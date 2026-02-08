@@ -58,6 +58,11 @@ const config: Config = {
           label: 'Docs',
         },
         {
+          href: 'pathname:///viewer.html',
+          label: '3D Viewer',
+          position: 'left',
+        },
+        {
           href: 'https://github.com/pjcau/esp32-emu-turbo',
           label: 'GitHub',
           position: 'right',

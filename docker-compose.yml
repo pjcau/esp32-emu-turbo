@@ -1,4 +1,14 @@
 services:
+  # Generate KiCad schematic from Python spec
+  generate-sch:
+    image: python:3.12-slim
+    volumes:
+      - ./scripts:/scripts:ro
+      - ./hardware/kicad:/output
+    working_dir: /scripts
+    command: python3 generate-schematic.py /output/esp32-emu-turbo.kicad_sch
+
+  # Export KiCad schematic to SVG/PDF
   kicad:
     build:
       context: ./docker/kicad
@@ -7,6 +17,7 @@ services:
       - ./website/static/img/schematics:/output
     working_dir: /project
 
+  # Render OpenSCAD enclosure to PNG
   openscad:
     build:
       context: ./docker/openscad

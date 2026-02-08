@@ -1,5 +1,5 @@
-.PHONY: all docker-build render-schematics render-enclosure render-all \
-       website-dev website-build clean help
+.PHONY: all docker-build generate-schematic render-schematics render-enclosure \
+       render-all website-dev website-build clean help
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -8,13 +8,16 @@ help: ## Show this help
 docker-build: ## Build Docker images (KiCad + OpenSCAD)
 	docker compose build
 
+generate-schematic: ## Generate KiCad schematic from Python spec
+	docker compose run --rm generate-sch
+
 render-schematics: docker-build ## Export KiCad schematic to SVG
 	./scripts/render-schematics.sh
 
 render-enclosure: docker-build ## Render OpenSCAD enclosure to PNG
 	./scripts/render-enclosure.sh
 
-render-all: docker-build ## Render everything (schematics + enclosure)
+render-all: generate-schematic docker-build ## Full render pipeline (generate + export)
 	./scripts/render-all.sh
 
 website-dev: ## Start Docusaurus dev server
@@ -23,7 +26,7 @@ website-dev: ## Start Docusaurus dev server
 website-build: ## Build Docusaurus site for production
 	cd website && npm run build
 
-all: render-all website-build ## Full pipeline: render + build website
+all: render-all website-build ## Full pipeline: generate + render + build website
 
 clean: ## Remove generated renders
 	rm -f website/static/img/schematics/*.svg

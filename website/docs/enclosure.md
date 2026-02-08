@@ -23,11 +23,13 @@ make render-enclosure
 ```
 :::
 
-## Rendered Views
+## Interactive 3D Viewer
 
-:::note
-Run `make render-enclosure` to generate the PNG renders. The images below will be available after rendering.
+:::tip
+**[Open the interactive 3D viewer](pathname:///viewer.html)** to inspect the enclosure from any angle. Switch between assembly and exploded views, toggle wireframe mode, and zoom into details.
 :::
+
+## Rendered Views
 
 ### Front (Display Side)
 ![Front View](/img/renders/enclosure-front.png)
@@ -47,7 +49,7 @@ Run `make render-enclosure` to generate the PNG renders. The images below will b
 - **4.0" display viewport** — centered, with 2mm raised bezel
 - **D-pad** — cross-shaped cutout on left side
 - **A/B/X/Y buttons** — diamond layout on right side (SNES style)
-- **Start/Select** — pill-shaped cutouts below the display
+- **Start/Select** — pill-shaped cutouts below the D-pad
 - **L/R shoulder buttons** — rectangular cutouts on top edge
 
 ### Back Panel
@@ -77,8 +79,7 @@ Run `make render-enclosure` to generate the PNG renders. The images below will b
 │  └─┤ ├─┘        │    ST7796S        │          [B]      │
 │    └─┘          │                   │                    │
 │   D-pad         └───────────────────┘                    │
-│                                                         │
-│              [Select]        [Start]                     │
+│  [Sel] [Sta]                                             │
 │                                                         │
 │  ┌──USB-C──┐                           ┌──SD Card──┐    │
 └──┴─────────┴───────────────────────────┴───────────┴────┘
@@ -94,8 +95,8 @@ Run `make render-enclosure` to generate the PNG renders. The images below will b
 | Display cutout | 86.4 × 64.8 mm | Active display area |
 | D-pad cutout | 24 × 24 mm cross | 5mm arm width |
 | Face button holes | 8 mm diameter | A/B/X/Y, 13mm spacing |
-| Start/Select | 10 × 4 mm pills | Pill-shaped |
-| Shoulder buttons | 22 × 8 mm | Rounded rectangle |
+| Start/Select | 10 × 4 mm pills | Below D-pad |
+| Shoulder buttons | 20 × 7 mm | Near top corners |
 | USB-C port | 9.0 × 3.2 mm | Centered on bottom edge |
 | SD card slot | 12 × 2.5 mm | Right side of bottom edge |
 | Battery bay | 82 × 52 × 11 mm | For 105080 LiPo |
@@ -132,8 +133,8 @@ corner_r = 8;        // Corner radius
 disp_w = 86.4;       // Display viewport width
 disp_h = 64.8;       // Display viewport height
 
-dpad_x = -55;        // D-pad horizontal position
-abxy_x = 55;         // ABXY horizontal position
+dpad_x = -62;        // D-pad horizontal position
+abxy_x = 62;         // ABXY horizontal position
 abxy_spacing = 13;   // Button center-to-center distance
 ```
 
