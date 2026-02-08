@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600">
+  <rect width="800" height="600" fill="#1a1a2e"/>
+  <text x="400" y="280" fill="#e0e0e0" font-family="monospace" font-size="18" text-anchor="middle">ESP32 Emu Turbo - Electrical Schematic</text>
+  <text x="400" y="310" fill="#888" font-family="monospace" font-size="14" text-anchor="middle">Run "make render-schematics" to generate from KiCad project</text>
+  <text x="400" y="340" fill="#666" font-family="monospace" font-size="12" text-anchor="middle">Source: hardware/kicad/esp32-emu-turbo.kicad_sch</text>
+</svg>

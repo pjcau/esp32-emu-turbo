@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32 Emu Turbo — 3D Enclosure Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    overflow: hidden;
+    height: 100vh;
+  }
+  #toolbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 20px;
+    background: rgba(16, 16, 32, 0.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  #toolbar h1 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    margin-right: 16px;
+    white-space: nowrap;
+  }
+  .btn {
+    padding: 7px 16px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.06);
+    color: #ccc;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+  .btn.active {
+    background: #4a6cf7;
+    border-color: #4a6cf7;
+    color: #fff;
+  }
+  .sep {
+    width: 1px;
+    height: 24px;
+    background: rgba(255,255,255,0.12);
+  }
+  #info {
+    margin-left: auto;
+    font-size: 11px;
+    color: #666;
+    white-space: nowrap;
+  }
+  #canvas-container {
+    width: 100%;
+    height: 100vh;
+  }
+  canvas { display: block; }
+  #loading {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 16px;
+    color: #888;
+    z-index: 5;
+  }
+  #loading.hidden { display: none; }
+  #legend {
+    position: fixed;
+    bottom: 20px; right: 20px;
+    z-index: 10;
+    background: rgba(16, 16, 32, 0.9);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.15);
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <h1>ESP32 Emu Turbo</h1>
+  <button class="btn active" id="btn-assembly" onclick="switchView('assembly')">Assembly</button>
+  <button class="btn" id="btn-exploded" onclick="switchView('exploded')">Exploded</button>
+  <div class="sep"></div>
+  <button class="btn" onclick="resetCamera()">Reset View</button>
+  <button class="btn" id="btn-wire" onclick="toggleWireframe()">Wireframe</button>
+  <span id="info">Drag: rotate | Scroll: zoom | Right-click: pan</span>
+</div>
+
+<div id="loading">Loading 3D model...</div>
+
+<div id="legend">
+  <div class="legend-item"><div class="legend-swatch" style="background:#2a2a35"></div> Top shell</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#35353f"></div> Bottom shell</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#0a0a22"></div> Display</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> D-pad</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#cc3333"></div> A (red)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#cccc33"></div> B (yellow)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#3366cc"></div> X (blue)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#33b050"></div> Y (green)</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#666"></div> Start / Select</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> L / R Shoulder</div>
+</div>
+
+<div id="canvas-container"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+
+// Part definitions: file → color + material props
+const ASSEMBLY_PARTS = [
+  { file: 'parts/case_top.stl',     color: 0x2a2a35, metalness: 0.2, roughness: 0.7, clearcoat: 0.3 },
+  { file: 'parts/case_bottom.stl',  color: 0x35353f, metalness: 0.2, roughness: 0.7, clearcoat: 0.3 },
+  { file: 'parts/part_display.stl', color: 0x0a0a22, metalness: 0.1, roughness: 0.3, clearcoat: 0.8 },
+  { file: 'parts/part_dpad.stl',    color: 0x555555, metalness: 0.1, roughness: 0.8 },
+  { file: 'parts/part_btn_a.stl',   color: 0xcc3333, metalness: 0.15, roughness: 0.5 },
+  { file: 'parts/part_btn_b.stl',   color: 0xcccc33, metalness: 0.15, roughness: 0.5 },
+  { file: 'parts/part_btn_x.stl',   color: 0x3366cc, metalness: 0.15, roughness: 0.5 },
+  { file: 'parts/part_btn_y.stl',   color: 0x33b050, metalness: 0.15, roughness: 0.5 },
+  { file: 'parts/part_start.stl',      color: 0x666666, metalness: 0.1, roughness: 0.8 },
+  { file: 'parts/part_select.stl',     color: 0x666666, metalness: 0.1, roughness: 0.8 },
+  { file: 'parts/part_shoulder_l.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
+  { file: 'parts/part_shoulder_r.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
+];
+
+let scene, camera, renderer, controls;
+let currentMeshes = [];
+let wireframeOn = false;
+let currentView = 'assembly';
+
+const container = document.getElementById('canvas-container');
+
+// Scene
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a2e);
+
+// Camera
+camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 10000);
+camera.position.set(180, 140, 280);
+
+// Renderer
+renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+
+// Controls
+controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 0, 12.5);
+controls.update();
+
+// Lights
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+
+const key = new THREE.DirectionalLight(0xffffff, 1.2);
+key.position.set(120, 200, 180);
+scene.add(key);
+
+const fill = new THREE.DirectionalLight(0x8888ff, 0.4);
+fill.position.set(-120, 60, -100);
+scene.add(fill);
+
+const rim = new THREE.DirectionalLight(0xffffff, 0.3);
+rim.position.set(0, -100, 80);
+scene.add(rim);
+
+// Grid
+const grid = new THREE.GridHelper(300, 30, 0x333355, 0x222244);
+grid.rotation.x = Math.PI / 2;
+scene.add(grid);
+
+// STL loader
+const loader = new STLLoader();
+
+function clearMeshes() {
+  currentMeshes.forEach(m => {
+    scene.remove(m);
+    m.geometry.dispose();
+    m.material.dispose();
+  });
+  currentMeshes = [];
+}
+
+function loadSTL(url) {
+  return new Promise((resolve, reject) => {
+    loader.load('img/renders/' + url, resolve, undefined, reject);
+  });
+}
+
+async function loadAssemblyColored() {
+  clearMeshes();
+  document.getElementById('loading').classList.remove('hidden');
+
+  const promises = ASSEMBLY_PARTS.map(async (part) => {
+    const geometry = await loadSTL(part.file);
+    geometry.computeVertexNormals();
+
+    const material = new THREE.MeshPhysicalMaterial({
+      color: part.color,
+      metalness: part.metalness || 0.2,
+      roughness: part.roughness || 0.6,
+      clearcoat: part.clearcoat || 0,
+      clearcoatRoughness: 0.4,
+      wireframe: wireframeOn,
+      side: THREE.DoubleSide,
+    });
+
+    const mesh = new THREE.Mesh(geometry, material);
+    scene.add(mesh);
+    currentMeshes.push(mesh);
+  });
+
+  await Promise.all(promises);
+  document.getElementById('loading').classList.add('hidden');
+}
+
+async function loadExplodedSingle() {
+  clearMeshes();
+  document.getElementById('loading').classList.remove('hidden');
+
+  const geometry = await loadSTL('exploded.stl');
+  geometry.computeVertexNormals();
+  geometry.center();
+
+  const material = new THREE.MeshPhysicalMaterial({
+    color: 0x2a2a35,
+    metalness: 0.3,
+    roughness: 0.6,
+    clearcoat: 0.2,
+    wireframe: wireframeOn,
+    side: THREE.DoubleSide,
+  });
+
+  const mesh = new THREE.Mesh(geometry, material);
+  scene.add(mesh);
+  currentMeshes.push(mesh);
+  document.getElementById('loading').classList.add('hidden');
+}
+
+async function switchView(view) {
+  currentView = view;
+  document.getElementById('btn-assembly').classList.toggle('active', view === 'assembly');
+  document.getElementById('btn-exploded').classList.toggle('active', view === 'exploded');
+
+  if (view === 'assembly') {
+    await loadAssemblyColored();
+  } else {
+    await loadExplodedSingle();
+  }
+}
+window.switchView = switchView;
+
+window.resetCamera = function() {
+  camera.position.set(180, 140, 280);
+  controls.target.set(0, 0, 12.5);
+  controls.update();
+};
+
+window.toggleWireframe = function() {
+  wireframeOn = !wireframeOn;
+  document.getElementById('btn-wire').classList.toggle('active', wireframeOn);
+  currentMeshes.forEach(m => { m.material.wireframe = wireframeOn; });
+};
+
+// Responsive
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+// Render loop
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+// Load initial view
+loadAssemblyColored();
+</script>
+
+</body>
+</html>
