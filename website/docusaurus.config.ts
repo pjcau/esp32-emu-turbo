@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: 'ESP32 Emu Turbo',
-  tagline: 'Handheld retro gaming console powered by ESP32-S3',
+  tagline: 'SNES-first handheld retro gaming console powered by ESP32-S3',
   favicon: 'img/favicon.ico',
 
   future: {
@@ -75,8 +75,24 @@ const config: Config = {
               to: '/docs/feasibility',
             },
             {
+              label: 'SNES Hardware',
+              to: '/docs/snes-hardware',
+            },
+            {
               label: 'Components (BOM)',
               to: '/docs/components',
+            },
+            {
+              label: 'Schematics',
+              to: '/docs/schematics',
+            },
+            {
+              label: 'Prototyping',
+              to: '/docs/prototyping',
+            },
+            {
+              label: 'Enclosure',
+              to: '/docs/enclosure',
             },
           ],
         },

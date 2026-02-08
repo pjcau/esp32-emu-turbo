@@ -7,7 +7,7 @@ slug: /
 
 # ESP32 Emu Turbo
 
-Handheld gaming console based on **ESP32-S3** for retro game emulation (**NES**, and potentially **SNES**).
+Handheld gaming console based on **ESP32-S3** for retro game emulation — **SNES** (primary) and **NES** (secondary).
 
 ## Goal
 
@@ -18,8 +18,9 @@ Build a portable battery-powered device with USB-C charging and a 3.5"-4" color 
 | Phase | Description | Status |
 |---|---|---|
 | **1. Feasibility** | Component analysis, schematics, budget | Completed |
-| **2. Prototype** | Breadboard assembly, testing and validation | Pending |
-| **3. Final version** | Custom PCB + 3D-printed enclosure | Pending |
+| **2. Hardware Design** | KiCad schematics, OpenSCAD enclosure, GPIO mapping | In Progress |
+| **3. Prototype** | Breadboard assembly, testing and validation | Pending |
+| **4. Final version** | Custom PCB + 3D-printed enclosure | Pending |
 
 ## Key Requirements
 
@@ -29,5 +30,5 @@ Build a portable battery-powered device with USB-C charging and a 3.5"-4" color 
 | **Display** | Color TFT/LCD, 3.5"-4" (ST7796S or ILI9488) |
 | **Power** | LiPo 3.7V, 5000mAh |
 | **Charging** | USB-C (IP5306, charge-and-play) |
-| **Emulation** | NES (primary), SNES (secondary) |
+| **Emulation** | SNES (primary), NES (secondary) |
 | **Budget** | ~$42-55 for the prototype |

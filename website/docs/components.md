@@ -1,7 +1,7 @@
 ---
 id: components
 title: Bill of Materials (BOM)
-sidebar_position: 3
+sidebar_position: 4
 ---
 
 # Bill of Materials (BOM) with AliExpress Links
@@ -116,7 +116,7 @@ The IP5306 manages battery charge/discharge and provides stable 5V output. The A
 
 ## Budget Summary
 
-### Recommended Configuration (NES + SNES)
+### Recommended Configuration (SNES Primary)
 
 | Category | Component | Price |
 |---|---|---|

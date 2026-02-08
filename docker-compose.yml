@@ -1,0 +1,17 @@
+services:
+  kicad:
+    build:
+      context: ./docker/kicad
+    volumes:
+      - ./hardware/kicad:/project
+      - ./website/static/img/schematics:/output
+    working_dir: /project
+
+  openscad:
+    build:
+      context: ./docker/openscad
+    init: true
+    volumes:
+      - ./hardware/enclosure:/project
+      - ./website/static/img/renders:/output
+    working_dir: /project

@@ -51,7 +51,7 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
               | ST7796S    |  | Module |  |  | DAC -> |  | D-pad   |
               | 3.5"-4"    |  | SPI    |  |  | PAM8403|  | A,B,X,Y |
               | 8-bit par  |  +--------+  |  | Speaker|  | Start   |
-              | or SPI     |              |  +--------+  | Select  |
+              | (8080)     |              |  +--------+  | Select  |
               +------------+              |              | L, R    |
                                           |              +---------+
                                     +-----+-----+
@@ -78,16 +78,18 @@ The ESP32-S3 has **45 GPIOs**, so both configurations are feasible.
 
 ## Feasibility Assessment
 
-### Fully feasible: NES
+### Primary target: SNES
+- SNES requires 65C816 CPU emulation + complex PPU (mode 7, rotation, scaling)
+- ESP32-S3 with **SIMD/PIE** instructions provides 2-10x speedup for pixel operations
+- **8 MB Octal PSRAM** at ~84 MB/s handles SNES VRAM + ROM caching
+- **Parallel display interface is mandatory** for 60 fps frame delivery
+- Reference: [esp-box-emu](https://github.com/esp-cpp/esp-box-emu) runs SNES on ESP32-S3-BOX hardware
+- Some complex SNES games (SuperFX, SA-1 co-processors) may need frame skipping
+
+### Also supported: NES
 - ESP32-S3 at 240 MHz with 8 MB PSRAM handles NES emulation with no issues
 - Existing projects (Retro-Go, esp-box-emu) demonstrate NES at **60 fps**
-- SPI display is sufficient for NES (native resolution 256x240)
-
-### Feasible with optimizations: SNES
-- SNES requires more processing power (65C816 CPU + complex PPU)
-- ESP32-S3 with SIMD/PIE and 8 MB PSRAM makes emulation possible
-- Parallel display interface needed for acceptable frame rates
-- Some complex SNES games may not run at full speed
+- NES runs comfortably even with parallel display overhead
 
 ### Risks and Mitigations
 
@@ -101,7 +103,7 @@ The ESP32-S3 has **45 GPIOs**, so both configurations are feasible.
 
 ### Conclusion
 
-**The project is feasible.** NES emulation is practically guaranteed, and SNES emulation is achievable with proper optimizations. The budget of ~$42-55 is modest, and all components are readily available on AliExpress.
+**The project is feasible with SNES as the primary target.** The ESP32-S3's SIMD/PIE instructions and Octal PSRAM provide the performance needed for SNES emulation. NES runs flawlessly as a bonus. The 8-bit 8080 parallel display is mandatory for SNES frame rates. The budget of ~$42-55 is modest, and all components are readily available on AliExpress.
 
 ## Reference Software
 

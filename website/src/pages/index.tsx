@@ -33,7 +33,7 @@ export default function Home(): ReactNode {
   return (
     <Layout
       title="Home"
-      description="Handheld retro gaming console powered by ESP32-S3 - NES and SNES emulation">
+      description="SNES-first handheld retro gaming console powered by ESP32-S3">
       <HomepageHeader />
       <main>
         <section style={{padding: '2rem 0'}}>
@@ -41,8 +41,8 @@ export default function Home(): ReactNode {
             <div className="row">
               <div className="col col--4">
                 <div style={{textAlign: 'center', padding: '1rem'}}>
-                  <Heading as="h3">NES + SNES</Heading>
-                  <p>Retro game emulation on ESP32-S3 hardware with Octal PSRAM and SIMD instructions.</p>
+                  <Heading as="h3">SNES + NES</Heading>
+                  <p>SNES-first retro game emulation on ESP32-S3 with SIMD/PIE and 8MB Octal PSRAM.</p>
                 </div>
               </div>
               <div className="col col--4">
