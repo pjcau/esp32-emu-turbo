@@ -406,7 +406,7 @@ def generate():
 
     # ---- DISPLAY ----
     DX, DY = 270, 55.88
-    o.append(T('=== DISPLAY - ST7796S 4.0" 8080 Parallel ===', 220, 12.7, 3.81, True))
+    o.append(T('=== DISPLAY - ST7796S 4in 8080 Parallel ===', 220, 12.7, 3.81, True))
     o.append(SYM("ST7796S_Module","U4","ST7796S 4.0in 8080",DX,DY,range(1,17)))
     o.append(v33(DX-17.78,DY-17.78)+W(DX-17.78,DY-17.78,DX-17.78,DY-15.24)+W(DX-10.16,DY-15.24,DX-17.78,DY-15.24))
     o.append(gnd(DX-17.78,DY-7.62)+W(DX-17.78,DY-7.62,DX-17.78,DY-12.7)+W(DX-10.16,DY-12.7,DX-17.78,DY-12.7))
