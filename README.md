@@ -44,6 +44,6 @@ Analyze feasibility and build a portable battery-powered device based on ESP32-S
 
 All project documentation lives in `website/docs/` and is published via Docusaurus to GitHub Pages:
 
-- [Documentation Site](https://pjonny.github.io/esp32-emu-turbo/) — full docs online
+- [Documentation Site](https://pjcau.github.io/esp32-emu-turbo/) — full docs online
 - [Feasibility Analysis](website/docs/feasibility.md)
 - [Bill of Materials](website/docs/components.md)

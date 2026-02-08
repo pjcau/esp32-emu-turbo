@@ -11,10 +11,10 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://pjonny.github.io',
+  url: 'https://pjcau.github.io',
   baseUrl: '/esp32-emu-turbo/',
 
-  organizationName: 'pjonny',
+  organizationName: 'pjcau',
   projectName: 'esp32-emu-turbo',
   trailingSlash: false,
 
@@ -32,7 +32,7 @@ const config: Config = {
         docs: {
           sidebarPath: './sidebars.ts',
           editUrl:
-            'https://github.com/pjonny/esp32-emu-turbo/tree/main/website/',
+            'https://github.com/pjcau/esp32-emu-turbo/tree/main/website/',
         },
         blog: false,
         theme: {
@@ -58,7 +58,7 @@ const config: Config = {
           label: 'Docs',
         },
         {
-          href: 'https://github.com/pjonny/esp32-emu-turbo',
+          href: 'https://github.com/pjcau/esp32-emu-turbo',
           label: 'GitHub',
           position: 'right',
         },
@@ -85,7 +85,7 @@ const config: Config = {
           items: [
             {
               label: 'GitHub',
-              href: 'https://github.com/pjonny/esp32-emu-turbo',
+              href: 'https://github.com/pjcau/esp32-emu-turbo',
             },
           ],
         },

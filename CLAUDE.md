@@ -32,7 +32,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 All documentation lives in `website/docs/` (single source of truth), published via Docusaurus to GitHub Pages:
 - `website/docs/feasibility.md` — full analysis: components, schematics, BOM, budget, risks
 - `website/docs/components.md` — BOM with AliExpress links for every part
-- Site URL: https://pjonny.github.io/esp32-emu-turbo/
+- Site URL: https://pjcau.github.io/esp32-emu-turbo/
 
 ## Reference Software
 
