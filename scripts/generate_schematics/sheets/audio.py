@@ -44,7 +44,7 @@ class AudioSheet(SchematicSheet):
 
         # Speaker (moved further right for orthogonal routing)
         spk_x, spk_y = ax + 65, ay
-        self.sym("Speaker", "LS1", "28mm 8ohm", spk_x, spk_y, ["1", "2"])
+        self.sym("Speaker", "SPK1", "28mm 8ohm", spk_x, spk_y, ["1", "2"])
         self.text("28mm speaker", spk_x + 8, spk_y - 5)
         self.text("8 ohm / 0.5W", spk_x + 8, spk_y + 1)
 

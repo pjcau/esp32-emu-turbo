@@ -100,18 +100,42 @@ _SYMBOL_SW_PUSH = """    (symbol "SW_Push" (pin_names (offset 1.016) hide) (in_b
         (pin passive line (at -5.08 0 0) (length 2.54) (name "1" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
         (pin passive line (at 5.08 0 180) (length 2.54) (name "2" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))\n"""
 
-_SYMBOL_IP5306 = """    (symbol "IP5306_Module" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "IP5306_USB-C_Module" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+_SYMBOL_IP5306 = """    (symbol "IP5306" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+      (property "Reference" "U" (at 0 10.16 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "IP5306" (at 0 -10.16 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "Package_SO:ESOP-8" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "IP5306_0_1" (rectangle (start -7.62 7.62) (end 7.62 -7.62) (stroke (width 0.254) (type default)) (fill (type background))))
+      (symbol "IP5306_1_1"
+        (pin power_in line (at -10.16 5.08 0) (length 2.54) (name "VIN" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin output line (at -10.16 2.54 0) (length 2.54) (name "LED1" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin output line (at -10.16 0 0) (length 2.54) (name "LED2" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
+        (pin output line (at -10.16 -2.54 0) (length 2.54) (name "LED3" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
+        (pin input line (at 10.16 -5.08 180) (length 2.54) (name "KEY" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at 10.16 -2.54 180) (length 2.54) (name "BAT" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 10.16 0 180) (length 2.54) (name "SW" (effects (font (size 1.016 1.016)))) (number "7" (effects (font (size 1.016 1.016)))))
+        (pin power_out line (at 10.16 5.08 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)))) (number "8" (effects (font (size 1.016 1.016)))))
+        (pin power_in line (at 0 -10.16 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "9" (effects (font (size 1.016 1.016)))))))\n"""
+
+_SYMBOL_L = """    (symbol "L" (pin_names (offset 0) hide) (in_bom yes) (on_board yes)
+      (property "Reference" "L" (at 2.032 0 90) (effects (font (size 1.27 1.27))))
+      (property "Value" "L" (at -1.778 0 90) (effects (font (size 1.27 1.27))))
       (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
       (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (symbol "IP5306_Module_0_1" (rectangle (start -7.62 6.35) (end 7.62 -6.35) (stroke (width 0.254) (type default)) (fill (type background))))
-      (symbol "IP5306_Module_1_1"
-        (pin power_in line (at -10.16 3.81 0) (length 2.54) (name "USB_5V" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
-        (pin power_in line (at -10.16 0 0) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at 10.16 3.81 180) (length 2.54) (name "BAT+" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at 10.16 0 180) (length 2.54) (name "BAT-" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
-        (pin power_out line (at 10.16 -3.81 180) (length 2.54) (name "OUT_5V" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))))\n"""
+      (symbol "L_0_1" (rectangle (start -1.016 -2.54) (end 1.016 2.54) (stroke (width 0.254) (type default)) (fill (type none))))
+      (symbol "L_1_1"
+        (pin passive line (at 0 3.81 270) (length 1.27) (name "~" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+        (pin passive line (at 0 -3.81 90) (length 1.27) (name "~" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))\n"""
+
+_SYMBOL_JST_PH_2 = """    (symbol "Conn_JST_PH_2" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+      (property "Reference" "J" (at 0 5.08 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "JST_PH_2" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "Conn_JST_PH_2_0_1" (rectangle (start -3.81 3.81) (end 3.81 -3.81) (stroke (width 0.254) (type default)) (fill (type background))))
+      (symbol "Conn_JST_PH_2_1_1"
+        (pin passive line (at -6.35 1.27 0) (length 2.54) (name "+" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -6.35 -1.27 0) (length 2.54) (name "-" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))))\n"""
 
 _SYMBOL_PAM8403 = """    (symbol "PAM8403_Module" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
@@ -251,6 +275,42 @@ _SYMBOL_5V = """    (symbol "+5V" (pin_names (offset 0) hide) (in_bom no) (on_bo
         (polyline (pts (xy 0 2.54) (xy 0.762 1.27)) (stroke (width 0) (type default)) (fill (type none))))
       (symbol "+5V_1_1" (pin power_in line (at 0 0 90) (length 0) (name "+5V" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))\n"""
 
+_SYMBOL_LED = """    (symbol "LED" (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
+      (property "Reference" "LED" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "LED" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "LED_0_1"
+        (polyline (pts (xy -1.27 -1.27) (xy -1.27 1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -1.27 0) (xy 1.27 1.27) (xy 1.27 -1.27) (xy -1.27 0)) (stroke (width 0.254) (type default)) (fill (type outline))))
+      (symbol "LED_1_1"
+        (pin passive line (at -3.81 0 0) (length 2.54) (name "A" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+        (pin passive line (at 3.81 0 180) (length 2.54) (name "K" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))\n"""
+
+_SYMBOL_FPC_16P = """    (symbol "FPC_16P" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+      (property "Reference" "J" (at 0 21.59 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "FPC-16P-0.5mm" (at 0 -21.59 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "FPC_16P_0_1" (rectangle (start -5.08 20.32) (end 5.08 -20.32) (stroke (width 0.254) (type default)) (fill (type background))))
+      (symbol "FPC_16P_1_1"
+        (pin passive line (at -7.62 17.78 0) (length 2.54) (name "1" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 15.24 0) (length 2.54) (name "2" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 12.7 0) (length 2.54) (name "3" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 10.16 0) (length 2.54) (name "4" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 7.62 0) (length 2.54) (name "5" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 5.08 0) (length 2.54) (name "6" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 2.54 0) (length 2.54) (name "7" (effects (font (size 1.016 1.016)))) (number "7" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 0 0) (length 2.54) (name "8" (effects (font (size 1.016 1.016)))) (number "8" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -2.54 0) (length 2.54) (name "9" (effects (font (size 1.016 1.016)))) (number "9" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -5.08 0) (length 2.54) (name "10" (effects (font (size 1.016 1.016)))) (number "10" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -7.62 0) (length 2.54) (name "11" (effects (font (size 1.016 1.016)))) (number "11" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -10.16 0) (length 2.54) (name "12" (effects (font (size 1.016 1.016)))) (number "12" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -12.7 0) (length 2.54) (name "13" (effects (font (size 1.016 1.016)))) (number "13" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -15.24 0) (length 2.54) (name "14" (effects (font (size 1.016 1.016)))) (number "14" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -17.78 0) (length 2.54) (name "15" (effects (font (size 1.016 1.016)))) (number "15" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -7.62 -20.32 0) (length 2.54) (name "16" (effects (font (size 1.016 1.016)))) (number "16" (effects (font (size 1.016 1.016)))))))\n"""
+
 # Registry: symbol name -> definition string
 SYMBOLS: dict[str, str] = {
     "ESP32-S3-WROOM-1": _SYMBOL_ESP32,
@@ -258,7 +318,9 @@ SYMBOLS: dict[str, str] = {
     "C": _SYMBOL_C,
     "R": _SYMBOL_R,
     "SW_Push": _SYMBOL_SW_PUSH,
-    "IP5306_Module": _SYMBOL_IP5306,
+    "IP5306": _SYMBOL_IP5306,
+    "L": _SYMBOL_L,
+    "Conn_JST_PH_2": _SYMBOL_JST_PH_2,
     "PAM8403_Module": _SYMBOL_PAM8403,
     "SD_Module": _SYMBOL_SD,
     "ST7796S_Module": _SYMBOL_ST7796S,
@@ -266,6 +328,8 @@ SYMBOLS: dict[str, str] = {
     "USB_C": _SYMBOL_USB_C,
     "Speaker": _SYMBOL_SPEAKER,
     "PSP_Joystick": _SYMBOL_JOYSTICK,
+    "LED": _SYMBOL_LED,
+    "FPC_16P": _SYMBOL_FPC_16P,
     "PWR_FLAG": _SYMBOL_PWR_FLAG,
     "GND": _SYMBOL_GND,
     "+3V3": _SYMBOL_3V3,

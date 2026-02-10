@@ -154,3 +154,30 @@ Plan for **~$55** to have margin for spares and unexpected needs.
 :::note Shipping
 Most AliExpress sellers offer **free shipping**. Delivery time: **2-4 weeks** (standard).
 :::
+
+---
+
+## JLCPCB PCB Assembly — LCSC Part Numbers
+
+For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are sourced from LCSC for JLCPCB assembly.
+
+| Ref | Component | Package | LCSC | Class |
+|-----|-----------|---------|------|-------|
+| U1 | ESP32-S3-WROOM-1-N16R8 | Module | C2913202 | Extended |
+| U2 | IP5306 charger+boost IC | eSOP-8 | C181692 | Extended |
+| U3 | AMS1117-3.3 LDO | SOT-223 | C6186 | Basic |
+| U5 | PAM8403 audio amplifier | SOP-16 | C5122557 | Extended |
+| J1 | USB-C 16-pin connector | SMT | C2765186 | Extended |
+| U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended |
+| J4 | FPC 16-pin 0.5mm | SMT | C2856801 | Extended |
+| J3 | JST PH 2-pin (battery) | THT | C173752 | Extended |
+| L1 | 1µH inductor 4.5A | SMD 4×4 | C280579 | Extended |
+| SW1–SW12 | SMT tact switch 5.1×5.1mm | SMT | C318884 | Extended |
+| R1–R2 | 5.1kΩ 0805 | 0805 | C27834 | Basic |
+| R3–R15 | 10kΩ 0805 | 0805 | C17414 | Basic |
+| R16 | 100kΩ 0805 | 0805 | C149504 | Basic |
+| C3–C16 | 100nF 0805 | 0805 | C49678 | Basic |
+| C1,C17,C18 | 10µF 0805 | 0805 | C15850 | Basic |
+| C2,C19 | 22µF 1206 | 1206 | C29632 | Basic |
+
+**Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.

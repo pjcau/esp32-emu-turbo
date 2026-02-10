@@ -94,6 +94,42 @@ class ControlsSheet(SchematicSheet):
             self.glabel(net, bx + 28, junc_y, 0)
             self.wire(cx, junc_y, bx + 28, junc_y)
 
+        # ═══════════════════════════════════════════════
+        # MENU BUTTON (separate from the 12-button grid)
+        # ═══════════════════════════════════════════════
+        mx, my = 335, 250
+        self.text("MENU BUTTON", mx - 15, my - 15, 2.54, True)
+
+        # R19 pull-up
+        self.sym("R", "R19", "10k", mx, my + 5, ["1", "2"])
+        self.v33(mx, my - 5)
+        self.wire(mx, my - 5, mx, my + 5 - 3.81)
+
+        # Junction
+        jx, jy = mx, my + 5 + 3.81
+        junc_y = jy + 3
+
+        # C20 debounce
+        cx, cy = mx + 18, my + 16
+        self.sym("C", "C20", "100nF", cx, cy, ["1", "2"])
+        self.wire(jx, jy, jx, junc_y)
+        self.wire(jx, junc_y, cx, junc_y)
+        self.wire(cx, junc_y, cx, cy - 3.81)
+        self.gnd(cx, cy + 8)
+        self.wire(cx, cy + 3.81, cx, cy + 8)
+
+        # SW13 menu switch
+        sw_y = my + 24
+        self.sym("SW_Push", "SW13", "MENU", mx, sw_y, ["1", "2"])
+        self.wire(jx, junc_y, jx, sw_y)
+        self.wire(jx, sw_y, mx - 5.08, sw_y)
+        self.gnd(mx + 5.08, sw_y + 8)
+        self.wire(mx + 5.08, sw_y, mx + 5.08, sw_y + 8)
+
+        # GPIO label
+        self.glabel("BTN_MENU", mx + 28, junc_y, 0)
+        self.wire(cx, junc_y, mx + 28, junc_y)
+
         # Schematic note at bottom
         ny = 295
         self.text("BUTTON CIRCUIT (repeated 12x):", 30, ny, 2.54, True)

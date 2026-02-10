@@ -80,7 +80,7 @@
   (text "GPIO16 - L/R Word Select (44.1kHz)" (at 65 78 0) (effects (font (size 2.54 2.54)) (justify left)))
   (global_label "I2S_DOUT" (shape output) (at 30 88 0) (effects (font (size 1.27 1.27))) (uuid "00000011-cafe-4000-8000-000000000011") (property "Intersheetrefs" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)))
   (text "GPIO17 - Serial Data Out -> PAM8403" (at 65 88 0) (effects (font (size 2.54 2.54)) (justify left)))
-  (symbol (lib_id "Speaker") (at 185 110 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "00000012-cafe-4000-8000-000000000012") (property "Reference" "LS1" (at 185 105 0) (effects (font (size 1.27 1.27)))) (property "Value" "28mm 8ohm" (at 185 115 0) (effects (font (size 1.27 1.27)))) (pin "1" (uuid "00000013-cafe-4000-8000-000000000013")) (pin "2" (uuid "00000014-cafe-4000-8000-000000000014")))
+  (symbol (lib_id "Speaker") (at 185 110 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "00000012-cafe-4000-8000-000000000012") (property "Reference" "SPK1" (at 185 105 0) (effects (font (size 1.27 1.27)))) (property "Value" "28mm 8ohm" (at 185 115 0) (effects (font (size 1.27 1.27)))) (pin "1" (uuid "00000013-cafe-4000-8000-000000000013")) (pin "2" (uuid "00000014-cafe-4000-8000-000000000014")))
   (text "28mm speaker" (at 193 105 0) (effects (font (size 2.54 2.54)) (justify left)))
   (text "8 ohm / 0.5W" (at 193 111 0) (effects (font (size 2.54 2.54)) (justify left)))
   (wire (pts (xy 130.16 106.19) (xy 181.19 106.19)) (stroke (width 0) (type default)) (uuid "00000015-cafe-4000-8000-000000000015"))

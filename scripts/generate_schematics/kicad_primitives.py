@@ -69,6 +69,12 @@ class KiCadContext:
         self._pn += 1
         return self.power_symbol("+5V", f"#PWR{self._pn:03d}", "+5V", x, y)
 
+    def no_connect(self, x: float, y: float) -> str:
+        return (
+            f'  (no_connect (at {x} {y})'
+            f' (uuid "{self.uid()}"))\n'
+        )
+
     def symbol(self, lib: str, ref: str, val: str,
                x: float, y: float, pins: list) -> str:
         s = (

@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ESP32 Emu Turbo — Interactive PCB 3D Viewer</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+    overflow: hidden;
+  }
+  #canvas { width: 100vw; height: 100vh; display: block; }
+  #hud {
+    position: fixed; top: 12px; left: 12px;
+    background: rgba(13,17,23,0.85);
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+  #hud h2 { font-size: 15px; color: #58a6ff; margin-bottom: 6px; }
+  #hud .dim { color: #8b949e; }
+  #controls {
+    position: fixed; bottom: 12px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 8px;
+    z-index: 10;
+  }
+  #controls button {
+    background: #21262d;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #controls button:hover { background: #30363d; border-color: #58a6ff; }
+  #controls button.active { background: #1f6feb; border-color: #58a6ff; color: #fff; }
+  #info {
+    position: fixed; bottom: 12px; right: 12px;
+    color: #484f58;
+    font-size: 11px;
+    z-index: 10;
+  }
+  #legend {
+    position: fixed; top: 12px; right: 12px;
+    background: rgba(13,17,23,0.85);
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 11px;
+    line-height: 1.8;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+  }
+  #legend h3 { font-size: 12px; color: #58a6ff; margin-bottom: 4px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 3px; border-radius: 1px; }
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <h2>ESP32 Emu Turbo PCB</h2>
+  <div>160 &times; 75 mm &middot; 4-Layer &middot; ENIG</div>
+  <div class="dim">65+ components &middot; JLCPCB PCBA</div>
+  <div class="dim" style="margin-top:4px">
+    TOP: Buttons (D-pad, ABXY, Start, Select, Menu) + LEDs<br>
+    BOTTOM: ESP32, ICs, connectors, speaker, L/R, passives
+  </div>
+</div>
+
+<div id="legend">
+  <h3>Trace Legend</h3>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff4444"></div> VBUS / Battery</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ff8844"></div> 5V Rail</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ffaa44"></div> 3.3V Rail</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#4488ff"></div> Data Bus</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#00ccff"></div> USB D+/D-</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#44cc44"></div> Audio</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#666666"></div> GND Return</div>
+</div>
+
+<div id="controls">
+  <button id="btn-top" onclick="viewTop()">Top View</button>
+  <button id="btn-bottom" onclick="viewBottom()">Bottom View</button>
+  <button id="btn-iso" class="active" onclick="viewIso()">3D View</button>
+  <button id="btn-spin" onclick="toggleSpin()">Spin</button>
+  <button id="btn-explode" onclick="toggleExplode()">Explode</button>
+</div>
+
+<div id="info">Drag to rotate · Scroll to zoom · Right-click to pan</div>
+
+<canvas id="canvas"></canvas>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// ── Scene setup ──────────────────────────────────────────────────────
+
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1117);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(100, 80, 120);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.target.set(0, 0, 0);
+controls.minDistance = 30;
+controls.maxDistance = 400;
+
+// ── Lighting ─────────────────────────────────────────────────────────
+
+scene.add(new THREE.AmbientLight(0x404060, 0.6));
+
+const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+mainLight.position.set(60, 100, 80);
+mainLight.castShadow = true;
+mainLight.shadow.mapSize.set(2048, 2048);
+mainLight.shadow.camera.left = -100;
+mainLight.shadow.camera.right = 100;
+mainLight.shadow.camera.top = 50;
+mainLight.shadow.camera.bottom = -50;
+scene.add(mainLight);
+
+const fillLight = new THREE.DirectionalLight(0x8090ff, 0.4);
+fillLight.position.set(-40, 60, -30);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
+rimLight.position.set(0, -20, -60);
+scene.add(rimLight);
+
+// ── Materials ────────────────────────────────────────────────────────
+
+const pcbMat = new THREE.MeshStandardMaterial({
+  color: 0x1a5c2a, roughness: 0.6, metalness: 0.1,
+});
+const padMat = new THREE.MeshStandardMaterial({
+  color: 0xd4af37, roughness: 0.2, metalness: 0.9,
+});
+const icMat = new THREE.MeshStandardMaterial({
+  color: 0x1a1a1a, roughness: 0.8, metalness: 0.1,
+});
+const shieldMat = new THREE.MeshStandardMaterial({
+  color: 0x777777, roughness: 0.4, metalness: 0.7,
+});
+const switchMat = new THREE.MeshStandardMaterial({
+  color: 0x555555, roughness: 0.5, metalness: 0.3,
+});
+const switchBtnMat = new THREE.MeshStandardMaterial({
+  color: 0x888888, roughness: 0.3, metalness: 0.4,
+});
+const connectorMat = new THREE.MeshStandardMaterial({
+  color: 0xa0a0a0, roughness: 0.3, metalness: 0.6,
+});
+const jstMat = new THREE.MeshStandardMaterial({
+  color: 0xe8e0d0, roughness: 0.6, metalness: 0.1,
+});
+const displayMat = new THREE.MeshStandardMaterial({
+  color: 0x0a0a14, roughness: 0.3, metalness: 0.1,
+});
+const displayBezelMat = new THREE.MeshStandardMaterial({
+  color: 0x222222, roughness: 0.7, metalness: 0.05,
+});
+const ledRedMat = new THREE.MeshStandardMaterial({
+  color: 0xff2020, roughness: 0.4, metalness: 0.1,
+  emissive: 0xff0000, emissiveIntensity: 0.5,
+});
+const ledGreenMat = new THREE.MeshStandardMaterial({
+  color: 0x20ff40, roughness: 0.4, metalness: 0.1,
+  emissive: 0x00ff20, emissiveIntensity: 0.5,
+});
+const slideSwitchMat = new THREE.MeshStandardMaterial({
+  color: 0x444444, roughness: 0.5, metalness: 0.4,
+});
+const inductorMat = new THREE.MeshStandardMaterial({
+  color: 0x4a4a4a, roughness: 0.5, metalness: 0.3,
+});
+const passiveMat = new THREE.MeshStandardMaterial({
+  color: 0x3a3020, roughness: 0.6, metalness: 0.2,
+});
+const capMat = new THREE.MeshStandardMaterial({
+  color: 0x8b6914, roughness: 0.5, metalness: 0.3,
+});
+const speakerMat = new THREE.MeshStandardMaterial({
+  color: 0x2a2a2a, roughness: 0.6, metalness: 0.2,
+});
+const speakerConeMat = new THREE.MeshStandardMaterial({
+  color: 0x3a3a3a, roughness: 0.7, metalness: 0.1,
+});
+
+// ── Board dimensions (mm) ────────────────────────────────────────────
+
+const BW = 160, BH = 75, BT = 1.6, CR = 6;
+const CX = BW / 2, CY = BH / 2;
+
+// Convert PCB coords (origin top-left, Y down) to Three.js (centered)
+function pos(x, y) { return [x - CX, 0, y - CY]; }
+
+// Enclosure coords to PCB coords
+function enc(ex, ey) { return [CX + ex, CY - ey]; }
+
+// ── Board group ──────────────────────────────────────────────────────
+
+const boardGroup = new THREE.Group();
+const topComponents = new THREE.Group();
+const bottomComponents = new THREE.Group();
+const traceGroup = new THREE.Group();
+boardGroup.add(topComponents);
+boardGroup.add(bottomComponents);
+boardGroup.add(traceGroup);
+
+// PCB board body — rounded rectangle
+function createRoundedRectShape(w, h, r) {
+  const shape = new THREE.Shape();
+  shape.moveTo(-w/2 + r, -h/2);
+  shape.lineTo(w/2 - r, -h/2);
+  shape.quadraticCurveTo(w/2, -h/2, w/2, -h/2 + r);
+  shape.lineTo(w/2, h/2 - r);
+  shape.quadraticCurveTo(w/2, h/2, w/2 - r, h/2);
+  shape.lineTo(-w/2 + r, h/2);
+  shape.quadraticCurveTo(-w/2, h/2, -w/2, h/2 - r);
+  shape.lineTo(-w/2, -h/2 + r);
+  shape.quadraticCurveTo(-w/2, -h/2, -w/2 + r, -h/2);
+  return shape;
+}
+
+// Mounting holes: enc coords -> pcb coords
+const mountEnc = [[-70,30.5],[70,30.5],[-70,-30.5],[70,-30.5],[-25,0],[25,0]];
+const holePositions = mountEnc.map(([ex,ey]) => enc(ex, ey));
+
+const boardShape = createRoundedRectShape(BW, BH, CR);
+holePositions.forEach(([hx, hy]) => {
+  const hole = new THREE.Path();
+  hole.absarc(hx - CX, hy - CY, 1.25, 0, Math.PI * 2, true);
+  boardShape.holes.push(hole);
+});
+
+const boardGeo = new THREE.ExtrudeGeometry(boardShape, {
+  depth: BT, bevelEnabled: false,
+});
+boardGeo.rotateX(-Math.PI / 2);
+const boardMesh = new THREE.Mesh(boardGeo, pcbMat);
+boardMesh.position.y = -BT / 2;
+boardMesh.castShadow = true;
+boardMesh.receiveShadow = true;
+boardGroup.add(boardMesh);
+
+// Mounting hole rings
+holePositions.forEach(([hx, hy]) => {
+  const [px, , pz] = pos(hx, hy);
+  const ring = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.5, 2.5, BT + 0.1, 24), padMat
+  );
+  ring.position.set(px, 0, pz);
+  boardGroup.add(ring);
+
+  const holeMesh = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.25, 1.25, BT + 0.5, 16),
+    new THREE.MeshStandardMaterial({ color: 0x0d1117 })
+  );
+  holeMesh.position.set(px, 0, pz);
+  boardGroup.add(holeMesh);
+});
+
+// ── Component helpers ────────────────────────────────────────────────
+
+function addBox(group, x, y, w, h, d, mat, yOff) {
+  const [px, , pz] = pos(x, y);
+  const geo = new THREE.BoxGeometry(w, d, h);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(px, yOff + d / 2, pz);
+  mesh.castShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
+function addCylinder(group, x, y, r, d, mat, yOff) {
+  const [px, , pz] = pos(x, y);
+  const geo = new THREE.CylinderGeometry(r, r, d, 16);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(px, yOff + d / 2, pz);
+  mesh.castShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
+function addTrace(x1, y1, x2, y2, color, width, yOff) {
+  const [px1, , pz1] = pos(x1, y1);
+  const [px2, , pz2] = pos(x2, y2);
+  const dx = px2 - px1;
+  const dz = pz2 - pz1;
+  const len = Math.sqrt(dx*dx + dz*dz);
+  if (len < 0.1) return;
+  const angle = Math.atan2(dz, dx);
+  const mat = new THREE.MeshStandardMaterial({
+    color: color, roughness: 0.3, metalness: 0.8
+  });
+  const geo = new THREE.BoxGeometry(len, 0.08, width);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(
+    (px1 + px2) / 2,
+    yOff,
+    (pz1 + pz2) / 2
+  );
+  mesh.rotation.y = -angle;
+  traceGroup.add(mesh);
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// TOP SIDE (F.Cu): Face buttons + LEDs + Menu + display module
+// ══════════════════════════════════════════════════════════════════════
+
+const TOP_Y = BT / 2;
+
+// ── Display module (ST7796S 4.0") ──
+const [dispX, dispY] = enc(0, 2);
+const DISP_W = 86.4, DISP_H = 64.8;
+addBox(topComponents, dispX, dispY, DISP_W + 4, DISP_H + 4, 0.8, displayBezelMat, TOP_Y);
+addBox(topComponents, dispX, dispY, DISP_W, DISP_H, 0.3, displayMat, TOP_Y + 0.8);
+
+// ── D-pad buttons (SW1-SW4) ──
+const dpadEnc = [-62, 5];
+const dpadOffsets = [[0,9],[0,-9],[-9,0],[9,0]];
+dpadOffsets.forEach(([dx, dy]) => {
+  const [bx, by] = enc(dpadEnc[0] + dx, dpadEnc[1] + dy);
+  addBox(topComponents, bx, by, 5.1, 5.1, 1.8, switchMat, TOP_Y);
+  addCylinder(topComponents, bx, by, 1.6, 0.6, switchBtnMat, TOP_Y + 1.8);
+});
+
+// ── ABXY buttons (SW5-SW8) — diamond (10mm offsets) ──
+const abxyEnc = [62, 5];
+const abxyOffsets = [[0,10],[10,0],[0,-10],[-10,0]];
+abxyOffsets.forEach(([dx, dy]) => {
+  const [bx, by] = enc(abxyEnc[0] + dx, abxyEnc[1] + dy);
+  addBox(topComponents, bx, by, 5.1, 5.1, 1.8, switchMat, TOP_Y);
+  addCylinder(topComponents, bx, by, 1.6, 0.6, switchBtnMat, TOP_Y + 1.8);
+});
+
+// ── Start/Select (SW9-SW10) ──
+const ssEnc = [-62, -17];
+const ssOffsets = [[-10,0],[10,0]];
+ssOffsets.forEach(([dx, dy]) => {
+  const [bx, by] = enc(ssEnc[0] + dx, ssEnc[1] + dy);
+  addBox(topComponents, bx, by, 5.1, 5.1, 1.8, switchMat, TOP_Y);
+  addCylinder(topComponents, bx, by, 1.6, 0.6, switchBtnMat, TOP_Y + 1.8);
+});
+
+// ── Menu button (SW13, front bottom-right, below ABXY) ──
+const [menuX, menuY] = enc(62, -25);
+addBox(topComponents, menuX, menuY, 5.1, 5.1, 1.8, switchMat, TOP_Y);
+addCylinder(topComponents, menuX, menuY, 1.6, 0.6, switchBtnMat, TOP_Y + 1.8);
+
+// ── Charging LEDs (front side, bottom-left) ──
+const [led1X, led1Y] = enc(-55, -30);
+addBox(topComponents, led1X, led1Y, 2.0, 1.25, 0.8, ledRedMat, TOP_Y);
+
+const [led2X, led2Y] = enc(-48, -30);
+addBox(topComponents, led2X, led2Y, 2.0, 1.25, 0.8, ledGreenMat, TOP_Y);
+
+// ══════════════════════════════════════════════════════════════════════
+// BOTTOM SIDE (B.Cu): Everything else
+// ══════════════════════════════════════════════════════════════════════
+
+const BOT_Y = -BT / 2;
+
+// ── ESP32-S3-WROOM-1 module (center) ──
+const [esp32X, esp32Y] = enc(0, 10);
+addBox(bottomComponents, esp32X, esp32Y, 18, 25.5, 3.2, shieldMat, -(BOT_Y + 3.2));
+addBox(bottomComponents, esp32X, esp32Y - 10, 16, 6, 0.5,
+  new THREE.MeshStandardMaterial({ color: 0x2d8c47, roughness: 0.4, metalness: 0.05 }),
+  -(BOT_Y + 3.7));
+
+// ── Shoulder L/R (SW11-SW12, back side) ──
+const [shLX, shLY] = enc(-65, 35);
+addBox(bottomComponents, shLX, shLY, 5.1, 5.1, 1.8, switchMat, -(BOT_Y + 1.8));
+addCylinder(bottomComponents, shLX, shLY, 1.6, 0.6, switchBtnMat, -(BOT_Y + 2.4));
+
+const [shRX, shRY] = enc(65, 35);
+addBox(bottomComponents, shRX, shRY, 5.1, 5.1, 1.8, switchMat, -(BOT_Y + 1.8));
+addCylinder(bottomComponents, shRX, shRY, 1.6, 0.6, switchBtnMat, -(BOT_Y + 2.4));
+
+// ── FPC 16-pin connector (back side) ──
+const [fpcX, fpcY] = enc(0, 32);
+addBox(bottomComponents, fpcX, fpcY, 20, 3, 1.5, connectorMat, -(BOT_Y + 1.5));
+for (let i = 0; i < 16; i++) {
+  addBox(bottomComponents, fpcX - 7.5 + i, fpcY, 0.4, 1.5, 0.3, padMat, -(BOT_Y + 1.8));
+}
+
+// ── USB-C connector (back side) ──
+const [usbX, usbY] = enc(0, -37.5 + 3);
+addBox(bottomComponents, usbX, usbY, 9, 7, 3.2, connectorMat, -(BOT_Y + 3.2));
+addBox(bottomComponents, usbX, usbY + 1.5, 8.4, 2.6, 2.6,
+  new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.5 }), -(BOT_Y + 3.2));
+
+// ── SD card slot (back side, more inward) ──
+const [sdX, sdY] = enc(40, -37.5 + 8);
+addBox(bottomComponents, sdX, sdY, 14, 15, 2, connectorMat, -(BOT_Y + 2));
+
+// ── Power slide switch (back side) ──
+const [swPwrX, swPwrY] = enc(-72, 15);
+addBox(bottomComponents, swPwrX, swPwrY, 3, 8, 2, slideSwitchMat, -(BOT_Y + 2));
+addBox(bottomComponents, swPwrX, swPwrY - 1.5, 2, 3, 1.5, switchBtnMat, -(BOT_Y + 3.5));
+
+// ── Speaker (back side, 22mm) ──
+const [spkX, spkY] = enc(-50, -15);
+addCylinder(bottomComponents, spkX, spkY, 11, 2, speakerMat, -(BOT_Y + 2));
+addCylinder(bottomComponents, spkX, spkY, 7, 1.5, speakerConeMat, -(BOT_Y + 2.5));
+addCylinder(bottomComponents, spkX, spkY, 3, 0.8,
+  new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.4 }), -(BOT_Y + 2.8));
+
+// ── IP5306 power management ──
+const [ip5306X, ip5306Y] = enc(45, 8);
+addBox(bottomComponents, ip5306X, ip5306Y, 6, 5, 1.8, icMat, -(BOT_Y + 1.8));
+
+// ── AMS1117 LDO ──
+const [amsX, amsY] = enc(62, 8);
+addBox(bottomComponents, amsX, amsY, 7, 3.5, 1.6, icMat, -(BOT_Y + 1.6));
+addBox(bottomComponents, amsX, amsY - 2.5, 3, 1.5, 1.6, padMat, -(BOT_Y + 1.6));
+
+// ── PAM8403 audio amplifier ──
+const [pamX, pamY] = enc(-50, 8);
+addBox(bottomComponents, pamX, pamY, 10, 6, 1.5, icMat, -(BOT_Y + 1.5));
+
+// ── Inductor L1 ──
+const [indX, indY] = enc(45, -3);
+addBox(bottomComponents, indX, indY, 4, 4, 2, inductorMat, -(BOT_Y + 2));
+
+// ── JST PH battery connector ──
+const [jstX, jstY] = enc(0, -15);
+addBox(bottomComponents, jstX, jstY, 6, 4.5, 3, jstMat, -(BOT_Y + 3));
+
+// ── Passives on bottom ──
+
+// USB-C CC resistors
+const [ux, uy] = enc(0, -37.5 + 3);
+const resistorPositions = [
+  [ux - 6, uy - 5], [ux + 6, uy - 5],
+];
+
+// ESP32 decoupling area
+const [ex, ey] = enc(0, 10);
+const espPassives = [
+  [ex - 15, ey + 16], [ex - 10, ey + 16], [ex + 10, ey + 16],
+  [ex - 5, ey + 16], [ex + 5, ey + 16],
+];
+
+// D-pad pull-ups + debounce caps
+const [dx, dy] = enc(-62, 5);
+const dpadPassives = [];
+for (let i = 0; i < 3; i++) dpadPassives.push([dx - 4 + i * 5, dy + 20]);
+for (let i = 0; i < 3; i++) dpadPassives.push([dx - 4 + i * 5, dy + 24]);
+for (let i = 0; i < 3; i++) dpadPassives.push([dx - 4 + i * 5, dy + 28]);
+for (let i = 0; i < 3; i++) dpadPassives.push([dx - 4 + i * 5, dy + 32]);
+
+// ABXY pull-ups + debounce caps
+const [ax, ay] = enc(62, 5);
+const abxyPassives = [];
+for (let i = 0; i < 3; i++) abxyPassives.push([ax - 4 + i * 5, ay + 20]);
+for (let i = 0; i < 3; i++) abxyPassives.push([ax - 4 + i * 5, ay + 24]);
+for (let i = 0; i < 3; i++) abxyPassives.push([ax - 4 + i * 5, ay + 28]);
+for (let i = 0; i < 3; i++) abxyPassives.push([ax - 4 + i * 5, ay + 32]);
+
+// IP5306 passives
+const ipPassives = [
+  [ip5306X - 8, ip5306Y + 6],
+  [ip5306X - 6, ip5306Y + 10], [ip5306X + 6, ip5306Y + 10],
+];
+
+// Other passives
+const otherPassives = [
+  [indX, indY + 6],
+  [amsX, amsY - 5], [amsX, amsY + 5],
+  [menuX + 5, menuY + 10], [menuX + 10, menuY + 10],
+];
+
+// Render resistors (brown)
+[...resistorPositions, espPassives[0], espPassives[3], espPassives[4],
+ ...dpadPassives.slice(0, 6), ...abxyPassives.slice(0, 6), ipPassives[0]
+].forEach(([px, py]) => {
+  addBox(bottomComponents, px, py, 2.0, 1.25, 0.6, passiveMat, -(BOT_Y + 0.6));
+});
+
+// Render capacitors (gold/tan)
+[espPassives[1], espPassives[2],
+ ...dpadPassives.slice(6), ...abxyPassives.slice(6),
+ ipPassives[1], ipPassives[2],
+ ...otherPassives
+].forEach(([px, py]) => {
+  addBox(bottomComponents, px, py, 2.0, 1.25, 0.6, capMat, -(BOT_Y + 0.6));
+});
+
+// ══════════════════════════════════════════════════════════════════════
+// TRACES (copper routing on B.Cu)
+// ══════════════════════════════════════════════════════════════════════
+
+const TRACE_Y = -BT / 2 - 0.05; // Just below PCB surface on bottom
+
+// Power VBUS+: USB-C -> IP5306
+addTrace(ux + 3, uy, ux + 3, ip5306Y + 12, 0xff4444, 0.5, TRACE_Y);
+addTrace(ux + 3, ip5306Y + 12, ip5306X, ip5306Y + 12, 0xff4444, 0.5, TRACE_Y);
+addTrace(ip5306X, ip5306Y + 12, ip5306X, ip5306Y + 3, 0xff4444, 0.5, TRACE_Y);
+// GND return: USB-C -> IP5306
+addTrace(ux - 3, uy, ux - 3, ip5306Y + 14, 0x666666, 0.5, TRACE_Y);
+addTrace(ux - 3, ip5306Y + 14, ip5306X - 6, ip5306Y + 14, 0x666666, 0.5, TRACE_Y);
+addTrace(ip5306X - 6, ip5306Y + 14, ip5306X - 6, ip5306Y + 3, 0x666666, 0.5, TRACE_Y);
+
+// 5V+: IP5306 -> L1, IP5306 -> AMS1117
+addTrace(ip5306X + 3, ip5306Y, indX, indY, 0xff8844, 0.4, TRACE_Y);
+addTrace(ip5306X + 3, ip5306Y, amsX - 3, amsY, 0xff8844, 0.4, TRACE_Y);
+// GND return: IP5306 -> AMS1117
+addTrace(ip5306X + 3, ip5306Y + 2, amsX - 3, amsY + 2, 0x666666, 0.4, TRACE_Y);
+
+// 3V3+: AMS1117 -> ESP32
+addTrace(amsX, amsY - 2, amsX, ey - 5, 0xffaa44, 0.35, TRACE_Y);
+addTrace(amsX, ey - 5, ex + 10, ey - 5, 0xffaa44, 0.35, TRACE_Y);
+// GND return: AMS1117 -> ESP32
+addTrace(amsX - 2, amsY - 2, amsX - 2, ey - 3, 0x666666, 0.35, TRACE_Y);
+addTrace(amsX - 2, ey - 3, ex + 10, ey - 3, 0x666666, 0.35, TRACE_Y);
+
+// Battery+: IP5306 -> JST
+addTrace(ip5306X - 3, ip5306Y + 3, ip5306X - 3, jstY, 0xff4444, 0.5, TRACE_Y);
+addTrace(ip5306X - 3, jstY, jstX + 3, jstY, 0xff4444, 0.5, TRACE_Y);
+// Battery GND: IP5306 -> JST
+addTrace(ip5306X - 5, ip5306Y + 3, ip5306X - 5, jstY + 2, 0x666666, 0.5, TRACE_Y);
+addTrace(ip5306X - 5, jstY + 2, jstX + 3, jstY + 2, 0x666666, 0.5, TRACE_Y);
+
+// 8080 Display bus: ESP32 -> FPC
+for (let i = 0; i < 8; i++) {
+  const ox = -7 + i * 2;
+  addTrace(ex + ox, ey - 13, fpcX + ox, fpcY + 2, 0x4488ff, 0.15, TRACE_Y);
+}
+
+// SPI: ESP32 -> SD
+for (let i = 0; i < 4; i++) {
+  const oy = -3 + i * 2;
+  addTrace(ex + 10, ey + oy, sdX - 7, sdY + oy, 0x4488ff, 0.15, TRACE_Y);
+}
+
+// I2S: ESP32 -> PAM8403
+for (let i = 0; i < 3; i++) {
+  const oy = -2 + i * 2;
+  addTrace(ex - 10, ey + oy, pamX + 6, pamY + oy, 0x4488ff, 0.15, TRACE_Y);
+}
+
+// Audio: PAM8403 -> Speaker
+addTrace(pamX - 5, pamY, spkX + 11, spkY, 0x44cc44, 0.25, TRACE_Y);
+addTrace(pamX - 5, pamY + 2, spkX + 11, spkY + 2, 0x44cc44, 0.25, TRACE_Y);
+
+// USB D+/D-: USB-C -> ESP32
+addTrace(ux - 1, uy - 3, ux - 1, ey + 8, 0x00ccff, 0.15, TRACE_Y);
+addTrace(ux - 1, ey + 8, ex + 2, ey + 3, 0x00ccff, 0.15, TRACE_Y);
+addTrace(ux + 1, uy - 3, ux + 1, ey + 10, 0x00ccff, 0.15, TRACE_Y);
+addTrace(ux + 1, ey + 10, ex + 4, ey + 3, 0x00ccff, 0.15, TRACE_Y);
+
+// Bottom components are flipped
+bottomComponents.rotation.x = Math.PI;
+
+scene.add(boardGroup);
+
+// ── Ground plane ─────────────────────────────────────────────────────
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(400, 400),
+  new THREE.ShadowMaterial({ opacity: 0.3 })
+);
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -20;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// Grid
+const gridHelper = new THREE.GridHelper(300, 30, 0x1a2332, 0x111822);
+gridHelper.position.y = -20;
+scene.add(gridHelper);
+
+// ── State ────────────────────────────────────────────────────────────
+
+let spinning = true;
+let exploded = false;
+let explodeProgress = 0;
+const EXPLODE_DIST = 15;
+
+// ── Animation ────────────────────────────────────────────────────────
+
+function animate() {
+  requestAnimationFrame(animate);
+
+  if (spinning) boardGroup.rotation.y += 0.003;
+
+  const target = exploded ? 1 : 0;
+  explodeProgress += (target - explodeProgress) * 0.08;
+  topComponents.position.y = explodeProgress * EXPLODE_DIST;
+  bottomComponents.position.y = explodeProgress * EXPLODE_DIST;
+
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+animate();
+
+// ── View controls ────────────────────────────────────────────────────
+
+function clearActive() {
+  document.querySelectorAll('#controls button').forEach(b => b.classList.remove('active'));
+}
+
+window.viewTop = function() {
+  clearActive();
+  document.getElementById('btn-top').classList.add('active');
+  spinning = false;
+  boardGroup.rotation.y = 0;
+  boardGroup.rotation.x = 0;
+  camera.position.set(0, 150, 0);
+  controls.target.set(0, 0, 0);
+};
+
+window.viewBottom = function() {
+  clearActive();
+  document.getElementById('btn-bottom').classList.add('active');
+  spinning = false;
+  boardGroup.rotation.y = 0;
+  boardGroup.rotation.x = 0;
+  camera.position.set(0, -150, 0);
+  controls.target.set(0, 0, 0);
+};
+
+window.viewIso = function() {
+  clearActive();
+  document.getElementById('btn-iso').classList.add('active');
+  camera.position.set(100, 80, 120);
+  controls.target.set(0, 0, 0);
+};
+
+window.toggleSpin = function() {
+  spinning = !spinning;
+  document.getElementById('btn-spin').classList.toggle('active', spinning);
+};
+
+window.toggleExplode = function() {
+  exploded = !exploded;
+  document.getElementById('btn-explode').classList.toggle('active', exploded);
+};
+
+// ── Resize ───────────────────────────────────────────────────────────
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+</script>
+</body>
+</html>

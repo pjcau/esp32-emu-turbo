@@ -29,4 +29,13 @@ def main(output_dir: str) -> list[str]:
         generated.append(path)
         print(f"  {filename} ({content.count(chr(10))} lines)")
 
+    # Generate hierarchical root schematic
+    from .root_schematic import generate_root
+    root_content = generate_root(config.SHEET_DEFS)
+    root_path = os.path.join(output_dir, "esp32-emu-turbo.kicad_sch")
+    with open(root_path, "w") as f:
+        f.write(root_content)
+    generated.append(root_path)
+    print(f"  esp32-emu-turbo.kicad_sch (root, {root_content.count(chr(10))} lines)")
+
     return generated

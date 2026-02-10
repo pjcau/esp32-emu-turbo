@@ -6,7 +6,7 @@ from ..sheet_base import SchematicSheet
 class DisplaySheet(SchematicSheet):
     title = "Display - ST7796S 4.0in 8080 Parallel"
     page_number = 3
-    needed_symbols = ["ST7796S_Module"]
+    needed_symbols = ["ST7796S_Module", "FPC_16P"]
 
     def build(self):
         # Title
@@ -67,6 +67,25 @@ class DisplaySheet(SchematicSheet):
             self.wire(px, py, px + 25, py)
             self.glabel(net, px + 25, py, 0)
             self.text(gpio, px + 40, py, 1.5)
+
+        # --- FPC Connector (physical connector on PCB back) ---
+        fpc_x, fpc_y = 260, 120
+        self.text("FPC RIBBON CONNECTOR", fpc_x - 15, fpc_y - 25, 2, True)
+        self.text("(on PCB back, connects to display module)", fpc_x - 15, fpc_y - 20, 1.5)
+        self.sym("FPC_16P", "J4", "FPC-16P-0.5mm", fpc_x, fpc_y, range(1, 17))
+
+        # Wire display module outputs to FPC pins
+        fpc_nets = [
+            "+3V3", "GND", "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
+            "LCD_RD", "LCD_BL",
+            "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3",
+            "LCD_D4", "LCD_D5", "LCD_D6", "LCD_D7",
+        ]
+        for i, net in enumerate(fpc_nets):
+            py = fpc_y + 17.78 - i * 2.54
+            px = fpc_x - 7.62
+            self.glabel(net, px - 10, py, 180, "input")
+            self.wire(px, py, px - 10, py)
 
         # --- Performance notes ---
         ny = 180
