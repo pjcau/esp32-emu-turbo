@@ -24,18 +24,86 @@ All components selected for the prototype, with direct purchase links.
 
 ## Display
 
+### Recommended: Bare LCD Panel (for custom PCB)
+
+| Spec | Value |
+|------|-------|
+| **Size** | 4.0" |
+| **Resolution** | 320(RGB) × 480 |
+| **Controller** | ST7796 |
+| **Touch IC** | GT911 (capacitive, I2C) |
+| **Connector** | 40-pin FPC, 0.5mm pitch |
+| **Interface** | MCU 8/16-bit parallel + SPI 3-wire/4-wire |
+| **Backlight** | White LED (8 chips parallel), 3.3V / 120mA |
+| **Display colors** | 262K |
+| **Active area** | 55.68 × 83.52 mm |
+| **Outline** | 60.88 × 94.57 × 3.65 mm |
+| **Operating temp** | -20°C to +70°C |
+| **Polarizer** | Transmissive |
+| **Power consumption** | 0.4W |
+| **Viewing direction** | 12 o'clock |
+| **Price** | ~$8-12 |
+| **Link** | [AliExpress](https://it.aliexpress.com/item/1005010555977696.html) |
+
+:::tip Why bare panel instead of module?
+The bare LCD panel connects directly to the PCB via a **40-pin FPC ribbon** — no breakout PCB, no pin headers. This is how commercial handheld consoles are built: compact, thin, and plug-in. The FPC ribbon slides into the J4 connector on our PCB and locks with the latch. **Zero soldering required.**
+:::
+
+### Display Orientation (landscape for gaming)
+
+```
+Portrait (native)          Landscape (gaming mode)
+┌──────────┐               ┌─────────────────────┐
+│          │               │                     │
+│  320px   │    rotate     │      480px          │
+│    ×     │   -------->   │       ×             │
+│  480px   │    90° CW     │      320px          │
+│          │               │                     │
+│  FPC ══  │               │              FPC ══ │
+└──────────┘               └─────────────────────┘
+Active: 55.68×83.52mm      Active: 83.52×55.68mm
+Outline: 60.88×94.57mm     Outline: 94.57×60.88mm
+```
+
+### FPC 40-Pin Pinout (typical ST7796 + GT911)
+
+| Pin | Signal | Direction | Description |
+|-----|--------|-----------|-------------|
+| 1 | GND | — | Ground |
+| 2 | LEDK | — | Backlight cathode (GND) |
+| 3 | LEDA | — | Backlight anode (3.3V, 120mA) |
+| 4-5 | GND | — | Ground |
+| 6 | RESET | Input | LCD reset (active low) |
+| 7 | CS | Input | Chip select (active low) |
+| 8 | RS/DC | Input | Register select / Data-Command |
+| 9 | WR | Input | Write strobe (8080 mode) |
+| 10 | RD | Input | Read strobe (8080 mode) |
+| 11-18 | DB0-DB7 | I/O | 8-bit data bus |
+| 19-26 | DB8-DB15 | I/O | 16-bit extension (NC in 8-bit mode) |
+| 27-28 | GND | — | Ground |
+| 29 | TE | Output | Tearing effect (optional, for vsync) |
+| 30-31 | IM0-IM1 | Input | Interface mode select |
+| 32-33 | GND | — | Ground |
+| 34 | VCC | — | Logic power (3.3V) |
+| 35 | VCC | — | Logic power (3.3V) |
+| 36 | CTP_SDA | I/O | GT911 touch I2C data |
+| 37 | CTP_SCL | Input | GT911 touch I2C clock |
+| 38 | CTP_INT | Output | GT911 touch interrupt |
+| 39 | CTP_RST | Input | GT911 touch reset |
+| 40 | GND | — | Ground |
+
+:::warning Pinout may vary
+The exact pinout depends on the specific panel manufacturer. **Always verify the FPC pinout** from the seller's datasheet before ordering the PCB. The table above is a typical reference for ST7796 + GT911 40-pin panels.
+:::
+
+### Alternative Display Options (prototyping only)
+
 | Option | Size | Resolution | Controller | Interface | Price | Link |
 |---|---|---|---|---|---|---|
-| **ST7796S 4.0" parallel** | 4.0" | 320x480 | ST7796S | 8/16-bit parallel | **$12.50** | [AliExpress](https://www.aliexpress.com/item/4000817656000.html) |
+| ST7796S 4.0" module + PCB | 4.0" | 320x480 | ST7796S | 8/16-bit parallel | ~$12-19 | Search: "ST7796S 4.0 inch parallel module" |
 | ST7796S 3.5" IPS SPI | 3.5" | 320x480 | ST7796S | SPI | $8-$12 | [AliExpress](https://www.aliexpress.com/item/1005006133152810.html) |
-| ILI9488 3.5" parallel | 3.5" | 320x480 | ILI9488 | 8/16-bit parallel | $8.80 | [AliExpress](https://www.aliexpress.com/item/32847751617.html) |
-| ILI9488 3.5" SPI with touch | 3.5" | 320x480 | ILI9488 | SPI | $9.61 | [AliExpress](https://www.aliexpress.com/item/32995839609.html) |
 
-**Recommended:** ST7796S 4.0" parallel (~$12.50) for best gaming performance
-
-:::warning For PCB version (JLCPCB)
-Buy the ST7796S 4.0" module **with FPC ribbon cable included** (most listings include it). The FPC plugs directly into the J4 connector on the PCB — no soldering needed, just slide in and close the latch. The display is NOT assembled by JLCPCB.
-:::
+These modules with PCB breakout + pin headers are for **breadboard prototyping only**, not for the custom JLCPCB PCB.
 
 ---
 
@@ -173,7 +241,7 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | U5 | PAM8403 audio amplifier | SOP-16 | C5122557 | Extended |
 | J1 | USB-C 16-pin connector | SMT | C2765186 | Extended |
 | U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended |
-| J4 | FPC 16-pin 0.5mm | SMT | C2856801 | Extended |
+| J4 | FPC 40-pin 0.5mm (display) | SMT | TBD | Extended |
 | J3 | JST PH 2-pin (battery) | THT | C173752 | Extended |
 | L1 | 1µH inductor 4.5A | SMD 4×4 | C280579 | Extended |
 | SW1–SW12 | SMT tact switch 5.1×5.1mm | SMT | C318884 | Extended |
@@ -194,12 +262,21 @@ When ordering the custom PCB from JLCPCB, the following components are **NOT inc
 
 | Component | Ref | Price | Connection to PCB | Solder? |
 |-----------|-----|-------|-------------------|---------|
-| **ST7796S 4.0" display with FPC cable** | U4 | ~$12-15 | FPC ribbon → J4 connector (slide + latch) | No |
+| **ST7796 4.0" bare LCD panel** (40P FPC 0.5mm, with GT911 touch) | U4 | ~$8-12 | FPC ribbon → J4 connector (slide + latch) | No |
 | **LiPo 105080 5000mAh battery** | BT1 | ~$6-8 | JST PH plug → J3 connector | No |
 | **Speaker 28mm 8Ω** | SPK1 | ~$0.80 | 2 wires → solder pads | Yes (easy) |
 | **PSP joystick** (optional) | J2 | ~$2 | 4 pins → pin header | Yes (easy) |
-| | | **~$21-26** | | |
+| | | **~$17-23** | | |
 
 :::tip
 The display and battery are **plug-in** — no soldering skills required. Only the speaker (2 wires) and optional joystick need soldering.
+:::
+
+:::warning Display purchase — important
+Buy the **bare LCD panel** (no PCB breakout board), specifically:
+- ST7796 controller, 4.0", 320×480, **40-pin FPC 0.5mm**
+- With **GT911 capacitive touch** (optional but recommended)
+- [AliExpress link](https://it.aliexpress.com/item/1005010555977696.html)
+
+Do **NOT** buy display modules with PCB breakout + pin headers — those are for breadboard prototyping and won't fit the FPC connector on the PCB.
 :::

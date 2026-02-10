@@ -48,7 +48,8 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 - **12× SMT tact switches** — D-pad (left), ABXY (right), Start/Select
 - **SW13** Menu button — bottom right
 - **LED1, LED2** — charging indicators (bottom left)
-- Display module sits on top (connected via FPC on back)
+- Bare LCD panel sits on top (connected via 40-pin FPC on back)
+- Panel outline: 94.57 × 60.88mm (landscape), active: 83.52 × 55.68mm
 
 ### Bottom Side (B.Cu) — Electronics
 - **U1 ESP32-S3-WROOM-1** — center
@@ -58,7 +59,7 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 - **L1** 1µH inductor — near IP5306
 - **J1** USB-C — bottom center
 - **U6** Micro SD slot — bottom right
-- **J4** FPC 16-pin — top center (display ribbon)
+- **J4** FPC 40-pin 0.5mm — top center (display ribbon, ST7796 + GT911 touch)
 - **J3** JST PH 2-pin — battery connector, center
 - **SW11, SW12** — L/R shoulder buttons
 - **SW_PWR** — power slide switch, left edge
@@ -77,7 +78,7 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 | U5 | PAM8403 audio amp | C5122557 | Extended | 1 |
 | J1 | USB-C 16-pin | C2765186 | Extended | 1 |
 | U6 | Micro SD slot (TF-01A) | C91145 | Extended | 1 |
-| J4 | FPC 16-pin 0.5mm | C2856801 | Extended | 1 |
+| J4 | FPC 40-pin 0.5mm (display) | TBD | Extended | 1 |
 | J3 | JST PH 2-pin (battery) | C173752 | Extended | 1 |
 | L1 | 1µH inductor 4.5A | C280579 | Extended | 1 |
 | LED1 | Red LED 0805 (charging) | C84256 | Basic | 1 |
@@ -100,12 +101,17 @@ These components are **NOT provided by JLCPCB** and must be purchased from AliEx
 | Component | Buy | Connection | Soldering |
 |-----------|-----|------------|-----------|
 | **LiPo 3.7V 5000mAh** (105080) | ~$6-8 | Plug into JST PH connector (J3) | No — plug-in connector |
-| **ST7796S 4.0" display module with FPC cable** | ~$12-15 | Insert FPC ribbon into connector (J4), close latch | No — plug-in FPC |
+| **ST7796 4.0" bare LCD panel** (40P FPC, GT911 touch) | ~$8-12 | Insert 40-pin FPC ribbon into J4 connector, close latch | No — plug-in FPC |
 | **28mm 8Ω speaker** | ~$0.80 | Solder 2 wires to pads on PCB | Yes — 2 solder points |
 | **PSP joystick** (optional) | ~$2 | Solder to pin header on PCB | Yes — 4 solder points |
 
 :::tip Display purchase
-When buying the ST7796S 4.0" display on AliExpress, make sure it comes **with the FPC ribbon cable already attached** (most modules do). The FPC cable plugs directly into the J4 connector on the PCB — no soldering required, just slide in and close the latch.
+Buy the **bare LCD panel** (NOT a module with PCB breakout):
+- ST7796 4.0" 320×480, **40-pin FPC 0.5mm pitch**
+- With GT911 capacitive touch (I2C)
+- [AliExpress](https://it.aliexpress.com/item/1005010555977696.html)
+- Panel outline: 94.57 × 60.88mm (landscape), active area: 83.52 × 55.68mm
+- The FPC ribbon slides into J4 and locks — **zero soldering**.
 :::
 
 ## JLCPCB Ordering
@@ -238,5 +244,5 @@ python3 scripts/verify_schematic_pcb.py   # Schematic/PCB consistency
 1. Export Gerbers: `kicad-cli pcb export gerbers`
 2. Upload Gerber + BOM + CPL to [jlcpcb.com](https://jlcpcb.com/)
 3. Order 5× PCBs with SMT assembly (65 components)
-4. Buy off-board components: display (with FPC), LiPo battery, speaker (see table above)
-5. Manual assembly: plug battery into J3, insert display FPC into J4, solder speaker wires
+4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
+5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
