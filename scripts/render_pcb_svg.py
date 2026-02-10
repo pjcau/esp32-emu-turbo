@@ -8,11 +8,16 @@ Layout:
   BOTTOM (B.Cu) — everything else: ESP32, ICs, connectors, L/R shoulder,
                   speaker, power switch, passives, battery connector
 
+Trace data is parsed from the generated .kicad_pcb file and color-coded
+by net type (power, data, buttons, USB, audio).
+
 No external dependencies — uses only Python standard library.
 """
 
 import os
+import re
 import sys
+from pathlib import Path
 
 # ── Board geometry ────────────────────────────────────────────────────
 
@@ -167,121 +172,121 @@ SILKSCREEN_BOTTOM = [
     ("R", 145.0, 7.5, 0.7),
 ]
 
-# ── Trace routing data (PCB coords) ──────────────────────────────────
-# Each: (x1, y1, x2, y2, color, width_mm)
+# ── PCB file parsing ─────────────────────────────────────────────────
 
-def _get_bottom_traces():
-    """Return trace segments for bottom (B.Cu) layer."""
-    # Component positions in PCB coords
-    ux, uy = 80.0, 72.0     # USB-C
-    ex, ey = 80.0, 27.5     # ESP32
-    ix, iy = 125.0, 29.5    # IP5306
-    amx, amy = 142.0, 29.5  # AMS1117
-    px, py = 30.0, 29.5     # PAM8403
-    fx, fy = 80.0, 5.5      # FPC
-    sx, sy = 120.0, 67.0    # SD card
-    lx, ly = 125.0, 40.5    # Inductor
-    jx, jy = 80.0, 52.5     # JST battery
-    spx, spy = 30.0, 52.5   # Speaker
+# Net ID -> color mapping
+_NET_COLORS = {
+    0: "#666666",        # unassigned
+    1: "#666666",        # GND
+    2: TRACE_POWER,      # VBUS
+    3: TRACE_5V,         # +5V
+    4: TRACE_3V3,        # +3V3
+    5: TRACE_POWER,      # BAT+
+}
+# LCD nets 6-19 -> blue
+for _n in range(6, 20):
+    _NET_COLORS[_n] = TRACE_DATA
+# SPI nets 20-23 -> blue
+for _n in range(20, 24):
+    _NET_COLORS[_n] = TRACE_DATA
+# I2S nets 24-26 -> blue
+for _n in range(24, 27):
+    _NET_COLORS[_n] = TRACE_DATA
+# Button nets 27-39 -> gold
+for _n in range(27, 40):
+    _NET_COLORS[_n] = TRACE_BTN
+# USB nets 40-41 -> cyan
+_NET_COLORS[40] = TRACE_USB
+_NET_COLORS[41] = TRACE_USB
+# Speaker nets 42-43 -> green
+_NET_COLORS[42] = TRACE_AUDIO
+_NET_COLORS[43] = TRACE_AUDIO
+# Joystick nets 44-45 -> gold
+_NET_COLORS[44] = TRACE_BTN
+_NET_COLORS[45] = TRACE_BTN
+
+# Net ID -> visual width multiplier (power traces drawn thicker)
+_NET_WIDTH_SCALE = {0: 1.0, 1: 1.2, 2: 1.5, 3: 1.3, 4: 1.2, 5: 1.5}
+
+
+def _parse_pcb_file(pcb_path=None):
+    """Parse segments and vias from a .kicad_pcb file.
+
+    Returns dict with 'segments' and 'vias' lists.
+    """
+    if pcb_path is None:
+        pcb_path = "hardware/kicad/esp32-emu-turbo.kicad_pcb"
+
+    path = Path(pcb_path)
+    if not path.exists():
+        return {"segments": [], "vias": []}
+
+    text = path.read_text()
+
+    segments = []
+    for m in re.finditer(
+        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
+        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
+        r'\(width\s+([\d.]+)\)\s+'
+        r'\(layer\s+"([^"]+)"\)\s+'
+        r'\(net\s+(\d+)\)', text
+    ):
+        segments.append({
+            "x1": float(m.group(1)), "y1": float(m.group(2)),
+            "x2": float(m.group(3)), "y2": float(m.group(4)),
+            "width": float(m.group(5)),
+            "layer": m.group(6),
+            "net": int(m.group(7)),
+        })
+
+    vias = []
+    for m in re.finditer(
+        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
+        r'\(size\s+([\d.]+)\)\s+'
+        r'\(drill\s+([\d.]+)\)', text
+    ):
+        vias.append({
+            "x": float(m.group(1)), "y": float(m.group(2)),
+            "size": float(m.group(3)),
+            "drill": float(m.group(4)),
+        })
+
+    return {"segments": segments, "vias": vias}
+
+
+def _get_traces_from_pcb(layer, pcb_data=None):
+    """Return trace tuples for a given layer, parsed from the PCB file.
+
+    Each tuple: (x1, y1, x2, y2, color, visual_width_mm)
+    """
+    if pcb_data is None:
+        pcb_data = _parse_pcb_file()
 
     traces = []
-
-    # GND trace color
-    gnd = "#666666"
-
-    # Power VBUS+ (red): USB-C -> IP5306
-    traces.extend([
-        (ux + 3, uy, ux + 3, iy + 12, TRACE_POWER, 1.2),
-        (ux + 3, iy + 12, ix, iy + 12, TRACE_POWER, 1.2),
-        (ix, iy + 12, ix, iy + 3, TRACE_POWER, 1.2),
-    ])
-    # GND return: USB-C -> IP5306
-    traces.extend([
-        (ux - 3, uy, ux - 3, iy + 14, gnd, 1.2),
-        (ux - 3, iy + 14, ix - 6, iy + 14, gnd, 1.2),
-        (ix - 6, iy + 14, ix - 6, iy + 3, gnd, 1.2),
-    ])
-
-    # 5V+ rail (orange): IP5306 -> L1, IP5306 -> AMS1117
-    traces.extend([
-        (ix + 3, iy, lx, ly, TRACE_5V, 1.0),
-        (ix + 3, iy, amx - 3, amy, TRACE_5V, 1.0),
-    ])
-    # GND return: IP5306 -> AMS1117
-    traces.append((ix + 3, iy + 2, amx - 3, amy + 2, gnd, 1.0))
-
-    # 3V3+ rail (yellow-orange): AMS1117 -> ESP32
-    traces.extend([
-        (amx, amy - 2, amx, ey - 5, TRACE_3V3, 0.8),
-        (amx, ey - 5, ex + 10, ey - 5, TRACE_3V3, 0.8),
-    ])
-    # GND return: AMS1117 -> ESP32
-    traces.extend([
-        (amx - 2, amy - 2, amx - 2, ey - 3, gnd, 0.8),
-        (amx - 2, ey - 3, ex + 10, ey - 3, gnd, 0.8),
-    ])
-
-    # Battery+ (red): IP5306 -> JST
-    traces.extend([
-        (ix - 3, iy + 3, ix - 3, jy, TRACE_POWER, 1.2),
-        (ix - 3, jy, jx + 3, jy, TRACE_POWER, 1.2),
-    ])
-    # Battery GND: IP5306 -> JST
-    traces.extend([
-        (ix - 5, iy + 3, ix - 5, jy + 2, gnd, 1.2),
-        (ix - 5, jy + 2, jx + 3, jy + 2, gnd, 1.2),
-    ])
-
-    # 8080 Display bus (blue): ESP32 -> FPC (8 lines)
-    for i in range(8):
-        ox = -7 + i * 2
-        traces.append((ex + ox, ey - 13, fx + ox, fy + 2, TRACE_DATA, 0.5))
-
-    # SPI to SD (blue): ESP32 -> SD card (4 lines)
-    for i in range(4):
-        oy = -3 + i * 2
-        traces.append((ex + 10, ey + oy, sx - 7, sy + oy, TRACE_DATA, 0.5))
-
-    # I2S to PAM8403 (blue): ESP32 -> PAM8403 (3 lines)
-    for i in range(3):
-        oy = -2 + i * 2
-        traces.append((ex - 10, ey + oy, px + 6, py + oy, TRACE_DATA, 0.5))
-
-    # Audio output (green): PAM8403 -> Speaker
-    traces.extend([
-        (px - 5, py, spx + 11, spy, TRACE_AUDIO, 0.6),
-        (px - 5, py + 2, spx + 11, spy + 2, TRACE_AUDIO, 0.6),
-    ])
-
-    # USB D+/D- (cyan): USB-C -> ESP32
-    traces.extend([
-        (ux - 1, uy - 3, ux - 1, ey + 8, TRACE_USB, 0.5),
-        (ux - 1, ey + 8, ex + 2, ey + 3, TRACE_USB, 0.5),
-        (ux + 1, uy - 3, ux + 1, ey + 10, TRACE_USB, 0.5),
-        (ux + 1, ey + 10, ex + 4, ey + 3, TRACE_USB, 0.5),
-    ])
-
+    for seg in pcb_data["segments"]:
+        if seg["layer"] != layer:
+            continue
+        net = seg["net"]
+        color = _NET_COLORS.get(net, TRACE_DATA)
+        scale = _NET_WIDTH_SCALE.get(net, 1.0)
+        visual_w = seg["width"] * scale * 2.0  # scale up for visibility
+        traces.append((
+            seg["x1"], seg["y1"],
+            seg["x2"], seg["y2"],
+            color, visual_w,
+        ))
     return traces
 
 
-def _get_top_traces():
-    """Return trace segments for top (F.Cu) layer — button to via."""
-    traces = []
-    # D-pad buttons -> vias (short copper traces)
-    dpad_btns = [(18.0, 23.5), (18.0, 41.5), (9.0, 32.5), (27.0, 32.5)]
-    for bx, by in dpad_btns:
-        traces.append((bx, by, bx + 4, by, TRACE_BTN, 0.5))
-        # Via dot will be drawn at the end
+def _get_vias_from_pcb(pcb_data=None):
+    """Return via positions parsed from the PCB file.
 
-    # ABXY buttons -> vias
-    abxy_btns = [(142.0, 22.5), (152.0, 32.5), (142.0, 42.5), (132.0, 32.5)]
-    for bx, by in abxy_btns:
-        traces.append((bx, by, bx - 4, by, TRACE_BTN, 0.5))
+    Each tuple: (x, y, pad_size)
+    """
+    if pcb_data is None:
+        pcb_data = _parse_pcb_file()
 
-    # Menu button -> via (bottom-right)
-    traces.append((142.0, 62.5, 142.0, 58.5, TRACE_BTN, 0.5))
-
-    return traces
+    return [(v["x"], v["y"], v["size"]) for v in pcb_data["vias"]]
 
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -674,25 +679,34 @@ def _draw_traces(traces, mirror_x=False):
     return "\n".join(lines)
 
 
-def _draw_vias(traces, mirror_x=False):
-    """Draw via dots at trace endpoints."""
+def _draw_pcb_vias(via_list, mirror_x=False):
+    """Draw via dots from parsed PCB data.
+
+    via_list: list of (x, y, pad_size) tuples.
+    """
     lines = []
-    for x1, y1, x2, y2, color, _ in traces:
-        # Draw via at the end point of each button trace
-        vx, vy = x2, y2
+    for vx, vy, pad_size in via_list:
         if mirror_x:
             vx = BOARD_W - vx
         cx, cy = _tx(vx), _ty(vy)
-        r = _s(0.4)
+        r_pad = _s(pad_size / 2)
+        r_drill = _s(pad_size / 4)
         lines.append(
-            f'<circle cx="{cx}" cy="{cy}" r="{r}" '
+            f'<circle cx="{cx}" cy="{cy}" r="{r_pad}" '
             f'fill="{PAD_GOLD}" stroke="{HOLE_DARK}" stroke-width="0.5"/>'
+        )
+        lines.append(
+            f'<circle cx="{cx}" cy="{cy}" r="{r_drill}" '
+            f'fill="{HOLE_DARK}"/>'
         )
     return "\n".join(lines)
 
 
 def generate_svg(view="top"):
     """Generate complete SVG for one side of the PCB."""
+    pcb_data = _parse_pcb_file()
+    via_list = _get_vias_from_pcb(pcb_data)
+
     title = f"ESP32 Emu Turbo — {'Top' if view == 'top' else 'Bottom'} View"
     parts = [_svg_header(title, view)]
     parts.append(_draw_board(view))
@@ -701,10 +715,10 @@ def generate_svg(view="top"):
     if view == "top":
         # Display area (the main visual element on top)
         parts.append(_draw_display_area())
-        # Traces (button to via)
-        top_traces = _get_top_traces()
+        # Traces from PCB file (F.Cu layer)
+        top_traces = _get_traces_from_pcb("F.Cu", pcb_data)
         parts.append(_draw_traces(top_traces))
-        parts.append(_draw_vias(top_traces))
+        parts.append(_draw_pcb_vias(via_list))
         # Top-side components
         for ref, val, pkg, x, y, w, h in COMPONENTS_TOP:
             parts.append(_draw_component(ref, val, pkg, x, y, w, h))
@@ -720,9 +734,11 @@ def generate_svg(view="top"):
         path = _rounded_rect_path(
             1, 1, BOARD_W - 2, BOARD_H - 2, CORNER_R - 1)
         parts.append(f'<path d="{path}" fill="#1a4a2a" opacity="0.3"/>')
-        # Traces (mirrored for bottom view)
-        bottom_traces = _get_bottom_traces()
+        # Traces from PCB file (B.Cu layer, mirrored for bottom view)
+        bottom_traces = _get_traces_from_pcb("B.Cu", pcb_data)
         parts.append(_draw_traces(bottom_traces, mirror_x=True))
+        # Vias (mirrored)
+        parts.append(_draw_pcb_vias(via_list, mirror_x=True))
         # Bottom components (mirrored X for bottom view)
         for ref, val, pkg, x, y, w, h in COMPONENTS_BOTTOM:
             mx = BOARD_W - x

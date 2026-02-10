@@ -12,6 +12,8 @@ Display module sits on top of PCB but FPC connector is on the back.
 import math
 
 from . import primitives as P
+from . import footprints as FP
+from . import routing
 
 # ── Board dimensions (from enclosure.scad) ──────────────────────
 BOARD_W = 160.0   # mm (170mm body - 2x5mm clearance)
@@ -238,7 +240,7 @@ def _display_outline():
 
 
 def _component_placeholders():
-    """Generate placeholder footprints for component placement."""
+    """Generate footprints with real pad definitions."""
     parts = []
     placements = []
 
@@ -277,185 +279,72 @@ def _component_placeholders():
 
     # ── BOTTOM side (B.Cu): everything else ──
 
-    # ESP32-S3-WROOM-1 (center, back)
     px, py = enc_to_pcb(*ESP32_ENC)
     placements.append(("U1", "ESP32-S3-WROOM-1-N16R8",
                         px, py, 0, "B.Cu"))
 
-    # Shoulder L/R (SW11-SW12, back side)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
     placements.append(("SW11", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
     placements.append(("SW12", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
 
-    # FPC display connector (top center, back side)
     px, py = enc_to_pcb(*FPC_ENC)
     placements.append(("J4", "FPC-16P-0.5mm", px, py, 0, "B.Cu"))
 
-    # USB-C connector (bottom center edge, back side)
     px, py = enc_to_pcb(*USBC_ENC)
     placements.append(("J1", "USB-C-16P", px, py, 0, "B.Cu"))
 
-    # SD card slot (back side, more inward)
     px, py = enc_to_pcb(*SD_ENC)
     placements.append(("U6", "TF-01A", px, py, 0, "B.Cu"))
 
-    # Power switch (back side, edge-accessible)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
     placements.append(("SW_PWR", "SS-12D00G3", px, py, 0, "B.Cu"))
 
-    # Speaker (back side, 22mm)
     px, py = enc_to_pcb(*SPEAKER_ENC)
     placements.append(("SPK1", "Speaker-22mm", px, py, 0, "B.Cu"))
 
-    # IP5306 (right area, back)
     px, py = enc_to_pcb(*IP5306_ENC)
     placements.append(("U2", "ESOP-8", px, py, 0, "B.Cu"))
 
-    # AMS1117 (far right, back)
     px, py = enc_to_pcb(*AMS1117_ENC)
     placements.append(("U3", "SOT-223", px, py, 0, "B.Cu"))
 
-    # PAM8403 (left area, back)
     px, py = enc_to_pcb(*PAM8403_ENC)
     placements.append(("U5", "SOP-16", px, py, 0, "B.Cu"))
 
-    # Inductor (near IP5306, back)
     px, py = enc_to_pcb(*INDUCTOR_ENC)
     placements.append(("L1", "SMD-4x4x2", px, py, 0, "B.Cu"))
 
-    # JST battery connector (center, back)
     px, py = enc_to_pcb(*JST_BAT_ENC)
     placements.append(("J3", "JST-PH-2P", px, py, 0, "B.Cu"))
 
-    # Generate footprint placeholders
-    for ref, val, x, y, rot, layer in placements:
+    # Generate footprints with real pad geometries
+    for ref, fp_name, x, y, rot, layer in placements:
+        layer_char = "F" if "F." in layer else "B"
+        pads = FP.get_pads(fp_name, layer_char)
+        pad_str = "".join(pads)
         parts.append(
-            f'  (footprint "{val}" (at {x} {y} {rot})'
+            f'  (footprint "{fp_name}" (at {x} {y} {rot})'
             f' (layer "{layer}")\n'
             f'    (uuid "{P.uid()}")\n'
             f'    (property "Reference" "{ref}"'
             f' (at 0 -3 0) (layer "{layer}")'
             f' (effects (font (size 1 1)'
             f' (thickness 0.15))))\n'
-            f'    (property "Value" "{val}"'
+            f'    (property "Value" "{fp_name}"'
             f' (at 0 3 0) (layer "{layer}")'
             f' (effects (font (size 1 1)'
             f' (thickness 0.15))))\n'
+            f'{pad_str}'
             f'  )\n'
         )
 
     return "".join(parts), placements
 
 
-def _gnd_zone():
-    """GND copper pour on In1.Cu (full board with margin)."""
-    m = 0.5
-    pts = [
-        (m, m), (BOARD_W - m, m),
-        (BOARD_W - m, BOARD_H - m), (m, BOARD_H - m),
-    ]
-    return P.zone_gnd("In1.Cu", pts)
-
-
-def _traces():
-    """Generate representative PCB traces for major signal paths."""
-    parts = []
-
-    # Key component positions (PCB coordinates)
-    ux, uy = enc_to_pcb(*USBC_ENC)
-    ex, ey = enc_to_pcb(*ESP32_ENC)
-    ix, iy = enc_to_pcb(*IP5306_ENC)
-    amx, amy = enc_to_pcb(*AMS1117_ENC)
-    px, py = enc_to_pcb(*PAM8403_ENC)
-    fx, fy = enc_to_pcb(*FPC_ENC)
-    sx, sy = enc_to_pcb(*SD_ENC)
-    lx, ly = enc_to_pcb(*INDUCTOR_ENC)
-    jx, jy = enc_to_pcb(*JST_BAT_ENC)
-    spx, spy = enc_to_pcb(*SPEAKER_ENC)
-
-    # ── Power traces (B.Cu, 0.5mm) — each with GND return ──
-
-    # VBUS+: USB-C -> IP5306
-    parts.append(P.segment(ux + 3, uy, ux + 3, iy + 12, "B.Cu", 0.5))
-    parts.append(P.segment(ux + 3, iy + 12, ix, iy + 12, "B.Cu", 0.5))
-    parts.append(P.segment(ix, iy + 12, ix, iy + 3, "B.Cu", 0.5))
-    # GND return: USB-C -> IP5306
-    parts.append(P.segment(ux - 3, uy, ux - 3, iy + 14, "B.Cu", 0.5))
-    parts.append(P.segment(ux - 3, iy + 14, ix - 6, iy + 14, "B.Cu", 0.5))
-    parts.append(P.segment(ix - 6, iy + 14, ix - 6, iy + 3, "B.Cu", 0.5))
-
-    # 5V+: IP5306 -> L1 -> AMS1117
-    parts.append(P.segment(ix + 3, iy, lx, ly, "B.Cu", 0.5))
-    parts.append(P.segment(ix + 3, iy, amx - 3, amy, "B.Cu", 0.5))
-    # GND return: IP5306 -> AMS1117
-    parts.append(P.segment(ix + 3, iy + 2, amx - 3, amy + 2, "B.Cu", 0.5))
-
-    # 3V3+: AMS1117 -> ESP32
-    parts.append(P.segment(amx, amy - 2, amx, ey - 5, "B.Cu", 0.4))
-    parts.append(P.segment(amx, ey - 5, ex + 10, ey - 5, "B.Cu", 0.4))
-    # GND return: AMS1117 -> ESP32
-    parts.append(P.segment(amx - 2, amy - 2, amx - 2, ey - 3, "B.Cu", 0.4))
-    parts.append(P.segment(amx - 2, ey - 3, ex + 10, ey - 3, "B.Cu", 0.4))
-
-    # BAT+: IP5306 -> JST
-    parts.append(P.segment(ix - 3, iy + 3, ix - 3, jy, "B.Cu", 0.5))
-    parts.append(P.segment(ix - 3, jy, jx + 3, jy, "B.Cu", 0.5))
-    # BAT GND: IP5306 -> JST
-    parts.append(P.segment(ix - 5, iy + 3, ix - 5, jy + 2, "B.Cu", 0.5))
-    parts.append(P.segment(ix - 5, jy + 2, jx + 3, jy + 2, "B.Cu", 0.5))
-
-    # ── Data traces (B.Cu, 0.2mm) ──
-
-    # 8080 display bus: ESP32 -> FPC (8 parallel lines)
-    for i in range(8):
-        ox = -7 + i * 2
-        parts.append(P.segment(
-            ex + ox, ey - 13, ex + ox, ey - 18, "B.Cu", 0.2))
-        parts.append(P.segment(
-            ex + ox, ey - 18, fx + ox, fy + 2, "B.Cu", 0.2))
-
-    # SPI: ESP32 -> SD card (4 lines)
-    for i in range(4):
-        oy = -3 + i * 2
-        parts.append(P.segment(
-            ex + 10, ey + oy, sx - 7, sy + oy, "B.Cu", 0.2))
-
-    # I2S: ESP32 -> PAM8403 (3 lines)
-    for i in range(3):
-        oy = -2 + i * 2
-        parts.append(P.segment(
-            ex - 10, ey + oy, px + 6, py + oy, "B.Cu", 0.2))
-
-    # Audio output: PAM8403 -> Speaker (2 lines)
-    parts.append(P.segment(px - 5, py, spx + 11, spy, "B.Cu", 0.3))
-    parts.append(P.segment(px - 5, py + 2, spx + 11, spy + 2, "B.Cu", 0.3))
-
-    # USB D+/D-: USB-C -> ESP32 (differential pair)
-    parts.append(P.segment(ux - 1, uy - 3, ux - 1, ey + 8, "B.Cu", 0.2))
-    parts.append(P.segment(ux - 1, ey + 8, ex + 2, ey + 3, "B.Cu", 0.2))
-    parts.append(P.segment(ux + 1, uy - 3, ux + 1, ey + 10, "B.Cu", 0.2))
-    parts.append(P.segment(ux + 1, ey + 10, ex + 4, ey + 3, "B.Cu", 0.2))
-
-    # ── Button vias (F.Cu -> B.Cu) ──
-    for ddx, ddy in DPAD_OFFSETS:
-        bx, by = DPAD_ENC
-        vx, vy = enc_to_pcb(bx + ddx, by + ddy)
-        parts.append(P.via(vx + 4, vy))
-        parts.append(P.segment(vx, vy, vx + 4, vy, "F.Cu", 0.2))
-
-    for ddx, ddy in ABXY_OFFSETS:
-        bx, by = ABXY_ENC
-        vx, vy = enc_to_pcb(bx + ddx, by + ddy)
-        parts.append(P.via(vx - 4, vy))
-        parts.append(P.segment(vx, vy, vx - 4, vy, "F.Cu", 0.2))
-
-    # Menu button via
-    mx, my = enc_to_pcb(*MENU_ENC)
-    parts.append(P.via(mx, my - 4))
-    parts.append(P.segment(mx, my, mx, my - 4, "F.Cu", 0.2))
-
-    return "".join(parts)
+def _all_routing():
+    """Generate all traces, vias, and copper zones via routing module."""
+    return routing.generate_all_traces()
 
 
 def generate_board() -> str:
@@ -479,8 +368,6 @@ def generate_board() -> str:
     comp_str, _placements = _component_placeholders()
     parts.append(comp_str)
     parts.append("\n")
-    parts.append(_traces())
-    parts.append("\n")
-    parts.append(_gnd_zone())
+    parts.append(_all_routing())
     parts.append(P.footer())
     return "".join(parts)

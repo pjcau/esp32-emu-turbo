@@ -24,7 +24,7 @@ def header() -> str:
         '(kicad_pcb\n'
         '  (version 20240108)\n'
         '  (generator "pcb_generator")\n'
-        '  (generator_version "1.0")\n'
+        '  (generator_version "2.0")\n'
         f'  (general (thickness 1.6) (legacy_teardrops no))\n'
         '  (paper "A4")\n'
     )
@@ -97,12 +97,48 @@ def setup_4layer() -> str:
     )
 
 
+# ── Complete netlist ──────────────────────────────────────────────
+
+NET_LIST = [
+    (0, ""),
+    (1, "GND"),
+    (2, "VBUS"),
+    (3, "+5V"),
+    (4, "+3V3"),
+    (5, "BAT+"),
+    # Display 8080 data bus
+    (6, "LCD_D0"), (7, "LCD_D1"), (8, "LCD_D2"), (9, "LCD_D3"),
+    (10, "LCD_D4"), (11, "LCD_D5"), (12, "LCD_D6"), (13, "LCD_D7"),
+    # Display control
+    (14, "LCD_CS"), (15, "LCD_RST"), (16, "LCD_DC"),
+    (17, "LCD_WR"), (18, "LCD_RD"), (19, "LCD_BL"),
+    # SD card SPI
+    (20, "SD_MOSI"), (21, "SD_MISO"), (22, "SD_CLK"), (23, "SD_CS"),
+    # I2S audio
+    (24, "I2S_BCLK"), (25, "I2S_LRCK"), (26, "I2S_DOUT"),
+    # Buttons
+    (27, "BTN_UP"), (28, "BTN_DOWN"), (29, "BTN_LEFT"), (30, "BTN_RIGHT"),
+    (31, "BTN_A"), (32, "BTN_B"), (33, "BTN_X"), (34, "BTN_Y"),
+    (35, "BTN_START"), (36, "BTN_SELECT"),
+    (37, "BTN_L"), (38, "BTN_R"),
+    (39, "BTN_MENU"),
+    # USB
+    (40, "USB_D+"), (41, "USB_D-"),
+    # Audio output
+    (42, "SPK+"), (43, "SPK-"),
+    # Joystick (optional)
+    (44, "JOY_X"), (45, "JOY_Y"),
+]
+
+NET_ID = {name: nid for nid, name in NET_LIST}
+
+
 def nets() -> str:
-    """Declare nets used in the board (required before any net reference)."""
-    return (
-        '  (net 0 "")\n'
-        '  (net 1 "GND")\n'
-    )
+    """Declare all nets used in the board."""
+    lines = []
+    for nid, name in NET_LIST:
+        lines.append(f'  (net {nid} "{name}")\n')
+    return "".join(lines)
 
 
 def gr_line(x1, y1, x2, y2, layer="Edge.Cuts", width=0.05):
@@ -156,11 +192,11 @@ def via(x, y, size=0.6, drill=0.3, net=0):
     )
 
 
-def zone_gnd(layer, pts_list, net=1):
-    """Copper fill zone for GND."""
+def zone_fill(layer, pts_list, net=1, net_name="GND"):
+    """Copper fill zone."""
     pts = " ".join(f"(xy {x} {y})" for x, y in pts_list)
     return (
-        f'  (zone (net {net}) (net_name "GND")'
+        f'  (zone (net {net}) (net_name "{net_name}")'
         f' (layer "{layer}")'
         f' (uuid "{uid()}")\n'
         f'    (fill yes (thermal_gap 0.5)'
@@ -168,6 +204,11 @@ def zone_gnd(layer, pts_list, net=1):
         f'    (polygon (pts {pts}))\n'
         f'  )\n'
     )
+
+
+def zone_gnd(layer, pts_list, net=1):
+    """GND copper fill zone."""
+    return zone_fill(layer, pts_list, net, "GND")
 
 
 def segment(x1, y1, x2, y2, layer="F.Cu", width=0.25, net=0):
