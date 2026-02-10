@@ -1,5 +1,6 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all website-dev website-build clean help
+       render-enclosure render-pcb render-all simulate verify-all \
+       website-dev website-build clean help
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -23,6 +24,14 @@ render-enclosure: docker-build ## Render OpenSCAD enclosure to PNG
 render-pcb: generate-pcb ## Render PCB layout to SVG/PNG/GIF
 	python3 scripts/render_pcb_svg.py website/static/img/pcb
 	python3 scripts/render_pcb_animation.py website/static/img/pcb
+
+simulate: ## Run electrical circuit simulation/verification
+	python3 scripts/simulate_circuit.py
+
+verify-all: ## Run all pre-production checks (DRC + simulation + consistency)
+	python3 scripts/drc_check.py
+	python3 scripts/simulate_circuit.py
+	python3 scripts/verify_schematic_pcb.py
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export)
 	./scripts/render-all.sh
