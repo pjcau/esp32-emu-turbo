@@ -8,7 +8,7 @@ help: ## Show this help
 docker-build: ## Build Docker images (KiCad + OpenSCAD)
 	docker compose build
 
-generate-schematic: ## Generate KiCad schematic from Python spec
+generate-schematic: ## Generate 7 KiCad schematics from Python spec
 	docker compose run --rm generate-sch
 
 render-schematics: docker-build ## Export KiCad schematic to SVG
@@ -30,4 +30,6 @@ all: render-all website-build ## Full pipeline: generate + render + build websit
 
 clean: ## Remove generated renders
 	rm -f website/static/img/schematics/*.svg
+	rm -f website/static/img/schematics/*.pdf
 	rm -f website/static/img/renders/*.png
+	rm -f hardware/kicad/0[1-7]-*.kicad_sch

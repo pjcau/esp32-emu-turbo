@@ -6,7 +6,7 @@ services:
       - ./scripts:/scripts:ro
       - ./hardware/kicad:/output
     working_dir: /scripts
-    command: python3 generate-schematic.py /output/esp32-emu-turbo.kicad_sch
+    command: python3 -m generate_schematics /output
 
   # Export KiCad schematic to SVG/PDF
   kicad:

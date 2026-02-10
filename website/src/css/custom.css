@@ -28,3 +28,86 @@
   --ifm-color-primary-lightest: #4fddbf;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
+
+/* Schematic SVG images */
+.schematic-container {
+  background: #fff;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
+.schematic-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+[data-theme='dark'] .schematic-container {
+  background: #1e1e2e;
+  border-color: var(--ifm-color-emphasis-400);
+}
+
+[data-theme='dark'] .schematic-container img {
+  filter: invert(0.88) hue-rotate(180deg);
+}
+
+/* Sheet navigation cards */
+.sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  margin: 20px 0;
+}
+
+.sheet-card {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  padding: 14px 16px;
+  text-decoration: none !important;
+  color: inherit !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.sheet-card:hover {
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme='dark'] .sheet-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.sheet-card h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.95rem;
+}
+
+.sheet-card p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ifm-color-emphasis-700);
+}
+
+/* PDF download button */
+.pdf-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-800) !important;
+  text-decoration: none !important;
+  transition: border-color 0.15s, background 0.15s;
+  margin: 8px 4px 8px 0;
+}
+
+.pdf-download:hover {
+  border-color: var(--ifm-color-primary);
+  background: var(--ifm-color-primary-lightest);
+  color: #fff !important;
+}
