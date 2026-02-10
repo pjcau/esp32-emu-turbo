@@ -33,6 +33,10 @@ All components selected for the prototype, with direct purchase links.
 
 **Recommended:** ST7796S 4.0" parallel (~$12.50) for best gaming performance
 
+:::warning For PCB version (JLCPCB)
+Buy the ST7796S 4.0" module **with FPC ribbon cable included** (most listings include it). The FPC plugs directly into the J4 connector on the PCB — no soldering needed, just slide in and close the latch. The display is NOT assembled by JLCPCB.
+:::
+
 ---
 
 ## Power Supply
@@ -181,3 +185,21 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | C2,C19 | 22µF 1206 | 1206 | C29632 | Basic |
 
 **Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.
+
+---
+
+## PCB Version — What to Buy Separately
+
+When ordering the custom PCB from JLCPCB, the following components are **NOT included** in the assembly and must be purchased from AliExpress:
+
+| Component | Ref | Price | Connection to PCB | Solder? |
+|-----------|-----|-------|-------------------|---------|
+| **ST7796S 4.0" display with FPC cable** | U4 | ~$12-15 | FPC ribbon → J4 connector (slide + latch) | No |
+| **LiPo 105080 5000mAh battery** | BT1 | ~$6-8 | JST PH plug → J3 connector | No |
+| **Speaker 28mm 8Ω** | SPK1 | ~$0.80 | 2 wires → solder pads | Yes (easy) |
+| **PSP joystick** (optional) | J2 | ~$2 | 4 pins → pin header | Yes (easy) |
+| | | **~$21-26** | | |
+
+:::tip
+The display and battery are **plug-in** — no soldering skills required. Only the speaker (2 wires) and optional joystick need soldering.
+:::

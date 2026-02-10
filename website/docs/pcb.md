@@ -93,14 +93,20 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 | SW_PWR | Slide switch SS-12D00G3 | C431540 | Extended | 1 |
 | SPK1 | 22mm speaker pads | — | Manual | 1 |
 
-### Manual Assembly (off-board)
+### Manual Assembly — Buy Separately
 
-| Component | Connection |
-|-----------|------------|
-| LiPo 3.7V 5000mAh battery | JST PH connector (J3) |
-| ST7796S 4.0" display module | FPC ribbon cable (J4) |
-| 28mm 8Ω speaker | Solder pads on PCB |
-| PSP joystick (optional) | Pin header on PCB |
+These components are **NOT provided by JLCPCB** and must be purchased from AliExpress (see [BOM](components.md)):
+
+| Component | Buy | Connection | Soldering |
+|-----------|-----|------------|-----------|
+| **LiPo 3.7V 5000mAh** (105080) | ~$6-8 | Plug into JST PH connector (J3) | No — plug-in connector |
+| **ST7796S 4.0" display module with FPC cable** | ~$12-15 | Insert FPC ribbon into connector (J4), close latch | No — plug-in FPC |
+| **28mm 8Ω speaker** | ~$0.80 | Solder 2 wires to pads on PCB | Yes — 2 solder points |
+| **PSP joystick** (optional) | ~$2 | Solder to pin header on PCB | Yes — 4 solder points |
+
+:::tip Display purchase
+When buying the ST7796S 4.0" display on AliExpress, make sure it comes **with the FPC ribbon cable already attached** (most modules do). The FPC cable plugs directly into the J4 connector on the PCB — no soldering required, just slide in and close the latch.
+:::
 
 ## JLCPCB Ordering
 
@@ -232,4 +238,5 @@ python3 scripts/verify_schematic_pcb.py   # Schematic/PCB consistency
 1. Export Gerbers: `kicad-cli pcb export gerbers`
 2. Upload Gerber + BOM + CPL to [jlcpcb.com](https://jlcpcb.com/)
 3. Order 5× PCBs with SMT assembly (65 components)
-4. Manual assembly: solder battery connector, display FPC, speaker
+4. Buy off-board components: display (with FPC), LiPo battery, speaker (see table above)
+5. Manual assembly: plug battery into J3, insert display FPC into J4, solder speaker wires

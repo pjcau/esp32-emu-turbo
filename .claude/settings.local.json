@@ -18,7 +18,8 @@
       "Bash(make render-schematics:*)",
       "Bash(npx docusaurus deploy)",
       "Bash(kicad-cli sch export svg:*)",
-      "Bash(USE_SSH=true npx docusaurus deploy:*)"
+      "Bash(USE_SSH=true npx docusaurus deploy:*)",
+      "Bash(ls:*)"
     ]
   }
 }
