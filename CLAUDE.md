@@ -18,7 +18,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 ## Hardware Requirements
 
 - **MCU:** ESP32-S3 N16R8 (16MB flash, 8MB Octal PSRAM, dual-core LX7 240MHz)
-- **Display:** ST7796S 4.0" 320x480, 8-bit 8080 parallel (mandatory for SNES)
+- **Display:** ILI9488 3.95" 320x480, 8-bit 8080 parallel, bare panel 40P FPC 0.5mm
 - **Power:** LiPo 3.7V 5000mAh (105080, 50x80x10mm)
 - **Charging:** USB-C via IP5306 (charge-and-play)
 - **Regulator:** AMS1117 5V->3.3V
@@ -26,7 +26,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 - **Storage:** Micro SD card via SPI (for ROMs)
 - **Emulation targets:** SNES (primary), NES (secondary)
 - **Controls:** 12 buttons (D-pad, A, B, X, Y, Start, Select, L, R) + optional PSP joystick
-- **Prototype budget:** ~$42-55
+- **Prototype budget:** ~$33-45
 
 ## Project Structure
 

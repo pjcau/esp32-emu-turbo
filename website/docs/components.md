@@ -24,29 +24,31 @@ All components selected for the prototype, with direct purchase links.
 
 ## Display
 
-### Recommended: Bare LCD Panel (for custom PCB)
+### Chosen: ILI9488 3.95" Bare LCD Panel (for custom PCB)
 
 | Spec | Value |
 |------|-------|
-| **Size** | 4.0" |
+| **Size** | 3.95" |
 | **Resolution** | 320(RGB) × 480 |
-| **Controller** | ST7796 |
-| **Touch IC** | GT911 (capacitive, I2C) |
+| **Controller** | ILI9488 |
+| **Touch** | Resistive (SPI) — not connected, touch not used |
 | **Connector** | 40-pin FPC, 0.5mm pitch |
-| **Interface** | MCU 8/16-bit parallel + SPI 3-wire/4-wire |
-| **Backlight** | White LED (8 chips parallel), 3.3V / 120mA |
+| **Interface** | MCU 8/16-bit parallel + SPI |
+| **Backlight** | White LED, 3.3V |
 | **Display colors** | 262K |
-| **Active area** | 55.68 × 83.52 mm |
-| **Outline** | 60.88 × 94.57 × 3.65 mm |
-| **Operating temp** | -20°C to +70°C |
-| **Polarizer** | Transmissive |
-| **Power consumption** | 0.4W |
-| **Viewing direction** | 12 o'clock |
-| **Price** | ~$8-12 |
-| **Link** | [AliExpress](https://it.aliexpress.com/item/1005010555977696.html) |
+| **Price** | ~$3.95 |
+| **Link** | [AliExpress](https://it.aliexpress.com/item/1005009422879126.html) |
 
 :::tip Why bare panel instead of module?
 The bare LCD panel connects directly to the PCB via a **40-pin FPC ribbon** — no breakout PCB, no pin headers. This is how commercial handheld consoles are built: compact, thin, and plug-in. The FPC ribbon slides into the J4 connector on our PCB and locks with the latch. **Zero soldering required.**
+:::
+
+:::info ILI9488 vs ST7796S — driver notes
+Both controllers are equivalent for 8-bit 8080 parallel with RGB565 (~20 MB/s). Key differences:
+- **ESP-IDF**: use community component [`esp_lcd_ili9488`](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488) (ST7796S has official Espressif component)
+- **LovyanGFX / TFT_eSPI**: both controllers fully supported
+- **SPI limitation**: ILI9488 does NOT support RGB565 over SPI (only RGB666/888). This does not affect us since we use **parallel 8080**.
+- **Init sequence**: slightly different command set, but handled by the driver library
 :::
 
 ### Display Orientation (landscape for gaming)
@@ -61,17 +63,15 @@ Portrait (native)          Landscape (gaming mode)
 │          │               │                     │
 │  FPC ══  │               │              FPC ══ │
 └──────────┘               └─────────────────────┘
-Active: 55.68×83.52mm      Active: 83.52×55.68mm
-Outline: 60.88×94.57mm     Outline: 94.57×60.88mm
 ```
 
-### FPC 40-Pin Pinout (typical ST7796 + GT911)
+### FPC 40-Pin Pinout (typical ILI9488 + resistive touch)
 
 | Pin | Signal | Direction | Description |
 |-----|--------|-----------|-------------|
 | 1 | GND | — | Ground |
 | 2 | LEDK | — | Backlight cathode (GND) |
-| 3 | LEDA | — | Backlight anode (3.3V, 120mA) |
+| 3 | LEDA | — | Backlight anode (3.3V) |
 | 4-5 | GND | — | Ground |
 | 6 | RESET | Input | LCD reset (active low) |
 | 7 | CS | Input | Chip select (active low) |
@@ -84,26 +84,24 @@ Outline: 60.88×94.57mm     Outline: 94.57×60.88mm
 | 29 | TE | Output | Tearing effect (optional, for vsync) |
 | 30-31 | IM0-IM1 | Input | Interface mode select |
 | 32-33 | GND | — | Ground |
-| 34 | VCC | — | Logic power (3.3V) |
-| 35 | VCC | — | Logic power (3.3V) |
-| 36 | CTP_SDA | I/O | GT911 touch I2C data |
-| 37 | CTP_SCL | Input | GT911 touch I2C clock |
-| 38 | CTP_INT | Output | GT911 touch interrupt |
-| 39 | CTP_RST | Input | GT911 touch reset |
+| 34-35 | VCC | — | Logic power (3.3V) |
+| 36 | T_CLK | — | Touch SPI clock — **NC (not connected)** |
+| 37 | T_CS | — | Touch SPI chip select — **NC** |
+| 38 | T_DIN | — | Touch SPI MOSI — **NC** |
+| 39 | T_DO | — | Touch SPI MISO — **NC** |
 | 40 | GND | — | Ground |
 
 :::warning Pinout may vary
-The exact pinout depends on the specific panel manufacturer. **Always verify the FPC pinout** from the seller's datasheet before ordering the PCB. The table above is a typical reference for ST7796 + GT911 40-pin panels.
+The exact pinout depends on the specific panel manufacturer. **Always verify the FPC pinout** from the seller's datasheet before ordering the PCB. The table above is a typical reference for ILI9488 40-pin panels. Touch pins (36-39) are left unconnected.
 :::
 
-### Alternative Display Options (prototyping only)
+### Alternative Display Options
 
-| Option | Size | Resolution | Controller | Interface | Price | Link |
+| Option | Size | Resolution | Controller | Interface | Price | Notes |
 |---|---|---|---|---|---|---|
-| ST7796S 4.0" module + PCB | 4.0" | 320x480 | ST7796S | 8/16-bit parallel | ~$12-19 | Search: "ST7796S 4.0 inch parallel module" |
-| ST7796S 3.5" IPS SPI | 3.5" | 320x480 | ST7796S | SPI | $8-$12 | [AliExpress](https://www.aliexpress.com/item/1005006133152810.html) |
-
-These modules with PCB breakout + pin headers are for **breadboard prototyping only**, not for the custom JLCPCB PCB.
+| **ST7796 4.0" bare panel + GT911 touch** | 4.0" | 320x480 | ST7796S | 8/16-bit parallel | ~$8-12 | [AliExpress](https://it.aliexpress.com/item/1005010555977696.html) — larger screen, official ESP-IDF driver |
+| ST7796S 4.0" module + PCB | 4.0" | 320x480 | ST7796S | 8/16-bit parallel | ~$12-19 | Prototyping only (pin headers, no FPC) |
+| ST7796S 3.5" IPS SPI | 3.5" | 320x480 | ST7796S | SPI | $8-$12 | Prototyping only |
 
 ---
 
@@ -193,7 +191,7 @@ The IP5306 manages battery charge/discharge and provides stable 5V output. The A
 | Category | Component | Price |
 |---|---|---|
 | MCU | ESP32-S3 N16R8 DevKitC-1 | $6.00 |
-| Display | ST7796S 4.0" 8-bit parallel | $12.50 |
+| Display | ILI9488 3.95" 8-bit parallel (bare panel) | $3.95 |
 | Battery | LiPo 105080 5000mAh | $6.50 |
 | Charging | IP5306 USB-C | $1.59 |
 | Regulator | AMS1117-3.3V | $0.24 |
@@ -202,7 +200,7 @@ The IP5306 manages battery charge/discharge and provides stable 5V output. The A
 | Audio | Speaker + PAM8403 | $1.25 |
 | Storage | SD module + 32GB card | $3.95 |
 | Misc | Breadboard, jumpers, resistors | $6.00 |
-| **TOTAL** | | **$41.45** |
+| **TOTAL** | | **$32.90** |
 
 ### Button Layout
 
@@ -262,7 +260,7 @@ When ordering the custom PCB from JLCPCB, the following components are **NOT inc
 
 | Component | Ref | Price | Connection to PCB | Solder? |
 |-----------|-----|-------|-------------------|---------|
-| **ST7796 4.0" bare LCD panel** (40P FPC 0.5mm, with GT911 touch) | U4 | ~$8-12 | FPC ribbon → J4 connector (slide + latch) | No |
+| **ILI9488 3.95" bare LCD panel** (40P FPC 0.5mm, resistive touch NC) | U4 | ~$3.95 | FPC ribbon → J4 connector (slide + latch) | No |
 | **LiPo 105080 5000mAh battery** | BT1 | ~$6-8 | JST PH plug → J3 connector | No |
 | **Speaker 28mm 8Ω** | SPK1 | ~$0.80 | 2 wires → solder pads | Yes (easy) |
 | **PSP joystick** (optional) | J2 | ~$2 | 4 pins → pin header | Yes (easy) |
@@ -274,9 +272,9 @@ The display and battery are **plug-in** — no soldering skills required. Only t
 
 :::warning Display purchase — important
 Buy the **bare LCD panel** (no PCB breakout board), specifically:
-- ST7796 controller, 4.0", 320×480, **40-pin FPC 0.5mm**
-- With **GT911 capacitive touch** (optional but recommended)
-- [AliExpress link](https://it.aliexpress.com/item/1005010555977696.html)
+- **ILI9488** controller, 3.95", 320×480, **40-pin FPC 0.5mm pitch**
+- Resistive touch (not connected — touch pins left NC on PCB)
+- [AliExpress link](https://it.aliexpress.com/item/1005009422879126.html)
 
 Do **NOT** buy display modules with PCB breakout + pin headers — those are for breadboard prototyping and won't fit the FPC connector on the PCB.
 :::
