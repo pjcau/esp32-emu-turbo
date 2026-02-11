@@ -48,8 +48,8 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
                     |               |  |  |  |  |             |
               +-----+-----+  +-----+--+  |  +--+-----+  +----+----+
               | Display    |  | SD Card|  |  | Audio  |  | Buttons |
-              | ST7796S    |  | Module |  |  | DAC -> |  | D-pad   |
-              | 3.5"-4"    |  | SPI    |  |  | PAM8403|  | A,B,X,Y |
+              | ILI9488    |  | Module |  |  | DAC -> |  | D-pad   |
+              | 3.95"      |  | SPI    |  |  | PAM8403|  | A,B,X,Y |
               | 8-bit par  |  +--------+  |  | Speaker|  | Start   |
               | (8080)     |              |  +--------+  | Select  |
               +------------+              |              | L, R    |

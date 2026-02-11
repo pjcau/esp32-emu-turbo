@@ -46,7 +46,7 @@ make render-enclosure
 ## Features
 
 ### Front Panel
-- **4.0" display viewport** — centered, with 2mm raised bezel
+- **3.95" display viewport** — centered, with 2mm raised bezel
 - **D-pad** — cross-shaped cutout on left side
 - **A/B/X/Y buttons** — diamond layout on right side (SNES style)
 - **Start/Select** — pill-shaped cutouts below the D-pad
@@ -74,9 +74,9 @@ make render-enclosure
 │                                                         │
 │                 ┌───────────────────┐                    │
 │                 │                   │                    │
-│    ┌─┐          │    4.0" Display   │          [X]      │
+│    ┌─┐          │   3.95" Display   │          [X]      │
 │  ┌─┤ ├─┐        │    320 x 480      │       [Y]   [A]   │
-│  └─┤ ├─┘        │    ST7796S        │          [B]      │
+│  └─┤ ├─┘        │    ILI9488        │          [B]      │
 │    └─┘          │                   │                    │
 │   D-pad         └───────────────────┘                    │
 │  [Sel] [Sta]                                             │

@@ -41,7 +41,7 @@ For SNES emulation, the display interface is the critical bottleneck:
 | **320×480 @ 16-bit, 60 fps** | 18.4 MB/s needed | 18.4 MB/s needed |
 | **Feasible at 60 fps?** | No (3.6x over capacity) | Yes (1.09x margin) |
 
-The **ST7796S 4.0" with 8-bit 8080 parallel interface** is the only viable option for SNES at 60 fps.
+The **ILI9488 3.95" with 8-bit 8080 parallel interface** (bare panel + 40-pin FPC) is the only viable option for SNES at 60 fps.
 
 ## GPIO Pin Assignment
 

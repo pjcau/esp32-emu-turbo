@@ -4,7 +4,7 @@ Handheld retro gaming console based on ESP32-S3 — **SNES** (primary) and **NES
 
 ## Project Goal
 
-Build a portable battery-powered device based on ESP32-S3, capable of loading and playing retro games via SD card, with USB-C charging and a 4.0" color TFT display.
+Build a portable battery-powered device based on ESP32-S3, capable of loading and playing retro games via SD card, with USB-C charging and an ILI9488 3.95" color LCD display.
 
 ## Development Phases
 
@@ -46,7 +46,7 @@ Build a portable battery-powered device based on ESP32-S3, capable of loading an
 | Component | Specification |
 |---|---|
 | **MCU** | ESP32-S3 N16R8 (16MB flash, 8MB Octal PSRAM) |
-| **Display** | ST7796S 4.0" 320x480, 8-bit 8080 parallel |
+| **Display** | ILI9488 3.95" 320x480, 8-bit 8080 parallel, bare panel + 40P FPC |
 | **Power** | LiPo 3.7V 5000mAh + IP5306 (SOP-8) + AMS1117 |
 | **Charging** | USB-C (charge-and-play) |
 | **Audio** | I2S -> PAM8403 -> 28mm speaker |

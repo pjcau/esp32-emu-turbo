@@ -5,8 +5,9 @@ Layout:
   TOP (F.Cu)  — face buttons (D-pad, ABXY, Start, Select, Menu)
                 + charging LEDs (bottom-left)
                 + display outline on silkscreen (module sits on top)
-  BOTTOM (B.Cu) — everything else: ESP32, ICs, connectors, L/R shoulder,
+  BOTTOM (B.Cu) — everything else: ESP32, ICs, connectors,
                   speaker, power switch, passives, battery connector
+                  + L/R shoulder buttons (rotated 90°, aligned to top edge)
 
 Trace data is parsed from the generated .kicad_pcb file and color-coded
 by net type (power, data, buttons, USB, audio).
@@ -90,9 +91,6 @@ COMPONENTS_TOP = [
     # Start/Select (10mm offsets)
     ("SW9", "St", "SW", 8.0, 54.5, 5.1, 5.1),
     ("SW10", "Se", "SW", 28.0, 54.5, 5.1, 5.1),
-    # Shoulder buttons (front side — user-facing)
-    ("SW11", "L", "SW", 15.0, 2.5, 5.1, 5.1),
-    ("SW12", "R", "SW", 145.0, 2.5, 5.1, 5.1),
     # Menu button (bottom-right, below ABXY)
     ("SW13", "Menu", "SW", 142.0, 62.5, 5.1, 5.1),
     # Charging LEDs (front, bottom-left)
@@ -102,10 +100,13 @@ COMPONENTS_TOP = [
 
 COMPONENTS_BOTTOM = [
     # (ref, value, package, x, y, width, height)
-    # Everything else on bottom (shoulder buttons moved to top)
+    # Everything else on bottom + L/R shoulder buttons (rotated 90°)
     ("U1", "ESP32-S3", "Module", 80.0, 27.5, 18, 25.5),
+    # Shoulder buttons (back side, rotated 90°, aligned to top edge)
+    ("SW11", "L", "SW", 15.0, 2.5, 5.1, 5.1),
+    ("SW12", "R", "SW", 145.0, 2.5, 5.1, 5.1),
     # Connectors (back side)
-    ("J4", "FPC-40P", "FPC", 139.0, 35.5, 26, 3),
+    ("J4", "FPC-40P", "FPC", 135.0, 35.5, 3, 26),
     ("J1", "USB-C", "USB-C", 80.0, 72.0, 9, 7),
     ("U6", "SD Card", "TF-01A", 140.0, 67.0, 14, 15),
     # Power switch (back side)
@@ -160,8 +161,6 @@ PASSIVES_BACK = [
 SILKSCREEN_TOP = [
     ("D-PAD", 18.0, 17.5, 1.0),
     ("ABXY", 142.0, 16.5, 1.0),
-    ("L", 15.0, 7.5, 0.7),
-    ("R", 145.0, 7.5, 0.7),
     ("MENU", 142.0, 57.5, 0.8),
     ("CHG", 25.0, 70.5, 0.6),
     ("FULL", 32.0, 70.5, 0.6),
@@ -176,6 +175,8 @@ SILKSCREEN_BOTTOM = [
     ("SD", 140.0, 62.0, 0.8),
     ("PWR", 8.0, 27.5, 0.7),
     ("SPEAKER", 30.0, 52.5, 0.8),
+    ("L", 15.0, 7.5, 0.7),
+    ("R", 145.0, 7.5, 0.7),
 ]
 
 # ── PCB file parsing ─────────────────────────────────────────────────
@@ -555,18 +556,19 @@ def _draw_component(ref, value, pkg, x, y, w, h):
         )
 
     elif pkg == "FPC":
+        # Vertical FPC connector (J4 rotated 90°)
         lines.append(
             f'<rect x="{cx - sw/2}" y="{cy - sh/2}" '
             f'width="{sw}" height="{sh}" rx="0.5" '
             f'fill="#8b6914" stroke="#a0832a" stroke-width="0.5"/>'
         )
         n_pins = 40
-        pin_pitch = (sw - 4) / (n_pins - 1)
+        pin_pitch = (sh - 4) / (n_pins - 1)
         for i in range(n_pins):
-            px = cx - sw / 2 + 2 + i * pin_pitch
+            py = cy - sh / 2 + 2 + i * pin_pitch
             lines.append(
-                f'<rect x="{px - 0.3}" y="{cy - sh/4}" '
-                f'width="0.6" height="{sh/2}" fill="{PAD_GOLD}"/>'
+                f'<rect x="{cx - sw/4}" y="{py - 0.3}" '
+                f'width="{sw/2}" height="0.6" fill="{PAD_GOLD}"/>'
             )
 
     elif pkg == "TF-01A":

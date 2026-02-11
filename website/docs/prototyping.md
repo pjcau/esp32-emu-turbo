@@ -57,7 +57,7 @@ Add decoupling capacitors:
 
 ### Step 3: Display Connection (8080 Parallel)
 
-Connect the ST7796S 4.0" display module with 8-bit 8080 parallel interface:
+Connect the ILI9488 3.95" display panel with 8-bit 8080 parallel interface (via 40-pin FPC):
 
 | Display Pin | Wire to | ESP32-S3 GPIO |
 |---|---|---|

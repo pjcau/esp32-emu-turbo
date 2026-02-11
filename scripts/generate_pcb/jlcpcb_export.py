@@ -20,9 +20,10 @@ def _build_placements():
 
     Layout:
       TOP (F.Cu)  — face buttons (D-pad, ABXY, Start, Select, Menu)
-                    + charging LEDs (bottom-left) + L/R shoulder buttons
+                    + charging LEDs (bottom-left)
       BOTTOM (B.Cu) — everything else: ESP32, ICs, connectors,
                       speaker, power switch, passives, battery connector
+                      + L/R shoulder buttons (rotated 90°, aligned to top edge)
 
     All passives have >= 3mm center-to-center spacing and are placed
     OUTSIDE IC courtyard zones.
@@ -30,7 +31,7 @@ def _build_placements():
     p = []
 
     # ══════════════════════════════════════════════════════════════
-    # TOP SIDE (F.Cu): face buttons + LEDs + shoulder buttons
+    # TOP SIDE (F.Cu): face buttons + LEDs
     # ══════════════════════════════════════════════════════════════
 
     # D-pad SW1-4
@@ -67,27 +68,27 @@ def _build_placements():
     p.append(("LED2", "Green",
               "LED_0805", x, y, 0, "top"))
 
-    # Shoulder L/R (front side — user-facing)
+    # ══════════════════════════════════════════════════════════════
+    # BOTTOM SIDE (B.Cu): everything else + shoulder buttons
+    # ══════════════════════════════════════════════════════════════
+
+    # Shoulder L/R (back side, rotated 90°, aligned to top edge)
     x, y = enc_to_pcb(*SHOULDER_L_ENC)
     p.append(("SW11", "SW_Push",
-              "SW-SMD-5.1x5.1", x, y, 0, "top"))
+              "SW-SMD-5.1x5.1", x, y, 90, "bottom"))
     x, y = enc_to_pcb(*SHOULDER_R_ENC)
     p.append(("SW12", "SW_Push",
-              "SW-SMD-5.1x5.1", x, y, 0, "top"))
-
-    # ══════════════════════════════════════════════════════════════
-    # BOTTOM SIDE (B.Cu): everything else
-    # ══════════════════════════════════════════════════════════════
+              "SW-SMD-5.1x5.1", x, y, 90, "bottom"))
 
     # ESP32-S3 module (center, back)
     x, y = enc_to_pcb(*ESP32_ENC)
     p.append(("U1", "ESP32-S3-WROOM-1-N16R8",
               "Module_ESP32-S3", x, y, 0, "bottom"))
 
-    # FPC display connector (back side, right of slot)
+    # FPC display connector (back side, right of slot, vertical)
     x, y = enc_to_pcb(*FPC_ENC)
     p.append(("J4", "FPC-40P-0.5mm",
-              "FPC-40P-0.5mm", x, y, 0, "bottom"))
+              "FPC-40P-0.5mm", x, y, 90, "bottom"))
 
     # USB-C connector (back side)
     x, y = enc_to_pcb(*USBC_ENC)

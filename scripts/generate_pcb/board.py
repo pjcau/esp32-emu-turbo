@@ -2,9 +2,10 @@
 
 Layout philosophy:
   TOP (F.Cu)  — user-facing: face buttons (D-pad, ABXY, Start, Select, Menu)
-                + charging LEDs (bottom-left) + L/R shoulder buttons
+                + charging LEDs (bottom-left)
   BOTTOM (B.Cu) — all electronics: ESP32, ICs, connectors,
                   speaker, power switch, passives, battery connector
+                  + L/R shoulder buttons (rotated 90°, aligned to top edge)
 
 Display (ILI9488 3.95" bare panel) sits on top of PCB.  FPC ribbon passes
 through a vertical slot in the board to reach J4 (FPC-40P) on the back.
@@ -79,14 +80,14 @@ LED_FULL_ENC = (-48, -30)      # Green LED — fully charged
 # ESP32-S3-WROOM-1 (center, back side)
 ESP32_ENC = (0, 10)
 
-# Shoulder L/R (near top edge, FRONT side — user-facing)
+# Shoulder L/R (near top edge, BACK side — rotated 90°, aligned to PCB top)
 SHOULDER_L_ENC = (-65, 35)
 SHOULDER_R_ENC = (65, 35)
 
-# FPC display connector (right of slot, connects to display via ribbon)
-# Pin 1 must clear slot right edge (128.5mm PCB). At enc(59,2) → PCB(139,35.5),
-# pin 1 is at 139-9.75=129.25 > 128.5+0.3mm margin.
-FPC_ENC = (59, 2)      # Next to FPC slot, right side
+# FPC display connector (right of slot, VERTICAL orientation)
+# Rotated 90° — pins run vertically from y=25.75 to y=45.25 at x=135.
+# Connector body 3mm wide at x=133.5-136.5, slot right edge at 128.5.
+FPC_ENC = (55, 2)      # Next to FPC slot, right side (vertical)
 
 # USB-C (bottom center edge)
 USBC_ENC = (0, -BOARD_H / 2 + 3)   # 3mm from bottom edge
@@ -237,11 +238,11 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*SPEAKER_ENC)
     parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 0.8))
 
-    # Shoulder button labels (front side — user-facing)
+    # Shoulder button labels (back side — rotated 90°, aligned to top edge)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    parts.append(P.gr_text("L", px, py + 5, "F.SilkS", 0.7))
+    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.7))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    parts.append(P.gr_text("R", px, py + 5, "F.SilkS", 0.7))
+    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.7))
 
     return "".join(parts)
 
@@ -306,12 +307,12 @@ def _component_placeholders():
                         px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    placements.append(("SW11", "SW-SMD-5.1x5.1", px, py, 0, "F.Cu"))
+    placements.append(("SW11", "SW-SMD-5.1x5.1", px, py, 90, "B.Cu"))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    placements.append(("SW12", "SW-SMD-5.1x5.1", px, py, 0, "F.Cu"))
+    placements.append(("SW12", "SW-SMD-5.1x5.1", px, py, 90, "B.Cu"))
 
     px, py = enc_to_pcb(*FPC_ENC)
-    placements.append(("J4", "FPC-40P-0.5mm", px, py, 0, "B.Cu"))
+    placements.append(("J4", "FPC-40P-0.5mm", px, py, 90, "B.Cu"))
 
     px, py = enc_to_pcb(*USBC_ENC)
     placements.append(("J1", "USB-C-16P", px, py, 0, "B.Cu"))

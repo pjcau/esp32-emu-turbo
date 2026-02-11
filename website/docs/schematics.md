@@ -19,7 +19,7 @@ Complete electrical design for the ESP32 Emu Turbo, split into 7 detailed schema
   </a>
   <a href="#sheet-3--display" className="sheet-card">
     <h4>3. Display</h4>
-    <p>ST7796S 8080 parallel</p>
+    <p>ILI9488 8080 parallel</p>
   </a>
   <a href="#sheet-4--audio" className="sheet-card">
     <h4>4. Audio</h4>
@@ -79,7 +79,7 @@ make render-schematics    # Export SVG + PDF
                     │               │  │  │  │  │             │
               ┌─────┴─────┐  ┌─────┴──┘  │  └──┴─────┐  ┌────┴────┐
               │ Display   │  │ SD Card│  │  │ Audio  │  │ Controls│
-              │ ST7796S   │  │ SPI    │  │  │PAM8403 │  │ 12 btns │
+              │ ILI9488   │  │ SPI    │  │  │PAM8403 │  │ 12 btns │
               │ 8080 ‖    │  └────────┘  │  └────────┘  └─────────┘
               └───────────┘              │
                                    ┌─────┴─────┐
@@ -117,7 +117,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | Consumer | Typical | Peak |
 |----------|---------|------|
 | ESP32-S3 (dual-core active) | 150 mA | 350 mA |
-| ST7796S display + backlight | 80 mA | 120 mA |
+| ILI9488 display + backlight | 80 mA | 120 mA |
 | PAM8403 + speaker | 20 mA | 100 mA |
 | SD card (SPI read) | 30 mA | 100 mA |
 | Misc (pull-ups, buttons) | 10 mA | 20 mA |
@@ -168,7 +168,7 @@ GPIO26–32 are used internally by the PSRAM. GPIO43 (TX0) is reserved for debug
 
 ## Sheet 3 — Display
 
-ST7796S 4.0" 320×480 display with 8-bit 8080 parallel interface — mandatory for SNES emulation speed.
+ILI9488 3.95" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed.
 
 <div className="schematic-container">
 
