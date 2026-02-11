@@ -20,9 +20,9 @@ Build a portable battery-powered device based on ESP32-S3, capable of loading an
 - 4-layer PCB layout (160x75mm, JLCPCB-ready)
 
 ### Phase 3 — PCB Fabrication (In Progress)
-- JLCPCB order (Gerber + BOM + CPL)
-- Assembly and testing
-- Performance optimization
+- Production files ready in `release_jlcpcb/` (Gerber ZIP + BOM + CPL)
+- JLCPCB order and assembly
+- Testing and performance optimization
 
 ### Phase 4 — Final Version (v2)
 - Revised PCB if needed
@@ -102,6 +102,12 @@ esp32-emu-turbo/
 │   │   ├── esp32-emu-turbo.kicad_pcb   # PCB layout
 │   │   └── jlcpcb/         # BOM + CPL for JLCPCB
 │   └── enclosure/          # OpenSCAD parametric 3D model
+├── release_jlcpcb/         # Production files for JLCPCB ordering
+│   ├── gerbers/            # Gerber + drill files (22 layers)
+│   ├── gerbers.zip         # Ready-to-upload ZIP
+│   ├── bom.csv             # Bill of Materials (JLCPCB format)
+│   ├── cpl.csv             # Component Placement List (65 parts)
+│   └── bom-summary.md      # Human-readable BOM + cost estimate
 ├── scripts/
 │   ├── generate_schematics/ # Schematic generator (Python)
 │   ├── generate_pcb/       # PCB layout generator (Python)

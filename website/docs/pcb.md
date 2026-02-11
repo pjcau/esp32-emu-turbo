@@ -38,16 +38,15 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 
 | Layer | Function |
 |-------|----------|
-| **F.Cu** (Top) | Face buttons, L/R shoulder buttons, menu button, charging LEDs |
+| **F.Cu** (Top) | Face buttons, menu button, charging LEDs |
 | **In1.Cu** | Full GND copper pour |
 | **In2.Cu** | +3V3 / +5V power plane |
-| **B.Cu** (Bottom) | ESP32, ICs, connectors, passives |
+| **B.Cu** (Bottom) | ESP32, ICs, connectors, passives, L/R shoulder buttons |
 
 ## Component Placement
 
 ### Top Side (F.Cu) — User-facing
-- **12× SMT tact switches** — D-pad (left), ABXY (right), Start/Select
-- **SW11, SW12** — L/R shoulder buttons (top edge)
+- **11× SMT tact switches** — D-pad (left), ABXY (right), Start/Select
 - **SW13** Menu button — bottom right
 - **LED1, LED2** — charging indicators (bottom left)
 - ILI9488 3.95" bare LCD panel sits on top (FPC ribbon passes through slot to J4 on back)
@@ -58,6 +57,7 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 - Located at x=127mm from left edge, vertically centered with display
 
 ### Bottom Side (B.Cu) — Electronics
+- **SW11, SW12** — L/R shoulder buttons (top edge, rotated 90°)
 - **U1 ESP32-S3-WROOM-1** — center
 - **U2 IP5306** (eSOP-8) — charger + boost, left-center area
 - **U3 AMS1117-3.3** (SOT-223) — 3.3V LDO, below center
@@ -121,9 +121,12 @@ Buy the **bare LCD panel** (NOT a module with PCB breakout):
 ## JLCPCB Ordering
 
 ### Files Needed
-1. **Gerber ZIP** — exported from KiCad (`kicad-cli pcb export gerbers`)
-2. **BOM.csv** — `hardware/kicad/jlcpcb/bom.csv`
-3. **CPL.csv** — `hardware/kicad/jlcpcb/cpl.csv`
+
+All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root:
+
+1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload)
+2. **BOM.csv** — `release_jlcpcb/bom.csv`
+3. **CPL.csv** — `release_jlcpcb/cpl.csv`
 
 ### Order Settings
 - Layers: **4**
@@ -245,8 +248,8 @@ python3 scripts/verify_schematic_pcb.py   # Schematic/PCB consistency
 
 ## Next Steps
 
-1. Export Gerbers: `kicad-cli pcb export gerbers`
-2. Upload Gerber + BOM + CPL to [jlcpcb.com](https://jlcpcb.com/)
+1. Upload `release_jlcpcb/gerbers.zip` to [jlcpcb.com](https://jlcpcb.com/)
+2. Upload `release_jlcpcb/bom.csv` and `release_jlcpcb/cpl.csv` for SMT assembly
 3. Order 5× PCBs with SMT assembly (65 components)
 4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
 5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
