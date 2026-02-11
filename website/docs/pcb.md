@@ -31,36 +31,42 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 | **Thickness** | 1.6 mm |
 | **Surface Finish** | ENIG (gold) |
 | **Corner Radius** | 6 mm |
+| **FPC Slot** | 3 × 24 mm vertical cutout (40-pin ribbon pass-through) |
 | **Mounting Holes** | 6× M2.5 (matches 3D enclosure) |
 
 ## Layer Stackup
 
 | Layer | Function |
 |-------|----------|
-| **F.Cu** (Top) | Face buttons, menu button, charging LEDs |
+| **F.Cu** (Top) | Face buttons, L/R shoulder buttons, menu button, charging LEDs |
 | **In1.Cu** | Full GND copper pour |
 | **In2.Cu** | +3V3 / +5V power plane |
-| **B.Cu** (Bottom) | ESP32, ICs, connectors, passives, shoulder buttons |
+| **B.Cu** (Bottom) | ESP32, ICs, connectors, passives |
 
 ## Component Placement
 
 ### Top Side (F.Cu) — User-facing
 - **12× SMT tact switches** — D-pad (left), ABXY (right), Start/Select
+- **SW11, SW12** — L/R shoulder buttons (top edge)
 - **SW13** Menu button — bottom right
 - **LED1, LED2** — charging indicators (bottom left)
-- ILI9488 3.95" bare LCD panel sits on top (connected via 40-pin FPC on back)
+- ILI9488 3.95" bare LCD panel sits on top (FPC ribbon passes through slot to J4 on back)
+
+### FPC Slot
+- **3 × 24 mm** vertical cutout between display area and ABXY buttons
+- Allows the 40-pin FPC ribbon cable to pass from top (display) to bottom (J4 connector)
+- Located at x=127mm from left edge, vertically centered with display
 
 ### Bottom Side (B.Cu) — Electronics
 - **U1 ESP32-S3-WROOM-1** — center
-- **U2 IP5306** (eSOP-8) — charger + boost, right area
-- **U3 AMS1117-3.3** (SOT-223) — 3.3V LDO, near IP5306
+- **U2 IP5306** (eSOP-8) — charger + boost, left-center area
+- **U3 AMS1117-3.3** (SOT-223) — 3.3V LDO, below center
 - **U5 PAM8403** (SOP-16) — audio amp, left area
 - **L1** 1µH inductor — near IP5306
 - **J1** USB-C — bottom center
 - **U6** Micro SD slot — bottom right
-- **J4** FPC 40-pin 0.5mm — top center (display ribbon, ILI9488)
+- **J4** FPC 40-pin 0.5mm — right of FPC slot (display ribbon, ILI9488)
 - **J3** JST PH 2-pin — battery connector, center
-- **SW11, SW12** — L/R shoulder buttons
 - **SW_PWR** — power slide switch, left edge
 - **SPK1** — 22mm speaker, left area
 - **26× passives** — organized in 2 centered rows below ESP32

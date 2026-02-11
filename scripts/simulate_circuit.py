@@ -34,7 +34,7 @@ from scripts.generate_pcb.routing import PULL_UP_REFS, DEBOUNCE_REFS  # noqa: E4
 # Component current draw on +3V3 rail (Amps)
 COMPONENTS_3V3 = {
     "ESP32-S3 (240MHz active)":     {"typ": 0.150, "max": 0.200},
-    "ST7796S display (backlight)":  {"typ": 0.080, "max": 0.100},
+    "ILI9488 display (backlight)":  {"typ": 0.080, "max": 0.100},
     "SD card (SPI read)":           {"typ": 0.020, "max": 0.030},
     "Button pull-ups (14x worst)":  {"typ": 0.000, "max": 0.00462},
     "EN pull-up (R3 10k)":          {"typ": 0.00033, "max": 0.00033},
@@ -292,7 +292,7 @@ def check_power_budget():
     print(f"      |    |")
     print(f"      |    +--[AMS1117 LDO]--> +3V3 ({max_3v3*1000:.0f}mA max)")
     print(f"      |    |    |-- ESP32-S3 ({COMPONENTS_3V3['ESP32-S3 (240MHz active)']['max']*1000:.0f}mA)")
-    print(f"      |    |    |-- Display ({COMPONENTS_3V3['ST7796S display (backlight)']['max']*1000:.0f}mA)")
+    print(f"      |    |    |-- Display ({COMPONENTS_3V3['ILI9488 display (backlight)']['max']*1000:.0f}mA)")
     print(f"      |    |    +-- SD card ({COMPONENTS_3V3['SD card (SPI read)']['max']*1000:.0f}mA)")
     print(f"      |    |")
     print(f"      |    +-- PAM8403 ({COMPONENTS_5V['PAM8403 (avg audio output)']['max']*1000:.0f}mA)")

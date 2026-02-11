@@ -20,8 +20,8 @@ def _build_placements():
 
     Layout:
       TOP (F.Cu)  — face buttons (D-pad, ABXY, Start, Select, Menu)
-                    + charging LEDs (bottom-left)
-      BOTTOM (B.Cu) — everything else: ESP32, ICs, connectors, L/R,
+                    + charging LEDs (bottom-left) + L/R shoulder buttons
+      BOTTOM (B.Cu) — everything else: ESP32, ICs, connectors,
                       speaker, power switch, passives, battery connector
 
     All passives have >= 3mm center-to-center spacing and are placed
@@ -30,7 +30,7 @@ def _build_placements():
     p = []
 
     # ══════════════════════════════════════════════════════════════
-    # TOP SIDE (F.Cu): face buttons + LEDs
+    # TOP SIDE (F.Cu): face buttons + LEDs + shoulder buttons
     # ══════════════════════════════════════════════════════════════
 
     # D-pad SW1-4
@@ -67,6 +67,14 @@ def _build_placements():
     p.append(("LED2", "Green",
               "LED_0805", x, y, 0, "top"))
 
+    # Shoulder L/R (front side — user-facing)
+    x, y = enc_to_pcb(*SHOULDER_L_ENC)
+    p.append(("SW11", "SW_Push",
+              "SW-SMD-5.1x5.1", x, y, 0, "top"))
+    x, y = enc_to_pcb(*SHOULDER_R_ENC)
+    p.append(("SW12", "SW_Push",
+              "SW-SMD-5.1x5.1", x, y, 0, "top"))
+
     # ══════════════════════════════════════════════════════════════
     # BOTTOM SIDE (B.Cu): everything else
     # ══════════════════════════════════════════════════════════════
@@ -76,25 +84,17 @@ def _build_placements():
     p.append(("U1", "ESP32-S3-WROOM-1-N16R8",
               "Module_ESP32-S3", x, y, 0, "bottom"))
 
-    # Shoulder L/R (back side)
-    x, y = enc_to_pcb(*SHOULDER_L_ENC)
-    p.append(("SW11", "SW_Push",
-              "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
-    x, y = enc_to_pcb(*SHOULDER_R_ENC)
-    p.append(("SW12", "SW_Push",
-              "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
-
-    # FPC display connector (back side)
+    # FPC display connector (back side, right of slot)
     x, y = enc_to_pcb(*FPC_ENC)
-    p.append(("J4", "FPC-16P-0.5mm",
-              "FPC-16P-0.5mm", x, y, 0, "bottom"))
+    p.append(("J4", "FPC-40P-0.5mm",
+              "FPC-40P-0.5mm", x, y, 0, "bottom"))
 
     # USB-C connector (back side)
     x, y = enc_to_pcb(*USBC_ENC)
     p.append(("J1", "USB-C-16P",
               "USB-C-SMD-16P", x, y, 0, "bottom"))
 
-    # SD card slot (back side, more inward)
+    # SD card slot (back side, bottom-right)
     x, y = enc_to_pcb(*SD_ENC)
     p.append(("U6", "Micro-SD-TF-01A",
               "TF-01A", x, y, 0, "bottom"))
@@ -109,12 +109,12 @@ def _build_placements():
     p.append(("SPK1", "Speaker-22mm",
               "Speaker-22mm-Pad", x, y, 0, "bottom"))
 
-    # IP5306 power IC
+    # IP5306 power IC (moved left to avoid slot)
     ix, iy = enc_to_pcb(*IP5306_ENC)
     p.append(("U2", "IP5306",
               "ESOP-8", ix, iy, 0, "bottom"))
 
-    # AMS1117 LDO
+    # AMS1117 LDO (near IP5306)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
     p.append(("U3", "AMS1117-3.3",
               "SOT-223", amx, amy, 0, "bottom"))
@@ -124,7 +124,7 @@ def _build_placements():
     p.append(("U5", "PAM8403",
               "SOP-16", px, py, 0, "bottom"))
 
-    # Inductor
+    # Inductor (near IP5306)
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)
     p.append(("L1", "1uH",
               "SMD-4x4x2", lx, ly, 0, "bottom"))
@@ -165,9 +165,9 @@ def _build_placements():
         p.append((ref, "10k", "R_0805",
                   50 + i * 5, 44, 0, "bottom"))
 
-    # R16: IP5306 KEY pull-up (outside IP5306 courtyard)
+    # R16: IP5306 KEY pull-down (near new IP5306/L1 position)
     p.append(("R16", "100k", "R_0805",
-              ix - 8, iy + 6, 0, "bottom"))
+              ix + 5, iy + 10, 0, "bottom"))
 
     # ── Button debounce caps (centered row below pull-ups, y=48) ──
     # 13 caps at 5mm spacing, centered at x=80 (x=50..110)
@@ -176,17 +176,17 @@ def _build_placements():
         p.append((ref, "100nF", "C_0805",
                   50 + i * 5, 48, 0, "bottom"))
 
-    # ── IP5306 support caps (below IC courtyard) ──
+    # ── IP5306 support caps (near new IP5306 position) ──
     p.append(("C17", "10uF", "C_0805",
-              ix - 6, iy + 10, 0, "bottom"))
+              ix - 6, iy - 5, 0, "bottom"))
     p.append(("C18", "10uF", "C_0805",
-              ix + 6, iy + 10, 0, "bottom"))
+              ix + 6, iy - 5, 0, "bottom"))
 
     # C19 near inductor L1
     p.append(("C19", "22uF", "C_1206",
               lx, ly + 6, 0, "bottom"))
 
-    # ── AMS1117 support caps (above/below IC) ──
+    # ── AMS1117 support caps (near new AMS1117 position) ──
     p.append(("C1", "10uF", "C_0805",
               amx, amy - 5, 0, "bottom"))
     p.append(("C2", "22uF", "C_1206",

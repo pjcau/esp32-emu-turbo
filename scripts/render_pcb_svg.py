@@ -25,11 +25,17 @@ BOARD_W = 160.0
 BOARD_H = 75.0
 CORNER_R = 6.0
 
-# Display area (ST7796S 4.0") — 86.4 x 64.8mm centered with 2mm up offset
+# Display area (ILI9488 3.95") — 86.4 x 64.8mm centered with 2mm up offset
 DISPLAY_W = 86.4
 DISPLAY_H = 64.8
 DISPLAY_X = 80.0   # center X
 DISPLAY_Y = 35.5   # center Y (37.5 - 2mm offset)
+
+# FPC slot — vertical cutout for 40-pin ribbon cable
+FPC_SLOT_X = 127.0  # PCB x center (enc 47 + 80)
+FPC_SLOT_Y = 35.5   # PCB y center (37.5 - 2)
+FPC_SLOT_W = 3.0
+FPC_SLOT_H = 24.0
 
 SCALE = 4.0
 MARGIN = 20
@@ -84,6 +90,9 @@ COMPONENTS_TOP = [
     # Start/Select (10mm offsets)
     ("SW9", "St", "SW", 8.0, 54.5, 5.1, 5.1),
     ("SW10", "Se", "SW", 28.0, 54.5, 5.1, 5.1),
+    # Shoulder buttons (front side — user-facing)
+    ("SW11", "L", "SW", 15.0, 2.5, 5.1, 5.1),
+    ("SW12", "R", "SW", 145.0, 2.5, 5.1, 5.1),
     # Menu button (bottom-right, below ABXY)
     ("SW13", "Menu", "SW", 142.0, 62.5, 5.1, 5.1),
     # Charging LEDs (front, bottom-left)
@@ -93,24 +102,21 @@ COMPONENTS_TOP = [
 
 COMPONENTS_BOTTOM = [
     # (ref, value, package, x, y, width, height)
-    # Everything else on bottom
+    # Everything else on bottom (shoulder buttons moved to top)
     ("U1", "ESP32-S3", "Module", 80.0, 27.5, 18, 25.5),
-    # Shoulder buttons (back side)
-    ("SW11", "L", "SW", 15.0, 2.5, 5.1, 5.1),
-    ("SW12", "R", "SW", 145.0, 2.5, 5.1, 5.1),
     # Connectors (back side)
-    ("J4", "FPC-16P", "FPC", 80.0, 5.5, 20, 3),
+    ("J4", "FPC-40P", "FPC", 139.0, 35.5, 26, 3),
     ("J1", "USB-C", "USB-C", 80.0, 72.0, 9, 7),
-    ("U6", "SD Card", "TF-01A", 120.0, 67.0, 14, 15),
+    ("U6", "SD Card", "TF-01A", 140.0, 67.0, 14, 15),
     # Power switch (back side)
     ("SW_PWR", "PWR", "SLIDE_SW", 8.0, 22.5, 4, 8),
     # Speaker (back side, 22mm)
     ("SPK1", "Speaker", "Speaker", 30.0, 52.5, 22, 22),
-    # ICs
-    ("U2", "IP5306", "ESOP-8", 125.0, 29.5, 6, 5),
-    ("U3", "AMS1117", "SOT-223", 142.0, 29.5, 7, 3.5),
+    # ICs (IP5306/AMS1117/L1 moved left to avoid slot)
+    ("U2", "IP5306", "ESOP-8", 110.0, 42.5, 6, 5),
+    ("U3", "AMS1117", "SOT-223", 125.0, 55.5, 7, 3.5),
     ("U5", "PAM8403", "SOP-16", 30.0, 29.5, 10, 6),
-    ("L1", "1uH", "Inductor", 125.0, 40.5, 4, 4),
+    ("L1", "1uH", "Inductor", 110.0, 52.5, 4, 4),
     ("J3", "Battery", "JST-PH", 80.0, 52.5, 6, 4.5),
 ]
 
@@ -134,8 +140,8 @@ PASSIVES_BACK = [
     ("R12", "10k", 90.0, 44.0), ("R13", "10k", 95.0, 44.0),
     ("R14", "10k", 100.0, 44.0), ("R15", "10k", 105.0, 44.0),
     ("R19", "10k", 110.0, 44.0),
-    # KEY pull-up (near IP5306)
-    ("R16", "100k", 117.0, 35.5),
+    # KEY pull-down (near new IP5306)
+    ("R16", "100k", 115.0, 52.5),
     # Button debounce caps — centered row below pull-ups (y=48, x=50..110)
     ("C5", "100n", 50.0, 48.0), ("C6", "100n", 55.0, 48.0),
     ("C7", "100n", 60.0, 48.0), ("C8", "100n", 65.0, 48.0),
@@ -144,16 +150,18 @@ PASSIVES_BACK = [
     ("C13", "100n", 90.0, 48.0), ("C14", "100n", 95.0, 48.0),
     ("C15", "100n", 100.0, 48.0), ("C16", "100n", 105.0, 48.0),
     ("C20", "100n", 110.0, 48.0),
-    # IP5306 caps
-    ("C17", "10u", 119.0, 39.5), ("C18", "10u", 131.0, 39.5),
-    ("C19", "22u", 125.0, 46.5),
-    # AMS1117 caps
-    ("C1", "10u", 142.0, 24.5), ("C2", "22u", 142.0, 34.5),
+    # IP5306 caps (near new IP5306 position)
+    ("C17", "10u", 104.0, 37.5), ("C18", "10u", 116.0, 37.5),
+    ("C19", "22u", 110.0, 58.5),
+    # AMS1117 caps (near new AMS1117 position)
+    ("C1", "10u", 125.0, 50.5), ("C2", "22u", 125.0, 60.5),
 ]
 
 SILKSCREEN_TOP = [
     ("D-PAD", 18.0, 17.5, 1.0),
     ("ABXY", 142.0, 16.5, 1.0),
+    ("L", 15.0, 7.5, 0.7),
+    ("R", 145.0, 7.5, 0.7),
     ("MENU", 142.0, 57.5, 0.8),
     ("CHG", 25.0, 70.5, 0.6),
     ("FULL", 32.0, 70.5, 0.6),
@@ -161,15 +169,13 @@ SILKSCREEN_TOP = [
 
 SILKSCREEN_BOTTOM = [
     ("ESP32-S3", 80.0, 11.5, 1.0),
-    ("IP5306", 125.0, 24.5, 0.8),
-    ("AMS1117", 142.0, 24.5, 0.8),
+    ("IP5306", 110.0, 37.5, 0.8),
+    ("AMS1117", 125.0, 50.5, 0.8),
     ("PAM8403", 30.0, 24.5, 0.8),
     ("USB-C", 80.0, 67.0, 0.8),
-    ("SD", 120.0, 62.0, 0.8),
+    ("SD", 140.0, 62.0, 0.8),
     ("PWR", 8.0, 27.5, 0.7),
     ("SPEAKER", 30.0, 52.5, 0.8),
-    ("L", 15.0, 7.5, 0.7),
-    ("R", 145.0, 7.5, 0.7),
 ]
 
 # ── PCB file parsing ─────────────────────────────────────────────────
@@ -385,20 +391,34 @@ def _draw_display_area():
     lines.append(
         f'<text x="{dx}" y="{dy - 5}" text-anchor="middle" '
         f'font-family="monospace" font-size="8" fill="#334" '
-        f'font-weight="bold">ST7796S 4.0"</text>'
+        f'font-weight="bold">ILI9488 3.95"</text>'
     )
     lines.append(
         f'<text x="{dx}" y="{dy + 5}" text-anchor="middle" '
         f'font-family="monospace" font-size="6" fill="#334">'
         f'320 x 480</text>'
     )
-    # FPC ribbon cable indication at top
+    # FPC ribbon cable indication at right (exits right side in landscape)
     lines.append(
-        f'<rect x="{dx - 15}" y="{dy - dh/2 - 10}" '
-        f'width="30" height="8" rx="1" '
+        f'<rect x="{dx + dw/2 + 2}" y="{dy - 15}" '
+        f'width="8" height="30" rx="1" '
         f'fill="#8b6914" stroke="#a0832a" stroke-width="0.5" opacity="0.7"/>'
     )
     return "\n".join(lines)
+
+
+def _draw_fpc_slot(mirror_x=False):
+    """Draw the FPC slot cutout as a dark rectangle."""
+    sx = FPC_SLOT_X
+    if mirror_x:
+        sx = BOARD_W - sx
+    cx, cy = _tx(sx), _ty(FPC_SLOT_Y)
+    sw, sh = _s(FPC_SLOT_W), _s(FPC_SLOT_H)
+    return (
+        f'<rect x="{cx - sw/2}" y="{cy - sh/2}" '
+        f'width="{sw}" height="{sh}" rx="1" '
+        f'fill="#0a0a0a" stroke="{EDGE_CUT}" stroke-width="1"/>'
+    )
 
 
 def _draw_mounting_holes():
@@ -540,7 +560,7 @@ def _draw_component(ref, value, pkg, x, y, w, h):
             f'width="{sw}" height="{sh}" rx="0.5" '
             f'fill="#8b6914" stroke="#a0832a" stroke-width="0.5"/>'
         )
-        n_pins = 16
+        n_pins = 40
         pin_pitch = (sw - 4) / (n_pins - 1)
         for i in range(n_pins):
             px = cx - sw / 2 + 2 + i * pin_pitch
@@ -710,6 +730,7 @@ def generate_svg(view="top"):
     title = f"ESP32 Emu Turbo — {'Top' if view == 'top' else 'Bottom'} View"
     parts = [_svg_header(title, view)]
     parts.append(_draw_board(view))
+    parts.append(_draw_fpc_slot(mirror_x=(view == "bottom")))
     parts.append(_draw_mounting_holes())
 
     if view == "top":

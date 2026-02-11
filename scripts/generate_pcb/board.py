@@ -2,11 +2,12 @@
 
 Layout philosophy:
   TOP (F.Cu)  — user-facing: face buttons (D-pad, ABXY, Start, Select, Menu)
-                + charging LEDs (bottom-left)
-  BOTTOM (B.Cu) — all electronics: ESP32, ICs, connectors, L/R shoulder,
+                + charging LEDs (bottom-left) + L/R shoulder buttons
+  BOTTOM (B.Cu) — all electronics: ESP32, ICs, connectors,
                   speaker, power switch, passives, battery connector
 
-Display module sits on top of PCB but FPC connector is on the back.
+Display (ILI9488 3.95" bare panel) sits on top of PCB.  FPC ribbon passes
+through a vertical slot in the board to reach J4 (FPC-40P) on the back.
 """
 
 import math
@@ -40,11 +41,17 @@ MOUNT_HOLES_ENC = [
     (-25, 0), (25, 0),
 ]
 
-# ── Display area (ST7796S 4.0" via FPC ribbon cable) ──
+# ── Display area (ILI9488 3.95" bare LCD panel via FPC ribbon) ──
 # Active area: 86.4 x 64.8mm, centered with 2mm upward offset
 DISPLAY_W = 86.4
 DISPLAY_H = 64.8
 DISPLAY_ENC = (0, 2)   # enclosure offset
+
+# ── FPC slot (vertical cutout for 40-pin ribbon cable) ──
+# Between display right edge (x=43.2) and ABXY left button (x=52)
+FPC_SLOT_ENC = (47, 2)   # slot center in enclosure coords
+FPC_SLOT_W = 3.0         # mm wide (enough for 0.3mm ribbon + clearance)
+FPC_SLOT_H = 24.0        # mm tall (for ~22mm wide 40-pin FPC ribbon)
 
 # ── TOP side (F.Cu): face buttons + LEDs ────────────────────────────
 
@@ -72,18 +79,20 @@ LED_FULL_ENC = (-48, -30)      # Green LED — fully charged
 # ESP32-S3-WROOM-1 (center, back side)
 ESP32_ENC = (0, 10)
 
-# Shoulder L/R (near top edge, back side)
+# Shoulder L/R (near top edge, FRONT side — user-facing)
 SHOULDER_L_ENC = (-65, 35)
 SHOULDER_R_ENC = (65, 35)
 
-# FPC display connector (top center, connects to display via ribbon)
-FPC_ENC = (0, 32)      # Near top edge for ribbon cable
+# FPC display connector (right of slot, connects to display via ribbon)
+# Pin 1 must clear slot right edge (128.5mm PCB). At enc(59,2) → PCB(139,35.5),
+# pin 1 is at 139-9.75=129.25 > 128.5+0.3mm margin.
+FPC_ENC = (59, 2)      # Next to FPC slot, right side
 
 # USB-C (bottom center edge)
 USBC_ENC = (0, -BOARD_H / 2 + 3)   # 3mm from bottom edge
 
-# SD card slot (bottom right, more inward)
-SD_ENC = (40, -BOARD_H / 2 + 8)
+# SD card slot (bottom right)
+SD_ENC = (60, -BOARD_H / 2 + 8)
 
 # Power slide switch (left edge, accessible from enclosure side)
 PWR_SWITCH_ENC = (-72, 15)
@@ -92,20 +101,20 @@ PWR_SWITCH_ENC = (-72, 15)
 SPEAKER_ENC = (-50, -15)
 SPEAKER_DIAM = 22.0
 
-# IP5306 power management (right area, back)
-IP5306_ENC = (45, 8)
-# AMS1117 LDO regulator (far right, back)
-AMS1117_ENC = (62, 8)
+# IP5306 power management (left-center, back — moved from slot zone)
+IP5306_ENC = (30, -5)
+# AMS1117 LDO regulator (below center, back — near IP5306)
+AMS1117_ENC = (45, -18)
 # PAM8403 audio amplifier (left area, back)
 PAM8403_ENC = (-50, 8)
-# L1 inductor (below IP5306, with clearance)
-INDUCTOR_ENC = (45, -3)
+# L1 inductor (near IP5306, with clearance)
+INDUCTOR_ENC = (30, -15)
 # JST PH battery connector (center-bottom, back)
 JST_BAT_ENC = (0, -15)
 
 
 def _board_outline():
-    """Generate rounded rectangle board outline on Edge.Cuts."""
+    """Generate rounded rectangle board outline + FPC slot on Edge.Cuts."""
     r = CORNER_R
     w, h = BOARD_W, BOARD_H
     parts = []
@@ -143,6 +152,19 @@ def _board_outline():
         0, h - r,
     ))
 
+    # FPC slot — internal rectangular cutout for 40-pin ribbon cable
+    sx, sy = enc_to_pcb(*FPC_SLOT_ENC)
+    sw2 = FPC_SLOT_W / 2
+    sh2 = FPC_SLOT_H / 2
+    slot_x1 = sx - sw2   # left
+    slot_x2 = sx + sw2   # right
+    slot_y1 = sy - sh2   # top
+    slot_y2 = sy + sh2   # bottom
+    parts.append(P.gr_line(slot_x1, slot_y1, slot_x2, slot_y1))  # top
+    parts.append(P.gr_line(slot_x2, slot_y1, slot_x2, slot_y2))  # right
+    parts.append(P.gr_line(slot_x2, slot_y2, slot_x1, slot_y2))  # bottom
+    parts.append(P.gr_line(slot_x1, slot_y2, slot_x1, slot_y1))  # left
+
     return "".join(parts)
 
 
@@ -165,7 +187,7 @@ def _silkscreen_labels():
     dx, dy = enc_to_pcb(*DISPLAY_ENC)
     dw2, dh2 = DISPLAY_W / 2, DISPLAY_H / 2
     parts.append(P.gr_text(
-        "DISPLAY AREA (ST7796S 4.0in)", dx, dy - dh2 - 3,
+        "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 3,
         "F.SilkS", 1.0,
     ))
 
@@ -215,11 +237,11 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*SPEAKER_ENC)
     parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 0.8))
 
-    # Shoulder button labels (back side)
+    # Shoulder button labels (front side — user-facing)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.7))
+    parts.append(P.gr_text("L", px, py + 5, "F.SilkS", 0.7))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.7))
+    parts.append(P.gr_text("R", px, py + 5, "F.SilkS", 0.7))
 
     return "".join(parts)
 
@@ -284,12 +306,12 @@ def _component_placeholders():
                         px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    placements.append(("SW11", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
+    placements.append(("SW11", "SW-SMD-5.1x5.1", px, py, 0, "F.Cu"))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    placements.append(("SW12", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
+    placements.append(("SW12", "SW-SMD-5.1x5.1", px, py, 0, "F.Cu"))
 
     px, py = enc_to_pcb(*FPC_ENC)
-    placements.append(("J4", "FPC-16P-0.5mm", px, py, 0, "B.Cu"))
+    placements.append(("J4", "FPC-40P-0.5mm", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*USBC_ENC)
     placements.append(("J1", "USB-C-16P", px, py, 0, "B.Cu"))

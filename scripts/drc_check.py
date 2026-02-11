@@ -29,6 +29,13 @@ RULES = {
     "board_height": 75.0,
 }
 
+# FPC slot cutout (internal Edge.Cuts rectangle)
+# PCB coordinates: center at (127, 35.5), 3mm wide × 24mm tall
+SLOT_X1 = 125.5   # left edge
+SLOT_X2 = 128.5   # right edge
+SLOT_Y1 = 23.5    # top edge
+SLOT_Y2 = 47.5    # bottom edge
+
 
 def parse_pcb(filepath):
     """Parse KiCad PCB file and extract design elements."""
@@ -127,8 +134,37 @@ def check_via_dimensions(data):
     return errors
 
 
+def _in_slot(x, y, margin):
+    """Check if point (with margin) intrudes into the FPC slot cutout."""
+    return (SLOT_X1 - margin < x < SLOT_X2 + margin and
+            SLOT_Y1 - margin < y < SLOT_Y2 + margin)
+
+
+def _segment_crosses_slot(x1, y1, x2, y2, hw):
+    """Check if a trace segment physically crosses through the FPC slot.
+
+    A horizontal segment crosses if it spans the slot x-range while within
+    the slot y-range. A vertical segment crosses if it spans the slot y-range
+    while within the slot x-range. hw = half-width of the trace.
+    """
+    if abs(y1 - y2) < 0.01:  # horizontal segment
+        y = y1
+        if SLOT_Y1 - hw <= y <= SLOT_Y2 + hw:
+            lo, hi = min(x1, x2), max(x1, x2)
+            if lo < SLOT_X1 - hw and hi > SLOT_X2 + hw:
+                return True
+    elif abs(x1 - x2) < 0.01:  # vertical segment
+        x = x1
+        if SLOT_X1 - hw <= x <= SLOT_X2 + hw:
+            lo, hi = min(y1, y2), max(y1, y2)
+            if lo < SLOT_Y1 - hw and hi > SLOT_Y2 + hw:
+                return True
+    return False
+
+
 def check_board_edge_clearance(data):
-    """Check all elements are inside board boundaries with margin."""
+    """Check all elements are inside board boundaries with margin,
+    and not intruding into the FPC slot cutout."""
     errors = []
     margin = RULES["min_board_edge_clearance"]
     bw = RULES["board_width"]
@@ -143,6 +179,18 @@ def check_board_edge_clearance(data):
                     f"Trace at ({x},{y}) too close to board edge "
                     f"(margin={margin}mm)"
                 )
+            # Check endpoint slot clearance
+            if _in_slot(x, y, margin):
+                errors.append(
+                    f"Trace at ({x},{y}) too close to FPC slot"
+                )
+        # Check if segment crosses through the slot
+        if _segment_crosses_slot(seg["x1"], seg["y1"],
+                                 seg["x2"], seg["y2"], hw):
+            errors.append(
+                f"Trace ({seg['x1']},{seg['y1']})->"
+                f"({seg['x2']},{seg['y2']}) crosses FPC slot"
+            )
 
     for v in data["vias"]:
         r = v["size"] / 2
@@ -150,6 +198,10 @@ def check_board_edge_clearance(data):
                 v["y"] - r < margin or v["y"] + r > bh - margin):
             errors.append(
                 f"Via at ({v['x']},{v['y']}) too close to board edge"
+            )
+        if _in_slot(v["x"], v["y"], margin):
+            errors.append(
+                f"Via at ({v['x']},{v['y']}) too close to FPC slot"
             )
 
     return errors

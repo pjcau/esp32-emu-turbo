@@ -171,19 +171,21 @@ def usb_c_16p(layer="B"):
     return pads
 
 
-# ── FPC 16-pin 0.5mm pitch ───────────────────────────────────────
-def fpc_16p(layer="B"):
+# ── FPC 40-pin 0.5mm pitch (ILI9488 display) ────────────────────
+def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
     pw, ph = 0.3, 1.2
 
-    for i in range(16):
-        x = -3.75 + i * 0.5
+    # 40 pins at 0.5mm pitch, centered at origin
+    # Pin 1 at x = -9.75, pin 40 at x = +9.75
+    for i in range(40):
+        x = -9.75 + i * 0.5
         pads.append(_pad(str(i + 1), "smd", "rect", x, 0, pw, ph, layers))
 
-    # 2 mounting pads
-    pads.append(_pad("MP1", "smd", "rect", -5.0, 0, 1.2, 2.0, layers))
-    pads.append(_pad("MP2", "smd", "rect", 5.0, 0, 1.2, 2.0, layers))
+    # 2 mounting pads (wider for 40-pin connector)
+    pads.append(_pad("MP1", "smd", "rect", -12.0, 0, 1.2, 2.0, layers))
+    pads.append(_pad("MP2", "smd", "rect", 12.0, 0, 1.2, 2.0, layers))
 
     return pads
 
@@ -271,7 +273,7 @@ FOOTPRINTS = {
     "SOT-223": (sot223, "B"),
     "SOP-16": (sop16, "B"),
     "USB-C-16P": (usb_c_16p, "B"),
-    "FPC-16P-0.5mm": (fpc_16p, "B"),
+    "FPC-40P-0.5mm": (fpc_40p, "B"),
     "TF-01A": (tf01a, "B"),
     "JST-PH-2P": (jst_ph_2p, "B"),
     "R_0805": (passive_0805, "B"),
