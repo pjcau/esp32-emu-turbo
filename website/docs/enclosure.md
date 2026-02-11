@@ -50,9 +50,9 @@ make render-enclosure
 - **D-pad** — cross-shaped cutout on left side
 - **A/B/X/Y buttons** — diamond layout on right side (SNES style)
 - **Start/Select** — pill-shaped cutouts below the D-pad
-- **L/R shoulder buttons** — rectangular cutouts on top edge
 
 ### Back Panel
+- **L/R shoulder buttons** — pill-shaped cutouts near top edge (20 × 7mm)
 - **Speaker grille** — array of 1.5mm holes in circular pattern (left side)
 - **Ventilation** — optional vent slots near the processor area
 
@@ -69,8 +69,8 @@ make render-enclosure
 ## Physical Layout
 
 ```
+FRONT (display side):
 ┌─────────────────────────────────────────────────────────┐
-│  [L]                                              [R]   │
 │                                                         │
 │                 ┌───────────────────┐                    │
 │                 │                   │                    │
@@ -83,6 +83,19 @@ make render-enclosure
 │                                                         │
 │  ┌──USB-C──┐                           ┌──SD Card──┐    │
 └──┴─────────┴───────────────────────────┴───────────┴────┘
+
+BACK (battery side):
+┌─────────────────────────────────────────────────────────┐
+│  [L]                                              [R]   │
+│                                                         │
+│                                                         │
+│                    (( Speaker ))                         │
+│                                                         │
+│                                                         │
+│                                                         │
+│                                                         │
+│                                                         │
+└─────────────────────────────────────────────────────────┘
 ```
 
 ## Dimensions Reference
@@ -96,7 +109,7 @@ make render-enclosure
 | D-pad cutout | 24 × 24 mm cross | 5mm arm width |
 | Face button holes | 8 mm diameter | A/B/X/Y, 13mm spacing |
 | Start/Select | 10 × 4 mm pills | Below D-pad |
-| Shoulder buttons | 20 × 7 mm | Near top corners |
+| Shoulder buttons | 20 × 7 mm | Back panel, near top edge |
 | USB-C port | 9.0 × 3.2 mm | Centered on bottom edge |
 | SD card slot | 12 × 2.5 mm | Right side of bottom edge |
 | Battery bay | 82 × 52 × 11 mm | For 105080 LiPo |

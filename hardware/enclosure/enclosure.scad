@@ -23,7 +23,7 @@ corner_r = 8;           // Corner radius
 top_d = 10;             // Top shell depth (display side)
 bot_d = body_d - top_d; // Bottom shell depth (battery side)
 
-// === Display parameters (ST7796S 4.0") ===
+// === Display parameters (ILI9488 3.95" bare panel + 40P FPC) ===
 disp_w = 86.4;          // Active area width
 disp_h = 64.8;          // Active area height
 disp_bezel = 2.0;       // Bezel width around viewport
@@ -51,7 +51,7 @@ ss_spacing = 16;        // Horizontal distance between Start and Select
 ss_w = 10;              // Pill width
 ss_h = 4;               // Pill height
 
-// === Shoulder buttons (L/R on top edge, near corners) ===
+// === Shoulder buttons (L/R on back side, near top edge) ===
 shoulder_inset_x = 65;  // Distance from center (moved to corners)
 shoulder_w = 20;
 shoulder_h = 7;
@@ -133,13 +133,6 @@ module top_shell() {
         translate([ss_x + ss_spacing/2, ss_y, 0])
         pill_cutout(ss_w, ss_h, top_d + 1);
 
-        // L shoulder button cutout (top edge, left corner)
-        translate([-shoulder_inset_x, body_h/2 - shoulder_h/2, 0])
-        shoulder_button_cutout(shoulder_w, shoulder_h, top_d + 1);
-
-        // R shoulder button cutout (top edge, right corner)
-        translate([shoulder_inset_x, body_h/2 - shoulder_h/2, 0])
-        shoulder_button_cutout(shoulder_w, shoulder_h, top_d + 1);
     }
 
     // Display bezel (raised frame)
@@ -171,11 +164,6 @@ module top_shell() {
         translate([ss_x + ss_spacing/2, ss_y - ss_h - 2, 0.1])
         button_label("STA", 2, 0.2);
 
-        // Shoulder labels
-        translate([-shoulder_inset_x, body_h/2 - 2, 0.1])
-        button_label("L", 2.5, 0.2);
-        translate([shoulder_inset_x, body_h/2 - 2, 0.1])
-        button_label("R", 2.5, 0.2);
     }
 }
 
@@ -215,6 +203,14 @@ module bottom_shell() {
         // Wire channel for battery cable
         translate([bat_w/2 + 2, 3, wall])
         wire_channel(15, 4, 3);
+
+        // L shoulder button cutout (back face, near top edge)
+        translate([-shoulder_inset_x, body_h/2 - shoulder_h/2, 0])
+        shoulder_button_cutout(shoulder_w, shoulder_h, wall + 1);
+
+        // R shoulder button cutout (back face, near top edge)
+        translate([shoulder_inset_x, body_h/2 - shoulder_h/2, 0])
+        shoulder_button_cutout(shoulder_w, shoulder_h, wall + 1);
     }
 
     // Screw bosses
@@ -227,6 +223,14 @@ module bottom_shell() {
                 cylinder(h=screw_boss_h + 0.2, d=screw_d_inner, $fn=24);
             }
         }
+    }
+
+    // Shoulder button labels (engraved on back face)
+    color([0.3, 0.3, 0.35]) {
+        translate([-shoulder_inset_x, body_h/2 - 2, -0.1])
+        button_label("L", 2.5, 0.2);
+        translate([shoulder_inset_x, body_h/2 - 2, -0.1])
+        button_label("R", 2.5, 0.2);
     }
 }
 
@@ -295,7 +299,7 @@ module cap_select() {
 
 module cap_shoulder_l() {
     sh_r = shoulder_h / 2 - 0.5;
-    translate([-shoulder_inset_x, body_h/2 - shoulder_h/2, body_d - cap_h])
+    translate([-shoulder_inset_x, body_h/2 - shoulder_h/2, -0.2])
     linear_extrude(height=cap_h + 0.2)
     hull() {
         translate([-(shoulder_w/2 - sh_r - 0.25), 0]) circle(r=sh_r, $fn=24);
@@ -305,7 +309,7 @@ module cap_shoulder_l() {
 
 module cap_shoulder_r() {
     sh_r = shoulder_h / 2 - 0.5;
-    translate([shoulder_inset_x, body_h/2 - shoulder_h/2, body_d - cap_h])
+    translate([shoulder_inset_x, body_h/2 - shoulder_h/2, -0.2])
     linear_extrude(height=cap_h + 0.2)
     hull() {
         translate([-(shoulder_w/2 - sh_r - 0.25), 0]) circle(r=sh_r, $fn=24);
