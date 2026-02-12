@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Pre-commit hook: run pre-production verification battery
+# Blocks commit if any check fails (exit code != 0)
+#
+# Install: git config core.hooksPath .githooks
+
+set -e
+
+# Only run when hardware or script files are staged
+HARDWARE_CHANGED=$(git diff --cached --name-only -- 'hardware/' 'scripts/' '*.kicad_pcb' '*.kicad_sch' | head -1)
+if [ -z "$HARDWARE_CHANGED" ]; then
+    exit 0
+fi
+
+echo ""
+echo "=========================================="
+echo "  Pre-production verification"
+echo "=========================================="
+echo ""
+
+ERRORS=0
+
+# 1. DRC Check
+printf "[verify] DRC Check ............ "
+DRC_OUTPUT=$(python3 scripts/drc_check.py 2>&1)
+DRC_EXIT=$?
+if [ $DRC_EXIT -ne 0 ]; then
+    echo "FAIL"
+    echo "$DRC_OUTPUT"
+    ERRORS=$((ERRORS + 1))
+else
+    DRC_SUMMARY=$(echo "$DRC_OUTPUT" | grep "^RESULT:" || echo "PASS")
+    echo "$DRC_SUMMARY"
+fi
+
+# 2. Circuit Simulation
+printf "[verify] Circuit Simulation ... "
+SIM_OUTPUT=$(python3 scripts/simulate_circuit.py 2>&1)
+SIM_EXIT=$?
+if [ $SIM_EXIT -ne 0 ]; then
+    echo "FAIL"
+    echo "$SIM_OUTPUT"
+    ERRORS=$((ERRORS + 1))
+else
+    SIM_SUMMARY=$(echo "$SIM_OUTPUT" | grep "^RESULT:" || echo "PASS")
+    echo "$SIM_SUMMARY"
+fi
+
+# 3. Schematic-PCB Consistency
+printf "[verify] Schematic-PCB ........ "
+VERIFY_OUTPUT=$(python3 scripts/verify_schematic_pcb.py 2>&1)
+VERIFY_EXIT=$?
+if [ $VERIFY_EXIT -ne 0 ]; then
+    echo "FAIL"
+    echo "$VERIFY_OUTPUT"
+    ERRORS=$((ERRORS + 1))
+else
+    echo "PASS"
+fi
+
+echo ""
+if [ $ERRORS -ne 0 ]; then
+    echo "=========================================="
+    echo "  BLOCKED: $ERRORS check(s) failed"
+    echo "  Fix errors before committing."
+    echo "=========================================="
+    exit 1
+fi
+
+echo "[verify] All pre-production checks passed"
+echo ""
+exit 0
