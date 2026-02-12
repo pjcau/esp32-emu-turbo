@@ -19,7 +19,7 @@
 | R17-R18 | 1k (LED limiting) | 0805 | C11702 | Basic | 2 | ~$0.002 |
 | C3-C16,C20 | 100nF (decoupling) | 0805 | C49678 | Basic | 15 | ~$0.002 |
 | C1,C17,C18 | 10uF | 0805 | C15850 | Basic | 3 | ~$0.01 |
-| C2,C19 | 22uF (tantalum/MLCC) | 1206 | C29632 | Basic | 2 | ~$0.02 |
+| C2,C19 | 22uF 25V MLCC (Samsung) | 1206 | C12891 | Basic | 2 | ~$0.02 |
 | SW1-SW13 | SMT tact switch | 5.1x5.1mm | C318884 | Extended | 13 | ~$0.02 |
 
 ## Manual Assembly (not on PCB or off-board)

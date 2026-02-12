@@ -19,7 +19,13 @@
       "Bash(npx docusaurus deploy)",
       "Bash(kicad-cli sch export svg:*)",
       "Bash(USE_SSH=true npx docusaurus deploy:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:jlcpcb.com)",
+      "WebFetch(domain:lcsc.com)",
+      "WebFetch(domain:www.lcsc.com)",
+      "Bash(sort:*)",
+      "Bash(kicad-cli:*)",
+      "Bash(zip:*)"
     ]
   }
 }
