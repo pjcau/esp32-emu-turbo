@@ -10,7 +10,7 @@
 | U5 | PAM8403 (audio amp) | SOP-16 | C5122557 | Extended | 1 | ~$0.50 |
 | J1 | USB-C 16-pin connector | SMD | C2765186 | Extended | 1 | ~$0.07 |
 | U6 | Micro SD card slot | TF-01A | C91145 | Extended | 1 | ~$0.19 |
-| J4 | FPC 40-pin 0.5mm | SMD | TBD | Extended | 1 | ~$0.10 |
+| J4 | FPC 40-pin 0.5mm (XUNPU) | SMD | C2856812 | Extended | 1 | ~$0.08 |
 | J3 | JST PH 2-pin (battery) | THT | C173752 | Extended | 1 | ~$0.04 |
 | L1 | 1uH inductor (boost) | 4x4x2mm | C280579 | Extended | 1 | ~$0.25 |
 | R1-R2 | 5.1k (CC pull-down) | 0805 | C27834 | Basic | 2 | ~$0.002 |
