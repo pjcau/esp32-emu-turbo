@@ -99,6 +99,16 @@ Progressive optimization of the snes9x core for ESP32-S3.
 
 ## Quick Start
 
+### Clone (with submodules)
+
+```bash
+git clone --recurse-submodules https://github.com/pjcau/esp32-emu-turbo.git
+cd esp32-emu-turbo
+
+# If you already cloned without --recurse-submodules:
+git submodule update --init --recursive
+```
+
 ### Generate hardware files
 
 ```bash
