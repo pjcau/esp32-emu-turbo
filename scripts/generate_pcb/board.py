@@ -346,6 +346,7 @@ def _component_placeholders():
         layer_char = "F" if "F." in layer else "B"
         pads = FP.get_pads(fp_name, layer_char)
         pad_str = "".join(pads)
+        mirror = " (justify mirror)" if "B." in layer else ""
         parts.append(
             f'  (footprint "{fp_name}" (at {x} {y} {rot})'
             f' (layer "{layer}")\n'
@@ -353,11 +354,11 @@ def _component_placeholders():
             f'    (property "Reference" "{ref}"'
             f' (at 0 -3 0) (layer "{layer}")'
             f' (effects (font (size 1 1)'
-            f' (thickness 0.15))))\n'
+            f' (thickness 0.15)){mirror}))\n'
             f'    (property "Value" "{fp_name}"'
             f' (at 0 3 0) (layer "{layer}")'
             f' (effects (font (size 1 1)'
-            f' (thickness 0.15))))\n'
+            f' (thickness 0.15)){mirror}))\n'
             f'{pad_str}'
             f'  )\n'
         )

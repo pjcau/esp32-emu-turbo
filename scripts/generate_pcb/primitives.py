@@ -160,11 +160,12 @@ def gr_arc(sx, sy, mx, my, ex, ey,
 
 
 def gr_text(text, x, y, layer="F.SilkS", size=1.0):
+    mirror = " (justify mirror)" if "B." in layer else ""
     return (
         f'  (gr_text "{text}" (at {x} {y})'
         f' (layer "{layer}")'
         f' (effects (font (size {size} {size})'
-        f' (thickness 0.15))))\n'
+        f' (thickness 0.15)){mirror}))\n'
     )
 
 
