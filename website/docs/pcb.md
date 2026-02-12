@@ -1,7 +1,7 @@
 ---
 id: pcb
 title: PCB Design (JLCPCB)
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # PCB Design — JLCPCB PCBA
