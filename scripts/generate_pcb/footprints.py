@@ -5,6 +5,8 @@ inside a (footprint ...) block.  Coordinates are relative to the
 footprint origin (center).
 """
 
+import re
+
 from . import primitives as P
 
 
@@ -286,12 +288,34 @@ FOOTPRINTS = {
 }
 
 
+def _mirror_pad_x(pad_str):
+    """Negate the X coordinate in a pad S-expression for B.Cu mirroring.
+
+    In KiCad, footprints on B.Cu must have their pad X coordinates
+    pre-mirrored (negated) so the Gerber copper matches the physical
+    component placement from the pick-and-place (CPL) file.
+    """
+    def _negate(match):
+        x = -float(match.group(1))
+        if x == 0:
+            x = 0.0  # avoid -0.0
+        y = match.group(2)
+        return f'(at {x} {y})'
+    return re.sub(r'\(at ([-\d.]+) ([-\d.]+)\)', _negate, pad_str, count=1)
+
+
 def get_pads(footprint_name, layer=None):
     """Return pad S-expression list for a given footprint.
 
     If layer is None, uses the default layer for that footprint.
+    For B.Cu footprints, pad X coordinates are negated (mirrored)
+    to match KiCad's convention for bottom-side components.
     """
     if footprint_name not in FOOTPRINTS:
         return []
     gen, default_layer = FOOTPRINTS[footprint_name]
-    return gen(layer or default_layer)
+    actual_layer = layer or default_layer
+    pads = gen(actual_layer)
+    if actual_layer == "B":
+        pads = [_mirror_pad_x(p) for p in pads]
+    return pads

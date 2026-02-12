@@ -333,13 +333,55 @@ def _component_placeholders():
     placements.append(("U3", "SOT-223", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*PAM8403_ENC)
-    placements.append(("U5", "SOP-16", px, py, 0, "B.Cu"))
+    placements.append(("U5", "SOP-16", px, py, 90, "B.Cu"))
 
     px, py = enc_to_pcb(*INDUCTOR_ENC)
     placements.append(("L1", "SMD-4x4x2", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*JST_BAT_ENC)
     placements.append(("J3", "JST-PH-2P", px, py, 0, "B.Cu"))
+
+    # ── Passive components (B.Cu) ──
+    # Positions must match jlcpcb_export.py for CPL/Gerber alignment.
+
+    # USB-C CC resistors
+    ux, uy = enc_to_pcb(*USBC_ENC)
+    placements.append(("R1", "R_0805", ux - 6, uy - 5, 0, "B.Cu"))
+    placements.append(("R2", "R_0805", ux + 6, uy - 5, 0, "B.Cu"))
+
+    # ESP32 decoupling + LED resistors (y=40, below ESP32 body)
+    placements.append(("R3", "R_0805", 65, 40, 0, "B.Cu"))
+    placements.append(("C3", "C_0805", 70, 40, 0, "B.Cu"))
+    placements.append(("R17", "R_0805", 75, 40, 0, "B.Cu"))
+    placements.append(("R18", "R_0805", 80, 40, 0, "B.Cu"))
+    placements.append(("C4", "C_0805", 85, 40, 0, "B.Cu"))
+
+    # Pull-up resistors (y=44, x=43..103, 5mm spacing)
+    pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
+    for i, ref in enumerate(pull_up_refs):
+        placements.append((ref, "R_0805", 43 + i * 5, 44, 0, "B.Cu"))
+
+    # IP5306 KEY pull-down
+    ix, iy = enc_to_pcb(*IP5306_ENC)
+    placements.append(("R16", "R_0805", ix + 5, iy + 10, 0, "B.Cu"))
+
+    # Debounce caps (y=48, x=43..103, 5mm spacing)
+    debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
+    for i, ref in enumerate(debounce_refs):
+        placements.append((ref, "C_0805", 43 + i * 5, 48, 0, "B.Cu"))
+
+    # IP5306 support caps
+    placements.append(("C17", "C_0805", 110, 35, 0, "B.Cu"))
+    placements.append(("C18", "C_0805", ix + 6, iy - 5, 0, "B.Cu"))
+
+    # C19 near inductor L1
+    lx, ly = enc_to_pcb(*INDUCTOR_ENC)
+    placements.append(("C19", "C_1206", lx, ly + 6, 0, "B.Cu"))
+
+    # AMS1117 support caps
+    amx, amy = enc_to_pcb(*AMS1117_ENC)
+    placements.append(("C1", "C_0805", amx, amy - 5, 0, "B.Cu"))
+    placements.append(("C2", "C_1206", amx, amy + 5, 0, "B.Cu"))
 
     # Generate footprints with real pad geometries
     for ref, fp_name, x, y, rot, layer in placements:

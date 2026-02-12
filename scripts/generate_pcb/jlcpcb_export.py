@@ -105,10 +105,7 @@ def _build_placements():
     p.append(("SW_PWR", "SS-12D00G3",
               "SS-12D00G3", x, y, 0, "bottom"))
 
-    # Speaker (back side, 22mm)
-    x, y = enc_to_pcb(*SPEAKER_ENC)
-    p.append(("SPK1", "Speaker-22mm",
-              "Speaker-22mm-Pad", x, y, 0, "bottom"))
+    # Speaker (SPK1) — manual assembly, not in BOM, excluded from CPL
 
     # IP5306 power IC (moved left to avoid slot)
     ix, iy = enc_to_pcb(*IP5306_ENC)
@@ -120,10 +117,10 @@ def _build_placements():
     p.append(("U3", "AMS1117-3.3",
               "SOT-223", amx, amy, 0, "bottom"))
 
-    # PAM8403 audio amp
+    # PAM8403 audio amp (rotated 90° for routing to speaker below)
     px, py = enc_to_pcb(*PAM8403_ENC)
     p.append(("U5", "PAM8403",
-              "SOP-16", px, py, 0, "bottom"))
+              "SOP-16", px, py, 90, "bottom"))
 
     # Inductor (near IP5306)
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)
@@ -136,6 +133,13 @@ def _build_placements():
               "JST-PH-2P-Vertical", jx, jy, 0, "bottom"))
 
     # ── Passive components (back side) ────────────────────────────
+    # All passives have >= 3mm center-to-center spacing.
+    # Layout rows (Y increases downward in KiCad):
+    #   y=35   IP5306 support caps (C17)
+    #   y=37.5 IP5306 support caps (C18)
+    #   y=40   ESP32 decoupling (R3, C3, R17, R18, C4)
+    #   y=44   Pull-up resistors (R4-R15, R19) x=43..103
+    #   y=48   Debounce caps (C5-C16, C20) x=43..103
 
     # USB-C CC resistors
     ux, uy = enc_to_pcb(*USBC_ENC)
@@ -144,42 +148,32 @@ def _build_placements():
     p.append(("R2", "5.1k", "R_0805",
               ux + 6, uy - 5, 0, "bottom"))
 
-    # ESP32 decoupling (below ESP32 module, 18x25.5mm body)
-    ex, ey = enc_to_pcb(*ESP32_ENC)
-    p.append(("R3", "10k", "R_0805",
-              ex - 15, ey + 16, 0, "bottom"))
-    p.append(("C3", "100nF", "C_0805",
-              ex - 10, ey + 16, 0, "bottom"))
-    p.append(("C4", "100nF", "C_0805",
-              ex + 10, ey + 16, 0, "bottom"))
+    # ESP32 decoupling + LED resistors (y=40, below ESP32 body edge)
+    p.append(("R3", "10k", "R_0805", 65, 40, 0, "bottom"))
+    p.append(("C3", "100nF", "C_0805", 70, 40, 0, "bottom"))
+    p.append(("R17", "1k", "R_0805", 75, 40, 0, "bottom"))
+    p.append(("R18", "1k", "R_0805", 80, 40, 0, "bottom"))
+    p.append(("C4", "100nF", "C_0805", 85, 40, 0, "bottom"))
 
-    # LED current-limiting resistors (on back, near ESP32)
-    p.append(("R17", "1k", "R_0805",
-              ex - 5, ey + 16, 0, "bottom"))
-    p.append(("R18", "1k", "R_0805",
-              ex + 5, ey + 16, 0, "bottom"))
-
-    # ── Button pull-up resistors (centered row below ESP32, y=44) ──
-    # 13 resistors at 5mm spacing, centered at x=80 (x=50..110)
+    # ── Button pull-up resistors (y=44, x=43..103, 5mm spacing) ──
+    # Shifted left to avoid IP5306 at x=110
     pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
     for i, ref in enumerate(pull_up_refs):
         p.append((ref, "10k", "R_0805",
-                  50 + i * 5, 44, 0, "bottom"))
+                  43 + i * 5, 44, 0, "bottom"))
 
-    # R16: IP5306 KEY pull-down (near new IP5306/L1 position)
+    # R16: IP5306 KEY pull-down (near IP5306/L1)
     p.append(("R16", "100k", "R_0805",
               ix + 5, iy + 10, 0, "bottom"))
 
-    # ── Button debounce caps (centered row below pull-ups, y=48) ──
-    # 13 caps at 5mm spacing, centered at x=80 (x=50..110)
+    # ── Button debounce caps (y=48, x=43..103, 5mm spacing) ──
     debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
     for i, ref in enumerate(debounce_refs):
         p.append((ref, "100nF", "C_0805",
-                  50 + i * 5, 48, 0, "bottom"))
+                  43 + i * 5, 48, 0, "bottom"))
 
-    # ── IP5306 support caps (near new IP5306 position) ──
-    p.append(("C17", "10uF", "C_0805",
-              ix - 6, iy - 5, 0, "bottom"))
+    # ── IP5306 support caps (away from mounting hole at 105,37.5) ──
+    p.append(("C17", "10uF", "C_0805", 110, 35, 0, "bottom"))
     p.append(("C18", "10uF", "C_0805",
               ix + 6, iy - 5, 0, "bottom"))
 
@@ -187,7 +181,7 @@ def _build_placements():
     p.append(("C19", "22uF", "C_1206",
               lx, ly + 6, 0, "bottom"))
 
-    # ── AMS1117 support caps (near new AMS1117 position) ──
+    # ── AMS1117 support caps ──
     p.append(("C1", "10uF", "C_0805",
               amx, amy - 5, 0, "bottom"))
     p.append(("C2", "22uF", "C_1206",

@@ -15,6 +15,9 @@ import sys
 import math
 from pathlib import Path
 
+# Ensure project root is importable
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 # ── JLCPCB 4-Layer Design Rules ──────────────────────────────────
 RULES = {
     "min_trace_width": 0.09,       # mm (practical: 0.2mm)
@@ -279,6 +282,38 @@ def check_drill_spacing(data):
     return errors
 
 
+def check_component_overlap():
+    """Check that no two components overlap (< 3mm center-to-center).
+
+    Also verifies no component is placed on a mounting hole.
+    Uses the CPL placement data from jlcpcb_export.
+    """
+    from scripts.generate_pcb.jlcpcb_export import _build_placements
+    from scripts.generate_pcb.board import MOUNT_HOLES_ENC, enc_to_pcb
+
+    MIN_DIST = 3.0  # mm minimum center-to-center
+
+    placements = _build_placements()
+    mounts = [enc_to_pcb(ex, ey) for ex, ey in MOUNT_HOLES_ENC]
+
+    # Build list of all positioned items
+    items = [(ref, x, y) for ref, _, _, x, y, _, layer in placements
+             if layer == "bottom"]
+    items += [(f"MH@{mx:.0f},{my:.0f}", mx, my) for mx, my in mounts]
+
+    errors = []
+    for i in range(len(items)):
+        for j in range(i + 1, len(items)):
+            r1, x1, y1 = items[i]
+            r2, x2, y2 = items[j]
+            d = math.hypot(x2 - x1, y2 - y1)
+            if d < MIN_DIST:
+                errors.append(
+                    f"{r1} <-> {r2}: {d:.1f}mm apart (min {MIN_DIST}mm)"
+                )
+    return errors
+
+
 def check_net_connectivity(data):
     """Check that all declared nets have at least 2 connections."""
     warnings = []
@@ -333,6 +368,15 @@ def main():
         ("Trace Spacing", check_trace_spacing),
         ("Drill Spacing", check_drill_spacing),
     ]
+
+    # Component overlap check (uses CPL data, not PCB data)
+    overlap_errors = check_component_overlap()
+    status = "PASS" if not overlap_errors else \
+        f"FAIL ({len(overlap_errors)} errors)"
+    print(f"  [{status}] Component Overlap")
+    for e in overlap_errors[:10]:
+        print(f"         {e}")
+    all_errors.extend(overlap_errors)
 
     for name, fn in checks:
         errors = fn(data)
