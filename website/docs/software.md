@@ -166,11 +166,11 @@ Fork and adapt Retro-Go for our hardware. Retro-Go is included as a git submodul
 | 2.1 | Add `ducalex/retro-go` as submodule | `retro-go/` directory, upstream repo | ✅ Done |
 | 2.2 | Create target `targets/esp32-emu-turbo/` | `config.h` + `env.py` + `sdkconfig` | ✅ Done |
 | 2.3 | Docker build pipeline | `docker-compose.retro-go.yml` + Makefile targets | ✅ Done |
-| 2.4 | Custom display driver `st7796s_i80.h` | Replace SPI ILI9341 with i80 parallel for 320x480 | Pending |
-| 2.5 | Frame scaling | 256x224 → 320x480 (integer scale + letterbox) | Pending |
-| 2.6 | Input mapping | `rg_input` GPIO direct for D-pad, ABXY, Start, Select, L, R | Pending |
-| 2.7 | Audio routing | I2S output config for PAM8403 | Pending |
-| 2.8 | First boot: NES test | nofrendo running Super Mario Bros at 60fps | Pending |
+| 2.4 | Custom display driver `st7796s_i80.h` | 8-bit i80 parallel via `esp_lcd_panel_io_i80`, async DMA, 5-buffer pool | ✅ Done |
+| 2.5 | Frame scaling | Automatic via Retro-Go core (320x480 portrait, integer scale + letterbox) | ✅ Done |
+| 2.6 | Input mapping | 12 GPIO direct buttons + MENU=SELECT (GPIO 0) | ✅ Done |
+| 2.7 | Audio routing | I2S ext DAC (BCLK=15, WS=16, DATA=17) → PAM8403 | ✅ Done |
+| 2.8 | First boot: NES test | nofrendo running Super Mario Bros at 60fps | ⏳ Needs hardware |
 
 #### Build & flash (Docker)
 
@@ -202,6 +202,22 @@ The target lives at `retro-go/components/retro-go/targets/esp32-emu-turbo/` with
 - `config.h` — GPIO mapping, display/audio/input config (mirrors `board_config.h`)
 - `env.py` — `IDF_TARGET = "esp32s3"`, firmware format
 - `sdkconfig` — ESP-IDF config (240MHz, 16MB flash QIO, 8MB Octal PSRAM)
+
+#### Display driver: `st7796s_i80.h`
+
+Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 parallel interface. Located at `retro-go/components/retro-go/drivers/display/st7796s_i80.h`.
+
+| Feature | Value |
+|:---|:---|
+| Bus | 8-bit i80 parallel (`esp_lcd_panel_io_i80`) |
+| Clock | 20 MHz write clock |
+| Resolution | 320x480 portrait |
+| Color format | RGB565 (16-bit) |
+| DMA | Async with 5-buffer pool |
+| Backlight | PWM via LEDC (GPIO 45) |
+| Driver ID | `RG_SCREEN_DRIVER 2` |
+
+The driver uses `esp_lcd_panel_io_tx_param` for commands (CASET/RASET) and `esp_lcd_panel_io_tx_color` for async DMA pixel transfers. A completion callback recycles buffers to the pool, providing natural backpressure without explicit sync.
 
 ### Phase 3 — All Emulators at Full Speed
 
