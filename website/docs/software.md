@@ -235,7 +235,50 @@ Doubles apparent framerate at the cost of slight vertical flicker. Works well fo
 
 **Expected gain:** +5 perceived fps
 
+### Optimization 5 — Audio Profiles
+
+The SPC700 audio DSP is the single biggest CPU bottleneck at ~8ms/frame (48% of budget). Three selectable profiles trade audio quality for frame rate, toggled in-game via **Menu button → Audio: Full / Fast / OFF**.
+
+#### Profile Comparison
+
+| Profile | Sample rate | Interpolation | Echo/Reverb | Channels | DSP time | Frame budget used |
+|:---|:---|:---|:---|:---|---:|---:|
+| **Full** | 32 kHz | Gaussian (4-tap) | Yes | Stereo | ~8.0 ms | 48% |
+| **Fast** | 16 kHz | Linear (2-tap) | No | Mono | ~2.5 ms | 15% |
+| **OFF** | — | — | — | — | 0 ms | 0% |
+
+#### CPU Timing Breakdown per Profile
+
+```
+Frame time budget: 16.67 ms (60 fps)
+
+                        Audio Full    Audio Fast    Audio OFF
+                        ──────────    ──────────    ─────────
+65C816 CPU emulation      4.5 ms        4.5 ms       4.5 ms
+PPU rendering             5.0 ms        5.0 ms       5.0 ms
+SPC700 audio DSP          8.0 ms        2.5 ms       0.0 ms
+Display transfer          1.5 ms        1.5 ms       1.5 ms
+                        ──────────    ──────────    ─────────
+TOTAL (single-core)      19.0 ms       13.5 ms      11.0 ms
+Theoretical fps            53            74           91
+```
+
+With dual-core audio offloading, the audio DSP runs in parallel on Core 1 and no longer blocks the main loop — but only if Core 1 finishes within the frame budget:
+
+```
+                        Audio Full    Audio Fast    Audio OFF
+                        ──────────    ──────────    ─────────
+Core 0 (CPU+PPU+LCD)    11.0 ms       11.0 ms      11.0 ms
+Core 1 (audio DSP)        8.0 ms        2.5 ms       0.0 ms
+Bottleneck               11.0 ms       11.0 ms      11.0 ms
+Theoretical fps            91            91           91
+```
+
+With Fast or OFF, Core 1 finishes well within budget, so the bottleneck is always Core 0 at 11ms. With Full audio, Core 1 at 8ms is still under Core 0's 11ms — but in practice, cache contention and memory bus sharing between cores reduce the effective throughput.
+
 ### SNES Performance Summary
+
+#### With Audio Full (32kHz Gaussian stereo)
 
 | Level | Optimizations applied | Rendered fps | Perceived fps | Best for |
 |:---|:---|---:|---:|:---|
@@ -244,18 +287,42 @@ Doubles apparent framerate at the cost of slight vertical flicker. Works well fo
 | **Better** | **+ adaptive frameskip** | **20-25** | **35-45** | **RPGs, puzzle, platformers** |
 | Best | + interlaced + all | 25-30 | 40-50 | Most games playable |
 
+#### With Audio Fast (16kHz linear mono)
+
+| Level | Optimizations applied | Rendered fps | Perceived fps | Best for |
+|:---|:---|---:|---:|:---|
+| Baseline | Audio Fast only | 25-30 | 25-30 | Barely playable |
+| **Good** | **IRAM + dual-core** | **35-40** | **35-40** | **Most games** |
+| **Better** | **+ adaptive frameskip** | **30-35** | **45-55** | **All genres** |
+| **Best** | **+ interlaced + all** | **35-40** | **55-60** | **Near full-speed** |
+
+#### With Audio OFF
+
+| Level | Optimizations applied | Rendered fps | Perceived fps | Best for |
+|:---|:---|---:|---:|:---|
+| Baseline | Audio OFF only | 30-35 | 30-35 | Playable |
+| Good | IRAM + dual-core | 40-45 | 40-45 | Most games |
+| Better | + adaptive frameskip | 35-40 | 50-55 | All genres |
+| Best | + interlaced + all | 40-45 | 55-60 | Full-speed |
+
+:::tip Sweet spot: Audio Fast + all optimizations
+With Audio Fast and all optimizations applied, SNES reaches **55-60 perceived fps** — near full-speed for virtually all games. Audio quality is reduced (16kHz mono, no echo) but still very usable for gameplay. This is the recommended default for action games and platformers.
+:::
+
 ### Game Compatibility by Genre
 
-| Genre | Examples | Difficulty | Expected fps |
-|:---|:---|:---|:---|
-| Turn-based RPG | FF6, Chrono Trigger, Earthbound | Low CPU | **35-45** |
-| Puzzle | Tetris Attack, Dr. Mario, Panel de Pon | Minimal animation | **40-50** |
-| Simple platformer | Super Mario World (early levels) | 1-2 BG layers | **30-40** |
-| Complex platformer | DKC, Yoshi's Island | Many effects | **20-30** |
-| Action / Mode 7 | F-Zero, Star Fox, Mario Kart | Heavy 3D math | **15-25** |
+| Genre | Examples | Audio Full | Audio Fast | Audio OFF |
+|:---|:---|:---|:---|:---|
+| Turn-based RPG | FF6, Chrono Trigger, Earthbound | **35-45** | **50-55** | **55-60** |
+| Puzzle | Tetris Attack, Dr. Mario, Panel de Pon | **40-50** | **55-60** | **55-60** |
+| Simple platformer | Super Mario World (early levels) | **30-40** | **45-55** | **50-60** |
+| Complex platformer | DKC, Yoshi's Island | **20-30** | **35-45** | **40-50** |
+| Action / Mode 7 | F-Zero, Star Fox, Mario Kart | **15-25** | **30-40** | **35-45** |
+
+All values assume all optimizations enabled (IRAM + dual-core + frameskip + interlaced).
 
 :::tip SNES on v2 (ESP32-P4)
-The ESP32-P4 at 400MHz with 2.1x the CoreMark score achieves ~50fps SNES with audio enabled. A future v2 PCB with ESP32-P4 would bring SNES to near full-speed for all genres.
+The ESP32-P4 at 400MHz with 2.1x the CoreMark score achieves ~50fps SNES with Full audio enabled. A future v2 PCB with ESP32-P4 would bring SNES to full-speed Audio Full for all genres.
 :::
 
 ---
