@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "verify": "python3 scripts/drc_check.py && python3 scripts/simulate_circuit.py && python3 scripts/verify_schematic_pcb.py"
+  },
+  "devDependencies": {
+    "husky": "^9.1.0"
+  }
+}

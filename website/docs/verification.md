@@ -179,14 +179,22 @@ python3 scripts/simulate_circuit.py
 python3 scripts/verify_schematic_pcb.py
 ```
 
-### Automatically (pre-commit hook)
+### Automatically (Husky pre-commit hook)
 
 All three checks run on every `git commit`. If any check fails (exit code != 0), the commit is blocked.
 
-The hook is installed at `.githooks/pre-commit` and activated via:
+The hook is managed by [Husky](https://typicode.github.io/husky/) and installed at `.husky/pre-commit`. After cloning:
 
 ```bash
-git config core.hooksPath .githooks
+npm install
+```
+
+This runs `husky` via the `prepare` script and activates the hooks automatically.
+
+You can also run the full battery manually:
+
+```bash
+npm run verify
 ```
 
 ### Expected output

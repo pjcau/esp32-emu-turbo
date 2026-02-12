@@ -1,12 +1,7 @@
-#!/usr/bin/env bash
 # Pre-commit hook: run pre-production verification battery
 # Blocks commit if any check fails (exit code != 0)
-#
-# Install: git config core.hooksPath .githooks
+# Skips when no hardware/script files are staged
 
-set -e
-
-# Only run when hardware or script files are staged
 HARDWARE_CHANGED=$(git diff --cached --name-only -- 'hardware/' 'scripts/' '*.kicad_pcb' '*.kicad_sch' | head -1)
 if [ -z "$HARDWARE_CHANGED" ]; then
     exit 0
@@ -69,4 +64,3 @@ fi
 
 echo "[verify] All pre-production checks passed"
 echo ""
-exit 0
