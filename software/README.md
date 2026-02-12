@@ -130,6 +130,47 @@ software/
 └── gen/    .bin / .md files
 ```
 
+## Retro-Go Emulator (Phase 2)
+
+After hardware validation, the project uses [Retro-Go](https://github.com/ducalex/retro-go) for multi-system emulation. Retro-Go lives in the `retro-go/` git submodule with a separate Docker Compose file.
+
+### Build
+
+```bash
+# Build all Retro-Go apps (launcher + emulators)
+make retro-go-build
+
+# Build launcher only (quick test)
+make retro-go-build-launcher
+
+# Flash + serial monitor
+make retro-go-flash
+
+# Clean build cache
+make retro-go-clean
+```
+
+### Build output
+
+| Binary | Contents | Size | Partition free |
+|---|---|---|---|
+| `launcher.bin` | Launcher UI + ROM browser | 1037 KB | 67% |
+| `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W) | ~2.5 MB | ~17% |
+| `gwenesis.bin` | Sega Genesis / Mega Drive | ~1.5 MB | ~50% |
+| `prboom-go.bin` | Doom port (PrBoom) | ~1.5 MB | ~50% |
+| `fmsx.bin` | MSX emulator | 655 KB | 79% |
+
+### SD Card Setup
+
+A script is provided to format the SD card and copy homebrew test ROMs:
+
+```bash
+sudo ./scripts/setup-sdcard.sh /dev/sdX          # Format + copy
+sudo ./scripts/setup-sdcard.sh /dev/sdX --no-format  # Copy only
+```
+
+8 homebrew ROMs are included in `test-roms/` (NES, GB, GBC, SMS, GG, PCE, Genesis, SNES).
+
 ## Troubleshooting
 
 | Problem | Fix |

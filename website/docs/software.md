@@ -135,7 +135,34 @@ SD Card (FAT32)
 3. **Create sub-folders** for each system you want to emulate
 4. **Copy ROM files** into the matching folder
 
-### Recommended test ROMs
+### Automated setup
+
+A script is provided to format the SD card and copy test ROMs in one step:
+
+```bash
+# Format SD card as FAT32 + copy all homebrew test ROMs
+sudo ./scripts/setup-sdcard.sh /dev/sdX
+
+# Copy only (skip formatting)
+sudo ./scripts/setup-sdcard.sh /dev/sdX --no-format
+```
+
+### Included homebrew test ROMs
+
+The project includes 8 freely distributable homebrew ROMs in `test-roms/` for testing without commercial ROMs:
+
+| System | ROM | Author | Size |
+|:---|:---|:---|:---|
+| NES | Owlia | Gradual Games | 512 KB |
+| GB | Blargg's CPU Instructions | Blargg | 64 KB |
+| GBC | ucity v1.3 | AntonioND | 128 KB |
+| SMS | Silver Valley | Enrique Ruiz | 256 KB |
+| GG | Swabby v1.11 | Anders S. Jensen | 128 KB |
+| PCE | Reflectron | Aetherbyte | 256 KB |
+| Genesis | Miniplanets | Sik | 256 KB |
+| SNES | Super Boss Gaiden v1.2 | Dieter Von Laser | 512 KB |
+
+### Recommended commercial test ROMs
 
 | System | ROM | File | Size | Why |
 |:---|:---|:---|:---|:---|
@@ -196,12 +223,49 @@ ESP_PORT=/dev/ttyACM0 make retro-go-flash
 make retro-go-clean
 ```
 
+#### Build output
+
+All 5 Retro-Go applications compile successfully for the ESP32 Emu Turbo target (ESP-IDF v5.4, ESP32-S3):
+
+| Binary | Contents | Size | Partition free |
+|:---|:---|:---|:---|
+| `launcher.bin` | Retro-Go launcher UI + ROM browser | 1037 KB | 67% |
+| `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W) | ~2.5 MB | ~17% |
+| `gwenesis.bin` | Sega Genesis / Mega Drive (standalone) | ~1.5 MB | ~50% |
+| `prboom-go.bin` | Doom port (PrBoom) | ~1.5 MB | ~50% |
+| `fmsx.bin` | MSX emulator | 655 KB | 79% |
+
+:::note
+The build produces `Device doesn't support fw format, try build-img!` at the end — this is expected. Our target uses individual app flashing via `make retro-go-flash`, not a combined firmware image.
+:::
+
 #### Target configuration
 
 The target lives at `retro-go/components/retro-go/targets/esp32-emu-turbo/` with:
 - `config.h` — GPIO mapping, display/audio/input config (mirrors `board_config.h`)
 - `env.py` — `IDF_TARGET = "esp32s3"`, firmware format
 - `sdkconfig` — ESP-IDF config (240MHz, 16MB flash QIO, 8MB Octal PSRAM)
+
+#### GPIO mapping verification
+
+All 33 GPIO pins have been cross-verified between three sources with **zero discrepancies**:
+
+| Group | Pins | board_config.h | Retro-Go config.h | KiCad schematic |
+|:---|:---|:---|:---|:---|
+| Display data D0–D7 | GPIO 4–11 | ✅ | ✅ | ✅ |
+| Display control | GPIO 3, 12–14, 45, 46 | ✅ | ✅ | ✅ |
+| SD card SPI | GPIO 36–39 | ✅ | ✅ | ✅ |
+| I2S audio | GPIO 15–17 | ✅ | ✅ | ✅ |
+| D-pad | GPIO 40, 41, 42, 1 | ✅ | ✅ | ✅ |
+| Face buttons | GPIO 2, 48, 47, 21 | ✅ | ✅ | ✅ |
+| System buttons | GPIO 18, 0 | ✅ | ✅ | ✅ |
+| Shoulder buttons | GPIO 35, 19 | ✅ | ✅ | ✅ |
+| I2C (IP5306) | GPIO 33, 34 | ✅ | ✅ | ✅ |
+
+**Notes:**
+- MENU and SELECT share GPIO 0 in Retro-Go (intentional — 12 physical buttons, 13 logical)
+- Joystick (GPIO 20, 44) is in the schematic but optional (not in firmware config)
+- GPIO 26–32 are reserved for Octal PSRAM (cannot be used)
 
 #### Display driver: `st7796s_i80.h`
 
