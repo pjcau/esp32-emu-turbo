@@ -1,0 +1,59 @@
+# Docker Compose for Retro-Go emulator build pipeline
+# Usage: docker compose -f docker-compose.retro-go.yml run --rm retro-go-build
+#
+# Separate from the main docker-compose.yml (hardware rendering + Phase 1 firmware)
+
+services:
+  # Build Retro-Go firmware for ESP32 Emu Turbo target
+  retro-go-build:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./retro-go:/project
+      - retro-go-build-cache:/project/build
+    working_dir: /project
+    command: >
+      bash -c "
+        python rg_tool.py --target=esp32-emu-turbo build-fw
+      "
+
+  # Flash Retro-Go firmware + serial monitor
+  retro-go-flash:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./retro-go:/project
+      - retro-go-build-cache:/project/build
+    working_dir: /project
+    devices:
+      - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
+    command: >
+      python rg_tool.py
+        --target=esp32-emu-turbo
+        --port=${ESP_PORT:-/dev/ttyUSB0}
+        flash
+
+  # Serial monitor only (no flash)
+  retro-go-monitor:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./retro-go:/project
+      - retro-go-build-cache:/project/build
+    working_dir: /project
+    devices:
+      - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
+    command: >
+      idf.py -p ${ESP_PORT:-/dev/ttyUSB0} monitor
+
+  # Build only the launcher app (quick test)
+  retro-go-build-launcher:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./retro-go:/project
+      - retro-go-build-cache:/project/build
+    working_dir: /project
+    command: >
+      bash -c "
+        python rg_tool.py --target=esp32-emu-turbo build launcher
+      "
+
+volumes:
+  retro-go-build-cache:

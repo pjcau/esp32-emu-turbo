@@ -159,17 +159,49 @@ Most SNES games are 1–4 MB. Games with special chips (SA-1, SuperFX) are large
 
 ### Phase 2 — Retro-Go Integration
 
-Fork and adapt Retro-Go for our hardware.
+Fork and adapt Retro-Go for our hardware. Retro-Go is included as a git submodule at `retro-go/` and built via a separate Docker Compose file.
 
-| Step | Task | Details |
-|:---|:---|:---|
-| 2.1 | Fork `ducalex/retro-go` | Branch `esp32-emu-turbo` |
-| 2.2 | Create target `targets/esp32-emu-turbo/` | `config.h` with GPIO map, display config, sdkconfig.defaults |
-| 2.3 | New display driver `ili9488_i80.h` | Replace SPI ILI9341 driver with i80 parallel |
-| 2.4 | Frame scaling | 256x224 → 320x480 (integer scale + letterbox) |
-| 2.5 | Input mapping | `rg_input` config for D-pad, ABXY, Start, Select, L, R, Menu |
-| 2.6 | Audio routing | I2S output config for PAM8403 |
-| 2.7 | First boot: NES test | nofrendo running Super Mario Bros at 60fps |
+| Step | Task | Details | Status |
+|:---|:---|:---|:---|
+| 2.1 | Add `ducalex/retro-go` as submodule | `retro-go/` directory, upstream repo | ✅ Done |
+| 2.2 | Create target `targets/esp32-emu-turbo/` | `config.h` + `env.py` + `sdkconfig` | ✅ Done |
+| 2.3 | Docker build pipeline | `docker-compose.retro-go.yml` + Makefile targets | ✅ Done |
+| 2.4 | Custom display driver `st7796s_i80.h` | Replace SPI ILI9341 with i80 parallel for 320x480 | Pending |
+| 2.5 | Frame scaling | 256x224 → 320x480 (integer scale + letterbox) | Pending |
+| 2.6 | Input mapping | `rg_input` GPIO direct for D-pad, ABXY, Start, Select, L, R | Pending |
+| 2.7 | Audio routing | I2S output config for PAM8403 | Pending |
+| 2.8 | First boot: NES test | nofrendo running Super Mario Bros at 60fps | Pending |
+
+#### Build & flash (Docker)
+
+Retro-Go uses a separate Docker Compose file (`docker-compose.retro-go.yml`) with the `espressif/idf:v5.4` image.
+
+```bash
+# Build all Retro-Go apps (launcher + emulators)
+make retro-go-build
+
+# Build launcher only (quick test)
+make retro-go-build-launcher
+
+# Flash firmware + serial monitor
+make retro-go-flash
+
+# Serial monitor only
+make retro-go-monitor
+
+# Custom USB port
+ESP_PORT=/dev/ttyACM0 make retro-go-flash
+
+# Clean build cache
+make retro-go-clean
+```
+
+#### Target configuration
+
+The target lives at `retro-go/components/retro-go/targets/esp32-emu-turbo/` with:
+- `config.h` — GPIO mapping, display/audio/input config (mirrors `board_config.h`)
+- `env.py` — `IDF_TARGET = "esp32s3"`, firmware format
+- `sdkconfig` — ESP-IDF config (240MHz, 16MB flash QIO, 8MB Octal PSRAM)
 
 ### Phase 3 — All Emulators at Full Speed
 

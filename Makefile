@@ -1,6 +1,7 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
        render-enclosure render-pcb render-all simulate verify-all \
        firmware-build firmware-flash firmware-monitor firmware-clean \
+       retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help
 
 help: ## Show this help
@@ -50,6 +51,25 @@ firmware-monitor: ## Open serial monitor only (no flash)
 
 firmware-clean: ## Clean firmware build artifacts
 	docker compose run --rm idf-build idf.py fullclean
+
+# ── Retro-Go emulator (Phase 2) ─────────────────────────────────────
+
+RETRO_GO_COMPOSE = docker compose -f docker-compose.retro-go.yml
+
+retro-go-build: ## Build Retro-Go firmware (all apps)
+	$(RETRO_GO_COMPOSE) run --rm retro-go-build
+
+retro-go-build-launcher: ## Build Retro-Go launcher only (quick test)
+	$(RETRO_GO_COMPOSE) run --rm retro-go-build-launcher
+
+retro-go-flash: ## Flash Retro-Go firmware + serial monitor
+	$(RETRO_GO_COMPOSE) run --rm retro-go-flash
+
+retro-go-monitor: ## Open serial monitor for Retro-Go
+	$(RETRO_GO_COMPOSE) run --rm retro-go-monitor
+
+retro-go-clean: ## Clean Retro-Go build artifacts
+	$(RETRO_GO_COMPOSE) down -v
 
 website-dev: ## Start Docusaurus dev server
 	cd website && npm start
