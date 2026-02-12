@@ -15,7 +15,8 @@ idf_component_register(
         esp_driver_gpio
         esp_driver_i2c
         esp_driver_ledc
+        esp_timer
         sdmmc
         fatfs
-        esp_vfs
+        vfs
 )

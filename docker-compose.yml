@@ -26,3 +26,26 @@ services:
       - ./hardware/enclosure:/project
       - ./website/static/img/renders:/output
     working_dir: /project
+
+  # ESP-IDF firmware build
+  idf-build:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./software:/project
+      - idf-build-cache:/project/build
+    working_dir: /project
+    command: bash -c "idf.py set-target esp32s3 && idf.py build"
+
+  # ESP-IDF firmware flash + serial monitor (requires USB device)
+  idf-flash:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./software:/project
+      - idf-build-cache:/project/build
+    working_dir: /project
+    devices:
+      - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
+    command: idf.py -p ${ESP_PORT:-/dev/ttyUSB0} flash monitor
+
+volumes:
+  idf-build-cache:

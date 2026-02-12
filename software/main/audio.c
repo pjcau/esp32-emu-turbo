@@ -7,7 +7,9 @@
 #include "board_config.h"
 
 #include "esp_log.h"
+#include "esp_check.h"
 #include "driver/i2s_std.h"
+#include "freertos/FreeRTOS.h"
 
 #include <math.h>
 #include <string.h>

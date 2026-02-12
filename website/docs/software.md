@@ -79,15 +79,22 @@ software/
     └── power.c/h               IP5306 I2C battery level + charge status
 ```
 
-#### Build & flash
+#### Build & flash (Docker)
+
+No local toolchain needed — the build runs inside the official `espressif/idf:v5.4` Docker image.
 
 ```bash
-source ~/esp/esp-idf/export.sh
-cd software
-idf.py set-target esp32s3
-idf.py build
-idf.py -p /dev/ttyUSB0 flash monitor
+# Build firmware
+make firmware-build
+
+# Flash + serial monitor (connect board, hold SELECT at power-on)
+make firmware-flash
+
+# Custom USB port
+ESP_PORT=/dev/ttyACM0 make firmware-flash
 ```
+
+Native ESP-IDF is also supported — see [`software/README.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/software/README.md) for details.
 
 #### Test sequence on boot
 
@@ -97,6 +104,58 @@ idf.py -p /dev/ttyUSB0 flash monitor
 4. SD card mounted, ROM directories scanned
 5. 440 Hz test tone plays for 2 seconds
 6. Interactive mode: button presses shown on screen + serial
+
+---
+
+## SD Card Setup
+
+The console loads ROMs from a micro SD card formatted as **FAT32**. Each emulated system has its own folder under `/roms/`.
+
+### Directory structure
+
+```
+SD Card (FAT32)
+└── roms/
+    ├── nes/       .nes files
+    ├── snes/      .smc / .sfc files
+    ├── gb/        .gb files
+    ├── gbc/       .gbc files
+    ├── sms/       .sms files
+    ├── gg/        .gg files
+    ├── pce/       .pce files
+    ├── gen/       .bin / .md files
+    ├── lynx/      .lnx files
+    └── gw/        .gw files
+```
+
+### Preparation steps
+
+1. **Format** the micro SD card as FAT32 (most cards come pre-formatted)
+2. **Create** the `roms/` directory in the root of the card
+3. **Create sub-folders** for each system you want to emulate
+4. **Copy ROM files** into the matching folder
+
+### Recommended test ROMs
+
+| System | ROM | File | Size | Why |
+|:---|:---|:---|:---|:---|
+| NES | Super Mario Bros | `smb.nes` | 40 KB | Universal test — scrolling, sprites, audio |
+| SNES | Super Mario World | `smw.smc` | 512 KB | Good baseline — 2 BG layers, Mode 1 |
+| SNES | FF6 | `ff6.smc` | 3 MB | Turn-based RPG — best SNES genre for ESP32 |
+| GB | Tetris | `tetris.gb` | 32 KB | Minimal — verifies basic emulation |
+| Genesis | Sonic | `sonic.bin` | 512 KB | Fast scrolling stress test |
+
+### Size limits
+
+| Constraint | Value |
+|:---|:---|
+| Max ROM size (PSRAM) | **6 MB** |
+| SD card format | FAT32 (max 32 GB recommended) |
+| Max filename length | 255 characters (long filename support enabled) |
+
+:::tip SNES ROM sizes
+Most SNES games are 1–4 MB. Games with special chips (SA-1, SuperFX) are larger and may not be compatible with snes9x on ESP32-S3.
+:::
 
 ### Phase 2 — Retro-Go Integration
 

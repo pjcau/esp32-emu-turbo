@@ -4,29 +4,68 @@ Phase 1 hardware validation firmware for the ESP32-S3 N16R8 handheld console.
 
 ## Prerequisites
 
-- [ESP-IDF v5.x](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/get-started/) installed and sourced
-- USB-C cable connected to the board
+- [Docker](https://docs.docker.com/get-docker/) installed
+- USB-C cable connected to the board (for flashing)
 - (Optional) Micro SD card with ROMs in `/roms/<system>/` folders
 
-## Quick Start
+## Quick Start (Docker — recommended)
+
+No local ESP-IDF installation needed. Everything runs inside the `espressif/idf:v5.4` Docker image.
 
 ```bash
-# 1. Source ESP-IDF environment
-source ~/esp/esp-idf/export.sh
+# From the project root (not software/)
 
-# 2. Set target to ESP32-S3
-cd software
-idf.py set-target esp32s3
+# 1. Build firmware
+make firmware-build
 
-# 3. Build
-idf.py build
+# 2. Connect board via USB-C, hold SELECT at power-on for download mode
 
-# 4. Flash and open serial monitor
-idf.py -p /dev/ttyUSB0 flash monitor
+# 3. Flash + open serial monitor
+make firmware-flash
+
+# If your board is on a different port:
+ESP_PORT=/dev/ttyACM0 make firmware-flash
 ```
 
-> **Tip:** To enter download mode, hold SELECT while powering on.
-> Press `Ctrl+]` to exit the serial monitor.
+> **Tip:** Press `Ctrl+]` to exit the serial monitor.
+
+### Other Docker commands
+
+```bash
+make firmware-monitor   # Serial monitor only (no flash)
+make firmware-clean     # Clean build artifacts
+```
+
+### docker compose directly
+
+```bash
+# Build only
+docker compose run --rm idf-build
+
+# Flash + monitor
+docker compose run --rm idf-flash
+
+# Custom port
+ESP_PORT=/dev/ttyACM0 docker compose run --rm idf-flash
+```
+
+## Alternative: Native ESP-IDF
+
+If you prefer a local installation instead of Docker:
+
+```bash
+# 1. Install ESP-IDF v5.4
+mkdir -p ~/esp && cd ~/esp
+git clone --recursive https://github.com/espressif/esp-idf.git -b v5.4
+cd esp-idf && ./install.sh esp32s3
+source export.sh
+
+# 2. Build and flash
+cd software
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/ttyUSB0 flash monitor
+```
 
 ## What It Does
 

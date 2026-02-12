@@ -1,5 +1,6 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
        render-enclosure render-pcb render-all simulate verify-all \
+       firmware-build firmware-flash firmware-monitor firmware-clean \
        website-dev website-build clean help
 
 help: ## Show this help
@@ -35,6 +36,20 @@ verify-all: ## Run all pre-production checks (DRC + simulation + consistency)
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export)
 	./scripts/render-all.sh
+
+ESP_PORT ?= /dev/ttyUSB0
+
+firmware-build: ## Build ESP-IDF firmware via Docker
+	docker compose run --rm idf-build
+
+firmware-flash: ## Flash firmware + open serial monitor (connect board first)
+	docker compose run --rm idf-flash
+
+firmware-monitor: ## Open serial monitor only (no flash)
+	docker compose run --rm idf-flash idf.py -p $(ESP_PORT) monitor
+
+firmware-clean: ## Clean firmware build artifacts
+	docker compose run --rm idf-build idf.py fullclean
 
 website-dev: ## Start Docusaurus dev server
 	cd website && npm start
