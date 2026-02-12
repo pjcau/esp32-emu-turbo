@@ -36,6 +36,14 @@ module speaker_grille(outer_diameter=22, hole_diameter=1.5, hole_spacing=3.5, de
     }
 }
 
+// Power slide switch cutout (SS-12D00G3)
+module power_switch_cutout(width=8, height=4, depth=5) {
+    translate([0, 0, -0.1])
+    linear_extrude(height=depth+0.2) {
+        square([width, height], center=true);
+    }
+}
+
 // Headphone jack cutout (3.5mm, optional)
 module headphone_jack_cutout(diameter=6.5, depth=5) {
     translate([0, 0, -0.1])

@@ -61,8 +61,12 @@ usbc_x = 0;
 usbc_z = bot_d / 2;     // Centered vertically on bottom edge
 
 // === SD card slot (bottom right) ===
-sd_x = 45;
+sd_x = 60;
 sd_z = bot_d / 2;
+
+// === Power switch (bottom edge, left of USB-C) ===
+pwr_sw_x = -40;
+pwr_sw_z = bot_d / 2;
 
 // === Speaker grille (back panel, left side) ===
 spk_x = -50;
@@ -191,6 +195,11 @@ module bottom_shell() {
         translate([sd_x, -body_h/2, sd_z])
         rotate([90, 0, 0])
         sd_slot_cutout(12, 2.5, wall + 2);
+
+        // Power switch cutout (bottom edge, left of USB-C)
+        translate([pwr_sw_x, -body_h/2, pwr_sw_z])
+        rotate([90, 0, 0])
+        power_switch_cutout(8, 4, wall + 2);
 
         // Speaker grille (back face, z=0)
         translate([spk_x, spk_y, 0])

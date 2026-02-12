@@ -95,8 +95,8 @@ USBC_ENC = (0, -BOARD_H / 2 + 3)   # 3mm from bottom edge
 # SD card slot (bottom right)
 SD_ENC = (60, -BOARD_H / 2 + 8)
 
-# Power slide switch (left edge, below speaker — accessible from enclosure side)
-PWR_SWITCH_ENC = (-72, -22)
+# Power slide switch (bottom edge, left of USB-C — accessible from enclosure)
+PWR_SWITCH_ENC = (-40, -BOARD_H / 2 + 3)
 
 # Speaker (back side, left area — 22mm diameter)
 SPEAKER_ENC = (-50, -15)
