@@ -137,9 +137,9 @@ def _build_placements():
     # Layout rows (Y increases downward in KiCad):
     #   y=35   IP5306 support caps (C17)
     #   y=37.5 IP5306 support caps (C18)
-    #   y=40   ESP32 decoupling (R3, C3, R17, R18, C4)
-    #   y=44   Pull-up resistors (R4-R15, R19) x=43..103
-    #   y=48   Debounce caps (C5-C16, C20) x=43..103
+    #   y=42   ESP32 decoupling (R3, C3, R17, R18, C4)
+    #   y=46   Pull-up resistors (R4-R15, R19) x=43..103
+    #   y=50   Debounce caps (C5-C16, C20) x=43..103
 
     # USB-C CC resistors
     ux, uy = enc_to_pcb(*USBC_ENC)
@@ -148,29 +148,29 @@ def _build_placements():
     p.append(("R2", "5.1k", "R_0805",
               ux + 6, uy - 5, 0, "bottom"))
 
-    # ESP32 decoupling + LED resistors (y=40, below ESP32 body edge)
-    p.append(("R3", "10k", "R_0805", 65, 40, 0, "bottom"))
-    p.append(("C3", "100nF", "C_0805", 70, 40, 0, "bottom"))
-    p.append(("R17", "1k", "R_0805", 75, 40, 0, "bottom"))
-    p.append(("R18", "1k", "R_0805", 80, 40, 0, "bottom"))
-    p.append(("C4", "100nF", "C_0805", 85, 40, 0, "bottom"))
+    # ESP32 decoupling + LED resistors (y=42, below ESP32 body edge at 40.25)
+    p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
+    p.append(("C3", "100nF", "C_0805", 70, 42, 0, "bottom"))
+    p.append(("R17", "1k", "R_0805", 75, 42, 0, "bottom"))
+    p.append(("R18", "1k", "R_0805", 80, 42, 0, "bottom"))
+    p.append(("C4", "100nF", "C_0805", 85, 42, 0, "bottom"))
 
-    # ── Button pull-up resistors (y=44, x=43..103, 5mm spacing) ──
+    # ── Button pull-up resistors (y=46, x=43..103, 5mm spacing) ──
     # Shifted left to avoid IP5306 at x=110
     pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
     for i, ref in enumerate(pull_up_refs):
         p.append((ref, "10k", "R_0805",
-                  43 + i * 5, 44, 0, "bottom"))
+                  43 + i * 5, 46, 0, "bottom"))
 
     # R16: IP5306 KEY pull-down (near IP5306/L1)
     p.append(("R16", "100k", "R_0805",
               ix + 5, iy + 10, 0, "bottom"))
 
-    # ── Button debounce caps (y=48, x=43..103, 5mm spacing) ──
+    # ── Button debounce caps (y=50, x=43..103, 5mm spacing) ──
     debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
     for i, ref in enumerate(debounce_refs):
         p.append((ref, "100nF", "C_0805",
-                  43 + i * 5, 48, 0, "bottom"))
+                  43 + i * 5, 50, 0, "bottom"))
 
     # ── IP5306 support caps (away from mounting hole at 105,37.5) ──
     p.append(("C17", "10uF", "C_0805", 110, 35, 0, "bottom"))

@@ -38,8 +38,8 @@ def _tht(num, x, y, w, h, drill):
 
 
 # ── ESP32-S3-WROOM-1-N16R8 ───────────────────────────────────────
-# Module: 25.5mm x 18mm, 39 castellated pads + GND pad
-# Left pins 1-19, Right pins 20-39, Bottom GND pad
+# Module: 25.5mm x 18mm, 39 castellated pads + exposed GND pad
+# Left pins 1-20, Right pins 21-39 (numbered bottom-up)
 def esp32_s3_wroom1(layer="B"):
     pads = []
     layers = SMD_B if layer == "B" else SMD_F
@@ -47,8 +47,8 @@ def esp32_s3_wroom1(layer="B"):
     pin_w = 1.8   # pad length (extends outward)
     pin_h = 0.9   # pad width
 
-    # Left side: pins 1-19 (top to bottom)
-    for i in range(19):
+    # Left side: pins 1-20 (top to bottom, 20 pins)
+    for i in range(20):
         pin = i + 1
         y = -11.43 + i * 1.27
         pads.append(_pad(
@@ -56,18 +56,14 @@ def esp32_s3_wroom1(layer="B"):
             -hw + pin_w / 2 - 0.5, y, pin_w, pin_h, layers,
         ))
 
-    # Right side: pins 20-39 (top to bottom, but numbered bottom-up)
-    for i in range(20):
+    # Right side: pins 21-39 (top to bottom, numbered bottom-up, 19 pins)
+    for i in range(19):
         pin = 39 - i
         y = -11.43 + i * 1.27
         pads.append(_pad(
             str(pin), "smd", "rect",
             hw - pin_w / 2 + 0.5, y, pin_w, pin_h, layers,
         ))
-
-    # Bottom GND pads (pins 40-41)
-    pads.append(_pad("40", "smd", "rect", -1.27, 13.0, 1.0, 1.8, layers))
-    pads.append(_pad("41", "smd", "rect", 1.27, 13.0, 1.0, 1.8, layers))
 
     # Exposed GND pad (large thermal pad)
     pads.append(_pad(

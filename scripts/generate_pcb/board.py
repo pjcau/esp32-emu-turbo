@@ -95,8 +95,8 @@ USBC_ENC = (0, -BOARD_H / 2 + 3)   # 3mm from bottom edge
 # SD card slot (bottom right)
 SD_ENC = (60, -BOARD_H / 2 + 8)
 
-# Power slide switch (left edge, accessible from enclosure side)
-PWR_SWITCH_ENC = (-72, 15)
+# Power slide switch (left edge, below speaker — accessible from enclosure side)
+PWR_SWITCH_ENC = (-72, -22)
 
 # Speaker (back side, left area — 22mm diameter)
 SPEAKER_ENC = (-50, -15)
@@ -110,8 +110,8 @@ AMS1117_ENC = (45, -18)
 PAM8403_ENC = (-50, 8)
 # L1 inductor (near IP5306, with clearance)
 INDUCTOR_ENC = (30, -15)
-# JST PH battery connector (center-bottom, back)
-JST_BAT_ENC = (0, -15)
+# JST PH battery connector (center, below passives, back)
+JST_BAT_ENC = (0, -20)
 
 
 def _board_outline():
@@ -349,26 +349,26 @@ def _component_placeholders():
     placements.append(("R1", "R_0805", ux - 6, uy - 5, 0, "B.Cu"))
     placements.append(("R2", "R_0805", ux + 6, uy - 5, 0, "B.Cu"))
 
-    # ESP32 decoupling + LED resistors (y=40, below ESP32 body)
-    placements.append(("R3", "R_0805", 65, 40, 0, "B.Cu"))
-    placements.append(("C3", "C_0805", 70, 40, 0, "B.Cu"))
-    placements.append(("R17", "R_0805", 75, 40, 0, "B.Cu"))
-    placements.append(("R18", "R_0805", 80, 40, 0, "B.Cu"))
-    placements.append(("C4", "C_0805", 85, 40, 0, "B.Cu"))
+    # ESP32 decoupling + LED resistors (y=42, below ESP32 body edge at 40.25)
+    placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
+    placements.append(("C3", "C_0805", 70, 42, 0, "B.Cu"))
+    placements.append(("R17", "R_0805", 75, 42, 0, "B.Cu"))
+    placements.append(("R18", "R_0805", 80, 42, 0, "B.Cu"))
+    placements.append(("C4", "C_0805", 85, 42, 0, "B.Cu"))
 
-    # Pull-up resistors (y=44, x=43..103, 5mm spacing)
+    # Pull-up resistors (y=46, x=43..103, 5mm spacing)
     pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
     for i, ref in enumerate(pull_up_refs):
-        placements.append((ref, "R_0805", 43 + i * 5, 44, 0, "B.Cu"))
+        placements.append((ref, "R_0805", 43 + i * 5, 46, 0, "B.Cu"))
 
     # IP5306 KEY pull-down
     ix, iy = enc_to_pcb(*IP5306_ENC)
     placements.append(("R16", "R_0805", ix + 5, iy + 10, 0, "B.Cu"))
 
-    # Debounce caps (y=48, x=43..103, 5mm spacing)
+    # Debounce caps (y=50, x=43..103, 5mm spacing)
     debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
     for i, ref in enumerate(debounce_refs):
-        placements.append((ref, "C_0805", 43 + i * 5, 48, 0, "B.Cu"))
+        placements.append((ref, "C_0805", 43 + i * 5, 50, 0, "B.Cu"))
 
     # IP5306 support caps
     placements.append(("C17", "C_0805", 110, 35, 0, "B.Cu"))
