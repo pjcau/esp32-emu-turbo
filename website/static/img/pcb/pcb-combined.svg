@@ -2,11 +2,11 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 1400.0 400.0"
      width="1400.0" height="400.0">
-<title>ESP32 Emu Turbo — PCB Layout (Both Sides)</title>
+<title>ESP32 EMU Turbo CPJ&amp;CP — PCB Layout (Both Sides)</title>
 <rect width="1400.0" height="400.0" fill="#1a1a2e"/>
 <text x="700.0" y="22" text-anchor="middle"
       font-family="monospace" font-size="16" fill="#aaa" font-weight="bold">
-  ESP32 Emu Turbo — PCB Layout (160x75mm, 4-Layer)
+  ESP32 EMU Turbo CPJ&amp;CP — PCB Layout (160x75mm, 4-Layer)
 </text>
 
 <g transform="translate(0, 35)">
@@ -135,7 +135,7 @@
 <text x="588.0" y="250.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="2.5600000000000005" fill="#e8e8e8" opacity="0.9">MENU</text>
 <text x="120.0" y="302.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="1.92" fill="#e8e8e8" opacity="0.9">CHG</text>
 <text x="148.0" y="302.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="1.92" fill="#e8e8e8" opacity="0.9">FULL</text>
-<text x="180.0" y="308.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="3.2" fill="#e8e8e8" opacity="0.9">ESP32 Emu Turbo v1.0</text>
+<text x="180.0" y="308.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="3.2" fill="#e8e8e8" opacity="0.9">ESP32 EMU Turbo CPJ&amp;CP v1.0</text>
 
 </g>
 <g transform="translate(720.0, 35)">

@@ -145,7 +145,7 @@
   (gr_line (start 36.8 67.9) (end 36.8 3.1000000000000014) (stroke (width 0.05) (type default)) (layer "F.SilkS") (uuid "00000016-dead-4000-a000-000000000016"))
 
   (gr_text "DISPLAY AREA (ILI9488 3.95in)" (at 80.0 0.10000000000000142) (layer "F.SilkS") (effects (font (size 1.0 1.0) (thickness 0.15))))
-  (gr_text "ESP32 Emu Turbo v1.0" (at 80.0 67.5) (layer "F.SilkS") (effects (font (size 1.5 1.5) (thickness 0.15))))
+  (gr_text "ESP32 EMU Turbo CPJ&CP v1.0" (at 80.0 67.5) (layer "F.SilkS") (effects (font (size 1.5 1.5) (thickness 0.15))))
   (gr_text "D-PAD" (at 18.0 17.5) (layer "F.SilkS") (effects (font (size 1.0 1.0) (thickness 0.15))))
   (gr_text "ABXY" (at 142.0 16.5) (layer "F.SilkS") (effects (font (size 1.0 1.0) (thickness 0.15))))
   (gr_text "MENU" (at 142.0 57.5) (layer "F.SilkS") (effects (font (size 0.8 0.8) (thickness 0.15))))

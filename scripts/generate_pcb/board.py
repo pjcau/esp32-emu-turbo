@@ -194,7 +194,7 @@ def _silkscreen_labels():
 
     # Board title
     parts.append(P.gr_text(
-        "ESP32 Emu Turbo v1.0", CX, CY + 30,
+        "ESP32 EMU Turbo CPJ&CP v1.0", CX, CY + 30,
         "F.SilkS", 1.5,
     ))
 

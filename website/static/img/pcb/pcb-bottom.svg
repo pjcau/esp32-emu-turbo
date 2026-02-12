@@ -2,7 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 680.0 340.0"
      width="680.0" height="340.0">
-<title>ESP32 Emu Turbo — Bottom View</title>
+<title>ESP32 EMU Turbo CPJ&amp;CP — Bottom View</title>
 <defs>
   <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%">
     <feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.3)" />

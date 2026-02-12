@@ -729,7 +729,7 @@ def generate_svg(view="top"):
     pcb_data = _parse_pcb_file()
     via_list = _get_vias_from_pcb(pcb_data)
 
-    title = f"ESP32 Emu Turbo — {'Top' if view == 'top' else 'Bottom'} View"
+    title = f"ESP32 EMU Turbo CPJ&amp;CP — {'Top' if view == 'top' else 'Bottom'} View"
     parts = [_svg_header(title, view)]
     parts.append(_draw_board(view))
     parts.append(_draw_fpc_slot(mirror_x=(view == "bottom")))
@@ -750,7 +750,7 @@ def generate_svg(view="top"):
             parts.append(_draw_silkscreen(text, x, y, size))
         # Board title
         parts.append(_draw_silkscreen(
-            "ESP32 Emu Turbo v1.0", 40.0, 72.0, 1.0))
+            "ESP32 EMU Turbo CPJ&amp;CP v1.0", 40.0, 72.0, 1.0))
 
     elif view == "bottom":
         # Copper fill hint
@@ -787,11 +787,11 @@ def generate_combined_svg():
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 {total_w} {total_h}"
      width="{total_w}" height="{total_h}">
-<title>ESP32 Emu Turbo — PCB Layout (Both Sides)</title>
+<title>ESP32 EMU Turbo CPJ&amp;CP — PCB Layout (Both Sides)</title>
 <rect width="{total_w}" height="{total_h}" fill="#1a1a2e"/>
 <text x="{total_w/2}" y="22" text-anchor="middle"
       font-family="monospace" font-size="16" fill="#aaa" font-weight="bold">
-  ESP32 Emu Turbo — PCB Layout (160x75mm, 4-Layer)
+  ESP32 EMU Turbo CPJ&amp;CP — PCB Layout (160x75mm, 4-Layer)
 </text>
 """]
 

@@ -2,7 +2,7 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      viewBox="0 0 680.0 340.0"
      width="680.0" height="340.0">
-<title>ESP32 Emu Turbo — Top View</title>
+<title>ESP32 EMU Turbo CPJ&amp;CP — Top View</title>
 <defs>
   <filter id="shadow" x="-5%" y="-5%" width="115%" height="115%">
     <feDropShadow dx="3" dy="3" stdDeviation="4" flood-color="rgba(0,0,0,0.3)" />
@@ -128,5 +128,5 @@
 <text x="588.0" y="250.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="2.5600000000000005" fill="#e8e8e8" opacity="0.9">MENU</text>
 <text x="120.0" y="302.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="1.92" fill="#e8e8e8" opacity="0.9">CHG</text>
 <text x="148.0" y="302.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="1.92" fill="#e8e8e8" opacity="0.9">FULL</text>
-<text x="180.0" y="308.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="3.2" fill="#e8e8e8" opacity="0.9">ESP32 Emu Turbo v1.0</text>
+<text x="180.0" y="308.0" text-anchor="middle" dominant-baseline="middle" font-family="monospace" font-size="3.2" fill="#e8e8e8" opacity="0.9">ESP32 EMU Turbo CPJ&amp;CP v1.0</text>
 </svg>
