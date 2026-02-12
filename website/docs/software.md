@@ -47,19 +47,56 @@ All systems except SNES run at full speed on ESP32-S3 N16R8 @ 240MHz.
 
 ## Implementation Plan
 
-### Phase 1 — Hardware Abstraction (bootstrap)
+### Phase 1 — Hardware Abstraction (bootstrap) ✅
 
-Standalone ESP-IDF project to validate all hardware before integrating Retro-Go.
+Standalone ESP-IDF v5.x project in `software/` that validates all hardware before integrating Retro-Go. See [`software/README.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/software/README.md) for build instructions.
 
-| Step | Task | Details |
-|:---|:---|:---|
-| 1.1 | ESP-IDF v5.x project setup | `idf.py create-project`, sdkconfig for N16R8 |
-| 1.2 | ILI9488 display driver (i80 8-bit parallel) | `esp_lcd_panel_io_i80` API, 14 GPIO (D0-D7 + CS/DC/WR/RD/RST/BL) |
-| 1.3 | Display test pattern | Color bars, fill speed, FPS counter |
-| 1.4 | SD card (SPI mode) | `sdmmc_host` SPI, FAT32, ROM file listing |
-| 1.5 | 12-button input | GPIO interrupt + 1ms polling, debounce via hardware RC |
-| 1.6 | I2S audio output | `i2s_std_config`, 32kHz 16-bit mono, PAM8403 amplifier |
-| 1.7 | Power management | IP5306 status read, battery LED control |
+| Step | Task | Details | Status |
+|:---|:---|:---|:---|
+| 1.1 | ESP-IDF v5.x project setup | sdkconfig for N16R8 (240MHz, 16MB flash, 8MB PSRAM) | ✅ Done |
+| 1.2 | ST7796S display driver (i80 8-bit parallel) | `esp_lcd_panel_io_i80` + `esp_lcd_st7796` component, 20MHz | ✅ Done |
+| 1.3 | Display test pattern | Color bars, fill screen, status indicators | ✅ Done |
+| 1.4 | SD card (SPI mode) | `esp_vfs_fat_sdspi_mount`, FAT32, ROM directory scanner | ✅ Done |
+| 1.5 | 12-button input | GPIO polling @ 1ms, bitmask API, HW RC debounce | ✅ Done |
+| 1.6 | I2S audio output | `i2s_std` 32kHz 16-bit mono, 440Hz test tone | ✅ Done |
+| 1.7 | Power management | IP5306 I2C (0x75), battery %, charge status | ✅ Done |
+
+#### Firmware project structure
+
+```
+software/
+├── CMakeLists.txt              ESP-IDF project root
+├── sdkconfig.defaults          ESP32-S3 N16R8 hardware config
+├── partitions.csv              4MB app + 12MB storage
+└── main/
+    ├── idf_component.yml       esp_lcd_st7796 ^1.4.0
+    ├── board_config.h          All GPIO pin definitions (source of truth)
+    ├── main.c                  Test harness → interactive button display
+    ├── display.c/h             ST7796S 320×480 i80 parallel + LEDC backlight
+    ├── input.c/h               12 buttons, active-low, bitmask polling
+    ├── sdcard.c/h              SPI @ 40MHz, FAT32, ROM listing
+    ├── audio.c/h               I2S mono → PAM8403 amplifier
+    └── power.c/h               IP5306 I2C battery level + charge status
+```
+
+#### Build & flash
+
+```bash
+source ~/esp/esp-idf/export.sh
+cd software
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/ttyUSB0 flash monitor
+```
+
+#### Test sequence on boot
+
+1. Display shows color bars for 3 seconds (verifies 8-bit data bus)
+2. IP5306 battery % and charge status (serial log)
+3. All 12 button GPIOs initialized
+4. SD card mounted, ROM directories scanned
+5. 440 Hz test tone plays for 2 seconds
+6. Interactive mode: button presses shown on screen + serial
 
 ### Phase 2 — Retro-Go Integration
 
@@ -107,21 +144,23 @@ Progressive optimization of the snes9x core (see [SNES Deep Dive](#snes-deep-div
 
 ## Display Driver
 
-### ILI9488 8-bit Parallel (i80 Bus)
+### ST7796S 8-bit Parallel (i80 Bus)
 
-Retro-Go ships with an SPI-only ILI9341 driver. Our hardware uses 8-bit 8080 parallel which requires a custom driver.
+Retro-Go ships with an SPI-only ILI9341 driver. Our hardware uses 8-bit 8080 parallel which requires a custom driver. The firmware uses the [`esp_lcd_st7796`](https://components.espressif.com/components/espressif/esp_lcd_st7796) component with the `esp_lcd_panel_io_i80` bus API.
 
 ```
-ESP32-S3                      ILI9488 (3.95" 320x480)
+ESP32-S3                      ST7796S (4.0" 320x480)
 ─────────                     ──────────────────────────
-GPIO 33-40 (D0-D7) ────────► DB0-DB7 (8-bit data bus)
-GPIO 41    (CS)     ────────► CS  (chip select)
-GPIO 42    (DC)     ────────► DC  (data/command)
-GPIO 45    (WR)     ────────► WR  (write strobe)
-GPIO 46    (RD)     ────────► RD  (read strobe, optional)
-GPIO 47    (RST)    ────────► RST (reset)
-GPIO 48    (BL)     ────────► LED (backlight PWM)
+GPIO 4-11  (D0-D7) ────────► DB0-DB7 (8-bit data bus)
+GPIO 12    (CS)     ────────► CS  (chip select)
+GPIO 14    (DC)     ────────► DC  (data/command)
+GPIO 46    (WR)     ────────► WR  (write strobe)
+GPIO 3     (RD)     ────────► RD  (read strobe)
+GPIO 13    (RST)    ────────► RST (reset)
+GPIO 45    (BL)     ────────► LED (backlight PWM via LEDC)
 ```
+
+GPIO4–11 form a contiguous 8-bit bus, enabling efficient DMA transfers.
 
 ### Bandwidth
 
@@ -142,7 +181,7 @@ The 8080 parallel bus has **4x the bandwidth** of SPI, leaving headroom for scal
 | Genesis | 320x224 | 320x448 (2x V) | Integer 2x vertical |
 | Master System | 256x192 | 256x384 (2x V) | Integer 2x vertical |
 
-The ILI9488 at 320x480 is well-suited: most systems are ≤320px wide and can be doubled vertically for a crisp image with black bars.
+The ST7796S at 320x480 is well-suited: most systems are ≤320px wide and can be doubled vertically for a crisp image with black bars.
 
 ---
 

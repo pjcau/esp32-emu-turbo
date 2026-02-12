@@ -23,3 +23,10 @@ __pycache__/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# ESP-IDF build artifacts
+software/build/
+software/sdkconfig
+software/sdkconfig.old
+software/managed_components/
+software/dependencies.lock

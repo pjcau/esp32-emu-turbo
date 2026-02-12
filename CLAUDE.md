@@ -30,10 +30,12 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ## Project Structure
 
+- `software/` — ESP-IDF v5.x firmware (Phase 1 hardware validation)
+- `software/main/board_config.h` — GPIO pin definitions (source of truth for firmware)
 - `hardware/kicad/` — KiCad 9.0 schematic project (full circuit design)
 - `hardware/enclosure/` — OpenSCAD parametric 3D enclosure model
 - `docker/` — Docker containers for headless rendering (KiCad + OpenSCAD)
-- `scripts/` — Rendering automation scripts
+- `scripts/` — Rendering and verification scripts
 - `Makefile` — Top-level automation (`make render-all`, `make website-dev`)
 - `docker-compose.yml` — Orchestrates rendering containers
 - `website/` — Docusaurus site for GitHub Pages (https://pjcau.github.io/esp32-emu-turbo/)
@@ -47,6 +49,9 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 - `website/docs/schematics.md` — electrical schematic documentation
 - `website/docs/prototyping.md` — breadboard wiring guide
 - `website/docs/enclosure.md` — 3D enclosure design + renderings
+- `website/docs/manufacturing.md` — JLCPCB PCBA ordering + cost analysis
+- `website/docs/verification.md` — pre-production DRC/simulation/consistency checks
+- `website/docs/software.md` — software architecture, SNES optimization, audio profiles
 
 ## Reference Software
 
