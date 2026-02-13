@@ -299,17 +299,38 @@ Enable and test each emulator core.
 | 3.8 | gwenesis (Genesis) | Sonic the Hedgehog | 50-60 fps |
 | 3.9 | gw-emulator (G&W) | Ball | 60 fps |
 
-### Phase 4 — SNES Optimization
+### Phase 4 — SNES Optimization (60 FPS target)
 
-Progressive optimization of the snes9x core (see [SNES Deep Dive](#snes-deep-dive) below).
+Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-phases over ~14 days. Target: **60 FPS stable** on standard titles (Super Mario World, Zelda ALttP, Chrono Trigger, Final Fantasy VI, Mega Man X). Baseline: ~30 FPS. See [SNES Deep Dive](#snes-deep-dive) for full technical details.
 
-| Step | Optimization | FPS gain | Cumulative |
-|:---|:---|:---|:---|
-| 4.1 | Baseline snes9x2010 | — | 15-20 fps |
-| 4.2 | Critical buffers → IRAM | +8-10 fps | 25-30 fps |
-| 4.3 | Audio DSP on Core 1 | +5-8 fps | 30-35 fps |
-| 4.4 | Adaptive frameskip | +10 perceived | 35-45 fps perceived |
-| 4.5 | Interlaced rendering | +5 perceived | 40-50 fps perceived |
+| Sub-phase | Step | Optimization | Days | Gain | Cumulative FPS |
+|:---|:---|:---|---:|:---|:---|
+| **4.1 — ASM DSP** | 4.1.1 | BRR Decode assembly (Xtensa LX7) | 1 | +5–7% | 30 → 32–33 |
+| | 4.1.2 | Gaussian Interpolation assembly | 0.5 | +3–4% | 33 → 34–35 |
+| | 4.1.3 | Voice Mixing assembly (fast-path) | 2 | +5–8% | 35 → 38–40 |
+| | 4.1.4 | Echo FIR Filter assembly (8-tap unrolled) | 0.5 | +2–3% | 40 → 41–42 |
+| **4.2 — Architecture** | 4.2.1 | Dual-Core SPC700 (Core 1 dedicated audio) | 2–3 | +35–45% | 42 → 50–52 |
+| | 4.2.2 | Memory Layout (PSRAM → SRAM, ~100 KB) | 1 | +15–20% | 52 → 54–56 |
+| | 4.2.3 | Overclock to 260 MHz | 0.01 | +8% | 56 → 57–58 |
+| | 4.2.4 | Audio sample rate 32 → 16 kHz | 0.05 | +2–3% | 57–58 |
+| **4.3 — PPU & Display** | 4.3.1 | PPU Fast-Path rendering (Mode 1) | 3–4 | +5–8% | 58 → 59–60 |
+| | 4.3.2 | Tile Cache in SRAM (dirty-flag) | 1 | +3–5% | 60 + headroom |
+| | 4.3.3 | DMA Display Push (double-buffer) | 1 | +2–3% | 60 + headroom |
+| | 4.3.4 | Adaptive Frameskip (safety net) | 0.5 | safety net | **60 stable** |
+
+### Phase 5 — v2 Hardware Audio Coprocessor (RP2040)
+
+Hardware evolution for v2: add an RP2040 microcontroller ($0.70) as a **universal audio coprocessor**. The ESP32-S3 is 100% freed from audio — both cores are dedicated to CPU + PPU + game logic. Benefits all emulators, not just SNES. See [Phase 5 Deep Dive](#phase-5--v2-hardware-audio-coprocessor) for full technical details.
+
+| Step | Task | Days | Impact |
+|:---|:---|---:|:---|
+| 5.1 | RP2040 circuit design + PCB integration | 2 | Hardware schematic |
+| 5.2 | SPI communication protocol (ESP32 ↔ RP2040) | 2 | 4 MHz SPI link |
+| 5.3 | RP2040 firmware — Passthrough mode (PCM relay) | 1 | All emulators audio offload |
+| 5.4 | RP2040 firmware — SPC700 native mode | 5 | SNES audio on dedicated chip |
+| 5.5 | ESP32 firmware — audio hub integration | 2 | Transparent emulator switching |
+| 5.6 | Testing + latency tuning | 2 | Target: under 5ms audio latency |
+| **Total** | | **~14** | **100% audio offload** |
 
 ---
 
@@ -375,164 +396,416 @@ Frame time budget: 16.67 ms (for 60 fps)
 └────────────────────────────────────────────┘
 ```
 
-At 114% of the frame budget on a single core, SNES cannot reach 60fps without optimizations.
+At 114% of the frame budget on a single core, SNES emulation via Retro-Go (Snes9x 2005) currently reaches ~30 FPS on a target of 60 FPS. The 3-phase optimization plan below combines assembly-level DSP work, architectural changes (dual-core, memory layout), and rendering optimizations (PPU fast-path, tile cache, DMA display) to reach 60 FPS stable.
 
-### Optimization 1 — IRAM Buffer Placement
+:::note
+Performance gains are not perfectly additive — each optimization reduces the total frame time, so subsequent ones operate on a smaller base. The estimates account for this non-linearity.
+:::
 
-**Problem:** Octal PSRAM at 80MHz has ~100ns access latency. Internal SRAM has ~10ns (10x faster). The snes9x core does thousands of random-access reads per frame into screen buffers and tile caches.
+---
 
-**Solution** (from [fcipaq/snes9x_esp32](https://github.com/fcipaq/snes9x_esp32)):
+### Phase 4.1 — Assembly DSP (Xtensa LX7)
 
-| Buffer | Size | Default | Optimized |
-|:---|:---|:---|:---|
-| Screen buffer | 115 KB | PSRAM | **IRAM** |
-| Tile cache | ~32 KB | PSRAM | **IRAM** |
-| CPU opcode table | ~8 KB | Flash | **IRAM** |
-| Subscreen | 115 KB | PSRAM | **Shared with Screen** |
+**Goal:** Rewrite the 4 heaviest S-DSP audio functions in native Xtensa assembly. These consume ~50% of the total SPC700 audio emulation time. ~120 lines of ASM, ~4 days.
 
-The "Subscreen = Screen" hack shares a single buffer for both layers, halving VRAM usage and allowing the main screen buffer to fit in the 520KB internal SRAM.
+#### 4.1.1 — BRR Decode (`DecodeBlockAsm`)
 
-**Expected gain:** +8-10 fps (from 15-20 → 25-30 fps)
+| | |
+|:---|:---|
+| **C function** | `DecodeBlock()` in soundux.cpp |
+| **What it does** | Decodes BRR blocks (9 bytes → 16 PCM 16-bit samples). Native compressed format for all SNES audio samples. |
+| **Call frequency** | ~2000–4000 times/frame (8 voices x sample rate x variable pitch) |
+| **C bottleneck** | Loop with branches for clamping, stack spill for filter variables, unoptimized buffer access |
+| **ASM optimization** | Zero-overhead `LOOP`, branchless `MIN`/`MAX` clamping, dedicated registers for filter state (a7/a8), load/compute interleaving |
+| **Expected gain** | **+5–7%** on total frame time |
+| **Effort** | ~30 lines ASM — 1 day |
 
-### Optimization 2 — Dual-Core Audio Offloading
+Each BRR block has a header byte (shift amount + filter type 0–3) followed by 8 bytes of compressed data. Filters apply linear prediction using the 2 previous samples. The assembly eliminates branches in [-32768, +32767] clamping via native Xtensa `MIN`/`MAX` instructions, keeping old/older samples in registers a7/a8 without touching the stack.
 
-**Problem:** `S9xMixSamples()` (SPC700 DSP emulation) takes ~8ms per frame — nearly half the budget.
+#### 4.1.2 — Gaussian Interpolation (`GaussianInterpAsm`)
 
-**Solution:** Dedicate Core 1 entirely to audio processing:
+| | |
+|:---|:---|
+| **C function** | Inline interpolation in MixStereo/MixMono loop |
+| **What it does** | 4-point filter with 512-entry Gaussian lookup table. Interpolates between decoded samples for resampling at desired pitch. |
+| **Call frequency** | 32000/sec x 8 voices = 256,000 calls/sec |
+| **C bottleneck** | 4 loads from gauss table + 4 multiplications + accumulate. Compiler generates ~18 instructions with intermediate load/stores. |
+| **ASM optimization** | Gauss table in IRAM (`.section .iram1`), 4x `MULL`+`ADD` pipeline-scheduled, result in 8 net instructions. All 4 samples and 4 coefficients live in registers. |
+| **Expected gain** | **+3–4%** on total frame time |
+| **Effort** | ~10 lines ASM — half day |
+
+The key is placing the Gaussian table (1 KB) in IRAM with `.section .iram1` — this eliminates PSRAM latency for every lookup. With coefficients pre-loaded in registers, the computation reduces to 4 `MULL` + 3 `ADD` + 1 `SRAI`. The C compiler typically cannot keep everything in registers because it has no aliasing guarantees on the pointers.
+
+#### 4.1.3 — Voice Mixing (`MixVoiceAsm`)
+
+| | |
+|:---|:---|
+| **C function** | `MixStereo()` / `MixMono()` in soundux.cpp |
+| **What it does** | For each voice: applies ADSR/GAIN envelope, multiplies by L/R volume, accumulates into mix buffer. Handles pitch modulation, noise, and echo enable. |
+| **Call frequency** | 1 per output sample x 8 voices = core loop of the entire DSP |
+| **C bottleneck** | Most complex loop: per-voice branching (envelope state machine, pitch mod check, noise check, echo check), volume multiplications, stereo accumulate. Many variables, heavy register pressure. |
+| **ASM optimization** | Fast-path for the common case (no pitch mod, no noise): eliminates branches, unrolls 8 voices, optimized stereo volume MAC. Fallback to C for special cases. |
+| **Expected gain** | **+5–8%** on total frame time |
+| **Effort** | ~60 lines ASM — 2 days (most complex) |
+
+The strategy is a fast-path for the most frequent case (active voice, envelope in SUSTAIN state, no pitch modulation, no noise). This covers ~80% of real gameplay situations. For edge cases (ATTACK/DECAY/RELEASE, active pitch mod, noise generator), it falls back to the original C function. The fast-path uses Xtensa register windowing to keep all 8 volumes (L+R) and 8 envelopes in registers.
+
+#### 4.1.4 — Echo FIR Filter (`EchoFIRAsm`)
+
+| | |
+|:---|:---|
+| **C function** | Echo processing in main MixStereo loop |
+| **What it does** | 8-tap FIR (Finite Impulse Response) on echo buffer. Each echo output sample = sum of 8 previous samples x 8 programmable coefficients. |
+| **Call frequency** | 32000/sec (one per output sample, stereo) |
+| **C bottleneck** | 8-iteration loop with signed multiplication and accumulate. Compiler doesn't fully unroll and doesn't optimally schedule the `MULL`. |
+| **ASM optimization** | Full 8x unroll, `MULL` pipeline-scheduled with next sample load in parallel. Echo buffer pointer in register. Branchless clamping. |
+| **Expected gain** | **+2–3%** on total frame time |
+| **Effort** | ~20 lines ASM — half day |
+
+With 8 taps fully unrolled, each `MULL` is scheduled while the next sample load is in flight, hiding memory latency. The 8 FIR coefficients (signed bytes) are loaded into two 32-bit registers (4 coefficients per register) and extracted with shift+mask, avoiding 8 separate loads.
+
+#### Phase 4.1 Summary
+
+| Function | ASM lines | Days | Gain % | FPS impact |
+|:---|---:|---:|:---|:---|
+| DecodeBlockAsm | ~30 | 1 | +5–7% | 30 → 32–33 |
+| GaussianInterpAsm | ~10 | 0.5 | +3–4% | 33 → 34–35 |
+| MixVoiceAsm | ~60 | 2 | +5–8% | 35 → 38–40 |
+| EchoFIRAsm | ~20 | 0.5 | +2–3% | 40 → 41–42 |
+| **TOTAL Phase 4.1** | **~120** | **4** | **+15–22%** | **30 → 38–42 FPS** |
+
+---
+
+### Phase 4.2 — Architectural Optimization
+
+**Goal:** Restructure the emulator to leverage the ESP32-S3 dual-core and optimize memory layout. This phase has the single biggest impact overall. ~4 days.
+
+#### 4.2.1 — Dual-Core SPC700 Separation
+
+| | |
+|:---|:---|
+| **Intervention** | Move the entire SPC700 + DSP emulation (now ASM-optimized from Phase 4.1) to a dedicated FreeRTOS task on Core 1. |
+| **Current state** | CPU 65C816, PPU, and SPC700 all run on Core 0 sequentially. Core 1 is essentially unused (only Wi-Fi/BT stack). |
+| **Target architecture** | **Core 0:** CPU 65C816 + PPU + game logic. **Core 1:** SPC700 CPU + DSP (Phase 4.1 assembly) + I2S output via DMA. Communication via 4 lock-free I/O ports (atomic read/write). |
+| **Implementation** | FreeRTOS task pinned to Core 1 with high priority. DMA-capable ring buffer (`MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL`) between DSP and I2S driver. The 4 SPC ↔ CPU ports are atomic variables (no mutex needed). |
+| **Risks** | Temporal synchronization: some games depend on exact timing between CPU and SPC700. **Solution:** timestamp-based sync with ±64 sample tolerance (~2ms). Works for 95%+ of games. |
+| **Expected gain** | **+35–45%** on total frame time |
+| **Effort** | 2–3 days |
+
+This is the single most impactful change in the entire plan. Freeing Core 0 from all audio emulation virtually doubles the available CPU budget for CPU+PPU.
 
 ```
 Core 0 (main):                 Core 1 (audio):
-  65C816 CPU emulation           SPC700 DSP emulation
-  PPU rendering                  S9xMixSamples()
-  Display transfer               I2S DMA feed
+  65C816 CPU emulation           SPC700 CPU emulation
+  PPU rendering                  DSP (assembly from Phase 4.1)
+  Display transfer               I2S DMA output feed
   Input polling
 
-  ~10.5 ms/frame                 ~8.0 ms/frame
-  → 95 fps theoretical           (runs in parallel)
+  ~10.5 ms/frame                 ~8.0 ms/frame → ~5 ms with ASM
+  → bottleneck at 11ms           (runs fully in parallel)
 ```
 
-Communication via a lock-free ring buffer: Core 0 pushes audio commands, Core 1 consumes and mixes asynchronously.
+#### 4.2.2 — Memory Layout Optimization
 
-**Expected gain:** +5-8 fps (from 25-30 → 30-35 fps)
+| | |
+|:---|:---|
+| **Intervention** | Relocate critical data structures from PSRAM to internal SRAM (512 KB). |
+| **Structures to move** | SPC700 RAM (64 KB), PPU tile cache (~32 KB), palette RAM (512 B), OAM sprite table (544 B), CGRAM (512 B), DSP registers (128 B). **Total: ~100 KB in SRAM.** |
+| **Impact** | Octal PSRAM has ~80–120ns random access latency vs ~10ns for internal SRAM. The DSP and PPU make thousands of random accesses per frame. **8–10x latency difference.** |
+| **Implementation** | Replace `malloc()` with `heap_caps_malloc(size, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT)` for identified structures. Verify remaining SRAM budget with `heap_caps_get_free_size()`. |
+| **Expected gain** | **+15–20%** on total frame time |
+| **Effort** | 1 day (few lines of code, but requires profiling) |
 
-### Optimization 3 — Adaptive Frameskip
+#### 4.2.3 — Overclock to 260 MHz
 
-Instead of rendering every frame, skip rendering when behind schedule while still running the CPU/audio emulation:
+| | |
+|:---|:---|
+| **Intervention** | Increase clock from 240 to 260 MHz via ESP-IDF menuconfig (unofficial but stable). |
+| **Implementation** | In sdkconfig: `CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=260`. Or runtime: `esp_pm_configure()` with `max_freq_mhz=260`. |
+| **Risks** | Minimal. The S3 is officially tested to 240 MHz, but 260 MHz is widely used in the community without stability issues. No significant power consumption increase. |
+| **Expected gain** | **+8%** linear across everything |
+| **Effort** | 10 minutes |
 
-```
-Frame 1: emulate + render  (16ms)
-Frame 2: emulate only      (8ms)   ← skipped render saves ~8ms
-Frame 3: emulate + render  (16ms)
-Frame 4: emulate only      (8ms)
-...
-Average: 12ms/frame → ~45 fps perceived with 22 frames rendered
-```
+#### 4.2.4 — Audio Sample Rate Reduction
 
-The game logic stays at full speed (60 ticks/sec) but the screen updates at 22-30 fps. For RPGs and puzzle games this is visually indistinguishable from full speed.
+| | |
+|:---|:---|
+| **Intervention** | Reduce DSP sample rate from 32 kHz to 16 kHz. Halves the number of samples to compute per second. |
+| **Audio impact** | Slightly lower perceived quality on high frequencies (cymbals, hi-hat). For most SNES music the difference is minimal on a handheld speaker. |
+| **Expected gain** | **+5–8%** on audio processing (~2–3% total after dual-core) |
+| **Effort** | 30 minutes |
 
-**Expected gain:** +10 perceived fps (from 30-35 → 35-45 fps perceived)
+#### Phase 4.2 Summary
 
-### Optimization 4 — Interlaced Rendering (experimental)
+| Intervention | Days | Gain % | Cumulative FPS |
+|:---|---:|:---|:---|
+| Dual-Core SPC700 | 2–3 | +35–45% | 42 → 50–52 |
+| Memory Layout SRAM | 1 | +15–20% | 52 → 54–56 |
+| Overclock 260 MHz | 0.01 | +8% | 56 → 57–58 |
+| Sample Rate 16 kHz | 0.05 | +2–3% | 57–58 |
+| **TOTAL Phase 4.2** | **~4** | **cumulative** | **42 → 56–58 FPS** |
 
-Render only even rows on even frames and odd rows on odd frames:
+---
 
-```
-Frame N:   render rows 0, 2, 4, 6, ...  (half the PPU work)
-Frame N+1: render rows 1, 3, 5, 7, ...  (other half)
-```
+### Phase 4.3 — The Last Mile: PPU & Display
 
-Doubles apparent framerate at the cost of slight vertical flicker. Works well for static scenes (menus, dialogue), visible during fast horizontal scrolling.
+**Goal:** Go from ~57 to 60 FPS stable by optimizing PPU rendering and the display pipeline. More complex optimizations but necessary for the final 5%. ~6 days.
 
-**Expected gain:** +5 perceived fps
+#### 4.3.1 — PPU Fast-Path Rendering
 
-### Optimization 5 — Audio Profiles
+| | |
+|:---|:---|
+| **Intervention** | Create optimized paths for common PPU cases: Mode 1 (used by 70%+ of games), no clipping windows, no mosaic, no complex color math. |
+| **Detail** | The Snes9x 2005 PPU handles ALL cases (Mode 0–7, windows, mosaic, color math, hi-res, interlace, offset-per-tile) in a single generic code path with many branches. The fast-path eliminates checks for features not used in the current scanline. |
+| **Expected gain** | **+5–8%** on total frame time |
+| **Effort** | 3–4 days (requires deep PPU understanding) |
 
-The SPC700 audio DSP is the single biggest CPU bottleneck at ~8ms/frame (48% of budget). Three selectable profiles trade audio quality for frame rate, toggled in-game via **Menu button → Audio: Full / Fast / OFF**.
+#### 4.3.2 — Tile Cache in SRAM
+
+| | |
+|:---|:---|
+| **Intervention** | Cache decoded tiles in internal SRAM. The PPU decodes the same tiles hundreds of times per frame (repeated background tiles). With dirty-flag tracking, only re-decode when VRAM changes. |
+| **Expected gain** | **+3–5%** |
+| **Effort** | 1 day |
+
+#### 4.3.3 — DMA Display Push
+
+| | |
+|:---|:---|
+| **Intervention** | Use the ESP32-S3 DMA to transfer the framebuffer to the display (8-bit 8080 parallel) without engaging the CPU. Double-buffering: while DMA sends frame N, the CPU renders frame N+1. |
+| **Expected gain** | **+2–3%** |
+| **Effort** | 1 day |
+
+#### 4.3.4 — Adaptive Frameskip (Safety Net)
+
+| | |
+|:---|:---|
+| **Intervention** | If the frame budget (16.67ms) is exceeded, skip rendering the next frame (but still execute game logic). Frameskip 1 = 30 FPS perceived but gameplay at 60. |
+| **Strategy** | Auto-adaptive: measure previous frame time. If over 16.67ms, skip render. If under 15ms, never skip. Zone 15–16.67ms: skip 1 every 4 frames. **Perceived result: 45–60 FPS constant.** |
+| **Expected gain** | Safety net — maintains 60 perceived FPS even at ~55 real FPS |
+| **Effort** | Half day |
+
+---
+
+### Complete FPS Progression
+
+| # | Intervention | FPS pre | FPS post | Delta FPS | Days cum. |
+|:---|:---|---:|---:|:---|---:|
+| F4.1 | BRR Decode ASM | 30 | 32–33 | +2–3 | 1 |
+| F4.1 | Gaussian Interp ASM | 33 | 34–35 | +1–2 | 1.5 |
+| F4.1 | Voice Mixing ASM | 35 | 38–40 | +3–5 | 3.5 |
+| F4.1 | Echo FIR ASM | 40 | 41–42 | +1–2 | 4 |
+| F4.2 | Dual-Core SPC700 | 42 | 50–52 | **+8–10** | 7 |
+| F4.2 | Memory Layout SRAM | 52 | 54–56 | +2–4 | 8 |
+| F4.2 | Overclock 260 MHz | 56 | 57–58 | +1–2 | 8 |
+| F4.2 | Sample Rate 16 kHz | 58 | 58 | +0–1 | 8 |
+| F4.3 | PPU Fast-Path | 58 | 59–60 | +1–2 | 12 |
+| F4.3 | Tile Cache SRAM | 60 | 60 | +headroom | 13 |
+| F4.3 | DMA Display | 60 | 60 | +headroom | 14 |
+| F4.3 | Adaptive Frameskip | — | **60 stable** | safety net | 14.5 |
+
+---
+
+### Game Compatibility
+
+| Game | Complexity | Expected FPS | Playable? |
+|:---|:---|:---|:---|
+| Super Mario World | Low | 60 | **Yes** |
+| Zelda: A Link to the Past | Low | 58–60 | **Yes** |
+| Chrono Trigger | Medium | 55–60 | **Yes** |
+| Final Fantasy VI | Medium | 55–60 | **Yes** |
+| Mega Man X | Medium | 55–58 | **Yes** |
+| Super Metroid | Medium-High | 50–58 | **Yes*** |
+| Donkey Kong Country | High | 45–55 | Partial |
+| Street Fighter II Turbo | High | 45–55 | Partial |
+| Star Fox (Super FX) | Extreme | 20–30 | **No** |
+| Yoshi's Island (Super FX 2) | Extreme | 15–25 | **No** |
+
+\* With occasional adaptive frameskip in heavy scenes.
+
+:::note Games with special coprocessors
+Games using special coprocessors (Super FX, Super FX 2, SA-1, DSP-1/2/3/4) would require an ESP32-P4 (400 MHz) or better to reach full speed. These chips add a significant computation overhead that cannot be optimized away on the ESP32-S3.
+:::
+
+:::tip SNES on v2 (ESP32-P4)
+The ESP32-P4 at 400MHz with 2.1x the CoreMark score would bring SNES to full-speed with full audio quality for virtually all standard games, and make Super FX titles partially playable.
+:::
+
+### Audio Profiles
+
+The SPC700 audio DSP is the single biggest CPU bottleneck before Phase 4.1 assembly optimizations. Three selectable profiles trade audio quality for frame rate, toggled in-game via **Menu button → Audio: Full / Fast / OFF**.
 
 #### Profile Comparison
 
-| Profile | Sample rate | Interpolation | Echo/Reverb | Channels | DSP time | Frame budget used |
+| Profile | Sample rate | Interpolation | Echo/Reverb | Channels | DSP time (pre-ASM) | DSP time (post-ASM) |
 |:---|:---|:---|:---|:---|---:|---:|
-| **Full** | 32 kHz | Gaussian (4-tap) | Yes | Stereo | ~8.0 ms | 48% |
-| **Fast** | 16 kHz | Linear (2-tap) | No | Mono | ~2.5 ms | 15% |
-| **OFF** | — | — | — | — | 0 ms | 0% |
+| **Full** | 32 kHz | Gaussian (4-tap) | Yes | Stereo | ~8.0 ms | ~5.0 ms |
+| **Fast** | 16 kHz | Linear (2-tap) | No | Mono | ~2.5 ms | ~1.5 ms |
+| **OFF** | — | — | — | — | 0 ms | 0 ms |
 
-#### CPU Timing Breakdown per Profile
+After Phase 4.1 (ASM DSP) + Phase 4.2 (dual-core), audio runs on Core 1 in parallel. With all optimizations applied, Full audio profile at 60 FPS is the target — no quality compromise needed for standard games.
 
-```
-Frame time budget: 16.67 ms (60 fps)
-
-                        Audio Full    Audio Fast    Audio OFF
-                        ──────────    ──────────    ─────────
-65C816 CPU emulation      4.5 ms        4.5 ms       4.5 ms
-PPU rendering             5.0 ms        5.0 ms       5.0 ms
-SPC700 audio DSP          8.0 ms        2.5 ms       0.0 ms
-Display transfer          1.5 ms        1.5 ms       1.5 ms
-                        ──────────    ──────────    ─────────
-TOTAL (single-core)      19.0 ms       13.5 ms      11.0 ms
-Theoretical fps            53            74           91
-```
-
-With dual-core audio offloading, the audio DSP runs in parallel on Core 1 and no longer blocks the main loop — but only if Core 1 finishes within the frame budget:
-
-```
-                        Audio Full    Audio Fast    Audio OFF
-                        ──────────    ──────────    ─────────
-Core 0 (CPU+PPU+LCD)    11.0 ms       11.0 ms      11.0 ms
-Core 1 (audio DSP)        8.0 ms        2.5 ms       0.0 ms
-Bottleneck               11.0 ms       11.0 ms      11.0 ms
-Theoretical fps            91            91           91
-```
-
-With Fast or OFF, Core 1 finishes well within budget, so the bottleneck is always Core 0 at 11ms. With Full audio, Core 1 at 8ms is still under Core 0's 11ms — but in practice, cache contention and memory bus sharing between cores reduce the effective throughput.
-
-### SNES Performance Summary
-
-#### With Audio Full (32kHz Gaussian stereo)
-
-| Level | Optimizations applied | Rendered fps | Perceived fps | Best for |
-|:---|:---|---:|---:|:---|
-| Baseline | None | 15-20 | 15-20 | Not playable |
-| **Good** | **IRAM + dual-core** | **25-30** | **25-30** | **Turn-based RPGs** |
-| **Better** | **+ adaptive frameskip** | **20-25** | **35-45** | **RPGs, puzzle, platformers** |
-| Best | + interlaced + all | 25-30 | 40-50 | Most games playable |
-
-#### With Audio Fast (16kHz linear mono)
-
-| Level | Optimizations applied | Rendered fps | Perceived fps | Best for |
-|:---|:---|---:|---:|:---|
-| Baseline | Audio Fast only | 25-30 | 25-30 | Barely playable |
-| **Good** | **IRAM + dual-core** | **35-40** | **35-40** | **Most games** |
-| **Better** | **+ adaptive frameskip** | **30-35** | **45-55** | **All genres** |
-| **Best** | **+ interlaced + all** | **35-40** | **55-60** | **Near full-speed** |
-
-#### With Audio OFF
-
-| Level | Optimizations applied | Rendered fps | Perceived fps | Best for |
-|:---|:---|---:|---:|:---|
-| Baseline | Audio OFF only | 30-35 | 30-35 | Playable |
-| Good | IRAM + dual-core | 40-45 | 40-45 | Most games |
-| Better | + adaptive frameskip | 35-40 | 50-55 | All genres |
-| Best | + interlaced + all | 40-45 | 55-60 | Full-speed |
-
-:::tip Sweet spot: Audio Fast + all optimizations
-With Audio Fast and all optimizations applied, SNES reaches **55-60 perceived fps** — near full-speed for virtually all games. Audio quality is reduced (16kHz mono, no echo) but still very usable for gameplay. This is the recommended default for action games and platformers.
+:::tip Recommended: Full audio after all optimizations
+Unlike the pre-optimization estimates, the 3-phase plan targets **60 FPS with full 32kHz stereo audio** for standard games (Super Mario World, Zelda, Chrono Trigger, FF6). Audio Fast/OFF remain available as fallback options for heavy scenes or complex games.
 :::
 
-### Game Compatibility by Genre
+---
 
-| Genre | Examples | Audio Full | Audio Fast | Audio OFF |
-|:---|:---|:---|:---|:---|
-| Turn-based RPG | FF6, Chrono Trigger, Earthbound | **35-45** | **50-55** | **55-60** |
-| Puzzle | Tetris Attack, Dr. Mario, Panel de Pon | **40-50** | **55-60** | **55-60** |
-| Simple platformer | Super Mario World (early levels) | **30-40** | **45-55** | **50-60** |
-| Complex platformer | DKC, Yoshi's Island | **20-30** | **35-45** | **40-50** |
-| Action / Mode 7 | F-Zero, Star Fox, Mario Kart | **15-25** | **30-40** | **35-45** |
+### Phase 5 — v2 Hardware Audio Coprocessor
 
-All values assume all optimizations enabled (IRAM + dual-core + frameskip + interlaced).
+**Goal:** Add an RP2040 microcontroller as a dedicated audio coprocessor on the v2 PCB. This completely offloads audio processing from the ESP32-S3 for **all emulators** — not just SNES. Both ESP32-S3 cores become 100% available for CPU + PPU + game logic. ~14 days.
 
-:::tip SNES on v2 (ESP32-P4)
-The ESP32-P4 at 400MHz with 2.1x the CoreMark score achieves ~50fps SNES with Full audio enabled. A future v2 PCB with ESP32-P4 would bring SNES to full-speed Audio Full for all genres.
+#### Why a Hardware Audio Coprocessor?
+
+Even after Phase 4 optimizations, the ESP32-S3 spends one entire core on SNES audio (SPC700 + DSP). For simpler emulators (NES, GB, Genesis), audio still consumes I2S DMA time and interrupt cycles. A dedicated audio chip eliminates this entirely.
+
+```
+v1 Architecture (software only):
+┌──────────────────────────────────────────────────────┐
+│ ESP32-S3                                             │
+│   Core 0: CPU + PPU + Display                        │
+│   Core 1: SPC700 + DSP + I2S DMA ← audio burden     │
+│                                        │             │
+│                                   I2S bus            │
+│                                        │             │
+│                                   PAM8403 → Speaker  │
+└──────────────────────────────────────────────────────┘
+
+v2 Architecture (RP2040 audio hub):
+┌──────────────────────┐    SPI 4MHz    ┌──────────────────────┐
+│ ESP32-S3             │ ──────────────→│ RP2040               │
+│   Core 0: CPU + PPU  │    commands    │   Core 0: SPC700 DSP │
+│   Core 1: CPU + PPU  │    + PCM data  │   Core 1: I2S output │
+│   (both 100% free    │               │                      │
+│    for emulation)    │               │          I2S bus     │
+└──────────────────────┘               │             │        │
+                                       │        PAM8403       │
+                                       │             │        │
+                                       │         Speaker      │
+                                       └──────────────────────┘
+```
+
+#### RP2040 Specifications
+
+| Parameter | Value |
+|:---|:---|
+| **Chip** | RP2040 (Raspberry Pi) |
+| **Cores** | 2x ARM Cortex-M0+ @ 133 MHz |
+| **SRAM** | 264 KB (enough for SPC700 64KB RAM + DSP + buffers) |
+| **Flash** | 2 MB external QSPI (firmware storage) |
+| **I2S** | Via PIO (Programmable I/O) — hardware-quality timing |
+| **SPI Slave** | Hardware peripheral, DMA-capable |
+| **Power** | ~25 mA @ 3.3V (~82 mW) |
+| **Package** | QFN-56, 7x7 mm |
+| **Unit cost** | ~$0.70 |
+
+#### Dual-Mode Firmware
+
+The RP2040 runs two firmware modes, selected by the ESP32-S3 via an SPI command at emulator launch:
+
+| Mode | Active for | RP2040 Core 0 | RP2040 Core 1 | Audio latency |
+|:---|:---|:---|:---|---:|
+| **Passthrough** | NES, GB, GBC, SMS, GG, PCE, Genesis, Lynx | Receive PCM via SPI → ring buffer | Ring buffer → I2S DMA output | under 2 ms |
+| **SPC700 Native** | SNES | Full SPC700 CPU + S-DSP emulation | I2S DMA output from DSP buffer | under 5 ms |
+
+**Passthrough mode:** The ESP32-S3 computes audio samples as usual (e.g., NES APU, GB sound) and sends raw PCM over SPI. The RP2040 simply relays them to I2S. This frees the ESP32 from I2S DMA interrupts and buffer management.
+
+**SPC700 Native mode:** The ESP32-S3 sends SPC700 I/O port writes (4 bytes) and timing sync packets over SPI. The RP2040 runs the complete SPC700 CPU emulation + S-DSP (BRR decode, mixing, echo FIR) natively on its ARM cores. At 133 MHz with 264 KB SRAM, the RP2040 has more than enough headroom for real-time SPC700 emulation.
+
+#### SPI Communication Protocol
+
+| Command | Direction | Payload | Rate |
+|:---|:---|:---|:---|
+| `MODE_SET` | ESP32 → RP2040 | 1 byte (0=Passthrough, 1=SPC700) | At emulator launch |
+| `PCM_DATA` | ESP32 → RP2040 | 256–512 bytes PCM (16-bit stereo) | 32 kHz / buffer size |
+| `SPC_PORT_WRITE` | ESP32 → RP2040 | 4 bytes (ports 0-3) | Per CPU write (~1000/frame) |
+| `SPC_SYNC` | ESP32 → RP2040 | 4 bytes (timestamp) | Every 2 ms |
+| `SPC_UPLOAD` | ESP32 → RP2040 | Variable (SPC700 program) | At game load |
+| `STATUS` | RP2040 → ESP32 | 4 bytes (ports 0-3 readback) | On request |
+
+**SPI bus:** 4 MHz clock, Mode 0, 8-bit frames. At 4 MHz, a 512-byte PCM buffer transfers in ~1 ms. The ESP32-S3 uses DMA for zero-CPU-cost SPI transfers.
+
+#### BOM Impact (v1 → v2)
+
+| Component | Qty | Unit cost | Total | Notes |
+|:---|---:|---:|---:|:---|
+| RP2040 (QFN-56) | 1 | $0.70 | $0.70 | Audio coprocessor |
+| W25Q16 (2MB flash) | 1 | $0.15 | $0.15 | RP2040 firmware storage |
+| 12 MHz crystal | 1 | $0.10 | $0.10 | RP2040 clock source |
+| 1uF caps (decoupling) | 4 | $0.01 | $0.04 | Power filtering |
+| 3.3V LDO (shared) | — | — | $0.00 | Uses existing AMS1117 |
+| **Total v2 addition** | | | **$0.99** | |
+
+**v2 total BOM delta:** under $1.00. The RP2040 runs at 3.3V from the existing AMS1117 regulator (which has 800 mA headroom — RP2040 adds only 25 mA).
+
+#### GPIO / SPI Wiring
+
+```
+ESP32-S3 (SPI Master)          RP2040 (SPI Slave)
+─────────────────────          ──────────────────
+GPIO 10 (SPI2_CS)    ────────→ GP1 (SPI0_CSn)
+GPIO 11 (SPI2_MOSI)  ────────→ GP0 (SPI0_RX)
+GPIO 12 (SPI2_MISO)  ←────────  GP3 (SPI0_TX)
+GPIO 13 (SPI2_CLK)   ────────→ GP2 (SPI0_SCK)
+
+RP2040 (I2S via PIO)          Audio
+─────────────────────          ─────
+GP26 (I2S_BCK)       ────────→ PAM8403 BCLK
+GP27 (I2S_WS)        ────────→ PAM8403 LRCLK
+GP28 (I2S_DOUT)      ────────→ PAM8403 DIN
+```
+
+The ESP32-S3 no longer needs I2S pins — GPIO 14 (I2S_BCK), 15 (I2S_WS), 16 (I2S_DOUT) become free for other uses.
+
+#### Performance: v1 vs v2
+
+| Metric | v1 (software) | v2 (RP2040) | Improvement |
+|:---|:---|:---|:---|
+| **ESP32 cores for emulation** | 1.0–1.5 (Core 1 shared with audio) | 2.0 (both cores 100%) | +33–100% |
+| **SNES audio CPU cost** | ~5 ms/frame (ASM, Core 1) | 0 ms (offloaded) | **-100%** |
+| **NES/GB audio CPU cost** | ~0.5 ms/frame + I2S IRQ | 0 ms (offloaded) | **-100%** |
+| **Audio latency** | 2–5 ms (DMA buffer) | 2–5 ms (SPI + DMA) | Same |
+| **Audio quality** | 16 kHz (compromise for FPS) | 32 kHz stereo (no compromise) | **2x sample rate** |
+| **Power consumption** | ~180 mA (both cores loaded) | ~205 mA (+25 mA RP2040) | +14% |
+| **BOM cost** | $33 | $34 | +$1 |
+
+#### SNES FPS Impact (v2)
+
+With the RP2040 handling all audio, the ESP32-S3 frame budget changes drastically:
+
+```
+v2 Frame time budget: 16.67 ms (for 60 fps)
+
+┌────────────────────────────────────────────┐
+│ 65C816 CPU emulation         ~4.5 ms  27%  │
+│ PPU rendering (2 BG layers)  ~5.0 ms  30%  │
+│ SPC700 audio DSP              0.0 ms   0%  │  ← offloaded to RP2040
+│ Display transfer             ~1.5 ms   9%  │
+├────────────────────────────────────────────┤
+│ TOTAL                       ~11.0 ms  66%  │  ← 34% headroom!
+└────────────────────────────────────────────┘
+```
+
+At only 66% of the frame budget **before any Phase 4 software optimizations**, v2 hardware reaches 60 FPS for standard SNES games out of the box. Phase 4 optimizations (PPU fast-path, tile cache, overclock) become headroom for complex games.
+
+#### v2 Game Compatibility (All 16-bit Systems)
+
+| System | Example games | v1 FPS | v2 FPS | Notes |
+|:---|:---|---:|---:|:---|
+| **NES** | Super Mario Bros, Zelda | 60 | 60 | Already full speed; v2 frees CPU headroom |
+| **Game Boy** | Tetris, Pokemon | 60 | 60 | Already full speed |
+| **GBC** | Pokemon Crystal | 60 | 60 | Already full speed |
+| **SMS** | Sonic the Hedgehog | 60 | 60 | Already full speed |
+| **Game Gear** | Sonic Triple Trouble | 60 | 60 | Already full speed |
+| **PCE** | Bonk's Adventure | 60 | 60 | Already full speed |
+| **Lynx** | California Games | 60 | 60 | Already full speed |
+| **Genesis** | Sonic, Streets of Rage | 50–60 | **58–60** | +8–10 FPS from freed Core 1 |
+| **SNES (standard)** | Mario World, Zelda ALttP | 30 | **55–60** | Audio offloaded, no Phase 4 needed |
+| **SNES (complex)** | Chrono Trigger, FF6 | 25–30 | **50–58** | Phase 4 PPU optimizations for 60 |
+| **SNES (Super FX)** | Star Fox, Yoshi's Island | 15–25 | **25–40** | Coprocessor still too heavy for 60 |
+
+:::tip v2 makes Phase 4 optional for most SNES games
+With the RP2040 handling all audio natively, the biggest SNES bottleneck (48% of frame time) is eliminated at the hardware level. Standard SNES games reach 55–60 FPS **without any assembly or architectural optimization**. Phase 4 becomes a bonus for pushing complex titles to a stable 60.
 :::
 
 ---
