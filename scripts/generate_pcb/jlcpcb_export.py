@@ -100,10 +100,10 @@ def _build_placements():
     p.append(("U6", "Micro-SD-TF-01A",
               "TF-01A", x, y, 0, "bottom"))
 
-    # Power slide switch (back side, rotated 90° — toggle faces downward)
+    # Power slide switch (back side, horizontal — toggle faces toward board edge)
     x, y = enc_to_pcb(*PWR_SWITCH_ENC)
     p.append(("SW_PWR", "SS-12D00G3",
-              "SS-12D00G3", x, y, 90, "bottom"))
+              "SS-12D00G3", x, y, 0, "bottom"))
 
     # Speaker (SPK1) — manual assembly, not in BOM, excluded from CPL
 

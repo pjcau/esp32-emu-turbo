@@ -586,7 +586,7 @@
     (pad "S" smd rect (at 7.0 6.5) (size 1.2 1.5) (layers "B.Cu" "B.Paste" "B.Mask") (net 0 "") (uuid "000000e4-dead-4000-a000-0000000000e4"))
     (pad "S" smd rect (at -7.0 6.5) (size 1.2 1.5) (layers "B.Cu" "B.Paste" "B.Mask") (net 0 "") (uuid "000000e5-dead-4000-a000-0000000000e5"))
   )
-  (footprint "SS-12D00G3" (at 40.0 72.0 90) (layer "B.Cu")
+  (footprint "SS-12D00G3" (at 40.0 72.0 0) (layer "B.Cu")
     (uuid "000000ea-dead-4000-a000-0000000000ea")
     (property "Reference" "SW_PWR" (at 0 -3 0) (layer "B.Cu") (effects (font (size 1 1) (thickness 0.15)) (justify mirror)))
     (property "Value" "SS-12D00G3" (at 0 3 0) (layer "B.Cu") (effects (font (size 1 1) (thickness 0.15)) (justify mirror)))
