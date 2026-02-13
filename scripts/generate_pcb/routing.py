@@ -72,7 +72,7 @@ PAM8403 = enc(-50, 8)     # (30.0, 29.5)
 L1 = enc(30, -15)         # (110.0, 52.5)  — near IP5306
 JST = enc(0, -15)         # (80.0, 52.5)
 SPEAKER = enc(-50, -15)   # (30.0, 52.5)
-PWR_SW = enc(-72, 15)     # (8.0, 22.5)
+PWR_SW = enc(-40, -34.5)  # (40.0, 72.0) — bottom edge, left of USB-C
 
 # Button positions (PCB coords)
 DPAD = [
@@ -248,10 +248,11 @@ def _power_traces():
     parts.append(_seg(ix - 6, iy + 3, ix - 6, jy + 2, "B.Cu", W_PWR, n_gnd))
     parts.append(_seg(ix - 6, jy + 2, jx - 2, jy + 2, "B.Cu", W_PWR, n_gnd))
 
-    # Power switch: BAT+ rail connection
+    # Power switch: BAT+ rail connection (PWR_SW at bottom edge, left of USB-C)
     pwx, pwy = PWR_SW
-    parts.append(_seg(pwx, pwy, pwx, jy - 5, "B.Cu", W_PWR, n_bat))
-    parts.append(_seg(pwx, jy - 5, jx - 5, jy - 5, "B.Cu", W_PWR, n_bat))
+    parts.append(_seg(pwx, pwy, pwx, jy + 5, "B.Cu", W_PWR, n_bat))
+    parts.append(_seg(pwx, jy + 5, jx - 5, jy + 5, "B.Cu", W_PWR, n_bat))
+    parts.append(_seg(jx - 5, jy + 5, jx - 5, jy, "B.Cu", W_PWR, n_bat))
 
     return parts
 
@@ -587,10 +588,23 @@ def _passive_traces():
         parts.append(_seg(cx + 0.95, cy, cx + 0.95, 50, "B.Cu", W_SIG,
                           n_gnd))
 
-    # Connect pull-up outputs to debounce cap inputs (vertical)
+    # Connect pull-up outputs to debounce cap inputs (Manhattan L-shape)
+    # Each R→C junction carries the respective button signal net.
+    btn_nets = [
+        NET_ID["BTN_UP"], NET_ID["BTN_DOWN"],
+        NET_ID["BTN_LEFT"], NET_ID["BTN_RIGHT"],
+        NET_ID["BTN_A"], NET_ID["BTN_B"],
+        NET_ID["BTN_X"], NET_ID["BTN_Y"],
+        NET_ID["BTN_START"], NET_ID["BTN_SELECT"],
+        NET_ID["BTN_L"], NET_ID["BTN_R"],
+        NET_ID["BTN_MENU"],
+    ]
     for i in range(len(PULL_UP_REFS)):
         x = 50 + i * 5
-        parts.append(_seg(x + 0.95, 44, x - 0.95, 48, "B.Cu", W_SIG, 0))
+        net = btn_nets[i] if i < len(btn_nets) else 0
+        # L-shape: vertical down from R pad, then horizontal to C pad
+        parts.append(_seg(x + 0.95, 44, x + 0.95, 48, "B.Cu", W_SIG, net))
+        parts.append(_seg(x + 0.95, 48, x - 0.95, 48, "B.Cu", W_SIG, net))
 
     # Decoupling caps near ICs
     # C3, C4 near ESP32
@@ -669,10 +683,12 @@ def _power_zones():
     parts.append(P.zone_fill("In2.Cu", board_pts, NET_ID["+3V3"], "+3V3"))
 
     # +5V zone on In2.Cu (center-right area near IP5306/AMS1117)
+    # Priority 1 = higher than +3V3 (priority 0) so +5V wins in overlap
     v5_pts = [
         (100, 35), (140, 35), (140, 65), (100, 65),
     ]
-    parts.append(P.zone_fill("In2.Cu", v5_pts, NET_ID["+5V"], "+5V"))
+    parts.append(P.zone_fill("In2.Cu", v5_pts, NET_ID["+5V"], "+5V",
+                             priority=1))
 
     return parts
 

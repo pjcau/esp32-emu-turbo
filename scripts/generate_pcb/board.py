@@ -321,7 +321,7 @@ def _component_placeholders():
     placements.append(("U6", "TF-01A", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    placements.append(("SW_PWR", "SS-12D00G3", px, py, 0, "B.Cu"))
+    placements.append(("SW_PWR", "SS-12D00G3", px, py, 90, "B.Cu"))
 
     px, py = enc_to_pcb(*SPEAKER_ENC)
     placements.append(("SPK1", "Speaker-22mm", px, py, 0, "B.Cu"))

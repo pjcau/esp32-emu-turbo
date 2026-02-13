@@ -109,8 +109,8 @@ COMPONENTS_BOTTOM = [
     ("J4", "FPC-40P", "FPC", 135.0, 35.5, 3, 26),
     ("J1", "USB-C", "USB-C", 80.0, 72.0, 9, 7),
     ("U6", "SD Card", "TF-01A", 140.0, 67.0, 14, 15),
-    # Power switch (back side, bottom edge)
-    ("SW_PWR", "PWR", "SLIDE_SW", 40.0, 72.0, 4, 8),
+    # Power switch (back side, bottom edge, rotated 90° — toggle faces down)
+    ("SW_PWR", "PWR", "SLIDE_SW", 40.0, 72.0, 8, 4),
     # Speaker (back side, 22mm)
     ("SPK1", "Speaker", "Speaker", 30.0, 52.5, 22, 22),
     # ICs (IP5306/AMS1117/L1 moved left to avoid slot)
@@ -495,11 +495,23 @@ def _draw_component(ref, value, pkg, x, y, w, h):
             f'width="{sw}" height="{sh}" rx="1.5" '
             f'fill="#444" stroke="#666" stroke-width="0.5"/>'
         )
-        lines.append(
-            f'<rect x="{cx - sw/3}" y="{cy - sh/4}" '
-            f'width="{sw*2/3}" height="{sh/3}" rx="1" '
-            f'fill="#888" stroke="#aaa" stroke-width="0.3"/>'
-        )
+        # Slide knob — positioned toward bottom edge (toggle faces outward)
+        knob_w = min(sw, sh) * 0.6
+        knob_h = max(sw, sh) * 0.35
+        if sw > sh:
+            # Horizontal switch: knob slides along X, toggle faces down
+            lines.append(
+                f'<rect x="{cx + sw/6}" y="{cy - knob_w/2}" '
+                f'width="{knob_h}" height="{knob_w}" rx="1" '
+                f'fill="#888" stroke="#aaa" stroke-width="0.3"/>'
+            )
+        else:
+            # Vertical switch: knob slides along Y
+            lines.append(
+                f'<rect x="{cx - knob_w/2}" y="{cy + sh/6}" '
+                f'width="{knob_w}" height="{knob_h}" rx="1" '
+                f'fill="#888" stroke="#aaa" stroke-width="0.3"/>'
+            )
         lines.append(
             f'<text x="{cx}" y="{cy + sh/2 + 5}" text-anchor="middle" '
             f'font-family="monospace" font-size="2.5" fill="{SILKSCREEN}">'
