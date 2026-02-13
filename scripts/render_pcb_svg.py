@@ -499,10 +499,12 @@ def _draw_component(ref, value, pkg, x, y, w, h):
         knob_w = min(sw, sh) * 0.6
         knob_h = max(sw, sh) * 0.35
         if sw > sh:
-            # Horizontal switch: knob slides along X, toggle faces down
+            # Horizontal switch: toggle protrudes toward bottom edge (outward)
+            kw = sw * 0.3
+            kh = sh * 0.7
             lines.append(
-                f'<rect x="{cx + sw/6}" y="{cy - knob_w/2}" '
-                f'width="{knob_h}" height="{knob_w}" rx="1" '
+                f'<rect x="{cx - kw/2}" y="{cy + sh/6}" '
+                f'width="{kw}" height="{kh}" rx="1" '
                 f'fill="#888" stroke="#aaa" stroke-width="0.3"/>'
             )
         else:
