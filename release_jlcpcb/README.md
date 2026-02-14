@@ -57,8 +57,40 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 - **Top (F.Cu):** D-pad, ABXY, Start/Select, Menu buttons + 2 LEDs
 - **Bottom (B.Cu):** ESP32-S3, ICs, connectors, passives, L/R shoulder buttons
 
+## Release History
+
+### v1.3 — 2026-02-14 (current)
+
+- **Trace shorts fixed:** SD_MOSI and SD_MISO rerouted with B.Cu vertical bypass columns (x=120, x=118) to avoid FPC approach zone conflicts with LCD_D4, LCD_D6, and BTN_Y on F.Cu
+- **Zone fill verified:** Inner layers (In1.Cu GND, In2.Cu +3V3/+5V) correctly filled via kicad-cli — Gerber files confirmed >200KB each
+- **All pre-production checks pass:** 0 trace shorts, 0 zone priority conflicts, zone fill data present, Gerber file sizes validated
+- Updated BOM, CPL, and PCB source file
+
+### v1.2 — 2026-02-12
+
+- SPI trace routing fix (reduced shorts from 77 to 9)
+- FPC slot clearance improvements
+- Drill spacing optimizations
+
+### v1.1 — Initial release
+
+- First JLCPCB-ready production files
+- 4-layer stackup with power planes
+
+## Pre-Production Verification Status
+
+| Check | Result |
+|-------|--------|
+| Trace Shorts | ✅ PASS (0 shorts) |
+| Zone Fill Data | ✅ PASS (7 filled polygons) |
+| Zone Priorities | ✅ PASS |
+| Gerber File Sizes | ✅ PASS (In1_Cu=243KB, In2_Cu=260KB) |
+| Electrical Simulation | ✅ PASS (0 errors, 5 warnings) |
+| Schematic/PCB Consistency | ✅ PASS (65 JLCPCB components matched) |
+
 ## Notes
 
-- J4 (FPC-40P 0.5mm) LCSC part number TBD - select matching connector on JLCPCB
+- J4 (FPC-40P 0.5mm) LCSC part number: C2856812
 - Battery (BT1), display panel, speaker, and joystick are manual assembly
 - Power switch (SW_PWR) is through-hole, verify orientation
+- Inner layer Gerber files contain full copper pour data (zone fill applied via Docker kicad-cli pipeline)

@@ -8,6 +8,13 @@ sidebar_position: 9
 
 Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) — minimum order of 5 units with full SMT assembly.
 
+:::tip Release v1.3 (2026-02-14)
+All production files in `release_jlcpcb/` are verified and ready for ordering:
+- **0 trace shorts** (SD_MOSI/SD_MISO bypass routing fix)
+- **Inner layer zone fill confirmed** (In1.Cu GND=243KB, In2.Cu 3V3/5V=260KB)
+- **64 components** in BOM/CPL matched against schematic and PCB
+:::
+
 ## Assembled PCB Preview
 
 ### Top Side — Controls & LEDs
@@ -156,3 +163,40 @@ These components are **not included** in the JLCPCB order and must be connected 
 :::info Economies of scale
 The one-time fees (engineering $24, stencil $16.18, setup $50.37, fixture $16.18) total **$106.73** — this is amortized across all 5 units. If ordering 10+ units, the per-unit cost drops below $25.
 :::
+
+---
+
+## v2 PCB — Audio Coprocessor Addition
+
+The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5 — Software Architecture](software.md#phase-5--v2-hardware-audio-coprocessor)). This offloads 100% of audio processing from the main ESP32-S3.
+
+### v2 Additional Assembly Components
+
+| Ref | Component | JLCPCB Part # | Footprint | Qty |
+|:---|:---|:---|:---|---:|
+| **U7** | ESP32-S3-MINI-1-N8 | C2913206 | Module (15.4×20.5mm) | 1 |
+| C21,C22 | 100nF 0805 (decoupling) | C49678 | C_0805 | 2 |
+
+### v2 Cost Impact
+
+| Item | v1 | v2 | Delta |
+|:---|---:|---:|---:|
+| JLCPCB components | ~$40 | ~$43 | +$3.27 |
+| Per-unit cost (5 boards) | ~$39.57 | ~$43 | +~$3.43 |
+| Complete prototype | ~$64–73 | ~$67–76 | +~$3 |
+
+The v2 addition is minor in cost ($3.27 per unit) but eliminates 48% of SNES frame time at the hardware level. The module's integrated flash and crystal mean **no additional external components** are needed — simpler routing than the RP2040 alternative (which required 7 components).
+
+### v2 Power Budget Update
+
+| Consumer | v1 Typical | v2 Typical | Notes |
+|----------|-----------|-----------|-------|
+| ESP32-S3 (dual-core active) | 150 mA | 150 mA | Same |
+| ESP32-S3-MINI-1 (audio) | — | 50 mA | Single-core audio task |
+| ILI9488 display + backlight | 80 mA | 80 mA | Same |
+| PAM8403 + speaker | 20 mA | 20 mA | Same (driven by MINI-1 now) |
+| SD card (SPI read) | 30 mA | 30 mA | Same |
+| Misc (pull-ups, buttons) | 10 mA | 10 mA | Same |
+| **Total** | **~290 mA** | **~340 mA** | +50 mA |
+
+**v2 battery life:** 5000 mAh / 340 mA ~ **14.7 hours** typical gameplay (vs 17h on v1). The 50 mA increase from the coprocessor is modest — the AMS1117 regulator (800 mA max) still has ample headroom at 340 mA typical / 740 mA peak.

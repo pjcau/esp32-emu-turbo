@@ -27,7 +27,7 @@ RULES = {
     "min_annular_ring": 0.13,      # mm
     "min_board_edge_clearance": 0.3,  # mm
     "min_drill_to_edge": 0.4,      # mm
-    "min_drill_spacing": 0.5,      # mm (edge-to-edge)
+    "min_drill_spacing": 0.25,     # mm (edge-to-edge, JLCPCB 4-layer: 0.254mm)
     "board_width": 160.0,
     "board_height": 75.0,
 }

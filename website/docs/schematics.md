@@ -78,14 +78,15 @@ make render-schematics    # Export SVG + PDF
                     ┌────────────┘  │  │  │  │  │  └──────────┐
                     │               │  │  │  │  │             │
               ┌─────┴─────┐  ┌─────┴──┘  │  └──┴─────┐  ┌────┴────┐
-              │ Display   │  │ SD Card│  │  │ Audio  │  │ Controls│
-              │ ILI9488   │  │ SPI    │  │  │PAM8403 │  │ 12 btns │
-              │ 8080 ‖    │  └────────┘  │  └────────┘  └─────────┘
-              └───────────┘              │
-                                   ┌─────┴─────┐
-                                   │ Joystick  │
-                                   │ (optional)│
-                                   └───────────┘
+              │ Display   │  │ SD Card│  │  │ SPI    │  │ Controls│
+              │ ILI9488   │  │ SPI    │  │  │(coproc)│  │ 12 btns │
+              │ 8080 ‖    │  └────────┘  │  └───┬────┘  └─────────┘
+              └───────────┘              │      │
+                                   ┌─────┴──┐  ┌┴─────────────┐
+                                   │Joystick│  │ESP32-S3-MINI │
+                                   │(opt.)  │  │  -1 (v2)     │
+                                   └────────┘  │  I2S → Audio │
+                                               └──────────────┘
 ```
 
 ---
@@ -285,4 +286,50 @@ The joystick is optional — the D-pad provides full SNES control. 12-bit ADC re
 
 :::caution
 GPIO44 shares the RX0 UART pin. When the joystick is connected, debug UART input is unavailable (TX0 on GPIO43 still works for output).
+:::
+
+---
+
+## v2 — Sheet 8: Audio Coprocessor (ESP32-S3-MINI-1)
+
+:::info v2 addition
+This sheet is only present on the **v2 PCB**. The v1 PCB uses direct I2S from the main ESP32-S3 to the PAM8403 (Sheet 4). In v2, the main ESP32-S3 communicates with the coprocessor via SPI, and the coprocessor drives I2S to the PAM8403.
+:::
+
+ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-S3 and I2S output to the PAM8403 amplifier.
+
+| Ref | Component | Value | Purpose |
+|-----|-----------|-------|---------|
+| U7 | ESP32-S3-MINI-1-N8 | Module | Audio coprocessor (SPC700 + I2S) |
+| C21 | Capacitor | 100 nF | 3V3 decoupling |
+| C22 | Capacitor | 100 nF | EN decoupling |
+
+### SPI Bus (Main ESP32-S3 → Coprocessor)
+
+| Signal | Main ESP32-S3 GPIO | MINI-1 GPIO | Direction |
+|--------|-------------------|-------------|-----------|
+| SPI_CLK | GPIO 15 (was I2S_BCLK) | GPIO 12 | Main → MINI-1 |
+| SPI_MOSI | GPIO 16 (was I2S_LRCLK) | GPIO 11 | Main → MINI-1 |
+| SPI_MISO | GPIO 17 (was I2S_DOUT) | GPIO 13 | MINI-1 → Main |
+| SPI_CS | GPIO 20 (was JOY_X) | GPIO 10 | Main → MINI-1 |
+
+### I2S Bus (Coprocessor → PAM8403)
+
+| Signal | MINI-1 GPIO | Direction |
+|--------|-------------|-----------|
+| I2S_BCLK | GPIO 15 | MINI-1 → PAM8403 |
+| I2S_LRCLK | GPIO 16 | MINI-1 → PAM8403 |
+| I2S_DOUT | GPIO 17 | MINI-1 → PAM8403 |
+
+### v2 GPIO Changes vs v1
+
+| Main ESP32-S3 GPIO | v1 Function | v2 Function | Notes |
+|---------------------|-------------|-------------|-------|
+| GPIO 15 | I2S_BCLK → PAM8403 | SPI_CLK → MINI-1 | Audio path moves to coprocessor |
+| GPIO 16 | I2S_LRCLK → PAM8403 | SPI_MOSI → MINI-1 | Audio path moves to coprocessor |
+| GPIO 17 | I2S_DOUT → PAM8403 | SPI_MISO ← MINI-1 | Audio path moves to coprocessor |
+| GPIO 20 | Joystick X (optional) | SPI_CS → MINI-1 | Joystick X sacrificed for coprocessor |
+
+:::tip Clean GPIO reuse
+The 3 I2S pins freed by moving audio to the coprocessor are reused for SPI communication — no GPIOs wasted. Only the optional joystick X-axis (GPIO 20) is sacrificed for the SPI chip select.
 :::

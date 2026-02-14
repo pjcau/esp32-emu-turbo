@@ -252,6 +252,19 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 
 **Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.
 
+### v2 Additional Components (Audio Coprocessor)
+
+The v2 PCB adds an ESP32-S3-MINI-1-N8 as a dedicated audio coprocessor (see [Phase 5 — Software Architecture](software.md#phase-5--v2-hardware-audio-coprocessor)):
+
+| Ref | Component | Package | LCSC | Class | Unit cost |
+|-----|-----------|---------|------|-------|-----------|
+| U7 | ESP32-S3-MINI-1-N8 | Module (15.4×20.5mm) | C2913206 | Extended | $3.25 |
+| C21,C22 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
+
+**v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything.
+
+**v2 estimated PCB cost:** ~$106 for 5 boards (~$21/board).
+
 ---
 
 ## PCB Version — What to Buy Separately

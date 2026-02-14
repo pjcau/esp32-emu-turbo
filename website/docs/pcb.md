@@ -83,7 +83,7 @@ Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlc
 | U5 | PAM8403 audio amp | C5122557 | Extended | 1 |
 | J1 | USB-C 16-pin | C2765186 | Extended | 1 |
 | U6 | Micro SD slot (TF-01A) | C91145 | Extended | 1 |
-| J4 | FPC 40-pin 0.5mm (display) | TBD | Extended | 1 |
+| J4 | FPC 40-pin 0.5mm (display) | C2856812 | Extended | 1 |
 | J3 | JST PH 2-pin (battery) | C173752 | Extended | 1 |
 | L1 | 1µH inductor 4.5A | C280579 | Extended | 1 |
 | LED1 | Red LED 0805 (charging) | C84256 | Basic | 1 |
@@ -122,11 +122,11 @@ Buy the **bare LCD panel** (NOT a module with PCB breakout):
 
 ### Files Needed
 
-All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root:
+All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root (v1.3, 2026-02-14):
 
-1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload)
-2. **BOM.csv** — `release_jlcpcb/bom.csv`
-3. **CPL.csv** — `release_jlcpcb/cpl.csv`
+1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload, inner layers with zone fill)
+2. **BOM.csv** — `release_jlcpcb/bom.csv` (64 components)
+3. **CPL.csv** — `release_jlcpcb/cpl.csv` (64 component placements)
 
 ### Order Settings
 - Layers: **4**
@@ -184,9 +184,59 @@ Output files:
 - `hardware/kicad/esp32-emu-turbo.kicad_pcb` — KiCad PCB layout
 - `hardware/kicad/jlcpcb/cpl.csv` — Component Placement List (65 parts)
 
+## Routing Architecture
+
+All traces use **Manhattan (orthogonal) routing** — horizontal segments on F.Cu, vertical segments on B.Cu, with vias at every direction change.
+
+### Trace Widths
+
+| Category | Width | Nets |
+|----------|-------|------|
+| Power | 0.5mm | VBUS, +5V, +3V3, BAT+, GND returns |
+| Signal | 0.25mm | Buttons, passives |
+| Data | 0.2mm | Display bus, SPI, I2S, USB |
+| Audio | 0.3mm | PAM8403 → speaker |
+
+### SPI Bus Routing (v1.3 fix)
+
+SD_MOSI and SD_MISO originally ran as long horizontal traces on F.Cu (~45mm, from ESP32 to SD card), crossing the FPC approach zone where LCD data bus and button traces also run on F.Cu. This caused 3 trace shorts:
+
+| Short | Cause |
+|-------|-------|
+| SD_MOSI (y=32.58) ↔ LCD_D4 (y=32.75) | Parallel traces within 0.2mm on F.Cu |
+| SD_MOSI (y=32.58) ↔ BTN_Y (y=32.5) | Parallel traces within 0.2mm on F.Cu |
+| SD_MISO (y=33.85) ↔ LCD_D6 (y=33.75) | Parallel traces within 0.2mm on F.Cu |
+
+**Fix:** SD_MOSI and SD_MISO now use B.Cu vertical bypass columns at x=120 and x=118 respectively. The traces drop to B.Cu before the conflict zone, run vertically to the SD card y-level, then continue on F.Cu to the SD card pins. SD_CLK and SD_CS were unaffected and use the direct route.
+
+### Inner Layer Power Planes
+
+| Layer | Net | Coverage | Zone Priority |
+|-------|-----|----------|---------------|
+| In1.Cu | GND | Full board | 0 |
+| In2.Cu | +3V3 | Full board (base) | 0 |
+| In2.Cu | +5V | Center-right (100-140, 35-65) | 1 (higher) |
+
+The +5V island on In2.Cu covers the IP5306/AMS1117/L1 area. Priority 1 ensures +5V wins in the overlap region. Components outside this area connect to +3V3 via the base zone.
+
+:::info Zone Fill Pipeline
+The Python PCB generator creates zone boundaries but **does not fill them** — zone fill requires the KiCad pcbnew API. The `make export-gerbers` pipeline runs `kicad_fill_zones.py` via Docker before exporting Gerber files, ensuring inner layers contain full copper pour data.
+:::
+
 ## Pre-Production Verification
 
-All automated checks passed before JLCPCB production order:
+All automated checks passed before JLCPCB production order (v1.3, 2026-02-14):
+
+### Short Circuit Analysis — PASS
+
+| Check | Result |
+|-------|--------|
+| Trace Shorts | ✅ PASS (0 shorts) |
+| Zone Fill Data | ✅ PASS (7 filled polygons) |
+| Zone Priorities | ✅ PASS |
+| Gerber File Sizes | ✅ PASS (In1_Cu=243KB, In2_Cu=260KB) |
+
+Script: `python3 scripts/short_circuit_analysis.py`
 
 ### DRC (Design Rule Check) — PASS
 
@@ -198,7 +248,6 @@ All automated checks passed before JLCPCB production order:
 | Via pad | 0.45mm | 0.6mm | PASS |
 | Annular ring | 0.13mm | 0.15mm | PASS |
 | Board edge clearance | 0.3mm | 0.5mm | PASS |
-| Drill spacing | 0.5mm | all OK | PASS |
 
 Script: `python3 scripts/drc_check.py`
 
@@ -231,25 +280,79 @@ Script: `python3 scripts/simulate_circuit.py`
 
 ### Schematic/PCB Consistency — PASS
 
-- All **65 JLCPCB components** matched between schematic, PCB, and CPL
-- 3 off-board components excluded: battery (BT1), display module (U4), joystick (J2)
-- PCB: 211 trace segments, 15 vias, 45 nets, 26 footprints
+- All **64 JLCPCB CPL components** matched between schematic, PCB, and CPL
+- 4 off-board components excluded: battery (BT1), display module (U4), joystick (J2), speaker (SPK1)
+- PCB: 241 trace segments, 202 vias, 45 nets, 65 footprints
 
 Script: `python3 scripts/verify_schematic_pcb.py`
 
 ### Run All Verifications
 
 ```bash
+# All checks in one command
+make verify-all
+
+# Or individually:
 python3 scripts/drc_check.py              # DRC manufacturing rules
 python3 scripts/simulate_circuit.py       # Electrical verification
 python3 scripts/verify_schematic_pcb.py   # Schematic/PCB consistency
-# or: make verify-all
+python3 scripts/short_circuit_analysis.py # Short circuits + zone fill
+
+# Export Gerbers with zone fill (requires Docker)
+make export-gerbers
 ```
 
+## v2 PCB — Audio Coprocessor
+
+The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom side of the PCB. See [Phase 5 — Software Architecture](software.md#phase-5--v2-hardware-audio-coprocessor) for the full rationale.
+
+### v2 Component Placement
+
+| Ref | Component | Side | Location | Notes |
+|-----|-----------|------|----------|-------|
+| **U7** | ESP32-S3-MINI-1-N8 | B.Cu (bottom) | Near PAM8403 (left area) | SPI slave + I2S output |
+| C21,C22 | 100nF 0805 | B.Cu (bottom) | Adjacent to U7 | Decoupling |
+
+### v2 Routing Changes
+
+| Connection | v1 | v2 |
+|------------|-----|-----|
+| GPIO 15 (main ESP32) | I2S_BCLK → PAM8403 | SPI_CLK → U7 (MINI-1) |
+| GPIO 16 (main ESP32) | I2S_LRCLK → PAM8403 | SPI_MOSI → U7 (MINI-1) |
+| GPIO 17 (main ESP32) | I2S_DOUT → PAM8403 | SPI_MISO ← U7 (MINI-1) |
+| GPIO 20 (main ESP32) | Joystick X (optional) | SPI_CS → U7 (MINI-1) |
+| U7 GPIO 15 | — | I2S_BCLK → PAM8403 |
+| U7 GPIO 16 | — | I2S_LRCLK → PAM8403 |
+| U7 GPIO 17 | — | I2S_DOUT → PAM8403 |
+
+The PAM8403 audio amplifier input changes from the main ESP32-S3 to the MINI-1 coprocessor. The I2S bus traces from U7 to U5 (PAM8403) are short and direct since both are on the bottom side in the left area.
+
+### v2 Schematic Architecture
+
+| Sheet | File | Components |
+|-------|------|-----------|
+| Root | `esp32-emu-turbo.kicad_sch` | 8 sheet references |
+| 1–7 | (same as v1) | (same as v1) |
+| **8** | `08-audio-coprocessor.kicad_sch` | **ESP32-S3-MINI-1-N8 + decoupling** |
+
+v2 Total: **71 unique component references**, **68 assembled by JLCPCB**.
+
+---
+
 ## Next Steps
+
+### v1 (current)
 
 1. Upload `release_jlcpcb/gerbers.zip` to [jlcpcb.com](https://jlcpcb.com/)
 2. Upload `release_jlcpcb/bom.csv` and `release_jlcpcb/cpl.csv` for SMT assembly
 3. Order 5× PCBs with SMT assembly (65 components)
 4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
 5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
+
+### v2 (audio coprocessor)
+
+1. Add ESP32-S3-MINI-1-N8 to KiCad schematic (Sheet 8) and PCB layout
+2. Re-route I2S traces from U7 to U5 (PAM8403), SPI traces from U1 to U7
+3. Re-export Gerbers, BOM, and CPL for JLCPCB
+4. Order v2 PCBs with 68 assembled components
+5. Flash coprocessor firmware via separate USB connection or SPI bootloader

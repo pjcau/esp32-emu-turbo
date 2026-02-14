@@ -10,7 +10,7 @@
 | U5 | PAM8403 (audio amp) | SOP-16 | C5122557 | Extended | 1 | ~$0.50 |
 | J1 | USB-C 16-pin connector | SMD | C2765186 | Extended | 1 | ~$0.07 |
 | U6 | Micro SD card slot | TF-01A | C91145 | Extended | 1 | ~$0.19 |
-| J4 | FPC 40-pin 0.5mm (XUNPU) | SMD | C2856812 | Extended | 1 | ~$0.08 |
+| J4 | FPC 40-pin 0.5mm | SMD | TBD | Extended | 1 | ~$0.10 |
 | J3 | JST PH 2-pin (battery) | THT | C173752 | Extended | 1 | ~$0.04 |
 | L1 | 1uH inductor (boost) | 4x4x2mm | C280579 | Extended | 1 | ~$0.25 |
 | R1-R2 | 5.1k (CC pull-down) | 0805 | C27834 | Basic | 2 | ~$0.002 |
@@ -19,7 +19,7 @@
 | R17-R18 | 1k (LED limiting) | 0805 | C11702 | Basic | 2 | ~$0.002 |
 | C3-C16,C20 | 100nF (decoupling) | 0805 | C49678 | Basic | 15 | ~$0.002 |
 | C1,C17,C18 | 10uF | 0805 | C15850 | Basic | 3 | ~$0.01 |
-| C2,C19 | 22uF 25V MLCC (Samsung) | 1206 | C12891 | Basic | 2 | ~$0.02 |
+| C2,C19 | 22uF (tantalum/MLCC) | 1206 | C29632 | Basic | 2 | ~$0.02 |
 | SW1-SW13 | SMT tact switch | 5.1x5.1mm | C318884 | Extended | 13 | ~$0.02 |
 
 ## Manual Assembly (not on PCB or off-board)

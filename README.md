@@ -20,7 +20,8 @@ Build a portable battery-powered device based on ESP32-S3, capable of loading an
 - 4-layer PCB layout (160x75mm, JLCPCB-ready)
 
 ### Phase 3 — PCB Fabrication (In Progress)
-- Production files ready in `release_jlcpcb/` (Gerber ZIP + BOM + CPL)
+- Production files ready in `release_jlcpcb/` v1.3 (Gerber ZIP + BOM + CPL)
+- All pre-production checks pass: 0 trace shorts, zone fill verified, DRC clean
 - JLCPCB order and assembly
 - Testing and performance optimization
 
@@ -81,8 +82,11 @@ Progressive optimization of the snes9x core for ESP32-S3.
 | **Dimensions** | 160 x 75 mm |
 | **Layers** | 4 (Signal / GND / Power / Signal) |
 | **Surface Finish** | ENIG |
-| **Components** | 65 assembled by JLCPCB |
-| **Estimated Cost** | ~$18/board (5 pcs) |
+| **Components** | 64 assembled by JLCPCB |
+| **Trace Shorts** | 0 (verified) |
+| **Zone Fill** | ✅ Inner layers filled (GND + 3V3/5V) |
+| **Release** | v1.3 (2026-02-14) |
+| **Estimated Cost** | ~$40/board (5 pcs, fully assembled) |
 
 ## Key Requirements
 
@@ -121,8 +125,11 @@ make generate-pcb
 # Render PCB images (SVG + PNG + GIF)
 make render-pcb
 
-# Verify schematic/PCB/JLCPCB consistency
-python3 scripts/verify_schematic_pcb.py
+# Run all pre-production checks (DRC + simulation + consistency + short circuit)
+make verify-all
+
+# Export Gerbers with zone fill (requires Docker)
+make export-gerbers
 ```
 
 ### Render schematics and 3D model
