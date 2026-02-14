@@ -459,7 +459,14 @@ def _usb_traces():
 
 
 def _button_traces():
-    """Button traces: F.Cu pad -> via -> B.Cu -> ESP32 GPIO."""
+    """Button traces: F.Cu pad -> via -> B.Cu -> ESP32 GPIO.
+
+    Each button gets a unique vertical approach column so traces never
+    overlap on B.Cu.  Left-side buttons (D-pad, Start/Select) use
+    columns at x=43..56 (between buttons and ESP32 left edge at 71).
+    Right-side buttons (ABXY, Menu) use columns at x=93..100 (between
+    ESP32 right edge at 89 and the slot at 125.5).
+    """
     parts = []
 
     # Button -> (net_name, gpio)
@@ -477,6 +484,16 @@ def _button_traces():
     # Front-side buttons: short F.Cu trace -> via -> B.Cu trace -> ESP32
     all_btns = DPAD + ABXY + SS
     btn_positions = {ref: pos for ref, pos in all_btns}
+
+    # Assign unique approach columns per button to prevent overlaps.
+    # Left-side buttons: columns spread between button area and ESP32.
+    # Right-side buttons: columns spread between ESP32 and FPC slot.
+    _left_col_x = 43.0   # starting column for left-side buttons
+    _right_col_x = 93.0  # starting column for right-side buttons
+    _col_step = 1.5       # spacing between adjacent columns (> trace width)
+
+    left_idx = 0
+    right_idx = 0
 
     crossing_idx = 0
     for ref, net_name, gpio in btn_map:
@@ -519,9 +536,19 @@ def _button_traces():
             parts.append(_seg(approach_x, epy, epx, epy,
                               "B.Cu", W_SIG, net))
         else:
-            # Normal L-shape route
-            parts.extend(_L(vx, vy, epx, epy, "B.Cu", W_SIG, net,
-                            h_first=(abs(vx - epx) > abs(vy - epy))))
+            # Unique vertical approach column per button
+            if bx < CX:
+                col_x = _left_col_x + left_idx * _col_step
+                left_idx += 1
+            else:
+                col_x = _right_col_x + right_idx * _col_step
+                right_idx += 1
+
+            # 3-segment Z-route: via -> horizontal to col_x ->
+            # vertical to epy -> horizontal to ESP pin
+            parts.append(_seg(vx, vy, col_x, vy, "B.Cu", W_SIG, net))
+            parts.append(_seg(col_x, vy, col_x, epy, "B.Cu", W_SIG, net))
+            parts.append(_seg(col_x, epy, epx, epy, "B.Cu", W_SIG, net))
 
     # Menu button (SW13)
     net_menu = NET_ID["BTN_MENU"]
@@ -529,31 +556,37 @@ def _button_traces():
     mvx, mvy = mx, my - 4
     parts.append(_seg(mx, my, mvx, mvy, "F.Cu", W_SIG, net_menu))
     parts.append(_via_net(mvx, mvy, net_menu))
-    # Route to nearest ESP32 GPIO (could use GPIO44 or another free pin)
-    parts.extend(_L(mvx, mvy, ESP32[0] + ESP_HW, ESP32[1] + 5,
-                    "B.Cu", W_SIG, net_menu, h_first=True))
+    # Unique column for menu button (after ABXY columns)
+    menu_col_x = _right_col_x + right_idx * _col_step
+    menu_epy = ESP32[1] + 5
+    parts.append(_seg(mvx, mvy, menu_col_x, mvy, "B.Cu", W_SIG, net_menu))
+    parts.append(_seg(menu_col_x, mvy, menu_col_x, menu_epy,
+                      "B.Cu", W_SIG, net_menu))
+    parts.append(_seg(menu_col_x, menu_epy, ESP32[0] + ESP_HW, menu_epy,
+                      "B.Cu", W_SIG, net_menu))
 
     # Shoulder buttons (on B.Cu — direct route to ESP32, no via needed)
+    # Each uses a unique horizontal channel to avoid crossing other traces.
     shoulder_map = [
         ("SW11", "BTN_L", 35), ("SW12", "BTN_R", 19),
     ]
     shoulder_positions = {
         "SW11": SHOULDER_L[1], "SW12": SHOULDER_R[1],
     }
+    shoulder_channels = {
+        "SW11": 5.0,   # y=5.0 horizontal channel (above slot)
+        "SW12": 3.0,   # y=3.0 horizontal channel (above slot)
+    }
     for ref, net_name, gpio in shoulder_map:
         net = NET_ID[net_name]
         sx, sy = shoulder_positions[ref]
         epx, epy = _esp_pin(gpio)
 
-        # Direct B.Cu route (both button and ESP32 are on B.Cu).
-        # SW11 (left): v_first — vertical down, then horizontal right.
-        # SW12 (right): h_first at y=2.5 (above slot top at 23.5).
-        if ref == "SW11":
-            parts.extend(_L(sx, sy, epx, epy, "B.Cu", W_SIG, net,
-                            h_first=False))
-        else:
-            parts.extend(_L(sx, sy, epx, epy, "B.Cu", W_SIG, net,
-                            h_first=True))
+        # Z-route via unique horizontal channel above the slot
+        chan_y = shoulder_channels[ref]
+        parts.append(_seg(sx, sy, sx, chan_y, "B.Cu", W_SIG, net))
+        parts.append(_seg(sx, chan_y, epx, chan_y, "B.Cu", W_SIG, net))
+        parts.append(_seg(epx, chan_y, epx, epy, "B.Cu", W_SIG, net))
 
     return parts
 

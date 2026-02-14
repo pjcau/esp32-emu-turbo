@@ -250,7 +250,7 @@ def via(x, y, size=0.6, drill=0.3, net=0):
 def zone_fill(layer, pts_list, net=1, net_name="GND", priority=0):
     """Copper fill zone with clearance from other nets."""
     pts = " ".join(f"(xy {x} {y})" for x, y in pts_list)
-    prio = f'    (priority {priority})\n' if priority > 0 else ''
+    prio = f'    (priority {priority})\n'
     return (
         f'  (zone\n'
         f'    (net {net})\n'

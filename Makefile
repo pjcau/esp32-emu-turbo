@@ -1,5 +1,6 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all \
+       render-enclosure render-pcb render-all simulate verify-all pcb-check \
+       export-gerbers \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help
@@ -30,10 +31,17 @@ render-pcb: generate-pcb ## Render PCB layout to SVG/PNG/GIF
 simulate: ## Run electrical circuit simulation/verification
 	python3 scripts/simulate_circuit.py
 
-verify-all: ## Run all pre-production checks (DRC + simulation + consistency)
+pcb-check: ## Run PCB short circuit / zone fill analysis
+	python3 scripts/short_circuit_analysis.py
+
+verify-all: ## Run all pre-production checks (DRC + simulation + consistency + short circuit)
 	python3 scripts/drc_check.py
 	python3 scripts/simulate_circuit.py
 	python3 scripts/verify_schematic_pcb.py
+	python3 scripts/short_circuit_analysis.py
+
+export-gerbers: generate-pcb docker-build ## Export Gerbers with zone fill via kicad-cli Docker
+	./scripts/export-gerbers.sh
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export)
 	./scripts/render-all.sh

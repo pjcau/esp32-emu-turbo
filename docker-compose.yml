@@ -17,6 +17,16 @@ services:
       - ./website/static/img/schematics:/output
     working_dir: /project
 
+  # Export PCB Gerbers with zone fill (kicad-cli + pcbnew Python API)
+  kicad-pcb:
+    build:
+      context: ./docker/kicad
+    volumes:
+      - ./hardware/kicad:/project
+      - ./hardware/kicad/gerbers:/gerbers
+      - ./scripts:/scripts:ro
+    working_dir: /project
+
   # Render OpenSCAD enclosure to PNG
   openscad:
     build:
