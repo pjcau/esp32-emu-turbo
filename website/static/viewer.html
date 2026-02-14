@@ -122,8 +122,9 @@
   <div class="legend-item"><div class="legend-swatch" style="background:#cccc33"></div> B (yellow)</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#3366cc"></div> X (blue)</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#33b050"></div> Y (green)</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#666"></div> Start / Select</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#666"></div> Start / Menu / Select</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> L / R Shoulder</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#008033"></div> PCB</div>
 </div>
 
 <div id="canvas-container"></div>
@@ -153,9 +154,11 @@ const ASSEMBLY_PARTS = [
   { file: 'parts/part_btn_x.stl',   color: 0x3366cc, metalness: 0.15, roughness: 0.5 },
   { file: 'parts/part_btn_y.stl',   color: 0x33b050, metalness: 0.15, roughness: 0.5 },
   { file: 'parts/part_start.stl',      color: 0x666666, metalness: 0.1, roughness: 0.8 },
+  { file: 'parts/part_menu.stl',       color: 0x666666, metalness: 0.1, roughness: 0.8 },
   { file: 'parts/part_select.stl',     color: 0x666666, metalness: 0.1, roughness: 0.8 },
   { file: 'parts/part_shoulder_l.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
   { file: 'parts/part_shoulder_r.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
+  { file: 'parts/part_pcb.stl',        color: 0x008033, metalness: 0.3, roughness: 0.5, clearcoat: 0.4 },
 ];
 
 let scene, camera, renderer, controls;

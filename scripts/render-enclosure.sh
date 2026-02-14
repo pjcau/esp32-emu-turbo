@@ -10,23 +10,26 @@ IMGSIZE="1920,1080"
 
 mkdir -p "$OUTPUT_DIR"
 
-# View definitions: name|rotation|part|distance
+# View definitions: name|camera_center|rotation|part|distance
 VIEWS=(
-    "front|25,0,340|assembly|500"
-    "back|205,0,20|assembly|500"
-    "top|90,0,0|assembly|500"
-    "exploded|55,0,330|exploded|600"
+    "front|0,0,12.5|25,0,340|assembly|500"
+    "back|0,0,12.5|205,0,20|assembly|500"
+    "top|0,0,12.5|90,0,0|assembly|500"
+    "exploded|0,0,20|55,0,330|exploded|600"
+    "cross-section|0,-10,12.5|55,0,0|cross_section|400"
+    "fit-check|0,0,25|30,0,340|fit_check|500"
+    "pcb|0,0,1|25,0,340|pcb|300"
 )
 
 for entry in "${VIEWS[@]}"; do
-    IFS='|' read -r name rotation view_part distance <<< "$entry"
+    IFS='|' read -r name center rotation view_part distance <<< "$entry"
     echo "==> Rendering enclosure-${name}.png (part=${view_part})..."
 
     docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
         openscad \
         -o "/output/enclosure-${name}.png" \
         --imgsize "$IMGSIZE" \
-        --camera "0,0,12.5,${rotation},${distance}" \
+        --camera "${center},${rotation},${distance}" \
         -D "part=\"${view_part}\"" \
         /project/enclosure.scad
 done
