@@ -77,29 +77,29 @@ Progressive optimization of the snes9x core for ESP32-S3.
 
 ![PCB Layout](/website/static/img/pcb/pcb-combined.png)
 
-| Parameter | Value |
-|-----------|-------|
-| **Dimensions** | 160 x 75 mm |
-| **Layers** | 4 (Signal / GND / Power / Signal) |
-| **Surface Finish** | ENIG |
-| **Components** | 64 assembled by JLCPCB |
-| **Trace Shorts** | 0 (verified) |
-| **Zone Fill** | ✅ Inner layers filled (GND + 3V3/5V) |
-| **Release** | v1.3 (2026-02-14) |
-| **Estimated Cost** | ~$40/board (5 pcs, fully assembled) |
+| Parameter          | Value                                |
+| ------------------ | ------------------------------------ |
+| **Dimensions**     | 160 x 75 mm                          |
+| **Layers**         | 4 (Signal / GND / Power / Signal)    |
+| **Surface Finish** | ENIG                                 |
+| **Components**     | 64 assembled by JLCPCB               |
+| **Trace Shorts**   | 0 (verified)                         |
+| **Zone Fill**      | ✅ Inner layers filled (GND + 3V3/5V) |
+| **Release**        | v1.3 (2026-02-14)                    |
+| **Estimated Cost** | ~$40/board (5 pcs, fully assembled)  |
 
 ## Key Requirements
 
-| Component | Specification |
-|---|---|
-| **MCU** | ESP32-S3 N16R8 (16MB flash, 8MB Octal PSRAM) |
-| **Display** | ILI9488 3.95" 320x480, 8-bit 8080 parallel, bare panel + 40P FPC |
-| **Power** | LiPo 3.7V 5000mAh + IP5306 (SOP-8) + AMS1117 |
-| **Charging** | USB-C (charge-and-play) |
-| **Audio** | I2S -> PAM8403 -> 28mm speaker |
-| **Controls** | 13 buttons (D-pad, ABXY, Start, Select, L, R, Menu) |
-| **Storage** | Micro SD card via SPI |
-| **Emulation** | SNES (primary), NES (secondary) |
+| Component     | Specification                                                    |
+| ------------- | ---------------------------------------------------------------- |
+| **MCU**       | ESP32-S3 N16R8 (16MB flash, 8MB Octal PSRAM)                     |
+| **Display**   | ILI9488 3.95" 320x480, 8-bit 8080 parallel, bare panel + 40P FPC |
+| **Power**     | LiPo 3.7V 5000mAh + IP5306 (SOP-8) + AMS1117                     |
+| **Charging**  | USB-C (charge-and-play)                                          |
+| **Audio**     | I2S -> PAM8403 -> 28mm speaker                                   |
+| **Controls**  | 13 buttons (D-pad, ABXY, Start, Select, L, R, Menu)              |
+| **Storage**   | Micro SD card via SPI                                            |
+| **Emulation** | SNES (primary), NES (secondary)                                  |
 
 ## Quick Start
 

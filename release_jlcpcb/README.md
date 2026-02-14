@@ -2,15 +2,15 @@
 
 ## Board Specification
 
-| Parameter | Value |
-|-----------|-------|
-| Board size | 160 x 75 mm |
-| Layers | 4 (F.Cu, In1.Cu, In2.Cu, B.Cu) |
-| Thickness | 1.6 mm |
-| Min trace width | 0.2 mm |
-| Min drill | 0.3 mm |
-| Surface finish | HASL or ENIG |
-| Copper weight | 1 oz |
+| Parameter       | Value                          |
+| --------------- | ------------------------------ |
+| Board size      | 160 x 75 mm                    |
+| Layers          | 4 (F.Cu, In1.Cu, In2.Cu, B.Cu) |
+| Thickness       | 1.6 mm                         |
+| Min trace width | 0.2 mm                         |
+| Min drill       | 0.3 mm                         |
+| Surface finish  | HASL or ENIG                   |
+| Copper weight   | 1 oz                           |
 
 ## Files Included
 
@@ -18,29 +18,29 @@
 
 Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
-| File | Layer |
-|------|-------|
-| `*.gtl` | Front Copper (F.Cu) |
-| `*.g1` | Inner Layer 1 (In1.Cu - GND) |
-| `*.g2` | Inner Layer 2 (In2.Cu - Power) |
-| `*.gbl` | Back Copper (B.Cu) |
-| `*.gto` | Front Silkscreen |
-| `*.gbo` | Back Silkscreen |
-| `*.gts` | Front Solder Mask |
-| `*.gbs` | Back Solder Mask |
-| `*.gtp` | Front Paste |
-| `*.gbp` | Back Paste |
-| `*.gm1` | Board Outline (Edge.Cuts) |
-| `*.drl` | Drill File |
+| File    | Layer                          |
+| ------- | ------------------------------ |
+| `*.gtl` | Front Copper (F.Cu)            |
+| `*.g1`  | Inner Layer 1 (In1.Cu - GND)   |
+| `*.g2`  | Inner Layer 2 (In2.Cu - Power) |
+| `*.gbl` | Back Copper (B.Cu)             |
+| `*.gto` | Front Silkscreen               |
+| `*.gbo` | Back Silkscreen                |
+| `*.gts` | Front Solder Mask              |
+| `*.gbs` | Back Solder Mask               |
+| `*.gtp` | Front Paste                    |
+| `*.gbp` | Back Paste                     |
+| `*.gm1` | Board Outline (Edge.Cuts)      |
+| `*.drl` | Drill File                     |
 
 ### Assembly Files (root folder)
 
-| File | Description |
-|------|-------------|
-| `bom.csv` | Bill of Materials (JLCPCB format) |
-| `cpl.csv` | Component Placement List (65 components) |
-| `bom-summary.md` | Human-readable BOM with cost estimate |
-| `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference) |
+| File                        | Description                              |
+| --------------------------- | ---------------------------------------- |
+| `bom.csv`                   | Bill of Materials (JLCPCB format)        |
+| `cpl.csv`                   | Component Placement List (65 components) |
+| `bom-summary.md`            | Human-readable BOM with cost estimate    |
+| `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference)             |
 
 ## JLCPCB Order Instructions
 
@@ -79,13 +79,13 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Pre-Production Verification Status
 
-| Check | Result |
-|-------|--------|
-| Trace Shorts | ✅ PASS (0 shorts) |
-| Zone Fill Data | ✅ PASS (7 filled polygons) |
-| Zone Priorities | ✅ PASS |
-| Gerber File Sizes | ✅ PASS (In1_Cu=243KB, In2_Cu=260KB) |
-| Electrical Simulation | ✅ PASS (0 errors, 5 warnings) |
+| Check                     | Result                                |
+| ------------------------- | ------------------------------------- |
+| Trace Shorts              | ✅ PASS (0 shorts)                     |
+| Zone Fill Data            | ✅ PASS (7 filled polygons)            |
+| Zone Priorities           | ✅ PASS                                |
+| Gerber File Sizes         | ✅ PASS (In1_Cu=243KB, In2_Cu=260KB)   |
+| Electrical Simulation     | ✅ PASS (0 errors, 5 warnings)         |
 | Schematic/PCB Consistency | ✅ PASS (65 JLCPCB components matched) |
 
 ## Notes

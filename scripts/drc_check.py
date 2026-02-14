@@ -249,7 +249,8 @@ def check_trace_spacing(data):
                         f"on {layer} between nets {s1['net']} and {s2['net']}"
                     )
                     if len(errors) > 20:
-                        errors.append("... (truncated, too many spacing errors)")
+                        errors.append(
+                            "... (truncated, too many spacing errors)")
                         return errors
 
     return errors

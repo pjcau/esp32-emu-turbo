@@ -134,6 +134,8 @@ ESP_HW = 9.0  # half-width
 # Right side: pins at x = ESP32[0] + ESP_HW
 
 # Map GPIO number to approximate PCB position (absolute)
+
+
 def _esp_pin(gpio):
     """Return (x, y) PCB coordinate for an ESP32 GPIO pin."""
     ex, ey = ESP32
