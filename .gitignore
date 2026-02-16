@@ -30,3 +30,6 @@ software/sdkconfig
 software/sdkconfig.old
 software/managed_components/
 software/dependencies.lock
+
+# Generated KiCad files (3D model injection for rendering)
+hardware/kicad/esp32-emu-turbo-3d.kicad_pcb

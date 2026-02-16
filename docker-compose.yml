@@ -27,6 +27,15 @@ services:
       - ./scripts:/scripts:ro
     working_dir: /project
 
+  # Render PCB 3D with raytracer (includes 3D component models)
+  kicad-3d:
+    build:
+      context: ./docker/kicad-3d
+    volumes:
+      - ./hardware/kicad:/project
+      - ./website/static/img/renders:/output
+    working_dir: /project
+
   # Render OpenSCAD enclosure to PNG
   openscad:
     build:

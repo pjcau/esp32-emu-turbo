@@ -43,6 +43,12 @@ make render-enclosure
 ### Exploded View
 ![Exploded View](/img/renders/enclosure-exploded.png)
 
+### Cross-Section (XZ plane)
+![Cross-Section View](/img/renders/enclosure-cross-section.png)
+
+### Fit Check (bottom shell + PCB + battery)
+![Fit Check View](/img/renders/enclosure-fit-check.png)
+
 ## Features
 
 ### Front Panel
@@ -52,18 +58,19 @@ make render-enclosure
 - **Start/Select** — pill-shaped cutouts below the D-pad
 
 ### Back Panel
-- **L/R shoulder buttons** — pill-shaped cutouts near top edge (20 × 7mm)
+- **L/R shoulder buttons** — pill-shaped cutouts near top edge (28 × 10mm)
 - **Speaker grille** — array of 1.5mm holes in circular pattern (left side)
-- **Ventilation** — optional vent slots near the processor area
 
 ### Bottom Edge
-- **USB-C port** — 9.0 × 3.2mm cutout (centered)
-- **SD card slot** — 12 × 2.5mm cutout (right side)
+- **USB-C port** — 9.0 × 3.2mm cutout (centered), Z-aligned with PCB connector
+- **SD card slot** — 12 × 2.5mm cutout (right side), Z-aligned with PCB module
+- **Power switch** — 8 × 4mm cutout (left of USB-C)
 
 ### Internal
-- **Battery compartment** — 82 × 52 × 11mm cavity with retainer clips (fits 105080 LiPo)
-- **Screw bosses** — 6 mounting points (4 corners + 2 center) with 2.5mm screw holes
-- **Display shelf** — internal ledge to support the display module PCB
+- **Battery compartment** — 70 × 55 × 9.5mm cavity with 1.5mm raised border wall and retainer clips (fits 65×55×9.5mm LiPo)
+- **Screw bosses** — 4 corner mounting points with M3 countersunk clearance holes
+- **PCB model** — 160 × 75mm PCB at shell split line (Z=15mm)
+- **Button caps** — retention flange (3mm wider than cutout) prevents fallthrough, actuator stem presses PCB tactile switch
 - **Wire channel** — routing path for battery connector cable
 
 ## Physical Layout
@@ -107,13 +114,16 @@ BACK (battery side):
 | Corner radius | 8 mm | Rounded for ergonomics |
 | Display cutout | 86.4 × 64.8 mm | Active display area |
 | D-pad cutout | 24 × 24 mm cross | 5mm arm width |
-| Face button holes | 8 mm diameter | A/B/X/Y, 13mm spacing |
-| Start/Select | 10 × 4 mm pills | Below D-pad |
-| Shoulder buttons | 20 × 7 mm | Back panel, near top edge |
-| USB-C port | 9.0 × 3.2 mm | Centered on bottom edge |
-| SD card slot | 12 × 2.5 mm | Right side of bottom edge |
-| Battery bay | 82 × 52 × 11 mm | For 105080 LiPo |
-| Screw bosses | 6mm OD / 2.5mm ID | M2.5 self-tapping |
+| Face button holes | 8 mm diameter | A/B/X/Y, 10mm spacing (matches KiCad) |
+| Start/Select | 10 × 4 mm pills | Below D-pad, 20mm apart |
+| Menu button | 10 × 4 mm pill | Below ABXY |
+| Shoulder buttons | 28 × 10 mm | Back panel, Y=35mm from center |
+| USB-C port | 9.0 × 3.2 mm | Centered, Z=13.5mm (PCB-aligned) |
+| SD card slot | 12 × 2.5 mm | X=60mm, Z=13.5mm (PCB-aligned) |
+| Power switch | 8 × 4 mm | X=-40mm, Z=13mm (PCB-aligned) |
+| Battery bay | 70 × 55 × 9.5 mm | 65×55mm LiPo + 5mm tolerance |
+| Battery border | 1.5mm wall | Raised edge around bay perimeter |
+| Screw bosses | 6mm OD / 2.5mm ID | 4 corners, M3 countersunk |
 
 ## 3D Printing Recommendations
 
@@ -148,7 +158,11 @@ disp_h = 64.8;       // Display viewport height
 
 dpad_x = -62;        // D-pad horizontal position
 abxy_x = 62;         // ABXY horizontal position
-abxy_spacing = 13;   // Button center-to-center distance
+abxy_spacing = 10;   // Button center-to-center (matches KiCad PCB)
+
+bat_w = 65;          // Battery width
+bat_h = 55;          // Battery height
+bat_d = 9.5;         // Battery thickness
 ```
 
 ### Rendering Different Views
