@@ -32,7 +32,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 - `software/` — ESP-IDF v5.x firmware (Phase 1 hardware validation)
 - `software/main/board_config.h` — GPIO pin definitions (source of truth for firmware)
-- `hardware/kicad/` — KiCad 9.0 schematic project (full circuit design)
+- `hardware/kicad/` — KiCad 10 schematic project (full circuit design)
 - `hardware/enclosure/` — OpenSCAD parametric 3D enclosure model
 - `docker/` — Docker containers for headless rendering (KiCad + OpenSCAD)
 - `scripts/` — Rendering and verification scripts

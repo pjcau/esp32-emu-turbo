@@ -42,7 +42,7 @@ Complete electrical design for the ESP32 Emu Turbo, split into 7 detailed schema
 <a className="pdf-download" href="/img/schematics/esp32-emu-turbo-schematics.pdf" target="_blank">Download all sheets (PDF, 7 pages)</a>
 
 :::info Source files
-KiCad 9.0 project: [`hardware/kicad/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/hardware/kicad)
+KiCad 10 project: [`hardware/kicad/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/hardware/kicad)
 
 ```bash
 make generate-schematic   # Generate 7 .kicad_sch files

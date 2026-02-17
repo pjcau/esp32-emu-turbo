@@ -12,7 +12,7 @@ import re
 import sys
 from pathlib import Path
 
-# KiCad 9 3D model base variable
+# KiCad 3D model base variable (KICAD9 var resolves in KiCad 9.x/10 nightly)
 M = "${KICAD9_3DMODEL_DIR}"
 
 # Footprint name → 3D model path mapping

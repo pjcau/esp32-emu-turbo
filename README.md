@@ -155,7 +155,7 @@ make website-dev
 ```
 esp32-emu-turbo/
 ├── hardware/
-│   ├── kicad/              # KiCad 9.0 schematics + PCB
+│   ├── kicad/              # KiCad 10 schematics + PCB
 │   │   ├── esp32-emu-turbo.kicad_sch   # Hierarchical root
 │   │   ├── 01-power-supply.kicad_sch   # 7 sub-sheets
 │   │   ├── ...
