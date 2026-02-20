@@ -353,6 +353,73 @@ def check_text_on_copper(pcb_path):
     return errors
 
 
+def check_board_outline_arcs(pcb_path):
+    """Check that all Edge.Cuts arcs are minor arcs (≤ 180°).
+
+    A wrong midpoint causes KiCad to draw a major arc (270°) instead
+    of a minor arc (90°), creating large circular notches in the
+    board outline.  The midpoint must lie on the short (minor) side
+    of the arc.
+    """
+    errors = []
+    text = Path(pcb_path).read_text()
+
+    for m in re.finditer(
+        r'\(gr_arc\s+'
+        r'\(start\s+([\d.-]+)\s+([\d.-]+)\)\s+'
+        r'\(mid\s+([\d.-]+)\s+([\d.-]+)\)\s+'
+        r'\(end\s+([\d.-]+)\s+([\d.-]+)\)'
+        r'.*?\(layer\s+"Edge\.Cuts"\)',
+        text, re.DOTALL
+    ):
+        sx, sy = float(m.group(1)), float(m.group(2))
+        mx, my = float(m.group(3)), float(m.group(4))
+        ex, ey = float(m.group(5)), float(m.group(6))
+
+        # Compute the arc center from three points (start, mid, end).
+        # The center lies at the intersection of perpendicular bisectors.
+        ax, ay = mx - sx, my - sy
+        bx, by = ex - sx, ey - sy
+        D = 2 * (ax * by - ay * bx)
+        if abs(D) < 1e-9:
+            continue  # Degenerate (collinear points)
+
+        cx = sx + (by * (ax * ax + ay * ay) - ay * (bx * bx + by * by)) / D
+        cy = sy + (ax * (bx * bx + by * by) - bx * (ax * ax + ay * ay)) / D
+
+        # Compute angles from center
+        a_start = math.atan2(sy - cy, sx - cx)
+        a_mid = math.atan2(my - cy, mx - cx)
+        a_end = math.atan2(ey - cy, ex - cx)
+
+        # The arc swept angle going start→mid→end.
+        # Normalize angles so the sweep direction is consistent.
+        def angle_diff(a, b):
+            d = (b - a) % (2 * math.pi)
+            return d
+
+        sweep_sm = angle_diff(a_start, a_mid)
+        sweep_se = angle_diff(a_start, a_end)
+
+        # If mid is between start and end (going one direction),
+        # the total sweep is sweep_se.  If mid is on the other side,
+        # the sweep is 2π - sweep_se.
+        if sweep_sm <= sweep_se:
+            total_sweep = sweep_se
+        else:
+            total_sweep = 2 * math.pi - sweep_se
+
+        # Reject arcs > 180° (π radians) — these are major arcs
+        if total_sweep > math.pi + 0.01:  # small tolerance
+            errors.append(
+                f"Edge.Cuts arc at start=({sx},{sy}) mid=({mx},{my}) "
+                f"end=({ex},{ey}) sweeps {math.degrees(total_sweep):.0f}° "
+                f"(> 180°) — midpoint selects major arc instead of minor"
+            )
+
+    return errors
+
+
 def check_net_connectivity(data):
     """Check that all declared nets have at least 2 connections."""
     warnings = []
@@ -437,6 +504,15 @@ def main():
     if len(copper_text_errors) > 5:
         print(f"         ... and {len(copper_text_errors) - 5} more")
     all_errors.extend(copper_text_errors)
+
+    # Board outline arc check (uses raw PCB file, not parsed data)
+    arc_errors = check_board_outline_arcs(pcb_path)
+    status = "PASS" if not arc_errors else \
+        f"FAIL ({len(arc_errors)} errors)"
+    print(f"  [{status}] Board Outline Arcs (no major arcs)")
+    for e in arc_errors[:5]:
+        print(f"         {e}")
+    all_errors.extend(arc_errors)
 
     # Connectivity is a warning, not a hard error
     print()

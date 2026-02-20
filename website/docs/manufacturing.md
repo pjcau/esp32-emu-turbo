@@ -8,11 +8,13 @@ sidebar_position: 9
 
 Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) — minimum order of 5 units with full SMT assembly.
 
-:::tip Release v1.3 (2026-02-14)
+:::tip Release v1.5 (2026-02-20)
 All production files in `release_jlcpcb/` are verified and ready for ordering:
 - **0 trace shorts** (SD_MOSI/SD_MISO bypass routing fix)
 - **Inner layer zone fill confirmed** (In1.Cu GND=243KB, In2.Cu 3V3/5V=260KB)
 - **64 components** in BOM/CPL matched against schematic and PCB
+- **Board outline fix** — corner arcs corrected (minor 90° arcs, no notches)
+- **Text on silkscreen only** — no designators on copper layers
 :::
 
 ## Assembled PCB Preview
