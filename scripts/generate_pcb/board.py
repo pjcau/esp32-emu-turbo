@@ -126,32 +126,18 @@ def _board_outline():
     parts.append(P.gr_line(w - r, h, r, h))           # Bottom
     parts.append(P.gr_line(0, h - r, 0, r))           # Left
 
-    # Four corner arcs (start, mid, end)
-    a = math.pi * 0.75
-    mx = r - r * math.cos(a)
-    my = r - r * math.sin(a)
-    parts.append(P.gr_arc(0, r, mx, my, r, 0))
+    # Four corner arcs (start, mid, end).
+    # The midpoint lies on the minor arc, pointing toward the board corner.
+    diag = r * math.sqrt(2) / 2  # offset along 45-degree diagonal
 
-    parts.append(P.gr_arc(
-        w - r, 0,
-        w - r + r * math.cos(math.pi * -0.25),
-        r - r * math.sin(math.pi * -0.25),
-        w, r,
-    ))
-
-    parts.append(P.gr_arc(
-        w, h - r,
-        w - r + r * math.cos(math.pi * 0.25),
-        h - r + r * math.sin(math.pi * 0.25),
-        w - r, h,
-    ))
-
-    parts.append(P.gr_arc(
-        r, h,
-        r - r * math.cos(math.pi * 0.25),
-        h - r + r * math.sin(math.pi * 0.25),
-        0, h - r,
-    ))
+    # Top-left corner (0,0): center (r, r)
+    parts.append(P.gr_arc(0, r, r - diag, r - diag, r, 0))
+    # Top-right corner (w,0): center (w-r, r)
+    parts.append(P.gr_arc(w - r, 0, w - r + diag, r - diag, w, r))
+    # Bottom-right corner (w,h): center (w-r, h-r)
+    parts.append(P.gr_arc(w, h - r, w - r + diag, h - r + diag, w - r, h))
+    # Bottom-left corner (0,h): center (r, h-r)
+    parts.append(P.gr_arc(r, h, r - diag, h - r + diag, 0, h - r))
 
     # FPC slot — internal rectangular cutout for 40-pin ribbon cable
     sx, sy = enc_to_pcb(*FPC_SLOT_ENC)
