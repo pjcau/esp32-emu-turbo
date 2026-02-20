@@ -315,6 +315,44 @@ def check_component_overlap():
     return errors
 
 
+def check_text_on_copper(pcb_path):
+    """Check that no text (Reference/Value) is placed on copper layers.
+
+    Text on F.Cu/B.Cu causes manufacturing issues — designators and values
+    should be on silkscreen (F.SilkS/B.SilkS) or fabrication (F.Fab/B.Fab).
+    Handles both single-line and multi-line property blocks.
+    """
+    errors = []
+    text = Path(pcb_path).read_text()
+    lines = text.split("\n")
+    fp_name = ""
+
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+
+        # Track current footprint
+        fp_match = re.match(r'\(footprint "([^"]*)"', stripped)
+        if fp_match:
+            fp_name = fp_match.group(1)
+
+        # Match property lines with a layer attribute on the SAME line
+        prop_match = re.search(
+            r'\(property "(Reference|Value)" "([^"]*)".*'
+            r'\(layer "(F\.Cu|B\.Cu)"\)',
+            stripped
+        )
+        if prop_match:
+            prop_name = prop_match.group(1)
+            prop_value = prop_match.group(2)
+            layer = prop_match.group(3)
+            errors.append(
+                f'{prop_name} "{prop_value}" of {fp_name} on {layer} '
+                f"(line {i + 1}) — should be on SilkS or Fab"
+            )
+
+    return errors
+
+
 def check_net_connectivity(data):
     """Check that all declared nets have at least 2 connections."""
     warnings = []
@@ -388,6 +426,17 @@ def main():
         if len(errors) > 5:
             print(f"         ... and {len(errors) - 5} more")
         all_errors.extend(errors)
+
+    # Text on copper check (uses raw PCB file, not parsed data)
+    copper_text_errors = check_text_on_copper(pcb_path)
+    status = "PASS" if not copper_text_errors else \
+        f"FAIL ({len(copper_text_errors)} errors)"
+    print(f"  [{status}] Text on Copper Layers")
+    for e in copper_text_errors[:5]:
+        print(f"         {e}")
+    if len(copper_text_errors) > 5:
+        print(f"         ... and {len(copper_text_errors) - 5} more")
+    all_errors.extend(copper_text_errors)
 
     # Connectivity is a warning, not a hard error
     print()
