@@ -16,7 +16,7 @@
 | R1-R2 | 5.1k (CC pull-down) | 0805 | C27834 | Basic | 2 | ~$0.002 |
 | R3-R15,R19 | 10k (pull-ups) | 0805 | C17414 | Basic | 14 | ~$0.002 |
 | R16 | 100k (KEY pull-up) | 0805 | C149504 | Basic | 1 | ~$0.002 |
-| R17-R18 | 1k (LED limiting) | 0805 | C11702 | Basic | 2 | ~$0.002 |
+| R17-R18 | 1k (LED limiting) | 0805 | C17513 | Basic | 2 | ~$0.002 |
 | C3-C16,C20 | 100nF (decoupling) | 0805 | C49678 | Basic | 15 | ~$0.002 |
 | C1,C17,C18 | 10uF | 0805 | C15850 | Basic | 3 | ~$0.01 |
 | C2,C19 | 22uF (tantalum/MLCC) | 1206 | C29632 | Basic | 2 | ~$0.02 |

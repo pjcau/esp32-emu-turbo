@@ -3,6 +3,11 @@
 Each function returns a list of pad S-expression strings for embedding
 inside a (footprint ...) block.  Coordinates are relative to the
 footprint origin (center).
+
+Pad dimensions sourced from:
+  - KiCad 10 standard library footprints (RF_Module, Package_SO, etc.)
+  - JLCPCB/EasyEDA official component library (C91145, C318884, etc.)
+  - Manufacturer datasheets (Espressif, HCTL, Korean Hroparts Elec)
 """
 
 import re
@@ -38,52 +43,57 @@ def _tht(num, x, y, w, h, drill):
 
 
 # ── ESP32-S3-WROOM-1-N16R8 ───────────────────────────────────────
-# Module: 25.5mm x 18mm, 39 castellated pads + exposed GND pad
-# Left pins 1-20, Right pins 21-39 (numbered bottom-up)
+# Module: 18mm x 25.5mm, 40 castellated pads on 3 sides + exposed GND
+# Ref: KiCad RF_Module.pretty/ESP32-S3-WROOM-1.kicad_mod
+# Left (1-14), Bottom (15-26), Right (27-40), GND pad #41
 def esp32_s3_wroom1(layer="B"):
     pads = []
     layers = SMD_B if layer == "B" else SMD_F
-    hw = 9.0      # half-width of module
-    pin_w = 1.8   # pad length (extends outward)
-    pin_h = 0.9   # pad width
+    pw, ph = 1.5, 0.9   # pad size for side pads
 
-    # Left side: pins 1-20 (top to bottom, 20 pins)
-    for i in range(20):
+    # Left side: pins 1-14, x=-8.75, pitch 1.27mm
+    # Pin 1 at y=-5.26, pin 14 at y=11.25
+    for i in range(14):
         pin = i + 1
-        y = -11.43 + i * 1.27
-        pads.append(_pad(
-            str(pin), "smd", "rect",
-            -hw + pin_w / 2 - 0.5, y, pin_w, pin_h, layers,
-        ))
+        y = -5.26 + i * 1.27
+        pads.append(_pad(str(pin), "smd", "rect", -8.75, y, pw, ph, layers))
 
-    # Right side: pins 21-39 (top to bottom, numbered bottom-up, 19 pins)
-    for i in range(19):
-        pin = 39 - i
-        y = -11.43 + i * 1.27
-        pads.append(_pad(
-            str(pin), "smd", "rect",
-            hw - pin_w / 2 + 0.5, y, pin_w, pin_h, layers,
-        ))
+    # Bottom side: pins 15-26, y=12.5, pitch 1.27mm
+    # Pin 15 at x=-6.985, pin 26 at x=6.985
+    # Pads rotated 270° → effectively size 0.9 x 1.5 (swap w/h)
+    for i in range(12):
+        pin = i + 15
+        x = -6.985 + i * 1.27
+        pads.append(_pad(str(pin), "smd", "rect", x, 12.5, ph, pw, layers))
 
-    # Exposed GND pad (large thermal pad)
+    # Right side: pins 27-40, x=8.75, pitch 1.27mm
+    # Pin 27 at y=11.25 (bottom), pin 40 at y=-5.26 (top)
+    for i in range(14):
+        pin = 27 + i
+        y = 11.25 - i * 1.27
+        pads.append(_pad(str(pin), "smd", "rect", 8.75, y, pw, ph, layers))
+
+    # Exposed GND pad #41 (thermal pad)
+    # Position: (-1.5, 2.46), size 3.9 x 3.9mm
     pads.append(_pad(
-        "GND", "smd", "rect", 0, 5.0, 10.0, 10.0, layers,
+        "41", "smd", "rect", -1.5, 2.46, 3.9, 3.9, layers,
     ))
 
     return pads
 
 
-# ── SMT Tact Switch 5.1x5.1mm ────────────────────────────────────
-# 4 pads: pin 1,2 (left pair), pin 3,4 (right pair)
-# Pins 1-2 are connected internally, pins 3-4 connected internally
+# ── SMT Tact Switch 5.1x5.1mm (TS-1187A-B-A-B, LCSC C318884) ───
+# Ref: JLCPCB/EasyEDA official library + brunoeagle KiCad footprint
+# 4 pads: pins 1,3 (left pair, terminal A), pins 2,4 (right pair, B)
+# Horizontal span: 6.0mm, vertical span: 3.7mm
 def sw_smd_5_1(layer="F"):
     layers = SMD_F if layer == "F" else SMD_B
-    pw, ph = 1.6, 1.0
-    cx, cy = 2.75, 1.85
+    pw, ph = 1.0, 0.75
+    cx, cy = 3.0, 1.85
     return [
         _pad("1", "smd", "rect", -cx, -cy, pw, ph, layers),
-        _pad("2", "smd", "rect", -cx, cy, pw, ph, layers),
-        _pad("3", "smd", "rect", cx, -cy, pw, ph, layers),
+        _pad("2", "smd", "rect", cx, -cy, pw, ph, layers),
+        _pad("3", "smd", "rect", -cx, cy, pw, ph, layers),
         _pad("4", "smd", "rect", cx, cy, pw, ph, layers),
     ]
 
@@ -124,86 +134,119 @@ def sot223(layer="B"):
     return pads
 
 
-# ── SOP-16 (PAM8403) ─────────────────────────────────────────────
-# 16 pins, 1.27mm pitch
+# ── SOIC-16W / SOP-16 (PAM8403) ─────────────────────────────────
+# Ref: KiCad Package_SO.pretty/SOIC-16W_7.5x10.3mm_P1.27mm.kicad_mod
+# 16 pins, 1.27mm pitch, wide body (7.5mm)
+# Pad centers at x=±4.65, pad size 2.05x0.6
 def sop16(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 1.7, 0.6
+    pw, ph = 2.05, 0.6
 
     # Left: pins 1-8 (top to bottom)
     for i in range(8):
         y = -4.445 + i * 1.27
-        pads.append(_pad(str(i + 1), "smd", "rect", -4.9, y, pw, ph, layers))
+        pads.append(_pad(str(i + 1), "smd", "rect", -4.65, y, pw, ph, layers))
 
     # Right: pins 9-16 (bottom to top)
     for i in range(8):
         y = 4.445 - i * 1.27
-        pads.append(_pad(str(i + 9), "smd", "rect", 4.9, y, pw, ph, layers))
+        pads.append(_pad(str(i + 9), "smd", "rect", 4.65, y, pw, ph, layers))
 
     return pads
 
 
-# ── USB-C 16-pin SMT ─────────────────────────────────────────────
-# Simplified: 16 signal pads + 4 shield legs
+# ── USB-C 16-pin SMT (HCTL HC-TYPE-C-16P-01A, LCSC C2765186) ────
+# Ref: KiCad Connector_USB.pretty/USB_C_Receptacle_HCTL_HC-TYPE-C-16P-01A
+# Single row of 16 signal pads at y=-3.745 (some overlap: A1/B12, etc.)
+# 4 shield THT pads
 def usb_c_16p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    # 2 rows of 6 pads (A-side and B-side), 0.5mm pitch
-    names_top = ["A1", "A4", "A5", "A6", "A7", "A8", "A9", "A12"]
-    names_bot = ["B12", "B9", "B8", "B7", "B6", "B5", "B4", "B1"]
 
-    for i, name in enumerate(names_top):
-        x = -1.75 + i * 0.5
-        pads.append(_pad(name, "smd", "rect", x, -3.2, 0.3, 1.0, layers))
+    # A-side pads at y=-3.745
+    # Wide pads (0.6x1.3): A1, A4, A9, A12
+    # Narrow pads (0.3x1.3): A5, A6, A7, A8
+    a_pads = [
+        ("A1",  -3.2,  0.6, 1.3),
+        ("A4",  -2.4,  0.6, 1.3),
+        ("A5",  -1.25, 0.3, 1.3),
+        ("A6",  -0.25, 0.3, 1.3),
+        ("A7",   0.25, 0.3, 1.3),
+        ("A8",   1.25, 0.3, 1.3),
+        ("A9",   2.4,  0.6, 1.3),
+        ("A12",  3.2,  0.6, 1.3),
+    ]
+    for name, x, w, h in a_pads:
+        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers))
 
-    for i, name in enumerate(names_bot):
-        x = -1.75 + i * 0.5
-        pads.append(_pad(name, "smd", "rect", x, -2.2, 0.3, 1.0, layers))
+    # B-side pads at y=-3.745 (some share physical location with A-side)
+    b_pads = [
+        ("B12", -3.2,  0.6, 1.3),
+        ("B9",  -2.4,  0.6, 1.3),
+        ("B8",  -1.75, 0.3, 1.3),
+        ("B7",  -0.75, 0.3, 1.3),
+        ("B6",   0.75, 0.3, 1.3),
+        ("B5",   1.75, 0.3, 1.3),
+        ("B4",   2.4,  0.6, 1.3),
+        ("B1",   3.2,  0.6, 1.3),
+    ]
+    for name, x, w, h in b_pads:
+        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers))
 
-    # Shield / mounting legs (4 corners, THT)
-    for sx, sy in [(-4.32, -1.5), (4.32, -1.5), (-4.32, 1.5), (4.32, 1.5)]:
-        pads.append(_pad("S", "thru_hole", "oval", sx, sy, 1.0, 1.8, THT,
+    # Shield / mounting legs (4 THT oval pads)
+    for sx, sy in [(-4.32, -3.105), (4.32, -3.105),
+                   (-4.32, 1.075), (4.32, 1.075)]:
+        pads.append(_pad("S", "thru_hole", "oval", sx, sy, 1.0, 2.1, THT,
                          drill=0.65))
 
     return pads
 
 
-# ── FPC 40-pin 0.5mm pitch (ILI9488 display) ────────────────────
+# ── FPC 40-pin 0.5mm pitch (display connector) ──────────────────
+# Ref: KiCad Hirose FH12 series / generic FPC-40P bottom contact
+# Signal pads at y=-1.85, size 0.3x1.3, 0.5mm pitch
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.3, 1.2
+    pw, ph = 0.3, 1.3
 
-    # 40 pins at 0.5mm pitch, centered at origin
+    # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
     for i in range(40):
         x = -9.75 + i * 0.5
-        pads.append(_pad(str(i + 1), "smd", "rect", x, 0, pw, ph, layers))
+        pads.append(_pad(str(i + 1), "smd", "rect", x, -1.85, pw, ph, layers))
 
-    # 2 mounting pads (wider for 40-pin connector)
-    pads.append(_pad("MP1", "smd", "rect", -12.0, 0, 1.2, 2.0, layers))
-    pads.append(_pad("MP2", "smd", "rect", 12.0, 0, 1.2, 2.0, layers))
+    # 2 mounting pads
+    pads.append(_pad("MP1", "smd", "rect", -11.5, -1.85, 1.6, 1.6, layers))
+    pads.append(_pad("MP2", "smd", "rect", 11.5, -1.85, 1.6, 1.6, layers))
 
     return pads
 
 
-# ── TF-01A Micro SD card slot ─────────────────────────────────────
-# 9 signal pads + 4 shield/detect pads
+# ── TF-01A Micro SD card slot (LCSC C91145) ─────────────────────
+# Ref: JLCPCB/EasyEDA official library for Korean Hroparts Elec TF-01A
+# 9 signal pads (1.1mm pitch) + 4 shield/GND pads
 def tf01a(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    # Signal pins (1-9), 1.1mm pitch
-    names = ["DAT2", "CD/DAT3", "CMD", "VDD", "CLK", "VSS", "DAT0",
-             "DAT1", "DET"]
-    for i in range(9):
-        x = -4.4 + i * 1.1
-        pads.append(_pad(str(i + 1), "smd", "rect", x, -6.8, 0.7, 1.8,
+
+    # Signal pins 1-9 at y=-5.45, 1.1mm pitch, size 0.6x1.3
+    # Pin 1 (DAT2) at x=2.24, descending to pin 9 (DET) at x=-6.56
+    signal_x = [2.24, 1.14, 0.04, -1.06, -2.16, -3.26, -4.36, -5.46, -6.56]
+    for i, x in enumerate(signal_x):
+        pads.append(_pad(str(i + 1), "smd", "rect", x, -5.45, 0.6, 1.3,
                          layers))
 
-    # Shield/mounting (4 pads)
-    for sx, sy in [(-7.0, -1.0), (7.0, -1.0), (-7.0, 6.5), (7.0, 6.5)]:
-        pads.append(_pad("S", "smd", "rect", sx, sy, 1.2, 1.5, layers))
+    # Shield/GND pads
+    shield = [
+        ("10", -7.76, -4.60, 1.2, 1.4),   # front-left
+        ("13",  6.92, -4.60, 1.2, 1.4),   # front-right
+        ("11", -7.76,  5.10, 1.2, 2.0),   # rear-left
+        ("12",  7.76,  5.10, 1.2, 2.0),   # rear-right
+    ]
+    for name, x, y, w, h in shield:
+        pads.append(_pad(name, "smd", "rect", x, y, w, h, layers))
 
     return pads
 
@@ -234,14 +277,25 @@ def passive_1206(layer="B"):
     ]
 
 
-# ── SS-12D00G3 slide switch ──────────────────────────────────────
-# 3 THT pins, SPDT
-def ss12d00g3(layer="B"):
-    return [
-        _tht("1", -2.5, 0, 1.5, 1.5, 0.8),
-        _tht("2", 0, 0, 1.5, 1.5, 0.8),
-        _tht("3", 2.5, 0, 1.5, 1.5, 0.8),
-    ]
+# ── MSK12C02 slide switch (LCSC C431540) ────────────────────────
+# Ref: KiCad Button_Switch_SMD.pretty/SW_SPDT_Shouhan_MSK12C02.kicad_mod
+# 3 signal SMD pads + 4 shell/mounting SMD pads
+# Replaces old SS-12D00G3 THT footprint (wrong component type)
+def msk12c02(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    pads = []
+
+    # Signal pads (3 pins, SPDT)
+    pads.append(_pad("1", "smd", "rect", -2.25, -1.95, 0.6, 1.3, layers))
+    pads.append(_pad("2", "smd", "rect", 0.75, -1.95, 0.6, 1.3, layers))
+    pads.append(_pad("3", "smd", "rect", 2.25, -1.95, 0.6, 1.3, layers))
+
+    # Shell/mounting pads (4 corners)
+    for sx, sy in [(-3.675, -1.1), (-3.675, 1.1),
+                   (3.675, -1.1), (3.675, 1.1)]:
+        pads.append(_pad("SH", "smd", "rect", sx, sy, 1.05, 0.7, layers))
+
+    return pads
 
 
 # ── Speaker 22mm ─────────────────────────────────────────────────
@@ -278,7 +332,7 @@ FOOTPRINTS = {
     "C_0805": (passive_0805, "B"),
     "LED_0805": (passive_0805, "F"),
     "C_1206": (passive_1206, "B"),
-    "SS-12D00G3": (ss12d00g3, "B"),
+    "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
     "Speaker-22mm": (speaker_22mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),
 }

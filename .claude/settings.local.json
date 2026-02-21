@@ -1,36 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker info:*)",
-      "Bash(docker compose build:*)",
-      "Bash(docker compose run:*)",
-      "Bash(curl:*)",
-      "Bash(done)",
-      "Bash(./scripts/render-enclosure.sh:*)",
-      "Bash(npm run build:*)",
-      "Bash(python3:*)",
-      "Bash(npx docusaurus build:*)",
-      "Bash(chmod:*)",
-      "Bash(git status:*)",
-      "Bash(git add:*)",
-      "Bash(git commit:*)",
-      "Bash(git push:*)",
-      "Bash(make render-schematics:*)",
-      "Bash(npx docusaurus deploy)",
-      "Bash(kicad-cli sch export svg:*)",
-      "Bash(USE_SSH=true npx docusaurus deploy:*)",
-      "Bash(ls:*)",
-      "WebFetch(domain:jlcpcb.com)",
-      "WebFetch(domain:lcsc.com)",
-      "WebFetch(domain:www.lcsc.com)",
-      "Bash(sort:*)",
-      "Bash(kicad-cli:*)",
-      "Bash(zip:*)",
-      "Bash(./scripts/export-gerbers.sh:*)",
-      "Bash(echo:*)",
-      "Bash(make verify-all:*)",
-      "Bash(make test:*)",
-      "WebFetch(domain:documentation.espressif.com)"
+      "Bash(*)",
+      "WebFetch(domain:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf /home/*)",
+      "Bash(rm -rf /home/pjonny/*)",
+      "Bash(rm -rf /home/pjonny/Documents/*)",
+      "Bash(rm -rf /home/pjonny/Documents/myProjects/*)"
     ]
   }
 }
