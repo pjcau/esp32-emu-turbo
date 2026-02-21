@@ -8,13 +8,14 @@ sidebar_position: 9
 
 Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) — minimum order of 5 units with full SMT assembly.
 
-:::tip Release v1.5 (2026-02-20)
+:::tip Release v1.6 (2026-02-21)
 All production files in `release_jlcpcb/` are verified and ready for ordering:
-- **0 trace shorts** (SD_MOSI/SD_MISO bypass routing fix)
-- **Inner layer zone fill confirmed** (In1.Cu GND=243KB, In2.Cu 3V3/5V=260KB)
+- **JLCPCB DFM footprint fix** — all 8 flagged components (J4, U1, U6, SW_PWR, U5, J1, SW11, SW12) corrected with pad geometries from KiCad 10 standard library and JLCPCB/EasyEDA official component library
+- **R17/R18 BOM fix** — LCSC part C11702 (0402) replaced with C17513 (correct 0805 package)
+- **ESP32-S3 pin layout** — corrected from 2-side (wrong) to 3-side layout (L:1-14, B:15-26, R:27-40)
+- **MSK12C02 slide switch** — replaced THT footprint with correct 7-pad SMD (matching C431540)
 - **64 components** in BOM/CPL matched against schematic and PCB
-- **Board outline fix** — corner arcs corrected (minor 90° arcs, no notches)
-- **Text on silkscreen only** — no designators on copper layers
+- **0 DRC errors**, all pre-production checks passed
 :::
 
 ## Assembled PCB Preview
@@ -64,7 +65,7 @@ The bottom side hosts the main circuitry:
 | R1, R2         | 5.1k (USB-C CC)             | C27834        | R_0805    |
 | R3–R15         | 10k (pull-ups)              | C17414        | R_0805    |
 | R16            | 100k                        | C149504       | R_0805    |
-| R17, R18       | 1k                          | C11702        | R_0805    |
+| R17, R18       | 1k                          | C17513        | R_0805    |
 | C1, C17, C18   | 10uF                        | C15850        | C_0805    |
 | C2, C19        | 22uF                        | C12891        | C_1206    |
 | C3–C16         | 100nF                       | C49678        | C_0805    |

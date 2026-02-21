@@ -134,7 +134,7 @@ Buy the **bare LCD panel** (NOT a module with PCB breakout):
 
 ### Files Needed
 
-All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root (v1.5, 2026-02-20):
+All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root (v1.6, 2026-02-21):
 
 1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload, inner layers with zone fill)
 2. **BOM.csv** — `release_jlcpcb/bom.csv` (64 components)
@@ -237,7 +237,7 @@ The Python PCB generator creates zone boundaries but **does not fill them** — 
 
 ## Pre-Production Verification
 
-All automated checks passed before JLCPCB production order (v1.5, 2026-02-20):
+All automated checks passed before JLCPCB production order (v1.6, 2026-02-21):
 
 ### Short Circuit Analysis — PASS
 
