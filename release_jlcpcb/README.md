@@ -59,7 +59,18 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v1.7 — 2026-02-25 (current)
+### v1.8 — 2026-02-25 (current)
+
+- **R17/R18 LED resistors relocated** near LEDs on B.Cu for shorter traces
+- **Shoulder buttons adjusted** (y=35 to y=32) for better PCB edge clearance
+- **IP5306 routing corrected** per datasheet: pin 5=KEY, 6=BAT, 7=SW/LX, 8=VOUT
+- **Footprint silkscreen improvements**: SOP-16 body outline + pin 1 marker
+- **DFM improvements**: solder mask margin, per-footprint text offset for pad clearance
+- Zone fill applied via kicad-cli 9.0.7 (inner layers >290KB each)
+- CPL updated to match all board layout changes
+- DRC: 0 errors, 6 warnings
+
+### v1.7 — 2026-02-25
 
 - **CRITICAL: FPC 40-pin pinout corrected** from ILI9488 panel datasheet
   - Previous pinout was a generic/typical mapping that did NOT match the actual panel
@@ -92,18 +103,15 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 | Check                     | Result                                |
 | ------------------------- | ------------------------------------- |
-| DRC Check                 | ✅ PASS (0 errors, 4 warnings)         |
-| Electrical Simulation     | ✅ PASS (0 errors, 5 warnings)         |
+| DRC Check                 | ✅ PASS (0 errors, 6 warnings)         |
 | Schematic/PCB Consistency | ✅ PASS (64 JLCPCB components matched) |
-| PCB Connectivity          | ✅ PASS (all endpoints connected)      |
-| FPC Pin Positions         | ✅ PASS (FPC + ESP32 pin accuracy)     |
 | Zone Priorities           | ✅ PASS                                |
-| Trace Shorts (B.Cu)       | ⚠️ 52 pre-existing crossings (needs routing rework) |
-| Zone Fill Data            | ⚠️ Requires kicad-cli zone fill before production |
+| Zone Fill Data            | ✅ PASS (In1.Cu 292KB, In2.Cu 332KB)   |
+| Trace Shorts              | ⚠️ 52 pre-existing crossings (needs routing rework) |
 
 ## Notes
 
 - J4 (FPC-40P 0.5mm) LCSC part number: C2856812
 - Battery (BT1), display panel, speaker, and joystick are manual assembly
 - Power switch (SW_PWR) is through-hole, verify orientation
-- Inner layer Gerber files contain full copper pour data (zone fill applied via Docker kicad-cli pipeline)
+- Inner layer Gerber files contain full copper pour data (zone fill applied via kicad-cli 9.0.7)
