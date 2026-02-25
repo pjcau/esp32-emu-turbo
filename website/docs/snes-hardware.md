@@ -49,22 +49,25 @@ Complete pin mapping for the ESP32-S3 N16R8 DevKitC-1:
 
 ### Display (8080 Parallel) — 14 GPIOs
 
-| GPIO | Function | Notes |
-|---|---|---|
-| GPIO4 | LCD_D0 | Data bus bit 0 |
-| GPIO5 | LCD_D1 | Data bus bit 1 |
-| GPIO6 | LCD_D2 | Data bus bit 2 |
-| GPIO7 | LCD_D3 | Data bus bit 3 |
-| GPIO8 | LCD_D4 | Data bus bit 4 |
-| GPIO9 | LCD_D5 | Data bus bit 5 |
-| GPIO10 | LCD_D6 | Data bus bit 6 |
-| GPIO11 | LCD_D7 | Data bus bit 7 |
-| GPIO12 | LCD_CS | Chip select (active low) |
-| GPIO13 | LCD_RST | Reset |
-| GPIO14 | LCD_DC | Data/Command select |
-| GPIO46 | LCD_WR | Write strobe |
-| GPIO3 | LCD_RD | Read strobe |
-| GPIO45 | LCD_BL | Backlight PWM |
+| GPIO | Function | FPC Pin | Notes |
+|---|---|---|---|
+| GPIO4 | LCD_D0 | 17 | Data bus bit 0 |
+| GPIO5 | LCD_D1 | 18 | Data bus bit 1 |
+| GPIO6 | LCD_D2 | 19 | Data bus bit 2 |
+| GPIO7 | LCD_D3 | 20 | Data bus bit 3 |
+| GPIO8 | LCD_D4 | 21 | Data bus bit 4 |
+| GPIO9 | LCD_D5 | 22 | Data bus bit 5 |
+| GPIO10 | LCD_D6 | 23 | Data bus bit 6 |
+| GPIO11 | LCD_D7 | 24 | Data bus bit 7 |
+| GPIO12 | LCD_CS | 9 | Chip select (active low) |
+| GPIO13 | LCD_RST | 15 | Reset |
+| GPIO14 | LCD_DC | 10 | Data/Command select |
+| GPIO46 | LCD_WR | 11 | Write strobe |
+| GPIO3 | LCD_RD | 12 | Read strobe |
+| GPIO45 | LCD_BL | 33 | Backlight anode (LED-A) |
+
+FPC power pins: 6=VDDI(+3V3), 7=VDDA(+3V3), 5/16/34-36/37=GND, 38=IM0(+3V3), 39=IM1(+3V3), 40=IM2(GND).
+Interface mode: IM2=0, IM1=1, IM0=1 → 8080 8-bit parallel.
 
 ### SD Card (SPI) — 4 GPIOs
 

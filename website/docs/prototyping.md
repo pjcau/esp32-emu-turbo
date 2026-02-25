@@ -57,26 +57,32 @@ Add decoupling capacitors:
 
 ### Step 3: Display Connection (8080 Parallel)
 
-Connect the ILI9488 3.95" display panel with 8-bit 8080 parallel interface (via 40-pin FPC):
+Connect the ILI9488 4.0" display panel with 8-bit 8080 parallel interface (via 40-pin FPC).
+FPC pin numbers from the ILI9488 panel datasheet:
 
-| Display Pin | Wire to | ESP32-S3 GPIO |
-|---|---|---|
-| VCC | 3.3V rail | — |
-| GND | GND rail | — |
-| D0 | jumper | GPIO4 |
-| D1 | jumper | GPIO5 |
-| D2 | jumper | GPIO6 |
-| D3 | jumper | GPIO7 |
-| D4 | jumper | GPIO8 |
-| D5 | jumper | GPIO9 |
-| D6 | jumper | GPIO10 |
-| D7 | jumper | GPIO11 |
-| CS | jumper | GPIO12 |
-| RST | jumper | GPIO13 |
-| DC/RS | jumper | GPIO14 |
-| WR | jumper | GPIO46 |
-| RD | jumper | GPIO3 |
-| BL | jumper | GPIO45 (or 3.3V for always-on) |
+| FPC Pin | Signal | Wire to | ESP32-S3 GPIO |
+|---|---|---|---|
+| 6 | VDDI | 3.3V rail | — |
+| 7 | VDDA | 3.3V rail | — |
+| 5, 16, 37 | GND | GND rail | — |
+| 17 | DB0 | jumper | GPIO4 |
+| 18 | DB1 | jumper | GPIO5 |
+| 19 | DB2 | jumper | GPIO6 |
+| 20 | DB3 | jumper | GPIO7 |
+| 21 | DB4 | jumper | GPIO8 |
+| 22 | DB5 | jumper | GPIO9 |
+| 23 | DB6 | jumper | GPIO10 |
+| 24 | DB7 | jumper | GPIO11 |
+| 9 | CS | jumper | GPIO12 |
+| 15 | RESET | jumper | GPIO13 |
+| 10 | DC/RS | jumper | GPIO14 |
+| 11 | WR | jumper | GPIO46 |
+| 12 | RD | jumper | GPIO3 |
+| 33 | LED-A (BL) | jumper | GPIO45 (or 3.3V for always-on) |
+| 34-36 | LED-K | GND rail | — |
+| 38 | IM0 | 3.3V rail | — (HIGH for 8-bit 8080) |
+| 39 | IM1 | 3.3V rail | — (HIGH for 8-bit 8080) |
+| 40 | IM2 | GND rail | — (LOW for 8-bit 8080) |
 
 :::tip Color-coding
 Use colored wires for the 8 data lines (e.g., rainbow order) to make debugging easier. Use a different color for control lines.

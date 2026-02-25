@@ -65,34 +65,52 @@ Portrait (native)          Landscape (gaming mode)
 └──────────┘               └─────────────────────┘
 ```
 
-### FPC 40-Pin Pinout (typical ILI9488 + resistive touch)
+### FPC 40-Pin Pinout (ILI9488 panel datasheet)
 
-| Pin | Signal | Direction | Description |
-|-----|--------|-----------|-------------|
-| 1 | GND | — | Ground |
-| 2 | LEDK | — | Backlight cathode (GND) |
-| 3 | LEDA | — | Backlight anode (3.3V) |
-| 4-5 | GND | — | Ground |
-| 6 | RESET | Input | LCD reset (active low) |
-| 7 | CS | Input | Chip select (active low) |
-| 8 | RS/DC | Input | Register select / Data-Command |
-| 9 | WR | Input | Write strobe (8080 mode) |
-| 10 | RD | Input | Read strobe (8080 mode) |
-| 11-18 | DB0-DB7 | I/O | 8-bit data bus |
-| 19-26 | DB8-DB15 | I/O | 16-bit extension (NC in 8-bit mode) |
-| 27-28 | GND | — | Ground |
-| 29 | TE | Output | Tearing effect (optional, for vsync) |
-| 30-31 | IM0-IM1 | Input | Interface mode select |
-| 32-33 | GND | — | Ground |
-| 34-35 | VCC | — | Logic power (3.3V) |
-| 36 | T_CLK | — | Touch SPI clock — **NC (not connected)** |
-| 37 | T_CS | — | Touch SPI chip select — **NC** |
-| 38 | T_DIN | — | Touch SPI MOSI — **NC** |
-| 39 | T_DO | — | Touch SPI MISO — **NC** |
-| 40 | GND | — | Ground |
+![ILI9488 FPC 40-pin pinout from datasheet](/img/ili9488-fpc40-pinout.png)
 
-:::warning Pinout may vary
-The exact pinout depends on the specific panel manufacturer. **Always verify the FPC pinout** from the seller's datasheet before ordering the PCB. The table above is a typical reference for ILI9488 40-pin panels. Touch pins (36-39) are left unconnected.
+![ILI9488 datasheet specifications](/img/ili9488-datasheet-specs.png)
+
+| Pin | Symbol | Direction | Description | Connection |
+|-----|--------|-----------|-------------|------------|
+| 1 | XL | — | Touch panel logical foot | **NC** |
+| 2 | YU | — | Touch panel logical foot | **NC** |
+| 3 | XR | — | Touch panel logical foot | **NC** |
+| 4 | YD | — | Touch panel logical foot | **NC** |
+| 5 | GND | — | Ground | GND |
+| 6 | VDDI | — | I/O power supply (1.8–3.3V) | **+3V3** |
+| 7 | VDDA | — | Analog/digital power (2.8–3.3V) | **+3V3** |
+| 8 | TE | Output | Tearing effect (vsync) | NC |
+| 9 | CS | Input | Chip select (active low) | GPIO12 |
+| 10 | DC/RS | Input | Data/Command select | GPIO14 |
+| 11 | WR | Input | Write strobe (8080 mode) | GPIO46 |
+| 12 | RD | Input | Read strobe (8080 mode) | GPIO3 |
+| 13 | SPI SDI | Input | SPI data in | NC (parallel mode) |
+| 14 | SPI SDO | Output | SPI data out | NC (parallel mode) |
+| 15 | RESET | Input | Reset (active low) | GPIO13 |
+| 16 | GND | — | Ground | GND |
+| 17-24 | DB0-DB7 | I/O | 8-bit parallel data bus | GPIO4-11 |
+| 25-32 | DB8-DB15 | I/O | 16-bit extension | NC (8-bit mode) |
+| 33 | LED-A | — | Backlight anode (2.9–3.3V typ 3.1V) | GPIO45 (PWM) |
+| 34-36 | LED-K | — | Backlight cathode (8 chip white LED) | **GND** |
+| 37 | GND | — | Ground | GND |
+| 38 | IM0 | Input | Interface mode select | **+3V3** (HIGH) |
+| 39 | IM1 | Input | Interface mode select | **+3V3** (HIGH) |
+| 40 | IM2 | Input | Interface mode select | **GND** (LOW) |
+
+:::info Interface Mode Selection (IM2:IM1:IM0)
+| IM2 | IM1 | IM0 | Mode | Data Pins |
+|-----|-----|-----|------|-----------|
+| 0 | 1 | 0 | 8080 16-bit parallel | DB15-DB0 |
+| **0** | **1** | **1** | **8080 8-bit parallel** | **DB7-DB0** |
+| 1 | 0 | 1 | 3-line 9-bit SPI | SDA in/out |
+| 1 | 1 | 1 | 4-line 8-bit SPI | SDA in/out |
+
+Our design uses **8080 8-bit parallel** (IM2=0, IM1=1, IM0=1): IM0 and IM1 pulled HIGH to +3V3, IM2 pulled LOW to GND.
+:::
+
+:::warning Pinout verified from actual panel datasheet
+This pinout is from the actual ILI9488 4.0" panel datasheet (see images above). It differs significantly from generic/typical pinouts found online. **Do NOT use generic ILI9488 pinout tables** — always refer to this datasheet.
 :::
 
 ### Alternative Display Options

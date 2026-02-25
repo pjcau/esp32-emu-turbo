@@ -38,7 +38,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | File                        | Description                              |
 | --------------------------- | ---------------------------------------- |
 | `bom.csv`                   | Bill of Materials (JLCPCB format)        |
-| `cpl.csv`                   | Component Placement List (65 components) |
+| `cpl.csv`                   | Component Placement List (64 components) |
 | `bom-summary.md`            | Human-readable BOM with cost estimate    |
 | `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference)             |
 
@@ -59,7 +59,18 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v1.3 — 2026-02-14 (current)
+### v1.7 — 2026-02-25 (current)
+
+- **CRITICAL: FPC 40-pin pinout corrected** from ILI9488 panel datasheet
+  - Previous pinout was a generic/typical mapping that did NOT match the actual panel
+  - Old mapping would have connected GPIOs to power pins (6=VDDI, 7=VDDA) and +3V3 to backlight cathodes (34-36=LED-K)
+  - Corrected pin assignments: 9=CS, 10=DC, 11=WR, 12=RD, 15=RESET, 17-24=DB0-DB7, 33=LED-A
+  - Added power connections: 5/16/37=GND, 6=VDDI(+3V3), 7=VDDA(+3V3), 34-36=LED-K(GND)
+  - Added interface mode pins: 38=IM0(+3V3), 39=IM1(+3V3), 40=IM2(GND) for 8080 8-bit parallel
+- All DRC checks pass (0 errors), drill spacing verified
+- Updated schematics, documentation, BOM, CPL
+
+### v1.3 — 2026-02-14
 
 - **Trace shorts fixed:** SD_MOSI and SD_MISO rerouted with B.Cu vertical bypass columns (x=120, x=118) to avoid FPC approach zone conflicts with LCD_D4, LCD_D6, and BTN_Y on F.Cu
 - **Zone fill verified:** Inner layers (In1.Cu GND, In2.Cu +3V3/+5V) correctly filled via kicad-cli — Gerber files confirmed >200KB each
@@ -81,12 +92,14 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 | Check                     | Result                                |
 | ------------------------- | ------------------------------------- |
-| Trace Shorts              | ✅ PASS (0 shorts)                     |
-| Zone Fill Data            | ✅ PASS (7 filled polygons)            |
-| Zone Priorities           | ✅ PASS                                |
-| Gerber File Sizes         | ✅ PASS (In1_Cu=243KB, In2_Cu=260KB)   |
+| DRC Check                 | ✅ PASS (0 errors, 4 warnings)         |
 | Electrical Simulation     | ✅ PASS (0 errors, 5 warnings)         |
-| Schematic/PCB Consistency | ✅ PASS (65 JLCPCB components matched) |
+| Schematic/PCB Consistency | ✅ PASS (64 JLCPCB components matched) |
+| PCB Connectivity          | ✅ PASS (all endpoints connected)      |
+| FPC Pin Positions         | ✅ PASS (FPC + ESP32 pin accuracy)     |
+| Zone Priorities           | ✅ PASS                                |
+| Trace Shorts (B.Cu)       | ⚠️ 52 pre-existing crossings (needs routing rework) |
+| Zone Fill Data            | ⚠️ Requires kicad-cli zone fill before production |
 
 ## Notes
 
