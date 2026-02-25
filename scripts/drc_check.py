@@ -28,6 +28,8 @@ RULES = {
     "min_board_edge_clearance": 0.3,  # mm
     "min_drill_to_edge": 0.4,      # mm
     "min_drill_spacing": 0.25,     # mm (edge-to-edge, JLCPCB 4-layer: 0.254mm)
+    "min_via_copper_spacing": 0.15,  # mm (via copper-to-copper clearance)
+    "min_silkscreen_width": 0.15,    # mm (JLCPCB minimum silkscreen line)
     "board_width": 160.0,
     "board_height": 75.0,
 }
@@ -445,6 +447,53 @@ def check_net_connectivity(data):
     return warnings
 
 
+def check_via_copper_spacing(data):
+    """Check minimum copper-to-copper clearance between vias.
+
+    Unlike drill spacing (edge-to-edge of holes), this checks the
+    copper annular ring overlap between adjacent vias.
+    """
+    errors = []
+    min_sp = RULES["min_via_copper_spacing"]
+
+    vias = [(v["x"], v["y"], v["size"] / 2) for v in data["vias"]]
+
+    for i in range(len(vias)):
+        for j in range(i + 1, len(vias)):
+            x1, y1, r1 = vias[i]
+            x2, y2, r2 = vias[j]
+            d = math.hypot(x1 - x2, y1 - y2)
+            clearance = d - r1 - r2
+            if -0.01 < clearance < min_sp:
+                errors.append(
+                    f"Via copper spacing {clearance:.3f}mm < {min_sp}mm "
+                    f"between ({x1},{y1}) and ({x2},{y2})"
+                )
+
+    return errors
+
+
+def check_silkscreen_line_width(pcb_path):
+    """Check silkscreen lines meet JLCPCB minimum width."""
+    errors = []
+    min_w = RULES["min_silkscreen_width"]
+    text = Path(pcb_path).read_text()
+
+    for m in re.finditer(
+        r'\(gr_line[^)]*\).*?\(stroke \(width ([\d.]+)\).*?'
+        r'\(layer "([FB]\.SilkS)"\)',
+        text,
+    ):
+        width = float(m.group(1))
+        if width < min_w:
+            errors.append(
+                f"Silkscreen line width {width}mm < {min_w}mm "
+                f"on {m.group(2)}"
+            )
+
+    return errors
+
+
 def main():
     pcb_path = sys.argv[1] if len(sys.argv) > 1 else \
         "hardware/kicad/esp32-emu-turbo.kicad_pcb"
@@ -473,6 +522,7 @@ def main():
         ("Board Edge Clearance", check_board_edge_clearance),
         ("Trace Spacing", check_trace_spacing),
         ("Drill Spacing", check_drill_spacing),
+        ("Via Copper Spacing", check_via_copper_spacing),
     ]
 
     # Component overlap check (uses CPL data, not PCB data)
@@ -513,6 +563,17 @@ def main():
     for e in arc_errors[:5]:
         print(f"         {e}")
     all_errors.extend(arc_errors)
+
+    # Silkscreen line width check (uses raw PCB file)
+    silk_errors = check_silkscreen_line_width(pcb_path)
+    status = "PASS" if not silk_errors else \
+        f"FAIL ({len(silk_errors)} errors)"
+    print(f"  [{status}] Silkscreen Line Width (>= {RULES['min_silkscreen_width']}mm)")
+    for e in silk_errors[:5]:
+        print(f"         {e}")
+    if len(silk_errors) > 5:
+        print(f"         ... and {len(silk_errors) - 5} more")
+    all_errors.extend(silk_errors)
 
     # Connectivity is a warning, not a hard error
     print()

@@ -92,7 +92,7 @@ def setup_4layer() -> str:
         ' (type "Bottom Silk Screen"))\n'
         '      (copper_finish "ENIG")\n'
         '    )\n'
-        '    (pad_to_mask_clearance 0.05)\n'
+        '    (pad_to_mask_clearance 0.0)\n'
         '    (pcbplotparams\n'
         '      (layerselection 0x00000000_00000000_55555555_5755f5ff)\n'
         '      (plot_on_all_layers_selection'
@@ -161,6 +161,8 @@ NET_LIST = [
     (42, "SPK+"), (43, "SPK-"),
     # Joystick (optional)
     (44, "JOY_X"), (45, "JOY_Y"),
+    # IP5306 boost converter
+    (46, "LX"), (47, "IP5306_KEY"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}
@@ -238,7 +240,7 @@ def mounting_hole(x, y, drill=2.5, pad_d=5.0):
     )
 
 
-def via(x, y, size=0.6, drill=0.3, net=0):
+def via(x, y, size=0.8, drill=0.35, net=0):
     return (
         f'  (via (at {x} {y}) (size {size})'
         f' (drill {drill})'

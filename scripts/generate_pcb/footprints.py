@@ -16,14 +16,17 @@ from . import primitives as P
 
 
 # ── Helper ────────────────────────────────────────────────────────
-def _pad(num, typ, shape, x, y, w, h, layers, net=0, drill=None):
+def _pad(num, typ, shape, x, y, w, h, layers, net=0, drill=None,
+         solder_mask_margin=None):
     """Generate a single KiCad pad S-expression."""
     d = f" (drill {drill})" if drill else ""
     net_s = f' (net {net} "")' if net == 0 else f' (net {net})'
+    mask_s = (f" (solder_mask_margin {solder_mask_margin})"
+              if solder_mask_margin is not None else "")
     return (
         f'    (pad "{num}" {typ} {shape} (at {x} {y})'
         f' (size {w} {h}){d}'
-        f' (layers {layers}){net_s}'
+        f' (layers {layers}){net_s}{mask_s}'
         f' (uuid "{P.uid()}"))\n'
     )
 
@@ -31,6 +34,24 @@ def _pad(num, typ, shape, x, y, w, h, layers, net=0, drill=None):
 SMD_F = '"F.Cu" "F.Paste" "F.Mask"'
 SMD_B = '"B.Cu" "B.Paste" "B.Mask"'
 THT = '"*.Cu" "*.Mask"'
+
+
+def _fp_line(x1, y1, x2, y2, layer="B.SilkS", width=0.15):
+    """Footprint-local silkscreen/fab line."""
+    return (
+        f'    (fp_line (start {x1} {y1}) (end {x2} {y2})'
+        f' (stroke (width {width}) (type default))'
+        f' (layer "{layer}") (uuid "{P.uid()}"))\n'
+    )
+
+
+def _fp_circle(cx, cy, r, layer="B.SilkS", width=0.15):
+    """Footprint-local circle (pin 1 marker etc.)."""
+    return (
+        f'    (fp_circle (center {cx} {cy}) (end {cx + r} {cy})'
+        f' (stroke (width {width}) (type default))'
+        f' (layer "{layer}") (uuid "{P.uid()}"))\n'
+    )
 
 
 def _smd(num, x, y, w, h, layer="B"):
@@ -138,8 +159,12 @@ def sot223(layer="B"):
 # Ref: KiCad Package_SO.pretty/SOIC-16W_7.5x10.3mm_P1.27mm.kicad_mod
 # 16 pins, 1.27mm pitch, wide body (7.5mm)
 # Pad centers at x=±4.65, pad size 2.05x0.6
+# PAM8403 pinout: 1=+OUT_L, 2=PGND, 3=-OUT_L, 4=PVDD, 5=MUTE,
+#   6=VDD, 7=INL, 8=VREF, 9=NC, 10=INR, 11=GND, 12=SHDN,
+#   13=PVDD, 14=-OUT_R, 15=PGND, 16=+OUT_R
 def sop16(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
+    silk = "B.SilkS" if layer == "B" else "F.SilkS"
     pads = []
     pw, ph = 2.05, 0.6
 
@@ -152,6 +177,17 @@ def sop16(layer="B"):
     for i in range(8):
         y = 4.445 - i * 1.27
         pads.append(_pad(str(i + 9), "smd", "rect", 4.65, y, pw, ph, layers))
+
+    # Silkscreen body outline (between pad rows, slightly beyond pin extent)
+    bx = 3.9    # body half-width (inside pads at ±4.65)
+    by = 5.3    # body half-height
+    pads.append(_fp_line(-bx, -by, bx, -by, silk))   # top
+    pads.append(_fp_line(bx, -by, bx, by, silk))      # right
+    pads.append(_fp_line(bx, by, -bx, by, silk))      # bottom
+    pads.append(_fp_line(-bx, by, -bx, -by, silk))    # left
+
+    # Pin 1 marker (dot inside body near pin 1)
+    pads.append(_fp_circle(-2.5, -4.0, 0.3, silk))
 
     return pads
 
@@ -178,7 +214,9 @@ def usb_c_16p(layer="B"):
         ("A12",  3.2,  0.6, 1.3),
     ]
     for name, x, w, h in a_pads:
-        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers))
+        margin = 0 if w <= 0.3 else None  # fine-pitch: no mask expansion
+        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers,
+                         solder_mask_margin=margin))
 
     # B-side pads at y=-3.745 (some share physical location with A-side)
     b_pads = [
@@ -192,7 +230,9 @@ def usb_c_16p(layer="B"):
         ("B1",   3.2,  0.6, 1.3),
     ]
     for name, x, w, h in b_pads:
-        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers))
+        margin = 0 if w <= 0.3 else None
+        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers,
+                         solder_mask_margin=margin))
 
     # Shield / mounting legs (4 THT oval pads)
     for sx, sy in [(-4.32, -3.105), (4.32, -3.105),
@@ -213,9 +253,11 @@ def fpc_40p(layer="B"):
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
+    # solder_mask_margin=0 avoids mask expansion on fine-pitch pads
     for i in range(40):
         x = -9.75 + i * 0.5
-        pads.append(_pad(str(i + 1), "smd", "rect", x, -1.85, pw, ph, layers))
+        pads.append(_pad(str(i + 1), "smd", "rect", x, -1.85, pw, ph, layers,
+                         solder_mask_margin=0))
 
     # 2 mounting pads
     pads.append(_pad("MP1", "smd", "rect", -11.5, -1.85, 1.6, 1.6, layers))
@@ -339,19 +381,22 @@ FOOTPRINTS = {
 
 
 def _mirror_pad_x(pad_str):
-    """Negate the X coordinate in a pad S-expression for B.Cu mirroring.
+    """Negate X coordinates in a pad/line S-expression for B.Cu mirroring.
 
-    In KiCad, footprints on B.Cu must have their pad X coordinates
+    In KiCad, footprints on B.Cu must have their X coordinates
     pre-mirrored (negated) so the Gerber copper matches the physical
     component placement from the pick-and-place (CPL) file.
+    Handles pad (at), fp_line (start/end), and fp_circle (center/end).
     """
     def _negate(match):
-        x = -float(match.group(1))
+        keyword = match.group(1)
+        x = -float(match.group(2))
         if x == 0:
             x = 0.0  # avoid -0.0
-        y = match.group(2)
-        return f'(at {x} {y})'
-    return re.sub(r'\(at ([-\d.]+) ([-\d.]+)\)', _negate, pad_str, count=1)
+        y = match.group(3)
+        return f'({keyword} {x} {y})'
+    return re.sub(r'\((at|start|end|center) ([-\d.]+) ([-\d.]+)\)',
+                  _negate, pad_str)
 
 
 def get_pads(footprint_name, layer=None):

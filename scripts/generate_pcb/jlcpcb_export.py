@@ -137,7 +137,7 @@ def _build_placements():
     # Layout rows (Y increases downward in KiCad):
     #   y=35   IP5306 support caps (C17)
     #   y=37.5 IP5306 support caps (C18)
-    #   y=42   ESP32 decoupling (R3, C3, R17, R18, C4)
+    #   y=42   ESP32 decoupling (R3, C3, C4)
     #   y=46   Pull-up resistors (R4-R15, R19) x=43..103
     #   y=50   Debounce caps (C5-C16, C20) x=43..103
 
@@ -148,12 +148,16 @@ def _build_placements():
     p.append(("R2", "5.1k", "R_0805",
               ux + 6, uy - 5, 0, "bottom"))
 
-    # ESP32 decoupling + LED resistors (y=42, below ESP32 body edge at 40.25)
+    # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
     p.append(("C3", "100nF", "C_0805", 70, 42, 0, "bottom"))
-    p.append(("R17", "1k", "R_0805", 75, 42, 0, "bottom"))
-    p.append(("R18", "1k", "R_0805", 80, 42, 0, "bottom"))
     p.append(("C4", "100nF", "C_0805", 85, 42, 0, "bottom"))
+
+    # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
+    x, y = enc_to_pcb(*LED_CHARGE_ENC)
+    p.append(("R17", "1k", "R_0805", x, y + 2.5, 0, "bottom"))
+    x, y = enc_to_pcb(*LED_FULL_ENC)
+    p.append(("R18", "1k", "R_0805", x, y + 2.5, 0, "bottom"))
 
     # ── Button pull-up resistors (y=46, x=43..103, 5mm spacing) ──
     # Shifted left to avoid IP5306 at x=110

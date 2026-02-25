@@ -99,8 +99,8 @@ SS = [
 ]
 MENU = ("SW13", enc(62, -25))
 # Shoulder buttons on B.Cu (back side, rotated 90deg, aligned to top edge)
-SHOULDER_L = ("SW11", enc(-65, 35))
-SHOULDER_R = ("SW12", enc(65, 35))
+SHOULDER_L = ("SW11", enc(-65, 32))
+SHOULDER_R = ("SW12", enc(65, 32))
 
 # LED positions (F.Cu)
 LED1 = enc(-55, -30)   # (25.0, 67.5) Red - charging
@@ -116,8 +116,8 @@ R1_POS = (74.0, 67.0)    # USB CC1 pull-down (ux-6, uy-5)
 R2_POS = (86.0, 67.0)    # USB CC2 pull-down (ux+6, uy-5)
 R3_POS = (65.0, 42.0)    # ESP32 decoupling
 R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
-R17_POS = (75.0, 42.0)   # LED1 current limit
-R18_POS = (80.0, 42.0)   # LED2 current limit
+R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
+R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
 C1_POS = (125.0, 50.5)   # AMS1117 input cap (amx, amy-5)
 C2_POS = (125.0, 60.5)   # AMS1117 output cap (amx, amy+5)
@@ -225,6 +225,10 @@ def _init_pads():
         ("R16", "R_0805", *R16_POS, 0, "B"),
         ("R1", "R_0805", *R1_POS, 0, "B"),
         ("R2", "R_0805", *R2_POS, 0, "B"),
+        ("R17", "R_0805", *R17_POS, 0, "B"),
+        ("R18", "R_0805", *R18_POS, 0, "B"),
+        ("LED1", "LED_0805", *LED1, 0, "F"),
+        ("LED2", "LED_0805", *LED2, 0, "F"),
     ]
     for ref, fp, cx, cy, rot, lc in passive_placements:
         _PADS[ref] = _compute_pads(fp, cx, cy, rot, lc)
@@ -277,7 +281,9 @@ def _L(x1, y1, x2, y2, layer="B.Cu", width=W_DATA, net=0,
     return parts
 
 
-def _via_net(x, y, net=0):
+def _via_net(x, y, net=0, size=None, drill=None):
+    if size is not None and drill is not None:
+        return P.via(x, y, size=size, drill=drill, net=net)
     return P.via(x, y, net=net)
 
 
@@ -313,16 +319,19 @@ def _power_traces():
     n_3v3 = NET_ID["+3V3"]
     n_bat = NET_ID["BAT+"]
     n_gnd = NET_ID["GND"]
+    n_lx = NET_ID["LX"]
+    n_key = NET_ID["IP5306_KEY"]
 
     # ── Get exact pad positions ─────────────────────────────────
-    # IP5306 (U2): ESOP-8
-    # Pin 1 = VIN (VBUS), Pin 3 = VSS (GND), Pin 4 = VOUT,
-    # Pin 8 = VCC (BAT+), EP = GND
-    ip_vbus = _pad("U2", "1")     # VBUS input
-    ip_gnd = _pad("U2", "3")      # GND
-    ip_vout = _pad("U2", "4")     # +5V output
-    ip_bat = _pad("U2", "8")      # BAT+ (battery)
-    ip_ep = _pad("U2", "EP")      # Exposed GND pad
+    # IP5306 (U2): ESOP-8 — corrected per datasheet
+    # Pin 1=VIN, 5=KEY, 6=BAT, 7=SW/LX, 8=VOUT, EP=GND
+    # Pins 2-4 = LED indicators (NC in this design)
+    ip_vbus = _pad("U2", "1")     # VIN (charger 5V input)
+    ip_key = _pad("U2", "5")      # KEY (on/off control)
+    ip_bat = _pad("U2", "6")      # BAT (battery terminal)
+    ip_sw = _pad("U2", "7")       # SW/LX (inductor switch node)
+    ip_vout = _pad("U2", "8")     # VOUT (5V boost output)
+    ip_ep = _pad("U2", "EP")      # GND (exposed pad)
 
     # AMS1117 (U3): SOT-223
     # Pin 1 = GND/ADJ, Pin 2 = VOUT (+3V3), Pin 3 = VIN (+5V), Pin 4 = tab (VOUT)
@@ -371,10 +380,10 @@ def _power_traces():
     # GND vias near key components
     gnd_via_positions = [
         (usb_gnd[0], usb_gnd[1] - 2),    # USB-C GND
-        (ip_gnd[0] + 2, ip_gnd[1]),       # IP5306 GND (offset RIGHT to avoid +5V at same X)
+        (ip_ep[0], ip_ep[1] + 3),          # IP5306 GND (via below exposed pad)
         (am_gnd[0], am_gnd[1] + 2),       # AMS1117 GND
         (esp_gnd[0], esp_gnd[1] + 2),     # ESP32 GND
-        (jst_n[0], jst_n[1]),             # JST GND
+        (jst_n[0] - 2, jst_n[1]),          # JST GND (offset AWAY from BAT+ pad)
     ]
     for gvx, gvy in gnd_via_positions:
         parts.append(_via_net(gvx, gvy, n_gnd))
@@ -382,32 +391,55 @@ def _power_traces():
     # B.Cu stubs from IC GND pads to vias
     parts.append(_seg(usb_gnd[0], usb_gnd[1], usb_gnd[0], usb_gnd[1] - 2,
                        "B.Cu", W_PWR, n_gnd))
-    # IP5306 GND: horizontal RIGHT to avoid sharing x with +5V vertical
-    parts.append(_seg(ip_gnd[0], ip_gnd[1], ip_gnd[0] + 2, ip_gnd[1],
+    # IP5306 GND: vertical DOWN from exposed pad
+    parts.append(_seg(ip_ep[0], ip_ep[1], ip_ep[0], ip_ep[1] + 3,
                        "B.Cu", W_PWR, n_gnd))
     parts.append(_seg(am_gnd[0], am_gnd[1], am_gnd[0], am_gnd[1] + 2,
                        "B.Cu", W_PWR, n_gnd))
     # ESP32 GND pad (pin 41) to GND via
     parts.append(_seg(esp_gnd[0], esp_gnd[1], esp_gnd[0], esp_gnd[1] + 2,
                        "B.Cu", W_PWR, n_gnd))
+    # JST GND pad to offset via (LEFT, away from BAT+ pad)
+    parts.append(_seg(jst_n[0], jst_n[1], jst_n[0] - 2, jst_n[1],
+                       "B.Cu", W_PWR, n_gnd))
 
-    # ── +5V: IP5306 output -> AMS1117 input, vias to In2.Cu ───
-    # IP5306 VOUT via: route DOWN (not up, to avoid GND at same X)
-    parts.append(_via_net(ip_vout[0], ip_vout[1] + 2, n_5v))
-    parts.append(_seg(ip_vout[0], ip_vout[1], ip_vout[0], ip_vout[1] + 2,
+    # ── +5V: IP5306 VOUT (pin 8) -> AMS1117 input ──────────────
+    # VOUT via to +5V zone on In2.Cu
+    parts.append(_via_net(ip_vout[0], ip_vout[1] - 2, n_5v))
+    parts.append(_seg(ip_vout[0], ip_vout[1], ip_vout[0], ip_vout[1] - 2,
                        "B.Cu", W_PWR, n_5v))
+    # AMS1117 VIN via
     parts.append(_via_net(am_vin[0], am_vin[1] - 2, n_5v))
     parts.append(_seg(am_vin[0], am_vin[1], am_vin[0], am_vin[1] - 2,
                        "B.Cu", W_PWR, n_5v))
-    # L1 inductor connection (IP5306 to L1)
-    parts.append(_via_net(l1_1[0], l1_1[1] - 2, n_5v))
+
+    # ── LX: IP5306 SW (pin 7) -> L1 inductor ────────────────
+    # Route from SW pin down to L1 pin 2 (closer pin)
+    parts.append(_seg(ip_sw[0], ip_sw[1], ip_sw[0], l1_2[1],
+                       "B.Cu", W_PWR, n_lx))
+    parts.append(_seg(ip_sw[0], l1_2[1], l1_2[0], l1_2[1],
+                       "B.Cu", W_PWR, n_lx))
+
+    # ── BAT+ side of L1: L1 pin 1 to BAT+ zone ─────────────
+    parts.append(_via_net(l1_1[0], l1_1[1] - 2, n_bat))
     parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], l1_1[1] - 2,
-                       "B.Cu", W_PWR, n_5v))
-    # Connect IP5306 VOUT to L1 via B.Cu (vertical down, then horizontal)
-    parts.append(_seg(ip_vout[0], ip_vout[1], ip_vout[0], l1_1[1],
-                       "B.Cu", W_PWR, n_5v))
-    parts.append(_seg(ip_vout[0], l1_1[1], l1_1[0], l1_1[1],
-                       "B.Cu", W_PWR, n_5v))
+                       "B.Cu", W_PWR, n_bat))
+
+    # ── KEY: IP5306 pin 5 -> R16 pull-up to +5V ─────────────
+    # B.Cu route from KEY pin down to R16 area
+    r16_p1 = _pad("R16", "1")
+    r16_p2 = _pad("R16", "2")
+    if r16_p2 and ip_key:
+        # R16 pin 2 -> IP5306 KEY (pin 5) via B.Cu L-route
+        parts.append(_seg(r16_p2[0], r16_p2[1], r16_p2[0], ip_key[1],
+                           "B.Cu", W_SIG, n_key))
+        parts.append(_seg(r16_p2[0], ip_key[1], ip_key[0], ip_key[1],
+                           "B.Cu", W_SIG, n_key))
+    if r16_p1:
+        # R16 pin 1 -> +5V via (pull-up for always-on)
+        parts.append(_seg(r16_p1[0], r16_p1[1], r16_p1[0], r16_p1[1] + 2,
+                           "B.Cu", W_SIG, n_5v))
+        parts.append(_via_net(r16_p1[0], r16_p1[1] + 2, n_5v))
 
     # ── +3V3: AMS1117 output via outside +5V zone ─────────────
     # AMS1117 VOUT (pin 2) and tab (pin 4) are +3V3
@@ -455,15 +487,7 @@ def _power_traces():
     parts.append(_seg(sw_com[0], bat_via_y, jst_p[0], bat_via_y,
                        "F.Cu", W_PWR, n_bat))
 
-    # ── USB CC pull-down resistors ─────────────────────────────
-    r1_gnd = _pad("R1", "2")
-    r2_gnd = _pad("R2", "2")
-    if r1_gnd:
-        parts.append(_seg(r1_gnd[0], r1_gnd[1], r1_gnd[0],
-                           usb_gnd[1] - 2, "B.Cu", W_SIG, n_gnd))
-    if r2_gnd:
-        parts.append(_seg(r2_gnd[0], r2_gnd[1], r2_gnd[0],
-                           usb_gnd[1] - 2, "B.Cu", W_SIG, n_gnd))
+    # USB CC pull-down resistor GND traces are in _usb_traces()
 
     return parts
 
@@ -534,16 +558,19 @@ def _display_traces():
         epx, epy = _esp_pin(gpio)
         fpx, fpy = _fpc_pin(fpc_pin)
 
-        bypass_y = 8.0 + idx * 0.5
-        apx = 130.0 + idx * 0.4
-        col_x = 124.0 - idx * 0.8  # wider spacing (0.8mm vs 0.5mm)
+        bypass_y = 5.0 + idx * 1.0   # DFM: was 0.5mm pitch (via overlap)
+        # Approach column: 0.65mm pitch with 0.5mm/0.2mm mini-vias.
+        # All approach vias east of BTN_Y (x=129.6) and west of BTN_A (x=138)
+        # so B.Cu stubs go EAST to FPC pads without crossing button verticals.
+        apx = 130.0 + idx * 0.65
+        col_x = 124.0 - idx * 1.1  # 1.1mm pitch avoids +5V vertical at x~117
 
         is_bottom = abs(epy - 40.0) < 1.0
 
         if is_bottom:
             # Bottom-side ESP32 pins: vertical stub UP to staggered Y
             # to avoid parallel overlapping horizontal stubs at y=40
-            stagger_y = 38.0 - stagger_idx * 0.6
+            stagger_y = 38.0 - stagger_idx * 1.0  # DFM: was 0.6mm (via overlap)
             stagger_idx += 1
 
             # 1. B.Cu vertical from pad up to stagger level
@@ -554,10 +581,10 @@ def _display_traces():
             # 2. F.Cu horizontal to col_x
             parts.append(_seg(epx, stagger_y, col_x, stagger_y,
                               "F.Cu", W_DATA, net))
-            parts.append(_via_net(col_x, stagger_y, net))
+            parts.append(_via_net(col_x, stagger_y, net, size=0.5, drill=0.2))
         else:
             # Side pins: horizontal stub right to via
-            via1_x = epx + 1.5
+            via1_x = epx + 2.0  # DFM: was 1.5 (too close to col_x vias)
             parts.append(_seg(epx, epy, via1_x, epy,
                               "B.Cu", W_DATA, net))
             parts.append(_via_net(via1_x, epy, net))
@@ -565,13 +592,13 @@ def _display_traces():
             # F.Cu horizontal to col_x
             parts.append(_seg(via1_x, epy, col_x, epy,
                               "F.Cu", W_DATA, net))
-            parts.append(_via_net(col_x, epy, net))
+            parts.append(_via_net(col_x, epy, net, size=0.5, drill=0.2))
 
         # 3. B.Cu vertical up to bypass level (above slot)
         from_y = stagger_y if is_bottom else epy
         parts.append(_seg(col_x, from_y, col_x, bypass_y,
                           "B.Cu", W_DATA, net))
-        parts.append(_via_net(col_x, bypass_y, net))
+        parts.append(_via_net(col_x, bypass_y, net, size=0.5, drill=0.2))
 
         # 4. F.Cu horizontal across slot at safe Y
         parts.append(_seg(col_x, bypass_y, apx, bypass_y,
@@ -580,7 +607,7 @@ def _display_traces():
 
         # 5. F.Cu vertical down to FPC pin Y level
         parts.append(_seg(apx, bypass_y, apx, fpy, "F.Cu", W_DATA, net))
-        parts.append(_via_net(apx, fpy, net))
+        parts.append(_via_net(apx, fpy, net, size=0.5, drill=0.2))
 
         # 6. B.Cu horizontal to FPC pad (short stub only)
         parts.append(_seg(apx, fpy, fpx, fpy, "B.Cu", W_DATA, net))
@@ -590,35 +617,36 @@ def _display_traces():
     n_3v3 = NET_ID["+3V3"]
 
     # GND pins: 5, 16, 34, 35, 36, 37, 40(IM2)
-    # Use staggered Y offsets for adjacent pins to ensure drill spacing
+    # DFM: large staggered offsets to ensure drill spacing ≥0.25mm
     gnd_pins_offsets = [
-        (5, -2, 0),     # pin 5: offset x=-2 (away from pin 6 +3V3 via)
-        (16, -2, 0),    # pin 16: offset x=-2
-        (34, 2, -1),    # pin 34: offset x=+2, y=-1
-        (35, -2, 0),    # pin 35: offset x=-2
-        (36, 2, 1),     # pin 36: offset x=+2, y=+1
-        (37, -2, 0),    # pin 37: offset x=-2
-        (40, -2, 0),    # pin 40 (IM2): offset x=-2 (away from pin 39 +3V3 via)
+        (5, -3, 0),     # pin 5: offset x=-3
+        (16, -3, 2),    # pin 16: offset x=-3, y=+2
+        (34, 3, -3),    # pin 34: offset x=+3, y=-3
+        (35, -3, 2),    # pin 35: offset x=-3, y=+2
+        (36, 3, 3),     # pin 36: offset x=+3, y=+3
+        (37, -3, -2),   # pin 37: offset x=-3, y=-2
+        (40, -3, 2),    # pin 40 (IM2): offset x=-3, y=+2
     ]
     for pin, ox, oy in gnd_pins_offsets:
         pos = _fpc_pin(pin)
         if pos:
             vx, vy = pos[0] + ox, pos[1] + oy
-            parts.append(_via_net(vx, vy, n_gnd))
+            parts.append(_via_net(vx, vy, n_gnd, size=0.5, drill=0.2))
             parts.append(_seg(pos[0], pos[1], vx, vy, "B.Cu", 0.3, n_gnd))
 
     # +3V3 pins: 6(VDDI), 7(VDDA), 38(IM0=HIGH), 39(IM1=HIGH)
+    # DFM: large staggered offsets to ensure drill spacing ≥0.25mm
     v33_pins_offsets = [
-        (6, 2, -2),     # pin 6 (VDDI): offset x=+2, y=-2 (away from pin 7)
-        (7, -2, 0),     # pin 7 (VDDA): offset x=-2
-        (38, -2, -1),   # pin 38 (IM0): offset x=-2, y=-1
-        (39, 2, 0),     # pin 39 (IM1): offset x=+2
+        (6, 3, -3),     # pin 6 (VDDI): offset x=+3, y=-3
+        (7, -3, 2),     # pin 7 (VDDA): offset x=-3, y=+2
+        (38, -3, -3),   # pin 38 (IM0): offset x=-3, y=-3
+        (39, 3, 2),     # pin 39 (IM1): offset x=+3, y=+2
     ]
     for pin, ox, oy in v33_pins_offsets:
         pos = _fpc_pin(pin)
         if pos:
             vx, vy = pos[0] + ox, pos[1] + oy
-            parts.append(_via_net(vx, vy, n_3v3))
+            parts.append(_via_net(vx, vy, n_3v3, size=0.5, drill=0.2))
             parts.append(_seg(pos[0], pos[1], vx, vy, "B.Cu", 0.3, n_3v3))
 
     return parts
@@ -651,7 +679,7 @@ def _spi_traces():
         sdx, sdy = sd_pad
 
         # Bypass Y above the slot
-        bypass_y = 18.0 + i * 0.5
+        bypass_y = 20.0 + i * 1.0  # DFM: was 0.5mm pitch (via overlap)
 
         # 1. B.Cu stub from ESP32 pad -> via
         stub_x = epx - 1.5 - i * 0.5  # unique offset left
@@ -691,93 +719,130 @@ def _spi_traces():
 
 
 def _i2s_traces():
-    """I2S audio: ESP32 -> PAM8403 -> Speaker.
+    """Audio chain: ESP32 I2S_DOUT -> PAM8403 -> Speaker (BTL right channel).
 
-    After B.Cu mirroring, I2S GPIOs (15-17, pins 8-10) are at board x~89
-    (RIGHT side). PAM8403 is at x=30 (LEFT). Route right-to-left.
+    PAM8403 SOP-16 correct pinout:
+      Pin 1=+OUT_L, 2=PGND, 3=-OUT_L, 4=PVDD, 5=MUTE, 6=VDD,
+      7=INL, 8=VREF, 9=NC, 10=INR, 11=GND, 12=SHDN,
+      13=PVDD, 14=-OUT_R, 15=PGND, 16=+OUT_R
+
+    Audio input: only I2S_DOUT (GPIO 17) routed to INR (pin 10) and INL
+      (pin 7) for mono. BCLK/LRCK unused by PAM8403 (analog amp, not I2S).
+    Speaker: BTL right channel: SPK+ = +OUT_R (pin 16), SPK- = -OUT_R (pin 14).
+    Power: PVDD (4,13) + VDD (6) → +5V; PGND (2,15) + GND (11) → GND.
+    Control: MUTE (5) + SHDN (12) → +5V (always on/unmuted).
+    VREF (8): internal reference, left unconnected (no spare cap in BOM).
     """
     parts = []
     _init_pads()
 
-    i2s = [
-        (15, "I2S_BCLK"), (16, "I2S_LRCK"), (17, "I2S_DOUT"),
-    ]
-    # PAM8403 input pins: RLIN=pin 11, LLIN=pin 6, BCLK=pin 14 etc.
-    # Actually PAM8403 in SOP-16: pins 1-8 left, 9-16 right (before rotation)
-    # After 90deg rotation + B.Cu mirror: pin layout changes
-    # Pin 1 (INL+) at (34.45, 34.15), pin 16 (VDD) at (34.45, 24.85)
-    # For I2S: we route to pins near the input side
-    # PAM8403 functional pins:
-    # Pin 4 = INR-, Pin 5 = INR+, Pin 12 = INL+, Pin 13 = INL-
-    # For mono bridged: use pin 5 (INR+) and pin 12 (INL+)
-    pam_pins = ["5", "12", "13"]  # BCLK→5, LRCK→12, DOUT→13
-
-    for i, (gpio, net_name) in enumerate(i2s):
-        net = NET_ID[net_name]
-        epx, epy = _esp_pin(gpio)
-        pam_pad = _pad("U5", pam_pins[i])
-        if not pam_pad:
-            continue
-        pamx, pamy = pam_pad
-
-        # Route from ESP32 (right side, x~89) to PAM8403 (left side, x~30)
-        # 1. B.Cu stub from ESP32 pad left -> via
-        via1_x = epx - 1.5
-        parts.append(_seg(epx, epy, via1_x, epy, "B.Cu", W_DATA, net))
-        parts.append(_via_net(via1_x, epy, net))
-
-        # 2. F.Cu horizontal LEFT across board to PAM8403 area
-        chan_y = epy  # use same Y for horizontal
-        parts.append(_seg(via1_x, chan_y, pamx, chan_y,
-                          "F.Cu", W_DATA, net))
-        parts.append(_via_net(pamx, chan_y, net))
-
-        # 3. B.Cu vertical from F.Cu channel to PAM8403 pad
-        # Offset X with fixed spacing to avoid same-X overlaps
-        col_x = 29.0 - i * 3.0  # i=0: 29, i=1: 26, i=2: 23
-        parts.append(_seg(pamx, chan_y, col_x, chan_y, "B.Cu", W_DATA, net))
-        parts.append(_seg(col_x, chan_y, col_x, pamy, "B.Cu", W_DATA, net))
-        if abs(col_x - pamx) > 0.01:
-            parts.append(_seg(col_x, pamy, pamx, pamy, "B.Cu", W_DATA, net))
-
-    # Audio output: PAM8403 -> Speaker
+    n_5v = NET_ID["+5V"]
+    n_gnd = NET_ID["GND"]
+    n_dout = NET_ID["I2S_DOUT"]
     n_spk_p = NET_ID["SPK+"]
     n_spk_m = NET_ID["SPK-"]
 
-    # PAM8403 output pins: pin 3 (OUTR+), pin 14 (OUTL+)
-    # Speaker pads
-    spk_1 = _pad("SPK1", "1")  # (39.5, 52.5)
-    spk_2 = _pad("SPK1", "2")  # (20.5, 52.5)
-    pam_outr = _pad("U5", "3")   # Right output
-    pam_outl = _pad("U5", "14")  # Left output
+    # ── Audio input: ESP32 I2S_DOUT → PAM8403 INR (pin 10) + INL (pin 7)
+    epx, epy = _esp_pin(17)  # GPIO 17 = I2S_DOUT
+    pam_inr = _pad("U5", "10")   # INR (26.825, 24.850)
+    pam_inl = _pad("U5", "7")    # INL (26.825, 34.150)
 
-    if pam_outr and spk_1:
-        # SPK+: PAM right output -> speaker pad 1
-        # Offset column +1.5mm right to avoid SPK- at same X
-        spk_p_x = pam_outr[0] + 1.5
-        mid_y = 23.0  # above PAM
-        parts.append(_seg(pam_outr[0], pam_outr[1], spk_p_x, pam_outr[1],
-                          "B.Cu", W_AUDIO, n_spk_p))
-        parts.append(_seg(spk_p_x, pam_outr[1], spk_p_x, mid_y,
-                          "B.Cu", W_AUDIO, n_spk_p))
-        parts.append(_via_net(spk_p_x, mid_y, n_spk_p))
-        parts.append(_seg(spk_p_x, mid_y, spk_1[0], mid_y,
-                          "F.Cu", W_AUDIO, n_spk_p))
-        parts.append(_via_net(spk_1[0], mid_y, n_spk_p))
-        parts.append(_seg(spk_1[0], mid_y, spk_1[0], spk_1[1],
-                          "B.Cu", W_AUDIO, n_spk_p))
+    if pam_inr:
+        inrx, inry = pam_inr
+        # B.Cu stub from ESP32 pad → via
+        via1_x = epx - 1.5
+        parts.append(_seg(epx, epy, via1_x, epy, "B.Cu", W_DATA, n_dout))
+        parts.append(_via_net(via1_x, epy, n_dout))
+        # F.Cu horizontal across board to PAM8403 area
+        parts.append(_seg(via1_x, epy, inrx, epy, "F.Cu", W_DATA, n_dout))
+        parts.append(_via_net(inrx, epy, n_dout))
+        # B.Cu vertical to INR pad
+        parts.append(_seg(inrx, epy, inrx, inry, "B.Cu", W_DATA, n_dout))
 
-    if pam_outl and spk_2:
-        # SPK-: PAM left output -> speaker pad 2
-        mid_y = 21.0  # above PAM, different channel
-        parts.append(_seg(pam_outl[0], pam_outl[1], pam_outl[0], mid_y,
-                          "B.Cu", W_AUDIO, n_spk_m))
-        parts.append(_via_net(pam_outl[0], mid_y, n_spk_m))
-        parts.append(_seg(pam_outl[0], mid_y, spk_2[0], mid_y,
-                          "F.Cu", W_AUDIO, n_spk_m))
-        parts.append(_via_net(spk_2[0], mid_y, n_spk_m))
-        parts.append(_seg(spk_2[0], mid_y, spk_2[0], spk_2[1],
-                          "B.Cu", W_AUDIO, n_spk_m))
+    if pam_inr and pam_inl:
+        inrx, inry = pam_inr
+        inlx, inly = pam_inl
+        # Bridge INR to INL for mono (same X column, vertical trace)
+        parts.append(_seg(inrx, inry, inrx, inly, "B.Cu", W_DATA, n_dout))
+
+    # ── Speaker output: BTL right channel
+    # SPK+ = +OUT_R (pin 16), SPK- = -OUT_R (pin 14)
+    spk_1 = _pad("SPK1", "1")    # (39.5, 52.5)
+    spk_2 = _pad("SPK1", "2")    # (20.5, 52.5)
+    pam_outr_p = _pad("U5", "16")  # +OUT_R (34.445, 24.850)
+    pam_outr_m = _pad("U5", "14")  # -OUT_R (31.905, 24.850)
+
+    if pam_outr_p and spk_1:
+        # SPK+: +OUT_R (pin 16) → speaker pad 1
+        ox, oy = pam_outr_p
+        sx, sy = spk_1
+        col_x = ox + 1.5  # offset right to avoid SPK- path
+        mid_y = 23.0
+        parts.append(_seg(ox, oy, col_x, oy, "B.Cu", W_AUDIO, n_spk_p))
+        parts.append(_seg(col_x, oy, col_x, mid_y, "B.Cu", W_AUDIO, n_spk_p))
+        parts.append(_via_net(col_x, mid_y, n_spk_p))
+        parts.append(_seg(col_x, mid_y, sx, mid_y, "F.Cu", W_AUDIO, n_spk_p))
+        parts.append(_via_net(sx, mid_y, n_spk_p))
+        parts.append(_seg(sx, mid_y, sx, sy, "B.Cu", W_AUDIO, n_spk_p))
+
+    if pam_outr_m and spk_2:
+        # SPK-: -OUT_R (pin 14) → speaker pad 2
+        ox, oy = pam_outr_m
+        sx, sy = spk_2
+        mid_y = 21.0  # different Y channel to avoid crossing SPK+
+        parts.append(_seg(ox, oy, ox, mid_y, "B.Cu", W_AUDIO, n_spk_m))
+        parts.append(_via_net(ox, mid_y, n_spk_m))
+        parts.append(_seg(ox, mid_y, sx, mid_y, "F.Cu", W_AUDIO, n_spk_m))
+        parts.append(_via_net(sx, mid_y, n_spk_m))
+        parts.append(_seg(sx, mid_y, sx, sy, "B.Cu", W_AUDIO, n_spk_m))
+
+    # ── PAM8403 +5V: chain on each row, single via per row
+    # Top row (y=34.15): VDD(6) → MUTE(5) → PVDD(4), via from VDD(6)
+    # VDD pin 6 at x=28.095, safe from BTN_RIGHT at x=31.0
+    # PVDD pin 4 at x=30.635 too close to BTN_RIGHT for a direct via
+    pam_vdd6 = _pad("U5", "6")
+    pam_mute = _pad("U5", "5")
+    pam_pvdd4 = _pad("U5", "4")
+    if pam_vdd6 and pam_mute:
+        parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
+                          pam_mute[0], pam_mute[1],
+                          "B.Cu", W_PWR, n_5v))
+    if pam_mute and pam_pvdd4:
+        parts.append(_seg(pam_mute[0], pam_mute[1],
+                          pam_pvdd4[0], pam_pvdd4[1],
+                          "B.Cu", W_PWR, n_5v))
+    if pam_vdd6:
+        via_y = pam_vdd6[1] + 2.0  # outward from IC
+        parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
+                          pam_vdd6[0], via_y, "B.Cu", W_PWR, n_5v))
+        parts.append(_via_net(pam_vdd6[0], via_y, n_5v))
+
+    # Bottom row (y=24.85): SHDN(12) → PVDD(13), via from PVDD(13)
+    pam_shdn = _pad("U5", "12")
+    pam_pvdd13 = _pad("U5", "13")
+    if pam_shdn and pam_pvdd13:
+        parts.append(_seg(pam_shdn[0], pam_shdn[1],
+                          pam_pvdd13[0], pam_pvdd13[1],
+                          "B.Cu", W_PWR, n_5v))
+    if pam_pvdd13:
+        via_y = pam_pvdd13[1] - 2.0  # outward from IC
+        parts.append(_seg(pam_pvdd13[0], pam_pvdd13[1],
+                          pam_pvdd13[0], via_y, "B.Cu", W_PWR, n_5v))
+        parts.append(_via_net(pam_pvdd13[0], via_y, n_5v))
+
+    # ── PAM8403 GND: PGND (pins 2, 15) + GND (pin 11) → GND
+    # All GND pins route vias outward from IC center
+    for pin in ["2", "15", "11"]:
+        p = _pad("U5", pin)
+        if p:
+            px, py = p
+            via_y = py + (2.0 if py > 30 else -2.0)  # outward
+            parts.append(_seg(px, py, px, via_y, "B.Cu", W_PWR, n_gnd))
+            parts.append(_via_net(px, via_y, n_gnd))
+
+    # VREF (pin 8): internal analog reference output.
+    # Ideally needs 100nF bypass cap to GND; no spare cap in BOM.
+    # Left unconnected — internal reference still functions with higher noise.
 
     return parts
 
@@ -830,18 +895,21 @@ def _usb_traces():
                        "B.Cu", W_DATA, n_dm))
     parts.append(_seg(dm_col_x, dm_y, dm_x, dm_y, "B.Cu", W_DATA, n_dm))
 
-    # USB CC pull-down resistors -> GND via (use actual pad positions)
+    # USB CC pull-down resistors -> local GND vias
     n_gnd = NET_ID["GND"]
     usb_gnd = _pad("J1", "A12")
     if usb_gnd:
         r1_gnd_pad = _pad("R1", "2")
         r2_gnd_pad = _pad("R2", "2")
+        cc_gnd_via_y = usb_gnd[1] - 2
         if r1_gnd_pad:
             parts.append(_seg(r1_gnd_pad[0], r1_gnd_pad[1], r1_gnd_pad[0],
-                              usb_gnd[1] - 2, "B.Cu", W_SIG, n_gnd))
+                              cc_gnd_via_y, "B.Cu", W_SIG, n_gnd))
+            parts.append(_via_net(r1_gnd_pad[0], cc_gnd_via_y, n_gnd))
         if r2_gnd_pad:
             parts.append(_seg(r2_gnd_pad[0], r2_gnd_pad[1], r2_gnd_pad[0],
-                              usb_gnd[1] - 2, "B.Cu", W_SIG, n_gnd))
+                              cc_gnd_via_y, "B.Cu", W_SIG, n_gnd))
+            parts.append(_via_net(r2_gnd_pad[0], cc_gnd_via_y, n_gnd))
 
     return parts
 
@@ -907,20 +975,20 @@ def _button_traces():
     for i, b in enumerate(btn_data):
         epx = b["epx"]
         if epx > CX:
-            ax = epx + 2 + i * 0.6
+            ax = epx + 2 + i * 1.0   # DFM: was 0.6mm (via overlap)
         else:
-            ax = epx - 2 - i * 0.6
+            ax = epx - 2 - i * 1.0   # DFM: was 0.6mm (via overlap)
         # Nudge away from passive traces and previously used columns
         for _ in range(20):
             conflict = False
             for px in passive_trace_xs:
-                if abs(ax - px) < 0.5:  # need 0.5mm clearance
-                    ax = px + 0.5 if ax > px else px - 0.5
+                if abs(ax - px) < 0.8:  # DFM: was 0.5mm
+                    ax = px + 0.8 if ax > px else px - 0.8
                     conflict = True
                     break
             for ux in used_approach_xs:
-                if abs(ax - ux) < 0.4:  # need 0.4mm clearance
-                    ax = ux - 0.4 if ax < ux else ux + 0.4
+                if abs(ax - ux) < 1.0:  # DFM: was 0.4mm (via overlap)
+                    ax = ux - 1.0 if ax < ux else ux + 1.0
                     conflict = True
                     break
             if not conflict:
@@ -973,7 +1041,7 @@ def _button_traces():
         # Bottom-side pins (y≈40) get Y-stagger to avoid same-Y overlap
         is_bottom = abs(epy - 40.0) < 2.0
         if is_bottom:
-            stagger_y = 38.0 - bottom_stagger_idx * 0.8
+            stagger_y = 38.0 - bottom_stagger_idx * 1.0  # DFM: was 0.8mm
             bottom_stagger_idx += 1
             # B.Cu vertical to stagger Y
             parts.append(_seg(ax, cy, ax, stagger_y, "B.Cu", W_SIG, net))
@@ -995,10 +1063,10 @@ def _button_traces():
                                   "F.Cu", W_SIG, net))
                 parts.append(_via_net(epx, epy, net))
 
-        # 6. GND via on opposite button pad
+        # 6. GND via on opposite button pad (mini-via: low current)
         gp = b["gnd_pad"]
         if gp:
-            parts.append(_via_net(gp[0], gp[1], n_gnd))
+            parts.append(_via_net(gp[0], gp[1], n_gnd, size=0.5, drill=0.2))
 
     # Shoulder button BTN_L (B.Cu, rotated 90°)
     net_l = NET_ID["BTN_L"]
@@ -1122,71 +1190,89 @@ def _passive_traces():
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c2_p2[0], c2_p2[1] + 2, n_gnd))
 
-    # C17 near IP5306: pad "1" -> +5V via, pad "2" -> GND via
+    # C17 near IP5306: VIN decoupling, pad "1" -> VBUS via, pad "2" -> GND via
     c17_p1 = _pad("C17", "1")
     c17_p2 = _pad("C17", "2")
     if c17_p1:
         parts.append(_seg(c17_p1[0], c17_p1[1], c17_p1[0], c17_p1[1] - 2,
-                          "B.Cu", W_SIG, n_5v))
-        parts.append(_via_net(c17_p1[0], c17_p1[1] - 2, n_5v))
+                          "B.Cu", W_SIG, NET_ID["VBUS"]))
+        parts.append(_via_net(c17_p1[0], c17_p1[1] - 2, NET_ID["VBUS"]))
     if c17_p2:
         parts.append(_seg(c17_p2[0], c17_p2[1], c17_p2[0], c17_p2[1] + 2,
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c17_p2[0], c17_p2[1] + 2, n_gnd))
 
-    # C18 near IP5306: pad "1" -> +5V via, pad "2" -> GND via
+    # C18 near IP5306: BAT decoupling, pad "1" -> BAT+ via, pad "2" -> GND via
     c18_p1 = _pad("C18", "1")
     c18_p2 = _pad("C18", "2")
     if c18_p1:
         parts.append(_seg(c18_p1[0], c18_p1[1], c18_p1[0], c18_p1[1] - 2,
-                          "B.Cu", W_SIG, n_5v))
-        parts.append(_via_net(c18_p1[0], c18_p1[1] - 2, n_5v))
+                          "B.Cu", W_SIG, NET_ID["BAT+"]))
+        parts.append(_via_net(c18_p1[0], c18_p1[1] - 2, NET_ID["BAT+"]))
     if c18_p2:
         parts.append(_seg(c18_p2[0], c18_p2[1], c18_p2[0], c18_p2[1] + 2,
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c18_p2[0], c18_p2[1] + 2, n_gnd))
 
-    # C19 near L1: pad "1" -> BAT+ (connect to L1 pad 2), pad "2" -> GND via
+    # C19 near L1: VOUT decoupling, pad "1" -> +5V via, pad "2" -> GND via
     c19_p1 = _pad("C19", "1")
     c19_p2 = _pad("C19", "2")
-    l1_2 = _pad("L1", "2")
-    if c19_p1 and l1_2:
-        parts.append(_seg(c19_p1[0], c19_p1[1], l1_2[0], c19_p1[1],
-                          "B.Cu", W_SIG, NET_ID["BAT+"]))
-        parts.append(_seg(l1_2[0], c19_p1[1], l1_2[0], l1_2[1],
-                          "B.Cu", W_SIG, NET_ID["BAT+"]))
+    if c19_p1:
+        parts.append(_seg(c19_p1[0], c19_p1[1], c19_p1[0], c19_p1[1] - 2,
+                          "B.Cu", W_SIG, NET_ID["+5V"]))
+        parts.append(_via_net(c19_p1[0], c19_p1[1] - 2, NET_ID["+5V"]))
     if c19_p2:
         parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 2,
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c19_p2[0], c19_p2[1] + 2, n_gnd))
 
-    # R16 IP5306 KEY pull-down: pad "1" -> IP5306 KEY, pad "2" -> GND via
-    r16_p1 = _pad("R16", "1")
-    r16_p2 = _pad("R16", "2")
-    if r16_p2:
-        parts.append(_seg(r16_p2[0], r16_p2[1], r16_p2[0], r16_p2[1] + 2,
-                          "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(r16_p2[0], r16_p2[1] + 2, n_gnd))
+    # R16 IP5306 KEY pull-up: now handled in _power_traces()
 
     return parts
 
 
 def _led_traces():
-    """LED traces: F.Cu pads -> via -> inner zone connections."""
+    """LED traces with inline current-limiting resistors.
+
+    Circuit: +3V3 → R17/R18 (B.Cu) → via → LED1/LED2 (F.Cu) → GND
+    R17 at (25.0, 65.0) B.Cu, LED1 at (25.0, 67.5) F.Cu
+    R18 at (32.0, 65.0) B.Cu, LED2 at (32.0, 67.5) F.Cu
+    """
     parts = []
+    _init_pads()
     n_3v3 = NET_ID["+3V3"]
     n_gnd = NET_ID["GND"]
 
-    for i, (lx, ly) in enumerate([LED1, LED2]):
-        # +3V3 anode — offset via Y to avoid button approach column vias
-        via_offset = 2.5 + i * 1.5  # stagger per LED (LED2 needs 4mm to clear BTN vias)
-        parts.append(_seg(lx - 1, ly, lx - 1, ly - via_offset,
-                          "F.Cu", W_SIG, n_3v3))
-        parts.append(_via_net(lx - 1, ly - via_offset, n_3v3))
-        # GND cathode
-        parts.append(_seg(lx + 1, ly, lx + 1, ly - via_offset,
+    pairs = [("R17", "LED1"), ("R18", "LED2")]
+    for i, (r_ref, led_ref) in enumerate(pairs):
+        r_p1 = _pad(r_ref, "1")   # B.Cu: x+0.95 (mirrored)
+        r_p2 = _pad(r_ref, "2")   # B.Cu: x-0.95 (mirrored)
+        led_p1 = _pad(led_ref, "1")  # F.Cu: x-0.95
+        led_p2 = _pad(led_ref, "2")  # F.Cu: x+0.95
+        if not (r_p1 and r_p2 and led_p1 and led_p2):
+            continue
+
+        # +3V3 via → R pad 1 (B.Cu, right side of resistor)
+        via_3v3_y = r_p1[1] - 2.0
+        parts.append(_via_net(r_p1[0], via_3v3_y, n_3v3))
+        parts.append(_seg(r_p1[0], via_3v3_y, r_p1[0], r_p1[1],
+                          "B.Cu", W_SIG, n_3v3))
+
+        # R pad 2 (B.Cu, left side) → via → LED pad 1 (F.Cu, left side)
+        # Same X column, use mid-point via at x=pad2 x
+        mid_y = (r_p2[1] + led_p1[1]) / 2
+        parts.append(_seg(r_p2[0], r_p2[1], r_p2[0], mid_y,
+                          "B.Cu", W_SIG, 0))
+        parts.append(P.via(r_p2[0], mid_y, size=0.8, drill=0.35, net=0))
+        parts.append(_seg(led_p1[0], mid_y, led_p1[0], led_p1[1],
+                          "F.Cu", W_SIG, 0))
+
+        # LED pad 2 (F.Cu, right side) → GND via
+        # Offset GND via horizontally RIGHT to avoid same-X column as +3V3 via
+        gnd_via_x = led_p2[0] + 1.5
+        parts.append(_seg(led_p2[0], led_p2[1], gnd_via_x, led_p2[1],
                           "F.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(lx + 1, ly - via_offset, n_gnd))
+        parts.append(_via_net(gnd_via_x, led_p2[1], n_gnd))
 
     return parts
 

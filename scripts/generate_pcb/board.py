@@ -81,8 +81,8 @@ LED_FULL_ENC = (-48, -30)      # Green LED — fully charged
 ESP32_ENC = (0, 10)
 
 # Shoulder L/R (near top edge, BACK side — rotated 90°, aligned to PCB top)
-SHOULDER_L_ENC = (-65, 35)
-SHOULDER_R_ENC = (65, 35)
+SHOULDER_L_ENC = (-65, 32)
+SHOULDER_R_ENC = (65, 32)
 
 # FPC display connector (right of slot, VERTICAL orientation)
 # Rotated 90° — pins run vertically from y=25.75 to y=45.25 at x=135.
@@ -241,10 +241,10 @@ def _display_outline():
     x1, y1 = dx - dw2, dy - dh2
     x2, y2 = dx + dw2, dy + dh2
     for layer in ("F.SilkS",):
-        parts.append(P.gr_line(x1, y1, x2, y1, layer=layer))
-        parts.append(P.gr_line(x2, y1, x2, y2, layer=layer))
-        parts.append(P.gr_line(x2, y2, x1, y2, layer=layer))
-        parts.append(P.gr_line(x1, y2, x1, y1, layer=layer))
+        parts.append(P.gr_line(x1, y1, x2, y1, layer=layer, width=0.2))
+        parts.append(P.gr_line(x2, y1, x2, y2, layer=layer, width=0.2))
+        parts.append(P.gr_line(x2, y2, x1, y2, layer=layer, width=0.2))
+        parts.append(P.gr_line(x1, y2, x1, y1, layer=layer, width=0.2))
     return "".join(parts)
 
 
@@ -335,12 +335,14 @@ def _component_placeholders():
     placements.append(("R1", "R_0805", ux - 6, uy - 5, 0, "B.Cu"))
     placements.append(("R2", "R_0805", ux + 6, uy - 5, 0, "B.Cu"))
 
-    # ESP32 decoupling + LED resistors (y=42, below ESP32 body edge at 40.25)
+    # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
     placements.append(("C3", "C_0805", 70, 42, 0, "B.Cu"))
-    placements.append(("R17", "R_0805", 75, 42, 0, "B.Cu"))
-    placements.append(("R18", "R_0805", 80, 42, 0, "B.Cu"))
     placements.append(("C4", "C_0805", 85, 42, 0, "B.Cu"))
+
+    # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
+    placements.append(("R17", "R_0805", 25, 65, 0, "B.Cu"))
+    placements.append(("R18", "R_0805", 32, 65, 0, "B.Cu"))
 
     # Pull-up resistors (y=46, x=43..103, 5mm spacing)
     pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
@@ -369,6 +371,21 @@ def _component_placeholders():
     placements.append(("C1", "C_0805", amx, amy - 5, 0, "B.Cu"))
     placements.append(("C2", "C_1206", amx, amy + 5, 0, "B.Cu"))
 
+    # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)
+    _text_offsets = {
+        "ESP32-S3-WROOM-1-N16R8": (-15, 15),
+        "USB-C-16P": (-6, 4),
+        "FPC-40P-0.5mm": (-12, 12),
+        "TF-01A": (-8, 8),
+        "SOP-16": (-7, 7),
+        "ESOP-8": (-5, 5),
+        "SOT-223": (-5, 5),
+        "Speaker-22mm": (-13, 13),
+        "JST-PH-2P": (-3, 3),
+        "SS-12D00G3": (-4, 4),
+        "SMD-4x4x2": (-4, 4),
+    }
+
     # Generate footprints with real pad geometries
     for ref, fp_name, x, y, rot, layer in placements:
         layer_char = "F" if "F." in layer else "B"
@@ -376,16 +393,17 @@ def _component_placeholders():
         pad_str = "".join(pads)
         silk_layer = "F.SilkS" if layer_char == "F" else "B.SilkS"
         mirror = " (justify mirror)" if "B." in layer else ""
+        ref_y, val_y = _text_offsets.get(fp_name, (-3, 3))
         parts.append(
             f'  (footprint "{fp_name}" (at {x} {y} {rot})'
             f' (layer "{layer}")\n'
             f'    (uuid "{P.uid()}")\n'
             f'    (property "Reference" "{ref}"'
-            f' (at 0 -3 0) (layer "{silk_layer}")'
+            f' (at 0 {ref_y} 0) (layer "{silk_layer}")'
             f' (effects (font (size 1 1)'
             f' (thickness 0.15)){mirror}))\n'
             f'    (property "Value" "{fp_name}"'
-            f' (at 0 3 0) (layer "{silk_layer}")'
+            f' (at 0 {val_y} 0) (layer "{silk_layer}")'
             f' (effects (font (size 1 1)'
             f' (thickness 0.15)){mirror}))\n'
             f'{pad_str}'

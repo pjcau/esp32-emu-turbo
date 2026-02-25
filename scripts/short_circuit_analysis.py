@@ -351,10 +351,10 @@ def main():
         errors = fn(data)
         status = "PASS" if not errors else f"FAIL ({len(errors)})"
         print(f"  [{status}] {name}")
-        for e in errors[:10]:
+        for e in errors[:60]:
             print(f"    CRITICAL: {e}")
-        if len(errors) > 10:
-            print(f"    ... and {len(errors) - 10} more")
+        if len(errors) > 60:
+            print(f"    ... and {len(errors) - 60} more")
         all_critical.extend(errors)
 
     # Gerber check
