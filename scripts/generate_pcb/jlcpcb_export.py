@@ -60,7 +60,7 @@ _JLCPCB_POS_CORRECTIONS = {
 # The JLCPCB C5122557 (PAM8403) 3D model's default orientation differs
 # from the generic SOP correction database. Tested empirically.
 _JLCPCB_ROT_OVERRIDES = {
-    "U5": 0,     # PAM8403 (C5122557) — empirically tested
+    "U5": 90,    # PAM8403 (C5122557) — 90° pre-rotation + X-mirror requires CPL=90
 }
 
 
@@ -257,7 +257,7 @@ def _build_placements():
 
     # ── AMS1117 support caps (±7mm spacing for DFM clearance) ──
     p.append(("C1", "10uF", "C_0805",
-              amx, amy - 7, 0, "bottom"))
+              amx - 3, amy - 7, 0, "bottom"))  # DFM: match board.py (moved from amx-1)
     p.append(("C2", "22uF", "C_1206",
               amx, amy + 7, 0, "bottom"))
 

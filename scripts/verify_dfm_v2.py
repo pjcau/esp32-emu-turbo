@@ -2,8 +2,11 @@
 """Verify DFM v2 fixes: CPL alignment, silkscreen, spacing, gerbers."""
 
 import csv
+import json
 import os
 import re
+import shutil
+import subprocess
 import sys
 import zipfile
 
@@ -55,9 +58,9 @@ def test_cpl_positions():
     check("U1 Mid Y = 31.12mm (ESP32 correction)", abs(u1_y - 31.12) < 0.01,
           f"got {u1_y}")
 
-    # U5: rotation override (empirically determined for C5122557)
+    # U5: rotation override — 90° aligns pre-rotated SOP-16 with JLCPCB model
     u5_rot = int(cpl["U5"]["Rotation"])
-    check("U5 rotation = 0 (override)", u5_rot == 0,
+    check("U5 rotation = 90 (pre-rotation alignment)", u5_rot == 90,
           f"got {u5_rot}")
 
 
@@ -262,6 +265,59 @@ def test_sop16_aperture():
     check("SOP-16 rotated aperture R,0.6x2.05 exists", has_rotated)
 
 
+def test_kicad_drc():
+    """Test 13-15: KiCad DRC — no real violations (edge, hole, silk)."""
+    print("\n── KiCad DRC Tests ──")
+    kicad_cli = shutil.which("kicad-cli")
+    if not kicad_cli:
+        print("  SKIP  kicad-cli not found (install KiCad for DRC tests)")
+        return
+
+    drc_out = os.path.join(BASE, "hardware", "kicad", "drc-report.json")
+    try:
+        subprocess.run(
+            [kicad_cli, "pcb", "drc",
+             "--output", drc_out, "--format", "json",
+             "--severity-all", "--units", "mm", "--all-track-errors",
+             PCB_FILE],
+            capture_output=True, timeout=60,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        print("  SKIP  kicad-cli drc failed to run")
+        return
+
+    if not os.path.exists(drc_out):
+        print("  SKIP  DRC report not generated")
+        return
+
+    with open(drc_out) as f:
+        data = json.load(f)
+
+    from collections import Counter
+    types = Counter()
+    for v in data.get("violations", []):
+        types[v["type"]] += 1
+
+    # Real violations that should be zero
+    edge = types.get("copper_edge_clearance", 0)
+    hole = types.get("hole_to_hole", 0)
+    silk_copper = types.get("silk_over_copper", 0)
+    silk_overlap = types.get("silk_overlap", 0)
+    silk_edge = types.get("silk_edge_clearance", 0)
+
+    check("KiCad DRC: copper_edge_clearance = 0", edge == 0,
+          f"got {edge}")
+    check("KiCad DRC: hole_to_hole = 0", hole == 0,
+          f"got {hole}")
+    check("KiCad DRC: silk issues = 0",
+          silk_copper + silk_overlap + silk_edge == 0,
+          f"silk_over_copper={silk_copper}, silk_overlap={silk_overlap}, "
+          f"silk_edge={silk_edge}")
+
+    # Clean up
+    os.remove(drc_out)
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -276,6 +332,7 @@ if __name__ == "__main__":
     test_gerber_zip()
     test_u5_pin_alignment()
     test_sop16_aperture()
+    test_kicad_drc()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")

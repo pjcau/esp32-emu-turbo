@@ -91,7 +91,7 @@ ABXY = [
     ("SW5", enc(62, 15)),     # A
     ("SW6", enc(72, 5)),      # B
     ("SW7", enc(62, -5)),     # X
-    ("SW8", enc(52, 5)),      # Y
+    ("SW8", enc(54, 5)),      # Y — DFM: was enc(52,5), moved +2mm right (slot edge + GND via vs LCD approach)
 ]
 SS = [
     ("SW9", enc(-72, -17)),   # START
@@ -119,7 +119,7 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (125.0, 48.5)   # AMS1117 input cap (amx, amy-7)
+C1_POS = (122.0, 48.5)   # AMS1117 input cap — DFM: was 124.0 (pad/via too close to FPC slot)
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (70.0, 42.0)    # ESP32 decoupling 1
 C4_POS = (85.0, 42.0)    # ESP32 decoupling 2
@@ -562,7 +562,7 @@ def _display_traces():
         # Approach column: 0.90mm pitch with 0.7mm/0.3mm vias (DFM fix).
         # All approach vias east of BTN_Y (x=129.6) and west of BTN_A (x=138)
         # so B.Cu stubs go EAST to FPC pads without crossing button verticals.
-        apx = 130.0 + idx * 0.90
+        apx = 130.0 + idx * 1.0  # DFM: was 0.90mm (hole_to_hole violations with GND/BTN vias)
         col_x = 124.0 - idx * 1.1  # 1.1mm pitch avoids +5V vertical at x~117
 
         is_bottom = abs(epy - 40.0) < 1.0
@@ -570,7 +570,7 @@ def _display_traces():
         if is_bottom:
             # Bottom-side ESP32 pins: vertical stub UP to staggered Y
             # to avoid parallel overlapping horizontal stubs at y=40
-            stagger_y = 38.0 - stagger_idx * 1.0  # DFM: was 0.6mm (via overlap)
+            stagger_y = 38.0 - stagger_idx * 1.2  # DFM: 1.2mm pitch (was 1.0, hole_to_hole violation)
             stagger_idx += 1
 
             # 1. B.Cu vertical from pad up to stagger level
@@ -621,7 +621,7 @@ def _display_traces():
     gnd_pins_offsets = [
         (5, -3, 0),     # pin 5: offset x=-3
         (16, -3, 2),    # pin 16: offset x=-3, y=+2
-        (34, 3, -3),    # pin 34: offset x=+3, y=-3
+        (34, 4, -3),    # pin 34: offset x=+4, y=-3 (DFM: was +3, hole_to_hole with LCD_D6 approach via)
         (35, -3, 2),    # pin 35: offset x=-3, y=+2
         (36, 3, 3),     # pin 36: offset x=+3, y=+3
         (37, -3, -2),   # pin 37: offset x=-3, y=-2
@@ -679,7 +679,7 @@ def _spi_traces():
         sdx, sdy = sd_pad
 
         # Bypass Y above the slot
-        bypass_y = 20.0 + i * 1.0  # DFM: was 0.5mm pitch (via overlap)
+        bypass_y = 19.0 + i * 1.0  # DFM: was 20.0 (SD_CS at y=23 too close to slot top y=23.5)
 
         # 1. B.Cu stub from ESP32 pad -> via
         stub_x = epx - 1.5 - i * 0.5  # unique offset left
@@ -777,7 +777,7 @@ def _i2s_traces():
         ox, oy = pam_outr_p
         sx, sy = spk_1
         col_x = ox + 1.5  # offset right to avoid SPK- path
-        mid_y = 23.0
+        mid_y = 22.5  # DFM: was 23.0 (too close to FPC slot top at y=23.5)
         parts.append(_seg(ox, oy, col_x, oy, "B.Cu", W_AUDIO, n_spk_p))
         parts.append(_seg(col_x, oy, col_x, mid_y, "B.Cu", W_AUDIO, n_spk_p))
         parts.append(_via_net(col_x, mid_y, n_spk_p))
@@ -1084,10 +1084,14 @@ def _button_traces():
                                   "F.Cu", W_SIG, net))
                 parts.append(_via_net(epx, epy, net))
 
-        # 6. GND via on opposite button pad (mini-via: low current)
+        # 6. GND via near opposite button pad (offset 1mm for DFM lead-to-hole)
         gp = b["gnd_pad"]
         if gp:
-            parts.append(_via_net(gp[0], gp[1], n_gnd, size=0.7, drill=0.3))
+            # Offset via 1mm below GND pad (Y+) + short stub trace
+            gnd_via_y = gp[1] + 1.0
+            parts.append(_seg(gp[0], gp[1], gp[0], gnd_via_y,
+                              "F.Cu", W_SIG, n_gnd))
+            parts.append(_via_net(gp[0], gnd_via_y, n_gnd, size=0.7, drill=0.3))
 
     # Shoulder button BTN_L (B.Cu, rotated 90°)
     net_l = NET_ID["BTN_L"]

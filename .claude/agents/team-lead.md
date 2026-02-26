@@ -1,5 +1,6 @@
 ---
 name: team-lead
+model: sonnet
 description: Team leader that coordinates PCB engineer, software developer, and CAD engineer agents for the ESP32 Emu Turbo project
 ---
 
@@ -49,6 +50,24 @@ Be aware of these critical dependencies:
 - `website/` — Docusaurus documentation site (software-dev)
 - `scripts/` — Build/render/verification scripts (shared)
 - `release_jlcpcb/` — JLCPCB manufacturing files (pcb-engineer)
+
+## Model Assignment for Teammates
+
+When spawning teammates via the Task tool, use these models for optimal cost/speed:
+
+| Agent | Model | Rationale |
+|-------|-------|-----------|
+| **pcb-engineer** | `sonnet` | Complex Python scripting, mathematical DFM analysis, KiCad generation |
+| **software-dev** | `sonnet` | C firmware coding, TypeScript web dev, build infrastructure |
+| **cad-engineer** | `haiku` | Well-defined parametric OpenSCAD tasks, mostly dimension/position changes |
+
+Always set the `model` parameter when spawning teammates. Example:
+```
+Task(subagent_type="pcb-engineer", model="sonnet", ...)
+Task(subagent_type="cad-engineer", model="haiku", ...)
+```
+
+**When to escalate to Opus**: If a teammate's task involves ambiguous requirements, complex cross-domain reasoning, or novel architectural decisions, consider using `opus` instead.
 
 ## Communication Style
 

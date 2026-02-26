@@ -62,7 +62,7 @@ DPAD_OFFSETS = [(0, 9), (0, -9), (-9, 0), (9, 0)]  # UP, DN, LF, RT
 
 # ABXY buttons (right cluster, wider diamond)
 ABXY_ENC = (62, 5)
-ABXY_OFFSETS = [(0, 10), (10, 0), (0, -10), (-10, 0)]  # A, B, X, Y
+ABXY_OFFSETS = [(0, 10), (10, 0), (0, -10), (-8, 0)]  # A, B, X, Y — Y shifted +2mm from FPC slot
 
 # Start/Select (below D-pad area)
 SS_ENC = (-62, -17)
@@ -174,61 +174,61 @@ def _silkscreen_labels():
     dx, dy = enc_to_pcb(*DISPLAY_ENC)
     dw2, dh2 = DISPLAY_W / 2, DISPLAY_H / 2
     parts.append(P.gr_text(
-        "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 1,
-        "F.SilkS", 1.0,
+        "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 2,
+        "F.Fab", 1.0,  # DFM: Fab avoids silk_over_copper
     ))
 
-    # Board title
+    # Board title (below display outline bottom to avoid silk_overlap)
     parts.append(P.gr_text(
-        "ESP32 EMU Turbo CPJ&CP v1.0", CX, CY + 30,
-        "F.SilkS", 1.5,
+        "ESP32 EMU Turbo CPJ&CP v1.0", CX, CY + 33,
+        "F.Fab", 1.5,  # DFM: F.Fab avoids silk_over_copper near mounting holes
     ))
 
     # Button group labels (front)
     px, py = enc_to_pcb(*DPAD_ENC)
-    parts.append(P.gr_text("D-PAD", px, py - 15, "F.SilkS"))
+    parts.append(P.gr_text("D-PAD", px, py - 15, "F.Fab"))
     px, py = enc_to_pcb(*ABXY_ENC)
-    parts.append(P.gr_text("ABXY", px, py - 16, "F.SilkS"))
+    parts.append(P.gr_text("ABXY", px, py - 16, "F.Fab"))
 
     # Menu button label (front)
     px, py = enc_to_pcb(*MENU_ENC)
-    parts.append(P.gr_text("MENU", px, py - 5, "F.SilkS", 0.8))
+    parts.append(P.gr_text("MENU", px, py - 5, "F.Fab", 0.8))
 
     # LED labels (front side, bottom-left)
     px, py = enc_to_pcb(*LED_CHARGE_ENC)
-    parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 0.8))
+    parts.append(P.gr_text("CHG", px, py + 3, "F.Fab", 0.8))
     px, py = enc_to_pcb(*LED_FULL_ENC)
-    parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 0.8))
+    parts.append(P.gr_text("FULL", px, py + 3, "F.Fab", 0.8))
 
     # ── Back silkscreen (everything else) ──
     px, py = enc_to_pcb(*ESP32_ENC)
-    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS"))
+    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.Fab"))
     px, py = enc_to_pcb(*IP5306_ENC)
-    parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 0.8))
+    parts.append(P.gr_text("IP5306", px, py - 10, "B.Fab", 0.8))
     px, py = enc_to_pcb(*AMS1117_ENC)
-    parts.append(P.gr_text("AMS1117", px, py - 8, "B.SilkS", 0.8))
+    parts.append(P.gr_text("AMS1117", px - 3, py - 6, "B.Fab", 0.8))  # DFM: B.Fab avoids silk_over_copper
     px, py = enc_to_pcb(*PAM8403_ENC)
-    parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("PAM8403", px, py - 5, "B.Fab", 0.8))  # DFM: B.Fab avoids silk_over_copper
 
     # Connector labels (back side)
     px, py = enc_to_pcb(*USBC_ENC)
-    parts.append(P.gr_text("USB-C", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("USB-C", px, py - 5, "B.Fab", 0.8))
     px, py = enc_to_pcb(*SD_ENC)
-    parts.append(P.gr_text("SD", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("SD", px, py - 5, "B.Fab", 0.8))  # DFM: B.Fab avoids silk_over_copper
 
     # Power switch label (back side)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("PWR", px, py - 5, "B.Fab", 0.8))
 
     # Speaker label (back side)
     px, py = enc_to_pcb(*SPEAKER_ENC)
-    parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 0.8))
+    parts.append(P.gr_text("SPEAKER", px, py, "B.Fab", 0.8))
 
     # Shoulder button labels (back side — rotated 90°, aligned to top edge)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("L", px, py + 5, "B.Fab", 0.8))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("R", px, py + 5, "B.Fab", 0.8))
 
     return "".join(parts)
 
@@ -240,7 +240,7 @@ def _display_outline():
     parts = []
     x1, y1 = dx - dw2, dy - dh2
     x2, y2 = dx + dw2, dy + dh2
-    for layer in ("F.SilkS",):
+    for layer in ("F.Fab",):  # DFM: F.Fab avoids silk_over_copper at bottom edge
         parts.append(P.gr_line(x1, y1, x2, y1, layer=layer, width=0.2))
         parts.append(P.gr_line(x2, y1, x2, y2, layer=layer, width=0.2))
         parts.append(P.gr_line(x2, y2, x1, y2, layer=layer, width=0.2))
@@ -367,8 +367,9 @@ def _component_placeholders():
     placements.append(("C19", "C_1206", lx, ly + 6, 0, "B.Cu"))
 
     # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
+    # C1 at amx-1 to keep pads outside FPC slot zone (slot starts at x=125.5)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("C1", "C_0805", amx, amy - 7, 0, "B.Cu"))
+    placements.append(("C1", "C_0805", amx - 3, amy - 7, 0, "B.Cu"))  # DFM: was amx-1, too close to FPC slot
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
     # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)

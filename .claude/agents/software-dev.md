@@ -1,5 +1,6 @@
 ---
 name: software-dev
+model: sonnet
 description: Software developer — ESP-IDF firmware development, Docusaurus website, build infrastructure, GPIO sync
 skills:
   - firmware-build
