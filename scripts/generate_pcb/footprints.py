@@ -10,6 +10,7 @@ Pad dimensions sourced from:
   - Manufacturer datasheets (Espressif, HCTL, Korean Hroparts Elec)
 """
 
+import math
 import re
 
 from . import primitives as P
@@ -385,6 +386,46 @@ FOOTPRINTS = {
 }
 
 
+def _pre_rotate_element(elem_str, angle_deg):
+    """Pre-rotate a pad/line/circle element by angle (degrees).
+
+    Rotates positions (at, start, end, center) and swaps pad (size w h)
+    for 90°/270° rotations so gerber apertures have correct orientation.
+    """
+    if angle_deg % 360 == 0:
+        return elem_str
+
+    rad = math.radians(angle_deg)
+    cos_a = math.cos(rad)
+    sin_a = math.sin(rad)
+
+    def _rotate_point(m):
+        kw = m.group(1)
+        x, y = float(m.group(2)), float(m.group(3))
+        nx = round(x * cos_a - y * sin_a, 6)
+        ny = round(x * sin_a + y * cos_a, 6)
+        if nx == 0:
+            nx = 0.0
+        if ny == 0:
+            ny = 0.0
+        return f'({kw} {nx:g} {ny:g})'
+
+    result = re.sub(
+        r'\((at|start|end|center) ([-\d.]+) ([-\d.]+)\)',
+        _rotate_point, elem_str,
+    )
+
+    # Swap (size w h) for 90° / 270° rotations
+    if angle_deg % 180 != 0:
+        result = re.sub(
+            r'\(size ([\d.]+) ([\d.]+)\)',
+            lambda m: f'(size {m.group(2)} {m.group(1)})',
+            result,
+        )
+
+    return result
+
+
 def _mirror_pad_x(pad_str):
     """Negate X coordinates in a pad/line S-expression for B.Cu mirroring.
 
@@ -404,18 +445,22 @@ def _mirror_pad_x(pad_str):
                   _negate, pad_str)
 
 
-def get_pads(footprint_name, layer=None):
+def get_pads(footprint_name, layer=None, rotation=0):
     """Return pad S-expression list for a given footprint.
 
-    If layer is None, uses the default layer for that footprint.
-    For B.Cu footprints, pad X coordinates are negated (mirrored)
-    to match KiCad's convention for bottom-side components.
+    If rotation is non-zero, pads are pre-rotated so the footprint
+    can be placed with rotation=0 in the .kicad_pcb file.  This ensures
+    pad apertures in the gerber export have the correct orientation.
+
+    Order: generate → pre-rotate → mirror (B.Cu).
     """
     if footprint_name not in FOOTPRINTS:
         return []
     gen, default_layer = FOOTPRINTS[footprint_name]
     actual_layer = layer or default_layer
     pads = gen(actual_layer)
+    if rotation % 360 != 0:
+        pads = [_pre_rotate_element(p, rotation) for p in pads]
     if actual_layer == "B":
         pads = [_mirror_pad_x(p) for p in pads]
     return pads

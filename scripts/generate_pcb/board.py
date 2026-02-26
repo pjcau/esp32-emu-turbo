@@ -387,15 +387,18 @@ def _component_placeholders():
     }
 
     # Generate footprints with real pad geometries
+    # Pads are pre-rotated so the footprint is placed with rotation=0.
+    # This ensures gerber apertures have the correct orientation
+    # (kicad-cli does not rotate pad aperture shapes for rotated footprints).
     for ref, fp_name, x, y, rot, layer in placements:
         layer_char = "F" if "F." in layer else "B"
-        pads = FP.get_pads(fp_name, layer_char)
+        pads = FP.get_pads(fp_name, layer_char, rotation=rot)
         pad_str = "".join(pads)
         silk_layer = "F.SilkS" if layer_char == "F" else "B.SilkS"
         mirror = " (justify mirror)" if "B." in layer else ""
         ref_y, val_y = _text_offsets.get(fp_name, (-3, 3))
         parts.append(
-            f'  (footprint "{fp_name}" (at {x} {y} {rot})'
+            f'  (footprint "{fp_name}" (at {x} {y})'
             f' (layer "{layer}")\n'
             f'    (uuid "{P.uid()}")\n'
             f'    (property "Reference" "{ref}"'
