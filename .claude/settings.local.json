@@ -2,7 +2,13 @@
   "permissions": {
     "allow": [
       "Bash(*)",
-      "WebFetch(domain:*)"
+      "WebFetch(domain:*)",
+      "WebSearch",
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep"
     ],
     "deny": [
       "Bash(rm -rf /*)",
