@@ -58,7 +58,7 @@ _JLCPCB_POS_CORRECTIONS = {
 # ── Per-component rotation overrides (bypass formula) ──
 # Use when a specific LCSC part's 3D model has non-standard orientation.
 _JLCPCB_ROT_OVERRIDES = {
-    "U5": 270,   # PAM8403 (C5122557) SOP-16 at 90° on bottom
+    "U5": 90,    # PAM8403 (C5122557) SOP-16 at 90° on bottom
 }
 
 
