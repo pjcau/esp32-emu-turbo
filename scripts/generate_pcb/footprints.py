@@ -165,7 +165,7 @@ def sot223(layer="B"):
 #   13=PVDD, 14=-OUT_R, 15=PGND, 16=+OUT_R
 def sop16(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
-    silk = "B.SilkS" if layer == "B" else "F.SilkS"
+    fab = "B.Fab" if layer == "B" else "F.Fab"
     pads = []
     pw, ph = 2.05, 0.6
 
@@ -179,17 +179,17 @@ def sop16(layer="B"):
         y = 4.445 - i * 1.27
         pads.append(_pad(str(i + 9), "smd", "rect", 4.65, y, pw, ph, layers))
 
-    # Silkscreen body outline (inside pad rows, DFM clearance from pads)
+    # Body outline on Fab layer (DFM: avoids silkscreen-to-pad violations)
     # Pads inner edge at x=±3.625 (4.65-2.05/2), keep 0.25mm clearance
     bx = 3.35   # body half-width (0.275mm inside pad inner edge)
     by = 5.3    # body half-height
-    pads.append(_fp_line(-bx, -by, bx, -by, silk))   # top
-    pads.append(_fp_line(bx, -by, bx, by, silk))      # right
-    pads.append(_fp_line(bx, by, -bx, by, silk))      # bottom
-    pads.append(_fp_line(-bx, by, -bx, -by, silk))    # left
+    pads.append(_fp_line(-bx, -by, bx, -by, fab))   # top
+    pads.append(_fp_line(bx, -by, bx, by, fab))      # right
+    pads.append(_fp_line(bx, by, -bx, by, fab))      # bottom
+    pads.append(_fp_line(-bx, by, -bx, -by, fab))    # left
 
     # Pin 1 marker (dot inside body near pin 1)
-    pads.append(_fp_circle(-2.5, -4.0, 0.3, silk))
+    pads.append(_fp_circle(-2.5, -4.0, 0.3, fab))
 
     return pads
 

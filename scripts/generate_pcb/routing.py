@@ -559,10 +559,10 @@ def _display_traces():
         fpx, fpy = _fpc_pin(fpc_pin)
 
         bypass_y = 5.0 + idx * 1.0   # DFM: was 0.5mm pitch (via overlap)
-        # Approach column: 0.65mm pitch with 0.5mm/0.2mm mini-vias.
+        # Approach column: 0.90mm pitch with 0.7mm/0.3mm vias (DFM fix).
         # All approach vias east of BTN_Y (x=129.6) and west of BTN_A (x=138)
         # so B.Cu stubs go EAST to FPC pads without crossing button verticals.
-        apx = 130.0 + idx * 0.65
+        apx = 130.0 + idx * 0.90
         col_x = 124.0 - idx * 1.1  # 1.1mm pitch avoids +5V vertical at x~117
 
         is_bottom = abs(epy - 40.0) < 1.0
@@ -581,7 +581,7 @@ def _display_traces():
             # 2. F.Cu horizontal to col_x
             parts.append(_seg(epx, stagger_y, col_x, stagger_y,
                               "F.Cu", W_DATA, net))
-            parts.append(_via_net(col_x, stagger_y, net, size=0.6, drill=0.25))
+            parts.append(_via_net(col_x, stagger_y, net, size=0.7, drill=0.3))
         else:
             # Side pins: horizontal stub right to via
             via1_x = epx + 2.0  # DFM: was 1.5 (too close to col_x vias)
@@ -592,13 +592,13 @@ def _display_traces():
             # F.Cu horizontal to col_x
             parts.append(_seg(via1_x, epy, col_x, epy,
                               "F.Cu", W_DATA, net))
-            parts.append(_via_net(col_x, epy, net, size=0.6, drill=0.25))
+            parts.append(_via_net(col_x, epy, net, size=0.7, drill=0.3))
 
         # 3. B.Cu vertical up to bypass level (above slot)
         from_y = stagger_y if is_bottom else epy
         parts.append(_seg(col_x, from_y, col_x, bypass_y,
                           "B.Cu", W_DATA, net))
-        parts.append(_via_net(col_x, bypass_y, net, size=0.6, drill=0.25))
+        parts.append(_via_net(col_x, bypass_y, net, size=0.7, drill=0.3))
 
         # 4. F.Cu horizontal across slot at safe Y
         parts.append(_seg(col_x, bypass_y, apx, bypass_y,
@@ -607,7 +607,7 @@ def _display_traces():
 
         # 5. F.Cu vertical down to FPC pin Y level
         parts.append(_seg(apx, bypass_y, apx, fpy, "F.Cu", W_DATA, net))
-        parts.append(_via_net(apx, fpy, net, size=0.6, drill=0.25))
+        parts.append(_via_net(apx, fpy, net, size=0.7, drill=0.3))
 
         # 6. B.Cu horizontal to FPC pad (short stub only)
         parts.append(_seg(apx, fpy, fpx, fpy, "B.Cu", W_DATA, net))
@@ -631,7 +631,7 @@ def _display_traces():
         pos = _fpc_pin(pin)
         if pos:
             vx, vy = pos[0] + ox, pos[1] + oy
-            parts.append(_via_net(vx, vy, n_gnd, size=0.6, drill=0.25))
+            parts.append(_via_net(vx, vy, n_gnd, size=0.7, drill=0.3))
             parts.append(_seg(pos[0], pos[1], vx, vy, "B.Cu", 0.3, n_gnd))
 
     # +3V3 pins: 6(VDDI), 7(VDDA), 38(IM0=HIGH), 39(IM1=HIGH)
@@ -646,7 +646,7 @@ def _display_traces():
         pos = _fpc_pin(pin)
         if pos:
             vx, vy = pos[0] + ox, pos[1] + oy
-            parts.append(_via_net(vx, vy, n_3v3, size=0.6, drill=0.25))
+            parts.append(_via_net(vx, vy, n_3v3, size=0.7, drill=0.3))
             parts.append(_seg(pos[0], pos[1], vx, vy, "B.Cu", 0.3, n_3v3))
 
     return parts
@@ -1087,7 +1087,7 @@ def _button_traces():
         # 6. GND via on opposite button pad (mini-via: low current)
         gp = b["gnd_pad"]
         if gp:
-            parts.append(_via_net(gp[0], gp[1], n_gnd, size=0.6, drill=0.25))
+            parts.append(_via_net(gp[0], gp[1], n_gnd, size=0.7, drill=0.3))
 
     # Shoulder button BTN_L (B.Cu, rotated 90°)
     net_l = NET_ID["BTN_L"]

@@ -174,7 +174,7 @@ def _silkscreen_labels():
     dx, dy = enc_to_pcb(*DISPLAY_ENC)
     dw2, dh2 = DISPLAY_W / 2, DISPLAY_H / 2
     parts.append(P.gr_text(
-        "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 3,
+        "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 1,
         "F.SilkS", 1.0,
     ))
 
@@ -196,9 +196,9 @@ def _silkscreen_labels():
 
     # LED labels (front side, bottom-left)
     px, py = enc_to_pcb(*LED_CHARGE_ENC)
-    parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 0.6))
+    parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 0.8))
     px, py = enc_to_pcb(*LED_FULL_ENC)
-    parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 0.6))
+    parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 0.8))
 
     # ── Back silkscreen (everything else) ──
     px, py = enc_to_pcb(*ESP32_ENC)
@@ -218,7 +218,7 @@ def _silkscreen_labels():
 
     # Power switch label (back side)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.7))
+    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.8))
 
     # Speaker label (back side)
     px, py = enc_to_pcb(*SPEAKER_ENC)
@@ -226,9 +226,9 @@ def _silkscreen_labels():
 
     # Shoulder button labels (back side — rotated 90°, aligned to top edge)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.7))
+    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.7))
+    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.8))
 
     return "".join(parts)
 
