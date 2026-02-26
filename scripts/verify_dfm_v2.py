@@ -55,9 +55,12 @@ def test_cpl_positions():
     check("U1 Mid Y = 31.12mm (ESP32 correction)", abs(u1_y - 31.12) < 0.01,
           f"got {u1_y}")
 
-    # U5: rotation override = 270
+    # U5: rotation override = 90 (mathematically proven correct)
+    # JLCPCB uses Y-mirror + CW rotation for bottom-side components.
+    # For SOP-16 at design rotation 90°, CPL=90 is the only value where
+    # all 16 model pins align perfectly with gerber pads.
     u5_rot = int(cpl["U5"]["Rotation"])
-    check("U5 rotation = 270 (override)", u5_rot == 270,
+    check("U5 rotation = 90 (override)", u5_rot == 90,
           f"got {u5_rot}")
 
 
@@ -199,8 +202,63 @@ def test_gerber_zip():
           f"got {len(names)}: {names}")
 
 
+def test_u5_pin_alignment():
+    """Test 11: U5 (PAM8403) model pins align with gerber pads at CPL rotation.
+
+    Uses JLCPCB's convention: Y-mirror (negate X) + CW rotation.
+    Verifies that every pin of the JLCPCB 3D model, after bottom-side
+    flip and CPL rotation, lands exactly on the corresponding gerber pad.
+    """
+    print("\n── U5 Pin Alignment Test ──")
+    import math
+
+    # Standard SOP-16 model pin positions (body center at origin)
+    model_pins = {}
+    for i in range(8):
+        model_pins[i + 1] = (-4.65, -4.445 + i * 1.27)
+    for i in range(8):
+        model_pins[i + 9] = (4.65, 4.445 - i * 1.27)
+
+    # Our gerber pad positions (from pre-rotation 90° + X-mirror)
+    gerber_pins = {}
+    for i in range(8):
+        x, y = -4.65, -4.445 + i * 1.27
+        rx, ry = -y, x      # 90° CCW pre-rotation
+        gerber_pins[i + 1] = (-rx, ry)  # X-mirror
+    for i in range(8):
+        x, y = 4.65, 4.445 - i * 1.27
+        rx, ry = -y, x
+        gerber_pins[i + 9] = (-rx, ry)
+
+    # Read CPL rotation for U5
+    cpl = read_cpl()
+    cpl_rot = int(cpl["U5"]["Rotation"])
+
+    # Apply JLCPCB transforms: Y-mirror then CW rotation
+    rad = math.radians(-cpl_rot)  # CW = negative
+    cos_a, sin_a = math.cos(rad), math.sin(rad)
+
+    max_err = 0
+    mismatches = []
+    for pin in sorted(model_pins):
+        mx, my = model_pins[pin]
+        mx = -mx  # Y-mirror (negate X)
+        rx = mx * cos_a - my * sin_a
+        ry = mx * sin_a + my * cos_a
+        gx, gy = gerber_pins[pin]
+        err = max(abs(rx - gx), abs(ry - gy))
+        max_err = max(max_err, err)
+        if err > 0.01:
+            mismatches.append(f"pin {pin}: model ({rx:.3f},{ry:.3f}) "
+                              f"vs pad ({gx:.3f},{gy:.3f})")
+
+    check(f"U5 all 16 pins align at CPL rot={cpl_rot}° (max err={max_err:.4f}mm)",
+          len(mismatches) == 0,
+          f"{len(mismatches)} mismatches: {mismatches[:3]}")
+
+
 def test_sop16_aperture():
-    """Test 11: SOP-16 aperture R,0.6x2.05 exists (pre-rotation working)."""
+    """Test 12: SOP-16 aperture R,0.6x2.05 exists (pre-rotation working)."""
     print("\n── SOP-16 Aperture Test ──")
     gerber_path = os.path.join(RELEASE, "gerbers", "esp32-emu-turbo-B_Cu.gbl")
     with open(gerber_path) as f:
@@ -223,6 +281,7 @@ if __name__ == "__main__":
     test_gr_text_vs_holes()
     test_via_annular_ring()
     test_gerber_zip()
+    test_u5_pin_alignment()
     test_sop16_aperture()
 
     print(f"\n{'=' * 60}")

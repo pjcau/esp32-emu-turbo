@@ -57,8 +57,12 @@ _JLCPCB_POS_CORRECTIONS = {
 
 # ── Per-component rotation overrides (bypass formula) ──
 # Use when a specific LCSC part's 3D model has non-standard orientation.
+# JLCPCB convention: Y-mirror (negate X) + CW rotation for bottom-side.
+# The generic SOP correction (270°) gives wrong result for PAM8403;
+# the default correction (180°) produces CPL=90° which is mathematically
+# verified: all 16 model pins align perfectly with gerber pads.
 _JLCPCB_ROT_OVERRIDES = {
-    "U5": 90,    # PAM8403 (C5122557) SOP-16 at 90° on bottom
+    "U5": 90,    # PAM8403 SOP-16 at 90° on bottom (verified pin alignment)
 }
 
 
