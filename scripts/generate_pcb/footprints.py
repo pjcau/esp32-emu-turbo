@@ -37,7 +37,7 @@ SMD_B = '"B.Cu" "B.Paste" "B.Mask"'
 THT = '"*.Cu" "*.Mask"'
 
 
-def _fp_line(x1, y1, x2, y2, layer="B.SilkS", width=0.15):
+def _fp_line(x1, y1, x2, y2, layer="B.SilkS", width=0.2):
     """Footprint-local silkscreen/fab line."""
     return (
         f'    (fp_line (start {x1} {y1}) (end {x2} {y2})'
@@ -46,7 +46,7 @@ def _fp_line(x1, y1, x2, y2, layer="B.SilkS", width=0.15):
     )
 
 
-def _fp_circle(cx, cy, r, layer="B.SilkS", width=0.15):
+def _fp_circle(cx, cy, r, layer="B.SilkS", width=0.2):
     """Footprint-local circle (pin 1 marker etc.)."""
     return (
         f'    (fp_circle (center {cx} {cy}) (end {cx + r} {cy})'

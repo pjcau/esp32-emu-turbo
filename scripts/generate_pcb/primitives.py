@@ -92,7 +92,7 @@ def setup_4layer() -> str:
         ' (type "Bottom Silk Screen"))\n'
         '      (copper_finish "ENIG")\n'
         '    )\n'
-        '    (pad_to_mask_clearance 0.0)\n'
+        '    (pad_to_mask_clearance 0.05)\n'
         '    (pcbplotparams\n'
         '      (layerselection 0x00000000_00000000_55555555_5755f5ff)\n'
         '      (plot_on_all_layers_selection'
@@ -202,7 +202,7 @@ def gr_text(text, x, y, layer="F.SilkS", size=1.0):
         f'  (gr_text "{text}" (at {x} {y})'
         f' (layer "{layer}")'
         f' (effects (font (size {size} {size})'
-        f' (thickness 0.15)){mirror}))\n'
+        f' (thickness 0.2)){mirror}))\n'
     )
 
 
@@ -221,13 +221,13 @@ def mounting_hole(x, y, drill=2.5, pad_d=5.0):
         f'      (at 0 0 0)\n'
         f'      (layer "F.SilkS")\n'
         f'      (uuid "{ref_uid}")\n'
-        f'      (effects (font (size 1.27 1.27) (thickness 0.15)))\n'
+        f'      (effects (font (size 1.27 1.27) (thickness 0.2)))\n'
         f'    )\n'
         f'    (property "Value" ""\n'
         f'      (at 0 0 0)\n'
         f'      (layer "F.Fab")\n'
         f'      (uuid "{val_uid}")\n'
-        f'      (effects (font (size 1.27 1.27) (thickness 0.15)))\n'
+        f'      (effects (font (size 1.27 1.27) (thickness 0.2)))\n'
         f'    )\n'
         f'    (pad "" thru_hole circle\n'
         f'      (at 0 0)\n'
@@ -242,7 +242,7 @@ def mounting_hole(x, y, drill=2.5, pad_d=5.0):
     )
 
 
-def via(x, y, size=0.8, drill=0.35, net=0):
+def via(x, y, size=0.9, drill=0.35, net=0):
     return (
         f'  (via (at {x} {y}) (size {size})'
         f' (drill {drill})'

@@ -48,10 +48,12 @@ _JLCPCB_ROT_DEFAULT = 180  # Cancels bottom mirror → preserves original rotati
 
 # ── JLCPCB position corrections (mm) ──
 # Compensate for KiCad footprint origin vs JLCPCB component library origin.
-# ESP32-S3-WROOM-1: KiCad origin at body center, pin center is 3.62mm below.
-# JLCPCB places by pin center → CPL Y needs +3.62mm offset.
+# JLCPCB places 3D model at CPL coordinates — if footprint origin != pad center,
+# the model appears offset. These corrections align CPL with actual pad centers.
 _JLCPCB_POS_CORRECTIONS = {
-    "U1": (0, 3.62),   # ESP32: body center → pin center
+    "U1": (0, 3.62),      # ESP32: body center → pin center (3.62mm below)
+    "J1": (0, -3.745),    # USB-C: origin → signal pad center (pads at y=-3.745)
+    "SW_PWR": (0, -1.95), # Switch: origin → signal pad center (pads at y=-1.95)
 }
 
 

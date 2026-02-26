@@ -386,6 +386,9 @@ def _component_placeholders():
         "SMD-4x4x2": (-4, 4),
     }
 
+    # Passives: put text on Fab layer (not silkscreen) to avoid DFM violations
+    _passive_fps = {"R_0805", "C_0805", "LED_0805", "C_1206"}
+
     # Generate footprints with real pad geometries
     # Pads are pre-rotated so the footprint is placed with rotation=0.
     # This ensures gerber apertures have the correct orientation
@@ -394,21 +397,29 @@ def _component_placeholders():
         layer_char = "F" if "F." in layer else "B"
         pads = FP.get_pads(fp_name, layer_char, rotation=rot)
         pad_str = "".join(pads)
-        silk_layer = "F.SilkS" if layer_char == "F" else "B.SilkS"
         mirror = " (justify mirror)" if "B." in layer else ""
         ref_y, val_y = _text_offsets.get(fp_name, (-3, 3))
+
+        # Passives: use Fab layer for text (avoids silkscreen-to-pad DFM)
+        if fp_name in _passive_fps:
+            text_layer = "F.Fab" if layer_char == "F" else "B.Fab"
+            text_size = 0.6
+        else:
+            text_layer = "F.SilkS" if layer_char == "F" else "B.SilkS"
+            text_size = 1
+
         parts.append(
             f'  (footprint "{fp_name}" (at {x} {y})'
             f' (layer "{layer}")\n'
             f'    (uuid "{P.uid()}")\n'
             f'    (property "Reference" "{ref}"'
-            f' (at 0 {ref_y} 0) (layer "{silk_layer}")'
-            f' (effects (font (size 1 1)'
-            f' (thickness 0.15)){mirror}))\n'
+            f' (at 0 {ref_y} 0) (layer "{text_layer}")'
+            f' (effects (font (size {text_size} {text_size})'
+            f' (thickness 0.2)){mirror}))\n'
             f'    (property "Value" "{fp_name}"'
-            f' (at 0 {val_y} 0) (layer "{silk_layer}")'
-            f' (effects (font (size 1 1)'
-            f' (thickness 0.15)){mirror}))\n'
+            f' (at 0 {val_y} 0) (layer "{text_layer}")'
+            f' (effects (font (size {text_size} {text_size})'
+            f' (thickness 0.2)){mirror}))\n'
             f'{pad_str}'
             f'  )\n'
         )
