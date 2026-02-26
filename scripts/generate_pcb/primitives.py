@@ -163,6 +163,8 @@ NET_LIST = [
     (44, "JOY_X"), (45, "JOY_Y"),
     # IP5306 boost converter
     (46, "LX"), (47, "IP5306_KEY"),
+    # USB CC pull-down
+    (48, "USB_CC1"), (49, "USB_CC2"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

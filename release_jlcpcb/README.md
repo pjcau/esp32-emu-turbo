@@ -59,7 +59,18 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v1.8 — 2026-02-25 (current)
+### v1.9 — 2026-02-26 (current)
+
+- **CRITICAL: USB-C CC1/CC2 pull-down traces added** — R1/R2 (5.1k to GND) were missing traces from CC pads, device would not be recognized by USB hosts
+- **R17/R18 CPL position fixed** — jlcpcb_export.py had y=70 instead of y=65, mismatching board.py placement
+- **USB-C shield pads corrected** — rear shields changed from 1.0x2.1 to 1.0x1.6 per official KiCad library footprint
+- **SOP-16 silkscreen DFM fix** — body outline bx reduced from 3.9 to 3.35 to avoid overlapping pad copper (was 0mm clearance)
+- **Silkscreen label DFM fixes** — AMS1117 label moved to avoid C1 pad overlap, PWR label moved inside board outline
+- **Zone fill script improved** — preserves orphan nets (USB_CC1/CC2) that pcbnew's SaveBoard() would strip
+- J4 FPC trace alignment verified (all 40 pins at x=136.85, 0.5mm pitch)
+- Zone fill: In1.Cu 286KB, In2.Cu 326KB
+
+### v1.8 — 2026-02-25
 
 - **R17/R18 LED resistors relocated** near LEDs on B.Cu for shorter traces
 - **Shoulder buttons adjusted** (y=35 to y=32) for better PCB edge clearance
@@ -106,7 +117,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | DRC Check                 | ✅ PASS (0 errors, 6 warnings)         |
 | Schematic/PCB Consistency | ✅ PASS (64 JLCPCB components matched) |
 | Zone Priorities           | ✅ PASS                                |
-| Zone Fill Data            | ✅ PASS (In1.Cu 292KB, In2.Cu 332KB)   |
+| Zone Fill Data            | ✅ PASS (In1.Cu 286KB, In2.Cu 326KB)   |
 | Trace Shorts              | ⚠️ 52 pre-existing crossings (needs routing rework) |
 
 ## Notes

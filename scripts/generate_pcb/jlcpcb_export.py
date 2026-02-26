@@ -1,7 +1,22 @@
-"""Generate JLCPCB CPL (Component Placement List) from board data."""
+"""Generate JLCPCB CPL (Component Placement List) from board data.
+
+JLCPCB rotation corrections:
+  KiCad and JLCPCB use different conventions for bottom-side components.
+  KiCad flips around the Y-axis; JLCPCB uses a different reference frame.
+  The community-validated fix is:
+    1. Bottom-side mirror: rot = (rot - 180) % 360
+    2. Per-footprint correction from the JLCKicadTools/KiBot databases
+    3. Default correction of 180° (cancels mirror) for unmatched footprints
+
+  Refs:
+    - https://github.com/Bouni/kicad-jlcpcb-tools/issues/636
+    - https://github.com/matthewlai/JLCKicadTools (cpl_rotations_db.csv)
+    - https://kibot.readthedocs.io/en/v1.8.0/notes_position.html
+"""
 
 import csv
 import os
+import re
 
 from .board import (
     enc_to_pcb,
@@ -13,6 +28,49 @@ from .board import (
     PWR_SWITCH_ENC, LED_CHARGE_ENC, LED_FULL_ENC,
     MENU_ENC, SPEAKER_ENC,
 )
+
+
+# ── JLCPCB rotation corrections (from JLCKicadTools cpl_rotations_db.csv) ──
+# Only entries that differ from the default (180°) are listed.
+# These values combine with the bottom-side mirror to produce correct
+# JLCPCB pick-and-place orientation.
+_JLCPCB_ROT_CORRECTIONS = [
+    (r"^SOP-(?!18_|4_)", 270),   # SOP packages (except SOP-18, SOP-4)
+    (r"^SOIC-", 270),            # SOIC packages
+    (r"^TSSOP-", 270),           # TSSOP packages
+    (r"^SSOP-", 270),            # SSOP packages
+    (r"^SOT-23", -90),           # SOT-23 family
+    (r"^LQFP-", 270),            # LQFP packages
+    (r"^TQFP-", 270),            # TQFP packages
+    (r"^DFN-", 270),             # DFN packages
+]
+_JLCPCB_ROT_DEFAULT = 180  # Cancels bottom mirror → preserves original rotation
+
+# ── JLCPCB position corrections (mm) ──
+# Compensate for KiCad footprint origin vs JLCPCB component library origin.
+# ESP32-S3-WROOM-1: KiCad origin at body center, pin center is 3.62mm below.
+# JLCPCB places by pin center → CPL Y needs +3.62mm offset.
+_JLCPCB_POS_CORRECTIONS = {
+    "U1": (0, 3.62),   # ESP32: body center → pin center
+}
+
+
+def _jlcpcb_rotation(rot, layer, footprint_name):
+    """Compute JLCPCB CPL rotation from KiCad rotation."""
+    if layer != "bottom":
+        return rot  # Top side: no correction needed
+
+    # Bottom-side mirror (community-validated formula)
+    rot = (rot - 180) % 360
+
+    # Per-footprint correction (from database)
+    correction = _JLCPCB_ROT_DEFAULT
+    for pattern, corr in _JLCPCB_ROT_CORRECTIONS:
+        if re.match(pattern, footprint_name):
+            correction = corr
+            break
+
+    return (rot + correction) % 360
 
 
 def _build_placements():
@@ -153,11 +211,10 @@ def _build_placements():
     p.append(("C3", "100nF", "C_0805", 70, 42, 0, "bottom"))
     p.append(("C4", "100nF", "C_0805", 85, 42, 0, "bottom"))
 
-    # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
-    x, y = enc_to_pcb(*LED_CHARGE_ENC)
-    p.append(("R17", "1k", "R_0805", x, y + 2.5, 0, "bottom"))
-    x, y = enc_to_pcb(*LED_FULL_ENC)
-    p.append(("R18", "1k", "R_0805", x, y + 2.5, 0, "bottom"))
+    # LED current-limiting resistors (B.Cu, above LEDs on F.Cu)
+    # Must match board.py: R17 at (25, 65), R18 at (32, 65)
+    p.append(("R17", "1k", "R_0805", 25, 65, 0, "bottom"))
+    p.append(("R18", "1k", "R_0805", 32, 65, 0, "bottom"))
 
     # ── Button pull-up resistors (y=46, x=43..103, 5mm spacing) ──
     # Shifted left to avoid IP5306 at x=110
@@ -195,16 +252,30 @@ def _build_placements():
 
 
 def export_cpl(output_dir: str):
-    """Write CPL.csv for JLCPCB pick-and-place."""
+    """Write CPL.csv for JLCPCB pick-and-place.
+
+    Applies JLCPCB-specific corrections:
+      - Position offsets for components with non-standard origins (ESP32)
+      - Rotation corrections for bottom-side convention differences
+    """
     placements = _build_placements()
     path = os.path.join(output_dir, "cpl.csv")
-    with open(path, "w", newline="") as f:
+    with open(path, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow([
             "Designator", "Val", "Package",
             "Mid X", "Mid Y", "Rotation", "Layer",
         ])
         for ref, val, pkg, x, y, rot, layer in placements:
+            # Apply JLCPCB position correction
+            if ref in _JLCPCB_POS_CORRECTIONS:
+                dx, dy = _JLCPCB_POS_CORRECTIONS[ref]
+                x += dx
+                y += dy
+
+            # Apply JLCPCB rotation correction
+            rot = _jlcpcb_rotation(rot, layer, pkg)
+
             w.writerow([
                 ref, val, pkg,
                 f"{x:.2f}mm", f"{y:.2f}mm",

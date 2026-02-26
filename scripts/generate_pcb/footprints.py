@@ -178,8 +178,9 @@ def sop16(layer="B"):
         y = 4.445 - i * 1.27
         pads.append(_pad(str(i + 9), "smd", "rect", 4.65, y, pw, ph, layers))
 
-    # Silkscreen body outline (between pad rows, slightly beyond pin extent)
-    bx = 3.9    # body half-width (inside pads at ±4.65)
+    # Silkscreen body outline (inside pad rows, DFM clearance from pads)
+    # Pads inner edge at x=±3.625 (4.65-2.05/2), keep 0.25mm clearance
+    bx = 3.35   # body half-width (0.275mm inside pad inner edge)
     by = 5.3    # body half-height
     pads.append(_fp_line(-bx, -by, bx, -by, silk))   # top
     pads.append(_fp_line(bx, -by, bx, by, silk))      # right
@@ -235,9 +236,13 @@ def usb_c_16p(layer="B"):
                          solder_mask_margin=margin))
 
     # Shield / mounting legs (4 THT oval pads)
-    for sx, sy in [(-4.32, -3.105), (4.32, -3.105),
-                   (-4.32, 1.075), (4.32, 1.075)]:
-        pads.append(_pad("S", "thru_hole", "oval", sx, sy, 1.0, 2.1, THT,
+    # Front shields: size 1.0x2.1, rear shields: size 1.0x1.6
+    # (per official KiCad USB_C_Receptacle_HCTL_HC-TYPE-C-16P-01A)
+    for sx in [-4.32, 4.32]:
+        pads.append(_pad("S", "thru_hole", "oval", sx, -3.105, 1.0, 2.1, THT,
+                         drill=0.65))
+    for sx in [-4.32, 4.32]:
+        pads.append(_pad("S", "thru_hole", "oval", sx, 1.075, 1.0, 1.6, THT,
                          drill=0.65))
 
     return pads

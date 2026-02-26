@@ -206,7 +206,7 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*IP5306_ENC)
     parts.append(P.gr_text("IP5306", px, py - 5, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*AMS1117_ENC)
-    parts.append(P.gr_text("AMS1117", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("AMS1117", px, py - 8, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*PAM8403_ENC)
     parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 0.8))
 
@@ -218,7 +218,7 @@ def _silkscreen_labels():
 
     # Power switch label (back side)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    parts.append(P.gr_text("PWR", px, py + 5, "B.SilkS", 0.7))
+    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.7))
 
     # Speaker label (back side)
     px, py = enc_to_pcb(*SPEAKER_ENC)

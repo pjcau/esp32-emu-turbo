@@ -895,21 +895,42 @@ def _usb_traces():
                        "B.Cu", W_DATA, n_dm))
     parts.append(_seg(dm_col_x, dm_y, dm_x, dm_y, "B.Cu", W_DATA, n_dm))
 
-    # USB CC pull-down resistors -> local GND vias
+    # ── USB CC pull-down resistors ──────────────────────────────
+    # CC1 (A5) → R1 pad1, CC2 (B5) → R2 pad1
+    # R1/R2 pad2 → GND vias
     n_gnd = NET_ID["GND"]
+    n_cc1 = NET_ID["USB_CC1"]
+    n_cc2 = NET_ID["USB_CC2"]
+
+    usb_cc1 = _pad("J1", "A5")   # CC1 pad
+    usb_cc2 = _pad("J1", "B5")   # CC2 pad
+    r1_p1 = _pad("R1", "1")      # signal side
+    r1_p2 = _pad("R1", "2")      # GND side
+    r2_p1 = _pad("R2", "1")      # signal side
+    r2_p2 = _pad("R2", "2")      # GND side
+
+    # CC1 → R1: L-shaped route on B.Cu
+    if usb_cc1 and r1_p1:
+        parts.extend(_L(usb_cc1[0], usb_cc1[1], r1_p1[0], r1_p1[1],
+                        "B.Cu", W_SIG, n_cc1, h_first=False))
+
+    # CC2 → R2: L-shaped route on B.Cu
+    if usb_cc2 and r2_p1:
+        parts.extend(_L(usb_cc2[0], usb_cc2[1], r2_p1[0], r2_p1[1],
+                        "B.Cu", W_SIG, n_cc2, h_first=False))
+
+    # R1/R2 GND side → GND vias
     usb_gnd = _pad("J1", "A12")
     if usb_gnd:
-        r1_gnd_pad = _pad("R1", "2")
-        r2_gnd_pad = _pad("R2", "2")
         cc_gnd_via_y = usb_gnd[1] - 2
-        if r1_gnd_pad:
-            parts.append(_seg(r1_gnd_pad[0], r1_gnd_pad[1], r1_gnd_pad[0],
+        if r1_p2:
+            parts.append(_seg(r1_p2[0], r1_p2[1], r1_p2[0],
                               cc_gnd_via_y, "B.Cu", W_SIG, n_gnd))
-            parts.append(_via_net(r1_gnd_pad[0], cc_gnd_via_y, n_gnd))
-        if r2_gnd_pad:
-            parts.append(_seg(r2_gnd_pad[0], r2_gnd_pad[1], r2_gnd_pad[0],
+            parts.append(_via_net(r1_p2[0], cc_gnd_via_y, n_gnd))
+        if r2_p2:
+            parts.append(_seg(r2_p2[0], r2_p2[1], r2_p2[0],
                               cc_gnd_via_y, "B.Cu", W_SIG, n_gnd))
-            parts.append(_via_net(r2_gnd_pad[0], cc_gnd_via_y, n_gnd))
+            parts.append(_via_net(r2_p2[0], cc_gnd_via_y, n_gnd))
 
     return parts
 
