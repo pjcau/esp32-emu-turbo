@@ -51,14 +51,23 @@ _JLCPCB_ROT_DEFAULT = 180  # Cancels bottom mirror → preserves original rotati
 # JLCPCB places 3D model at CPL coordinates — if footprint origin != pad center,
 # the model appears offset. These corrections align CPL with actual pad centers.
 _JLCPCB_POS_CORRECTIONS = {
-    "U1": (0, 3.62),      # ESP32: body center → pin center (3.62mm below)
-    "J1": (0, -3.745),    # USB-C: origin → signal pad center (pads at y=-3.745)
-    "SW_PWR": (0, -1.95), # Switch: origin → signal pad center (pads at y=-1.95)
+    "U1": (0, 3.62),      # ESP32: body center → pin center (confirmed working)
+    # J1 and SW_PWR: body center = footprint origin, no correction needed
+}
+
+# ── Per-component rotation overrides (bypass formula) ──
+# Use when a specific LCSC part's 3D model has non-standard orientation.
+_JLCPCB_ROT_OVERRIDES = {
+    "U5": 270,   # PAM8403 (C5122557) SOP-16 at 90° on bottom
 }
 
 
-def _jlcpcb_rotation(rot, layer, footprint_name):
+def _jlcpcb_rotation(rot, layer, footprint_name, ref=None):
     """Compute JLCPCB CPL rotation from KiCad rotation."""
+    # Per-component override (bypass formula entirely)
+    if ref and ref in _JLCPCB_ROT_OVERRIDES:
+        return _JLCPCB_ROT_OVERRIDES[ref]
+
     if layer != "bottom":
         return rot  # Top side: no correction needed
 
@@ -244,11 +253,11 @@ def _build_placements():
     p.append(("C19", "22uF", "C_1206",
               lx, ly + 6, 0, "bottom"))
 
-    # ── AMS1117 support caps ──
+    # ── AMS1117 support caps (±7mm spacing for DFM clearance) ──
     p.append(("C1", "10uF", "C_0805",
-              amx, amy - 5, 0, "bottom"))
+              amx, amy - 7, 0, "bottom"))
     p.append(("C2", "22uF", "C_1206",
-              amx, amy + 5, 0, "bottom"))
+              amx, amy + 7, 0, "bottom"))
 
     return p
 
@@ -276,7 +285,7 @@ def export_cpl(output_dir: str):
                 y += dy
 
             # Apply JLCPCB rotation correction
-            rot = _jlcpcb_rotation(rot, layer, pkg)
+            rot = _jlcpcb_rotation(rot, layer, pkg, ref=ref)
 
             w.writerow([
                 ref, val, pkg,

@@ -204,7 +204,7 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*ESP32_ENC)
     parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS"))
     px, py = enc_to_pcb(*IP5306_ENC)
-    parts.append(P.gr_text("IP5306", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*AMS1117_ENC)
     parts.append(P.gr_text("AMS1117", px, py - 8, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*PAM8403_ENC)
@@ -366,10 +366,10 @@ def _component_placeholders():
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)
     placements.append(("C19", "C_1206", lx, ly + 6, 0, "B.Cu"))
 
-    # AMS1117 support caps
+    # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("C1", "C_0805", amx, amy - 5, 0, "B.Cu"))
-    placements.append(("C2", "C_1206", amx, amy + 5, 0, "B.Cu"))
+    placements.append(("C1", "C_0805", amx, amy - 7, 0, "B.Cu"))
+    placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
     # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)
     _text_offsets = {
@@ -400,13 +400,9 @@ def _component_placeholders():
         mirror = " (justify mirror)" if "B." in layer else ""
         ref_y, val_y = _text_offsets.get(fp_name, (-3, 3))
 
-        # Passives: use Fab layer for text (avoids silkscreen-to-pad DFM)
-        if fp_name in _passive_fps:
-            text_layer = "F.Fab" if layer_char == "F" else "B.Fab"
-            text_size = 0.6
-        else:
-            text_layer = "F.SilkS" if layer_char == "F" else "B.SilkS"
-            text_size = 1
+        # ALL footprints: text on Fab layer (eliminates silkscreen-to-pad DFM)
+        text_layer = "F.Fab" if layer_char == "F" else "B.Fab"
+        text_size = 0.6 if fp_name in _passive_fps else 1
 
         parts.append(
             f'  (footprint "{fp_name}" (at {x} {y})'

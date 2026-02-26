@@ -119,8 +119,8 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (125.0, 50.5)   # AMS1117 input cap (amx, amy-5)
-C2_POS = (125.0, 60.5)   # AMS1117 output cap (amx, amy+5)
+C1_POS = (125.0, 48.5)   # AMS1117 input cap (amx, amy-7)
+C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (70.0, 42.0)    # ESP32 decoupling 1
 C4_POS = (85.0, 42.0)    # ESP32 decoupling 2
 C17_POS = (110.0, 35.0)  # IP5306 cap

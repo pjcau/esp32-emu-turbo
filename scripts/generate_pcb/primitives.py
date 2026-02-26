@@ -219,7 +219,7 @@ def mounting_hole(x, y, drill=2.5, pad_d=5.0):
         f'    (at {x} {y})\n'
         f'    (property "Reference" ""\n'
         f'      (at 0 0 0)\n'
-        f'      (layer "F.SilkS")\n'
+        f'      (layer "F.Fab")\n'
         f'      (uuid "{ref_uid}")\n'
         f'      (effects (font (size 1.27 1.27) (thickness 0.2)))\n'
         f'    )\n'
