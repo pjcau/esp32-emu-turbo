@@ -9,8 +9,10 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-docker-build: ## Build Docker images (KiCad + OpenSCAD)
-	docker compose build
+docker-build: ## Build Docker images (KiCad + OpenSCAD) — cached if unchanged
+	@docker compose images -q 2>/dev/null | head -1 > /dev/null 2>&1 && \
+		echo "Docker images already built (use 'docker compose build --no-cache' to force)" || \
+		docker compose build
 
 generate-schematic: ## Generate 7 KiCad schematics from Python spec
 	docker compose run --rm generate-sch
@@ -35,10 +37,13 @@ pcb-check: ## Run PCB short circuit / zone fill analysis
 	python3 scripts/short_circuit_analysis.py
 
 verify-all: ## Run all pre-production checks (DRC + simulation + consistency + short circuit)
-	python3 scripts/drc_check.py
-	python3 scripts/simulate_circuit.py
-	python3 scripts/verify_schematic_pcb.py
-	python3 scripts/short_circuit_analysis.py
+	@echo "Running verification suite..."
+	@python3 scripts/drc_check.py & \
+	 python3 scripts/simulate_circuit.py & \
+	 python3 scripts/verify_schematic_pcb.py & \
+	 python3 scripts/short_circuit_analysis.py & \
+	 wait
+	@echo "All verification checks complete."
 
 verify-fast: ## Quick DFM check only (30s vs 2min full suite)
 	python3 scripts/verify_dfm_v2.py
@@ -58,8 +63,9 @@ fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
 release-prep: generate-pcb export-gerbers-fast verify-all render-pcb ## Full release pipeline (fast gerber export)
 	@echo "Release prep complete: PCB generated, verified, rendered"
 
-render-all: generate-schematic docker-build ## Full render pipeline (generate + export)
-	./scripts/render-all.sh
+render-all: generate-schematic docker-build ## Full render pipeline (generate + export, parallel renders)
+	@echo "Running renders in parallel..."
+	@$(MAKE) -j3 render-schematics render-enclosure render-pcb
 
 ESP_PORT ?= /dev/ttyUSB0
 
