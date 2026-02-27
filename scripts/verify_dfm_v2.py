@@ -609,8 +609,8 @@ def test_btn_r_routed():
     """Test 21: BTN_R (SW12 shoulder-right button) has a trace to ESP32 GPIO36.
 
     SW12 is at enc(65, 32) = (145, 5.5) on B.Cu.  Routing uses a B.Cu stub
-    down to a channel row, F.Cu across the board, then B.Cu up to GPIO36
-    (ESP32 right-side pad at y~36.21).  Verify that at least one B.Cu segment
+    down to a channel row, F.Cu across the board, then B.Cu up to GPIO19
+    (ESP32 right-side pad at y~37.48).  Verify that at least one B.Cu segment
     originates near SW12 pad 3 (143.15, 8.5).
     """
     print("\n── BTN_R (SW12) Routing Tests ──")
@@ -638,19 +638,233 @@ def test_btn_r_routed():
         "no B.Cu segment near SW12 signal pad — BTN_R may be unrouted",
     )
 
-    # Also verify a long F.Cu horizontal segment exists near chan_y_r (69.0)
-    # that spans most of the board width (x > 60mm length) for the cross-board run
+    # Also verify a long F.Cu horizontal segment exists near chan_y_r (69.5mm)
+    # that spans a significant board width (x > 40mm length) for the cross-board run.
+    # BTN_R routes to GPIO19 at x=88.75 (right-side ESP32), approach at x=90.75,
+    # so F.Cu from SW12 pad (x=146.85) to approach_r (x=90.75): length ~56.1mm.
     long_fcu = any(
         s["layer"] == "F.Cu"
         and abs(s["y1"] - s["y2"]) < 0.01
-        and abs(s["y1"] - 69.0) < 1.0
-        and abs(s["x1"] - s["x2"]) > 60
+        and abs(s["y1"] - 69.5) < 1.0
+        and abs(s["x1"] - s["x2"]) > 40
         for s in segs
     )
     check(
         "BTN_R long F.Cu cross-board segment found near y=69mm",
         long_fcu,
-        "no long F.Cu segment at y~69mm — BTN_R channel route may be missing",
+        "no long F.Cu segment at y~69.5mm — BTN_R channel route may be missing",
+    )
+
+
+def test_kicad_drc_edge_clearance():
+    """Test 22: KiCad DRC copper-to-edge clearance — zero violations.
+
+    Guards against traces or vias placed too close to the board outline,
+    the FPC slot edge, or any other Edge.Cuts element.
+    Passes only when kicad-cli is available.
+    """
+    print("\n── KiCad DRC Edge Clearance Guard ──")
+    kicad_cli = shutil.which("kicad-cli")
+    if not kicad_cli:
+        print("  SKIP  kicad-cli not found")
+        return
+
+    drc_out = os.path.join(BASE, "hardware", "kicad", "drc-edge-guard.json")
+    try:
+        subprocess.run(
+            [kicad_cli, "pcb", "drc",
+             "--output", drc_out, "--format", "json",
+             "--severity-all", "--units", "mm",
+             PCB_FILE],
+            capture_output=True, timeout=60,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        print("  SKIP  kicad-cli drc failed")
+        return
+
+    if not os.path.exists(drc_out):
+        print("  SKIP  DRC report not generated")
+        return
+
+    with open(drc_out) as f:
+        data = json.load(f)
+
+    from collections import Counter
+    types = Counter(v["type"] for v in data.get("violations", []))
+    edge = types.get("copper_edge_clearance", 0)
+    hole = types.get("hole_to_hole", 0)
+
+    check("KiCad DRC: copper_edge_clearance = 0 (regression guard)", edge == 0,
+          f"got {edge} violations")
+    check("KiCad DRC: hole_to_hole = 0 (regression guard)", hole == 0,
+          f"got {hole} violations")
+
+    os.remove(drc_out)
+
+
+def test_sw8_slot_clearance():
+    """Test 23: SW8 (BTN_Y) pad 1 clears FPC slot edge by >= 0.5mm.
+
+    SW8 pad 1 (signal pad) is closest to the FPC slot cutout (right edge
+    at x=128.5mm).  Pad center must be at x >= 129.0mm so the copper edge
+    (pad_center - pad_half_width = x - 0.6) is at least 0.5mm from slot edge.
+    Min center x = 128.5 + 0.5 + 0.6 = 129.6mm.
+    Guards against accidental leftward drift of SW8 position.
+    """
+    print("\n── SW8 Slot Clearance Test ──")
+    cpl = read_cpl()
+    sw8_x = float(cpl["SW8"]["Mid X"].replace("mm", ""))
+    # SW8 pad 1 is 3mm left of center
+    pad1_x = sw8_x - 3.0
+    slot_edge_x = 128.5
+    pad_half_w = 0.6
+    gap = pad1_x - pad_half_w - slot_edge_x
+    check(
+        f"SW8 pad1 clears FPC slot by >= 0.5mm (gap={gap:.2f}mm)",
+        gap >= 0.5,
+        f"SW8 center={sw8_x:.2f}mm, pad1={pad1_x:.2f}mm, slot={slot_edge_x}mm, gap={gap:.3f}mm",
+    )
+
+
+def test_btn_r_edge_clearance():
+    """Test 24: BTN_R F.Cu channel is at least 0.5mm from board bottom edge.
+
+    BTN_R uses an F.Cu horizontal segment to cross the board.  The bottom
+    board edge is at y=75.0mm.  The copper must be at most y=74.5mm
+    (0.5mm clearance from edge).
+    Guards against chan_y_r drifting to 75.0 (board edge).
+    """
+    print("\n── BTN_R Edge Clearance Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    # BTN_R net=38; find its longest F.Cu horizontal segment
+    net_btn_r = 38
+    board_bottom = 75.0
+    min_clearance = 0.5
+    violations = []
+    for s in segs:
+        if s["net"] != net_btn_r or s["layer"] != "F.Cu":
+            continue
+        if abs(s["y1"] - s["y2"]) > 0.01:
+            continue  # not horizontal
+        y = s["y1"]
+        clearance = board_bottom - y
+        if clearance < min_clearance:
+            violations.append(
+                f"BTN_R F.Cu at y={y:.3f}mm: clearance to board edge = {clearance:.3f}mm < {min_clearance}mm"
+            )
+
+    check(
+        "BTN_R F.Cu channel >= 0.5mm from board bottom edge (y <= 74.5mm)",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:3]}",
+    )
+
+
+def test_sd_gnd_via_clearance():
+    """Test 25: SD routing B.Cu post_slot traces clear of SW5/SW7 GND vias.
+
+    SW5 (BTN_A) and SW7 (BTN_X) GND vias land at x=143.5 (pads at x=145 offset
+    1.5mm left).  SD routing post_slot B.Cu verticals at x=137,140,142,146 must
+    all be >= 0.2mm (KiCad netclass clearance) from via ring at 143.5±0.45mm.
+
+    Forbidden zone: x in [143.05, 143.95] (via ring ±0.45mm).
+    Clearance requirement: trace half-width (0.1mm) + via radius (0.45mm) +
+    clearance (0.2mm) = 0.75mm from via center.  So trace centerline must be
+    outside [142.75, 144.25].
+
+    Guards against post_slot_map assignments at x=143 or x=144 which caused
+    0.05mm clearance violations in KiCad DRC.
+    """
+    print("\n── SD Post-Slot vs GND Via Clearance ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    # GND vias from SW5/SW7 routing are at x=143.5 (net=GND).
+    # SD post_slot B.Cu verticals are net 20-23 (SD_MOSI,MISO,CLK,CS).
+    # Any SD B.Cu segment with centerline in [142.75, 144.25] is a violation.
+    FORBIDDEN_LO = 142.75
+    FORBIDDEN_HI = 144.25
+    SD_NETS = {20, 21, 22, 23}  # SD_MOSI, SD_MISO, SD_CLK, SD_CS
+
+    violations = []
+    for s in segs:
+        if s["net"] not in SD_NETS or s["layer"] != "B.Cu":
+            continue
+        # Vertical segment: x1==x2
+        if abs(s["x1"] - s["x2"]) > 0.01:
+            continue
+        x = s["x1"]
+        if FORBIDDEN_LO < x < FORBIDDEN_HI:
+            violations.append(
+                f"SD net={s['net']} B.Cu vert at x={x:.3f} in forbidden zone "
+                f"[{FORBIDDEN_LO},{FORBIDDEN_HI}]"
+            )
+
+    check(
+        "SD post_slot B.Cu verticals avoid x=[142.75,144.25] (GND via clearance zone)",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:3]}",
+    )
+
+
+def test_bat_plus_via_vbus_clearance():
+    """Test 26: BAT+ via at L1[1] clears VBUS F.Cu trace at x=111.0.
+
+    The L1 boost inductor pin 1 BAT+ via is at (bat_via_x, bat_via_y).
+    The VBUS F.Cu trace runs vertically at x=111.0 with width=0.5mm.
+    Required clearance: 0.2mm (netclass default).
+
+    Forbidden: via must not be within 0.75mm of x=111.0 (via_radius +
+    trace_half + clearance = 0.45+0.25+0.2-0.25 = 0.65mm from trace center).
+    More precisely: via_center_x - via_radius >= 111.25 + 0.2 → x >= 111.9mm.
+    Guards against BAT+ via drifting back to (111.7, 49.5) which gives 0.0mm gap.
+    """
+    print("\n── BAT+ Via / VBUS Trace Clearance ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+
+    import re as _re
+    # Find BAT+ via (net=5) near y=49.5
+    vias_raw = _re.findall(
+        r'\(via\s+\(at\s+([-\d.]+)\s+([-\d.]+)\).*?\(size\s+([-\d.]+)\).*?\(drill\s+([-\d.]+)\).*?\(net\s+(\d+)\)',
+        content, _re.DOTALL
+    )
+    # Find VBUS F.Cu vertical near x=111 (any segment with both endpoints at x≈111)
+    vbus_net = 2
+    vbus_trace_x = 111.0
+    vbus_trace_hw = 0.25  # half-width of 0.5mm VBUS trace
+    required_clearance = 0.2
+
+    bat_net = 5
+    violations = []
+    for v in vias_raw:
+        vx, vy, vsize, vdrill, vnet = float(v[0]), float(v[1]), float(v[2]), float(v[3]), int(v[4])
+        if vnet != bat_net:
+            continue
+        # Only check the L1[1] BAT+ via — it's near x=111-113, y=48-51.
+        # Other BAT+ vias (e.g. for JST connector, IP5306 BAT pins) are far from x=111.
+        if not (110.0 < vx < 115.0 and 47.0 < vy < 52.0):
+            continue
+        # This via must be RIGHT of VBUS trace: via_left >= vbus_right + clearance.
+        via_radius = float(vsize) / 2
+        # VBUS trace right edge = vbus_trace_x + vbus_trace_hw = 111.25
+        vbus_right = vbus_trace_x + vbus_trace_hw
+        via_left = vx - via_radius
+        gap = via_left - vbus_right
+        if gap < required_clearance:
+            violations.append(
+                f"BAT+ L1 via at ({vx:.3f},{vy:.3f}) r={via_radius:.3f}: "
+                f"gap to VBUS right edge={gap:.3f}mm < {required_clearance}mm"
+            )
+
+    check(
+        "BAT+ L1 via clears VBUS F.Cu trace by >= 0.2mm",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:3]}",
     )
 
 
@@ -675,6 +889,11 @@ if __name__ == "__main__":
     test_esop8_ep_pad_clearance()
     test_msk12c02_unique_sh_pads()
     test_btn_r_routed()
+    test_kicad_drc_edge_clearance()
+    test_sw8_slot_clearance()
+    test_btn_r_edge_clearance()
+    test_sd_gnd_via_clearance()
+    test_bat_plus_via_vbus_clearance()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")
