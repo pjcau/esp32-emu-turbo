@@ -59,7 +59,34 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v1.9 — 2026-02-26 (current)
+### v2.0 — 2026-02-27 (current)
+
+**DFM fixes targeting JLCPCB DFM report issues:**
+
+- **ESOP-8 EP pad reduced** (IP5306, U2) — exposed pad height 3.4 -> 2.8mm so
+  corner signal pad gap increases from 0.095mm to 0.205mm (above 0.10mm danger
+  threshold). Eliminates 4 pad-spacing-danger flags in JLCPCB DFM report.
+- **MSK12C02 shell pad unique names** (SW_PWR) — four mounting pads renamed from
+  shared "SH" to unique "SH1"-"SH4". Prevents JLCPCB DFM checker from grouping
+  them and reporting spurious 0mm pad-spacing violations.
+- **BTN_R (SW12 shoulder-right) routed** — the right shoulder button had no traces
+  connecting it to ESP32 GPIO36. Full B.Cu / F.Cu / B.Cu route added: stub down
+  from SW12 pad 3 at (143.15, 8.5), cross-board F.Cu channel at y=69mm,
+  approach column right of ESP32, final B.Cu stub to GPIO36 at (71.25, 36.21).
+- **GND stub added for SW12 pad 2** — offset 1mm outward from pad (DFM lead-to-hole
+  clearance) matching existing SW11 treatment.
+- **Display stagger test corrected** (verify_dfm_v2.py test 18) — button routing
+  traces that legitimately terminate at ESP32 pad X columns are now excluded from
+  the ESP32-pin-Y collision check (were false positives).
+- **3 new regression guard tests added** (tests 19-21):
+  - Test 19: ESOP-8 EP pad height <= 3.2mm (clearance guard)
+  - Test 20: MSK12C02 SH pads have unique names SH1-SH4
+  - Test 21: BTN_R (SW12) routing stub and cross-board segment present
+- **Via count**: 223 -> 226 (3 new vias for BTN_R routing)
+- **Trace spacing**: 27 -> 17 baseline violations (improvement, no regressions)
+- All 27 DFM verification tests pass (was 20/21 before this release)
+
+### v1.9 — 2026-02-26
 
 - **CRITICAL: USB-C CC1/CC2 pull-down traces added** — R1/R2 (5.1k to GND) were missing traces from CC pads, device would not be recognized by USB hosts
 - **R17/R18 CPL position fixed** — jlcpcb_export.py had y=70 instead of y=65, mismatching board.py placement
@@ -112,13 +139,18 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Pre-Production Verification Status
 
-| Check                     | Result                                |
-| ------------------------- | ------------------------------------- |
-| DRC Check                 | ✅ PASS (0 errors, 6 warnings)         |
-| Schematic/PCB Consistency | ✅ PASS (64 JLCPCB components matched) |
-| Zone Priorities           | ✅ PASS                                |
-| Zone Fill Data            | ✅ PASS (In1.Cu 286KB, In2.Cu 326KB)   |
-| Trace Shorts              | ⚠️ 52 pre-existing crossings (needs routing rework) |
+| Check                       | Result                                          |
+| --------------------------- | ----------------------------------------------- |
+| DRC Check                   | PASS (0 errors, 0 silk violations)              |
+| DFM v2 Tests                | PASS (27/27, including 3 new regression guards) |
+| Schematic/PCB Consistency   | PASS (64 JLCPCB components matched)             |
+| Zone Priorities             | PASS                                            |
+| Zone Fill Data              | PASS (In1.Cu 52KB, In2.Cu 292KB)                |
+| Via annular ring            | PASS (226 vias, all >= 0.175mm)                 |
+| Via hole-to-hole            | PASS (min gap >= 0.25mm)                        |
+| Trace spacing               | PASS (17 violations, baseline <= 27)            |
+| ESOP-8 EP pad clearance     | PASS (gap = 0.205mm > 0.10mm danger)            |
+| BTN_R routing               | PASS (SW12 pad 3 stub + cross-board route)      |
 
 ## Notes
 

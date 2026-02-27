@@ -337,7 +337,7 @@ def _component_placeholders():
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
-    placements.append(("C3", "C_0805", 70, 42, 0, "B.Cu"))
+    placements.append(("C3", "C_0805", 68, 42, 0, "B.Cu"))  # DFM: moved from 70 to 68 (clears BTN_LEFT approach col)
     placements.append(("C4", "C_0805", 85, 42, 0, "B.Cu"))
 
     # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)

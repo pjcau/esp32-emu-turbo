@@ -221,7 +221,7 @@ def _build_placements():
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
-    p.append(("C3", "100nF", "C_0805", 70, 42, 0, "bottom"))
+    p.append(("C3", "100nF", "C_0805", 68, 42, 0, "bottom"))  # DFM: moved from 70 to 68
     p.append(("C4", "100nF", "C_0805", 85, 42, 0, "bottom"))
 
     # LED current-limiting resistors (B.Cu, above LEDs on F.Cu)

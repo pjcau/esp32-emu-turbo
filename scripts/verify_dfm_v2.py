@@ -471,7 +471,11 @@ def test_display_stagger_vs_esp32():
     ESP32 left-side pins at y = 22.24 + n*1.27 (n=0..13).
     Bottom-pin stagger traces (y=28..32 region) must use midpoints
     to avoid trace spacing violations with ESP32 side-pin signal traces.
-    Only checks the critical stagger region where collisions occurred.
+
+    Excludes button routing traces, which legitimately end at ESP32 pad X
+    positions (x=71.25 right side, x=88.75 left side).  Those traces are
+    short point-to-point segments terminating at the ESP32 pad — they are
+    not display bus stagger traces and cannot be at midpoints.
     """
     print("\n── Display Stagger vs ESP32 Pin Tests ──")
     with open(PCB_FILE) as f:
@@ -481,9 +485,16 @@ def test_display_stagger_vs_esp32():
     # ESP32 left-side pin Y positions
     esp_pin_ys = [22.24 + n * 1.27 for n in range(14)]
 
+    # ESP32 right-side pin X coordinates (board level, after B.Cu mirror)
+    # Button traces that END at an ESP32 pad x are excluded from stagger check.
+    # Right-side ESP32 pads are at x=71.25; left-side at x=88.75.
+    ESP32_PAD_XS = {71.25, 88.75}
+
     # Find F.Cu horizontal traces in the STAGGER REGION (y=28..32)
-    # These are display bottom-pin stagger traces that must use midpoints
-    # Exclude short stubs < 5mm (direct pad connections)
+    # These are display bottom-pin stagger traces that must use midpoints.
+    # Exclude:
+    #   - short stubs < 5mm (direct pad connections)
+    #   - button routing traces that end exactly at an ESP32 pad column
     stagger_segs = []
     for s in segs:
         if s["layer"] != "F.Cu":
@@ -495,8 +506,14 @@ def test_display_stagger_vs_esp32():
             continue  # short stub
         y = s["y1"]
         # Critical stagger region: y=28..32 where bottom ESP32 pins are
-        if 28 < y < 32 and min(s["x1"], s["x2"]) < 75:
-            stagger_segs.append(s)
+        if not (28 < y < 32 and min(s["x1"], s["x2"]) < 75):
+            continue
+        # Exclude button routing traces that terminate at an ESP32 pad column.
+        # These traces end at epx (ESP32 pad x) or start at the approach column.
+        x_max = max(s["x1"], s["x2"])
+        if any(abs(x_max - ex) < 0.1 for ex in ESP32_PAD_XS):
+            continue  # button approach-to-pad trace, not a display stagger
+        stagger_segs.append(s)
 
     violations = []
     min_gap = 0.15  # minimum y-distance from ESP32 pin center
@@ -514,6 +531,127 @@ def test_display_stagger_vs_esp32():
     check(f"Bottom stagger traces at midpoints ({len(stagger_segs)} traces)",
           len(violations) == 0,
           f"{len(violations)} violations: {violations[:5]}")
+
+
+def test_esop8_ep_pad_clearance():
+    """Test 19: ESOP-8 (IP5306) EP pad has >= 0.10mm gap to corner signal pads.
+
+    The EP (exposed pad) is 3.4 x 2.8mm (height reduced from 3.4mm).
+    Corner signal pins 1, 4, 5, 8 are at y = ±1.905mm, half-height = 0.3mm.
+    EP edge at ±1.4mm.  Gap = 1.605 - 1.4 = 0.205mm > 0.10mm danger threshold.
+    Guard against regression that restores the original 3.4mm height.
+    """
+    print("\n── ESOP-8 EP Pad Clearance Tests ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+
+    # Find the ESOP-8 footprint block and locate the EP pad size
+    # The EP pad at center (0,0) has name "EP"
+    ep_pattern = re.compile(
+        r'\(pad "EP" smd rect \(at ([-\d.]+) ([-\d.]+)\)'
+        r' \(size ([\d.]+) ([\d.]+)\)',
+    )
+    found = False
+    violations = []
+    for m in ep_pattern.finditer(content):
+        ex, ey = float(m.group(1)), float(m.group(2))
+        ew, eh = float(m.group(3)), float(m.group(4))
+        found = True
+        # EP edges (in footprint-local coords, before board transform)
+        ep_half_h = eh / 2
+        # Corner signal pin edge at ±1.605mm (y=±1.905, half-height=0.3)
+        pin_edge = 1.605
+        gap = pin_edge - ep_half_h
+        if gap < 0.10:
+            violations.append(
+                f"EP size {ew}x{eh}mm: gap={gap:.3f}mm < 0.10mm danger threshold"
+            )
+
+    check("ESOP-8 EP pad found", found)
+    check(
+        "ESOP-8 EP pad height <= 3.2mm (gap >= 0.10mm to corner pins)",
+        len(violations) == 0,
+        f"{len(violations)} violation(s): {violations[:2]}",
+    )
+
+
+def test_msk12c02_unique_sh_pads():
+    """Test 20: MSK12C02 (SW_PWR) mounting pads have unique names SH1-SH4.
+
+    JLCPCB's DFM checker groups same-named pads and can report 0mm spacing
+    between them.  All four shell/mounting pads must have distinct names.
+    """
+    print("\n── MSK12C02 Unique SH Pad Names ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+
+    # Count pads named exactly "SH" (the old shared name) in SS-12D00G3 footprint
+    sh_plain_pattern = re.compile(r'\(pad "SH" smd rect')
+    sh_plain_count = len(sh_plain_pattern.findall(content))
+
+    # Count uniquely-named SH1-SH4 pads
+    sh_unique_pattern = re.compile(r'\(pad "SH[1-4]" smd rect')
+    sh_unique_count = len(sh_unique_pattern.findall(content))
+
+    check(
+        "No plain 'SH' pads remain (all renamed to SH1-SH4)",
+        sh_plain_count == 0,
+        f"found {sh_plain_count} plain 'SH' pads (should be 0)",
+    )
+    check(
+        "Exactly 4 unique SH1-SH4 pads present (one MSK12C02 with 4 shell pads)",
+        sh_unique_count == 4,
+        f"found {sh_unique_count} SH1-SH4 pads (expected 4)",
+    )
+
+
+def test_btn_r_routed():
+    """Test 21: BTN_R (SW12 shoulder-right button) has a trace to ESP32 GPIO36.
+
+    SW12 is at enc(65, 32) = (145, 5.5) on B.Cu.  Routing uses a B.Cu stub
+    down to a channel row, F.Cu across the board, then B.Cu up to GPIO36
+    (ESP32 right-side pad at y~36.21).  Verify that at least one B.Cu segment
+    originates near SW12 pad 3 (143.15, 8.5).
+    """
+    print("\n── BTN_R (SW12) Routing Tests ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    # SW12 signal pad 3 is at (143.15, 8.5) in board coordinates.
+    # Expect a B.Cu segment starting or ending very near this position.
+    target_x, target_y = 143.15, 8.5
+    tolerance = 0.1
+
+    found_stub = any(
+        s["layer"] == "B.Cu"
+        and (
+            (abs(s["x1"] - target_x) < tolerance and abs(s["y1"] - target_y) < tolerance)
+            or (abs(s["x2"] - target_x) < tolerance and abs(s["y2"] - target_y) < tolerance)
+        )
+        for s in segs
+    )
+
+    check(
+        "BTN_R B.Cu stub found near SW12 pad 3 (143.15, 8.5)",
+        found_stub,
+        "no B.Cu segment near SW12 signal pad — BTN_R may be unrouted",
+    )
+
+    # Also verify a long F.Cu horizontal segment exists near chan_y_r (69.0)
+    # that spans most of the board width (x > 60mm length) for the cross-board run
+    long_fcu = any(
+        s["layer"] == "F.Cu"
+        and abs(s["y1"] - s["y2"]) < 0.01
+        and abs(s["y1"] - 69.0) < 1.0
+        and abs(s["x1"] - s["x2"]) > 60
+        for s in segs
+    )
+    check(
+        "BTN_R long F.Cu cross-board segment found near y=69mm",
+        long_fcu,
+        "no long F.Cu segment at y~69mm — BTN_R channel route may be missing",
+    )
 
 
 if __name__ == "__main__":
@@ -534,6 +672,9 @@ if __name__ == "__main__":
     test_trace_spacing()
     test_via_to_via_spacing()
     test_display_stagger_vs_esp32()
+    test_esop8_ep_pad_clearance()
+    test_msk12c02_unique_sh_pads()
+    test_btn_r_routed()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")

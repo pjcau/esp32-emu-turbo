@@ -108,9 +108,11 @@ def esp32_s3_wroom1(layer="B"):
 # Ref: JLCPCB/EasyEDA official library + brunoeagle KiCad footprint
 # 4 pads: pins 1,3 (left pair, terminal A), pins 2,4 (right pair, B)
 # Horizontal span: 6.0mm, vertical span: 3.7mm
+# DFM: pad width increased 1.0->1.2mm, height 0.75->0.9mm to fully cover
+#      JLCPCB 3D model leads and eliminate pin-left/pin-right edge violations
 def sw_smd_5_1(layer="F"):
     layers = SMD_F if layer == "F" else SMD_B
-    pw, ph = 1.0, 0.75
+    pw, ph = 1.2, 0.9   # IPC-SM-782 standard for 5.1x5.1 tact switch
     cx, cy = 3.0, 1.85
     return [
         _pad("1", "smd", "rect", -cx, -cy, pw, ph, layers),
@@ -122,6 +124,9 @@ def sw_smd_5_1(layer="F"):
 
 # ── ESOP-8 (IP5306) ──────────────────────────────────────────────
 # 8 pins + exposed pad, 1.27mm pitch
+# DFM: EP reduced from 3.4x3.4 to 3.4x2.8mm so corner signal pads
+#      (at y=±1.905, half-height=0.3 → edge at y=±1.605) have ≥0.155mm
+#      clearance from EP edges (±1.4mm): gap = 1.605-1.45 > 0.15mm threshold.
 def esop8(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
@@ -137,8 +142,9 @@ def esop8(layer="B"):
         y = 1.905 - i * 1.27
         pads.append(_pad(str(i + 5), "smd", "rect", 3.0, y, pw, ph, layers))
 
-    # Exposed pad
-    pads.append(_pad("EP", "smd", "rect", 0, 0, 3.4, 3.4, layers))
+    # Exposed pad — height 2.8mm (reduced from 3.4mm for pad-to-pad clearance)
+    # EP edges at y=±1.4mm; corner pin edges at y=±1.605mm; gap=0.205mm > 0.10mm
+    pads.append(_pad("EP", "smd", "rect", 0, 0, 3.4, 2.8, layers))
 
     return pads
 
@@ -242,11 +248,13 @@ def usb_c_16p(layer="B"):
     # Front shields: size 1.3x2.1, rear shields: size 1.3x1.6
     # Drill 0.80mm, solder_mask_margin=-0.1 to reduce mask opening
     # and avoid THT-to-SMD DFM flags with nearby signal pads
-    for sx in [-4.32, 4.32]:
-        pads.append(_pad("S", "thru_hole", "oval", sx, -3.105, 1.3, 2.1, THT,
+    # DFM: unique pad names S1-S4 to prevent JLCPCB treating same-named pads
+    #      at different positions as 0mm pad spacing violations
+    for pi, sx in enumerate([-4.32, 4.32]):
+        pads.append(_pad(f"S{pi+1}", "thru_hole", "oval", sx, -3.105, 1.3, 2.1, THT,
                          drill=0.80, solder_mask_margin=-0.1))
-    for sx in [-4.32, 4.32]:
-        pads.append(_pad("S", "thru_hole", "oval", sx, 1.075, 1.3, 1.6, THT,
+    for pi, sx in enumerate([-4.32, 4.32]):
+        pads.append(_pad(f"S{pi+3}", "thru_hole", "oval", sx, 1.075, 1.3, 1.6, THT,
                          drill=0.80, solder_mask_margin=-0.1))
 
     return pads
@@ -334,6 +342,8 @@ def passive_1206(layer="B"):
 # Ref: KiCad Button_Switch_SMD.pretty/SW_SPDT_Shouhan_MSK12C02.kicad_mod
 # 3 signal SMD pads + 4 shell/mounting SMD pads
 # Replaces old SS-12D00G3 THT footprint (wrong component type)
+# DFM: unique pad names SH1-SH4 (was all "SH") to prevent JLCPCB treating
+#      same-named pads as pad-spacing 0mm violations in its DFM checker.
 def msk12c02(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
@@ -343,10 +353,11 @@ def msk12c02(layer="B"):
     pads.append(_pad("2", "smd", "rect", 0.75, -1.95, 0.6, 1.3, layers))
     pads.append(_pad("3", "smd", "rect", 2.25, -1.95, 0.6, 1.3, layers))
 
-    # Shell/mounting pads (4 corners)
-    for sx, sy in [(-3.675, -1.1), (-3.675, 1.1),
-                   (3.675, -1.1), (3.675, 1.1)]:
-        pads.append(_pad("SH", "smd", "rect", sx, sy, 1.05, 0.7, layers))
+    # Shell/mounting pads (4 corners) — unique names to avoid JLCPCB 0mm spacing
+    shell_positions = [(-3.675, -1.1), (-3.675, 1.1),
+                       (3.675, -1.1), (3.675, 1.1)]
+    for i, (sx, sy) in enumerate(shell_positions):
+        pads.append(_pad(f"SH{i+1}", "smd", "rect", sx, sy, 1.05, 0.7, layers))
 
     return pads
 

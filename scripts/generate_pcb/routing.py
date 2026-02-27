@@ -121,7 +121,7 @@ R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
 C1_POS = (122.0, 48.5)   # AMS1117 input cap — DFM: was 124.0 (pad/via too close to FPC slot)
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
-C3_POS = (70.0, 42.0)    # ESP32 decoupling 1
+C3_POS = (68.0, 42.0)    # ESP32 decoupling 1 — DFM: moved from 70 to 68 (pad1 at 68.95 clears BTN_LEFT ax=70.95)
 C4_POS = (85.0, 42.0)    # ESP32 decoupling 2
 C17_POS = (110.0, 35.0)  # IP5306 cap
 C18_POS = (116.0, 37.5)  # IP5306 cap (ix+6, iy-5)
@@ -359,12 +359,13 @@ def _power_traces():
     esp_gnd = _pad("U1", "41")
 
     # ── VBUS: USB-C -> IP5306 ──────────────────────────────────
-    # B.Cu stub from USB-C VBUS pad -> via
-    vbus_via_y = usb_vbus[1] - 2
+    # B.Cu stub from USB-C VBUS pad -> via at y=60 (clear of button channels y=62-71)
+    # DFM: was y = usb_vbus[1]-2 = 66.25 which overlaps BTN_A F.Cu channel at y=66
+    vbus_via_y = 60.0   # fixed safe Y above all button channels
     parts.append(_seg(usb_vbus[0], usb_vbus[1], usb_vbus[0], vbus_via_y,
                        "B.Cu", W_PWR, n_vbus))
     parts.append(_via_net(usb_vbus[0], vbus_via_y, n_vbus))
-    # F.Cu horizontal to IP5306 area, then F.Cu vertical down
+    # F.Cu horizontal to IP5306 area, then F.Cu vertical up to IP5306 pin Y
     # (avoid long B.Cu vertical crossing BAT+ horizontal at y~58.5)
     ip_vbus_via_x = ip_vbus[0] - 2
     parts.append(_seg(usb_vbus[0], vbus_via_y, ip_vbus_via_x, vbus_via_y,
@@ -415,9 +416,14 @@ def _power_traces():
 
     # ── LX: IP5306 SW (pin 7) -> L1 inductor ────────────────
     # Route from SW pin down to L1 pin 2 (closer pin)
-    parts.append(_seg(ip_sw[0], ip_sw[1], ip_sw[0], l1_2[1],
+    # DFM: SW pin at x=107, BAT pin also at x=107 — route LX LEFT 1mm first
+    # to avoid vertical overlap between LX and BAT+ traces on same x=107 column
+    lx_col_x = ip_sw[0] - 1.0   # x=106 — clear of BAT+ vertical at x=107
+    parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR, n_lx))
-    parts.append(_seg(ip_sw[0], l1_2[1], l1_2[0], l1_2[1],
+    parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, l1_2[1],
+                       "B.Cu", W_PWR, n_lx))
+    parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR, n_lx))
 
     # ── BAT+ side of L1: L1 pin 1 to BAT+ zone ─────────────
@@ -463,12 +469,17 @@ def _power_traces():
                            esp_3v3[1] - 2, "B.Cu", 0.4, n_3v3))
 
     # ── BAT+: IP5306 -> JST battery connector ─────────────────
+    # DFM: ip_bat at x=107 same as ip_sw — offset BAT+ via to x=108 to avoid
+    # LX trace running down x=106 column (both IP5306 pins are at x=107)
+    bat_col_x = ip_bat[0] + 1.0   # x=108, clear of LX at x=106
     bat_via_y = ip_bat[1] + 3
-    parts.append(_seg(ip_bat[0], ip_bat[1], ip_bat[0], bat_via_y,
+    parts.append(_seg(ip_bat[0], ip_bat[1], bat_col_x, ip_bat[1],
                        "B.Cu", W_PWR, n_bat))
-    parts.append(_via_net(ip_bat[0], bat_via_y, n_bat))
+    parts.append(_seg(bat_col_x, ip_bat[1], bat_col_x, bat_via_y,
+                       "B.Cu", W_PWR, n_bat))
+    parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
     # F.Cu horizontal to JST
-    parts.append(_seg(ip_bat[0], bat_via_y, jst_p[0], bat_via_y,
+    parts.append(_seg(bat_col_x, bat_via_y, jst_p[0], bat_via_y,
                        "F.Cu", W_PWR, n_bat))
     parts.append(_via_net(jst_p[0], bat_via_y, n_bat))
     # B.Cu vertical to JST pad
@@ -700,7 +711,9 @@ def _spi_traces():
         parts.append(_via_net(col_x, bypass_y, net))
 
         # 4. F.Cu horizontal across board past slot
-        post_slot_x = 135.0 + i * 1.0  # right of slot
+        # DFM: post_slot_x=135+i overlaps with LCD approach columns at 135-138
+        # Shift SPI to x=142+i (right of FPC connector pad at x=136.85)
+        post_slot_x = 142.0 + i * 1.0  # right of FPC connector, clear of LCD
         parts.append(_seg(col_x, bypass_y, post_slot_x, bypass_y,
                           "F.Cu", W_DATA, net))
         # Stay on F.Cu — no via here (avoid B.Cu vertical crossing LCD traces)
@@ -943,15 +956,27 @@ def _usb_traces():
     r2_p1 = _pad("R2", "1")      # signal side
     r2_p2 = _pad("R2", "2")      # GND side
 
-    # CC1 → R1: L-shaped route on B.Cu
+    # CC1 → R1: staggered Y to avoid horizontal overlap with CC2
+    # DFM: h_first=False creates horizontal at r1_p1[1]=67 which overlaps CC2.
+    # Use stagger_y=66 for CC1 to separate the two horizontal segments.
     if usb_cc1 and r1_p1:
-        parts.extend(_L(usb_cc1[0], usb_cc1[1], r1_p1[0], r1_p1[1],
-                        "B.Cu", W_SIG, n_cc1, h_first=False))
+        cc1_y = r1_p1[1] - 1.0   # y=66, one row above R pad
+        parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], cc1_y,
+                           "B.Cu", W_SIG, n_cc1))
+        parts.append(_seg(usb_cc1[0], cc1_y, r1_p1[0], cc1_y,
+                           "B.Cu", W_SIG, n_cc1))
+        parts.append(_seg(r1_p1[0], cc1_y, r1_p1[0], r1_p1[1],
+                           "B.Cu", W_SIG, n_cc1))
 
-    # CC2 → R2: L-shaped route on B.Cu
+    # CC2 → R2: staggered at y=68 to avoid overlap with CC1 at y=66
     if usb_cc2 and r2_p1:
-        parts.extend(_L(usb_cc2[0], usb_cc2[1], r2_p1[0], r2_p1[1],
-                        "B.Cu", W_SIG, n_cc2, h_first=False))
+        cc2_y = r2_p1[1] + 1.0   # y=68, one row below R pad
+        parts.append(_seg(usb_cc2[0], usb_cc2[1], usb_cc2[0], cc2_y,
+                           "B.Cu", W_SIG, n_cc2))
+        parts.append(_seg(usb_cc2[0], cc2_y, r2_p1[0], cc2_y,
+                           "B.Cu", W_SIG, n_cc2))
+        parts.append(_seg(r2_p1[0], cc2_y, r2_p1[0], r2_p1[1],
+                           "B.Cu", W_SIG, n_cc2))
 
     # R1/R2 GND side → GND vias (offset 1.5mm from pad to avoid via-in-pad)
     if r1_p2:
@@ -1032,17 +1057,23 @@ def _button_traces():
             ax = epx + 2 + i * 1.0   # DFM: was 0.6mm (via overlap)
         else:
             ax = epx - 2 - i * 1.0   # DFM: was 0.6mm (via overlap)
-        # Nudge away from passive traces and previously used columns
-        for _ in range(20):
+        # Nudge away from passive traces and previously used columns.
+        # Use expanding-step search to escape oscillation: when a candidate
+        # is blocked from both sides (passive on one side, used on other),
+        # step away from the ESP32 in increasing increments.
+        step = 0
+        for _ in range(40):
             conflict = False
             for px in passive_trace_xs:
-                if abs(ax - px) < 1.0:  # DFM: 1.0mm clearance from passive vertical traces
-                    ax = px + 1.0 if ax > px else px - 1.0
+                if abs(ax - px) < 1.5:  # DFM: 1.5mm clearance from passive traces
+                    ax = px + 1.5 if ax > px else px - 1.5
                     conflict = True
                     break
             for ux in used_approach_xs:
-                if abs(ax - ux) < 1.0:  # DFM: was 0.4mm (via overlap)
-                    ax = ux - 1.0 if ax < ux else ux + 1.0
+                if abs(ax - ux) < 1.5:  # DFM: 1.5mm min separation between columns
+                    # Always step AWAY from ESP32 pin to expand outward
+                    step += 1.5
+                    ax = (ux + step) if epx > CX else (ux - step)
                     conflict = True
                     break
             if not conflict:
@@ -1136,7 +1167,7 @@ def _button_traces():
     # Shoulder button BTN_L (B.Cu, rotated 90°)
     net_l = NET_ID["BTN_L"]
     # Use actual pad position instead of button center
-    sl_pad = _pad("SW11", "3")  # bottom pad after rotation
+    sl_pad = _pad("SW11", "3")  # signal pad (inner side toward board center)
     sx_l = sl_pad[0] if sl_pad else SHOULDER_L[1][0]
     sy_l = sl_pad[1] if sl_pad else SHOULDER_L[1][1]
     epx_l, epy_l = _esp_pin(35)
@@ -1163,6 +1194,38 @@ def _button_traces():
         parts.append(_seg(sl_gnd[0], sl_gnd[1], gnd_via_x, sl_gnd[1],
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(gnd_via_x, sl_gnd[1], n_gnd))
+
+    # Shoulder button BTN_R (B.Cu, rotated 90°)
+    # SW12 at enc(65, 32) = (145, 5.5) on the right side of the board.
+    # Route: pad 3 (inner signal pad) -> B.Cu down -> F.Cu across -> ESP32 GPIO36
+    net_r = NET_ID["BTN_R"]
+    sr_pad = _pad("SW12", "3")  # signal pad (inner side toward board center)
+    epx_r, epy_r = _esp_pin(36)
+    if sr_pad:
+        sx_r, sy_r = sr_pad
+        chan_y_r = chan_y_l + 1.0  # unique channel row below BTN_L
+
+        # B.Cu vertical from shoulder-R pad down to channel
+        parts.append(_seg(sx_r, sy_r, sx_r, chan_y_r, "B.Cu", W_SIG, net_r))
+        parts.append(_via_net(sx_r, chan_y_r, net_r))
+        # F.Cu horizontal across board to approach column right of ESP32
+        approach_r = epx_r + 2
+        parts.append(_seg(sx_r, chan_y_r, approach_r, chan_y_r,
+                           "F.Cu", W_SIG, net_r))
+        parts.append(_via_net(approach_r, chan_y_r, net_r))
+        # B.Cu vertical up to ESP32 pin level
+        parts.append(_seg(approach_r, chan_y_r, approach_r, epy_r,
+                           "B.Cu", W_SIG, net_r))
+        # B.Cu horizontal to ESP32 pad
+        parts.append(_seg(approach_r, epy_r, epx_r, epy_r,
+                           "B.Cu", W_SIG, net_r))
+        # GND via on outer pad of SW12 (offset 1mm away from pad)
+        sr_gnd = _pad("SW12", "2")
+        if sr_gnd:
+            gnd_via_x_r = sr_gnd[0] + 1.0  # 1mm outward from pad
+            parts.append(_seg(sr_gnd[0], sr_gnd[1], gnd_via_x_r, sr_gnd[1],
+                              "B.Cu", W_SIG, n_gnd))
+            parts.append(_via_net(gnd_via_x_r, sr_gnd[1], n_gnd))
 
     return parts
 
