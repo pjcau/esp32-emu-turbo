@@ -232,6 +232,12 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
     parts.append(P.gr_text("R", px, py + 5, "B.Fab", 0.8))
 
+    # Board title (back side, top center)
+    parts.append(P.gr_text(
+        "ESP32-EMU-TURBO CPJ&CP 2026", CX, 3.0,
+        "B.SilkS", 0.8,
+    ))
+
     return "".join(parts)
 
 
