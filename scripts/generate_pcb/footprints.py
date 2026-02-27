@@ -240,14 +240,14 @@ def usb_c_16p(layer="B"):
 
     # Shield / mounting legs (4 THT oval pads)
     # Front shields: size 1.3x2.1, rear shields: size 1.3x1.6
-    # Drill 0.80mm (was 0.65 — increased for JLCPCB DFM "missing hole for pin")
-    # Annular ring: (1.3-0.8)/2 = 0.25mm > 0.175mm minimum
+    # Drill 0.80mm, solder_mask_margin=-0.1 to reduce mask opening
+    # and avoid THT-to-SMD DFM flags with nearby signal pads
     for sx in [-4.32, 4.32]:
         pads.append(_pad("S", "thru_hole", "oval", sx, -3.105, 1.3, 2.1, THT,
-                         drill=0.80))
+                         drill=0.80, solder_mask_margin=-0.1))
     for sx in [-4.32, 4.32]:
         pads.append(_pad("S", "thru_hole", "oval", sx, 1.075, 1.3, 1.6, THT,
-                         drill=0.80))
+                         drill=0.80, solder_mask_margin=-0.1))
 
     return pads
 

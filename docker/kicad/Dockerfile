@@ -1,4 +1,4 @@
-FROM kicad/kicad:nightly
+FROM --platform=linux/amd64 kicad/kicad:nightly
 
 # Official KiCad image includes kicad-cli for headless schematic export.
 # Used to export schematics to SVG/PDF without a GUI.
