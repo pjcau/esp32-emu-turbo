@@ -1165,7 +1165,7 @@ def _usb_traces():
                        "B.Cu", W_DATA, n_dp))
     parts.append(_via_net(usb_dp[0], dp_via_y, n_dp))
     # 2. F.Cu horizontal to approach column
-    dp_col_x = dp_x + 2
+    dp_col_x = dp_x + 1.5   # DFM fix: was +2 (gap to GND cap 0.575mm vs 0.075mm)
     parts.append(_seg(usb_dp[0], dp_via_y, dp_col_x, dp_via_y,
                        "F.Cu", W_DATA, n_dp))
     parts.append(_via_net(dp_col_x, dp_via_y, n_dp))
@@ -1180,7 +1180,7 @@ def _usb_traces():
     parts.append(_seg(usb_dm[0], usb_dm[1], usb_dm[0], dm_via_y,
                        "B.Cu", W_DATA, n_dm))
     parts.append(_via_net(usb_dm[0], dm_via_y, n_dm))
-    dm_col_x = dm_x + 3
+    dm_col_x = dm_x + 2.5   # DFM fix: was +3 (match dp shift)
     parts.append(_seg(usb_dm[0], dm_via_y, dm_col_x, dm_via_y,
                        "F.Cu", W_DATA, n_dm))
     parts.append(_via_net(dm_col_x, dm_via_y, n_dm))
@@ -1483,7 +1483,7 @@ def _button_traces():
         LCD_BL_X = 73.02  # LCD_BL B.Cu vert x (crosses left-side button stubs)
         is_bottom = abs(epy - 40.0) < 2.0
         if is_bottom:
-            stagger_y = 38.0 - bottom_stagger_idx * 1.0  # DFM: was 0.8mm
+            stagger_y = 35.5 - bottom_stagger_idx * 1.0  # DFM fix: was 38.0 (clear MH 55,37.5)
             bottom_stagger_idx += 1
             # B.Cu vertical from approach column to stagger Y
             parts.append(_seg(ax, cy, ax, stagger_y, "B.Cu", W_SIG, net))
@@ -1502,7 +1502,7 @@ def _button_traces():
             if epx < CX:
                 _ne = epx - 2.0
                 if _ne < LCD_BL_X < epx:
-                    _ne = LCD_BL_X + 0.5   # 73.52 — just right of LCD_BL
+                    _ne = LCD_BL_X + 0.5 + (bottom_stagger_idx - 1) * 0.4  # DFM fix: stagger vias apart
                 # Additional check: if stub [_ne,epx] spans BTN_UP vert, push _ne > BTN_UP_VX
                 if _ne < BTN_UP_VX < epx:
                     _ne = BTN_UP_VX + 0.3  # 70.75 — just right of BTN_UP vert

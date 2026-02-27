@@ -1075,6 +1075,96 @@ def test_via_pad_spacing():
     )
 
 
+def test_usb_cap_trace_spacing():
+    """Test 40: USB D+/D- B.Cu traces maintain >= 0.10mm from GND cap traces.
+
+    Guards against JLCPCB DANGER: B.Cu trace spacing in USB area (x=88-93).
+    """
+    print("\n── USB Cap Trace Spacing Test ──")
+    segs = _cached_segments()
+
+    # B.Cu segments in USB area
+    usb_segs = [s for s in segs
+                if s["layer"] == "B.Cu" and 88 <= s["x1"] <= 93 and 88 <= s["x2"] <= 93
+                and 55 <= s["y1"] <= 75 and 55 <= s["y2"] <= 75]
+
+    violations = []
+    for i in range(len(usb_segs)):
+        for j in range(i + 1, len(usb_segs)):
+            s1, s2 = usb_segs[i], usb_segs[j]
+            if s1["net"] == s2["net"]:
+                continue
+            gap = _seg_min_dist(s1, s2)
+            if gap is not None and gap < 0.10:
+                violations.append(
+                    f"gap={gap:.3f}mm: ({s1['x1']},{s1['y1']})-({s1['x2']},{s1['y2']}) w={s1['w']} "
+                    f"vs ({s2['x1']},{s2['y1']})-({s2['x2']},{s2['y2']}) w={s2['w']}"
+                )
+
+    check("USB B.Cu trace-to-cap spacing >= 0.10mm",
+          len(violations) == 0,
+          f"{len(violations)} violations: {violations[:3]}")
+
+
+def test_mounting_hole_trace_clearance():
+    """Test 41: F.Cu traces maintain >= 0.18mm from MH(55,37.5) drill edge.
+
+    Guards against JLCPCB DANGER: PTH-to-trace clearance near mounting holes.
+    MH drill=2.5mm, so edge radius=1.25mm from center.
+    """
+    print("\n── Mounting Hole Trace Clearance Test ──")
+    segs = _cached_segments()
+
+    mh_x, mh_y = 55.0, 37.5
+    mh_radius = 1.25  # drill=2.5mm
+    min_clearance = 0.18  # JLCPCB minimum
+
+    # F.Cu segments near the mounting hole (within 5mm box)
+    nearby = [s for s in segs
+              if s["layer"] == "F.Cu"
+              and min(s["x1"], s["x2"]) < mh_x + 5
+              and max(s["x1"], s["x2"]) > mh_x - 5
+              and min(s["y1"], s["y2"]) < mh_y + 5
+              and max(s["y1"], s["y2"]) > mh_y - 5]
+
+    violations = []
+    for s in nearby:
+        # Distance from MH center to nearest point on segment
+        # For axis-aligned segments:
+        if abs(s["x1"] - s["x2"]) < 0.01:  # vertical
+            dx = abs(s["x1"] - mh_x)
+            sy_min, sy_max = min(s["y1"], s["y2"]), max(s["y1"], s["y2"])
+            if sy_min <= mh_y <= sy_max:
+                dist = dx
+            else:
+                dy = min(abs(mh_y - sy_min), abs(mh_y - sy_max))
+                dist = (dx**2 + dy**2)**0.5
+        elif abs(s["y1"] - s["y2"]) < 0.01:  # horizontal
+            dy = abs(s["y1"] - mh_y)
+            sx_min, sx_max = min(s["x1"], s["x2"]), max(s["x1"], s["x2"])
+            if sx_min <= mh_x <= sx_max:
+                dist = dy
+            else:
+                dx = min(abs(mh_x - sx_min), abs(mh_x - sx_max))
+                dist = (dx**2 + dy**2)**0.5
+        else:
+            # Diagonal — use endpoint distances as conservative estimate
+            d1 = ((s["x1"] - mh_x)**2 + (s["y1"] - mh_y)**2)**0.5
+            d2 = ((s["x2"] - mh_x)**2 + (s["y2"] - mh_y)**2)**0.5
+            dist = min(d1, d2)
+
+        # Gap = center distance - MH radius - half trace width
+        gap = dist - mh_radius - s["w"] / 2
+        if gap < min_clearance:
+            violations.append(
+                f"gap={gap:.3f}mm: ({s['x1']},{s['y1']})-({s['x2']},{s['y2']}) w={s['w']}"
+            )
+
+    check(f"F.Cu traces >= {min_clearance}mm from MH(55,37.5) drill edge",
+          len(violations) == 0,
+          f"{len(violations)} violations: {violations[:3]}")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -1107,6 +1197,8 @@ if __name__ == "__main__":
     test_gnd_lcd_d7_spacing()
     test_lcd_sd_approach_spacing()
     test_via_pad_spacing()
+    test_usb_cap_trace_spacing()
+    test_mounting_hole_trace_clearance()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")
