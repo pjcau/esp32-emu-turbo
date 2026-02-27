@@ -43,66 +43,35 @@ SLOT_Y2 = 47.5    # bottom edge
 
 
 def parse_pcb(filepath):
-    """Parse KiCad PCB file and extract design elements."""
-    text = Path(filepath).read_text()
+    """Parse KiCad PCB file and extract design elements (via cache)."""
+    from pcb_cache import load_cache
+    cache = load_cache(Path(filepath))
 
-    result = {
-        "segments": [],
-        "vias": [],
+    # THT pads with drill (deduplicated by position)
+    seen = set()
+    tht_pads = []
+    for p in cache["pads"]:
+        if p.get("type") == "thru_hole" and p.get("drill", 0) > 0:
+            key = (p["x"], p["y"])
+            if key not in seen:
+                seen.add(key)
+                tht_pads.append({
+                    "x": p["x"], "y": p["y"],
+                    "size_w": p["w"], "size_h": p["h"],
+                    "drill": p["drill"],
+                })
+
+    # Filter nets: id > 0 and non-empty name
+    nets = [n for n in cache["nets"] if n["id"] > 0 and n["name"]]
+
+    return {
+        "segments": cache["segments"],
+        "vias": cache["vias"],
         "footprints": [],
-        "zones": [],
-        "nets": [],
-        "pads": [],
+        "zones": cache["zones"],
+        "nets": nets,
+        "pads": tht_pads,
     }
-
-    # Extract segments: (segment (start X Y) (end X Y) (width W) (layer L) (net N))
-    for m in re.finditer(
-        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(width\s+([\d.]+)\)\s+'
-        r'\(layer\s+"([^"]+)"\)\s+'
-        r'\(net\s+(\d+)\)', text
-    ):
-        result["segments"].append({
-            "x1": float(m.group(1)), "y1": float(m.group(2)),
-            "x2": float(m.group(3)), "y2": float(m.group(4)),
-            "width": float(m.group(5)),
-            "layer": m.group(6),
-            "net": int(m.group(7)),
-        })
-
-    # Extract vias: (via (at X Y) (size S) (drill D))
-    for m in re.finditer(
-        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+'
-        r'\(drill\s+([\d.]+)\)', text
-    ):
-        result["vias"].append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size": float(m.group(3)),
-            "drill": float(m.group(4)),
-        })
-
-    # Extract net declarations
-    for m in re.finditer(r'\(net\s+(\d+)\s+"([^"]*)"\)', text):
-        nid = int(m.group(1))
-        name = m.group(2)
-        if nid > 0 and name:
-            result["nets"].append({"id": nid, "name": name})
-
-    # Extract mounting holes / pads with drill
-    for m in re.finditer(
-        r'\(pad\s+"[^"]*"\s+thru_hole\s+\w+\s+\(at\s+([\d.-]+)\s+([\d.-]+)\)'
-        r'\s+\(size\s+([\d.]+)\s+([\d.]+)\)'
-        r'\s+\(drill\s+([\d.]+)\)', text
-    ):
-        result["pads"].append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size_w": float(m.group(3)), "size_h": float(m.group(4)),
-            "drill": float(m.group(5)),
-        })
-
-    return result
 
 
 def check_trace_width(data):

@@ -57,52 +57,19 @@ MOUNT_HOLES = [
 
 
 def parse_pcb(filepath):
-    """Parse KiCad PCB file."""
-    text = Path(filepath).read_text()
-    result = {"segments": [], "vias": [], "nets": [], "zones": []}
+    """Parse KiCad PCB file (via cache)."""
+    from pcb_cache import load_cache
+    cache = load_cache(Path(filepath))
 
-    for m in re.finditer(
-        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(width\s+([\d.]+)\)\s+'
-        r'\(layer\s+"([^"]+)"\)\s+'
-        r'\(net\s+(\d+)\)', text
-    ):
-        result["segments"].append({
-            "x1": float(m.group(1)), "y1": float(m.group(2)),
-            "x2": float(m.group(3)), "y2": float(m.group(4)),
-            "width": float(m.group(5)),
-            "layer": m.group(6),
-            "net": int(m.group(7)),
-        })
+    # Filter nets: id > 0
+    nets = [n for n in cache["nets"] if n["id"] > 0]
 
-    for m in re.finditer(
-        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+\(drill\s+([\d.]+)\)'
-        r'.*?\(net\s+(\d+)\)', text, re.DOTALL
-    ):
-        result["vias"].append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size": float(m.group(3)), "drill": float(m.group(4)),
-            "net": int(m.group(5)),
-        })
-
-    for m in re.finditer(r'\(net\s+(\d+)\s+"([^"]*)"\)', text):
-        nid = int(m.group(1))
-        if nid > 0:
-            result["nets"].append({"id": nid, "name": m.group(2)})
-
-    for m in re.finditer(
-        r'\(zone\s+.*?\(net\s+(\d+)\).*?\(net_name\s+"([^"]*)"\).*?\(layer\s+"([^"]+)"\)',
-        text, re.DOTALL
-    ):
-        result["zones"].append({
-            "net": int(m.group(1)),
-            "net_name": m.group(2),
-            "layer": m.group(3),
-        })
-
-    return result
+    return {
+        "segments": cache["segments"],
+        "vias": cache["vias"],
+        "nets": nets,
+        "zones": cache["zones"],
+    }
 
 
 def seg_length(seg):

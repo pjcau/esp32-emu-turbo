@@ -105,11 +105,17 @@ def main():
     print(f"\n  All sub-sheets combined: {len(all_subsheet_refs)} unique refs")
     print(f"  Refs: {', '.join(sorted(all_subsheet_refs))}")
 
-    # 3. PCB file
+    # 3. PCB file (via cache for faster loading)
     pcb_path = os.path.join(kicad_dir, "esp32-emu-turbo.kicad_pcb")
     if os.path.exists(pcb_path):
-        pcb_content = open(pcb_path).read()
-        pcb_refs = set(extract_pcb_refs(pcb_content))
+        try:
+            from pcb_cache import load_cache
+            from pathlib import Path as _Path
+            cache = load_cache(_Path(pcb_path))
+            pcb_refs = set(cache["refs"])
+        except Exception:
+            pcb_content = open(pcb_path).read()
+            pcb_refs = set(extract_pcb_refs(pcb_content))
         print_section("PCB FILE")
         print(f"  File: {pcb_path}")
         print(f"  Components: {len(pcb_refs)}")

@@ -31,107 +31,25 @@ SLOT_Y1, SLOT_Y2 = 23.5, 47.5
 
 
 def parse_pcb(filepath):
-    """Parse KiCad PCB and extract elements for analysis."""
-    text = Path(filepath).read_text()
-    data = {
-        "segments": [],
-        "vias": [],
-        "zones": [],
-        "nets": {},
-        "pads": [],
-        "filled_polygons": 0,
+    """Parse KiCad PCB and extract elements for analysis (via cache)."""
+    from pcb_cache import load_cache
+    cache = load_cache(Path(filepath))
+
+    # Convert nets from list to dict {id: name}
+    nets = {n["id"]: n["name"] for n in cache["nets"]
+            if n["id"] > 0 and n["name"]}
+
+    # Simplify pads to just {net: N}
+    pad_nets = [{"net": p["net"]} for p in cache["pads"]]
+
+    return {
+        "segments": cache["segments"],
+        "vias": cache["vias"],
+        "zones": cache["zones"],
+        "nets": nets,
+        "pads": pad_nets,
+        "filled_polygons": cache["filled_polygons"],
     }
-
-    # Segments
-    for m in re.finditer(
-        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(width\s+([\d.]+)\)\s+'
-        r'\(layer\s+"([^"]+)"\)\s+'
-        r'\(net\s+(\d+)\)', text
-    ):
-        data["segments"].append({
-            "x1": float(m.group(1)), "y1": float(m.group(2)),
-            "x2": float(m.group(3)), "y2": float(m.group(4)),
-            "width": float(m.group(5)),
-            "layer": m.group(6),
-            "net": int(m.group(7)),
-        })
-
-    # Vias
-    for m in re.finditer(
-        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+'
-        r'\(drill\s+([\d.]+)\)\s+'
-        r'\(layers\s+"[^"]+"\s+"[^"]+"\)\s+'
-        r'\(net\s+(\d+)\)', text
-    ):
-        data["vias"].append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size": float(m.group(3)),
-            "drill": float(m.group(4)),
-            "net": int(m.group(5)),
-        })
-
-    # Net declarations
-    for m in re.finditer(r'^\s+\(net\s+(\d+)\s+"([^"]*)"\)', text, re.M):
-        nid = int(m.group(1))
-        name = m.group(2)
-        if nid > 0 and name:
-            data["nets"][nid] = name
-
-    # Zones
-    zone_pattern = re.compile(
-        r'\(zone\s*\n'
-        r'\s+\(net\s+(\d+)\)\s*\n'
-        r'\s+\(net_name\s+"([^"]+)"\)\s*\n'
-        r'\s+\(layer\s+"([^"]+)"\)\s*\n'
-        r'[\s\S]*?\(priority\s+(\d+)\)?',
-        re.MULTILINE
-    )
-    for m in zone_pattern.finditer(text):
-        data["zones"].append({
-            "net": int(m.group(1)),
-            "net_name": m.group(2),
-            "layer": m.group(3),
-            "priority": int(m.group(4)) if m.group(4) else -1,
-        })
-
-    # Simpler zone parse as fallback
-    if not data["zones"]:
-        for m in re.finditer(
-            r'\(zone\s*\n\s+\(net\s+(\d+)\)\s*\n'
-            r'\s+\(net_name\s+"([^"]+)"\)\s*\n'
-            r'\s+\(layer\s+"([^"]+)"\)', text
-        ):
-            prio_match = re.search(
-                r'\(priority\s+(\d+)\)',
-                text[m.start():m.start() + 500]
-            )
-            data["zones"].append({
-                "net": int(m.group(1)),
-                "net_name": m.group(2),
-                "layer": m.group(3),
-                "priority": int(prio_match.group(1)) if prio_match else -1,
-            })
-
-    # Check for filled_polygon data
-    data["filled_polygons"] = len(re.findall(r'\(filled_polygon\b', text))
-
-    # Pad net assignments
-    for m in re.finditer(
-        r'\(pad\s+"[^"]*"\s+\w+\s+\w+\s+'
-        r'\(at\s+[\d.\s-]+\)\s+'
-        r'\(size\s+[\d.\s]+\)\s*'
-        r'(?:\(drill\s+[\d.]+\)\s*)?'
-        r'\(layers\s+[^)]+\)\s*'
-        r'(?:\(remove_unused_layers\s+\w+\)\s*)?'
-        r'(?:\(net\s+(\d+))?', text
-    ):
-        net = int(m.group(1)) if m.group(1) else 0
-        data["pads"].append({"net": net})
-
-    return data
 
 
 def _segments_overlap(s1, s2):

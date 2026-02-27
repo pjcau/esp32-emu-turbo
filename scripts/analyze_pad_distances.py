@@ -74,170 +74,30 @@ def _rotate(x, y, angle_deg):
 
 
 def parse_pcb(path: Path):
-    """Parse .kicad_pcb and return (pads, vias, segments)."""
-    text = path.read_text(encoding="utf-8")
+    """Parse .kicad_pcb and return (pads, vias, segments) via cache."""
+    from pcb_cache import load_cache
+    cache = load_cache(path)
 
-    pads: list[Pad] = []
-    vias: list[Via] = []
-    segments: list[Segment] = []
+    pads: list[Pad] = [
+        Pad(ref=p["ref"], num=p["num"], layer=p["layer"],
+            x=p["x"], y=p["y"], w=p["w"], h=p["h"], shape=p["shape"],
+            fp_x=p["fp_x"], fp_y=p["fp_y"], net=p["net"])
+        for p in cache["pads"]
+    ]
 
-    # ── Parse footprints ─────────────────────────────────────────
-    # Split on top-level footprint blocks
-    # Strategy: find each "(footprint" and extract its block
-    i = 0
-    while True:
-        idx = text.find("(footprint ", i)
-        if idx == -1:
-            break
-        # Find the matching closing paren for this footprint block
-        depth = 0
-        start = idx
-        j = idx
-        while j < len(text):
-            if text[j] == '(':
-                depth += 1
-            elif text[j] == ')':
-                depth -= 1
-                if depth == 0:
-                    break
-            j += 1
-        fp_block = text[start:j+1]
-        i = j + 1
+    vias: list[Via] = [
+        Via(x=v["x"], y=v["y"], size=v["size"], drill=v["drill"],
+            annular=(v["size"] - v["drill"]) / 2, net=v["net"])
+        for v in cache["vias"]
+    ]
 
-        # Footprint position and rotation
-        # (footprint "name" (at X Y [ROT]) (layer "L") ...)
-        at_m = re.search(r'\(footprint\s+"[^"]*"\s+\(at\s+([-\d.]+)\s+([-\d.]+)(?:\s+([-\d.]+))?\)', fp_block)
-        if not at_m:
-            continue
-        fp_x = float(at_m.group(1))
-        fp_y = float(at_m.group(2))
-        fp_rot = float(at_m.group(3)) if at_m.group(3) else 0.0
-
-        layer_m = re.search(r'\(footprint\s+"[^"]*"\s+\(at[^)]*\)\s+\(layer\s+"([^"]+)"\)', fp_block)
-        fp_layer = layer_m.group(1) if layer_m else "F.Cu"
-
-        # Reference
-        ref_m = re.search(r'\(property\s+"Reference"\s+"([^"]+)"', fp_block)
-        ref = ref_m.group(1) if ref_m else "?"
-
-        # Extract pad sub-blocks
-        k = 0
-        while True:
-            pidx = fp_block.find("(pad ", k)
-            if pidx == -1:
-                break
-            # Find pad block end
-            pdepth = 0
-            pk = pidx
-            while pk < len(fp_block):
-                if fp_block[pk] == '(':
-                    pdepth += 1
-                elif fp_block[pk] == ')':
-                    pdepth -= 1
-                    if pdepth == 0:
-                        break
-                pk += 1
-            pad_block = fp_block[pidx:pk+1]
-            k = pk + 1
-
-            # (pad "num" TYPE SHAPE (at X Y) (size W H) ...)
-            pad_m = re.match(
-                r'\(pad\s+"([^"]*)"\s+(\S+)\s+(\S+)\s+\(at\s+([-\d.]+)\s+([-\d.]+)(?:\s+([-\d.]+))?\)',
-                pad_block
-            )
-            if not pad_m:
-                continue
-
-            pnum = pad_m.group(1)
-            ptype = pad_m.group(2)   # smd, thru_hole
-            pshape = pad_m.group(3)  # rect, circle, oval, roundrect
-            plx = float(pad_m.group(4))
-            ply = float(pad_m.group(5))
-            # per-pad rotation (rarely used, but possible)
-            pad_rot_local = float(pad_m.group(6)) if pad_m.group(6) else 0.0
-
-            size_m = re.search(r'\(size\s+([\d.]+)\s+([\d.]+)\)', pad_block)
-            if not size_m:
-                continue
-            pw = float(size_m.group(1))
-            ph = float(size_m.group(2))
-
-            # Determine copper layer(s) for this pad
-            layers_m = re.search(r'\(layers\s+([^)]+)\)', pad_block)
-            layers_str = layers_m.group(1) if layers_m else ""
-
-            # Determine which copper layer(s) this pad appears on
-            copper_layers = []
-            if '"F.Cu"' in layers_str or 'F.Cu' in layers_str:
-                copper_layers.append("F.Cu")
-            if '"B.Cu"' in layers_str or 'B.Cu' in layers_str:
-                copper_layers.append("B.Cu")
-            if '"*.Cu"' in layers_str or '*.Cu' in layers_str:
-                copper_layers.extend(["F.Cu", "B.Cu"])
-            copper_layers = list(set(copper_layers))
-
-            if not copper_layers:
-                continue
-
-            # Compute absolute position
-            # 1) Rotate local pad coords by footprint rotation
-            total_rot = fp_rot + pad_rot_local
-            if total_rot != 0:
-                rlx, rly = _rotate(plx, ply, total_rot)
-            else:
-                rlx, rly = plx, ply
-
-            abs_x = fp_x + rlx
-            abs_y = fp_y + rly
-
-            # Rotate pad size for 90/270 deg
-            eff_rot = total_rot % 360
-            if eff_rot in (90, 270) or (eff_rot not in (0, 180) and abs(eff_rot % 180 - 90) < 5):
-                pw, ph = ph, pw
-
-            # Extract net number from pad block
-            net_m = re.search(r'\(net\s+(\d+)\s+"[^"]*"\)', pad_block)
-            if not net_m:
-                net_m = re.search(r'\(net\s+(\d+)\)', pad_block)
-            pad_net = int(net_m.group(1)) if net_m else 0
-
-            for clayer in copper_layers:
-                pads.append(Pad(
-                    ref=ref, num=pnum, layer=clayer,
-                    x=abs_x, y=abs_y, w=pw, h=ph, shape=pshape,
-                    fp_x=fp_x, fp_y=fp_y, net=pad_net
-                ))
-
-    # ── Parse vias ───────────────────────────────────────────────
-    for via_m in re.finditer(
-        r'\(via\s+\(at\s+([-\d.]+)\s+([-\d.]+)\)\s+\(size\s+([\d.]+)\)\s+\(drill\s+([\d.]+)\)(?:[^)]*\(net\s+(\d+)\))?',
-        text
-    ):
-        vx = float(via_m.group(1))
-        vy = float(via_m.group(2))
-        vsize = float(via_m.group(3))
-        vdrill = float(via_m.group(4))
-        vnet = int(via_m.group(5)) if via_m.group(5) else 0
-        vias.append(Via(
-            x=vx, y=vy, size=vsize, drill=vdrill,
-            annular=(vsize - vdrill) / 2, net=vnet
-        ))
-
-    # ── Parse trace segments ─────────────────────────────────────
-    for seg_m in re.finditer(
-        r'\(segment\s+\(start\s+([-\d.]+)\s+([-\d.]+)\)\s+\(end\s+([-\d.]+)\s+([-\d.]+)\)\s+\(width\s+([\d.]+)\)\s+\(layer\s+"([^"]+)"\)(?:\s+\(net\s+(\d+)\))?',
-        text
-    ):
-        seg_layer = seg_m.group(6)
-        if seg_layer not in ("F.Cu", "B.Cu"):
-            continue
-        segments.append(Segment(
-            x1=float(seg_m.group(1)), y1=float(seg_m.group(2)),
-            x2=float(seg_m.group(3)), y2=float(seg_m.group(4)),
-            width=float(seg_m.group(5)),
-            layer=seg_layer,
-            net=int(seg_m.group(7)) if seg_m.group(7) else 0
-        ))
+    # Only F.Cu and B.Cu segments (matches original behavior)
+    segments: list[Segment] = [
+        Segment(x1=s["x1"], y1=s["y1"], x2=s["x2"], y2=s["y2"],
+                width=s["width"], layer=s["layer"], net=s["net"])
+        for s in cache["segments"]
+        if s["layer"] in ("F.Cu", "B.Cu")
+    ]
 
     return pads, vias, segments
 

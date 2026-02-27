@@ -321,42 +321,28 @@ def test_kicad_drc():
     os.remove(drc_out)
 
 
-def _parse_segments(content):
-    """Parse all trace segments from PCB file."""
-    seg_re = re.compile(
-        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(width\s+([\d.]+)\)\s+'
-        r'\(layer\s+"([^"]+)"\)\s+'
-        r'\(net\s+(\d+)\)',
-    )
-    segs = []
-    for m in seg_re.finditer(content):
-        segs.append({
-            "x1": float(m.group(1)), "y1": float(m.group(2)),
-            "x2": float(m.group(3)), "y2": float(m.group(4)),
-            "w": float(m.group(5)), "layer": m.group(6),
-            "net": int(m.group(7)),
-        })
-    return segs
+_CACHE = None
 
 
-def _parse_vias(content):
-    """Parse all vias from PCB file."""
-    via_re = re.compile(
-        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+'
-        r'\(drill\s+([\d.]+)\).*?'
-        r'\(net\s+(\d+)\)',
-    )
-    vias = []
-    for m in via_re.finditer(content):
-        vias.append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size": float(m.group(3)), "drill": float(m.group(4)),
-            "net": int(m.group(5)),
-        })
-    return vias
+def _get_cache():
+    """Lazy-load PCB cache (shared across all test functions)."""
+    global _CACHE
+    if _CACHE is None:
+        from pcb_cache import load_cache
+        _CACHE = load_cache()
+    return _CACHE
+
+
+def _cached_segments():
+    """Load segments from cache with 'w' key (backward compat)."""
+    return [{"x1": s["x1"], "y1": s["y1"], "x2": s["x2"], "y2": s["y2"],
+             "w": s["width"], "layer": s["layer"], "net": s["net"]}
+            for s in _get_cache()["segments"]]
+
+
+def _cached_vias():
+    """Load vias from cache."""
+    return _get_cache()["vias"]
 
 
 def _seg_min_dist(s1, s2):
@@ -395,9 +381,7 @@ def test_trace_spacing():
     This test guards against REGRESSIONS — the count should not increase.
     """
     print("\n── Trace Spacing Tests ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     # Group by layer for efficient comparison
     by_layer = {}
@@ -435,9 +419,7 @@ def test_trace_spacing():
 def test_via_to_via_spacing():
     """Test 17: No via holes closer than 0.25mm (hole-to-hole edge gap)."""
     print("\n── Via-to-Via Spacing Tests ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    vias = _parse_vias(content)
+    vias = _cached_vias()
 
     min_hole_gap = 0.25  # JLCPCB minimum hole-to-hole clearance
     violations = []
@@ -478,9 +460,7 @@ def test_display_stagger_vs_esp32():
     not display bus stagger traces and cannot be at midpoints.
     """
     print("\n── Display Stagger vs ESP32 Pin Tests ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     # ESP32 left-side pin Y positions
     esp_pin_ys = [22.24 + n * 1.27 for n in range(14)]
@@ -614,9 +594,7 @@ def test_btn_r_routed():
     originates near SW12 pad 3 (143.15, 8.5).
     """
     print("\n── BTN_R (SW12) Routing Tests ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     # SW12 signal pad 3 is at (143.15, 8.5) in board coordinates.
     # Expect a B.Cu segment starting or ending very near this position.
@@ -735,9 +713,7 @@ def test_btn_r_edge_clearance():
     Guards against chan_y_r drifting to 75.0 (board edge).
     """
     print("\n── BTN_R Edge Clearance Test ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     # BTN_R net=38; find its longest F.Cu horizontal segment
     net_btn_r = 38
@@ -779,9 +755,7 @@ def test_sd_gnd_via_clearance():
     0.05mm clearance violations in KiCad DRC.
     """
     print("\n── SD Post-Slot vs GND Via Clearance ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     # GND vias from SW5/SW7 routing are at x=143.5 (net=GND).
     # SD post_slot B.Cu verticals are net 20-23 (SD_MOSI,MISO,CLK,CS).
@@ -921,9 +895,7 @@ def test_lx_bat_trace_spacing():
     toward BAT+ column.
     """
     print("\n── LX vs BAT+ Trace Spacing Test ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     n_lx = 46   # NET_ID["LX"]
     n_bat = 5   # NET_ID["BAT+"]
@@ -960,9 +932,7 @@ def test_button_vx_spacing():
     assignments that are too close.
     """
     print("\n── Button B.Cu Column Spacing Test ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     btn_nets = set(range(27, 40))  # BTN_UP(27) through BTN_MENU(39)
     min_edge_gap = 0.15
@@ -998,9 +968,7 @@ def test_gnd_lcd_d7_spacing():
     drifting back to x=81.5 (overlapping LCD_D7 at x=81.905).
     """
     print("\n── GND vs LCD_D7 Spacing Test ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     n_gnd = 1   # NET_ID["GND"]
     n_lcd_d7 = 13  # NET_ID["LCD_D7"]
@@ -1038,9 +1006,7 @@ def test_lcd_sd_approach_spacing():
     pitch or SD post_slot column being too close.
     """
     print("\n── LCD Approach vs SD Trace Spacing Test ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    segs = _parse_segments(content)
+    segs = _cached_segments()
 
     lcd_nets = set(range(6, 20))  # LCD_D0(6)..LCD_BL(19)
     sd_nets = {20, 21, 22, 23}   # SD_MOSI, SD_MISO, SD_CLK, SD_CS
@@ -1077,9 +1043,7 @@ def test_via_pad_spacing():
     nets. Excludes same-net pairs and vias within ESP32 module area.
     """
     print("\n── Via Pad Spacing Test ──")
-    with open(PCB_FILE) as f:
-        content = f.read()
-    vias = _parse_vias(content)
+    vias = _cached_vias()
 
     min_pad_gap = 0.15
     violations = []

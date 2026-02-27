@@ -41,64 +41,20 @@ DATA_SIGNAL_NETS = set(range(6, 14)) | set(range(20, 24)) | set(range(24, 27))
 # =====================================================================
 
 def parse_pcb(filepath):
-    """Parse KiCad PCB file - segments, vias, zones, nets."""
-    text = Path(filepath).read_text()
+    """Parse KiCad PCB file - segments, vias, zones, nets (via cache)."""
+    from pcb_cache import load_cache
+    cache = load_cache(Path(filepath))
 
-    result = {
-        "segments": [],
-        "vias": [],
-        "zones": [],
-        "nets": {},
+    # Convert nets from list to dict {id: name}
+    nets = {n["id"]: n["name"] for n in cache["nets"]
+            if n["id"] > 0 and n["name"]}
+
+    return {
+        "segments": cache["segments"],
+        "vias": cache["vias"],
+        "zones": cache["zones"],
+        "nets": nets,
     }
-
-    # Extract segments: (segment (start X Y) (end X Y) (width W) (layer L) (net N))
-    for m in re.finditer(
-        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(width\s+([\d.]+)\)\s+'
-        r'\(layer\s+"([^"]+)"\)\s+'
-        r'\(net\s+(\d+)\)', text
-    ):
-        result["segments"].append({
-            "x1": float(m.group(1)), "y1": float(m.group(2)),
-            "x2": float(m.group(3)), "y2": float(m.group(4)),
-            "width": float(m.group(5)),
-            "layer": m.group(6),
-            "net": int(m.group(7)),
-        })
-
-    # Extract vias with net: (via (at X Y) (size S) (drill D) ... (net N))
-    for m in re.finditer(
-        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+'
-        r'\(drill\s+([\d.]+)\).*?\(net\s+(\d+)\)', text
-    ):
-        result["vias"].append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size": float(m.group(3)),
-            "drill": float(m.group(4)),
-            "net": int(m.group(5)),
-        })
-
-    # Extract net declarations: (net ID "NAME")
-    for m in re.finditer(r'\(net\s+(\d+)\s+"([^"]*)"\)', text):
-        nid = int(m.group(1))
-        name = m.group(2)
-        if nid > 0 and name:
-            result["nets"][nid] = name
-
-    # Extract zones: (zone ... (net N) ... (net_name "NAME") ... (layer "L"))
-    for m in re.finditer(
-        r'\(zone\s+.*?\(net\s+(\d+)\).*?\(net_name\s+"([^"]*)"\).*?'
-        r'\(layer\s+"([^"]+)"\)', text
-    ):
-        result["zones"].append({
-            "net": int(m.group(1)),
-            "net_name": m.group(2),
-            "layer": m.group(3),
-        })
-
-    return result
 
 
 # =====================================================================

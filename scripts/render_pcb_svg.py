@@ -217,7 +217,7 @@ _NET_WIDTH_SCALE = {0: 1.0, 1: 1.2, 2: 1.5, 3: 1.3, 4: 1.2, 5: 1.5}
 
 
 def _parse_pcb_file(pcb_path=None):
-    """Parse segments and vias from a .kicad_pcb file.
+    """Parse segments and vias from a .kicad_pcb file (via cache).
 
     Returns dict with 'segments' and 'vias' lists.
     """
@@ -228,37 +228,9 @@ def _parse_pcb_file(pcb_path=None):
     if not path.exists():
         return {"segments": [], "vias": []}
 
-    text = path.read_text()
-
-    segments = []
-    for m in re.finditer(
-        r'\(segment\s+\(start\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(end\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(width\s+([\d.]+)\)\s+'
-        r'\(layer\s+"([^"]+)"\)\s+'
-        r'\(net\s+(\d+)\)', text
-    ):
-        segments.append({
-            "x1": float(m.group(1)), "y1": float(m.group(2)),
-            "x2": float(m.group(3)), "y2": float(m.group(4)),
-            "width": float(m.group(5)),
-            "layer": m.group(6),
-            "net": int(m.group(7)),
-        })
-
-    vias = []
-    for m in re.finditer(
-        r'\(via\s+\(at\s+([\d.]+)\s+([\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+'
-        r'\(drill\s+([\d.]+)\)', text
-    ):
-        vias.append({
-            "x": float(m.group(1)), "y": float(m.group(2)),
-            "size": float(m.group(3)),
-            "drill": float(m.group(4)),
-        })
-
-    return {"segments": segments, "vias": vias}
+    from pcb_cache import load_cache
+    cache = load_cache(path)
+    return {"segments": cache["segments"], "vias": cache["vias"]}
 
 
 def _get_traces_from_pcb(layer, pcb_data=None):
