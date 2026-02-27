@@ -92,7 +92,7 @@ def setup_4layer() -> str:
         ' (type "Bottom Silk Screen"))\n'
         '      (copper_finish "ENIG")\n'
         '    )\n'
-        '    (pad_to_mask_clearance 0.05)\n'
+        '    (pad_to_mask_clearance 0)\n'
         '    (pcbplotparams\n'
         '      (layerselection 0x00000000_00000000_55555555_5755f5ff)\n'
         '      (plot_on_all_layers_selection'
@@ -206,8 +206,8 @@ def gr_text(text, x, y, layer="F.SilkS", size=1.0):
     )
 
 
-def mounting_hole(x, y, drill=2.5, pad_d=5.0):
-    """M2.5 mounting hole with annular ring."""
+def mounting_hole(x, y, drill=2.5, pad_d=3.5):
+    """M2.5 mounting hole with annular ring (3.5mm pad for DFM clearance)."""
     ref_uid = uid()
     val_uid = uid()
     fp_uid = uid()

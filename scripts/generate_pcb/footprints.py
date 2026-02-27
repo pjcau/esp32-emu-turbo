@@ -203,39 +203,40 @@ def usb_c_16p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # A-side pads at y=-3.745
-    # Wide pads (0.6x1.3): A1, A4, A9, A12
-    # Narrow pads (0.3x1.3): A5, A6, A7, A8
-    a_pads = [
-        ("A1",  -3.2,  0.6, 1.3),
-        ("A4",  -2.4,  0.6, 1.3),
+    # Merged wide pads — A-side and B-side share identical positions:
+    #   A1/B12 (GND), A4/B9 (VBUS), A9/B4 (VBUS), A12/B1 (GND)
+    # Only emit ONE pad per position to eliminate "pad spacing 0mm" DFM error.
+    # Keep A-side names (routing.py references A4, A12, etc.)
+    merged_wide = [
+        ("A1",  -3.2,  0.6, 1.3),   # A1+B12 (GND)
+        ("A4",  -2.4,  0.6, 1.3),   # A4+B9 (VBUS)
+        ("A9",   2.4,  0.6, 1.3),   # A9+B4 (VBUS)
+        ("A12",  3.2,  0.6, 1.3),   # A12+B1 (GND)
+    ]
+    for name, x, w, h in merged_wide:
+        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers))
+
+    # A-side unique narrow pads (no B-side overlap)
+    a_narrow = [
         ("A5",  -1.25, 0.3, 1.3),
         ("A6",  -0.25, 0.3, 1.3),
         ("A7",   0.25, 0.3, 1.3),
         ("A8",   1.25, 0.3, 1.3),
-        ("A9",   2.4,  0.6, 1.3),
-        ("A12",  3.2,  0.6, 1.3),
     ]
-    for name, x, w, h in a_pads:
-        margin = 0 if w <= 0.3 else None  # fine-pitch: no mask expansion
+    for name, x, w, h in a_narrow:
         pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers,
-                         solder_mask_margin=margin))
+                         solder_mask_margin=0))
 
-    # B-side pads at y=-3.745 (some share physical location with A-side)
-    b_pads = [
-        ("B12", -3.2,  0.6, 1.3),
-        ("B9",  -2.4,  0.6, 1.3),
+    # B-side unique narrow pads (no A-side overlap)
+    b_narrow = [
         ("B8",  -1.75, 0.3, 1.3),
         ("B7",  -0.75, 0.3, 1.3),
         ("B6",   0.75, 0.3, 1.3),
         ("B5",   1.75, 0.3, 1.3),
-        ("B4",   2.4,  0.6, 1.3),
-        ("B1",   3.2,  0.6, 1.3),
     ]
-    for name, x, w, h in b_pads:
-        margin = 0 if w <= 0.3 else None
+    for name, x, w, h in b_narrow:
         pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers,
-                         solder_mask_margin=margin))
+                         solder_mask_margin=0))
 
     # Shield / mounting legs (4 THT oval pads)
     # Front shields: size 1.3x2.1, rear shields: size 1.3x1.6
