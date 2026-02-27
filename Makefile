@@ -1,6 +1,6 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all pcb-check \
-       export-gerbers \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast pcb-check \
+       export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help
@@ -40,8 +40,23 @@ verify-all: ## Run all pre-production checks (DRC + simulation + consistency + s
 	python3 scripts/verify_schematic_pcb.py
 	python3 scripts/short_circuit_analysis.py
 
+verify-fast: ## Quick DFM check only (30s vs 2min full suite)
+	python3 scripts/verify_dfm_v2.py
+
+firmware-sync-check: ## Verify GPIO sync between firmware and schematic (fail on mismatch)
+	python3 scripts/verify_schematic_pcb.py
+
 export-gerbers: generate-pcb docker-build ## Export Gerbers with zone fill via kicad-cli Docker
 	./scripts/export-gerbers.sh
+
+export-gerbers-fast: generate-pcb ## Export Gerbers (local kicad-cli + Docker zone fill only)
+	./scripts/export-gerbers-fast.sh
+
+fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
+	./scripts/fast-check.sh
+
+release-prep: generate-pcb export-gerbers-fast verify-all render-pcb ## Full release pipeline (fast gerber export)
+	@echo "Release prep complete: PCB generated, verified, rendered"
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export)
 	./scripts/render-all.sh

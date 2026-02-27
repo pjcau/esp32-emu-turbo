@@ -62,14 +62,16 @@ DPAD_OFFSETS = [(0, 9), (0, -9), (-9, 0), (9, 0)]  # UP, DN, LF, RT
 
 # ABXY buttons (right cluster, wider diamond)
 ABXY_ENC = (62, 5)
-ABXY_OFFSETS = [(0, 10), (10, 0), (0, -10), (-8, 0)]  # A, B, X, Y — Y shifted +2mm from FPC slot
+ABXY_OFFSETS = [(0, 10), (10, 0), (0, -10), (-9, 0)]  # A, B, X, Y — DFM: Y shifted right (enc -9 not -10); SW8 pad left edge at 129.4mm clears FPC slot edge (128.5mm) by 0.9mm >= 0.5mm required
 
 # Start/Select (below D-pad area)
 SS_ENC = (-62, -17)
 SS_OFFSETS = [(-10, 0), (10, 0)]  # START, SELECT
 
 # Menu button (front, bottom-right — below ABXY, outside display area)
-MENU_ENC = (62, -25)
+# DFM: was (62,-25) → SW13[1] at y=61.1 overlapped U6[4] at y=60.9 (gap=-0.2mm)
+# Moved down 0.7mm: SW13[1].cy=62.5, bottom=62.5-0.45=62.05, U6[4].top=60.90, gap=1.15mm
+MENU_ENC = (62, -25.7)
 
 # Charging LEDs (front side, bottom-left)
 LED_CHARGE_ENC = (-55, -30)    # Red LED — charging
@@ -337,8 +339,8 @@ def _component_placeholders():
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
-    placements.append(("C3", "C_0805", 68, 42, 0, "B.Cu"))  # DFM: moved from 70 to 68 (clears BTN_LEFT approach col)
-    placements.append(("C4", "C_0805", 85, 42, 0, "B.Cu"))
+    placements.append(("C3", "C_0805", 69.5, 42, 0, "B.Cu"))  # DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm=danger). At 69.5: C3[2]=68.55, R3[1]=65.95, gap=2.60mm clear
+    placements.append(("C4", "C_0805", 92, 42, 0, "B.Cu"))  # DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715)
 
     # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
     placements.append(("R17", "R_0805", 25, 65, 0, "B.Cu"))
@@ -360,7 +362,7 @@ def _component_placeholders():
 
     # IP5306 support caps
     placements.append(("C17", "C_0805", 110, 35, 0, "B.Cu"))
-    placements.append(("C18", "C_0805", ix + 6, iy - 5, 0, "B.Cu"))
+    placements.append(("C18", "C_0805", 118, 55, 0, "B.Cu"))  # DFM: moved to (118,55) below display trace zone
 
     # C19 near inductor L1
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)

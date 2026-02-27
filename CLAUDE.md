@@ -53,6 +53,168 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 - `website/docs/verification.md` — pre-production DRC/simulation/consistency checks
 - `website/docs/software.md` — software architecture, SNES optimization, audio profiles
 
+## Agents & Skills Architecture
+
+### Agents (4)
+
+```
+team-lead (sonnet) ──── orchestrator, 0 skills
+  ├── pcb-engineer (sonnet) ──── 19 skills
+  ├── software-dev (sonnet) ──── 3 skills
+  └── cad-engineer (haiku) ───── 3 skills
+```
+
+### Cross-Agent Dependencies
+
+```
+PCB ↔ SW:  config.py ↔ board_config.h  (GPIO pins sync)
+PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
+SW  ↔ CAD: website/docs/  (renders + documentation)
+```
+
+### Skills Map (26 total)
+
+#### PCB-Engineer — 19 skills
+
+| Category | Skills |
+|----------|--------|
+| **Pipeline (5)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/render` (SVG + animation) · `/check` (DRC + 3D + gerbers) |
+| **Verification (6)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (6-domain scored) · `/pad-analysis` (pad spacing check) |
+| **Fix & Debug (4)** | `/dfm-fix` (fix DFM issues) · `/fix-rotation` (CPL rotation) · `/jlcpcb-check` (3D alignment) · `/jlcpcb-parts` (BOM + LCSC search) |
+| **MCP Design (5)** | `/pcb-schematic` (schematic ops) · `/pcb-components` (placement) · `/pcb-routing` (traces + vias) · `/pcb-library` (footprints) · `/pcb-board` (board setup) |
+
+**Workflow pipeline:** `/pcb-schematic` → `/pcb-board` → `/pcb-components` → `/pcb-routing` → `/generate` → `/verify` → `/release`
+
+#### Software-Dev — 3 skills
+
+| Skill | Description |
+|-------|-------------|
+| `/firmware-build` | Build, flash, test ESP-IDF firmware via Docker |
+| `/firmware-sync` | Verify GPIO pins match between firmware and schematic |
+| `/website-dev` | Develop, build, deploy Docusaurus website |
+
+#### CAD-Engineer — 3 skills
+
+| Skill | Description |
+|-------|-------------|
+| `/enclosure-design` | OpenSCAD parametric enclosure design |
+| `/enclosure-render` | Render enclosure views to PNG via Docker |
+| `/enclosure-export` | Export STL files for 3D printing |
+
+### Architecture Diagram (Mermaid)
+
+```mermaid
+graph TB
+    TL["TEAM-LEAD<br/><i>sonnet • orchestrator</i>"]
+    PCB["PCB-ENGINEER<br/><i>sonnet • 19 skills</i>"]
+    SW["SOFTWARE-DEV<br/><i>sonnet • 3 skills</i>"]
+    CAD["CAD-ENGINEER<br/><i>haiku • 3 skills</i>"]
+
+    TL -->|coordinates| PCB
+    TL -->|coordinates| SW
+    TL -->|coordinates| CAD
+
+    PCB <-.->|"GPIO sync"| SW
+    PCB <-.->|"dimensions sync"| CAD
+    SW <-.->|"docs update"| CAD
+
+    subgraph PCB_PIPELINE["Pipeline & Manufacturing"]
+        s_generate["/generate"]
+        s_release["/release"]
+        s_render["/render"]
+        s_check["/check"]
+    end
+
+    subgraph PCB_VERIFY["Verification & Analysis"]
+        s_verify["/verify"]
+        s_dfm_test["/dfm-test"]
+        s_drc["/drc-native"]
+        s_optimize["/pcb-optimize"]
+        s_review["/pcb-review"]
+    end
+
+    subgraph PCB_FIX["Fix & Debug"]
+        s_dfm_fix["/dfm-fix"]
+        s_fix_rot["/fix-rotation"]
+        s_jlcpcb_chk["/jlcpcb-check"]
+        s_jlcpcb_parts["/jlcpcb-parts"]
+    end
+
+    subgraph PCB_DESIGN["MCP Design Skills"]
+        s_schematic["/pcb-schematic"]
+        s_components["/pcb-components"]
+        s_routing["/pcb-routing"]
+        s_library["/pcb-library"]
+        s_board["/pcb-board"]
+    end
+
+    PCB --- PCB_PIPELINE
+    PCB --- PCB_VERIFY
+    PCB --- PCB_FIX
+    PCB --- PCB_DESIGN
+
+    subgraph SW_SKILLS["Firmware & Web"]
+        s_fw_build["/firmware-build"]
+        s_fw_sync["/firmware-sync"]
+        s_web["/website-dev"]
+    end
+    SW --- SW_SKILLS
+
+    subgraph CAD_SKILLS["Enclosure"]
+        s_enc_design["/enclosure-design"]
+        s_enc_render["/enclosure-render"]
+        s_enc_export["/enclosure-export"]
+    end
+    CAD --- CAD_SKILLS
+
+    s_generate ==>|"produces .kicad_pcb"| s_verify
+    s_verify ==>|"must pass"| s_release
+    s_dfm_fix -->|"fixes → regenerate"| s_generate
+    s_schematic -->|"nets"| s_board
+    s_board -->|"outline"| s_components
+    s_components -->|"placed"| s_routing
+```
+
+### Hooks (auto-guards)
+
+| Trigger | Matcher | Action |
+|---------|---------|--------|
+| PostToolUse | `Bash` (contains `generate_pcb`) | Reminds to run `verify_dfm_v2.py` |
+| PostToolUse | `Edit` (path contains `scripts/generate_pcb/`) | Reminds to regenerate PCB |
+
+Config: `.claude/settings.json` · Scripts: `.claude/hooks/`
+
+### Makefile Quick Targets
+
+| Target | Description |
+|--------|-------------|
+| `make fast-check` | Full pipeline with local kicad-cli (~5s) |
+| `make verify-fast` | Quick DFM check only (1.4s) |
+| `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |
+| `make release-prep` | Full pipeline: generate → gerbers → verify → render |
+| `make firmware-sync-check` | Verify GPIO sync, fail on mismatch |
+| `make verify-all` | Full verification suite (DRC + sim + consistency) |
+
+### Performance Optimizations
+
+**Container runtime: OrbStack** (replaces Docker Desktop)
+- Drop-in replacement: same `docker` / `docker compose` commands, zero code changes
+- Container startup: **0.2s** (was 3.2s with Docker Desktop) — **16x faster**
+- Idle RAM: ~180 MB (was 2+ GB) — **11x less memory**
+- Idle CPU: ~0.1% (was ~5%)
+
+**Hybrid local+Docker pipeline** (`fast-check.sh`, `export-gerbers-fast.sh`)
+- Local `kicad-cli` for DRC, gerber export, drill export (no container overhead)
+- Docker only for zone fill (pcbnew Python API not available in kicad-cli)
+- Full check pipeline: **~5s** (was ~15-20s with all-Docker)
+
+| Operation | All-Docker (old) | Hybrid (new) | Speedup |
+|-----------|-----------------|--------------|---------|
+| Container startup | 3.2s | 0.2s | 16x |
+| Gerber export (3 steps) | 4.7s | 4.0s | 1.2x |
+| Full check pipeline | 15-20s | ~5s | 3-4x |
+| DFM quick check | 1.4s | 1.4s | (no Docker) |
+
 ## Reference Software
 
 - **Retro-Go** (github.com/ducalex/retro-go) — NES, GB, GBC, SMS

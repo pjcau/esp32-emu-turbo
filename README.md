@@ -113,6 +113,17 @@ cd esp32-emu-turbo
 git submodule update --init --recursive
 ```
 
+### Prerequisites
+
+- **Python 3.12+**
+- **KiCad 10** with `kicad-cli` (for local DRC/gerber export)
+- **OrbStack** (lightweight Docker alternative, replaces Docker Desktop)
+
+```bash
+brew install --cask orbstack    # Container runtime (16x faster than Docker Desktop)
+brew install --cask kicad       # Includes kicad-cli
+```
+
 ### Generate hardware files
 
 ```bash
@@ -125,10 +136,19 @@ make generate-pcb
 # Render PCB images (SVG + PNG + GIF)
 make render-pcb
 
-# Run all pre-production checks (DRC + simulation + consistency + short circuit)
+# Quick DFM check (1.4s, no Docker needed)
+make verify-fast
+
+# Full check pipeline: generate + DFM + DRC + gerbers + connectivity (~5s)
+make fast-check
+
+# Export Gerbers (local kicad-cli + Docker for zone fill only)
+make export-gerbers-fast
+
+# Full verification suite (DRC + simulation + consistency + short circuit)
 make verify-all
 
-# Export Gerbers with zone fill (requires Docker)
+# Export Gerbers with zone fill (all Docker)
 make export-gerbers
 ```
 

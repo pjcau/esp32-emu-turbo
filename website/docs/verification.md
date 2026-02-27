@@ -171,12 +171,34 @@ The joystick nets have no PCB traces because the joystick is optional and not pa
 
 ## Running Verification
 
-### Manually
+### Fast commands (recommended)
 
 ```bash
-python3 scripts/drc_check.py
-python3 scripts/simulate_circuit.py
-python3 scripts/verify_schematic_pcb.py
+# Quick DFM check — 31 tests, 1.4s, no Docker needed
+make verify-fast
+
+# Full pipeline — generate + DFM + DRC + gerbers + connectivity (~5s)
+make fast-check
+
+# GPIO firmware/schematic sync check
+make firmware-sync-check
+```
+
+### Full verification suite
+
+```bash
+make verify-all    # DRC + simulation + consistency + short circuit
+```
+
+Or individually:
+
+```bash
+python3 scripts/verify_dfm_v2.py         # 31 DFM guard tests
+python3 scripts/drc_check.py             # JLCPCB design rules
+python3 scripts/simulate_circuit.py      # Power/timing simulation
+python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync
+python3 scripts/test_pcb_connectivity.py # Electrical connectivity
+python3 scripts/analyze_pad_distances.py # Pad spacing analysis
 ```
 
 ### Automatically (Husky pre-commit hook)
@@ -205,3 +227,19 @@ npm run verify
 [verify] Schematic-PCB ........ PASS
 [verify] All pre-production checks passed
 ```
+
+---
+
+## Performance Notes
+
+The verification pipeline uses a **hybrid local + Docker** approach for speed:
+
+| Tool | Runs via | Time |
+|------|----------|------|
+| DFM tests (`verify_dfm_v2.py`) | Python (local) | 1.4s |
+| KiCad DRC | `kicad-cli` (local) | 0.8s |
+| Gerber export | `kicad-cli` (local) | 0.9s |
+| Zone fill | Docker (pcbnew API) | 1.8s |
+| Connectivity | Python (local) | 0.15s |
+
+Container runtime: **OrbStack** (drop-in Docker Desktop replacement, 16x faster container startup).

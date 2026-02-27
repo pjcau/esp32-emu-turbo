@@ -42,6 +42,14 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | `bom-summary.md`            | Human-readable BOM with cost estimate    |
 | `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference)             |
 
+### PCB Renders (`renders/`)
+
+| File                | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `renders/pcb-top.svg`      | Top side (F.Cu) — face buttons, LEDs, display area      |
+| `renders/pcb-bottom.svg`   | Bottom side (B.Cu) — ESP32, ICs, connectors, passives   |
+| `renders/pcb-combined.svg` | Both sides side-by-side (160x75mm, 4-layer overview)    |
+
 ## JLCPCB Order Instructions
 
 1. Go to [jlcpcb.com](https://jlcpcb.com) > Order Now
@@ -59,7 +67,33 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v2.0 — 2026-02-27 (current)
+### v2.1 — 2026-02-27 (current)
+
+**DFM fixes: via proximity, edge clearance, trace overlap:**
+
+- **FPC power via proximity fixed** — GND pin 36 and +3V3 pin 39 vias were 0.5mm
+  apart (gap 0.20mm < 0.25mm JLCPCB minimum). Same for GND pin 37 and +3V3 pin 38.
+  Fixed by increasing Y offsets for pins 38 and 39 to achieve 1.2-1.7mm separation.
+- **FPC +3V3 pin 7 via clearance fixed** — via at (129.15, 25.75) had 0.30mm gap
+  to FPC slot edge (need >= 0.5mm). Moved to (129.65, 25.75) giving 0.80mm gap.
+- **SW8 (BTN_Y) pad overlap with FPC slot fixed** — SW8 pad left edge at 128.4mm
+  was inside the 128.5mm slot edge. SW8 moved 1mm right (enc -9 not -10) so pad
+  left edge is now at 129.4mm, giving 0.9mm clearance to slot edge.
+- **BTN_R channel edge clearance fixed** — F.Cu channel was at y=75.0mm (board edge!).
+  Moved to y=72.5mm, giving 2.5mm clearance to board bottom edge.
+- **BAT+ vs SPK+ trace overlap fixed** — B.Cu BAT+ vertical at x=39.25 (w=0.5mm)
+  overlapped with SPK+ vertical at x=39.5 (w=0.3mm) by -0.15mm. BAT+ long vertical
+  rerouted to x=38.0mm column (1.1mm gap to SPK+, well above threshold).
+- **3 new regression guard tests added** (tests 22-24):
+  - Test 22: KiCad DRC copper_edge_clearance = 0 and hole_to_hole = 0 (regression guard)
+  - Test 23: SW8 pad 1 clears FPC slot edge by >= 0.5mm
+  - Test 24: BTN_R F.Cu channel >= 0.5mm from board bottom edge
+- **KiCad DRC**: 0 copper_edge_clearance, 0 hole_to_hole, 0 silk violations
+- All 31 DFM verification tests pass (was 27/27 before this release)
+- **PCB renders updated** — `renders/pcb-top.svg`, `renders/pcb-bottom.svg`, `renders/pcb-combined.svg`
+  regenerated from v2.1 PCB (includes actual trace/via data from kicad_pcb parsed at render time)
+
+### v2.0 — 2026-02-27
 
 **DFM fixes targeting JLCPCB DFM report issues:**
 
@@ -142,7 +176,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | Check                       | Result                                          |
 | --------------------------- | ----------------------------------------------- |
 | DRC Check                   | PASS (0 errors, 0 silk violations)              |
-| DFM v2 Tests                | PASS (27/27, including 3 new regression guards) |
+| DFM v2 Tests                | PASS (31/31, including 6 new regression guards) |
 | Schematic/PCB Consistency   | PASS (64 JLCPCB components matched)             |
 | Zone Priorities             | PASS                                            |
 | Zone Fill Data              | PASS (In1.Cu 52KB, In2.Cu 292KB)                |
