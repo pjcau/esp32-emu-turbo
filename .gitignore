@@ -19,6 +19,9 @@ Thumbs.db
 __pycache__/
 *.pyc
 
+# Task timing logs (local benchmarks)
+logs/
+
 # Debug logs
 npm-debug.log*
 yarn-debug.log*

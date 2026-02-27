@@ -3,62 +3,69 @@
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
-       website-dev website-build clean help
+       website-dev website-build clean help stats
+
+# ── Task timer wrapper ────────────────────────────────────────────
+# Every target logs its execution time to logs/task-times.csv
+# View report: make stats
+T = scripts/task-timer.sh
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+stats: ## Show task performance report (slowest, most frequent, failures)
+	@scripts/task-stats.sh
+
 docker-build: ## Build Docker images (KiCad + OpenSCAD) — cached if unchanged
 	@docker compose images -q 2>/dev/null | head -1 > /dev/null 2>&1 && \
 		echo "Docker images already built (use 'docker compose build --no-cache' to force)" || \
-		docker compose build
+		$(T) docker-build docker compose build
 
 generate-schematic: ## Generate 7 KiCad schematics from Python spec
-	docker compose run --rm generate-sch
+	@$(T) generate-schematic docker compose run --rm generate-sch
 
 generate-pcb: ## Generate KiCad PCB + JLCPCB exports (BOM, CPL)
-	python3 -m scripts.generate_pcb hardware/kicad
+	@$(T) generate-pcb python3 -m scripts.generate_pcb hardware/kicad
 
 render-schematics: docker-build ## Export KiCad schematic to SVG
-	./scripts/render-schematics.sh
+	@$(T) render-schematics ./scripts/render-schematics.sh
 
 render-enclosure: docker-build ## Render OpenSCAD enclosure to PNG
-	./scripts/render-enclosure.sh
+	@$(T) render-enclosure ./scripts/render-enclosure.sh
 
 render-pcb: generate-pcb ## Render PCB layout to SVG/PNG/GIF
-	python3 scripts/render_pcb_svg.py website/static/img/pcb
-	python3 scripts/render_pcb_animation.py website/static/img/pcb
+	@$(T) render-pcb sh -c 'python3 scripts/render_pcb_svg.py website/static/img/pcb && python3 scripts/render_pcb_animation.py website/static/img/pcb'
 
 simulate: ## Run electrical circuit simulation/verification
-	python3 scripts/simulate_circuit.py
+	@$(T) simulate python3 scripts/simulate_circuit.py
 
 pcb-check: ## Run PCB short circuit / zone fill analysis
-	python3 scripts/short_circuit_analysis.py
+	@$(T) pcb-check python3 scripts/short_circuit_analysis.py
 
 verify-all: ## Run all pre-production checks (DRC + simulation + consistency + short circuit)
 	@echo "Running verification suite..."
-	@python3 scripts/drc_check.py & \
-	 python3 scripts/simulate_circuit.py & \
-	 python3 scripts/verify_schematic_pcb.py & \
-	 python3 scripts/short_circuit_analysis.py & \
-	 wait
-	@echo "All verification checks complete."
+	@$(T) verify-all sh -c '\
+		python3 scripts/drc_check.py & \
+		python3 scripts/simulate_circuit.py & \
+		python3 scripts/verify_schematic_pcb.py & \
+		python3 scripts/short_circuit_analysis.py & \
+		wait'
 
-verify-fast: ## Quick DFM check only (30s vs 2min full suite)
-	python3 scripts/verify_dfm_v2.py
+verify-fast: ## Quick DFM check only (1.4s)
+	@$(T) verify-fast python3 scripts/verify_dfm_v2.py
 
 firmware-sync-check: ## Verify GPIO sync between firmware and schematic (fail on mismatch)
-	python3 scripts/verify_schematic_pcb.py
+	@$(T) firmware-sync-check python3 scripts/verify_schematic_pcb.py
 
 export-gerbers: generate-pcb docker-build ## Export Gerbers with zone fill via kicad-cli Docker
-	./scripts/export-gerbers.sh
+	@$(T) export-gerbers ./scripts/export-gerbers.sh
 
 export-gerbers-fast: generate-pcb ## Export Gerbers (local kicad-cli + Docker zone fill only)
-	./scripts/export-gerbers-fast.sh
+	@$(T) export-gerbers-fast ./scripts/export-gerbers-fast.sh
 
 fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
-	./scripts/fast-check.sh
+	@$(T) fast-check ./scripts/fast-check.sh
 
 release-prep: generate-pcb export-gerbers-fast verify-all render-pcb ## Full release pipeline (fast gerber export)
 	@echo "Release prep complete: PCB generated, verified, rendered"
@@ -70,10 +77,10 @@ render-all: generate-schematic docker-build ## Full render pipeline (generate + 
 ESP_PORT ?= /dev/ttyUSB0
 
 firmware-build: ## Build ESP-IDF firmware via Docker
-	docker compose run --rm idf-build
+	@$(T) firmware-build docker compose run --rm idf-build
 
 firmware-flash: ## Flash firmware + open serial monitor (connect board first)
-	docker compose run --rm idf-flash
+	@$(T) firmware-flash docker compose run --rm idf-flash
 
 firmware-monitor: ## Open serial monitor only (no flash)
 	docker compose run --rm idf-flash idf.py -p $(ESP_PORT) monitor
@@ -86,10 +93,10 @@ firmware-clean: ## Clean firmware build artifacts
 RETRO_GO_COMPOSE = docker compose -f docker-compose.retro-go.yml
 
 retro-go-build: ## Build Retro-Go firmware (all apps)
-	$(RETRO_GO_COMPOSE) run --rm retro-go-build
+	@$(T) retro-go-build $(RETRO_GO_COMPOSE) run --rm retro-go-build
 
 retro-go-build-launcher: ## Build Retro-Go launcher only (quick test)
-	$(RETRO_GO_COMPOSE) run --rm retro-go-build-launcher
+	@$(T) retro-go-build-launcher $(RETRO_GO_COMPOSE) run --rm retro-go-build-launcher
 
 retro-go-flash: ## Flash Retro-Go firmware + serial monitor
 	$(RETRO_GO_COMPOSE) run --rm retro-go-flash
@@ -104,7 +111,7 @@ website-dev: ## Start Docusaurus dev server
 	cd website && npm start
 
 website-build: ## Build Docusaurus site for production
-	cd website && npm run build
+	@$(T) website-build sh -c 'cd website && npm run build'
 
 all: render-all website-build ## Full pipeline: generate + render + build website
 
