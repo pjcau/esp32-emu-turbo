@@ -8,7 +8,7 @@
 
 #include "driver/gpio.h"
 
-/* ── Display: ST7796S 320x480, 8-bit 8080 parallel ───────────────── */
+/* ── Display: ILI9488 320x480, 8-bit 8080 parallel ───────────────── */
 
 #define LCD_H_RES           320
 #define LCD_V_RES           480
