@@ -767,7 +767,7 @@ def test_sd_gnd_via_clearance():
     """Test 25: SD routing B.Cu post_slot traces clear of SW5/SW7 GND vias.
 
     SW5 (BTN_A) and SW7 (BTN_X) GND vias land at x=143.5 (pads at x=145 offset
-    1.5mm left).  SD routing post_slot B.Cu verticals at x=137,140,142,146 must
+    1.5mm left).  SD routing post_slot B.Cu verticals at x=141,145,146,148 must
     all be >= 0.2mm (KiCad netclass clearance) from via ring at 143.5±0.45mm.
 
     Forbidden zone: x in [143.05, 143.95] (via ring ±0.45mm).
@@ -868,6 +868,249 @@ def test_bat_plus_via_vbus_clearance():
     )
 
 
+def test_mounting_holes_npth():
+    """Test 27: All MountingHole footprints use np_thru_hole (NPTH).
+
+    DFM: NPTH mounting holes have no copper annular ring, eliminating
+    THT-to-SMD and pad spacing DANGER violations with nearby components.
+    Guards against regression that restores PTH mounting holes.
+    """
+    print("\n── Mounting Holes NPTH Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+
+    # Find all MountingHole footprint blocks and check pad type
+    mh_blocks = re.findall(
+        r'\(footprint "MountingHole[^"]*".*?\n(?:.*?\n)*?.*?\(pad[^)]*\)',
+        content,
+    )
+    pth_count = 0
+    npth_count = 0
+    for block in mh_blocks:
+        if 'np_thru_hole' in block:
+            npth_count += 1
+        elif 'thru_hole' in block:
+            pth_count += 1
+
+    # Also check with a simpler pattern for reliability
+    npth_pattern = re.compile(
+        r'\(footprint "MountingHole.*?'
+        r'\(pad "" np_thru_hole',
+        re.DOTALL,
+    )
+    pth_pattern = re.compile(
+        r'\(footprint "MountingHole.*?'
+        r'\(pad "" thru_hole',
+        re.DOTALL,
+    )
+    npth_simple = len(npth_pattern.findall(content))
+    pth_simple = len(pth_pattern.findall(content))
+
+    check(
+        "All MountingHole pads are np_thru_hole (NPTH)",
+        pth_simple == 0 and npth_simple > 0,
+        f"PTH={pth_simple}, NPTH={npth_simple} (expected 0 PTH, >0 NPTH)",
+    )
+
+
+def test_lx_bat_trace_spacing():
+    """Test 28: LX and BAT+ B.Cu vertical columns have edge gap >= 0.25mm.
+
+    LX (net=46) vertical at lx_col_x and BAT+ (net=5) vertical at bat_col_x
+    must have sufficient spacing. Guards against LX column drifting right
+    toward BAT+ column.
+    """
+    print("\n── LX vs BAT+ Trace Spacing Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    n_lx = 46   # NET_ID["LX"]
+    n_bat = 5   # NET_ID["BAT+"]
+    min_edge_gap = 0.25
+
+    # Find B.Cu vertical segments for LX and BAT+
+    lx_verts = [s for s in segs if s["net"] == n_lx and s["layer"] == "B.Cu"
+                and abs(s["x1"] - s["x2"]) < 0.01]
+    bat_verts = [s for s in segs if s["net"] == n_bat and s["layer"] == "B.Cu"
+                 and abs(s["x1"] - s["x2"]) < 0.01]
+
+    violations = []
+    for lx in lx_verts:
+        for bat in bat_verts:
+            gap = _seg_min_dist(lx, bat)
+            if gap is not None and gap < min_edge_gap:
+                violations.append(
+                    f"LX@x={lx['x1']:.3f} vs BAT+@x={bat['x1']:.3f}: "
+                    f"edge gap={gap:.3f}mm < {min_edge_gap}mm"
+                )
+
+    check(
+        f"LX vs BAT+ B.Cu vertical edge gap >= {min_edge_gap}mm",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:3]}",
+    )
+
+
+def test_button_vx_spacing():
+    """Test 29: Button B.Cu vertical columns have edge gap >= 0.15mm.
+
+    All BTN_* (net 27-39) B.Cu vertical segments must maintain minimum
+    spacing between different-net columns. Guards against button vx
+    assignments that are too close.
+    """
+    print("\n── Button B.Cu Column Spacing Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    btn_nets = set(range(27, 40))  # BTN_UP(27) through BTN_MENU(39)
+    min_edge_gap = 0.15
+
+    btn_verts = [s for s in segs if s["net"] in btn_nets and s["layer"] == "B.Cu"
+                 and abs(s["x1"] - s["x2"]) < 0.01]
+
+    violations = []
+    for i in range(len(btn_verts)):
+        for j in range(i + 1, len(btn_verts)):
+            s1, s2 = btn_verts[i], btn_verts[j]
+            if s1["net"] == s2["net"]:
+                continue
+            gap = _seg_min_dist(s1, s2)
+            if gap is not None and gap < min_edge_gap - 0.005:  # 5µm tolerance for FP
+                violations.append(
+                    f"net{s1['net']}@x={s1['x1']:.3f} vs net{s2['net']}@x={s2['x1']:.3f}: "
+                    f"gap={gap:.3f}mm"
+                )
+
+    check(
+        f"Button B.Cu vertical edge gap >= {min_edge_gap}mm ({len(btn_verts)} segments)",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:5]}",
+    )
+
+
+def test_gnd_lcd_d7_spacing():
+    """Test 30: GND power trace vs LCD_D7 B.Cu gap >= 0.15mm.
+
+    ESP32 GND thermal pad (net=1, w=0.5mm) B.Cu vertical must not approach
+    LCD_D7 (net=13, w=0.2mm) B.Cu vertical. Guards against GND trace
+    drifting back to x=81.5 (overlapping LCD_D7 at x=81.905).
+    """
+    print("\n── GND vs LCD_D7 Spacing Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    n_gnd = 1   # NET_ID["GND"]
+    n_lcd_d7 = 13  # NET_ID["LCD_D7"]
+    min_edge_gap = 0.15
+
+    # GND power B.Cu verticals near ESP32 (x in 78..84, y in 28..35)
+    gnd_verts = [s for s in segs if s["net"] == n_gnd and s["layer"] == "B.Cu"
+                 and abs(s["x1"] - s["x2"]) < 0.01 and s["w"] >= 0.4
+                 and 78 < s["x1"] < 84 and min(s["y1"], s["y2"]) < 35]
+    lcd_d7_verts = [s for s in segs if s["net"] == n_lcd_d7 and s["layer"] == "B.Cu"
+                    and abs(s["x1"] - s["x2"]) < 0.01]
+
+    violations = []
+    for g in gnd_verts:
+        for l in lcd_d7_verts:
+            gap = _seg_min_dist(g, l)
+            if gap is not None and gap < min_edge_gap:
+                violations.append(
+                    f"GND@x={g['x1']:.3f} vs LCD_D7@x={l['x1']:.3f}: "
+                    f"gap={gap:.3f}mm"
+                )
+
+    check(
+        f"GND power vs LCD_D7 B.Cu edge gap >= {min_edge_gap}mm",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:3]}",
+    )
+
+
+def test_lcd_sd_approach_spacing():
+    """Test 31: LCD approach columns vs SD traces edge gap >= 0.15mm.
+
+    LCD B.Cu vertical approach columns (x in 134..141) must not overlap
+    SD card routing B.Cu verticals (net 20-23). Guards against approach
+    pitch or SD post_slot column being too close.
+    """
+    print("\n── LCD Approach vs SD Trace Spacing Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    segs = _parse_segments(content)
+
+    lcd_nets = set(range(6, 20))  # LCD_D0(6)..LCD_BL(19)
+    sd_nets = {20, 21, 22, 23}   # SD_MOSI, SD_MISO, SD_CLK, SD_CS
+    min_edge_gap = 0.15
+
+    # LCD B.Cu verticals in approach column range
+    lcd_verts = [s for s in segs if s["net"] in lcd_nets and s["layer"] == "B.Cu"
+                 and abs(s["x1"] - s["x2"]) < 0.01 and 133 < s["x1"] < 142]
+    # SD B.Cu verticals in same x range
+    sd_verts = [s for s in segs if s["net"] in sd_nets and s["layer"] == "B.Cu"
+                and abs(s["x1"] - s["x2"]) < 0.01 and 133 < s["x1"] < 148]
+
+    violations = []
+    for lcd in lcd_verts:
+        for sd in sd_verts:
+            gap = _seg_min_dist(lcd, sd)
+            if gap is not None and gap < min_edge_gap:
+                violations.append(
+                    f"LCD net{lcd['net']}@x={lcd['x1']:.3f} vs "
+                    f"SD net{sd['net']}@x={sd['x1']:.3f}: gap={gap:.3f}mm"
+                )
+
+    check(
+        f"LCD approach vs SD B.Cu edge gap >= {min_edge_gap}mm",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:5]}",
+    )
+
+
+def test_via_pad_spacing():
+    """Test 32: All different-net via pairs have pad edge gap >= 0.15mm.
+
+    Guards against via placement that creates overlapping pads on different
+    nets. Excludes same-net pairs and vias within ESP32 module area.
+    """
+    print("\n── Via Pad Spacing Test ──")
+    with open(PCB_FILE) as f:
+        content = f.read()
+    vias = _parse_vias(content)
+
+    min_pad_gap = 0.15
+    violations = []
+
+    for i in range(len(vias)):
+        for j in range(i + 1, len(vias)):
+            v1, v2 = vias[i], vias[j]
+            if v1["net"] == v2["net"]:
+                continue
+            dist = ((v1["x"] - v2["x"])**2 + (v1["y"] - v2["y"])**2)**0.5
+            pad_gap = dist - (v1["size"] + v2["size"]) / 2
+            if pad_gap < min_pad_gap:
+                # Exclude ESP32 area (already handled by via_to_via_spacing)
+                esp_cx, esp_cy = 80.0, 31.12
+                on_esp = (abs(v1["x"] - esp_cx) < 10 and abs(v1["y"] - esp_cy) < 14
+                          and abs(v2["x"] - esp_cx) < 10 and abs(v2["y"] - esp_cy) < 14)
+                if on_esp:
+                    continue
+                violations.append(
+                    f"net{v1['net']}@({v1['x']:.3f},{v1['y']:.3f}) vs "
+                    f"net{v2['net']}@({v2['x']:.3f},{v2['y']:.3f}): "
+                    f"pad gap={pad_gap:.3f}mm"
+                )
+
+    check(
+        f"Via pad edge gap >= {min_pad_gap}mm ({len(vias)} vias)",
+        len(violations) == 0,
+        f"{len(violations)} violations: {violations[:5]}",
+    )
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -894,6 +1137,12 @@ if __name__ == "__main__":
     test_btn_r_edge_clearance()
     test_sd_gnd_via_clearance()
     test_bat_plus_via_vbus_clearance()
+    test_mounting_holes_npth()
+    test_lx_bat_trace_spacing()
+    test_button_vx_spacing()
+    test_gnd_lcd_d7_spacing()
+    test_lcd_sd_approach_spacing()
+    test_via_pad_spacing()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")

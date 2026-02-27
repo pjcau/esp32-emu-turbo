@@ -207,7 +207,11 @@ def gr_text(text, x, y, layer="F.SilkS", size=1.0):
 
 
 def mounting_hole(x, y, drill=2.5, pad_d=3.5):
-    """M2.5 mounting hole with annular ring (3.5mm pad for DFM clearance)."""
+    """M2.5 mounting hole — NPTH (no copper annular ring, purely mechanical).
+
+    DFM: NPTH eliminates 4× THT-to-SMD and 2× pad spacing DANGER violations
+    caused by the old PTH copper pad interfering with nearby SMD components.
+    """
     ref_uid = uid()
     val_uid = uid()
     fp_uid = uid()
@@ -229,12 +233,11 @@ def mounting_hole(x, y, drill=2.5, pad_d=3.5):
         f'      (uuid "{val_uid}")\n'
         f'      (effects (font (size 1.27 1.27) (thickness 0.2)))\n'
         f'    )\n'
-        f'    (pad "" thru_hole circle\n'
+        f'    (pad "" np_thru_hole circle\n'
         f'      (at 0 0)\n'
-        f'      (size {pad_d} {pad_d})\n'
+        f'      (size {drill} {drill})\n'
         f'      (drill {drill})\n'
         f'      (layers "*.Cu" "*.Mask")\n'
-        f'      (remove_unused_layers no)\n'
         f'      (uuid "{pad_uid}")\n'
         f'    )\n'
         f'    (embedded_fonts no)\n'
