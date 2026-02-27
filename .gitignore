@@ -33,3 +33,10 @@ software/dependencies.lock
 
 # Generated KiCad files (3D model injection for rendering)
 hardware/kicad/esp32-emu-turbo-3d.kicad_pcb
+
+# KiCad lock files
+hardware/kicad/~*.lck
+
+# Claude Code local settings
+.claude/hooks/
+.claude/settings.json
