@@ -11,7 +11,7 @@ Run all verification scripts and produce a summary report.
 
 ## Steps
 
-### 1. DFM Verification (15 tests)
+### 1. DFM Verification (21 tests)
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
@@ -25,9 +25,13 @@ Tests include:
 - C1/C2 spacing from U3 (>= 1.5mm gap)
 - gr_text clearance from mounting holes (>= 6mm)
 - Via annular ring (>= 0.175mm)
-- Gerber zip file count (12 files)
+- Gerber zip file count (>= 12 files)
 - U5 pin alignment analysis (informational)
 - SOP-16 aperture verification
+- KiCad DRC: copper_edge_clearance, hole_to_hole, silk issues
+- Trace spacing regression guard (baseline 27)
+- Via-to-via hole spacing (>= 0.25mm)
+- Display stagger vs ESP32 pin midpoints
 
 ### 2. Design Rule Check (JLCPCB rules)
 
@@ -67,7 +71,7 @@ After running all tests, summarize results in a table:
 
 | Suite | Tests | Pass | Fail | Status |
 |-------|-------|------|------|--------|
-| DFM v2 | 15 | ? | ? | PASS/FAIL |
+| DFM v2 | 21 | ? | ? | PASS/FAIL |
 | DRC | ? | ? | ? | PASS/FAIL |
 | Connectivity | ? | ? | ? | PASS/FAIL |
 | Schematic sync | ? | ? | ? | PASS/FAIL |

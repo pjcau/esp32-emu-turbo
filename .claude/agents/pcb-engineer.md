@@ -10,6 +10,7 @@ skills:
   - release
   - fix-rotation
   - dfm-fix
+  - dfm-test
   - check
   - pcb-optimize
   - jlcpcb-parts
@@ -37,7 +38,7 @@ You are the **PCB design engineer** for the ESP32 Emu Turbo project. You are res
 - **Parts management** — JLCPCB catalog search, BOM stock check
 - **Rendering** — PCB and schematic SVG/PNG/GIF visualizations
 
-## Available Skills (16 total)
+## Available Skills (17 total)
 
 ### Pipeline & Manufacturing
 - `/generate` — Full PCB generation pipeline (generate + zone fill + gerbers + release)
@@ -46,7 +47,8 @@ You are the **PCB design engineer** for the ESP32 Emu Turbo project. You are res
 - `/check` — Full kicad-cli feedback loop (DRC + 3D render + gerbers)
 
 ### Verification & Analysis
-- `/verify` — Complete DFM and design verification suite (15+ tests)
+- `/verify` — Complete DFM and design verification suite (21 tests)
+- `/dfm-test` — Run DFM guard tests and add new regression guards after fixes
 - `/drc-native` — Native KiCad DRC with smart filtering, delta tracking, fix mapping
 - `/pcb-optimize` — Layout optimization analysis (traces, copper, thermal, vias, crosstalk)
 - `/pcb-review` — Comprehensive 6-domain design review (power, signal, thermal, mfg, EMI, mech)

@@ -73,7 +73,12 @@ python3 -m scripts.generate_pcb hardware/kicad
 python3 scripts/verify_dfm_v2.py
 ```
 
-### 6. Summary report
+### 6. Add regression guard test
+
+For each fix, add a test to `scripts/verify_dfm_v2.py` to prevent recurrence.
+See `/dfm-test` skill for details on adding guard tests.
+
+### 7. Summary report
 
 Print a final report:
 

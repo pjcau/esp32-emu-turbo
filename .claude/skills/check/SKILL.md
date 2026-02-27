@@ -133,7 +133,7 @@ After running all steps, present results as:
 | KiCad DRC clearance | X violations | (should be 0) |
 | KiCad DRC copper_edge | X violations | (should be 0) |
 | KiCad DRC silk issues | X violations | (should be 0) |
-| Custom DFM tests | X/15 pass | — |
+| Custom DFM tests | X/21 pass | — |
 | 3D render top | [image] | visual check |
 | 3D render bottom | [image] | visual check |
 
