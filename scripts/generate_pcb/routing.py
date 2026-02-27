@@ -1483,7 +1483,7 @@ def _button_traces():
         LCD_BL_X = 73.02  # LCD_BL B.Cu vert x (crosses left-side button stubs)
         is_bottom = abs(epy - 40.0) < 2.0
         if is_bottom:
-            stagger_y = 35.5 - bottom_stagger_idx * 1.0  # DFM fix: was 38.0 (clear MH 55,37.5)
+            stagger_y = 35.5 - bottom_stagger_idx * 1.2  # DFM fix: 1.2mm step for 0.3mm via pad gap
             bottom_stagger_idx += 1
             # B.Cu vertical from approach column to stagger Y
             parts.append(_seg(ax, cy, ax, stagger_y, "B.Cu", W_SIG, net))
