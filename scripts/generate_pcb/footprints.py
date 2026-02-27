@@ -156,10 +156,12 @@ def sot223(layer="B"):
     return pads
 
 
-# ── SOIC-16W / SOP-16 (PAM8403) ─────────────────────────────────
-# Ref: KiCad Package_SO.pretty/SOIC-16W_7.5x10.3mm_P1.27mm.kicad_mod
-# 16 pins, 1.27mm pitch, wide body (7.5mm)
-# Pad centers at x=±4.65, pad size 2.05x0.6
+# ── SOP-16 narrow body (PAM8403 C5122557) ──────────────────────
+# Ref: KiCad Package_SO.pretty/SOIC-16_3.9x9.9mm_P1.27mm.kicad_mod
+# C5122557 (Slkor PAM8403) = SOP-16 150mil (3.9mm body, 6.0mm lead span)
+# NOT the wide body SOIC-16W (7.5mm). Confirmed from LCSC datasheet:
+#   body 3.9mm (E=3.8-4.0), lead span 6.0mm (E1=5.8-6.3)
+# 16 pins, 1.27mm pitch, pad centers at x=±2.7 (lead midpoint)
 # PAM8403 pinout: 1=+OUT_L, 2=PGND, 3=-OUT_L, 4=PVDD, 5=MUTE,
 #   6=VDD, 7=INL, 8=VREF, 9=NC, 10=INR, 11=GND, 12=SHDN,
 #   13=PVDD, 14=-OUT_R, 15=PGND, 16=+OUT_R
@@ -167,29 +169,28 @@ def sop16(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     fab = "B.Fab" if layer == "B" else "F.Fab"
     pads = []
-    pw, ph = 2.05, 0.6
+    pw, ph = 1.55, 0.6   # narrow body: 1.55mm pad (lead 1.05mm + extension)
 
     # Left: pins 1-8 (top to bottom)
     for i in range(8):
         y = -4.445 + i * 1.27
-        pads.append(_pad(str(i + 1), "smd", "rect", -4.65, y, pw, ph, layers))
+        pads.append(_pad(str(i + 1), "smd", "rect", -2.7, y, pw, ph, layers))
 
     # Right: pins 9-16 (bottom to top)
     for i in range(8):
         y = 4.445 - i * 1.27
-        pads.append(_pad(str(i + 9), "smd", "rect", 4.65, y, pw, ph, layers))
+        pads.append(_pad(str(i + 9), "smd", "rect", 2.7, y, pw, ph, layers))
 
-    # Body outline on Fab layer (DFM: avoids silkscreen-to-pad violations)
-    # Pads inner edge at x=±3.625 (4.65-2.05/2), keep 0.25mm clearance
-    bx = 3.35   # body half-width (0.275mm inside pad inner edge)
-    by = 5.3    # body half-height
+    # Body outline on Fab layer (3.9mm body width)
+    bx = 2.0    # body half-width (3.9mm / 2 ≈ 2.0mm)
+    by = 5.0    # body half-height (9.9mm / 2 ≈ 5.0mm)
     pads.append(_fp_line(-bx, -by, bx, -by, fab))   # top
     pads.append(_fp_line(bx, -by, bx, by, fab))      # right
     pads.append(_fp_line(bx, by, -bx, by, fab))      # bottom
     pads.append(_fp_line(-bx, by, -bx, -by, fab))    # left
 
     # Pin 1 marker (dot inside body near pin 1)
-    pads.append(_fp_circle(-2.5, -4.0, 0.3, fab))
+    pads.append(_fp_circle(-1.0, -4.0, 0.3, fab))
 
     return pads
 
@@ -237,14 +238,15 @@ def usb_c_16p(layer="B"):
                          solder_mask_margin=margin))
 
     # Shield / mounting legs (4 THT oval pads)
-    # Front shields: size 1.0x2.1, rear shields: size 1.0x1.6
-    # (per official KiCad USB_C_Receptacle_HCTL_HC-TYPE-C-16P-01A)
+    # Front shields: size 1.3x2.1, rear shields: size 1.3x1.6
+    # Drill 0.80mm (was 0.65 — increased for JLCPCB DFM "missing hole for pin")
+    # Annular ring: (1.3-0.8)/2 = 0.25mm > 0.175mm minimum
     for sx in [-4.32, 4.32]:
-        pads.append(_pad("S", "thru_hole", "oval", sx, -3.105, 1.0, 2.1, THT,
-                         drill=0.65))
+        pads.append(_pad("S", "thru_hole", "oval", sx, -3.105, 1.3, 2.1, THT,
+                         drill=0.80))
     for sx in [-4.32, 4.32]:
-        pads.append(_pad("S", "thru_hole", "oval", sx, 1.075, 1.0, 1.6, THT,
-                         drill=0.65))
+        pads.append(_pad("S", "thru_hole", "oval", sx, 1.075, 1.3, 1.6, THT,
+                         drill=0.80))
 
     return pads
 
@@ -299,11 +301,13 @@ def tf01a(layer="B"):
     return pads
 
 
-# ── JST PH 2-pin (through-hole) ──────────────────────────────────
+# ── JST PH 2-pin (through-hole, C173752) ────────────────────────
+# Standard JST PH pin diameter: 0.64mm → hole = 0.85mm (0.21mm clearance)
+# JLCPCB DFM requires ≥0.80mm for standard JST PH press-fit
 def jst_ph_2p(layer="B"):
     return [
-        _tht("1", -1.0, 0, 1.5, 1.5, 0.75),
-        _tht("2", 1.0, 0, 1.5, 1.5, 0.75),
+        _tht("1", -1.0, 0, 1.6, 1.6, 0.85),
+        _tht("2", 1.0, 0, 1.6, 1.6, 0.85),
     ]
 
 

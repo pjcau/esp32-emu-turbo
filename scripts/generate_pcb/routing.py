@@ -1116,10 +1116,13 @@ def _button_traces():
     # B.Cu horizontal to ESP32 pad
     parts.append(_seg(approach_l, epy_l, epx_l, epy_l,
                        "B.Cu", W_SIG, net_l))
-    # GND via on opposite shoulder pad
+    # GND via on opposite shoulder pad (offset 1mm for DFM lead-to-hole)
     sl_gnd = _pad("SW11", "2")
     if sl_gnd:
-        parts.append(_via_net(sl_gnd[0], sl_gnd[1], n_gnd))
+        gnd_via_x = sl_gnd[0] + 1.0  # offset 1mm right (away from pad)
+        parts.append(_seg(sl_gnd[0], sl_gnd[1], gnd_via_x, sl_gnd[1],
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(gnd_via_x, sl_gnd[1], n_gnd))
 
     return parts
 
@@ -1134,11 +1137,14 @@ def _passive_traces():
     n_gnd = NET_ID["GND"]
     n_5v = NET_ID["+5V"]
 
-    # Button pull-up resistors: +3V3 via at pull-up pad
+    # Button pull-up resistors: +3V3 via offset 1mm above pad (DFM lead-to-hole)
     for i, ref in enumerate(PULL_UP_REFS):
         rx = 43 + i * 5
         ry = 46
-        parts.append(_via_net(rx - 0.95, ry, n_3v3))
+        # B.Cu pad "2" at (rx-0.95, ry) — offset via 1mm above with stub trace
+        parts.append(_seg(rx - 0.95, ry, rx - 0.95, ry - 1.0,
+                          "B.Cu", W_SIG, n_3v3))
+        parts.append(_via_net(rx - 0.95, ry - 1.0, n_3v3))
 
     # Debounce caps: GND via at cap pad
     for i, ref in enumerate(DEBOUNCE_REFS):
@@ -1167,10 +1173,12 @@ def _passive_traces():
     # B.Cu passives: after mirroring, pad "1" at (cx+0.95, cy), pad "2" at (cx-0.95, cy)
     _init_pads()
 
-    # C3 near ESP32: pad "1" -> +3V3 via
+    # C3 near ESP32: pad "1" -> +3V3 via (offset 1mm for DFM lead-to-hole)
     c3_p1 = _pad("C3", "1")
     if c3_p1:
-        parts.append(_via_net(c3_p1[0], c3_p1[1], n_3v3))
+        parts.append(_seg(c3_p1[0], c3_p1[1], c3_p1[0], c3_p1[1] - 1.0,
+                          "B.Cu", W_SIG, n_3v3))
+        parts.append(_via_net(c3_p1[0], c3_p1[1] - 1.0, n_3v3))
     # C3 pad "2" -> GND via
     c3_p2 = _pad("C3", "2")
     if c3_p2:
@@ -1178,11 +1186,13 @@ def _passive_traces():
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c3_p2[0], c3_p2[1] - 2, n_gnd))
 
-    # C4 near ESP32: pad "1" -> +3V3 via, pad "2" -> GND via
+    # C4 near ESP32: pad "1" -> +3V3 via (offset 1mm), pad "2" -> GND via
     c4_p1 = _pad("C4", "1")
     c4_p2 = _pad("C4", "2")
     if c4_p1:
-        parts.append(_via_net(c4_p1[0], c4_p1[1], n_3v3))
+        parts.append(_seg(c4_p1[0], c4_p1[1], c4_p1[0], c4_p1[1] - 1.0,
+                          "B.Cu", W_SIG, n_3v3))
+        parts.append(_via_net(c4_p1[0], c4_p1[1] - 1.0, n_3v3))
     if c4_p2:
         parts.append(_seg(c4_p2[0], c4_p2[1], c4_p2[0], c4_p2[1] - 2,
                           "B.Cu", W_SIG, n_gnd))

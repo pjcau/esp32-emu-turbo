@@ -205,28 +205,31 @@ def test_gerber_zip():
 def test_u5_pin_alignment():
     """Test 11: Analyze U5 (PAM8403) pin alignment at all rotations.
 
-    Tests all 4 rotations under JLCPCB convention (Y-mirror + CW rotation).
-    Reports which rotation aligns with standard SOIC-16W model assumptions.
+    Tests all 4 rotations under JLCPCB convention (Y-mirror + CCW rotation).
+    C5122557 = narrow SOP-16 (3.9mm body, pad centers at ±2.7mm).
+    Reports which rotation aligns with standard SOIC-16 model assumptions.
     Always passes — JLCPCB C5122557 model may differ from standard.
     """
     print("\n── U5 Pin Alignment Analysis ──")
     import math
 
-    # Standard SOP-16 model pin positions (body center at origin)
+    # Narrow SOP-16 model pin positions (body center at origin)
+    # C5122557: 3.9mm body width, pad centers at ±2.7mm
+    PAD_X = 2.7   # narrow body pad center distance from body center
     model_pins = {}
     for i in range(8):
-        model_pins[i + 1] = (-4.65, -4.445 + i * 1.27)
+        model_pins[i + 1] = (-PAD_X, -4.445 + i * 1.27)
     for i in range(8):
-        model_pins[i + 9] = (4.65, 4.445 - i * 1.27)
+        model_pins[i + 9] = (PAD_X, 4.445 - i * 1.27)
 
     # Our gerber pad positions (from pre-rotation 90° + X-mirror)
     gerber_pins = {}
     for i in range(8):
-        x, y = -4.65, -4.445 + i * 1.27
+        x, y = -PAD_X, -4.445 + i * 1.27
         rx, ry = -y, x
         gerber_pins[i + 1] = (-rx, ry)
     for i in range(8):
-        x, y = 4.65, 4.445 - i * 1.27
+        x, y = PAD_X, 4.445 - i * 1.27
         rx, ry = -y, x
         gerber_pins[i + 9] = (-rx, ry)
 
@@ -254,15 +257,15 @@ def test_u5_pin_alignment():
 
 
 def test_sop16_aperture():
-    """Test 12: SOP-16 aperture R,0.6x2.05 exists (pre-rotation working)."""
+    """Test 12: SOP-16 narrow aperture R,0.6x1.55 exists (pre-rotation working)."""
     print("\n── SOP-16 Aperture Test ──")
     gerber_path = os.path.join(RELEASE, "gerbers", "esp32-emu-turbo-B_Cu.gbl")
     with open(gerber_path) as f:
         content = f.read()
 
-    # Look for rotated aperture (0.6 wide, 2.05 tall)
-    has_rotated = bool(re.search(r'R,0\.600000X2\.050000', content))
-    check("SOP-16 rotated aperture R,0.6x2.05 exists", has_rotated)
+    # Look for rotated aperture (0.6 wide, 1.55 tall — narrow SOP-16)
+    has_rotated = bool(re.search(r'R,0\.600000X1\.550000', content))
+    check("SOP-16 narrow rotated aperture R,0.6x1.55 exists", has_rotated)
 
 
 def test_kicad_drc():
