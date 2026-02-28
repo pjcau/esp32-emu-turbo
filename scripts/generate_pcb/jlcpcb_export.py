@@ -52,8 +52,8 @@ _JLCPCB_ROT_DEFAULT = 180  # Cancels bottom mirror → preserves original rotati
 # the model appears offset. These corrections align CPL with actual pad centers.
 _JLCPCB_POS_CORRECTIONS = {
     "U1": (0, 3.62),      # ESP32: body center → pin center (confirmed working)
-    "J1": (0, +0.2),      # USB-C: was -3.0, +3.2mm down from PCBA test alignment
-    "J4": (+6.3, 0),      # FPC: was +0.5, +5.8mm right from PCBA test alignment
+    "J1": (0, -6.2),      # USB-C: -3.0 -3.2mm (bottom view: 3.2mm down = CPL -Y)
+    "J4": (-5.3, 0),      # FPC: +0.5 -5.8mm (bottom view: 5.8mm right = CPL -X)
     "SW_PWR": (0, -0.5),  # MSK12C02: shift model UP 2mm from prev (+1.5→-0.5)
 }
 
