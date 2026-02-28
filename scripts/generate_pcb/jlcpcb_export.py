@@ -52,8 +52,8 @@ _JLCPCB_ROT_DEFAULT = 180  # Cancels bottom mirror → preserves original rotati
 # the model appears offset. These corrections align CPL with actual pad centers.
 _JLCPCB_POS_CORRECTIONS = {
     "U1": (0, 3.62),      # ESP32: body center → pin center (confirmed working)
-    "J4": (-1.85, 0),     # FPC: footprint origin → pad center (pads at x=-1.85 after rotation)
-    "SW_PWR": (0, -1.5),  # MSK12C02: shift up so 3D model pins align with pads
+    "J1": (0, -3.0),      # USB-C: shift model UP so pins align with pads
+    "SW_PWR": (0, +1.5),  # MSK12C02: shift model DOWN so pins align with pads
 }
 
 # ── Per-component rotation overrides (bypass formula) ──

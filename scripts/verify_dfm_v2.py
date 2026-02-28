@@ -43,14 +43,14 @@ def test_cpl_positions():
     print("\n── CPL Position & Rotation Tests ──")
     cpl = read_cpl()
 
-    # J1: no correction, should be at raw position 72.00
+    # J1: position correction -3.0mm applied → 72.00 - 3.0 = 69.00
     j1_y = float(cpl["J1"]["Mid Y"].replace("mm", ""))
-    check("J1 Mid Y = 72.00mm (no correction)", abs(j1_y - 72.00) < 0.01,
+    check("J1 Mid Y = 69.00mm (position correction)", abs(j1_y - 69.00) < 0.01,
           f"got {j1_y}")
 
-    # SW_PWR: position correction -1.5mm applied → 72.00 - 1.5 = 70.50
+    # SW_PWR: position correction +1.5mm applied → 72.00 + 1.5 = 73.50
     sw_y = float(cpl["SW_PWR"]["Mid Y"].replace("mm", ""))
-    check("SW_PWR Mid Y = 70.50mm (position correction)", abs(sw_y - 70.50) < 0.01,
+    check("SW_PWR Mid Y = 73.50mm (position correction)", abs(sw_y - 73.50) < 0.01,
           f"got {sw_y}")
 
     # U1: ESP32 correction +3.62 still applied
