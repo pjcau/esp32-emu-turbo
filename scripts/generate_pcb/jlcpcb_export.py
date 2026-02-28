@@ -52,7 +52,7 @@ _JLCPCB_ROT_DEFAULT = 180  # Cancels bottom mirror → preserves original rotati
 # the model appears offset. These corrections align CPL with actual pad centers.
 _JLCPCB_POS_CORRECTIONS = {
     "U1": (0, 3.62),      # ESP32: body center → pin center (confirmed working)
-    # J1 and SW_PWR: body center = footprint origin, no correction needed
+    "SW_PWR": (0, -1.5),  # MSK12C02: shift up so 3D model pins align with pads
 }
 
 # ── Per-component rotation overrides (bypass formula) ──
@@ -60,9 +60,7 @@ _JLCPCB_POS_CORRECTIONS = {
 # The JLCPCB C5122557 (PAM8403) 3D model's default orientation differs
 # from the generic SOP correction database. Tested empirically.
 _JLCPCB_ROT_OVERRIDES = {
-    "U5": 90,      # PAM8403 (C5122557) — 90° pre-rotation + X-mirror requires CPL=90
-    "J4": 270,     # FPC-40P — needs +180° so pins land on pads
-    "SW_PWR": 180, # SS-12D00G3 — 3D body flipped vs pads
+    "U5": 90,    # PAM8403 (C5122557) — 90° pre-rotation + X-mirror requires CPL=90
 }
 
 
