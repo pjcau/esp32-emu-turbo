@@ -48,9 +48,9 @@ def test_cpl_positions():
     check("J1 Mid Y = 72.00mm (no correction)", abs(j1_y - 72.00) < 0.01,
           f"got {j1_y}")
 
-    # SW_PWR: no correction, should be at raw position 72.00
+    # SW_PWR: position correction -1.5mm applied → 72.00 - 1.5 = 70.50
     sw_y = float(cpl["SW_PWR"]["Mid Y"].replace("mm", ""))
-    check("SW_PWR Mid Y = 72.00mm (no correction)", abs(sw_y - 72.00) < 0.01,
+    check("SW_PWR Mid Y = 70.50mm (position correction)", abs(sw_y - 70.50) < 0.01,
           f"got {sw_y}")
 
     # U1: ESP32 correction +3.62 still applied
