@@ -60,7 +60,9 @@ _JLCPCB_POS_CORRECTIONS = {
 # The JLCPCB C5122557 (PAM8403) 3D model's default orientation differs
 # from the generic SOP correction database. Tested empirically.
 _JLCPCB_ROT_OVERRIDES = {
-    "U5": 90,    # PAM8403 (C5122557) — 90° pre-rotation + X-mirror requires CPL=90
+    "U5": 90,      # PAM8403 (C5122557) — 90° pre-rotation + X-mirror requires CPL=90
+    "J4": 270,     # FPC-40P — needs +180° so pins land on pads
+    "SW_PWR": 180, # SS-12D00G3 — 3D body flipped vs pads
 }
 
 
@@ -221,8 +223,8 @@ def _build_placements():
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
-    p.append(("C3", "100nF", "C_0805", 68, 42, 0, "bottom"))  # DFM: moved from 70 to 68
-    p.append(("C4", "100nF", "C_0805", 85, 42, 0, "bottom"))
+    p.append(("C3", "100nF", "C_0805", 69.5, 42, 0, "bottom"))  # DFM: synced with board.py
+    p.append(("C4", "100nF", "C_0805", 92, 42, 0, "bottom"))  # DFM: synced with board.py
 
     # LED current-limiting resistors (B.Cu, above LEDs on F.Cu)
     # Must match board.py: R17 at (25, 65), R18 at (32, 65)
@@ -248,8 +250,7 @@ def _build_placements():
 
     # ── IP5306 support caps (away from mounting hole at 105,37.5) ──
     p.append(("C17", "10uF", "C_0805", 110, 35, 0, "bottom"))
-    p.append(("C18", "10uF", "C_0805",
-              ix + 6, iy - 5, 0, "bottom"))
+    p.append(("C18", "10uF", "C_0805", 118, 55, 0, "bottom"))  # DFM: synced with board.py
 
     # C19 near inductor L1
     p.append(("C19", "22uF", "C_1206",
