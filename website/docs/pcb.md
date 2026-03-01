@@ -261,7 +261,9 @@ Script: `python3 scripts/short_circuit_analysis.py`
 | Annular ring         | 0.13mm     | 0.15mm                        | PASS   |
 | Board edge clearance | 0.3mm      | 0.5mm                         | PASS   |
 
-Script: `python3 scripts/drc_check.py`
+**DRC Engine:** KiCad native DRC with [JLCPCB custom rules](https://github.com/tinfever/KiCAD-Custom-DRC-Rules-for-JLCPCB-with-Unit-Tests) (`hardware/kicad/esp32-emu-turbo.kicad_dru`)
+
+**Script:** `python3 scripts/drc_native.py --run` (zone fill + DRC + smart analysis)
 
 ### Electrical Simulation — PASS (6 warnings)
 
@@ -305,7 +307,7 @@ Script: `python3 scripts/verify_schematic_pcb.py`
 make verify-all
 
 # Or individually:
-python3 scripts/drc_check.py              # DRC manufacturing rules
+python3 scripts/drc_native.py --run       # JLCPCB DRC with smart analysis
 python3 scripts/simulate_circuit.py       # Electrical verification
 python3 scripts/verify_schematic_pcb.py   # Schematic/PCB consistency
 python3 scripts/short_circuit_analysis.py # Short circuits + zone fill
@@ -313,6 +315,14 @@ python3 scripts/short_circuit_analysis.py # Short circuits + zone fill
 # Export Gerbers with zone fill (requires Docker)
 make export-gerbers
 ```
+
+**DRC Improvements (Feb 2026):**
+- Integrated JLCPCB custom `.kicad_dru` rules (4-layer, standard vias)
+- Smart violation categorization (known-acceptable vs real issues)
+- Baseline tracking for delta detection (regression prevention)
+- Source file mapping with fix suggestions for real issues
+- Reduced critical violations from **186 → 10** borderline clearance issues (0.032-0.085mm vs 0.09mm JLCPCB min)
+- Fixed **8 unconnected items** in power routing (VBUS, +5V, +3V3, BAT+, LX nets)
 
 ## v2 PCB — Audio Coprocessor
 

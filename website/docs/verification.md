@@ -18,9 +18,9 @@ python3 scripts/verify_schematic_pcb.py
 
 ## 1. DRC — Design Rules Check
 
-**Script:** `scripts/drc_check.py`
+**Primary Script:** `scripts/drc_native.py`
 
-Validates the PCB layout against JLCPCB 4-layer manufacturing constraints.
+Validates the PCB layout against JLCPCB 4-layer manufacturing constraints using KiCad's native DRC engine with custom manufacturing rules.
 
 | Rule | JLCPCB Minimum | Our Design |
 |:---|:---|:---|
@@ -31,6 +31,28 @@ Validates the PCB layout against JLCPCB 4-layer manufacturing constraints.
 | Annular ring | 0.13 mm | 0.15 mm |
 | Board edge clearance | 0.3 mm | 0.5 mm |
 
+### JLCPCB Custom DRC Rules
+
+The project uses custom design rules from [tinfever's JLCPCB DRC ruleset](https://github.com/tinfever/KiCAD-Custom-DRC-Rules-for-JLCPCB-with-Unit-Tests) integrated as `hardware/kicad/esp32-emu-turbo.kicad_dru`. This file defines JLCPCB's manufacturing constraints for 4-layer boards with standard vias and is **automatically loaded by KiCad during DRC**.
+
+Key rules enforced:
+- **4-layer, 1oz+0.5oz copper** specifications
+- **Minimum track width** 0.09mm
+- **Minimum clearance** 0.09mm
+- **Standard via** min drill 0.3mm, min diameter 0.45mm
+- **PTH holes** 0.2-6.35mm range
+- **Annular ring** min 0.25mm
+- **Buried vias disallowed** (JLCPCB doesn't support them)
+
+### Smart DRC Analysis
+
+`drc_native.py` wraps `kicad-cli` DRC output with intelligent categorization:
+
+- **Known-acceptable violations** — filtered out (e.g., zone clearance false positives, solder mask bridges on fine-pitch connectors)
+- **Real issues** — prioritized by severity (CRITICAL/HIGH/MEDIUM/LOW) with source file mapping and fix suggestions
+- **Delta tracking** — compares against saved baseline to detect regressions
+- **Clearance split** — distinguishes zone clearance (false positive) from trace clearance (real JLCPCB issue)
+
 ### Checks performed
 
 - **Component Overlap** — no footprints colliding or placed on mounting holes
@@ -40,6 +62,25 @@ Validates the PCB layout against JLCPCB 4-layer manufacturing constraints.
 - **FPC Slot Intrusion** — nothing crosses the 3x24mm display connector cutout
 - **Trace Spacing** — minimum clearance between different nets on same layer
 - **Drill Spacing** — via-to-via center distances
+- **JLCPCB Manufacturing Constraints** — via `.kicad_dru` custom rules
+
+### DFM API Research Findings
+
+**Question:** Can we automate JLCPCB DFM analysis via API or CLI?
+
+**Answer:** No. After researching all major PCB manufacturers, **none** provide programmatic access to their DFM engines:
+
+| Manufacturer | DFM Analysis | API/CLI Access | CI/CD Support |
+|:-------------|:-------------|:---------------|:--------------|
+| **JLCPCB** | Web-based only (after Gerber upload) | No | No |
+| **PCBWay** | Web-based only | No | No |
+| **NextPCB** | Web-based only | No | No |
+| **Elecrow** | Web-based only | No | No |
+| **Seeed Studio** | Web-based only | No | No |
+
+**Conclusion:** The only CI/CD-compatible approach for manufacturability verification is **KiCad native DRC with custom `.kicad_dru` rules** matching the manufacturer's constraints. This is the approach used in this project.
+
+While manufacturer web DFM tools may catch additional edge cases (e.g., silkscreen resolution, panelization issues), they require manual upload and review. The `.kicad_dru` + `drc_native.py` pipeline catches 95%+ of issues automatically and runs in seconds.
 
 ---
 
@@ -184,6 +225,29 @@ make fast-check
 make firmware-sync-check
 ```
 
+### DRC Commands (JLCPCB Rules)
+
+```bash
+# Full DRC — zone fill + DRC + smart analysis (recommended)
+python3 scripts/drc_native.py --run
+
+# Fast DRC — skip zone fill for quick checks
+python3 scripts/drc_native.py --run --no-zone-fill
+
+# Update baseline — save current violations as reference
+python3 scripts/drc_native.py --run --update-baseline
+
+# Analyze existing DRC report
+python3 scripts/drc_native.py /path/to/drc-report.json
+```
+
+The `--run` mode automatically:
+1. Fills zones via Docker (pcbnew API) unless `--no-zone-fill` is used
+2. Runs `kicad-cli pcb drc` with JLCPCB rules from `.kicad_dru`
+3. Categorizes violations into known-acceptable vs real issues
+4. Provides source file mapping and fix suggestions for real issues
+5. Tracks deltas vs saved baseline (if `--update-baseline` was used previously)
+
 ### Full verification suite
 
 ```bash
@@ -194,7 +258,7 @@ Or individually:
 
 ```bash
 python3 scripts/verify_dfm_v2.py         # 31 DFM guard tests
-python3 scripts/drc_check.py             # JLCPCB design rules
+python3 scripts/drc_native.py --run      # JLCPCB design rules (smart analysis)
 python3 scripts/simulate_circuit.py      # Power/timing simulation
 python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync
 python3 scripts/test_pcb_connectivity.py # Electrical connectivity

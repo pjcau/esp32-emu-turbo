@@ -1,23 +1,30 @@
 #!/usr/bin/env python3
-"""Smart KiCad DRC analysis with violation filtering and fix suggestions.
+"""Smart KiCad DRC analysis with JLCPCB rules and fix suggestions.
 
 Wraps kicad-cli DRC JSON output with:
+- JLCPCB manufacturing constraint checking (via .kicad_dru rules)
 - Known-acceptable violation filtering
 - Delta tracking vs saved baseline
 - Source file mapping for fix suggestions
 - Priority ranking by severity and fixability
 
 Usage:
-    python3 scripts/drc_native.py <drc-report.json>
-    python3 scripts/drc_native.py <drc-report.json> --update-baseline
+    python3 scripts/drc_native.py --run                    # Run DRC + analyze
+    python3 scripts/drc_native.py --run --update-baseline  # Run + save baseline
+    python3 scripts/drc_native.py <drc-report.json>        # Analyze existing report
 """
 
 import json
+import shutil
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from collections import Counter
 
 BASELINE_PATH = Path("scripts/drc_baseline.json")
+PCB_PATH = Path("hardware/kicad/esp32-emu-turbo.kicad_pcb")
+DRU_PATH = Path("hardware/kicad/esp32-emu-turbo.kicad_dru")
 
 # Known-acceptable violations in the generated PCB.
 # These are expected because the Python generator doesn't assign nets to pads
@@ -30,11 +37,17 @@ KNOWN_ACCEPTABLE = {
     "via_dangling": "Zone-connected vias appear dangling before zone fill",
     "track_dangling": "Zone-connected tracks appear dangling before zone fill",
     "courtyardOverlap": "Overlapping courtyards on dense areas (acceptable for PCBA)",
+    "clearance_zone": "Via vs inner-layer zone clearance (JLCPCB adds thermal relief automatically)",
 }
+
+# Zone clearance violations (via vs GND zone on inner layers) are expected
+# because the generator places vias without thermal relief offsets.
+# JLCPCB handles this with automatic thermal relief generation.
+ZONE_CLEARANCE_PATTERN = "zone clearance"
 
 # Violation types that indicate REAL issues to fix
 REAL_ISSUES = {
-    "clearance": {
+    "clearance_trace": {
         "severity": "HIGH",
         "source": "scripts/generate_pcb/routing.py",
         "fix": "Increase trace spacing or move traces apart. Check segment coordinates.",
@@ -110,14 +123,22 @@ def categorize_violations(report):
     counts = Counter()
     details = {}
 
-    # Count violations
+    # Count violations, splitting clearance into zone vs trace
     for v in report.get("violations", []):
         vtype = v.get("type", "unknown")
+        desc = v.get("description", "")
+
+        # Split clearance: zone clearance (known-acceptable) vs trace clearance (real)
+        if vtype == "clearance" and ZONE_CLEARANCE_PATTERN in desc:
+            vtype = "clearance_zone"
+        elif vtype == "clearance":
+            vtype = "clearance_trace"
+
         counts[vtype] += 1
         if vtype not in details:
             details[vtype] = []
         if len(details[vtype]) < 5:  # Keep top 5 examples
-            details[vtype].append(v.get("description", ""))
+            details[vtype].append(desc)
 
     # Count unconnected items
     unconnected = report.get("unconnected_items", [])
@@ -250,22 +271,95 @@ def analyze(report_path, update_baseline=False):
     return real_count
 
 
+def fill_zones():
+    """Fill zones via Docker pcbnew API. Works on the PCB file in-place."""
+    print("==> Zone fill via Docker (pcbnew API)...")
+
+    project_root = Path(__file__).resolve().parent.parent
+    cmd = [
+        "docker", "compose", "-f", str(project_root / "docker-compose.yml"),
+        "run", "--rm", "--entrypoint", "python3",
+        "kicad-pcb",
+        "/scripts/kicad_fill_zones.py", f"/project/{PCB_PATH.name}",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"Zone fill FAILED (exit {result.returncode}):")
+        print(result.stderr)
+        print(result.stdout)
+        return False
+
+    for line in result.stdout.strip().split("\n"):
+        print(f"  {line}")
+    print()
+    return True
+
+
+def run_drc(skip_zone_fill=False):
+    """Fill zones + run kicad-cli DRC with JLCPCB rules. Returns report path."""
+    if not PCB_PATH.exists():
+        print(f"ERROR: {PCB_PATH} not found")
+        sys.exit(1)
+
+    if DRU_PATH.exists():
+        print(f"JLCPCB rules: {DRU_PATH}")
+    else:
+        print("WARNING: No .kicad_dru rules file found — using project defaults only")
+    print()
+
+    # Step 1: Zone fill (unless skipped)
+    if not skip_zone_fill:
+        if not fill_zones():
+            print("WARNING: Zone fill failed — running DRC without filled zones")
+            print("         (expect false-positive unconnected_items on power nets)")
+            print()
+
+    # Step 2: DRC
+    report_fd, report_path = tempfile.mkstemp(suffix=".json", prefix="drc-")
+
+    cmd = [
+        "kicad-cli", "pcb", "drc",
+        "--output", report_path,
+        "--format", "json",
+        "--severity-all",
+        "--units", "mm",
+        "--all-track-errors",
+        str(PCB_PATH),
+    ]
+
+    print(f"==> Running DRC: {' '.join(cmd)}")
+    print()
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+
+    if result.returncode not in (0, 5):  # 5 = violations found (expected)
+        print(f"kicad-cli FAILED (exit {result.returncode}):")
+        print(result.stderr)
+        sys.exit(1)
+
+    return report_path
+
+
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 scripts/drc_native.py <drc-report.json> [--update-baseline]")
-        print()
-        print("Run kicad-cli first:")
-        print("  kicad-cli pcb drc --output /tmp/drc-report.json --format json \\")
-        print("    --severity-all --units mm --all-track-errors \\")
-        print("    hardware/kicad/esp32-emu-turbo.kicad_pcb")
+        print("Usage:")
+        print("  python3 scripts/drc_native.py --run                       # Zone fill + DRC + analyze")
+        print("  python3 scripts/drc_native.py --run --no-zone-fill        # DRC only (skip Docker zone fill)")
+        print("  python3 scripts/drc_native.py --run --update-baseline     # Run + save baseline")
+        print("  python3 scripts/drc_native.py <drc-report.json>           # Analyze existing report")
         sys.exit(1)
 
-    report_path = sys.argv[1]
     update = "--update-baseline" in sys.argv
+    skip_fill = "--no-zone-fill" in sys.argv
 
-    if not Path(report_path).exists():
-        print(f"ERROR: {report_path} not found")
-        sys.exit(1)
+    if "--run" in sys.argv:
+        report_path = run_drc(skip_zone_fill=skip_fill)
+    else:
+        report_path = [a for a in sys.argv[1:] if not a.startswith("--")][0]
+        if not Path(report_path).exists():
+            print(f"ERROR: {report_path} not found")
+            sys.exit(1)
 
     real_count = analyze(report_path, update_baseline=update)
     sys.exit(0)  # Always exit 0 (advisory)
