@@ -11,7 +11,8 @@
       "Write",
       "Edit",
       "Glob",
-      "Grep"
+      "Grep",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [
       "Bash(rm -rf /*)",
@@ -19,6 +20,37 @@
       "Bash(rm -rf /home/pjonny/*)",
       "Bash(rm -rf /home/pjonny/Documents/*)",
       "Bash(rm -rf /home/pjonny/Documents/myProjects/*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(generate_pcb/|release_jlcpcb/|footprints|jlcpcb_export|\\.kicad_pcb)'; then echo '\\n>>> PCB/PCBA file modified — remember to run DFA verification: python3 scripts/verify_dfa.py'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(generate_pcb/|release_jlcpcb/|footprints|jlcpcb_export|\\.kicad_pcb)'; then echo '\\n>>> PCB/PCBA file modified — remember to run DFA verification: python3 scripts/verify_dfa.py'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$CLAUDE_BASH_COMMAND\" | grep -qE '(generate_pcb|verify_dfm|release)'; then echo '\\n>>> PCB pipeline command detected — remember to run DFA verification: python3 scripts/verify_dfa.py'; fi"
+          }
+        ]
+      }
     ]
   }
 }

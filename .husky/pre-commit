@@ -15,6 +15,20 @@ echo ""
 
 ERRORS=0
 
+# 0. DFA Verification (SMT DFM checks)
+printf "[verify] DFA (SMT DFM) ....... "
+DFA_OUTPUT=$(python3 scripts/verify_dfa.py 2>&1)
+DFA_EXIT=$?
+if [ $DFA_EXIT -ne 0 ]; then
+    echo "FAIL"
+    echo "$DFA_OUTPUT"
+    ERRORS=$((ERRORS + 1))
+else
+    DFA_PASS=$(echo "$DFA_OUTPUT" | grep -oP '\d+ passed' || echo "PASS")
+    DFA_FAIL=$(echo "$DFA_OUTPUT" | grep -oP '\d+ failed' || echo "0 failed")
+    echo "RESULT: PASS — $DFA_PASS, $DFA_FAIL"
+fi
+
 # 1. DRC Check
 printf "[verify] DRC Check ............ "
 DRC_OUTPUT=$(python3 scripts/drc_check.py 2>&1)

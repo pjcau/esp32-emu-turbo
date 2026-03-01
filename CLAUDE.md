@@ -179,10 +179,13 @@ graph TB
 
 | Trigger | Matcher | Action |
 |---------|---------|--------|
-| PostToolUse | `Bash` (contains `generate_pcb`) | Reminds to run `verify_dfm_v2.py` |
-| PostToolUse | `Edit` (path contains `scripts/generate_pcb/`) | Reminds to regenerate PCB |
+| PostToolUse | `Edit` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| PostToolUse | `Write` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| PostToolUse | `Bash` (generate_pcb/release) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
 
-Config: `.claude/settings.json` · Scripts: `.claude/hooks/`
+**MANDATORY**: After ANY change to PCB generator, footprints, routing, BOM, CPL, or JLCPCB export files, you MUST run `python3 scripts/verify_dfa.py` and confirm all 9 checks pass before committing.
+
+Config: `.claude/settings.local.json` (hooks section)
 
 ### Makefile Quick Targets
 
