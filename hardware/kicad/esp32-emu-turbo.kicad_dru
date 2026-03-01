@@ -95,6 +95,11 @@
 	(constraint edge_clearance (min 0.3mm))
 	(condition "A.Type == 'track'"))
 
+# ----------------------------------- Assembly (DFA) -------------------------------------
+
+(rule "Assembly Courtyard Clearance"
+	(constraint courtyard_clearance (min 0.25mm)))
+
 # ----------------------------------- Silkscreen -----------------------------------------
 
 (rule "Minimum Text"
