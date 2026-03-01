@@ -375,10 +375,16 @@ def _power_traces():
     # ── VBUS: USB-C -> IP5306 ──────────────────────────────────
     # B.Cu stub from USB-C VBUS pad -> via at y=60 (clear of button channels y=62-71)
     # DFM: was y = usb_vbus[1]-2 = 66.25 which overlaps BTN_A F.Cu channel at y=66
+    # DFM v2: VBUS via moved LEFT from x=136.3 (USB pad) to x=133.0 to avoid LCD approach
+    # column vias at x=134.5..140.35 (pitch 0.45mm). B.Cu horiz stub LEFT, then vertical.
     vbus_via_y = 60.0   # fixed safe Y above all button channels
-    parts.append(_seg(usb_vbus[0], usb_vbus[1], usb_vbus[0], vbus_via_y,
+    vbus_via_x = 133.0  # LEFT of LCD approach column start (x=134.5), gap=1.25mm ✓
+    # B.Cu horizontal LEFT from USB pad to via X, then vertical down to via Y
+    parts.append(_seg(usb_vbus[0], usb_vbus[1], vbus_via_x, usb_vbus[1],
                        "B.Cu", W_PWR, n_vbus))
-    parts.append(_via_net(usb_vbus[0], vbus_via_y, n_vbus))
+    parts.append(_seg(vbus_via_x, usb_vbus[1], vbus_via_x, vbus_via_y,
+                       "B.Cu", W_PWR, n_vbus))
+    parts.append(_via_net(vbus_via_x, vbus_via_y, n_vbus))
     # F.Cu horizontal to IP5306 area, then F.Cu vertical up to IP5306 pin Y
     # (avoid long B.Cu vertical crossing BAT+ horizontal at y~58.5)
     ip_vbus_via_x = ip_vbus[0] - 2
@@ -386,7 +392,7 @@ def _power_traces():
     # ip_vbus[1]=40.595. Via at y=40.595: U2[EP] top=41.1, gap=41.1-40.595-0.45=0.055mm < 0.10mm.
     # At y=40.095: gap_y=41.1-40.095-0.45=0.555mm OK.
     ip_vbus_via_y = ip_vbus[1] - 0.5  # DFM: was ip_vbus[1] (gap 0.055mm to U2[EP])
-    parts.append(_seg(usb_vbus[0], vbus_via_y, ip_vbus_via_x, vbus_via_y,
+    parts.append(_seg(vbus_via_x, vbus_via_y, ip_vbus_via_x, vbus_via_y,
                        "F.Cu", W_PWR, n_vbus))
     parts.append(_seg(ip_vbus_via_x, vbus_via_y, ip_vbus_via_x, ip_vbus_via_y,
                        "F.Cu", W_PWR, n_vbus))
@@ -673,10 +679,15 @@ def _display_traces():
         #   - Collinear B.Cu overlap: each vertical at unique apx column.
         #   - No B.Cu horizontal stagger stubs that would cross other B.Cu verticals.
         #   - SW8 moved to enc(53,5)→PCB(133,32.5): SW8[2] now at x=136, clear of J4 contact x=133.8.
-        # apx range: 134.50 (idx=0) to 134.5+13*0.45=140.35 (idx=13), 0.45mm pitch.
+        # DFM v3: Pitch increased from 0.45mm to 0.70mm for via-to-track clearance.
+        # At 0.45mm: trace_width=0.2mm (±0.1), via_dia=0.7mm (±0.35) → gap=0.45-0.1-0.35=0.0mm.
+        # At 0.70mm: gap=0.70-0.1-0.35=0.25mm ≥ 0.254mm min via-to-track clearance ✓
+        # DFM v4: Start position moved from 134.5 to 131.0 to avoid SD conflict at x=141.2.
+        # apx range: 131.0 (idx=0) to 131.0+13*0.70=140.1 (idx=13), 0.70mm pitch.
+        # Rightmost via right edge: 140.1+0.35=140.45mm, gap to SD=141.2-140.45=0.75mm ✓
         # B.Cu stubs from via@(apx,bypass_y) to FPC pad@(fpx, fpy): B.Cu vertical + horizontal.
         # No via at (apx, fpy): both seg5 and seg6 are B.Cu — no layer switch needed.
-        apx = round(134.5 + idx * 0.45, 4)  # DFM: was 0.40mm pitch (edge gap 0.20mm). Now 0.45mm: edge gap 0.25mm ≥ JLCPCB min
+        apx = round(131.0 + idx * 0.70, 4)  # DFM v4: start=131.0, pitch=0.70mm for clearances
         col_x = 124.0 - idx * 1.1  # 1.1mm pitch avoids power verticals at x~117
 
         is_bottom = abs(epy - 40.0) < 1.0

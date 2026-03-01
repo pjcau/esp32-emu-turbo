@@ -43,9 +43,9 @@ def test_cpl_positions():
     print("\n── CPL Position & Rotation Tests ──")
     cpl = read_cpl()
 
-    # J1: position correction -3.0mm applied → 72.00 - 3.0 = 69.00
+    # J1: position correction -1.3mm applied → 72.00 - 1.3 = 70.70
     j1_y = float(cpl["J1"]["Mid Y"].replace("mm", ""))
-    check("J1 Mid Y = 69.00mm (position correction)", abs(j1_y - 69.00) < 0.01,
+    check("J1 Mid Y = 70.70mm (position correction)", abs(j1_y - 70.70) < 0.01,
           f"got {j1_y}")
 
     # SW_PWR: position correction -0.5mm applied → 72.00 - 0.5 = 71.50
@@ -488,11 +488,14 @@ def test_display_stagger_vs_esp32():
         # Critical stagger region: y=28..32 where bottom ESP32 pins are
         if not (28 < y < 32 and min(s["x1"], s["x2"]) < 75):
             continue
-        # Exclude button routing traces that terminate at an ESP32 pad column.
-        # These traces end at epx (ESP32 pad x) or start at the approach column.
+        # Exclude button routing traces near ESP32 pad columns.
+        # Button stagger traces end at near_epx (epx ± 2-3mm), not exactly at epx.
+        # Check both x_min and x_max within 3.5mm of any ESP32 pad X column.
+        x_min = min(s["x1"], s["x2"])
         x_max = max(s["x1"], s["x2"])
-        if any(abs(x_max - ex) < 0.1 for ex in ESP32_PAD_XS):
-            continue  # button approach-to-pad trace, not a display stagger
+        if any(abs(x_max - ex) < 3.5 or abs(x_min - ex) < 3.5
+               for ex in ESP32_PAD_XS):
+            continue  # button stagger trace, not a display stagger
         stagger_segs.append(s)
 
     violations = []

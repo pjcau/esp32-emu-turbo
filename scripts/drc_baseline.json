@@ -1,0 +1,13 @@
+{
+  "solder_mask_bridge": 202,
+  "shorting_items": 199,
+  "clearance_borderline": 8,
+  "hole_clearance": 90,
+  "clearance_zone": 203,
+  "clearance_trace": 3,
+  "text_height": 1,
+  "lib_footprint_mismatch": 6,
+  "via_dangling": 18,
+  "isolated_copper": 11,
+  "unconnected_zone": 15
+}
