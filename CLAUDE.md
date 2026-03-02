@@ -59,9 +59,9 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ```
 team-lead (sonnet) ──── orchestrator, 0 skills
-  ├── pcb-engineer (sonnet) ──── 19 skills
-  ├── software-dev (sonnet) ──── 3 skills
-  └── cad-engineer (haiku) ───── 3 skills
+  ├── pcb-engineer (opus) ───── 20 skills
+  ├── software-dev (opus) ───── 3 skills
+  └── cad-engineer (haiku) ──── 3 skills
 ```
 
 ### Cross-Agent Dependencies

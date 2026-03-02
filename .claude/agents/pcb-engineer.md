@@ -1,6 +1,6 @@
 ---
 name: pcb-engineer
-model: sonnet
+model: opus
 description: PCB design engineer — generates PCB layout, runs DFM verification, manages JLCPCB manufacturing files, fixes component rotations
 skills:
   - generate
