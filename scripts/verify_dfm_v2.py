@@ -1261,10 +1261,10 @@ def test_drill_trace_clearance():
                         f"gap={gap:.3f}mm"
                     )
 
-    # Baseline: 71 violations from dense areas (GND vias near signal traces,
+    # Baseline: 45 violations from dense areas (GND vias near signal traces,
     # display bus vias on SPI traces). These need routing fixes — this test
     # guards against regressions (count must not increase).
-    BASELINE = 71
+    BASELINE = 45
     check(
         f"Drill-to-trace violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(unique_drills)} holes × {len(segs)} segs)",
@@ -1318,10 +1318,12 @@ def test_trace_pad_different_net_clearance():
                     f"@({p['x']},{p['y']}) gap={gap:.3f}mm"
                 )
 
-    # Baseline: 140 violations from dense areas (ESOP-8 exposed pad,
+    # Baseline: 106 violations from dense areas (ESOP-8 exposed pad,
     # FPC pin proximity, speaker/battery traces near IC pads).
     # Guards against regressions — count must not increase.
-    BASELINE = 140
+    # Reduced from 140 → 106 after SPK+ left-escape routing fix (avoids U5:15 GND pad)
+    # and +5V bridge PVDD4→PVDD13 direct vert (avoids U5:11 GND pad).
+    BASELINE = 106
     check(
         f"Trace-to-pad violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(segs)} segs × {len(pads)} pads)",
