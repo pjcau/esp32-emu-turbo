@@ -21,13 +21,13 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 python3 -m scripts.generate_pcb hardware/kicad
 ```
 
-### 2. Zone fill + gerber export
+### 2. Zone fill + gerber export (fast: local kicad-cli + Docker zone fill)
 
 ```bash
-./scripts/export-gerbers.sh
+./scripts/export-gerbers-fast.sh
 ```
 
-Or via Docker:
+Or via full Docker:
 ```bash
 docker compose run --rm --entrypoint python3 kicad-pcb /scripts/kicad_fill_zones.py "/project/esp32-emu-turbo.kicad_pcb"
 docker compose run --rm kicad-pcb pcb export gerbers --output /gerbers/ --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts" --subtract-soldermask --use-drill-file-origin "/project/esp32-emu-turbo.kicad_pcb"
@@ -38,12 +38,13 @@ docker compose run --rm kicad-pcb pcb export drill --output /gerbers/ --format e
 
 ```bash
 python3 scripts/verify_dfm_v2.py
+python3 scripts/verify_dfa.py
 python3 scripts/drc_check.py
 python3 scripts/test_pcb_connectivity.py
 python3 scripts/verify_schematic_pcb.py
 ```
 
-**ALL tests must pass before proceeding.** If any fail, fix the issues first.
+**ALL tests must pass before proceeding (43 DFM + 9 DFA + DRC + connectivity + schematic sync).** If any fail, fix the issues first.
 
 ### 4. Copy to release_jlcpcb/
 

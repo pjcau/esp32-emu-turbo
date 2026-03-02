@@ -192,11 +192,12 @@ Config: `.claude/settings.local.json` (hooks section)
 | Target | Description |
 |--------|-------------|
 | `make fast-check` | Full pipeline with local kicad-cli (~5s) |
-| `make verify-fast` | Quick DFM check only (1.4s) |
+| `make verify-fast` | Quick DFM check only (43 tests, 1.4s) |
+| `make verify-dfa` | Quick DFA check (9 assembly tests) |
 | `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |
 | `make release-prep` | Full pipeline: generate → gerbers → verify → render |
 | `make firmware-sync-check` | Verify GPIO sync, fail on mismatch |
-| `make verify-all` | Full verification suite (DRC + sim + consistency) |
+| `make verify-all` | Full verification suite (DFM + DFA + DRC + sim + consistency) |
 
 ### Performance Optimizations
 

@@ -24,6 +24,10 @@ import re
 from . import primitives as P
 from . import footprints as FP
 from .primitives import NET_ID
+from .collision import CollisionGrid
+
+# ── Collision detection grid (populated in _init_pads, used by _seg/_via_net)
+_GRID = CollisionGrid()
 
 # ── Trace widths ──────────────────────────────────────────────────
 W_PWR = 0.5
@@ -267,6 +271,17 @@ def _init_pads():
             key = (round(px, 2), round(py, 2))
             _PAD_POS_LOOKUP.setdefault(key, []).append((ref, num))
 
+    # Pre-populate collision grid with pads, slot, edges, mounting holes
+    if not _GRID._populated:
+        from .pad_positions import get_all_pad_positions
+        from .board import MOUNT_HOLES_ENC, enc_to_pcb
+        all_pads = get_all_pad_positions()
+        _GRID.register_pads(all_pads)
+        _GRID.register_slot()
+        _GRID.register_board_edges()
+        _GRID.register_mounting_holes(
+            [enc_to_pcb(ex, ey) for ex, ey in MOUNT_HOLES_ENC])
+
 
 def _pad(ref, num):
     """Return absolute (x, y) for a component pad."""
@@ -301,6 +316,11 @@ def _seg(x1, y1, x2, y2, layer="B.Cu", width=W_DATA, net=0):
             key = (round(x, 2), round(y, 2))
             for ref, num in _PAD_POS_LOOKUP.get(key, []):
                 _PAD_NETS[(ref, num)] = net
+                _GRID.update_pad_net(ref, num, net)
+        # Collision check + register
+        violations = _GRID.check_segment(x1, y1, x2, y2, layer, width, net)
+        _GRID.violations.extend(violations)
+        _GRID.add_segment(x1, y1, x2, y2, layer, width, net)
     return P.segment(x1, y1, x2, y2, layer, width, net)
 
 
@@ -328,6 +348,13 @@ def _via_net(x, y, net=0, size=None, drill=None):
         key = (round(x, 2), round(y, 2))
         for ref, num in _PAD_POS_LOOKUP.get(key, []):
             _PAD_NETS[(ref, num)] = net
+            _GRID.update_pad_net(ref, num, net)
+        # Collision check + register
+        _size = size if size is not None else 0.9
+        _drill = drill if drill is not None else 0.35
+        violations = _GRID.check_via(x, y, net, _size, _drill)
+        _GRID.violations.extend(violations)
+        _GRID.add_via(x, y, net, _size, _drill)
     if size is not None and drill is not None:
         return P.via(x, y, size=size, drill=drill, net=net)
     return P.via(x, y, net=net)
@@ -2013,6 +2040,13 @@ def generate_all_traces():
 
     Returns a single string of KiCad S-expressions.
     """
+    # Reset collision grid and pad state for fresh generation
+    global _PADS, _PAD_NETS, _PAD_POS_LOOKUP
+    _GRID.reset()
+    _PADS = {}
+    _PAD_NETS = {}
+    _PAD_POS_LOOKUP = {}
+
     all_parts = []
     all_parts.extend(_power_traces())
     all_parts.extend(_display_traces())
@@ -2023,4 +2057,13 @@ def generate_all_traces():
     all_parts.extend(_passive_traces())
     all_parts.extend(_led_traces())
     all_parts.extend(_power_zones())
+
+    # Report collision violations
+    _GRID.print_report()
+
     return "".join(all_parts)
+
+
+def get_collision_violations():
+    """Return collision violations from the last generate_all_traces() call."""
+    return _GRID.get_violations()

@@ -11,7 +11,7 @@ Run all verification scripts and produce a summary report.
 
 ## Steps
 
-### 1. DFM Verification (21 tests)
+### 1. DFM Verification (43 tests)
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
@@ -29,9 +29,23 @@ Tests include:
 - U5 pin alignment analysis (informational)
 - SOP-16 aperture verification
 - KiCad DRC: copper_edge_clearance, hole_to_hole, silk issues
-- Trace spacing regression guard (baseline 27)
+- Trace spacing regression guard
 - Via-to-via hole spacing (>= 0.25mm)
 - Display stagger vs ESP32 pin midpoints
+- Mounting hole trace clearance
+- Drill-trace clearance (JLCPCB hole-cuts-trace prevention)
+- Trace-pad different-net clearance (JLCPCB net assignment check)
+
+### 1b. DFA Verification (9 tests)
+
+```bash
+python3 scripts/verify_dfa.py
+```
+
+Tests include:
+- BOM file presence and component counts
+- CPL file presence and component positions
+- Polarity-sensitive component verification
 
 ### 2. Design Rule Check (JLCPCB rules)
 
@@ -71,7 +85,8 @@ After running all tests, summarize results in a table:
 
 | Suite | Tests | Pass | Fail | Status |
 |-------|-------|------|------|--------|
-| DFM v2 | 21 | ? | ? | PASS/FAIL |
+| DFM v2 | 43 | ? | ? | PASS/FAIL |
+| DFA | 9 | ? | ? | PASS/FAIL |
 | DRC | ? | ? | ? | PASS/FAIL |
 | Connectivity | ? | ? | ? | PASS/FAIL |
 | Schematic sync | ? | ? | ? | PASS/FAIL |
@@ -80,7 +95,8 @@ Report any failures with details and suggested fixes.
 
 ## Key Files
 
-- `scripts/verify_dfm_v2.py` — DFM verification (main)
+- `scripts/verify_dfm_v2.py` — DFM verification (43 tests)
+- `scripts/verify_dfa.py` — DFA verification (9 tests)
 - `scripts/drc_check.py` — Design rule check
 - `scripts/test_pcb_connectivity.py` — Connectivity test
 - `scripts/verify_schematic_pcb.py` — Schematic/PCB sync

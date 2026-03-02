@@ -65,13 +65,14 @@ cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/gerbers.zip
 
 ### 6. Run verification
 
-After the pipeline completes, run the DFM verification:
+After the pipeline completes, run DFM + DFA verification:
 
 ```bash
 python3 scripts/verify_dfm_v2.py
+python3 scripts/verify_dfa.py
 ```
 
-Report results as a summary table.
+Report results as a summary table (43 DFM + 9 DFA tests).
 
 ## Important Notes
 
@@ -88,4 +89,6 @@ Report results as a summary table.
 - Footprints: `scripts/generate_pcb/footprints.py`
 - JLCPCB export: `scripts/generate_pcb/jlcpcb_export.py`
 - Zone fill: `scripts/kicad_fill_zones.py`
-- Gerber export: `scripts/export-gerbers.sh`
+- Gerber export (fast): `scripts/export-gerbers-fast.sh`
+- Gerber export (Docker): `scripts/export-gerbers.sh`
+- DFA verification: `scripts/verify_dfa.py`

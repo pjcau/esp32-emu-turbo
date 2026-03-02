@@ -43,6 +43,6 @@ hardware/kicad/.pcb_cache.json
 # KiCad lock files
 hardware/kicad/~*.lck
 
-# Claude Code local settings
+# Claude Code local settings (personal overrides)
 .claude/hooks/
-.claude/settings.json
+.claude/settings.local.json

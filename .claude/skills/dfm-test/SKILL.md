@@ -32,7 +32,9 @@ python3 scripts/verify_dfm_v2.py
 
 ### 3. Interpret results
 
-The test suite covers 6 categories (21 tests total):
+The test suite covers 43 DFM tests + 9 DFA tests:
+
+**DFM tests (`verify_dfm_v2.py` — 43 tests):**
 
 | # | Category | Tests | What it checks |
 |---|----------|-------|----------------|
@@ -43,9 +45,20 @@ The test suite covers 6 categories (21 tests total):
 | 10 | Gerbers | 1 | gerbers.zip has >= 12 files |
 | 11-12 | Footprints | 2 | U5 pin alignment analysis, SOP-16 aperture |
 | 13-15 | KiCad DRC | 3 | copper_edge=0, hole_to_hole=0, silk issues=0 |
-| 16 | Trace spacing | 1 | Parallel trace gap violations <= baseline (27) |
+| 16 | Trace spacing | 1 | Parallel trace gap violations <= baseline |
 | 17 | Via spacing | 1 | Via hole-to-hole gap >= 0.25mm |
 | 18 | Display stagger | 1 | Bottom stagger traces use ESP32 pin midpoints |
+| 19+ | Mounting/drill | 2+ | Mounting hole trace clearance, drill-trace clearance |
+| 42 | Drill-trace | 1 | Drill doesn't cut different-net traces (JLCPCB) |
+| 43 | Trace-pad net | 1 | Trace-pad different-net clearance check |
+
+**DFA tests (`verify_dfa.py` — 9 tests):**
+
+| # | Category | Tests | What it checks |
+|---|----------|-------|----------------|
+| 1-3 | BOM | 3 | File exists, component counts, part numbers |
+| 4-6 | CPL | 3 | File exists, positions, rotations |
+| 7-9 | Polarity | 3 | Polarity-sensitive components correct |
 
 ### 4. Add a new guard test (when fixing a DFM issue)
 
@@ -87,7 +100,9 @@ The test file provides reusable helpers:
 
 Some tests use baselines for inherent violations in dense areas:
 
-- **Trace spacing baseline**: Currently 27 (USB-C area, pull-up arrays, ESP32 fan-out)
+- **Trace spacing baseline**: Tracks violations in dense routing areas (USB-C, pull-ups, ESP32 fan-out)
+- **Drill-trace baseline**: Currently 71 (via drills near different-net traces)
+- **Trace-pad baseline**: Currently 140 (traces near different-net pads)
   - If routing changes REDUCE violations, lower the baseline
   - If routing changes INCREASE violations, investigate the regression before raising baseline
 

@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast pcb-check \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa pcb-check \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -43,9 +43,11 @@ simulate: ## Run electrical circuit simulation/verification
 pcb-check: ## Run PCB short circuit / zone fill analysis
 	@$(T) pcb-check python3 scripts/short_circuit_analysis.py
 
-verify-all: ## Run all pre-production checks (DRC + simulation + consistency + short circuit)
+verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + consistency)
 	@echo "Running verification suite..."
 	@$(T) verify-all sh -c '\
+		python3 scripts/verify_dfm_v2.py & \
+		python3 scripts/verify_dfa.py & \
 		python3 scripts/drc_check.py & \
 		python3 scripts/simulate_circuit.py & \
 		python3 scripts/verify_schematic_pcb.py & \
@@ -54,6 +56,9 @@ verify-all: ## Run all pre-production checks (DRC + simulation + consistency + s
 
 verify-fast: ## Quick DFM check only (1.4s)
 	@$(T) verify-fast python3 scripts/verify_dfm_v2.py
+
+verify-dfa: ## Quick DFA check (assembly verification, 9 tests)
+	@$(T) verify-dfa python3 scripts/verify_dfa.py
 
 firmware-sync-check: ## Verify GPIO sync between firmware and schematic (fail on mismatch)
 	@$(T) firmware-sync-check python3 scripts/verify_schematic_pcb.py
@@ -67,7 +72,7 @@ export-gerbers-fast: generate-pcb ## Export Gerbers (local kicad-cli + Docker zo
 fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
 	@$(T) fast-check ./scripts/fast-check.sh
 
-release-prep: generate-pcb export-gerbers-fast verify-all render-pcb ## Full release pipeline (fast gerber export)
+release-prep: generate-pcb export-gerbers-fast verify-all verify-dfa render-pcb ## Full release pipeline (fast gerber export)
 	@echo "Release prep complete: PCB generated, verified, rendered"
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export, parallel renders)

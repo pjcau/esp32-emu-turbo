@@ -26,13 +26,13 @@ python3 scripts/verify_dfm_v2.py
 
 If any test FAILS, stop and report. Do NOT continue to gerber export with failing tests.
 
-### 3. Export gerbers (requires Docker)
+### 3. Export gerbers (local kicad-cli + Docker zone fill)
 
 ```bash
-./scripts/export-gerbers.sh
+./scripts/export-gerbers-fast.sh
 ```
 
-If Docker is not available, skip this step and note it in the summary.
+If Docker/OrbStack is not available, skip this step and note it in the summary.
 
 ### 4. Copy to release folder
 
@@ -44,13 +44,22 @@ cp -r hardware/kicad/gerbers release_jlcpcb/gerbers
 cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/gerbers.zip 2>/dev/null || true
 ```
 
-### 5. Summary
+### 5. DFA verification (assembly checks)
+
+```bash
+python3 scripts/verify_dfa.py
+```
+
+If any test FAILS, stop and report. Assembly issues must be fixed before release.
+
+### 6. Summary
 
 | Step | Status | Detail |
 |------|--------|--------|
 | PCB generation | OK/FAIL | — |
-| DFM tests | X/Y pass | list failures |
-| Gerber export | OK/SKIP | Docker required |
+| DFM tests (43) | X/Y pass | list failures |
+| DFA tests (9) | X/Y pass | list failures |
+| Gerber export | OK/SKIP | OrbStack required |
 | Release copy | OK/FAIL | — |
 
 **Next steps**: If all OK, use `/release <version>` to create a versioned release with git commit.
