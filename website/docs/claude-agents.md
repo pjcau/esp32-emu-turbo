@@ -17,6 +17,8 @@ team-lead (Sonnet) ──── orchestrator, task coordination
   ├── pcb-engineer (Opus) ───── 20 skills, PCB design + manufacturing
   ├── software-dev (Opus) ───── 3 skills, firmware + website
   └── cad-engineer (Haiku) ──── 3 skills, OpenSCAD enclosure
+
+scout (Opus) ──── 1 skill, GitHub pattern discovery (weekly via GitHub Action)
 ```
 
 ### Architecture Graph
@@ -93,6 +95,13 @@ graph TB
     end
     TL --- CROSS
 
+    SCOUT["SCOUT<br/>opus - 1 skill<br/>weekly GitHub Action"]
+    subgraph SCOUT_SK["Pattern Discovery 1"]
+        s_scout["/scout"]
+    end
+    SCOUT --- SCOUT_SK
+    SCOUT -.->|"integrates patterns"| TL
+
     s_sch ==>|"nets"| s_brd
     s_brd ==>|"outline"| s_comp
     s_comp ==>|"placed"| s_rout
@@ -114,7 +123,7 @@ graph TB
 - **pcb-engineer**: routing with JLCPCB constraints (clearance, drill, annular ring) requires deep multi-step reasoning. DFM violations need root-cause analysis across multiple scripts. Errors cost real money (JLCPCB rework)
 - **software-dev**: ESP-IDF firmware involves low-level GPIO, DMA, I2S, SPI debugging. Cross-domain sync (firmware ↔ schematic ↔ PCB) requires broad contextual understanding
 
-## Skills System (27 Skills)
+## Skills System (28 Skills)
 
 ### PCB Engineer — 20 Skills
 
@@ -148,6 +157,16 @@ graph TB
 | Skill | Description |
 |-------|-------------|
 | `/user-feedback` | Record user preferences and distribute to agents/memory |
+
+### Scout (Autonomous) — 1 Skill
+
+| Skill | Description |
+|-------|-------------|
+| `/scout` | Search GitHub for new Claude Code patterns, evaluate relevance, integrate, create PR |
+
+The scout agent runs **autonomously** via a weekly GitHub Action (Monday 02:00 UTC) or on-demand via `/scout`. It searches GitHub for new Claude Code skills, agents, hooks, and CLAUDE.md patterns, evaluates their relevance to this project, and creates PRs with useful integrations.
+
+**State tracking**: `.claude/scout-state.json` persists seen repos and integrated patterns across runs.
 
 ## Cross-Agent Dependencies
 

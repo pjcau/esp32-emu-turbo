@@ -62,6 +62,8 @@ team-lead (sonnet) ──── orchestrator, 0 skills
   ├── pcb-engineer (opus) ───── 20 skills
   ├── software-dev (opus) ───── 3 skills
   └── cad-engineer (haiku) ──── 3 skills
+
+scout (opus) ──── /scout (GitHub pattern discovery, weekly via GitHub Action)
 ```
 
 ### Cross-Agent Dependencies
@@ -72,9 +74,9 @@ PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
 SW  ↔ CAD: website/docs/  (renders + documentation)
 ```
 
-### Skills Map (26 total)
+### Skills Map (28 total)
 
-#### PCB-Engineer — 19 skills
+#### PCB-Engineer — 20 skills
 
 | Category | Skills |
 |----------|--------|
@@ -101,13 +103,19 @@ SW  ↔ CAD: website/docs/  (renders + documentation)
 | `/enclosure-render` | Render enclosure views to PNG via Docker |
 | `/enclosure-export` | Export STL files for 3D printing |
 
+#### Scout — 1 skill (autonomous, weekly via GitHub Action)
+
+| Skill | Description |
+|-------|-------------|
+| `/scout` | Search GitHub for new Claude Code patterns, evaluate, integrate, create PR |
+
 ### Architecture Diagram (Mermaid)
 
 ```mermaid
 graph TB
     TL["TEAM-LEAD<br/><i>sonnet • orchestrator</i>"]
-    PCB["PCB-ENGINEER<br/><i>sonnet • 19 skills</i>"]
-    SW["SOFTWARE-DEV<br/><i>sonnet • 3 skills</i>"]
+    PCB["PCB-ENGINEER<br/><i>opus • 20 skills</i>"]
+    SW["SOFTWARE-DEV<br/><i>opus • 3 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>haiku • 3 skills</i>"]
 
     TL -->|coordinates| PCB

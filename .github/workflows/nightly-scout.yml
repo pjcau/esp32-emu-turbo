@@ -1,0 +1,31 @@
+name: Nightly Scout
+on:
+  schedule:
+    - cron: '0 2 * * 1'   # Every Monday 02:00 UTC
+  workflow_dispatch:        # manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  scout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            REPO: ${{ github.repository }}
+
+            Run the /scout skill. Search GitHub for new Claude Code
+            skills, agents, hooks, and patterns. Evaluate relevance to
+            this ESP32 PCB/firmware project. If you find useful patterns,
+            integrate them and create a PR. If nothing useful found,
+            update scout-state.json and report.
+          claude_args: |
+            --max-turns 15
+            --model claude-opus-4-6
