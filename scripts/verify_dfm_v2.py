@@ -373,6 +373,25 @@ def _seg_min_dist(s1, s2):
     return None
 
 
+def _point_to_segment_dist(px, py, s):
+    """Distance from point (px, py) to the nearest point on segment s.
+
+    s must be a dict with keys x1, y1, x2, y2.
+    Works for any segment orientation (not just axis-aligned).
+    """
+    ax, ay = s["x1"], s["y1"]
+    bx, by = s["x2"], s["y2"]
+    dx, dy = bx - ax, by - ay
+    len_sq = dx * dx + dy * dy
+    if len_sq < 1e-12:
+        return ((px - ax) ** 2 + (py - ay) ** 2) ** 0.5
+    t = ((px - ax) * dx + (py - ay) * dy) / len_sq
+    t = max(0.0, min(1.0, t))
+    cx = ax + t * dx
+    cy = ay + t * dy
+    return ((px - cx) ** 2 + (py - cy) ** 2) ** 0.5
+
+
 def test_trace_spacing():
     """Test 16: Trace spacing regression guard — no new parallel trace violations.
 
@@ -1168,6 +1187,149 @@ def test_mounting_hole_trace_clearance():
           f"{len(violations)} violations: {violations[:3]}")
 
 
+def test_drill_trace_clearance():
+    """Test 42: No via/THT drill circle cuts across a different-net trace.
+
+    JLCPCB error: "The indicated hole will cut off the trace."
+    For every via and THT pad, checks that the drill edge maintains >= 0.15mm
+    clearance from every different-net trace on the same copper layer.
+    """
+    print("\n── Drill-Trace Clearance Test ──")
+    MIN_CLR = 0.15  # mm — JLCPCB minimum
+
+    segs = _cached_segments()
+    vias = _cached_vias()
+    pads = _get_cache()["pads"]
+
+    # Collect all drill items: (x, y, drill_r, net, layers)
+    drill_items = []
+    for v in vias:
+        drill_items.append({
+            "x": v["x"], "y": v["y"],
+            "drill_r": v["drill"] / 2.0,
+            "net": v["net"],
+            "layers": {"F.Cu", "B.Cu"},
+            "label": f"via@({v['x']},{v['y']})",
+        })
+
+    # THT pads (thru_hole, np_thru_hole) span *.Cu
+    for p in pads:
+        if p.get("type") not in ("thru_hole", "np_thru_hole"):
+            continue
+        if p.get("drill", 0) <= 0:
+            continue
+        drill_items.append({
+            "x": p["x"], "y": p["y"],
+            "drill_r": p["drill"] / 2.0,
+            "net": p["net"],
+            "layers": {"F.Cu", "B.Cu"},
+            "label": f"{p['ref']}[{p['num']}]@({p['x']},{p['y']})",
+        })
+
+    # Deduplicate by position+drill (cache duplicates THT pads per layer)
+    seen = set()
+    unique_drills = []
+    for item in drill_items:
+        key = (round(item["x"], 3), round(item["y"], 3),
+               round(item["drill_r"], 3))
+        if key not in seen:
+            seen.add(key)
+            unique_drills.append(item)
+
+    # Index segments by layer
+    segs_by_layer = {}
+    for s in segs:
+        segs_by_layer.setdefault(s["layer"], []).append(s)
+
+    violations = []
+    for item in unique_drills:
+        hx, hy = item["x"], item["y"]
+        dr = item["drill_r"]
+        h_net = item["net"]
+        for layer in item["layers"]:
+            for s in segs_by_layer.get(layer, []):
+                # Skip same-net (intentional connection)
+                if h_net != 0 and s["net"] != 0 and h_net == s["net"]:
+                    continue
+                dist = _point_to_segment_dist(hx, hy, s)
+                gap = dist - dr - s["w"] / 2.0
+                if gap < MIN_CLR:
+                    violations.append(
+                        f"{item['label']} drill_r={dr:.2f} net={h_net} vs "
+                        f"{layer} net={s['net']} w={s['w']} "
+                        f"({s['x1']},{s['y1']})-({s['x2']},{s['y2']}) "
+                        f"gap={gap:.3f}mm"
+                    )
+
+    # Baseline: 71 violations from dense areas (GND vias near signal traces,
+    # display bus vias on SPI traces). These need routing fixes — this test
+    # guards against regressions (count must not increase).
+    BASELINE = 71
+    check(
+        f"Drill-to-trace violations <= baseline {BASELINE} "
+        f"({len(violations)} found, {len(unique_drills)} holes × {len(segs)} segs)",
+        len(violations) <= BASELINE,
+        f"{len(violations)} violations (baseline {BASELINE}): {violations[:5]}",
+    )
+
+
+def test_trace_pad_different_net_clearance():
+    """Test 43: No trace overlaps a pad on a different net.
+
+    JLCPCB error: "The pad and trace is connected, is that correct?"
+    Skips if pads appear unnetted (>90% net=0) — run after pad net injection.
+    """
+    print("\n── Trace-Pad Different-Net Clearance Test ──")
+    MIN_CLR = 0.10  # mm
+
+    segs = _cached_segments()
+    pads = _get_cache()["pads"]
+
+    # Sanity check: skip if pads don't have net assignments yet
+    nonzero = sum(1 for p in pads if p["net"] != 0)
+    if pads and (nonzero / len(pads)) < 0.10:
+        print(f"  SKIP  Pads appear unnetted ({nonzero}/{len(pads)} "
+              f"non-zero) — inject pad nets first (Action 2b)")
+        return
+
+    # Index pads by layer
+    pads_by_layer = {}
+    for p in pads:
+        pads_by_layer.setdefault(p["layer"], []).append(p)
+
+    violations = []
+    for s in segs:
+        if s["net"] == 0:
+            continue
+        for p in pads_by_layer.get(s["layer"], []):
+            if p["net"] == 0:
+                continue
+            if s["net"] == p["net"]:
+                continue
+            # Conservative pad radius = half-diagonal of bounding box
+            pad_r = ((p["w"] / 2) ** 2 + (p["h"] / 2) ** 2) ** 0.5
+            dist = _point_to_segment_dist(p["x"], p["y"], s)
+            gap = dist - pad_r - s["w"] / 2.0
+            if gap < MIN_CLR:
+                violations.append(
+                    f"seg net={s['net']} {s['layer']} "
+                    f"({s['x1']},{s['y1']})-({s['x2']},{s['y2']}) "
+                    f"vs {p['ref']}[{p['num']}] net={p['net']} "
+                    f"@({p['x']},{p['y']}) gap={gap:.3f}mm"
+                )
+
+    # Baseline: 140 violations from dense areas (ESOP-8 exposed pad,
+    # FPC pin proximity, speaker/battery traces near IC pads).
+    # Guards against regressions — count must not increase.
+    BASELINE = 140
+    check(
+        f"Trace-to-pad violations <= baseline {BASELINE} "
+        f"({len(violations)} found, {len(segs)} segs × {len(pads)} pads)",
+        len(violations) <= BASELINE,
+        f"{len(violations)} violations (baseline {BASELINE}): {violations[:5]}",
+    )
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -1202,6 +1364,8 @@ if __name__ == "__main__":
     test_via_pad_spacing()
     test_usb_cap_trace_spacing()
     test_mounting_hole_trace_clearance()
+    test_drill_trace_clearance()
+    test_trace_pad_different_net_clearance()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")

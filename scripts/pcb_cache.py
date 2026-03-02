@@ -194,8 +194,9 @@ def parse_pcb_full(path=None):
     # ── Vias ──────────────────────────────────────────────────────
     for m in re.finditer(
         r'\(via\s+\(at\s+([-\d.]+)\s+([-\d.]+)\)\s+'
-        r'\(size\s+([\d.]+)\)\s+\(drill\s+([\d.]+)\)'
-        r'(?:[^)]*\(net\s+(\d+)\))?',
+        r'\(size\s+([\d.]+)\)\s+\(drill\s+([\d.]+)\)\s+'
+        r'\(layers[^)]*\)'
+        r'(?:\s+\(net\s+(\d+)\))?',
         text
     ):
         vias.append({

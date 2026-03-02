@@ -27,11 +27,10 @@ PCB_PATH = Path("hardware/kicad/esp32-emu-turbo.kicad_pcb")
 DRU_PATH = Path("hardware/kicad/esp32-emu-turbo.kicad_dru")
 
 # Known-acceptable violations in the generated PCB.
-# These are expected because the Python generator doesn't assign nets to pads
-# (only traces have net assignments). KiCad sees traces near unnetted pads
-# and reports false positives.
+# NOTE: "shorting_items" removed — pad nets are now correctly assigned
+# by routing.py auto-capture + board.py injection. Real shorting
+# violations will surface as true positives.
 KNOWN_ACCEPTABLE = {
-    "shorting_items": "Traces near unnetted pads (false positive — nets not assigned in generated PCB)",
     "solder_mask_bridge": "Fine-pitch FPC/USB-C connectors (expected, JLCPCB handles this)",
     "hole_clearance": "Via-in-pad for button footprints (intentional design)",
     "via_dangling": "Zone-connected vias appear dangling before zone fill",

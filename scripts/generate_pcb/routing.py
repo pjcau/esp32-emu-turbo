@@ -191,6 +191,20 @@ def _compute_pads(fp_name, cx, cy, rot, layer_char):
 # Precomputed pad positions for all routed components
 _PADS = {}
 
+# Pad-to-net registry: auto-populated by _seg() and _via_net() when
+# a segment/via endpoint matches a known pad position. Used by board.py
+# to inject correct net assignments into footprint pads.
+_PAD_NETS = {}          # {(ref, pad_num_str): net_id}
+_PAD_POS_LOOKUP = {}    # {(round_x, round_y): [(ref, num_str), ...]}
+
+
+def get_pad_nets():
+    """Return the (ref, pad_num_str) -> net_id mapping.
+
+    Called by board.py after generate_all_traces() to inject nets into pads.
+    """
+    return dict(_PAD_NETS)
+
 
 def _init_pads():
     """Lazily compute pad positions (called on first use)."""
@@ -247,6 +261,12 @@ def _init_pads():
     for ref, fp, cx, cy, rot, lc in passive_placements:
         _PADS[ref] = _compute_pads(fp, cx, cy, rot, lc)
 
+    # Build position lookup for auto pad-net detection in _seg()/_via_net()
+    for ref, pad_dict in _PADS.items():
+        for num, (px, py) in pad_dict.items():
+            key = (round(px, 2), round(py, 2))
+            _PAD_POS_LOOKUP.setdefault(key, []).append((ref, num))
+
 
 def _pad(ref, num):
     """Return absolute (x, y) for a component pad."""
@@ -274,7 +294,13 @@ def _fpc_pin(pin):
 # ── Manhattan routing helpers ─────────────────────────────────────
 
 def _seg(x1, y1, x2, y2, layer="B.Cu", width=W_DATA, net=0):
-    """Shorthand for segment."""
+    """Shorthand for segment. Auto-registers pad-net associations."""
+    if net != 0:
+        _init_pads()
+        for x, y in [(x1, y1), (x2, y2)]:
+            key = (round(x, 2), round(y, 2))
+            for ref, num in _PAD_POS_LOOKUP.get(key, []):
+                _PAD_NETS[(ref, num)] = net
     return P.segment(x1, y1, x2, y2, layer, width, net)
 
 
@@ -296,6 +322,12 @@ def _L(x1, y1, x2, y2, layer="B.Cu", width=W_DATA, net=0,
 
 
 def _via_net(x, y, net=0, size=None, drill=None):
+    """Create a via. Auto-registers pad-net associations."""
+    if net != 0:
+        _init_pads()
+        key = (round(x, 2), round(y, 2))
+        for ref, num in _PAD_POS_LOOKUP.get(key, []):
+            _PAD_NETS[(ref, num)] = net
     if size is not None and drill is not None:
         return P.via(x, y, size=size, drill=drill, net=net)
     return P.via(x, y, net=net)

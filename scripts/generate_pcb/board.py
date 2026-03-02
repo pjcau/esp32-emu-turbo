@@ -12,10 +12,35 @@ through a vertical slot in the board to reach J4 (FPC-40P) on the back.
 """
 
 import math
+import re as _re
 
 from . import primitives as P
 from . import footprints as FP
 from . import routing
+
+# Net ID -> name lookup for pad net injection
+_NET_NAME = {nid: name for nid, name in P.NET_LIST}
+
+
+def _inject_pad_net(pad_str, ref):
+    """Replace (net 0 "") in a pad S-expression with the correct net.
+
+    Extracts pad number, looks up (ref, pad_num) in routing.get_pad_nets(),
+    and substitutes the correct net ID and name.
+    """
+    num_m = _re.search(r'\(pad\s+"([^"]*)"', pad_str)
+    if not num_m:
+        return pad_str
+    pad_num = num_m.group(1)
+    net_id = routing.get_pad_nets().get((ref, pad_num), 0)
+    if net_id == 0:
+        return pad_str
+    net_name = _NET_NAME.get(net_id, "")
+    return _re.sub(
+        r'\(net\s+0\s+""\)',
+        f'(net {net_id} "{net_name}")',
+        pad_str,
+    )
 
 # ── Board dimensions (from enclosure.scad) ──────────────────────
 BOARD_W = 160.0   # mm (170mm body - 2x5mm clearance)
@@ -405,6 +430,7 @@ def _component_placeholders():
     for ref, fp_name, x, y, rot, layer in placements:
         layer_char = "F" if "F." in layer else "B"
         pads = FP.get_pads(fp_name, layer_char, rotation=rot)
+        pads = [_inject_pad_net(p, ref) for p in pads]
         pad_str = "".join(pads)
         mirror = " (justify mirror)" if "B." in layer else ""
         ref_y, val_y = _text_offsets.get(fp_name, (-3, 3))
@@ -455,9 +481,12 @@ def generate_board() -> str:
         _silkscreen_labels(),
         "\n",
     ]
+    # Generate routing FIRST to populate pad-net mapping (_PAD_NETS),
+    # then generate footprints with correct net assignments injected.
+    routing_str = _all_routing()
     comp_str, _placements = _component_placeholders()
     parts.append(comp_str)
     parts.append("\n")
-    parts.append(_all_routing())
+    parts.append(routing_str)
     parts.append(P.footer())
     return "".join(parts)
