@@ -44,5 +44,4 @@ hardware/kicad/.pcb_cache.json
 hardware/kicad/~*.lck
 
 # Claude Code local settings (personal overrides)
-.claude/hooks/
 .claude/settings.local.json

@@ -8,6 +8,11 @@
             "type": "command",
             "command": "./.claude/hooks/post-generate-dfm.sh",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/enforce-script-failure-report.sh",
+            "timeout": 10
           }
         ]
       },
