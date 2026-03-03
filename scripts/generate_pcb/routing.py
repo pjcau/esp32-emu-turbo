@@ -1350,21 +1350,25 @@ def _display_traces():
         # Zone via at (vx, safe_y)
         parts.append(_via_net(vx, safe_y, n_3v3, size=0.7, drill=0.3))
 
-    # ── +3V3 top pins (6, 7): via-in-pad (same as GND top pins) ──
-    # Pin 6 (y=28.25): GND pin 5 via now at y=27.25 (moved up 0.5mm), so
-    #   gap to pin 5 via = 28.25-27.25 = 1.0mm, edge gap = 0.54mm ✓
-    # Pin 7 (y=28.75): same-net as pin 6 (+3V3), no clearance issue.
-    # DFM FIX: both pins use 0.46mm pad (JLCPCB annular ring min 0.13mm).
-    #   Pin 7 reduced from 0.55mm to 0.46mm to increase gap to pin 8 NC pad:
-    #   28.75+0.23=28.98 to 29.25-0.15=29.10 → gap=0.12mm (was 0.075mm at 0.55mm).
-    v33_top = [6, 7]
-    for pin in v33_top:
-        pos = _fpc_pin(pin)
-        if pos:
-            px, py = pos[0], pos[1]
-            # Via-in-pad: via directly on FPC pad connects to In2.Cu +3V3 zone
-            # Both pins use 0.46mm pad (0.20mm drill, AR=0.13mm=JLCPCB min).
-            parts.append(_via_net(px, py, n_3v3, size=0.46, drill=0.2))
+    # ── +3V3 top pins (6, 7): single via-in-pad on pin 6, B.Cu stub for pin 7 ──
+    # Pin 6 (y=28.25): via-in-pad at pad center connects to In2.Cu +3V3 zone.
+    #   Gap to GND pin 5 via@(133.15,27.25): 28.25-27.25-0.46=0.54mm ✓
+    # Pin 7 (y=28.75): SAME NET as pin 6 (+3V3). Instead of a second via (which
+    #   would create a 0.04mm via-to-via gap flagged by JLCPCB as F.Cu DANGER),
+    #   connect pin 7 to pin 6 via a short B.Cu stub. One via suffices for both.
+    #   DFM FIX: only ONE via for both adjacent same-net pins → eliminates the
+    #   via@(133.15,28.25) vs via@(133.15,28.75) gap=0.04mm JLCPCB F.Cu DANGER.
+    pos6 = _fpc_pin(6)
+    pos7 = _fpc_pin(7)
+    if pos6:
+        px6, py6 = pos6[0], pos6[1]
+        # Via-in-pad on pin 6: 0.46mm/0.20mm (AR=0.13mm=JLCPCB min).
+        parts.append(_via_net(px6, py6, n_3v3, size=0.46, drill=0.2))
+    if pos7 and pos6:
+        px7, py7 = pos7[0], pos7[1]
+        # Short B.Cu stub: pin 7 pad → pin 6 pad (same net, no via needed).
+        # stub length = 0.5mm (one FPC pitch). Eliminates second via-in-pad.
+        parts.append(_seg(px7, py7, px6, py6, "B.Cu", 0.3, n_3v3))
 
     return parts
 
@@ -2443,12 +2447,24 @@ def _button_traces():
                 if abs(gnd_via_x - BTN_L_VERT_X) < 0.625:
                     gnd_via_x = gp[0] + 1.0  # 1.0mm offset: x=16.0, gap=0.375mm ✓
             gnd_via_y = gp[1] + 0.5   # small Y offset to clear pad edge
+            # Via size selection:
+            # Left-side buttons (gnd_via_x ~16.0): use 0.46mm via to avoid JLCPCB
+            # F.Cu DANGER gap to adjacent SW corner pads (1.2x0.9mm).
+            # SW1[3]@(15,25.35) and SW2[3]@(15,43.35): corner at (15.6, pad_y+0.45).
+            # via@(16.0, pad_y+0.5) d=0.7mm: gap=hypot(0.4,0.05)-0.35=0.053mm DANGER.
+            # via@(16.0, pad_y+0.5) d=0.46mm: gap=hypot(0.4,0.05)-0.23=0.173mm OK.
+            # Threshold: if gnd_via_x < BTN_L_VERT_X - 0.5 (clearly a left-side button)
+            # use small via. Right-side buttons keep 0.7mm for better GND connection.
+            if gnd_via_x < 20.0:  # left-side button region (x ~ 14-17mm)
+                gnd_via_sz, gnd_via_drill = 0.46, 0.2
+            else:
+                gnd_via_sz, gnd_via_drill = 0.7, 0.3
             # L-shape: horizontal inward, then short segment to via
             parts.append(_seg(gp[0], gp[1], gnd_via_x, gp[1],
                               "F.Cu", W_SIG, n_gnd))
             parts.append(_seg(gnd_via_x, gp[1], gnd_via_x, gnd_via_y,
                               "F.Cu", W_SIG, n_gnd))
-            parts.append(_via_net(gnd_via_x, gnd_via_y, n_gnd, size=0.7, drill=0.3))
+            parts.append(_via_net(gnd_via_x, gnd_via_y, n_gnd, size=gnd_via_sz, drill=gnd_via_drill))
 
     # Shoulder button BTN_L (B.Cu, rotated 90°)
     net_l = NET_ID["BTN_L"]
