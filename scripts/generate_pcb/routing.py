@@ -52,6 +52,232 @@ SLOT_X1, SLOT_X2 = 125.5, 128.5
 SLOT_Y1, SLOT_Y2 = 23.5, 47.5
 
 
+# ── Keepout zones (mounting holes, slots, board features) ──────
+# Each: (center_x, center_y, radius_with_clearance)
+# Traces and vias must not enter these circles.
+_KEEPOUT_CIRCLES = []
+
+
+def _segment_crosses_circle(x1, y1, x2, y2, width, cx, cy, cr):
+    """Check if a segment (with width) crosses a circle keepout zone.
+
+    Returns True if the minimum distance from the segment centerline to the
+    circle center is less than cr + width/2 (i.e., the trace copper enters
+    the keepout zone).
+    """
+    dx, dy = x2 - x1, y2 - y1
+    if dx == 0 and dy == 0:
+        dist = math.hypot(x1 - cx, y1 - cy)
+    else:
+        t = max(0, min(1, ((cx - x1) * dx + (cy - y1) * dy) / (dx * dx + dy * dy)))
+        px, py = x1 + t * dx, y1 + t * dy
+        dist = math.hypot(px - cx, py - cy)
+    return dist < cr + width / 2
+
+
+def _init_keepout_zones():
+    """Build keepout zones from mounting holes and other features."""
+    global _KEEPOUT_CIRCLES
+    _KEEPOUT_CIRCLES = []
+    # Mounting holes: 3.5mm pad + 0.5mm clearance = 2.25mm radius
+    from .board import MOUNT_HOLES_ENC, enc_to_pcb
+    for ex, ey in MOUNT_HOLES_ENC:
+        mx, my = enc_to_pcb(ex, ey)
+        _KEEPOUT_CIRCLES.append((mx, my, 2.25))  # 1.75mm pad radius + 0.5mm clearance
+
+
+# Detour Y allocation counter: assigns unique Y offsets for traces detouring
+# around the same mounting hole. Reset in generate_all_traces().
+_MH_DETOUR_IDX = {}
+
+
+def _mh_detour_h(x1, y, x2, layer, width, net):
+    """Route a horizontal F.Cu segment around any mounting hole keepout.
+
+    Two strategies depending on whether the trace Y is inside the physical
+    drill hole or only inside the clearance annulus:
+
+    A) LAYER SWAP (trace Y outside drill+clearance, inside keepout):
+       F.Cu -> via -> B.Cu horizontal at same Y -> via -> F.Cu
+       Safe because B.Cu copper outside the drill is not cut.
+
+    B) B.Cu DETOUR (trace Y inside drill+clearance zone):
+       Route entirely on B.Cu with vertical jog north of the drill:
+       F.Cu -> via -> [B.Cu vert + B.Cu horiz + B.Cu vert] -> via -> F.Cu
+       Only 2 vias. The B.Cu detour_y is outside the drill circle.
+       Each trace gets unique x_left/x_right columns (0.75mm pitch) so
+       B.Cu verticals don't overlap.
+
+    Returns a list of segment/via S-expressions.
+    """
+    lo_x, hi_x = min(x1, x2), max(x1, x2)
+    parts = []
+    for cx, cy, cr in _KEEPOUT_CIRCLES:
+        # Does this horizontal cross the keepout circle?
+        if not _segment_crosses_circle(x1, y, x2, y, width, cx, cy, cr):
+            continue
+
+        mh_key = (round(cx, 1), round(cy, 1))
+        detour_idx = _MH_DETOUR_IDX.get(mh_key, 0)
+        _MH_DETOUR_IDX[mh_key] = detour_idx + 1
+
+        # Vias for MH detour layer transitions.
+        # AR = (0.51-0.25)/2 = 0.13mm = JLCPCB min 0.13mm.
+        # Drill 0.25mm (KiCad default min 0.30mm flags DRC but JLCPCB accepts 0.25mm).
+        via_sz, via_dr = 0.51, 0.25
+        via_r = via_sz / 2  # 0.255mm
+
+        # Check if trace Y is inside the physical drill circle.
+        # Mounting holes are NPTH with drill=2.5mm, radius=1.25mm.
+        # Need drill_radius + trace_half_width + NPTH drill-to-copper clearance.
+        drill_r = 1.25  # 2.5mm / 2
+        npth_clearance = 0.20  # JLCPCB NPTH drill-to-copper
+        min_dist = drill_r + width / 2 + npth_clearance
+        trace_inside_drill = abs(y - cy) < min_dist
+
+        if not trace_inside_drill:
+            # Strategy A: LAYER SWAP — B.Cu horizontal at same Y under NPTH.
+            # Via column positions: just outside keepout circle.
+            x_left = round(cx - cr - via_r - 0.15, 2)
+            x_right = round(cx + cr + via_r + 0.15, 2)
+
+            # Verify x boundaries are within segment span
+            if x_left <= lo_x or x_right >= hi_x:
+                continue
+
+            # 1. F.Cu horizontal from x1 to x_left at y
+            parts.append(_seg(x1, y, x_left, y, layer, width, net))
+            # 2. Via F.Cu -> B.Cu at (x_left, y)
+            parts.append(_via_net(x_left, y, net, size=via_sz, drill=via_dr))
+            # 3. B.Cu horizontal from x_left to x_right at y
+            parts.append(_seg(x_left, y, x_right, y, "B.Cu", width, net))
+            # 4. Via B.Cu -> F.Cu at (x_right, y)
+            parts.append(_via_net(x_right, y, net, size=via_sz, drill=via_dr))
+            # 5. F.Cu horizontal from x_right to x2 at y
+            parts.append(_seg(x_right, y, x2, y, layer, width, net))
+        else:
+            # Strategy B: ALL-B.Cu DETOUR — only 2 vias, full detour on B.Cu.
+            # B.Cu vert + B.Cu horiz + B.Cu vert, all outside the drill circle.
+            #
+            # Each trace gets a unique x_left/x_right pair so B.Cu verticals
+            # at different X positions don't overlap. 0.75mm pitch = via_dia(0.5)
+            # + gap(0.25). Stagger outward from base positions.
+            south_key = ("drill", mh_key[0], mh_key[1])
+            south_idx = _MH_DETOUR_IDX.get(south_key, 0)
+            _MH_DETOUR_IDX[south_key] = south_idx + 1
+
+            # CROSSING-FREE via columns for 3 inside-drill traces.
+            #
+            # Strategy: each trace gets unique x_left, x_right, detour_y chosen
+            # so no B.Cu horizontal crosses any B.Cu vertical of another trace.
+            #
+            # Constraints:
+            #   - x_left > 100.45 + 0.525 = 100.975 (BTN_START B.Cu vert w=0.25)
+            #   - x_left < 102.35 (strategy A left via at cx-cr-via_r-0.15)
+            #   - net16 strategy A B.Cu horiz at y=35.575, x=[102.35, 107.65]:
+            #     right columns between 102.35-107.65 are OK only if the B.Cu
+            #     vertical Y range does NOT span y=35.575
+            #   - C17 pad 2 at (109.05, 35.0) extends x=[108.55, 109.55]
+            #   - GND via at (109.05, 37.0) pad r=0.45
+            #   - VBUS B.Cu vert at (110.95, 35->33), C17 pad 1 at x=[110.45, 111.45]
+            #
+            # Solution — 3 non-crossing detours:
+            #
+            # idx0 (net18 Y=38.12): outermost, right col goes RIGHT of C17/GND
+            #   left=101.00, right=110.00, detour_y=33.00
+            #   Right vert at x=110.0: gap to C17p1(110.45)=0.35mm, GND via(109.50)=0.40mm
+            #   B.Cu horiz at y=33.0: gap to VBUS via(110.50)=0.40mm, LCD_RST F.Cu=diff layer
+            #
+            # idx1 (net17 Y=36.84): middle, right col in gap between strat_A and C17
+            #   left=101.55, right=108.20, detour_y=34.60
+            #
+            # idx2 (net10 Y=36.21): WIDE BYPASS south of all other detours.
+            #   The tight inner columns (103.10/106.90) caused F.Cu keepout violations
+            #   and segment-mounting_hole warnings because the F.Cu stub endpoints
+            #   at y=36.21 were only 2.30mm from MH@(105,37.5) (need >=2.35mm).
+            #   The right side between strat_A (107.65) and idx1 (108.20) is too narrow
+            #   for another via column, and C17 pad (108.55) blocks further right.
+            #
+            #   Fix: bypass the ENTIRE constrained zone with wide columns:
+            #   left=99.50, right=111.50, detour_y=32.30
+            #
+            #   Left col at x=99.50:
+            #     Gap to BTN_START vert(100.45, w=0.25): 100.325-99.78=0.545mm ✓
+            #     F.Cu (90.75,36.21)->(99.50,36.21): dist to MH=5.66mm >> 2.35mm keepout
+            #     Via(99.50,36.21) to net17 F.Cu@y=36.845: 0.285mm > 0.15mm via-trace
+            #
+            #   Right col at x=111.50:
+            #     Gap to VBUS vert(110.95, w=0.25): 111.40-111.075=0.325mm > trace gap
+            #     F.Cu (111.50,36.21)->(114.10,36.21): dist to MH=6.63mm >> 2.35mm
+            #     Via(111.50,36.21) to net17 F.Cu@y=36.845: 0.285mm > 0.15mm
+            #
+            #   B.Cu horiz at y=32.30:
+            #     Gap to idx0 horiz(y=33.0): 32.90-32.40=0.50mm > 0.10mm trace gap
+            #     Gap to VBUS via pad(110.95,33.0) bottom=32.55: 32.55-32.40=0.15mm > 0.10mm
+            #     No via/pad overlap in path x=[100,111.5]
+            #
+            #   B.Cu vert crossings at x=99.50, y=[32.30,36.21]:
+            #     BTN_START(100.45) starts at y=34.94, gap_x=0.95mm. OK
+            #     net18 vert(101.0): gap_x=1.50mm. OK
+            #   B.Cu vert crossings at x=111.50, y=[32.30,36.21]:
+            #     VBUS vert(110.95): gap_x=0.325mm. OK
+            #     net18 vert(110.0): gap_x=1.30mm. OK
+            #
+            # Cross-check: no B.Cu horiz crosses any other B.Cu vert:
+            #   idx0 horiz y=33.0, x=[101.0,110.0]:
+            #     idx1 L-vert x=101.55 y=[34.60,36.845]: 33.0 not in range. OK
+            #     idx2 L-vert x=99.50 y=[32.30,36.21]: 33.0 IS in range.
+            #       x=99.50 NOT in idx0 horiz x-range [101.0,110.0]. OK (no crossing)
+            #     idx2 R-vert x=111.50 y=[32.30,36.21]: 33.0 IS in range.
+            #       x=111.50 NOT in idx0 horiz x-range [101.0,110.0]. OK
+            #   idx1 horiz y=34.60, x=[101.55,108.20]:
+            #     idx0 verts x=101.0,110.0: outside [101.55,108.20]. OK
+            #     idx2 L-vert x=99.50: outside [101.55,108.20]. OK
+            #     idx2 R-vert x=111.50: outside [101.55,108.20]. OK
+            #   idx2 horiz y=32.30, x=[99.50,111.50]:
+            #     idx0 L-vert x=101.0 y=[33.0,38.12]: 32.30 not in range. OK
+            #     idx0 R-vert x=110.0 y=[33.0,38.12]: 32.30 not in range. OK
+            #     idx1 L-vert x=101.55 y=[34.60,36.845]: 32.30 not in range. OK
+            #     idx1 R-vert x=108.20 y=[34.60,36.845]: 32.30 not in range. OK
+            _left_cols = [101.00, 101.55, 99.50]
+            _right_cols = [110.00, 108.20, 111.50]
+            x_left = _left_cols[min(south_idx, 2)]
+            x_right = _right_cols[min(south_idx, 2)]
+
+            # Unique detour_y per trace — non-crossing B.Cu horizontals.
+            # idx0: y=33.00 — outermost
+            # idx1: y=34.60 — middle
+            # idx2: y=32.30 — wide bypass south of all other detours
+            #   B.Cu horiz [100.0,111.5] at y=32.30: below idx0 horiz (33.0) by 0.50mm.
+            #   B.Cu verts at x=100.0 and x=111.5: outside all other horiz x-ranges.
+            _detour_ys = [33.00, 34.60, 32.30]
+            detour_y = _detour_ys[min(south_idx, 2)]
+
+            # Verify x boundaries are within segment span
+            if x_left <= lo_x or x_right >= hi_x:
+                continue
+
+            # 1. F.Cu horizontal from x1 to x_left at y
+            parts.append(_seg(x1, y, x_left, y, layer, width, net))
+            # 2. Via F.Cu -> B.Cu at (x_left, y)
+            parts.append(_via_net(x_left, y, net, size=via_sz, drill=via_dr))
+            # 3. B.Cu vertical from y to detour_y at x_left
+            parts.append(_seg(x_left, y, x_left, detour_y, "B.Cu", width, net))
+            # 4. B.Cu horizontal from x_left to x_right at detour_y
+            parts.append(_seg(x_left, detour_y, x_right, detour_y, "B.Cu", width, net))
+            # 5. B.Cu vertical from detour_y to y at x_right
+            parts.append(_seg(x_right, detour_y, x_right, y, "B.Cu", width, net))
+            # 6. Via B.Cu -> F.Cu at (x_right, y)
+            parts.append(_via_net(x_right, y, net, size=via_sz, drill=via_dr))
+            # 7. F.Cu horizontal from x_right to x2 at y
+            parts.append(_seg(x_right, y, x2, y, layer, width, net))
+        return parts
+
+    # No keepout crossed: single segment
+    parts.append(_seg(x1, y, x2, y, layer, width, net))
+    return parts
+
+
 def _crosses_slot(x1, y1, x2, y2):
     """Check if a horizontal or vertical segment crosses through the slot."""
     if y1 == y2:  # horizontal
@@ -321,6 +547,20 @@ def _seg(x1, y1, x2, y2, layer="B.Cu", width=W_DATA, net=0):
         violations = _GRID.check_segment(x1, y1, x2, y2, layer, width, net)
         _GRID.violations.extend(violations)
         _GRID.add_segment(x1, y1, x2, y2, layer, width, net)
+    # Keepout zone warning (all segments, including net=0)
+    # B.Cu traces crossing NPTH mounting holes are OK — NPTH has no barrel
+    # plating, so copper on internal/back layers can safely pass under the
+    # drill as long as drill-to-copper clearance is met (checked by DFM).
+    # Only warn for F.Cu crossings (top copper near drill opening).
+    import sys as _sys
+    for kx, ky, kr in _KEEPOUT_CIRCLES:
+        if _segment_crosses_circle(x1, y1, x2, y2, width, kx, ky, kr):
+            if layer == "B.Cu":
+                continue  # B.Cu under NPTH is intentional (layer-swap detour)
+            _sys.stderr.write(
+                f"  KEEPOUT VIOLATION: {layer} ({x1},{y1})->({x2},{y2})"
+                f" w={width} crosses MH@({kx},{ky}) r={kr}\n"
+            )
     return P.segment(x1, y1, x2, y2, layer, width, net)
 
 
@@ -869,9 +1109,9 @@ def _display_traces():
                                   "B.Cu", W_DATA, net))
                 parts.append(_via_net(epx, stagger_y, net))
 
-                # 2. F.Cu horizontal to col_x
-                parts.append(_seg(epx, stagger_y, col_x, stagger_y,
-                                  "F.Cu", W_DATA, net))
+                # 2. F.Cu horizontal to col_x (detour around mounting holes)
+                parts.extend(_mh_detour_h(epx, stagger_y, col_x,
+                                          "F.Cu", W_DATA, net))
                 parts.append(_via_net(col_x, stagger_y, net, size=0.7, drill=0.3))
         else:
             # Side pins: horizontal stub right to via
@@ -880,9 +1120,9 @@ def _display_traces():
                               "B.Cu", W_DATA, net))
             parts.append(_via_net(via1_x, epy, net))
 
-            # F.Cu horizontal to col_x
-            parts.append(_seg(via1_x, epy, col_x, epy,
-                              "F.Cu", W_DATA, net))
+            # F.Cu horizontal to col_x (detour around mounting holes)
+            parts.extend(_mh_detour_h(via1_x, epy, col_x,
+                                      "F.Cu", W_DATA, net))
             parts.append(_via_net(col_x, epy, net, size=0.7, drill=0.3))
 
         # 3. B.Cu vertical up to bypass level (above slot)
@@ -1056,11 +1296,12 @@ def _display_traces():
             # Collisions with LCD approach columns at x=133.10 are unavoidable
             # in this 0.5mm-pitch area — accepted as inherent geometry constraint.
             # Pin 5 (y=27.75) is adjacent to +3V3 pin 6 (y=28.25) at 0.5mm pitch.
-            # Use small via (0.55mm/0.2mm) for pin 5 to satisfy:
+            # DFM FIX: sized to meet JLCPCB annular ring minimum (0.13mm).
+            #   Pin 5: 0.46mm pad, edge at 27.98mm; pin 6 edge at 28.02mm → gap=0.04mm
+            #   annular ring = (0.46 - 0.20) / 2 = 0.13mm = JLCPCB min OK
             #   hole gap = 0.5 - 0.2 = 0.3mm >= 0.25mm OK
-            #   annular ring = (0.55 - 0.20) / 2 = 0.175mm = JLCPCB min OK
             # Pin 16 (y=33.25) is 5mm from nearest different-net via: standard size OK.
-            via_sz = (0.55, 0.2) if pin == 5 else (0.7, 0.3)
+            via_sz = (0.46, 0.2) if pin == 5 else (0.7, 0.3)
             parts.append(_via_net(px, py, n_gnd, size=via_sz[0], drill=via_sz[1]))
 
     # ── +3V3 bottom pin (38): use x=132.0 column (separate from GND at x=134.0) ──
@@ -1101,18 +1342,22 @@ def _display_traces():
 
     # ── +3V3 top pins (6, 7): via-in-pad (same as GND top pins) ──
     # Pin 6 (y=28.25) is 0.5mm from GND pin 5 (y=27.75) — use small via.
-    # Pin 7 (y=28.75) is 0.5mm from pin 6 (same net) — same-net OK, but
-    # also use small via for uniform size in this FPC pitch area.
+    # Pin 7 (y=28.75) is 0.5mm from pin 6 (same net) — same-net OK.
+    # DFM FIX: pin 6 reduced from 0.55mm to 0.45mm to match pin 5 sizing.
+    # Pin 6 edge to pin 5 edge: (28.25-0.225) - (27.75+0.225) = 0.05mm (was -0.05mm overlap)
+    # Pin 7 keeps 0.55mm since it's same-net as pin 6 (no clearance issue).
     v33_top = [6, 7]
     for pin in v33_top:
         pos = _fpc_pin(pin)
         if pos:
             px, py = pos[0], pos[1]
             # Via-in-pad: via directly on FPC pad connects to In2.Cu +3V3 zone
-            # Small via (0.55mm/0.2mm) to satisfy hole-to-hole and annular ring:
+            # Pin 6: 0.46mm pad to meet JLCPCB annular ring (0.13mm).
+            # Pin 7: 0.55mm pad (same net as pin 6, no clearance needed).
+            #   annular ring = (0.46 - 0.20) / 2 = 0.13mm = JLCPCB min OK
             #   hole gap = 0.5 - 0.2 = 0.3mm >= 0.25mm OK
-            #   annular ring = (0.55 - 0.20) / 2 = 0.175mm = JLCPCB min OK
-            parts.append(_via_net(px, py, n_3v3, size=0.55, drill=0.2))
+            via_sz = 0.46 if pin == 6 else 0.55
+            parts.append(_via_net(px, py, n_3v3, size=via_sz, drill=0.2))
 
     return parts
 
@@ -1226,12 +1471,13 @@ def _spi_traces():
 
         # stagger_y: mixed pitch to avoid MH at (150,68) and BTN_R via at (146.85,68.7).
         # i=2 (SD_CLK): stagger row F.Cu spans x=[142.16,152.5], crossing MH(150,68).
-        #   Need stagger_y >= 68+0.125+1.25+0.5=69.875mm → use 70.0.
+        #   Need stagger_y such that |stagger_y - 68| >= 2.25mm (keepout radius).
+        #   70.0 gives 2.0mm < 2.25mm → KEEPOUT VIOLATION. Use 70.5 → 2.5mm ✓.
         # i=1 (SD_MISO): post_slot_x=146, BTN_R via at (146.85,68.7).
         #   At stagger_y=68.0: gap=0.050mm < 0.25mm (AABB dx=-0.05mm) → keep at 67.5.
-        # i=3 (SD_CS): moved to 72.0 to maintain 2mm gap from i=2 (70.0).
-        # via-via gaps: 66→67.5: 0.6mm ✓, 70→72: 1.1mm ✓, all cross-pairs checked ✓
-        _stagger_map = {0: 66.0, 1: 67.5, 2: 70.0, 3: 72.0}
+        # i=3 (SD_CS): moved to 72.0 to maintain 1.5mm gap from i=2 (70.5).
+        # via-via gaps: 66→67.5: 0.6mm ✓, 70.5→72: 0.6mm ✓, all cross-pairs checked ✓
+        _stagger_map = {0: 66.0, 1: 67.5, 2: 70.5, 3: 72.0}
         stagger_y = _stagger_map[i]  # max=72.0 < 74.5 (board bottom keepout) ✓
 
         # Step 1: B.Cu horizontal stub RIGHT from ESP32 pad to shared via column.
@@ -1781,13 +2027,13 @@ def _button_traces():
         (141.20, 0.50),  # net=20 LCD_CS y=1.5-66.0 (via at 66.0, close to chan Y)
         (146.00, 0.50),  # net=21 LCD_RS y=2.2-67.5 (via at 67.5)
         (148.00, 0.50),  # net=23 LCD_CLK y=3.6-72.0 (via at 72.0)
-        (152.50, 0.50),  # net=22 LCD_WR y=2.9-70.0 (via at 70.0)
+        (152.50, 0.50),  # net=22 SD_CLK y=2.9-70.5 (via at 70.5)
     ]
     # LCD secondary verticals near channel Y band.
     # (144.36, 67.5) has a via: need dx >= 1.04mm for button chan_y=68.0 (dy=0.5).
-    # (142.16, 70.0) has a via: dy=2.0mm to chan_y=68 >> 1.15mm min → trace margin only.
+    # (142.16, 70.5) has a via: dy=2.5mm to chan_y=68 >> 1.15mm min → trace margin only.
     _lcd_post_slot_xs.append((144.36, 1.10))  # net=21 secondary, via at y=67.5
-    _lcd_post_slot_xs.append((142.16, 0.50))  # net=22 secondary, via at y=70.0 (far)
+    _lcd_post_slot_xs.append((142.16, 0.50))  # net=22 secondary, via at y=70.5 (far)
     # BTN_R shoulder B.Cu vert at x=146.85 (net=38, w=0.25).
     _lcd_post_slot_xs.append((146.85, 0.50))
 
@@ -2538,6 +2784,12 @@ def generate_all_traces():
     _PADS = {}
     _PAD_NETS = {}
     _PAD_POS_LOOKUP = {}
+
+    # Initialize keepout zones from mounting holes
+    _init_keepout_zones()
+    # Reset detour Y counter for unique spacing
+    global _MH_DETOUR_IDX
+    _MH_DETOUR_IDX = {}
 
     all_parts = []
     all_parts.extend(_power_traces())

@@ -258,9 +258,12 @@ def _silkscreen_labels():
     parts.append(P.gr_text("R", px, py + 5, "B.Fab", 0.8))
 
     # Board title (back side, top center)
+    # DFM: moved from B.SilkS to B.Fab to avoid silkscreen-to-hole DFM warnings.
+    # B.Fab is a documentation layer (not manufactured) — prevents silkscreen
+    # clearance violations near mounting holes at (10,7) and (150,7).
     parts.append(P.gr_text(
         "ESP32-EMU-TURBO CPJ&CP 2026", CX, 3.0,
-        "B.SilkS", 0.8,
+        "B.Fab", 0.8,
     ))
 
     return "".join(parts)
