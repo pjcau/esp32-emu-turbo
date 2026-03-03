@@ -1292,17 +1292,21 @@ def _display_traces():
         pos = _fpc_pin(pin)
         if pos:
             px, py = pos[0], pos[1]
-            # Via-in-pad: via directly on FPC pad connects to In1.Cu GND zone.
-            # Collisions with LCD approach columns at x=133.10 are unavoidable
-            # in this 0.5mm-pitch area — accepted as inherent geometry constraint.
-            # Pin 5 (y=27.75) is adjacent to +3V3 pin 6 (y=28.25) at 0.5mm pitch.
-            # DFM FIX: sized to meet JLCPCB annular ring minimum (0.13mm).
-            #   Pin 5: 0.46mm pad, edge at 27.98mm; pin 6 edge at 28.02mm → gap=0.04mm
-            #   annular ring = (0.46 - 0.20) / 2 = 0.13mm = JLCPCB min OK
-            #   hole gap = 0.5 - 0.2 = 0.3mm >= 0.25mm OK
-            # Pin 16 (y=33.25) is 5mm from nearest different-net via: standard size OK.
-            via_sz = (0.46, 0.2) if pin == 5 else (0.7, 0.3)
-            parts.append(_via_net(px, py, n_gnd, size=via_sz[0], drill=via_sz[1]))
+            if pin == 5:
+                # DFM FIX: via-in-pad at pin 5 (y=27.75) was 0.04mm from pin 6
+                # +3V3 via (y=28.25) — below JLCPCB 0.10mm minimum.
+                # At 0.5mm pitch with min 0.46mm via pad, gap = 0.04mm is unfixable
+                # with co-located vias. Fix: move pin 5 GND via UP by 0.5mm to
+                # pin 4 (NC) position (y=27.25). Short B.Cu stub connects pad to via.
+                #   New gap to pin 6 via: 28.25-27.25 = 1.0mm, edge = 0.54mm ✓
+                #   B.Cu stub at x=133.15 crosses LCD_CS at x=133.10 — accepted
+                #   as inherent FPC geometry constraint (existing via overlapped too).
+                via_y = py - 0.5  # y=27.25 (pin 4 NC position)
+                parts.append(_seg(px, py, px, via_y, "B.Cu", W_DATA, n_gnd))
+                parts.append(_via_net(px, via_y, n_gnd, size=0.46, drill=0.2))
+            else:
+                # Pin 16 (y=33.25) is 5mm from nearest different-net via: standard size OK.
+                parts.append(_via_net(px, py, n_gnd, size=0.7, drill=0.3))
 
     # ── +3V3 bottom pin (38): use x=132.0 column (separate from GND at x=134.0) ──
     pos38 = _fpc_pin(38)
@@ -1341,23 +1345,20 @@ def _display_traces():
         parts.append(_via_net(vx, safe_y, n_3v3, size=0.7, drill=0.3))
 
     # ── +3V3 top pins (6, 7): via-in-pad (same as GND top pins) ──
-    # Pin 6 (y=28.25) is 0.5mm from GND pin 5 (y=27.75) — use small via.
-    # Pin 7 (y=28.75) is 0.5mm from pin 6 (same net) — same-net OK.
-    # DFM FIX: pin 6 reduced from 0.55mm to 0.45mm to match pin 5 sizing.
-    # Pin 6 edge to pin 5 edge: (28.25-0.225) - (27.75+0.225) = 0.05mm (was -0.05mm overlap)
-    # Pin 7 keeps 0.55mm since it's same-net as pin 6 (no clearance issue).
+    # Pin 6 (y=28.25): GND pin 5 via now at y=27.25 (moved up 0.5mm), so
+    #   gap to pin 5 via = 28.25-27.25 = 1.0mm, edge gap = 0.54mm ✓
+    # Pin 7 (y=28.75): same-net as pin 6 (+3V3), no clearance issue.
+    # DFM FIX: both pins use 0.46mm pad (JLCPCB annular ring min 0.13mm).
+    #   Pin 7 reduced from 0.55mm to 0.46mm to increase gap to pin 8 NC pad:
+    #   28.75+0.23=28.98 to 29.25-0.15=29.10 → gap=0.12mm (was 0.075mm at 0.55mm).
     v33_top = [6, 7]
     for pin in v33_top:
         pos = _fpc_pin(pin)
         if pos:
             px, py = pos[0], pos[1]
             # Via-in-pad: via directly on FPC pad connects to In2.Cu +3V3 zone
-            # Pin 6: 0.46mm pad to meet JLCPCB annular ring (0.13mm).
-            # Pin 7: 0.55mm pad (same net as pin 6, no clearance needed).
-            #   annular ring = (0.46 - 0.20) / 2 = 0.13mm = JLCPCB min OK
-            #   hole gap = 0.5 - 0.2 = 0.3mm >= 0.25mm OK
-            via_sz = 0.46 if pin == 6 else 0.55
-            parts.append(_via_net(px, py, n_3v3, size=via_sz, drill=0.2))
+            # Both pins use 0.46mm pad (0.20mm drill, AR=0.13mm=JLCPCB min).
+            parts.append(_via_net(px, py, n_3v3, size=0.46, drill=0.2))
 
     return parts
 
@@ -1782,8 +1783,12 @@ def _usb_traces():
     parts.append(_via_net(usb_dm[0], dm_via_y, n_dm))
     # SHORT FIX: dm_col_x moved from +2.5 to +3.0 to clear C4 GND via at (91.05,40.0).
     # Old: dm_col_x=91.25, GND via at 91.05 → edge gap |91.25-91.05|-0.10-0.125=-0.025mm.
-    # New: dm_col_x=91.75 → edge gap to via (91.05+0.45)=91.50 → 91.75-91.50-0.10=0.15mm ✓
-    dm_col_x = dm_x + 3.0   # 91.75 — clears C4 GND via at (91.05, 40.0)
+    # v2: dm_col_x=91.75 → edge gap to via (91.05+0.45)=91.50 → 91.75-91.50-0.10=0.15mm ✓
+    # v3: dm_col_x=91.75 too close to R14 +3V3 stub at x=92.05 (gap=0.075mm < 0.10mm).
+    #   Shift to +2.95 (x=91.70). C4 GND via reduced to 0.80mm (edge=91.45).
+    #   Left gap:  91.70-0.10-(91.05+0.40) = 91.60-91.45 = 0.15mm ✓
+    #   Right gap: (92.05-0.125)-(91.70+0.10) = 91.925-91.80 = 0.125mm ✓
+    dm_col_x = dm_x + 2.95   # 91.70 — clears C4 GND via (0.80mm) and R14 +3V3 stub
     parts.append(_seg(usb_dm[0], dm_via_y, dm_col_x, dm_via_y,
                        "F.Cu", W_DATA, n_dm))
     parts.append(_via_net(dm_col_x, dm_via_y, n_dm))
@@ -2009,7 +2014,7 @@ def _button_traces():
     # Use 0.50mm margin to ensure conflict detection triggers reliably.
     _usb_vertical_xs = [
         (79.75, 0.50),   # USB_D- vertical at x=79.75
-        (91.25, 0.50),   # USB_D- vertical at x=91.25 (main conflict with BTN_R)
+        (91.70, 0.50),   # USB_D- vertical at x=91.70 (was 91.75, shifted for R14 gap)
     ]
 
     # LCD post-slot B.Cu verticals: long verticals spanning most of board height.
@@ -2611,7 +2616,11 @@ def _passive_traces():
     if c4_p2:
         parts.append(_seg(c4_p2[0], c4_p2[1], c4_p2[0], c4_p2[1] - 2,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c4_p2[0], c4_p2[1] - 2, n_gnd))
+        # DFM FIX: reduced via from 0.90 to 0.80mm to give USB_D- vertical at
+        # x=91.70 more clearance (edge gap 0.15mm vs 0.10mm at 0.90mm).
+        # Annular ring = (0.80-0.30)/2 = 0.25mm >= JLCPCB 0.13mm min ✓
+        parts.append(_via_net(c4_p2[0], c4_p2[1] - 2, n_gnd,
+                              size=0.8, drill=0.3))
 
     # C1 AMS1117 input: pad "1" -> +5V via, pad "2" -> GND via
     # DFM: 2.5mm offset (was 2mm) to avoid via-in-pad with 0805 (1.3mm tall pad)

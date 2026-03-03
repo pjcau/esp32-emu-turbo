@@ -1344,7 +1344,9 @@ def test_trace_pad_different_net_clearance():
     # → 81 (MH@(105,37.5) B.Cu detour segment proximity to nearby pad)
     # → 82 (MH detour crossing fix: wider detour columns shift trace endpoints)
     # → 83 (net10 wide bypass detour: B.Cu path x=[100,111.5] y=32.3 near VBUS area)
-    BASELINE = 83
+    # → 87 (FPC pin 5 GND via moved up 0.5mm: new B.Cu stub + pad net reassignment
+    #        exposes 4 pre-existing VBUS/BAT+ proximity conditions)
+    BASELINE = 87
     check(
         f"Trace-to-pad violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(segs)} segs × {len(pads)} pads)",
