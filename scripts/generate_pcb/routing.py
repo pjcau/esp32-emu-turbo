@@ -1305,8 +1305,14 @@ def _display_traces():
                 parts.append(_seg(px, py, px, via_y, "B.Cu", W_DATA, n_gnd))
                 parts.append(_via_net(px, via_y, n_gnd, size=0.46, drill=0.2))
             else:
-                # Pin 16 (y=33.25) is 5mm from nearest different-net via: standard size OK.
-                parts.append(_via_net(px, py, n_gnd, size=0.7, drill=0.3))
+                # Pin 16 (y=33.25): adjacent to LCD_RST pad (y=32.75) and LCD_D0 pad (y=33.75).
+                # FPC pad height=0.30mm (half=0.15). Standard 0.7mm via (r=0.35) leaves:
+                #   gap to pin15 bottom: 33.25-0.35 - (32.75+0.15) = 0.00mm DANGER
+                #   gap to pin17 top:    (33.75-0.15) - (33.25+0.35) = 0.00mm DANGER
+                # DFM FIX: reduce via to 0.46mm (r=0.23), matching pins 5/6/7.
+                #   gap to pin15 bottom: 33.25-0.23 - (32.75+0.15) = 0.12mm OK
+                #   gap to pin17 top:    (33.75-0.15) - (33.25+0.23) = 0.12mm OK
+                parts.append(_via_net(px, py, n_gnd, size=0.46, drill=0.2))
 
     # ── +3V3 bottom pin (38): use x=132.0 column (separate from GND at x=134.0) ──
     pos38 = _fpc_pin(38)
@@ -1467,7 +1473,24 @@ def _spi_traces():
         #   stagger via (152.5,69.0) gap to MH(150,7)=far ✓
         #   B.Cu vert x=152.5: MH gaps 1.125mm ≥ 0.5mm ✓
         #   No pads within 1.5mm at x=152.5, y=4..69 ✓
-        _post_slot_map = {0: 141.2, 1: 146, 2: 152.5, 3: 148}
+        # DFM FIX: i=1 (SD_MISO) post_slot_x changed from 146 to 145.6.
+        # SW12.3 (R shoulder button pad) at (146.85, 2.5) size=0.9x1.2.
+        # Via at (146.0, 2.2) had gap to SW12.3 = 0.05mm DANGER.
+        # At 145.6: gap = (146.85-0.45) - (145.6+0.35) - 0.10 clearance:
+        #   nearest edge distance = sqrt((146.85-145.6-0.45)²+0) = 0.40mm gap ✓
+        # Stagger via moves from (146.0, 67.5) to (145.6, 67.5): check BTN_R area.
+        #
+        # DFM FIX: i=3 (SD_CS) post_slot_x changed from 148 to 153.5.
+        # Via at (148.0, 72.0) overlapped U6.11 SD mounting pad (147.76, 72.10) size=1.2x2.0:
+        #   AABB gap = -0.45mm DANGER. Moving stagger_y or x=148 caused conflicts with:
+        #   - stagger_y=74.0: via(148,74.45) too close to board keepout strip (y=74.5) → gap=0.05mm FAIL
+        #   - x=150.5: B.Cu vert at x=150.5 only 0.5mm from MH(150,7/68), inside MH pad (r=1.75) FAIL
+        # Fix: move to x=153.5, stagger_y=72.0.
+        #   U6.11 gap: (153.5-148.36)-0.45=4.24mm ✓ (well separated in X)
+        #   MH(150,68): dist=sqrt(3.5²+4²)=5.32mm, margin=5.32-0.45-2.25=2.62mm ✓
+        #   B.Cu vert at x=153.5: MH dist=3.5mm, margin=3.5-0.1-1.75=1.65mm ✓
+        #   SD_CLK at x=152.5: different x, no B.Cu crossing ✓
+        _post_slot_map = {0: 141.2, 1: 145.6, 2: 152.5, 3: 153.5}
         post_slot_x = _post_slot_map[i]
 
         # stagger_y: mixed pitch to avoid MH at (150,68) and BTN_R via at (146.85,68.7).
@@ -1476,8 +1499,10 @@ def _spi_traces():
         #   70.0 gives 2.0mm < 2.25mm → KEEPOUT VIOLATION. Use 70.5 → 2.5mm ✓.
         # i=1 (SD_MISO): post_slot_x=146, BTN_R via at (146.85,68.7).
         #   At stagger_y=68.0: gap=0.050mm < 0.25mm (AABB dx=-0.05mm) → keep at 67.5.
-        # i=3 (SD_CS): moved to 72.0 to maintain 1.5mm gap from i=2 (70.5).
-        # via-via gaps: 66→67.5: 0.6mm ✓, 70.5→72: 0.6mm ✓, all cross-pairs checked ✓
+        # i=3 (SD_CS): post_slot_x moved to 153.5 (see above), stagger_y remains 72.0.
+        #   Via at (153.5,72.0): clear of U6.11 (153.05 > 148.36 right edge) ✓
+        #   MH(150,68) dist=5.32mm, margin=2.62mm ✓
+        # via-via gaps: 66→67.5: 0.6mm ✓, 70.5→72.0: x=152.5 vs 153.5 → far apart ✓
         _stagger_map = {0: 66.0, 1: 67.5, 2: 70.5, 3: 72.0}
         stagger_y = _stagger_map[i]  # max=72.0 < 74.5 (board bottom keepout) ✓
 
@@ -2321,6 +2346,31 @@ def _button_traces():
                 BTN_L_VERT_X = 72.50  # approach_l for BTN_L shoulder button vert (shifted from 72.25)
                 if abs(_ne - BTN_L_VERT_X) < 0.725:
                     _ne = BTN_L_VERT_X + 0.75  # 72.50+0.75=73.25, gap=0.175mm ✓
+                # DFM FIX: R9.1 decoupling cap pad (net0) at (68.95, 46.0) size=1.0x1.3.
+                # BTN_SELECT (epx≈71.25, stagger_y=45.1) ne=69.25 overlaps R9.1 pad:
+                #   via(69.25,45.1) r=0.45 vs pad(68.95,46.0) half=(0.5,0.65) → gap=-0.20mm DANGER.
+                # Fix: when near_epx lands in the forbidden X band (R9 pad zone), push RIGHT
+                # to x=73.25 to clear R9.1 AND both +3V3 vias at (70.45,44.0) and (72.05,44.6):
+                #   R9.1 gap at ne=73.25: far right, no conflict ✓
+                #   +3V3 via(72.05,44.6) AABB gap at ne=73.25, sy=45.1:
+                #     via box=[72.80,44.65,73.70,45.55] vs +3V3=[71.60,44.15,72.50,45.05]
+                #     dx=72.80-72.50=0.30mm, dy=0 → gap=0.30mm > 0.25mm ✓
+                #   BTN_L_VERT_X check: abs(73.25-72.50)=0.75 → NOT pushed (barely outside 0.725) ✓
+                #   ne=73.25 > epx=71.25 → B.Cu reversed stub (73.25→71.25, 2mm wide): valid ✓
+                R9_PAD_X = 68.95   # R9.1 pad center x
+                R9_PAD_HW = 0.5    # R9.1 pad half-width
+                R9_PAD_Y = 46.0    # R9.1 pad center y
+                R9_PAD_HH = 0.65   # R9.1 pad half-height
+                VIA_R = 0.45       # via radius (size=0.9mm)
+                # Check if the via at (_ne, stagger_y) would overlap R9.1 pad
+                _r9_cx = max(0, abs(_ne - R9_PAD_X) - R9_PAD_HW)
+                _r9_cy = max(0, abs(stagger_y - R9_PAD_Y) - R9_PAD_HH)
+                import math as _m
+                _r9_gap = _m.sqrt(_r9_cx**2 + _r9_cy**2) - VIA_R
+                if _r9_gap < 0.10:
+                    # Push right past both +3V3 vias to x=73.25.
+                    # BTN_L_VERT_X check: abs(73.25-72.50)=0.75 > 0.725 → no further push ✓
+                    _ne = 73.25
                 near_epx = _ne
             else:
                 # DFM v3: BTN_R approach via@(91.0,37.48) vs near_epx via@(90.0,37.48): gap=0.1mm.
