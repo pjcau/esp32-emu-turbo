@@ -23,6 +23,7 @@ skills:
   - pcb-library
   - pcb-board
   - pad-analysis
+  - jlcpcb-alignment
 ---
 
 # PCB Engineer — ESP32 Emu Turbo

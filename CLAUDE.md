@@ -74,14 +74,14 @@ PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
 SW  ↔ CAD: website/docs/  (renders + documentation)
 ```
 
-### Skills Map (28 total)
+### Skills Map (29 total)
 
-#### PCB-Engineer — 20 skills
+#### PCB-Engineer — 21 skills
 
 | Category | Skills |
 |----------|--------|
 | **Pipeline (5)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/render` (SVG + animation) · `/check` (DRC + 3D + gerbers) |
-| **Verification (6)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (6-domain scored) · `/pad-analysis` (pad spacing check) |
+| **Verification (7)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (6-domain scored) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) |
 | **Fix & Debug (4)** | `/dfm-fix` (fix DFM issues) · `/fix-rotation` (CPL rotation) · `/jlcpcb-check` (3D alignment) · `/jlcpcb-parts` (BOM + LCSC search) |
 | **MCP Design (5)** | `/pcb-schematic` (schematic ops) · `/pcb-components` (placement) · `/pcb-routing` (traces + vias) · `/pcb-library` (footprints) · `/pcb-board` (board setup) |
 

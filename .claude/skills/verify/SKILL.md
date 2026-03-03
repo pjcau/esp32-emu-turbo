@@ -11,7 +11,7 @@ Run all verification scripts and produce a summary report.
 
 ## Steps
 
-### 1. DFM Verification (43 tests)
+### 1. DFM Verification (64 tests)
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
@@ -35,6 +35,7 @@ Tests include:
 - Mounting hole trace clearance
 - Drill-trace clearance (JLCPCB hole-cuts-trace prevention)
 - Trace-pad different-net clearance (JLCPCB net assignment check)
+- **Batch JLCPCB alignment** (7 ICs: rotation, position correction, pin-net assignment)
 
 ### 1b. DFA Verification (9 tests)
 
@@ -85,7 +86,7 @@ After running all tests, summarize results in a table:
 
 | Suite | Tests | Pass | Fail | Status |
 |-------|-------|------|------|--------|
-| DFM v2 | 43 | ? | ? | PASS/FAIL |
+| DFM v2 | 64 | ? | ? | PASS/FAIL |
 | DFA | 9 | ? | ? | PASS/FAIL |
 | DRC | ? | ? | ? | PASS/FAIL |
 | Connectivity | ? | ? | ? | PASS/FAIL |
@@ -95,7 +96,7 @@ Report any failures with details and suggested fixes.
 
 ## Key Files
 
-- `scripts/verify_dfm_v2.py` — DFM verification (43 tests)
+- `scripts/verify_dfm_v2.py` — DFM verification (64 tests, includes JLCPCB alignment)
 - `scripts/verify_dfa.py` — DFA verification (9 tests)
 - `scripts/drc_check.py` — Design rule check
 - `scripts/test_pcb_connectivity.py` — Connectivity test

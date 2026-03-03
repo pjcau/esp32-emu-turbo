@@ -57,7 +57,7 @@ If any test FAILS, stop and report. Assembly issues must be fixed before release
 | Step | Status | Detail |
 |------|--------|--------|
 | PCB generation | OK/FAIL | — |
-| DFM tests (43) | X/Y pass | list failures |
+| DFM tests (64) | X/Y pass | list failures |
 | DFA tests (9) | X/Y pass | list failures |
 | Gerber export | OK/SKIP | OrbStack required |
 | Release copy | OK/FAIL | — |

@@ -44,7 +44,9 @@ python3 scripts/test_pcb_connectivity.py
 python3 scripts/verify_schematic_pcb.py
 ```
 
-**ALL tests must pass before proceeding (43 DFM + 9 DFA + DRC + connectivity + schematic sync).** If any fail, fix the issues first.
+**ALL tests must pass before proceeding (64 DFM + 9 DFA + DRC + connectivity + schematic sync).** If any fail, fix the issues first.
+
+The DFM suite includes batch JLCPCB alignment checks (rotation, position correction, and pin-net assignment for all 7 bottom-side ICs/connectors).
 
 ### 4. Copy to release_jlcpcb/
 
