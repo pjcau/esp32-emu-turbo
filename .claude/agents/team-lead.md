@@ -87,8 +87,8 @@ When spawning teammates via the Task tool, use these models for optimal cost/spe
 
 | Agent | Model | Rationale |
 |-------|-------|-----------|
-| **pcb-engineer** | `sonnet` | Complex Python scripting, mathematical DFM analysis, KiCad generation |
-| **software-dev** | `sonnet` | C firmware coding, TypeScript web dev, build infrastructure |
+| **pcb-engineer** | `opus` | Complex Python scripting, mathematical DFM analysis, spatial collision solving, KiCad generation |
+| **software-dev** | `opus` | C firmware coding, TypeScript web dev, build infrastructure |
 | **cad-engineer** | `haiku` | Well-defined parametric OpenSCAD tasks, mostly dimension/position changes |
 
 Always set the `model` parameter when spawning teammates. Example:
