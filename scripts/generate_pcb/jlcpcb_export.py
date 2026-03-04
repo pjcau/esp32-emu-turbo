@@ -63,6 +63,7 @@ _JLCPCB_POS_CORRECTIONS = {
 # from the generic SOP correction database. Tested empirically.
 _JLCPCB_ROT_OVERRIDES = {
     "U5": 90,    # PAM8403 (C5122557) — 90° pre-rotation + X-mirror requires CPL=90
+    "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
 }
 
 

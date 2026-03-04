@@ -691,6 +691,57 @@ class PolarityVerificationTest(unittest.TestCase):
             f"Only {total} pin-to-net expectations defined (expected >= 100)"
         )
 
+    def test_j4_fpc_orientation(self):
+        """J4 (FPC): cable insertion side (signal pads) faces FPC slot.
+
+        Bottom-contact FPC connector: signal pads (1-40) must be at lower X
+        than mounting pads (41-42), so the cable from the FPC slot (X≈127)
+        can reach the connector opening.
+        """
+        cache = load_cache()
+        # Cache stores pads at top level with 'ref' and 'num' keys
+        signal_xs = []
+        mount_xs = []
+        for pad in cache.get("pads", []):
+            if pad.get("ref") != "J4":
+                continue
+            pname = pad.get("num", "")
+            if not pname.isdigit():
+                continue
+            pnum = int(pname)
+            gx = pad["x"]  # already global X
+            if pnum <= 40:
+                signal_xs.append(gx)
+            else:
+                mount_xs.append(gx)
+
+        self.assertTrue(len(signal_xs) >= 40,
+                        f"Expected 40 signal pads, got {len(signal_xs)}")
+        self.assertTrue(len(mount_xs) >= 2,
+                        f"Expected 2 mounting pads, got {len(mount_xs)}")
+
+        avg_sig = sum(signal_xs) / len(signal_xs)
+        avg_mnt = sum(mount_xs) / len(mount_xs)
+
+        # Signal pads (cable insertion) must be at lower X (closer to slot)
+        self.assertLess(
+            avg_sig, avg_mnt,
+            f"J4 signal pads (X={avg_sig:.2f}) must be LEFT of "
+            f"mounting pads (X={avg_mnt:.2f}) to face FPC slot"
+        )
+
+        # Signal pads must be between slot right edge and connector center
+        slot_right = 128.5
+        self.assertGreater(
+            avg_sig, slot_right,
+            f"J4 signal pads (X={avg_sig:.2f}) must be right of "
+            f"slot edge (X={slot_right})"
+        )
+        self.assertLess(
+            avg_sig - slot_right, 8.0,
+            f"J4 signal-to-slot gap ({avg_sig - slot_right:.1f}mm) too large"
+        )
+
 
 # ---- Standalone runner with summary ----
 

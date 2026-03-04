@@ -1417,9 +1417,24 @@ def test_batch_pin_alignment():
         # Translate
         return (fx + rx, fy + ry)
 
+    from generate_pcb.jlcpcb_export import _JLCPCB_ROT_OVERRIDES
+
     for ref, fp_name in REFS.items():
         fx, fy, kicad_rot = board_data[ref]
         cpl_rot = float(cpl[ref]["Rotation"])
+
+        # Components with rotation overrides: verified via JLCPCB 3D preview,
+        # not via mathematical model (JLCPCB's transform differs from KiCad's).
+        # Dedicated tests (e.g. test_j4_fpc_orientation) cover geometric correctness.
+        if ref in _JLCPCB_ROT_OVERRIDES and kicad_rot != cpl_rot:
+            expected = _JLCPCB_ROT_OVERRIDES[ref]
+            check(
+                f"{ref} ({fp_name}) CPL rotation override = {expected}° "
+                f"(JLCPCB 3D verified)",
+                cpl_rot == expected,
+                f"expected {expected}°, got {cpl_rot}°",
+            )
+            continue
 
         # Get raw footprint pads (local coordinates, no mirror/rotation)
         gen, _ = FP.FOOTPRINTS[fp_name]
@@ -1534,6 +1549,90 @@ def test_batch_pin_net_assignment():
             )
 
 
+def test_j4_fpc_orientation():
+    """Test: J4 FPC connector cable insertion side faces toward FPC slot.
+
+    Bottom-contact FPC connector: signal pads = cable insertion side.
+    Signal pads must be at lower X (closer to FPC slot at X≈127) than
+    mounting pads (latch side) for the ribbon cable to reach from the slot.
+    Also verifies CPL rotation produces correct pick-and-place orientation.
+    """
+    print("\n── J4 FPC Orientation Tests ──")
+
+    with open(PCB_FILE) as f:
+        pcb = f.read()
+
+    # Find J4 FPC footprint block
+    j4_start = pcb.find('(footprint "FPC-40P-0.5mm"')
+    if j4_start < 0:
+        check("J4 FPC footprint found in PCB", False, "not found")
+        return
+    depth = 0
+    j4_end = j4_start
+    for i in range(j4_start, len(pcb)):
+        if pcb[i] == '(':
+            depth += 1
+        elif pcb[i] == ')':
+            depth -= 1
+            if depth == 0:
+                j4_end = i + 1
+                break
+    j4_block = pcb[j4_start:j4_end]
+
+    # Get J4 center
+    at_m = re.search(r'\(at\s+([\d.]+)\s+([\d.]+)', j4_block)
+    j4_cx = float(at_m.group(1))
+
+    # Collect signal pad X positions (pins 1-40) and mounting pad X (pins 41-42)
+    signal_xs = []
+    mount_xs = []
+    for pm in re.finditer(
+        r'\(pad "(\d+)" smd \w+ \(at ([-\d.]+) [-\d.]+\)', j4_block
+    ):
+        pnum = int(pm.group(1))
+        gx = j4_cx + float(pm.group(2))
+        if pnum <= 40:
+            signal_xs.append(gx)
+        else:
+            mount_xs.append(gx)
+
+    if not signal_xs or not mount_xs:
+        check("J4 pads parsed", False, f"signal={len(signal_xs)} mount={len(mount_xs)}")
+        return
+
+    avg_sig_x = sum(signal_xs) / len(signal_xs)
+    avg_mnt_x = sum(mount_xs) / len(mount_xs)
+
+    # PCB test: signal pads must be closer to slot (lower X) than mounting pads
+    # FPC slot right edge is at X=128.5
+    slot_right_x = 128.5
+    check(
+        "J4 signal pads face toward FPC slot (signal X < mount X)",
+        avg_sig_x < avg_mnt_x,
+        f"signal avg X={avg_sig_x:.2f}, mount avg X={avg_mnt_x:.2f}",
+    )
+    check(
+        "J4 signal pads between slot and center",
+        slot_right_x < avg_sig_x < j4_cx,
+        f"slot={slot_right_x}, signal={avg_sig_x:.2f}, center={j4_cx}",
+    )
+    check(
+        "J4 cable bridge distance < 8mm",
+        0 < (avg_sig_x - slot_right_x) < 8,
+        f"gap={avg_sig_x - slot_right_x:.1f}mm",
+    )
+
+    # CPL test: rotation must produce correct pick-and-place orientation
+    # JLCPCB 3D verification: 90° puts pins on wrong side, 270° aligns correctly
+    cpl = read_cpl()
+    j4_rot = int(cpl["J4"]["Rotation"])
+    check(
+        "J4 CPL rotation = 270° (JLCPCB 3D model alignment)",
+        j4_rot == 270,
+        f"got {j4_rot}°",
+    )
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -1572,6 +1671,7 @@ if __name__ == "__main__":
     test_trace_pad_different_net_clearance()
     test_batch_pin_alignment()
     test_batch_pin_net_assignment()
+    test_j4_fpc_orientation()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")
