@@ -52,6 +52,7 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/simulate_circuit.py & \
 		python3 scripts/verify_schematic_pcb.py & \
 		python3 scripts/short_circuit_analysis.py & \
+		python3 scripts/verify_polarity.py & \
 		wait'
 
 verify-fast: ## Quick DFM check only (1.4s)

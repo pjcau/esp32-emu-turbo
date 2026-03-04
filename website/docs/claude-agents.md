@@ -180,6 +180,16 @@ The `/firmware-sync` skill verifies GPIO consistency between the schematic Pytho
 
 ## Performance Optimizations
 
+### Token Optimization: RTK
+
+[RTK (Rust Token Killer)](https://github.com/rtk-ai/rtk) is a token-optimized CLI proxy that reduces Claude Code token consumption by **60-90%** on dev operations. It works as a transparent hook-based rewriter — commands like `git status` are automatically routed through `rtk git status`, which filters and compresses output before it reaches the LLM context window.
+
+Key features:
+- **Zero-config**: hooks rewrite commands transparently, no workflow changes needed
+- **Analytics**: `rtk gain` shows cumulative token savings across sessions
+- **Discovery**: `rtk discover` analyzes Claude Code history for missed optimization opportunities
+- **Rust-native**: minimal overhead, single binary
+
 ### Container Runtime: OrbStack
 
 Replaced Docker Desktop with **OrbStack** for dramatically faster container operations:

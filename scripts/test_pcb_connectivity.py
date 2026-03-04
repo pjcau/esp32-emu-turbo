@@ -392,7 +392,10 @@ def check_trace_pad_proximity(segments, vias, pads):
 
     for pad in pads:
         # Skip shield/mounting pads
-        if pad["num"] in ("S", "SH", "MP1", "MP2", ""):
+        # Skip shield/mounting/NPTH pads (no signal traces expected)
+        # S/SH = old shield names, 13b/14b = USB-C rear shield, 4a-4d = switch shell
+        if pad["num"] in ("S", "SH", "MP1", "MP2",
+                          "13b", "14b", "4a", "4b", "4c", "4d", ""):
             continue
 
         connected = False

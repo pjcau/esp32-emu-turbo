@@ -201,111 +201,131 @@ def sop16(layer="B"):
     return pads
 
 
-# ── USB-C 16-pin SMT (HCTL HC-TYPE-C-16P-01A, LCSC C2765186) ────
-# Ref: KiCad Connector_USB.pretty/USB_C_Receptacle_HCTL_HC-TYPE-C-16P-01A
-# Single row of 16 signal pads at y=-3.745 (some overlap: A1/B12, etc.)
-# 4 shield THT pads
+# ── USB-C 6-pin SMT (HCTL HC-TYPE-C-16P-01A, LCSC C2765186) ─────
+# Ref: JLCPCB/EasyEDA package USB-C-SMD_TYPE-C-6PIN-2MD-073
+# 12 signal pads (pins 1-12) at y=-2.375, 4 shield THT pads (pins 13-14),
+# 2 NPTH positioning holes.
+# Pin mapping (JLCPCB 1-14 scheme):
+#   1=GND, 2=VBUS, 3=USB_DM_B, 4=CC1, 5=USB_DM_A, 6=USB_DP_A,
+#   7=USB_DP_B, 8=SBU, 9=VBUS, 10=CC2, 11=VBUS, 12=GND,
+#   13=SHIELD_FRONT, 14=SHIELD_REAR
 def usb_c_16p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Merged wide pads — A-side and B-side share identical positions:
-    #   A1/B12 (GND), A4/B9 (VBUS), A9/B4 (VBUS), A12/B1 (GND)
-    # Only emit ONE pad per position to eliminate "pad spacing 0mm" DFM error.
-    # Keep A-side names (routing.py references A4, A12, etc.)
-    merged_wide = [
-        ("A1",  -3.2,  0.6, 1.3),   # A1+B12 (GND)
-        ("A4",  -2.4,  0.6, 1.3),   # A4+B9 (VBUS)
-        ("A9",   2.4,  0.6, 1.3),   # A9+B4 (VBUS)
-        ("A12",  3.2,  0.6, 1.3),   # A12+B1 (GND)
+    # Wide signal pads (pins 1, 2, 11, 12): 0.550 x 1.100mm at y=-2.375
+    wide_pads = [
+        ("1",  -3.200),   # GND
+        ("2",  -2.400),   # VBUS
+        ("11",  2.400),   # VBUS
+        ("12",  3.200),   # GND
     ]
-    for name, x, w, h in merged_wide:
-        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers))
+    for name, x in wide_pads:
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.55, 1.1, layers))
 
-    # A-side unique narrow pads (no B-side overlap)
-    a_narrow = [
-        ("A5",  -1.25, 0.3, 1.3),
-        ("A6",  -0.25, 0.3, 1.3),
-        ("A7",   0.25, 0.3, 1.3),
-        ("A8",   1.25, 0.3, 1.3),
+    # Narrow signal pads (pins 3-10): 0.300 x 1.100mm, 0.500mm pitch at y=-2.375
+    narrow_pads = [
+        ("3",  -1.750),
+        ("4",  -1.250),
+        ("5",  -0.750),
+        ("6",  -0.250),
+        ("7",   0.250),
+        ("8",   0.750),
+        ("9",   1.250),
+        ("10",  1.750),
     ]
-    for name, x, w, h in a_narrow:
-        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers,
+    for name, x in narrow_pads:
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.3, 1.1, layers,
                          solder_mask_margin=0))
 
-    # B-side unique narrow pads (no A-side overlap)
-    b_narrow = [
-        ("B8",  -1.75, 0.3, 1.3),
-        ("B7",  -0.75, 0.3, 1.3),
-        ("B6",   0.75, 0.3, 1.3),
-        ("B5",   1.75, 0.3, 1.3),
-    ]
-    for name, x, w, h in b_narrow:
-        pads.append(_pad(name, "smd", "rect", x, -3.745, w, h, layers,
-                         solder_mask_margin=0))
+    # Shield THT oval pads (2 pads per pin number, pins 13-14)
+    # Pin 13: left side, pin 14: right side
+    # Front (near signal pads): 1.100 x 2.000mm, drill 0.600mm
+    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.0, THT,
+                     drill=0.60, solder_mask_margin=-0.1))
+    pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.1, 2.0, THT,
+                     drill=0.60, solder_mask_margin=-0.1))
+    # Rear: 1.200 x 1.800mm, drill 0.600mm
+    # Use 13b/14b names to avoid JLCPCB 0mm pad-spacing for same-named pads
+    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
+                     drill=0.60, solder_mask_margin=-0.1))
+    pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.2, 1.8, THT,
+                     drill=0.60, solder_mask_margin=-0.1))
 
-    # Shield / mounting legs (4 THT oval pads)
-    # Front shields: size 1.3x2.1, rear shields: size 1.3x1.6
-    # Drill 0.80mm, solder_mask_margin=-0.1 to reduce mask opening
-    # and avoid THT-to-SMD DFM flags with nearby signal pads
-    # DFM: unique pad names S1-S4 to prevent JLCPCB treating same-named pads
-    #      at different positions as 0mm pad spacing violations
-    for pi, sx in enumerate([-4.32, 4.32]):
-        pads.append(_pad(f"S{pi+1}", "thru_hole", "oval", sx, -3.105, 1.3, 2.1, THT,
-                         drill=0.80, solder_mask_margin=-0.1))
-    for pi, sx in enumerate([-4.32, 4.32]):
-        pads.append(_pad(f"S{pi+3}", "thru_hole", "oval", sx, 1.075, 1.3, 1.6, THT,
-                         drill=0.80, solder_mask_margin=-0.1))
+    # NPTH positioning holes (no pad, no net)
+    pads.append(
+        f'    (pad "" np_thru_hole circle (at -2.89 -1.305)'
+        f' (size 0.35 0.35) (drill 0.35)'
+        f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+    )
+    pads.append(
+        f'    (pad "" np_thru_hole circle (at 2.89 -1.305)'
+        f' (size 0.35 0.35) (drill 0.35)'
+        f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+    )
 
     return pads
 
 
-# ── FPC 40-pin 0.5mm pitch (display connector) ──────────────────
-# Ref: KiCad Hirose FH12 series / generic FPC-40P bottom contact
-# Signal pads at y=-1.85, size 0.3x1.3, 0.5mm pitch
+# ── FPC 40-pin 0.5mm pitch (display connector, LCSC C2856812) ────
+# Ref: JLCPCB/EasyEDA package FPC-SMD_40P-P0.50_FPC-05F-40PH20
+# 40 signal pads at y=-1.288, size 0.300 x 1.500mm, 0.500mm pitch
+# 2 mounting pads (pins 41-42): 2.000 x 2.500mm at y=+1.288
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.3, 1.3
+    pw, ph = 0.3, 1.5
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
     # solder_mask_margin=0 avoids mask expansion on fine-pitch pads
     for i in range(40):
         x = -9.75 + i * 0.5
-        pads.append(_pad(str(i + 1), "smd", "rect", x, -1.85, pw, ph, layers,
+        pads.append(_pad(str(i + 1), "smd", "rect", x, -1.288, pw, ph, layers,
                          solder_mask_margin=0))
 
-    # 2 mounting pads
-    pads.append(_pad("MP1", "smd", "rect", -11.5, -1.85, 1.6, 1.6, layers))
-    pads.append(_pad("MP2", "smd", "rect", 11.5, -1.85, 1.6, 1.6, layers))
+    # 2 mounting pads (pins 41-42): 2.000 x 2.500mm
+    pads.append(_pad("41", "smd", "rect", 11.44, 1.288, 2.0, 2.5, layers))
+    pads.append(_pad("42", "smd", "rect", -11.44, 1.288, 2.0, 2.5, layers))
 
     return pads
 
 
 # ── TF-01A Micro SD card slot (LCSC C91145) ─────────────────────
-# Ref: JLCPCB/EasyEDA official library for Korean Hroparts Elec TF-01A
-# 9 signal pads (1.1mm pitch) + 4 shield/GND pads
+# Ref: JLCPCB/EasyEDA package TF-SMD_TF-01A
+# 9 signal pads (1.1mm pitch) + 4 shield/GND pads + 2 NPTH locating holes
 def tf01a(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Signal pins 1-9 at y=-5.45, 1.1mm pitch, size 0.6x1.3
-    # Pin 1 (DAT2) at x=2.24, descending to pin 9 (DET) at x=-6.56
+    # Signal pins 1-9 at y=-5.276, 1.1mm pitch, size 0.600 x 1.300mm
+    # Pin 1 (DAT2) at x=+2.240, descending to pin 9 (DET) at x=-6.560
     signal_x = [2.24, 1.14, 0.04, -1.06, -2.16, -3.26, -4.36, -5.46, -6.56]
     for i, x in enumerate(signal_x):
-        pads.append(_pad(str(i + 1), "smd", "rect", x, -5.45, 0.6, 1.3,
+        pads.append(_pad(str(i + 1), "smd", "rect", x, -5.276, 0.6, 1.3,
                          layers))
 
-    # Shield/GND pads
+    # Shield/GND pads — IMPORTANT: pin 10 at -X, pin 12 at +X (not mirrored)
     shield = [
-        ("10", -7.76, -4.60, 1.2, 1.4),   # front-left
-        ("13",  6.92, -4.60, 1.2, 1.4),   # front-right
-        ("11", -7.76,  5.10, 1.2, 2.0),   # rear-left
-        ("12",  7.76,  5.10, 1.2, 2.0),   # rear-right
+        ("10", -7.76, -4.426, 1.2, 1.4),   # front-left
+        ("13",  6.92, -4.426, 1.2, 1.4),   # front-right
+        ("11", -7.76,  5.276, 1.2, 2.0),   # rear-left
+        ("12",  7.76,  5.276, 1.2, 2.0),   # rear-right
     ]
     for name, x, y, w, h in shield:
         pads.append(_pad(name, "smd", "rect", x, y, w, h, layers))
+
+    # NPTH locating holes
+    pads.append(
+        f'    (pad "" np_thru_hole circle (at -4.95 5.566)'
+        f' (size 0.5 0.5) (drill 0.5)'
+        f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+    )
+    pads.append(
+        f'    (pad "" np_thru_hole circle (at 3.05 5.566)'
+        f' (size 0.5 0.5) (drill 0.5)'
+        f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+    )
 
     return pads
 
@@ -339,25 +359,38 @@ def passive_1206(layer="B"):
 
 
 # ── MSK12C02 slide switch (LCSC C431540) ────────────────────────
-# Ref: KiCad Button_Switch_SMD.pretty/SW_SPDT_Shouhan_MSK12C02.kicad_mod
-# 3 signal SMD pads + 4 shell/mounting SMD pads
-# Replaces old SS-12D00G3 THT footprint (wrong component type)
-# DFM: unique pad names SH1-SH4 (was all "SH") to prevent JLCPCB treating
-#      same-named pads as pad-spacing 0mm violations in its DFM checker.
+# Ref: JLCPCB/EasyEDA package SW-TH_MSK12C02
+# 3 signal SMD pads + 4 shell/mounting SMD pads + 2 NPTH holes
+# Pin 4 = shell pads (unique names 4a-4d to avoid JLCPCB 0mm spacing)
+# Note: shell pad Y positions are ASYMMETRIC (-0.600 top, +1.700 bottom)
 def msk12c02(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Signal pads (3 pins, SPDT)
-    pads.append(_pad("1", "smd", "rect", -2.25, -1.95, 0.6, 1.3, layers))
-    pads.append(_pad("2", "smd", "rect", 0.75, -1.95, 0.6, 1.3, layers))
-    pads.append(_pad("3", "smd", "rect", 2.25, -1.95, 0.6, 1.3, layers))
+    # Signal pads (3 pins, SPDT): 0.600 x 1.524mm
+    pads.append(_pad("1", "smd", "rect", -2.25, -1.7, 0.6, 1.524, layers))
+    pads.append(_pad("2", "smd", "rect", 0.75, -1.7, 0.6, 1.524, layers))
+    pads.append(_pad("3", "smd", "rect", 2.25, -1.7, 0.6, 1.524, layers))
 
-    # Shell/mounting pads (4 corners) — unique names to avoid JLCPCB 0mm spacing
-    shell_positions = [(-3.675, -1.1), (-3.675, 1.1),
-                       (3.675, -1.1), (3.675, 1.1)]
-    for i, (sx, sy) in enumerate(shell_positions):
-        pads.append(_pad(f"SH{i+1}", "smd", "rect", sx, sy, 1.05, 0.7, layers))
+    # Shell/mounting pads (pin 4): 1.200 x 0.700mm
+    # Unique names 4a-4d to prevent JLCPCB 0mm pad-spacing violations
+    # Y positions are asymmetric: top=-0.600, bottom=+1.700
+    pads.append(_pad("4a", "smd", "rect", -3.6, -0.6, 1.2, 0.7, layers))
+    pads.append(_pad("4b", "smd", "rect", 3.6, -0.6, 1.2, 0.7, layers))
+    pads.append(_pad("4c", "smd", "rect", -3.6, 1.7, 1.2, 0.7, layers))
+    pads.append(_pad("4d", "smd", "rect", 3.6, 1.7, 1.2, 0.7, layers))
+
+    # NPTH mounting holes
+    pads.append(
+        f'    (pad "" np_thru_hole circle (at -1.5 0.55)'
+        f' (size 0.45 0.45) (drill 0.45)'
+        f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+    )
+    pads.append(
+        f'    (pad "" np_thru_hole circle (at 1.5 0.55)'
+        f' (size 0.45 0.45) (drill 0.45)'
+        f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+    )
 
     return pads
 

@@ -653,9 +653,9 @@ def _power_traces():
     am_vin = _pad("U3", "3")
     am_tab = _pad("U3", "4")      # tab = VOUT
 
-    # USB-C (J1): VBUS on A1/A4/B12/B9, GND on A12/B1
-    usb_vbus = _pad("J1", "A4")   # VBUS pad
-    usb_gnd = _pad("J1", "A12")   # GND pad
+    # USB-C (J1): VBUS on pin 2/11, GND on pin 1/12
+    usb_vbus = _pad("J1", "2")    # VBUS pad (was A4)
+    usb_gnd = _pad("J1", "12")    # GND pad (was A12)
 
     # JST battery (J3)
     jst_p = _pad("J3", "1")       # BAT+
@@ -1761,9 +1761,9 @@ def _usb_traces():
     dp_x, dp_y = _esp_pin(20)  # D+
     dm_x, dm_y = _esp_pin(19)  # D-
 
-    # USB-C data pads: D+ on A6/B6, D- on A7/B7
-    usb_dp = _pad("J1", "A6")
-    usb_dm = _pad("J1", "A7")
+    # USB-C data pads: D+ on pin 6, D- on pin 7
+    usb_dp = _pad("J1", "6")     # was A6
+    usb_dm = _pad("J1", "7")     # was A7
     if not usb_dp or not usb_dm:
         return parts
 
@@ -1838,8 +1838,8 @@ def _usb_traces():
     n_cc1 = NET_ID["USB_CC1"]
     n_cc2 = NET_ID["USB_CC2"]
 
-    usb_cc1 = _pad("J1", "A5")   # CC1 pad
-    usb_cc2 = _pad("J1", "B5")   # CC2 pad
+    usb_cc1 = _pad("J1", "4")    # CC1 pad (was A5)
+    usb_cc2 = _pad("J1", "10")   # CC2 pad (was B5)
     r1_p1 = _pad("R1", "1")      # signal side
     r1_p2 = _pad("R1", "2")      # GND side
     r2_p1 = _pad("R2", "1")      # signal side
