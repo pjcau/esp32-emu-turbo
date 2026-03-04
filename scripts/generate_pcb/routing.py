@@ -526,10 +526,22 @@ def _esp_pin(gpio):
 
 
 def _fpc_pin(pin):
-    """Return (x, y) PCB coordinate for FPC connector pin (1-indexed)."""
+    """Return (x, y) PCB coordinate for FPC connector pad (1-indexed)."""
     _init_pads()
     pos = _PADS.get("J4", {}).get(str(pin))
     return pos if pos else FPC
+
+
+def _fpc_display_pin(display_pin):
+    """Return (x, y) PCB coordinate for display FPC pin (1-indexed).
+
+    The display in landscape (CCW rotation) has its FPC cable passing
+    straight through the PCB slot.  Pin 1 (south on cable) contacts
+    connector pad 40 (south on PCB), so display pin N maps to
+    connector pad (41 - N).
+    """
+    connector_pad = 41 - display_pin
+    return _fpc_pin(connector_pad)
 
 
 # ── Manhattan routing helpers ─────────────────────────────────────
@@ -1001,15 +1013,16 @@ def _display_traces():
         _raw_lcd.append((gpio, fpc_pin, f"LCD_D{i}"))
     for gpio, net_name, fpc_pin in ctrl:
         _raw_lcd.append((gpio, fpc_pin, net_name))
-    # Ctrl FPC pins (9-12) need DESCENDING fpy sort; all others use ASCENDING fpy.
-    # Sort key: (group, fpy) where group=0 for ctrl descending (use -fpy), group=1 for rest.
-    _CTRL_FPC_PINS = {9, 10, 11, 12}  # LCD_CS, LCD_DC, LCD_WR, LCD_RD
+    # NO-CROSSING INVARIANT: sort ALL signals by DESCENDING fpy.
+    # Approach columns apx increase with idx (131.0 + idx*0.70).
+    # Step-5 B.Cu vertical at apx_j descends from bypass_y to fpy_j.
+    # Since fpy_j < fpy_i for j > i (descending sort), the vertical
+    # at apx_j never reaches fpy_i (which is further south), so it
+    # cannot cross signal i's step-6 horizontal stub at fpy_i.
+    # This holds for ALL signals uniformly -- no group separation needed.
     def _lcd_sort_key(e):
-        fpy = (_fpc_pin(e[1]) or (0, 999))[1]
-        is_ctrl = e[1] in _CTRL_FPC_PINS
-        # Ctrl signals: group=0 with DESCENDING fpy (negate to reverse).
-        # Non-ctrl: group=1 with ASCENDING fpy (sorted after ctrl).
-        return (0, -fpy) if is_ctrl else (1, fpy)
+        fpy = (_fpc_display_pin(e[1]) or (0, 999))[1]
+        return -fpy  # descending: highest fpy first (southmost gets smallest apx)
     _raw_lcd.sort(key=_lcd_sort_key)
     # Build all_lcd with sequential idx for apx/bypass_y assignment
     all_lcd = [(idx, gpio, fpc_pin, net_name)
@@ -1021,7 +1034,7 @@ def _display_traces():
     for idx, gpio, fpc_pin, net_name in all_lcd:
         net = NET_ID[net_name]
         epx, epy = _esp_pin(gpio)
-        fpx, fpy = _fpc_pin(fpc_pin)
+        fpx, fpy = _fpc_display_pin(fpc_pin)
 
         bypass_y = 5.0 + idx * 1.0   # DFM: was 0.5mm pitch (via overlap)
         # DFM FIX: unique staggered approach column per signal.
@@ -1152,222 +1165,154 @@ def _display_traces():
         parts.append(_seg(apx, fpy, fpx, fpy, "B.Cu", W_DATA, net))
 
     # ── Power and GND connections to FPC (per ILI9488 datasheet) ──
+    # After pin reversal (display pin N → connector pad 41-N):
+    #   OLD "bottom" pins 34-40 are NOW at TOP (y=25.75-28.75), ABOVE approach zone
+    #   OLD "top" pins 5-7 are NOW at BOTTOM (y=42.25-43.25), BELOW approach zone
+    #   Pin 16 (GND) at y=37.75, INSIDE approach zone (between D0@37.25 and RST@38.25)
+    #   LCD approach zone: y=29.25 (LCD_BL) to y=41.25 (LCD_CS)
+    #   Approach columns: x=131.0 to x=140.1
     n_gnd = NET_ID["GND"]
     n_3v3 = NET_ID["+3V3"]
+    fpx0 = _fpc_display_pin(1)[0]  # FPC pad X (133.71)
 
-    # GND pins: 5, 16, 34, 35, 36, 37, 40(IM2)
-    # DFM: L-shaped Manhattan routes to avoid diagonal crossing of J4 signal pads.
-    # Route: horizontal from pad → (vx, py), then vertical → (vx, vy).
-    # Offsets (ox, oy) from pad position (fpx=133.15, fpy):
-    #   ox < 0 → go LEFT (vx < 133.15); ox > 0 → go RIGHT
-    #   oy = 0 means via stays at same Y as pad (single horizontal segment)
-    # CROSSING FIX: FPC GND/+3V3 stubs completely redesigned to eliminate
-    # all 43 violations (21 GND-vs-3V3, 17 FPC-vs-LCD, 5 other).
+    # ── GND pins at TOP (34,35,36,37,40): now y=25.75-28.75 ──
+    # These pins are between the approach columns' bypass_y (5-18) and fpy (29-41),
+    # meaning ALL 14 B.Cu approach columns pass through their Y levels.
+    # Any B.Cu horizontal stub would cross multiple approach columns.
+    # Solution: via-in-pad connects directly to internal GND plane (In1.Cu).
+    # Use 0.46mm/0.20mm vias to fit 0.5mm FPC pitch.
+    # For adjacent pins, use single via + short B.Cu stubs to avoid tight spacing.
     #
-    # Root cause: all stubs shared x=133.15 on B.Cu — GND and +3V3 verticals
-    # overlapped each other AND crossed LCD approach B.Cu columns at x=131..140.
+    # Pin 40 (y=25.75): via-in-pad
+    # Pin 39 (+3V3, y=26.25): handled in +3V3 section
+    # Pin 38 (+3V3, y=26.75): handled in +3V3 section
+    # Pin 37 (y=27.25): via-in-pad
+    # Pin 36 (y=27.75): B.Cu stub to pin 37 via (same net, 0.5mm away)
+    # Pin 35 (y=28.25): via-in-pad
+    # Pin 34 (y=28.75): B.Cu stub to pin 35 via (same net, 0.5mm away)
     #
-    # New strategy:
-    #   BOTTOM pins (fpy >= 42, below LCD approach zone end at y=37.25):
-    #     Route B.Cu horizontals + verticals freely — LCD approach columns don't
-    #     extend to y > 38. Spread GND vias to x=134.0, +3V3 to x=132.0 so they
-    #     don't overlap each other. Via-via spacing >= 1.5mm maintained.
-    #   TOP pins (fpy < 38, inside LCD approach zone):
-    #     B.Cu horizontal to escape column at x=128.0 (LEFT of LCD approach start
-    #     at x=131.0, LEFT of slot zone x=125.5..128.5 but pins are at y<33.25
-    #     which is above slot y=23.5..47.5 barrier — actually slot Y is relevant).
-    #     Actually: x=128.0 is inside slot zone (125.5..128.5)!
-    #     Use x=129.0 instead (right of slot, left of approach).
-    #     Gap: 129.0+0.35=129.35 to LCD_RD at 131.0-0.10=130.90 → 1.55mm ✓
-    #     Via at (129.0, fpy). Then F.Cu vertical to zone via at (129.0, y>38).
-    #   PIN 36/39 (ox=3): route to x=136.15, separate Y positions with >= 2mm gap.
+    # Via spacing check (0.46mm via, r=0.23):
+    #   pin 40 (25.75) to pin 39 +3V3 (26.25): gap=0.50-0.46=0.04mm -- tight
+    #   pin 37 (27.25) to pin 36 stub: same net, OK
+    #   pin 35 (28.25) to pin 34 stub: same net, OK
+    #   pin 37 (27.25) to pin 38 +3V3 (26.75): gap=0.50-0.46=0.04mm -- tight
+    # Fix: offset pin 40 via DOWN by 0.5mm to y=26.25 (pin 39 NC pos)... but 39 is +3V3.
+    # Use staggered via positions: place GND vias only on even-spaced pins.
+    # Group: pin 40 alone, pin 37+36 (stub), pin 35+34 (stub).
+    # Gap between pin 40 via (25.75) and +3V3 pin 39 via (26.25): 0.50-0.46=0.04mm.
+    # To fix: move pin 40 via UP by 0.5mm to y=25.25 (outside connector) with stub.
+    # FPC pads at x=133.71, between approach cols idx=3 (133.10) and idx=4 (133.80).
+    # Via-in-pad at x=133.71 collides with col4 B.Cu vert (gap=0.09mm).
+    # Fix: offset vias to x=133.45 (midpoint 133.10-133.80), with short B.Cu stub.
+    # Gap to col3: 133.45-133.10=0.35, minus drill_r(0.10)+trace_hw(0.10)=0.15mm OK.
+    # Gap to col4: 133.80-133.45=0.35, minus 0.10+0.10=0.15mm OK.
+    # B.Cu stub from pad (133.71) to via (133.45): horizontal, does not cross cols.
+    VIA_X_PWR = 133.45  # offset via x to avoid approach columns
+    # Via size for power pins between approach columns:
+    # Approach cols at x=133.10 (idx=3) and x=133.80 (idx=4), trace hw=0.10mm.
+    # Distance to nearest col: 133.45-133.10 = 0.35mm.
+    # Need: drill_r + trace_hw + 0.15 <= 0.35 → drill_r <= 0.10 → drill <= 0.20.
+    # But with IEEE 754: 0.35-0.10-0.10=0.1499 < 0.15. Need drill_r < 0.10.
+    # Use 0.40mm/0.15mm via: drill_r=0.075, gap=0.35-0.075-0.10=0.175mm OK.
+    # Annular ring: (0.40-0.15)/2=0.125mm = JLCPCB micro-via min.
+    VIA_PWR_SIZE = 0.40
+    VIA_PWR_DRILL = 0.15
 
-    # ── GND bottom pins (34, 35, 37, 40): use x=134.0 column ──
-    # All at fpy >= 42.25, well below LCD approach columns (end at y=37.25).
-    # vx=134.0: gap to LCD_CS approach at x=133.1: |134.0-133.1|-0.15-0.35=0.40mm ✓
-    # GND via Y positions spread with >= 1.5mm spacing.
-    gnd_bottom = [
-        (34, 134.0, 50.25),  # fpy=42.25, via at y=50.25 (8mm below)
-        (35, 134.0, 48.25),  # fpy=42.75, via at y=48.25 (5.5mm below), gap to pin34=2.0mm ✓
-        (37, 134.0, 52.25),  # fpy=43.75, via at y=52.25 (8.5mm below), gap to pin34=2.0mm ✓
-        (40, 134.0, 54.25),  # fpy=45.25, via at y=54.25 (9mm below), gap to pin37=2.0mm ✓
-    ]
-    for pin, vx, vy in gnd_bottom:
-        pos = _fpc_pin(pin)
+    # Pin 40 (y=25.75): move via UP 0.5mm to separate from +3V3 pin 39 (y=26.25)
+    for pin in [40]:
+        pos = _fpc_display_pin(pin)
         if pos:
             px, py = pos[0], pos[1]
-            parts.append(_via_net(vx, vy, n_gnd, size=0.7, drill=0.3))
-            parts.append(_seg(px, py, vx, py, "B.Cu", 0.3, n_gnd))
-            parts.append(_seg(vx, py, vx, vy, "B.Cu", 0.3, n_gnd))
+            via_y = py - 0.5  # y=25.25
+            parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", W_DATA, n_gnd))
+            parts.append(_seg(VIA_X_PWR, py, VIA_X_PWR, via_y, "B.Cu", W_DATA, n_gnd))
+            parts.append(_via_net(VIA_X_PWR, via_y, n_gnd,
+                                  size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
 
-    # ── GND pin 36 (ox=3): route RIGHT to x=136.15 (unchanged, already clear) ──
-    pos36 = _fpc_pin(36)
-    if pos36:
-        px, py = pos36[0], pos36[1]
-        vx, vy = px + 3, py + 3  # (136.15, 46.25)
+    # Pin 37 (y=27.25) + pin 36 (y=27.75): via at pin 37 position, stub from 36.
+    pos37 = _fpc_display_pin(37)
+    pos36 = _fpc_display_pin(36)
+    if pos37:
+        px37, py37 = pos37[0], pos37[1]
+        parts.append(_seg(px37, py37, VIA_X_PWR, py37, "B.Cu", 0.3, n_gnd))
+        parts.append(_via_net(VIA_X_PWR, py37, n_gnd,
+                              size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
+    if pos36 and pos37:
+        px36, py36 = pos36[0], pos36[1]
+        # Stub from pin 36 to pin 37 (same net, adjacent pads)
+        parts.append(_seg(px36, py36, px37, py37, "B.Cu", 0.3, n_gnd))
+
+    # Pin 35 (y=28.25) + pin 34 (y=28.75): via at pin 35 position, stub from 34.
+    pos35 = _fpc_display_pin(35)
+    pos34 = _fpc_display_pin(34)
+    if pos35:
+        px35, py35 = pos35[0], pos35[1]
+        parts.append(_seg(px35, py35, VIA_X_PWR, py35, "B.Cu", 0.3, n_gnd))
+        parts.append(_via_net(VIA_X_PWR, py35, n_gnd,
+                              size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
+    if pos34 and pos35:
+        px34, py34 = pos34[0], pos34[1]
+        parts.append(_seg(px34, py34, px35, py35, "B.Cu", 0.3, n_gnd))
+
+    # ── GND pins at BOTTOM (5, 16) ──
+    # Pin 5: y=43.25, BELOW approach zone (ends at y=41.25). Route DOWN freely.
+    # Pin 16: y=37.75, INSIDE approach zone. Use via-in-pad.
+    pos5 = _fpc_display_pin(5)
+    if pos5:
+        px, py = pos5[0], pos5[1]
+        # Route B.Cu stub RIGHT then DOWN to zone via below connector.
+        # Use x=143.0 (right of approach columns AND clear of net20 vert at x=141.2).
+        vx, vy = 143.0, 50.25
         parts.append(_via_net(vx, vy, n_gnd, size=0.7, drill=0.3))
         parts.append(_seg(px, py, vx, py, "B.Cu", 0.3, n_gnd))
         parts.append(_seg(vx, py, vx, vy, "B.Cu", 0.3, n_gnd))
 
-    # ── GND top pins (5, 16): escape LEFT to x=129.0 on F.Cu, zone via at y>38 ──
-    # Pin 5: fpy=27.75. B.Cu horiz from (133.15, 27.75) to x=129.0 would cross LCD
-    # approach columns at x=131.0,131.7,132.4,133.1 (all have B.Cu verts through y=27.75).
-    # Fix: go DOWN on B.Cu from fpy=27.75 to y=38.5 (below all LCD approach columns),
-    # then B.Cu horiz to vx=134.0, then place zone via. This stays at x=133.15 going
-    # down through the approach zone but x=133.15 is BETWEEN approach columns
-    # (LCD_CS at x=133.10 and LCD_D0 at x=133.80) with only 0.30mm gap each direction.
-    # That's too tight (need 0.10mm gap = |133.15-133.10| - 0.15 - 0.10 = -0.10mm FAIL).
-    #
-    # Better: use via-to-internal-plane directly at (px+ox, py+oy) but move ox to avoid
-    # LCD approach columns. The columns are at x=131.0+n*0.70 (n=0..13).
-    # Between columns: midpoint at 131.0+n*0.70+0.35 = 131.35, 132.05, 132.75, 133.45...
-    # Via radius 0.35, trace half-width 0.10. Via needs clearance from column edges:
-    # 0.35+0.10+0.15=0.60mm from column center, but column pitch is 0.70mm so half-pitch
-    # is 0.35mm. 0.35 < 0.60. NO safe position between columns for vias.
-    #
-    # FINAL APPROACH for top pins: eliminate B.Cu stubs entirely. Use via-in-pad or
-    # via directly adjacent to pad, connecting to internal GND/+3V3 plane.
-    # The FPC pad is connected to GND via internal plane — we just need ANY via nearby.
-    # Place tiny via (0.5mm/0.25mm) immediately below (higher Y) each FPC pad,
-    # offset 0.6mm down from pad center (pad half-height ~0.2mm + via radius 0.25 + 0.15 gap).
-    # At 0.5mm via: annular ring = (0.5-0.25)/2 = 0.125mm < 0.175mm JLCPCB min. FAIL.
-    # Use 0.6mm/0.25mm: ring = 0.175mm = JLCPCB min. OK.
-    # But 0.6mm via in 0.5mm FPC pitch doesn't fit between adjacent pads.
-    #
-    # ACTUAL FINAL APPROACH: connect top GND/+3V3 pins by routing B.Cu VERTICAL ONLY
-    # at the FPC pad x (133.15) all the way down to y=50+ (below all LCD approach cols
-    # AND below all other FPC stubs), then place zone via there. Use unique Y per pin.
-    # The B.Cu vertical at x=133.15 will cross LCD approach column HORIZONTAL stubs
-    # (step 6) at fpy=29.75..37.25, but these stubs end at fpx=133.15 — the GND vertical
-    # endpoint matches their endpoint. The collision checker sees overlap only if the
-    # segments share both X and Y range on the same layer. The LCD stubs go from
-    # (apx, fpy) to (fpx=133.15, fpy) on B.Cu. The GND vertical goes from (133.15, 27.75)
-    # to (133.15, 56.0) on B.Cu. At the intersection point (133.15, fpy), both segments
-    # touch but they're different nets. BUT: these are INTENTIONAL pad connections
-    # (the LCD step 6 stub connects to the FPC pad at x=133.15, and so does the GND stub).
-    # The collision checker will flag them but they terminate at the same pad.
-    #
-    # Actually, the LCD step 6 stubs go from apx to fpx, and the GND vertical runs
-    # at x=133.15 which equals fpx. The LCD horizontal at y=fpy has its right endpoint
-    # at x=fpx=133.15. The GND vertical passes through (133.15, fpy). These create a
-    # crossing between different nets at the FPC pad. This IS a real short circuit
-    # on the actual board. We MUST avoid this.
-    #
-    # DEFINITIVE APPROACH: route top GND pins through F.Cu vertical.
-    # B.Cu pad exit: short horizontal RIGHT to x=133.85 (midpoint between LCD_CS@133.1
-    # and LCD_D0@133.8). This horizontal at fpy=27.75 crosses LCD_CS approach column
-    # at x=133.10 — but only if the LCD_CS column extends to y=27.75.
-    # LCD_CS: idx=3, fpy=29.75. Column goes from bypass_y=8.0 to fpy=29.75.
-    # At y=27.75: 8.0 < 27.75 < 29.75 → YES it extends there. FAIL.
-    #
-    # OK: route RIGHT to x=140.5 (past ALL LCD approach columns, max at x=140.1).
-    # B.Cu horizontal at y=27.75 from 133.15 to 140.5 crosses ALL approach columns
-    # (131.0 to 140.1) that extend to y=27.75. That's ALL 14 columns... FAIL.
-    #
-    # TRULY FINAL: The top FPC GND/+3V3 pins CANNOT be routed on B.Cu without crossing
-    # LCD approach columns because those columns surround the FPC pad on all sides.
-    # The ONLY solution: connect them to internal planes via vias placed ON the FPC pad
-    # (via-in-pad). The via connects the B.Cu pad directly to the internal GND/+3V3 plane.
-    # Use standard via (0.7mm/0.3mm) placed at the pad center.
-    # FPC 0.5mm pitch: pad width ~0.3mm, pad-to-pad gap ~0.2mm.
-    # Via diameter 0.7mm exceeds pad width (0.3mm). Adjacent pads are at risk.
-    # BUT: via-in-pad is acceptable for JLCPCB if the via is filled/capped.
-    # And the collision checker flags via-pad overlaps for adjacent pads, but these
-    # are the same FPC connector so it's a known geometry.
-    #
-    # Simplest working approach: place zone via AT the FPC pad position (px, py).
-    # This creates via-in-pad which connects directly to internal plane.
-    # No additional B.Cu stubs needed — the via IS the connection.
-    # For top GND pins, via-in-pad at (133.15, py) collides with LCD_CS approach
-    # column at x=133.10 (net14). Offset via to x=133.65 (midway to next approach
-    # column at x=133.80). Gap to LCD_CS: |133.65-133.10|-0.35-0.10=0.10mm ✓ (marginal).
-    # Gap to LCD_D0: |133.80-133.65|-0.35-0.10=-0.10mm FAIL.
-    # Use x=133.50: gap to LCD_CS: 133.50-133.10-0.35-0.10=-0.05mm FAIL.
-    # The approach columns are too close together. Use F.Cu vertical escape:
-    # Short B.Cu RIGHT to x=140.5 (past all approach cols)? No, that B.Cu crosses them.
-    # Via-in-pad is the only option. Accept the via-approach collision as inherent to
-    # the FPC connector geometry (these are stitching vias to internal planes).
-    gnd_top = [5, 16]
-    for pin in gnd_top:
-        pos = _fpc_pin(pin)
-        if pos:
-            px, py = pos[0], pos[1]
-            if pin == 5:
-                # DFM FIX: via-in-pad at pin 5 (y=27.75) was 0.04mm from pin 6
-                # +3V3 via (y=28.25) — below JLCPCB 0.10mm minimum.
-                # At 0.5mm pitch with min 0.46mm via pad, gap = 0.04mm is unfixable
-                # with co-located vias. Fix: move pin 5 GND via UP by 0.5mm to
-                # pin 4 (NC) position (y=27.25). Short B.Cu stub connects pad to via.
-                #   New gap to pin 6 via: 28.25-27.25 = 1.0mm, edge = 0.54mm ✓
-                #   B.Cu stub at x=133.15 crosses LCD_CS at x=133.10 — accepted
-                #   as inherent FPC geometry constraint (existing via overlapped too).
-                via_y = py - 0.5  # y=27.25 (pin 4 NC position)
-                parts.append(_seg(px, py, px, via_y, "B.Cu", W_DATA, n_gnd))
-                parts.append(_via_net(px, via_y, n_gnd, size=0.46, drill=0.2))
-            else:
-                # Pin 16 (y=33.25): adjacent to LCD_RST pad (y=32.75) and LCD_D0 pad (y=33.75).
-                # FPC pad height=0.30mm (half=0.15). Standard 0.7mm via (r=0.35) leaves:
-                #   gap to pin15 bottom: 33.25-0.35 - (32.75+0.15) = 0.00mm DANGER
-                #   gap to pin17 top:    (33.75-0.15) - (33.25+0.35) = 0.00mm DANGER
-                # DFM FIX: reduce via to 0.46mm (r=0.23), matching pins 5/6/7.
-                #   gap to pin15 bottom: 33.25-0.23 - (32.75+0.15) = 0.12mm OK
-                #   gap to pin17 top:    (33.75-0.15) - (33.25+0.23) = 0.12mm OK
-                parts.append(_via_net(px, py, n_gnd, size=0.46, drill=0.2))
+    pos16 = _fpc_display_pin(16)
+    if pos16:
+        px, py = pos16[0], pos16[1]
+        # Pin 16 at y=37.75: inside approach zone. Via at pad x=133.71 would
+        # collide with LCD_RST approach column at x=133.80 (gap=-0.112mm).
+        # Offset via to VIA_X_PWR=133.45 with short B.Cu stub.
+        # Gap to col3 (133.10): 0.35-0.10-0.10=0.15mm OK.
+        # Gap to col4 (133.80): 0.35-0.10-0.10=0.15mm OK.
+        parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", 0.3, n_gnd))
+        parts.append(_via_net(VIA_X_PWR, py, n_gnd,
+                              size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
 
-    # ── +3V3 bottom pin (38): use x=132.0 column (separate from GND at x=134.0) ──
-    pos38 = _fpc_pin(38)
-    if pos38:
-        px, py = pos38[0], pos38[1]
-        vx, vy = 132.0, py - 3  # (132.0, 41.25) — via LEFT of approach columns
-        # B.Cu horiz from pad to x=132.0 at fpy=44.25 (below LCD approach end at 37.25) ✓
-        # Then B.Cu vert UP to via at (132.0, 41.25)
-        parts.append(_via_net(vx, vy, n_3v3, size=0.7, drill=0.3))
-        parts.append(_seg(px, py, vx, py, "B.Cu", 0.3, n_3v3))
-        parts.append(_seg(vx, py, vx, vy, "B.Cu", 0.3, n_3v3))
-
-    # ── +3V3 pin 39 (ox=4): route LEFT then DOWN to avoid GND horizontals ──
-    # Old route: straight DOWN at x=133.15 crossed GND horizontal at y=45.25
-    # (GND pin 37 stub from x=133.15 to x=134.0, gap=-0.300mm).
-    # Fix: L-shape LEFT first to x=132.5 (clear of GND horizontal start at x=133.15),
-    # then DOWN to y=55.0 (below all GND bottom stubs max y=54.25),
-    # then RIGHT to via at x=137.15.
-    # Clearances at x=132.5:
-    #   +3V3 pin 38 vert at x=132.0: gap=0.20mm ✓
-    #   BTN_A vert at x=131.80: gap=0.425mm ✓
-    #   GND horiz at y=45.25 (starts at x=133.15): not present at x=132.5 ✓
-    pos39 = _fpc_pin(39)
+    # ── +3V3 pins at TOP (38, 39): now y=26.25-26.75, inside approach column zone ──
+    # Same constraint as GND top pins. Offset via to VIA_X_PWR.
+    # Pin 39 gets via at (VIA_X_PWR, 26.25); pin 38 stubs DOWN to pin 39.
+    # This puts +3V3 via at y=26.25, GND pin 37 via at y=27.25: gap=1.0mm-0.40=0.60mm OK.
+    # (Previously pin 38 had via at y=26.75, only 0.50mm from GND pin 37 at y=27.25.)
+    pos38 = _fpc_display_pin(38)
+    pos39 = _fpc_display_pin(39)
     if pos39:
-        px, py = pos39[0], pos39[1]
-        escape_x = 132.5  # LEFT of GND horizontal start (x=133.15)
-        safe_y = 55.0
-        vx = px + 4  # x=137.15, separate from GND pin 36 at 136.15 by 1.0mm
-        # B.Cu horizontal LEFT from pad to escape_x
-        parts.append(_seg(px, py, escape_x, py, "B.Cu", 0.3, n_3v3))
-        # B.Cu vertical DOWN to safe_y
-        parts.append(_seg(escape_x, py, escape_x, safe_y, "B.Cu", 0.3, n_3v3))
-        # B.Cu horizontal RIGHT to vx at safe_y
-        parts.append(_seg(escape_x, safe_y, vx, safe_y, "B.Cu", 0.3, n_3v3))
-        # Zone via at (vx, safe_y)
-        parts.append(_via_net(vx, safe_y, n_3v3, size=0.7, drill=0.3))
+        px39, py39 = pos39[0], pos39[1]
+        parts.append(_seg(px39, py39, VIA_X_PWR, py39, "B.Cu", 0.3, n_3v3))
+        parts.append(_via_net(VIA_X_PWR, py39, n_3v3,
+                              size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
+    if pos38 and pos39:
+        px38, py38 = pos38[0], pos38[1]
+        # Short B.Cu stub from pin 38 DOWN to pin 39 (same net, 0.5mm away)
+        parts.append(_seg(px38, py38, px39, py39, "B.Cu", 0.3, n_3v3))
 
-    # ── +3V3 top pins (6, 7): single via-in-pad on pin 6, B.Cu stub for pin 7 ──
-    # Pin 6 (y=28.25): via-in-pad at pad center connects to In2.Cu +3V3 zone.
-    #   Gap to GND pin 5 via@(133.15,27.25): 28.25-27.25-0.46=0.54mm ✓
-    # Pin 7 (y=28.75): SAME NET as pin 6 (+3V3). Instead of a second via (which
-    #   would create a 0.04mm via-to-via gap flagged by JLCPCB as F.Cu DANGER),
-    #   connect pin 7 to pin 6 via a short B.Cu stub. One via suffices for both.
-    #   DFM FIX: only ONE via for both adjacent same-net pins → eliminates the
-    #   via@(133.15,28.25) vs via@(133.15,28.75) gap=0.04mm JLCPCB F.Cu DANGER.
-    pos6 = _fpc_pin(6)
-    pos7 = _fpc_pin(7)
+    # ── +3V3 pins at BOTTOM (6, 7): now y=42.25-42.75, BELOW approach zone ──
+    # Pin 6 at y=42.75, pin 7 at y=42.25. Both below LCD_CS at y=41.25.
+    # Route B.Cu stubs DOWN to zone vias.
+    # Use single via for pin 6; connect pin 7 to pin 6 via short B.Cu stub
+    # (same net, avoids tight via-via spacing at 0.5mm FPC pitch).
+    pos6 = _fpc_display_pin(6)
+    pos7 = _fpc_display_pin(7)
     if pos6:
         px6, py6 = pos6[0], pos6[1]
-        # Via-in-pad on pin 6: 0.46mm/0.20mm (AR=0.13mm=JLCPCB min).
-        parts.append(_via_net(px6, py6, n_3v3, size=0.46, drill=0.2))
+        # Route DOWN to zone via below connector
+        vx, vy = 132.0, 50.25  # separate x from GND at 134.5
+        parts.append(_via_net(vx, vy, n_3v3, size=0.7, drill=0.3))
+        parts.append(_seg(px6, py6, vx, py6, "B.Cu", 0.3, n_3v3))
+        parts.append(_seg(vx, py6, vx, vy, "B.Cu", 0.3, n_3v3))
     if pos7 and pos6:
         px7, py7 = pos7[0], pos7[1]
-        # Short B.Cu stub: pin 7 pad → pin 6 pad (same net, no via needed).
-        # stub length = 0.5mm (one FPC pitch). Eliminates second via-in-pad.
+        # Short B.Cu stub: pin 7 pad -> pin 6 pad (same net, no via needed).
         parts.append(_seg(px7, py7, px6, py6, "B.Cu", 0.3, n_3v3))
 
     return parts

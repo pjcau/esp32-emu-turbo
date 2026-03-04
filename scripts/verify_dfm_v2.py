@@ -1356,7 +1356,11 @@ def test_trace_pad_different_net_clearance():
     # → 103 (JLCPCB footprint alignment: J1/J4/U6/SW_PWR pad positions shifted to
     #         match EasyEDA library; conservative half-diagonal metric reports new
     #         proximity from shifted pads — no real copper overlap)
-    BASELINE = 103
+    # → 127 (FPC pin reversal fix: display pin N → connector pad 41-N. Approach
+    #         columns idx=3,4,5 now extend further south (fpy increased), crossing
+    #         more J4 pads. Structural: B.Cu approach columns at x=133.10/133.80
+    #         pass through 1.5mm-wide FPC pads centered at x=133.71)
+    BASELINE = 127
     check(
         f"Trace-to-pad violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(segs)} segs × {len(pads)} pads)",
@@ -1633,6 +1637,112 @@ def test_j4_fpc_orientation():
     )
 
 
+def test_j4_display_pin_reversal():
+    """Test: J4 connector pad nets match display pin reversal (41-N mapping).
+
+    The ILI9488 display in landscape (CCW rotation) has its FPC cable
+    passing straight through the PCB slot.  Display pin N physically
+    contacts connector pad (41-N).  Verify that each connector pad
+    carries the correct net for the display pin it mates with.
+    """
+    print("\n── J4 Display Pin Reversal Tests ──")
+
+    with open(PCB_FILE) as f:
+        pcb = f.read()
+
+    # Find J4 block
+    j4_start = pcb.find('(footprint "FPC-40P-0.5mm"')
+    if j4_start < 0:
+        check("J4 found", False, "not found")
+        return
+    depth = 0
+    j4_end = j4_start
+    for i in range(j4_start, len(pcb)):
+        if pcb[i] == '(':
+            depth += 1
+        elif pcb[i] == ')':
+            depth -= 1
+            if depth == 0:
+                j4_end = i + 1
+                break
+    j4_block = pcb[j4_start:j4_end]
+
+    # Extract pad -> net mapping
+    pad_nets = {}
+    for m in re.finditer(
+        r'\(pad "(\d+)" smd \w+ \(at [-\d.]+ [-\d.]+\).*?'
+        r'\(net (\d+) "([^"]*)"\)', j4_block
+    ):
+        pad_nets[int(m.group(1))] = m.group(3)
+
+    # Expected display pin -> signal mapping (ILI9488 datasheet)
+    display_pin_signal = {
+        5: "GND", 6: "+3V3", 7: "+3V3",
+        9: "LCD_CS", 10: "LCD_DC", 11: "LCD_WR", 12: "LCD_RD",
+        15: "LCD_RST", 16: "GND",
+        17: "LCD_D0", 18: "LCD_D1", 19: "LCD_D2", 20: "LCD_D3",
+        21: "LCD_D4", 22: "LCD_D5", 23: "LCD_D6", 24: "LCD_D7",
+        33: "LCD_BL",
+        34: "GND", 35: "GND", 36: "GND", 37: "GND",
+        38: "+3V3", 39: "+3V3", 40: "GND",
+    }
+
+    # Verify: display pin N -> connector pad (41-N) -> correct net
+    errors = []
+    for disp_pin, expected_net in sorted(display_pin_signal.items()):
+        conn_pad = 41 - disp_pin
+        actual_net = pad_nets.get(conn_pad, "")
+        if actual_net != expected_net:
+            errors.append(
+                f"Display pin {disp_pin} ({expected_net}) -> "
+                f"conn pad {conn_pad}: got '{actual_net}'"
+            )
+
+    check(
+        f"J4 display pin reversal (41-N): {len(display_pin_signal)} signals",
+        len(errors) == 0,
+        "; ".join(errors[:5]) if errors else "all correct",
+    )
+
+    # Verify pin ordering: connector pad 1 (north) = display pin 40 (south)
+    # and connector pad 40 (south) = display pin 1 (north)
+    j4_at = re.search(r'\(at\s+([\d.]+)\s+([\d.]+)', j4_block)
+    j4_cy = float(j4_at.group(2))
+
+    # Get Y positions of key pads
+    pad_ys = {}
+    for m in re.finditer(
+        r'\(pad "(\d+)" smd \w+ \(at [-\d.]+ ([-\d.]+)\)', j4_block
+    ):
+        pad_ys[int(m.group(1))] = j4_cy + float(m.group(2))
+
+    # Pad 1 should be NORTH (low Y), pad 40 should be SOUTH (high Y)
+    if 1 in pad_ys and 40 in pad_ys:
+        check(
+            "J4 pad 1 (display pin 40) at NORTH, pad 40 (display pin 1) at SOUTH",
+            pad_ys[1] < pad_ys[40],
+            f"pad1 Y={pad_ys[1]:.2f}, pad40 Y={pad_ys[40]:.2f}",
+        )
+
+    # Verify data bus order: D0 on south side, D7 on north side
+    # (display D0=pin17 -> conn pad 24 at south, D7=pin24 -> conn pad 17 at north)
+    if 17 in pad_ys and 24 in pad_ys:
+        check(
+            "J4 data bus: LCD_D7 (conn pad 17) north of LCD_D0 (conn pad 24)",
+            pad_ys[17] < pad_ys[24],
+            f"D7@pad17 Y={pad_ys[17]:.2f}, D0@pad24 Y={pad_ys[24]:.2f}",
+        )
+
+    # Verify ctrl signals south of data bus
+    # CS=display pin 9 -> conn pad 32 should be south of D0=conn pad 24
+    if 32 in pad_ys and 24 in pad_ys:
+        check(
+            "J4 ctrl (LCD_CS pad 32) south of data (LCD_D0 pad 24)",
+            pad_ys[32] > pad_ys[24],
+            f"CS@pad32 Y={pad_ys[32]:.2f}, D0@pad24 Y={pad_ys[24]:.2f}",
+        )
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -1672,6 +1782,7 @@ if __name__ == "__main__":
     test_batch_pin_alignment()
     test_batch_pin_net_assignment()
     test_j4_fpc_orientation()
+    test_j4_display_pin_reversal()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")

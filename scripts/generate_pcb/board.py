@@ -112,7 +112,9 @@ SHOULDER_L_ENC = (-65, 32)
 SHOULDER_R_ENC = (65, 32)
 
 # FPC display connector (right of slot, VERTICAL orientation)
-# Rotated 90° — pins run vertically from y=25.75 to y=45.25 at x=135.
+# Rotated 90° — connector pads run vertically from y=25.75 to y=45.25 at x=135.
+# NOTE: Display FPC pin order is REVERSED vs connector pad order.
+# Display Pin N contacts connector pad (41-N) due to landscape CCW + straight-through slot.
 # Connector body 3mm wide at x=133.5-136.5, slot right edge at 128.5.
 FPC_ENC = (55, 2)      # Next to FPC slot, right side (vertical)
 
