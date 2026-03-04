@@ -55,7 +55,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ## Agents & Skills Architecture
 
-### Agents (4)
+### Agents (5)
 
 ```
 team-lead (sonnet) ──── orchestrator, 0 skills
@@ -63,7 +63,8 @@ team-lead (sonnet) ──── orchestrator, 0 skills
   ├── software-dev (opus) ───── 3 skills
   └── cad-engineer (haiku) ──── 3 skills
 
-scout (opus) ──── /scout (GitHub pattern discovery, weekly via GitHub Action)
+plan-reviewer (opus) ── pre-implementation plan review (PCB/routing/BOM changes)
+scout (opus) ────────── /scout (GitHub pattern discovery, weekly via GitHub Action)
 ```
 
 ### Cross-Agent Dependencies
@@ -187,13 +188,17 @@ graph TB
 
 | Trigger | Matcher | Action |
 |---------|---------|--------|
-| PostToolUse | `Edit` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
-| PostToolUse | `Write` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| UserPromptSubmit | (all prompts) | Suggests relevant skills based on keyword matching |
+| PreToolUse | `Bash`, `Edit`, `Write`, `Read` | Safety guard (prevents dangerous operations) |
+| PreToolUse | `Edit`, `Write` | PCB edit guard (prevents direct .kicad_pcb edits) |
 | PostToolUse | `Bash` (generate_pcb/release) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| PostToolUse | `Bash` (project scripts) | Enforces failure reporting before manual workarounds |
+| PostToolUse | `Edit`, `Write` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| Stop | (after response) | Auto-runs DFM verification if PCB files changed |
 
 **MANDATORY**: After ANY change to PCB generator, footprints, routing, BOM, CPL, or JLCPCB export files, you MUST run `python3 scripts/verify_dfa.py` and confirm all 9 checks pass before committing.
 
-Config: `.claude/settings.local.json` (hooks section)
+Config: `.claude/settings.json` (hooks section)
 
 ### Makefile Quick Targets
 
