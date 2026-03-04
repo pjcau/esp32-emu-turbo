@@ -117,7 +117,7 @@ SHOULDER_R_ENC = (65, 32)
 FPC_ENC = (55, 2)      # Next to FPC slot, right side (vertical)
 
 # USB-C (bottom center edge)
-USBC_ENC = (0, -BOARD_H / 2 + 3)   # 3mm from bottom edge
+USBC_ENC = (0, -BOARD_H / 2 + 3.5)  # 3.5mm from bottom edge (DFM: shield pads clear edge by 0.225mm)
 
 # SD card slot (bottom right)
 SD_ENC = (60, -BOARD_H / 2 + 8)

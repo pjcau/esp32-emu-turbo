@@ -45,7 +45,7 @@ def test_cpl_positions():
 
     # J1: footprint now matches JLCPCB C2765186 exactly, no position correction needed
     j1_y = float(cpl["J1"]["Mid Y"].replace("mm", ""))
-    check("J1 Mid Y = 72.00mm (no correction, footprint matches JLCPCB)", abs(j1_y - 72.00) < 0.01,
+    check("J1 Mid Y = 71.50mm (DFM: shield pads clear board edge)", abs(j1_y - 71.50) < 0.01,
           f"got {j1_y}")
 
     # SW_PWR: footprint now matches JLCPCB C431540 exactly, no correction needed

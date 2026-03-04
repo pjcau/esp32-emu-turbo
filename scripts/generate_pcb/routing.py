@@ -300,7 +300,7 @@ def _crosses_slot(x1, y1, x2, y2):
 
 ESP32 = enc(0, 10)        # (80.0, 27.5)
 FPC = enc(55, 2)          # (135.0, 35.5)  — right of slot, vertical (90deg)
-USBC = enc(0, -34.5)      # (80.0, 72.0)
+USBC = enc(0, -34.0)      # (80.0, 71.5) — DFM: shield pads clear board edge by 0.225mm
 SD = enc(60, -29.5)       # (140.0, 67.0)  — bottom-right
 IP5306 = enc(30, -5)      # (110.0, 42.5)  — moved left
 AMS1117 = enc(45, -18)    # (125.0, 55.5)  — moved left
