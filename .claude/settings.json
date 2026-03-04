@@ -93,6 +93,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/stop-verify-dfm.sh",
+            "timeout": 30
+          }
+        ]
+      }
     ]
   }
 }
