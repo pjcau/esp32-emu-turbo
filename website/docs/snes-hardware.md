@@ -69,6 +69,10 @@ Complete pin mapping for the ESP32-S3 N16R8 DevKitC-1:
 FPC power pins: 6=VDDI(+3V3), 7=VDDA(+3V3), 5/16/34-36/37=GND, 38=IM0(+3V3), 39=IM1(+3V3), 40=IM2(GND).
 Interface mode: IM2=0, IM1=1, IM0=1 → 8080 8-bit parallel.
 
+:::info FPC Pin Reversal on PCB
+The FPC pin numbers above refer to the **display** pin numbering. On the PCB, the display is mounted in landscape (CCW rotation) with the FPC tail passing straight through a slot to the J4 connector on the bottom side. Because the cable doesn't twist, display Pin N contacts connector Pad (41−N). For example, display Pin 17 (LCD_D0) connects to J4 Pad 24. The PCB routing accounts for this reversal automatically.
+:::
+
 ### SD Card (SPI) — 4 GPIOs
 
 | GPIO | Function | Notes |

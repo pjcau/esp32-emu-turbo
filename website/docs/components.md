@@ -113,6 +113,10 @@ Our design uses **8080 8-bit parallel** (IM2=0, IM1=1, IM0=1): IM0 and IM1 pulle
 This pinout is from the actual ILI9488 4.0" panel datasheet (see images above). It differs significantly from generic/typical pinouts found online. **Do NOT use generic ILI9488 pinout tables** — always refer to this datasheet.
 :::
 
+:::info FPC Pin Reversal on PCB
+When the display is mounted in landscape (CCW rotation), Pin 1 is at the south end of the FPC tail. The ribbon passes straight through the PCB slot to J4 on the bottom side without twisting, so **display Pin N contacts connector Pad (41−N)**. The PCB traces are routed accordingly — e.g., display Pin 17 (DB0/GPIO4) connects to J4 Pad 24. See [PCB FPC Slot](pcb.md#fpc-slot--pin-reversal) for details.
+:::
+
 ### Alternative Display Options
 
 | Option | Size | Resolution | Controller | Interface | Price | Notes |
