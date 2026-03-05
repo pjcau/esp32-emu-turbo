@@ -105,22 +105,21 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 | GPIO0 | SELECT | Boot button (dual-use) |
 | GPIO18 | START | 10k pull-up + 100nF debounce |
 | GPIO35 | L shoulder | 10k pull-up + 100nF debounce |
-| GPIO19 | R shoulder | 10k pull-up + 100nF debounce |
+| GPIO43 | R shoulder | 10k pull-up + 100nF debounce |
 
-### Joystick (ADC, optional) — 2 GPIOs
+### USB (native) — 2 GPIOs
 
 | GPIO | Function | Notes |
 |---|---|---|
-| GPIO20 | JOY_X | ADC channel (0-3.3V) |
-| GPIO33 | JOY_Y | ADC channel (0-3.3V) |
+| GPIO19 | USB D- | Native USB data (firmware flash + debug) |
+| GPIO20 | USB D+ | Native USB data (firmware flash + debug) |
 
 ### Reserved GPIOs
 
 | GPIOs | Reason |
 |---|---|
 | GPIO26–GPIO32 | Used by Octal PSRAM (N16R8 module) |
-| GPIO43 (TX0) | UART0 TX (programming/debug) |
-| GPIO44 (RX0) | UART0 RX (programming/debug) |
+| GPIO44 (RX0) | Available, unused |
 
 ### Summary
 
@@ -130,7 +129,7 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 | SD Card (SPI) | 4 |
 | Audio (I2S) | 3 |
 | Buttons | 12 |
-| Joystick (optional) | 2 |
+| USB (native) | 2 |
 | **Total** | **35** |
 | ESP32-S3 available | 45 |
 | **Remaining** | **10** |

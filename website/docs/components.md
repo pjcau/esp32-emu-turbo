@@ -174,7 +174,7 @@ The IP5306 manages battery charge/discharge and provides stable 5V output. The A
 | **Tact switch 6x6mm (20pcs)** | Momentary push button, for D-pad/A/B/X/Y/Start/Select/L/R (12 buttons) | **$1.04** | [AliExpress](https://www.aliexpress.com/item/33024158924.html) |
 | Rubber pads GBA-style | Conductive silicone, better feel | $0.27 | [AliExpress](https://www.aliexpress.com/item/32800611102.html) |
 | Rubber pads GBA full set | D-pad + A/B + Start/Select + L/R | $1.05 | [AliExpress](https://www.aliexpress.com/item/33007129317.html) |
-| **PSP Joystick** (optional) | 2-axis analog, PSP 2000/3000 | **$2.11** | [AliExpress](https://www.aliexpress.com/item/32830760575.html) |
+| ~~PSP Joystick~~ (removed) | ~~2-axis analog, PSP 2000/3000~~ | ~~$2.11~~ | Removed in v2 — GPIOs reassigned to USB data and BTN_R |
 
 ---
 
@@ -218,7 +218,7 @@ The IP5306 manages battery charge/discharge and provides stable 5V output. The A
 | Charging | IP5306 USB-C | $1.59 |
 | Regulator | AMS1117-3.3V | $0.24 |
 | Controls | Tact switch 20pcs (12 buttons: D-pad, A, B, X, Y, Start, Select, L, R) | $1.04 |
-| Extra controls | Rubber pads + PSP joystick | $2.38 |
+| Extra controls | Rubber pads | $1.05 |
 | Audio | Speaker + PAM8403 | $1.25 |
 | Storage | SD module + 32GB card | $3.95 |
 | Misc | Breadboard, jumpers, resistors | $6.00 |
@@ -298,11 +298,11 @@ When ordering the custom PCB from JLCPCB, the following components are **NOT inc
 | **ILI9488 3.95" bare LCD panel** (40P FPC 0.5mm, resistive touch NC) | U4 | ~$3.95 | FPC ribbon → J4 connector (slide + latch) | No |
 | **LiPo 105080 5000mAh battery** | BT1 | ~$6-8 | JST PH plug → J3 connector | No |
 | **Speaker 28mm 8Ω** | SPK1 | ~$0.80 | 2 wires → solder pads | Yes (easy) |
-| **PSP joystick** (optional) | J2 | ~$2 | 4 pins → pin header | Yes (easy) |
+| ~~PSP joystick~~ (removed) | ~~J2~~ | — | Removed in v2 — GPIOs reassigned to USB data and BTN_R | — |
 | | | **~$17-23** | | |
 
 :::tip
-The display and battery are **plug-in** — no soldering skills required. Only the speaker (2 wires) and optional joystick need soldering.
+The display and battery are **plug-in** — no soldering skills required. Only the speaker (2 wires) needs soldering.
 :::
 
 :::warning Display purchase — important

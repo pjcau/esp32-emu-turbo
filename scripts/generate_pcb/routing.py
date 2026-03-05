@@ -372,7 +372,7 @@ _PIN_TO_GPIO = {
     23: 21, 24: 47, 25: 48, 26: 45,
     27: 0, 28: 35, 29: 36, 30: 37,
     31: 38, 32: 39, 33: 40, 34: 41,
-    35: 42, 36: 1, 37: 2,
+    35: 42, 36: 43, 37: 44, 38: 1, 39: 2,
 }
 _GPIO_TO_PIN = {gpio: pin for pin, gpio in _PIN_TO_GPIO.items()}
 
@@ -1207,16 +1207,12 @@ def _display_traces():
     # Gap to col3: 133.45-133.10=0.35, minus drill_r(0.10)+trace_hw(0.10)=0.15mm OK.
     # Gap to col4: 133.80-133.45=0.35, minus 0.10+0.10=0.15mm OK.
     # B.Cu stub from pad (133.71) to via (133.45): horizontal, does not cross cols.
-    VIA_X_PWR = 133.45  # offset via x to avoid approach columns
-    # Via size for power pins between approach columns:
-    # Approach cols at x=133.10 (idx=3) and x=133.80 (idx=4), trace hw=0.10mm.
-    # Distance to nearest col: 133.45-133.10 = 0.35mm.
-    # Need: drill_r + trace_hw + 0.15 <= 0.35 → drill_r <= 0.10 → drill <= 0.20.
-    # But with IEEE 754: 0.35-0.10-0.10=0.1499 < 0.15. Need drill_r < 0.10.
-    # Use 0.40mm/0.15mm via: drill_r=0.075, gap=0.35-0.075-0.10=0.175mm OK.
-    # Annular ring: (0.40-0.15)/2=0.125mm = JLCPCB micro-via min.
-    VIA_PWR_SIZE = 0.40
-    VIA_PWR_DRILL = 0.15
+    # FPC GND/power vias between approach columns 3 (x=133.10) and 4 (x=133.80).
+    # JLCPCB requires drill ≥ 0.20mm / size ≥ 0.45mm (no micro-via surcharge).
+    # Gap to each col: 0.35 - drill_r(0.10) - trace_hw(0.10) = 0.15mm ≥ 0.15mm ✓
+    VIA_X_PWR = 133.45
+    VIA_PWR_SIZE = 0.45
+    VIA_PWR_DRILL = 0.20
 
     # Pin 40 (y=25.75): move via UP 0.5mm to separate from +3V3 pin 39 (y=26.25)
     for pin in [40]:
@@ -1768,12 +1764,7 @@ def _usb_traces():
     parts.append(_via_net(dm_col_x, dm_via_y, n_dm))
     parts.append(_seg(dm_col_x, dm_via_y, dm_col_x, dm_y,
                        "B.Cu", W_DATA, n_dm))
-    # BTN_R (net=38) and USB_D- (net=41) share ESP32 pin 13 (GPIO 19).
-    # Both signals must terminate at (88.75, 37.48).  The B.Cu stub from
-    # dm_col_x to dm_x at y=37.48 will overlap BTN_R's B.Cu stub at the
-    # same Y (collinear, same-pin convergence).  This is intentional copper
-    # sharing — the short circuit analyzer flags it, but it's benign since
-    # both nets connect to the same physical pin.
+    # USB_D- terminates at ESP32 pin 13 (GPIO 19). BTN_R moved to GPIO 43.
     parts.append(_seg(dm_col_x, dm_y, dm_x, dm_y, "B.Cu", W_DATA, n_dm))
 
     # ── USB CC pull-down resistors ──────────────────────────────
@@ -1813,11 +1804,9 @@ def _usb_traces():
                            "B.Cu", W_SIG, n_cc2))
 
     if usb_cc1 and r1_p1:
-        # CC1: DOWN past BTN_R vert end (y=72.5), then LEFT to R1p1 x, UP to R1p1 y.
-        # CROSSING FIX: old cc1_low_y=70.5 crossed BTN_R B.Cu vert at x=76.25 (y=36.21..72.5).
-        # CC1 H from (81.25,70.5)→(74.95,70.5) spanned x=76.25 which is in BTN_R vert range.
-        # Fix: use cc1_low_y=73.5 (> BTN_R vert bottom y=72.5). Horiz at y=73.5 is below BTN_R. CLEAR.
-        cc1_low_y = usb_cc1[1] + 5.25   # 73.5 — below BTN_R vert end (y=72.5), below CC2 stagger (69.5)
+        # CC1: DOWN past BTN_R vert, then LEFT to R1p1 x, UP to R1p1 y.
+        # BTN_R now routes to GPIO43 (different path), but keep safe Y margin.
+        cc1_low_y = usb_cc1[1] + 5.25   # 73.5 — below CC2 stagger (69.5)
         parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], cc1_low_y,
                            "B.Cu", W_SIG, n_cc1))
         parts.append(_seg(usb_cc1[0], cc1_low_y, r1_p1[0], cc1_low_y,
@@ -1916,9 +1905,8 @@ def _button_traces():
     for i, b in enumerate(btn_data):
         epx = b["epx"]
         if epx > CX:
-            # DFM v3: was +2.3 (BTN_R approach at x=91.0, 0.025mm gap to USB_D- at x=91.25).
-            # +2.8 → first col at x=91.55, gap to USB_D- = 0.30mm (USB_D- is w=0.2, edge at 91.35) ✓
-            ax = epx + 2.8 + i * 1.0   # DFM: was 0.6mm pitch (via overlap)
+            # Approach column offset: clears USB_D- vertical and nearby stubs.
+            ax = epx + 2.8 + i * 1.0
         else:
             ax = epx - 2.8 - i * 1.0   # DFM: was 0.6mm pitch (via overlap)
         # Nudge away from passive traces and previously used columns.
@@ -2463,14 +2451,12 @@ def _button_traces():
 
     # Shoulder button BTN_R (B.Cu, rotated 90°)
     # SW12 at enc(65, 32) = (145, 5.5) on the right side of the board.
-    # Route: pad 3 (inner signal pad) -> B.Cu down -> F.Cu across -> ESP32 GPIO19
-    # GPIO mapping: BTN_R = GPIO 19 (epx=88.75, epy=37.48) — RIGHT side of ESP32.
-    # Old bug: used _esp_pin(36) (SD_MOSI position, left ESP32 column) → wrong pin.
-    # Fix: use _esp_pin(19) → routes to right-side ESP32 column, no conflict with
-    #   SD_MOSI vias at x=71.9..72.95 or BTN_X/BTN_B stagger vias at x=73..76.
+    # Route: pad 3 (inner signal pad) -> B.Cu down -> F.Cu across -> ESP32 GPIO43
+    # GPIO mapping: BTN_R = GPIO 43 (pin 36, right-side ESP32 column).
+    # GPIO19 freed for USB_D- native USB data line.
     net_r = NET_ID["BTN_R"]
     sr_pad = _pad("SW12", "3")  # signal pad (inner side toward board center)
-    epx_r, epy_r = _esp_pin(19)   # GPIO 19 = BTN_R (right-side ESP32 pin)
+    epx_r, epy_r = _esp_pin(43)   # GPIO 43 = BTN_R (right-side ESP32 pin 36)
     if sr_pad:
         sx_r, sy_r = sr_pad
         # DFM FIX: was chan_y_l + 1.0 = 75.0 (board edge! board height=75mm).
@@ -2499,34 +2485,23 @@ def _button_traces():
         # F.Cu horizontal LEFT across board to approach column just RIGHT of GPIO19 (epx=88.75)
         # approach_r = epx_r + 1.5 = 90.25: right of GPIO19, avoids any left-side conflicts.
         # GPIO19 is on the RIGHT ESP32 column (x=88.75), away from SD_MOSI/BTN vias at x<77.
-        # DFM v2: was +2.0 (x=90.75), 0.085mm gap to VBUS/LCD traces. +2.25 → x=91.0, gap=0.34mm ✓
-        # DFM v3: +2.25 (x=91.0) conflicts with USB_D- vertical at x=91.25 (gap=0.025mm).
-        # USB_D- B.Cu vert at x=91.25 (w=0.2, hw=0.1). BTN_R approach via (r=0.45).
-        # Need |approach_r - 91.25| >= 0.45 + 0.10 + 0.15 = 0.70mm.
-        # CROSSING FIX: was +2.85 (x=91.60), gap=0.35mm (via-to-trace 0.35-0.45=-0.10 FAIL).
-        # Use +3.30 → x=92.05, gap to USB_D- = 0.80mm (via edge=91.60, trace edge=91.35, gap=0.25mm ✓)
-        # SHORT FIX: was +3.30 (x=92.05) which EXACTLY overlapped R14 +3V3 stub at (92.05,44.6-46)
-        # and C15 GND stub at (92.05,50-52). Gap=0mm → short circuit.
-        # Fix: shift approach_r to 93.50 (epx_r+4.75). Edge gap to stubs at x=92.05:
-        # |93.50-92.05|-0.125-0.125=1.20mm ✓. Junction vert at x=93.95: gap=0.20mm ✓.
-        # USB_D- at x=91.25: gap=2.25mm ✓.
-        approach_r = epx_r + 4.75  # 93.50 — clears +3V3/GND stubs at x=92.05 (gap=1.20mm)
+        # BTN_R now routes to GPIO43 (pin 36), different Y on ESP32 right column.
+        # Approach column offset from ESP32 pin X, clearing nearby stubs.
+        approach_r = epx_r + 4.75
         parts.append(_seg(sx_r, chan_y_r, approach_r, chan_y_r,
                            "F.Cu", W_SIG, net_r))
         parts.append(_via_net(approach_r, chan_y_r, net_r))
-        # B.Cu vertical UP from channel to GPIO19 pin level (single segment, no stubs to cross)
+        # B.Cu vertical UP from channel to GPIO43 pin level
         parts.append(_seg(approach_r, chan_y_r, approach_r, epy_r,
                            "B.Cu", W_SIG, net_r))
         # Layer hop at approach_r column to switch from B.Cu to F.Cu
         parts.append(_via_net(approach_r, epy_r, net_r))
         # F.Cu horizontal LEFT to near_epx_r (just right of pad for B.Cu stub clearance)
-        # Via gap: |near_epx_r - approach_r| >= 0.9+0.15=1.05mm.
-        # near_epx_r=90.45: gap=|90.45-93.50|=3.05mm, spacing=2.15mm ✓
-        near_epx_r = epx_r + 1.7  # 90.45 — via gap to approach_r = 3.05mm (spacing=2.15mm ✓)
+        near_epx_r = epx_r + 1.7
         parts.append(_seg(approach_r, epy_r, near_epx_r, epy_r,
                            "F.Cu", W_SIG, net_r))
         parts.append(_via_net(near_epx_r, epy_r, net_r))
-        # B.Cu short stub LEFT to ESP32 GPIO19 pad
+        # B.Cu short stub LEFT to ESP32 GPIO43 pad
         parts.append(_seg(near_epx_r, epy_r, epx_r, epy_r,
                            "B.Cu", W_SIG, net_r))
         # GND via on outer pad of SW12

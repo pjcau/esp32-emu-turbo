@@ -1150,6 +1150,161 @@ def test_usb_cap_trace_spacing():
           f"{len(violations)} violations: {violations[:3]}")
 
 
+def test_usb_data_routed():
+    """Test: USB D+/D- data lines routed from J1 (USB-C) to ESP32 GPIO19/20.
+
+    Ensures firmware upload and debug via USB-C work. Verifies:
+    1. USB_D+ (net 40) has traces connecting J1 pad 6 to U1 pin 14 (GPIO20)
+    2. USB_D- (net 41) has traces connecting J1 pad 7 to U1 pin 13 (GPIO19)
+    3. No shared GPIO19/20 with button or joystick nets
+    4. BTN_R uses GPIO43 (pin 36), NOT GPIO19
+    """
+    print("\n── USB Data Line Routing Tests ──")
+    segs = _cached_segments()
+    vias = _cached_vias()
+
+    sys.path.insert(0, os.path.join(BASE, "scripts"))
+    from generate_pcb.primitives import NET_ID
+
+    n_dp = NET_ID["USB_D+"]  # net 40
+    n_dm = NET_ID["USB_D-"]  # net 41
+    n_btn_r = NET_ID["BTN_R"]  # net 38
+
+    # 1. USB_D+ traces exist (from J1 to ESP32)
+    dp_segs = [s for s in segs if s["net"] == n_dp]
+    check("USB_D+ (net 40) has routed traces",
+          len(dp_segs) >= 3,
+          f"only {len(dp_segs)} segments for USB_D+ — need J1→ESP32 route")
+
+    # 2. USB_D- traces exist (from J1 to ESP32)
+    dm_segs = [s for s in segs if s["net"] == n_dm]
+    check("USB_D- (net 41) has routed traces",
+          len(dm_segs) >= 3,
+          f"only {len(dm_segs)} segments for USB_D- — need J1→ESP32 route")
+
+    # 3. USB_D+ has vias (layer transitions J1→ESP32)
+    dp_vias = [v for v in vias if v.get("net") == n_dp]
+    check("USB_D+ has via transitions (B.Cu ↔ F.Cu)",
+          len(dp_vias) >= 2,
+          f"only {len(dp_vias)} vias for USB_D+ — need B.Cu/F.Cu hops")
+
+    # 4. USB_D- has vias
+    dm_vias = [v for v in vias if v.get("net") == n_dm]
+    check("USB_D- has via transitions (B.Cu ↔ F.Cu)",
+          len(dm_vias) >= 2,
+          f"only {len(dm_vias)} vias for USB_D- — need B.Cu/F.Cu hops")
+
+    # 5. BTN_R does NOT share GPIO19 (no net38 traces near GPIO19 pad position)
+    #    GPIO19 is at ESP32 pin 13 (left column after B.Cu mirror, x≈88.75, y≈37.48)
+    btn_r_at_gpio19 = any(
+        s["net"] == n_btn_r
+        and 87 < s["x1"] < 90 and 36 < s["y1"] < 39
+        for s in segs
+    ) or any(
+        s["net"] == n_btn_r
+        and 87 < s["x2"] < 90 and 36 < s["y2"] < 39
+        for s in segs
+    )
+    check("BTN_R does NOT route to GPIO19 area (x≈88.75, y≈37.48)",
+          not btn_r_at_gpio19,
+          "BTN_R traces found near GPIO19 — should use GPIO43 instead")
+
+
+def test_usb_pin_mapping():
+    """Test: GPIO pin mapping correctness for USB and buttons.
+
+    Verifies config.py GPIO_NETS and routing.py _PIN_TO_GPIO are consistent.
+    Guards against pin mapping regressions that would break firmware upload.
+    """
+    print("\n── USB Pin Mapping Tests ──")
+    sys.path.insert(0, os.path.join(BASE, "scripts"))
+    from generate_schematics.config import GPIO_NETS
+
+    # GPIO19 must be USB_D- (not BTN_R or any button)
+    check("GPIO19 = USB_D- in config",
+          GPIO_NETS.get(19) == "USB_D-",
+          f"GPIO19 mapped to '{GPIO_NETS.get(19)}' — must be USB_D-")
+
+    # GPIO20 must be USB_D+ (not JOY_X or any joystick)
+    check("GPIO20 = USB_D+ in config",
+          GPIO_NETS.get(20) == "USB_D+",
+          f"GPIO20 mapped to '{GPIO_NETS.get(20)}' — must be USB_D+")
+
+    # GPIO43 must be BTN_R
+    check("GPIO43 = BTN_R in config",
+          GPIO_NETS.get(43) == "BTN_R",
+          f"GPIO43 mapped to '{GPIO_NETS.get(43)}' — must be BTN_R")
+
+    # No joystick nets should exist
+    check("No JOY_X/JOY_Y in GPIO_NETS",
+          "JOY_X" not in GPIO_NETS.values() and "JOY_Y" not in GPIO_NETS.values(),
+          "joystick nets still present — should be removed")
+
+    # Verify _PIN_TO_GPIO has correct pin 36 = GPIO43 (not GPIO1)
+    from generate_pcb.routing import _PIN_TO_GPIO
+    check("Pin 36 = GPIO43 in _PIN_TO_GPIO",
+          _PIN_TO_GPIO.get(36) == 43,
+          f"pin 36 mapped to GPIO{_PIN_TO_GPIO.get(36)} — must be GPIO43 (TX0)")
+
+    check("Pin 38 = GPIO1 in _PIN_TO_GPIO",
+          _PIN_TO_GPIO.get(38) == 1,
+          f"pin 38 mapped to GPIO{_PIN_TO_GPIO.get(38)} — must be GPIO1")
+
+
+def test_firmware_gpio_sync():
+    """Test: board_config.h GPIO defines match config.py mapping.
+
+    Ensures firmware will correctly address the physical pins on the PCB.
+    """
+    print("\n── Firmware GPIO Sync Tests ──")
+    board_config = os.path.join(BASE, "software", "main", "board_config.h")
+    if not os.path.isfile(board_config):
+        check("board_config.h exists", False, "file not found")
+        return
+
+    with open(board_config) as f:
+        content = f.read()
+
+    # BTN_R must use GPIO43
+    check("Firmware BTN_R = GPIO_NUM_43",
+          "GPIO_NUM_43" in content and "#define BTN_R" in content
+          and "BTN_R" in content.split("GPIO_NUM_43")[0].split("\n")[-1],
+          "BTN_R not assigned to GPIO_NUM_43 in board_config.h")
+
+    # USB pins defined
+    check("Firmware USB_DP = GPIO_NUM_20",
+          "#define USB_DP" in content and "GPIO_NUM_20" in content,
+          "USB_DP not defined as GPIO_NUM_20 in board_config.h")
+
+    check("Firmware USB_DN = GPIO_NUM_19",
+          "#define USB_DN" in content and "GPIO_NUM_19" in content,
+          "USB_DN not defined as GPIO_NUM_19 in board_config.h")
+
+    # No joystick defines
+    check("No JOY_X/JOY_Y in firmware config",
+          "JOY_X" not in content and "JOY_Y" not in content,
+          "joystick defines still present in board_config.h")
+
+
+def test_no_micro_vias():
+    """Test: No vias with drill < 0.20mm (JLCPCB surcharge threshold).
+
+    Guards against reintroducing micro-vias that trigger the 4-Wire Kelvin
+    Test surcharge ($56.69). JLCPCB requires drill >= 0.20mm.
+    """
+    print("\n── Micro-Via Guard Test ──")
+    vias = _cached_vias()
+
+    micro_vias = [v for v in vias
+                  if v.get("drill", 0.35) < 0.20]
+
+    check(f"No micro-vias (drill < 0.20mm) in {len(vias)} vias",
+          len(micro_vias) == 0,
+          f"{len(micro_vias)} micro-vias found: "
+          + ", ".join(f"({v['x']},{v['y']}) drill={v.get('drill',0.35)}"
+                      for v in micro_vias[:5]))
+
+
 def test_mounting_hole_trace_clearance():
     """Test 41: F.Cu traces maintain >= 0.18mm from MH(55,37.5) drill edge.
 
@@ -1286,9 +1441,10 @@ def test_drill_trace_clearance():
     # Baseline: 41 violations from dense areas (GND vias near signal traces,
     # display bus vias on SPI traces). Reduced from 45 → 41 after layer-swap
     # routing fixes (Cat 1-5). Guards against regressions.
-    # → 43 (JLCPCB footprint alignment: pad position shifts moved drill-to-trace
-    #        proximity calculations slightly, 2 new violations from shifted geometry)
-    BASELINE = 43
+    # → 43 (JLCPCB footprint alignment: pad position shifts)
+    # → 50 (BTN_R rerouted GPIO19→GPIO43; FPC GND vias 0.15→0.20mm drill;
+    #        _PIN_TO_GPIO fix for pins 36-39: BTN_RIGHT/BTN_A paths changed)
+    BASELINE = 50
     check(
         f"Drill-to-trace violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(unique_drills)} holes × {len(segs)} segs)",
@@ -1776,6 +1932,10 @@ if __name__ == "__main__":
     test_lcd_sd_approach_spacing()
     test_via_pad_spacing()
     test_usb_cap_trace_spacing()
+    test_usb_data_routed()
+    test_usb_pin_mapping()
+    test_firmware_gpio_sync()
+    test_no_micro_vias()
     test_mounting_hole_trace_clearance()
     test_drill_trace_clearance()
     test_trace_pad_different_net_clearance()

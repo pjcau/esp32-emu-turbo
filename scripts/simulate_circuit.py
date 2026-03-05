@@ -23,7 +23,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, _PROJECT_ROOT)
 
 from scripts.generate_schematics.config import (   # noqa: E402
-    GPIO_NETS, BUTTON_NETS, JOYSTICK_NETS,
+    GPIO_NETS, BUTTON_NETS, USB_DATA_NETS,
     DISPLAY_NETS, AUDIO_NETS, SD_NETS,
 )
 from scripts.generate_pcb.primitives import NET_LIST, NET_ID  # noqa: E402
@@ -588,10 +588,10 @@ def check_gpio_conflicts():
     e, w = _check("Strapping pins", [], strap_warns)
     warnings.extend(w)
 
-    # ADC pins for joystick
-    print(f"\n  Joystick ADC pins:")
+    # USB data pins (native USB on GPIO19/20)
+    print(f"\n  USB data pins:")
     adc_warns = []
-    for net_name in JOYSTICK_NETS:
+    for net_name in USB_DATA_NETS:
         gpio = None
         for g, n in used_gpios.items():
             if n == net_name:
@@ -633,7 +633,7 @@ def check_net_connectivity():
 
     # Verify all signal nets declared
     all_signal_nets = DISPLAY_NETS + AUDIO_NETS + SD_NETS + BUTTON_NETS + ["BTN_MENU"]
-    all_signal_nets += JOYSTICK_NETS + ["USB_D+", "USB_D-", "SPK+", "SPK-"]
+    all_signal_nets += USB_DATA_NETS + ["SPK+", "SPK-"]
     missing_nets = [n for n in all_signal_nets if n not in net_names]
     print(f"\n  Signal nets: {len(all_signal_nets)} expected, "
           f"{len(all_signal_nets) - len(missing_nets)} declared")
@@ -688,7 +688,7 @@ def check_net_connectivity():
     print(f"    Buttons: {len(BUTTON_NETS) + 1}")
     print(f"    USB: 2")
     print(f"    Audio: 2")
-    print(f"    Joystick: {len(JOYSTICK_NETS)}")
+    print(f"    USB data: {len(USB_DATA_NETS)}")
 
     return errors, warnings
 

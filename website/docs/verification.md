@@ -163,7 +163,7 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 | Ref | Component | Reason |
 |:---|:---|:---|
 | BT1 | LiPo battery | Connected via JST-PH cable |
-| J2 | PSP joystick | Optional, not assembled |
+| J2 | PSP joystick | Removed in v2 (was optional) |
 | SPK1 | 28mm speaker | Soldered manually to pads |
 | U4 | ILI9488 display | Connected via FPC cable |
 
@@ -200,13 +200,13 @@ ESP32-S3 reads GPIO0 at boot: HIGH = normal boot, LOW = download mode. If SELECT
 If GPIO45 were HIGH at boot, the ESP32 would set VDD_SPI to 1.8V instead of 3.3V, causing the PSRAM and flash to malfunction. Our circuit prevents this because the backlight starts OFF.
 :::
 
-### GPIO44 (JOY_Y) — No ADC
+### GPIO43 (BTN_R) — Was TX0
 
-GPIO44 has no analog-to-digital converter. The joystick is **optional** (SNES games use only D-pad). If needed in the future, reassign JOY_Y to an ADC-capable GPIO (GPIO1–10).
+GPIO43 was previously reserved for UART debug (TX0). It is now assigned to BTN_R. UART debug is replaced by native USB (GPIO19/20 as USB_D-/D+).
 
-### JOY_X / JOY_Y nets — No traces
+### USB Native Data (GPIO19/20)
 
-The joystick nets have no PCB traces because the joystick is optional and not part of the v1.0 PCBA. These nets are reserved for a future revision.
+GPIO19 and GPIO20 carry USB D- and D+ for firmware flashing and CDC debug console. These pins connect to the USB-C connector alongside the power lines (VBUS/GND for charging via IP5306).
 
 ---
 

@@ -210,11 +210,11 @@
 <line x1="410.2" y1="277.6" x2="410.2" y2="134.36" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="383.0" y1="134.36" x2="375.0" y2="134.36" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="523.2" y1="142.6" x2="523.2" y2="282.4" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
-<line x1="425.8" y1="282.4" x2="425.8" y2="129.28" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
-<line x1="383.0" y1="129.28" x2="375.0" y2="129.28" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+<line x1="425.8" y1="282.4" x2="425.8" y2="119.12" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+<line x1="383.0" y1="119.12" x2="375.0" y2="119.12" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="138.79999999999995" y1="102.6" x2="138.79999999999995" y2="287.2" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
-<line x1="450.2" y1="287.2" x2="450.2" y2="124.2" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
-<line x1="383.0" y1="124.2" x2="375.0" y2="124.2" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+<line x1="450.2" y1="287.2" x2="450.2" y2="114.03999999999999" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+<line x1="383.0" y1="114.03999999999999" x2="375.0" y2="114.03999999999999" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="88.79999999999995" y1="142.6" x2="88.79999999999995" y2="292.0" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="478.2" y1="292.0" x2="478.2" y2="186.0" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="367.0" y1="186.0" x2="362.86" y2="186.0" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
@@ -239,8 +239,8 @@
 <line x1="370.0" y1="169.92000000000002" x2="375.0" y2="169.92000000000002" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="607.4" y1="54.0" x2="601.4" y2="54.0" stroke="#666666" stroke-width="0.96" stroke-linecap="round" opacity="0.7"/>
 <line x1="72.60000000000002" y1="30.0" x2="72.60000000000002" y2="280.0" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
-<line x1="286.0" y1="280.0" x2="286.0" y2="169.92000000000002" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
-<line x1="298.2" y1="169.92000000000002" x2="305.0" y2="169.92000000000002" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+<line x1="356.0" y1="280.0" x2="356.0" y2="129.28" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
+<line x1="368.2" y1="129.28" x2="375.0" y2="129.28" stroke="#c8a83e" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="87.39999999999998" y1="54.0" x2="81.39999999999998" y2="54.0" stroke="#666666" stroke-width="0.96" stroke-linecap="round" opacity="0.7"/>
 <line x1="491.8" y1="204.0" x2="491.8" y2="198.4" stroke="#ffaa44" stroke-width="0.96" stroke-linecap="round" opacity="0.7"/>
 <line x1="471.8" y1="204.0" x2="471.8" y2="198.4" stroke="#ffaa44" stroke-width="0.96" stroke-linecap="round" opacity="0.7"/>
@@ -462,18 +462,18 @@
 <circle cx="221.2" cy="92.0" r="0.7" fill="#1a1a1a"/>
 <circle cx="99.60000000000002" cy="92.0" r="1.4" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="99.60000000000002" cy="92.0" r="0.7" fill="#1a1a1a"/>
-<circle cx="126.20000000000005" cy="121.0" r="0.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="126.20000000000005" cy="121.0" r="0.4" fill="#1a1a1a"/>
-<circle cx="126.20000000000005" cy="129.0" r="0.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="126.20000000000005" cy="129.0" r="0.4" fill="#1a1a1a"/>
-<circle cx="126.20000000000005" cy="133.0" r="0.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="126.20000000000005" cy="133.0" r="0.4" fill="#1a1a1a"/>
+<circle cx="126.20000000000005" cy="121.0" r="0.9" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="126.20000000000005" cy="121.0" r="0.45" fill="#1a1a1a"/>
+<circle cx="126.20000000000005" cy="129.0" r="0.9" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="126.20000000000005" cy="129.0" r="0.45" fill="#1a1a1a"/>
+<circle cx="126.20000000000005" cy="133.0" r="0.9" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="126.20000000000005" cy="133.0" r="0.45" fill="#1a1a1a"/>
 <circle cx="88.0" cy="221.0" r="1.4" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="88.0" cy="221.0" r="0.7" fill="#1a1a1a"/>
-<circle cx="126.20000000000005" cy="171.0" r="0.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="126.20000000000005" cy="171.0" r="0.4" fill="#1a1a1a"/>
-<circle cx="126.20000000000005" cy="125.0" r="0.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="126.20000000000005" cy="125.0" r="0.4" fill="#1a1a1a"/>
+<circle cx="126.20000000000005" cy="171.0" r="0.9" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="126.20000000000005" cy="171.0" r="0.45" fill="#1a1a1a"/>
+<circle cx="126.20000000000005" cy="125.0" r="0.9" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="126.20000000000005" cy="125.0" r="0.45" fill="#1a1a1a"/>
 <circle cx="132.0" cy="221.0" r="1.4" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="132.0" cy="221.0" r="0.7" fill="#1a1a1a"/>
 <circle cx="371.2" cy="164.84" r="1.4" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
@@ -604,10 +604,10 @@
 <circle cx="523.2" cy="282.4" r="0.9" fill="#1a1a1a"/>
 <circle cx="425.8" cy="282.4" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="425.8" cy="282.4" r="0.9" fill="#1a1a1a"/>
-<circle cx="425.8" cy="129.28" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="425.8" cy="129.28" r="0.9" fill="#1a1a1a"/>
-<circle cx="383.0" cy="129.28" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="383.0" cy="129.28" r="0.9" fill="#1a1a1a"/>
+<circle cx="425.8" cy="119.12" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="425.8" cy="119.12" r="0.9" fill="#1a1a1a"/>
+<circle cx="383.0" cy="119.12" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="383.0" cy="119.12" r="0.9" fill="#1a1a1a"/>
 <circle cx="558.0" cy="159.4" r="1.4" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="558.0" cy="159.4" r="0.7" fill="#1a1a1a"/>
 <circle cx="138.79999999999995" cy="102.6" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
@@ -616,10 +616,10 @@
 <circle cx="138.79999999999995" cy="287.2" r="0.9" fill="#1a1a1a"/>
 <circle cx="450.2" cy="287.2" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="450.2" cy="287.2" r="0.9" fill="#1a1a1a"/>
-<circle cx="450.2" cy="124.2" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="450.2" cy="124.2" r="0.9" fill="#1a1a1a"/>
-<circle cx="383.0" cy="124.2" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="383.0" cy="124.2" r="0.9" fill="#1a1a1a"/>
+<circle cx="450.2" cy="114.04" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="450.2" cy="114.04" r="0.9" fill="#1a1a1a"/>
+<circle cx="383.0" cy="114.04" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="383.0" cy="114.04" r="0.9" fill="#1a1a1a"/>
 <circle cx="86.0" cy="119.4" r="1.4" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="86.0" cy="119.4" r="0.7" fill="#1a1a1a"/>
 <circle cx="88.79999999999995" cy="142.6" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
@@ -690,12 +690,12 @@
 <circle cx="601.4" cy="54.0" r="0.9" fill="#1a1a1a"/>
 <circle cx="72.60000000000002" cy="280.0" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="72.60000000000002" cy="280.0" r="0.9" fill="#1a1a1a"/>
-<circle cx="286.0" cy="280.0" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="286.0" cy="280.0" r="0.9" fill="#1a1a1a"/>
-<circle cx="286.0" cy="169.92" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="286.0" cy="169.92" r="0.9" fill="#1a1a1a"/>
-<circle cx="298.2" cy="169.92" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="298.2" cy="169.92" r="0.9" fill="#1a1a1a"/>
+<circle cx="356.0" cy="280.0" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="356.0" cy="280.0" r="0.9" fill="#1a1a1a"/>
+<circle cx="356.0" cy="129.28" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="356.0" cy="129.28" r="0.9" fill="#1a1a1a"/>
+<circle cx="368.2" cy="129.28" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="368.2" cy="129.28" r="0.9" fill="#1a1a1a"/>
 <circle cx="81.39999999999998" cy="54.0" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="81.39999999999998" cy="54.0" r="0.9" fill="#1a1a1a"/>
 <circle cx="491.8" cy="198.4" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>

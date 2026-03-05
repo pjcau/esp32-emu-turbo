@@ -159,8 +159,6 @@ NET_LIST = [
     (40, "USB_D+"), (41, "USB_D-"),
     # Audio output
     (42, "SPK+"), (43, "SPK-"),
-    # Joystick (optional)
-    (44, "JOY_X"), (45, "JOY_Y"),
     # IP5306 boost converter
     (46, "LX"), (47, "IP5306_KEY"),
     # USB CC pull-down

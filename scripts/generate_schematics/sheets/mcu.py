@@ -92,8 +92,8 @@ class MCUSheet(SchematicSheet):
         self.text("SD CARD", px_r + 28, MCU_Y - 18, 2, True)
         self.text("(SPI)", px_r + 28, MCU_Y - 14, 1.5)
 
-        self.text("JOYSTICK", px_r + 28, MCU_Y + 2, 2, True)
-        self.text("(ADC)", px_r + 28, MCU_Y + 6, 1.5)
+        self.text("USB", px_r + 28, MCU_Y + 2, 2, True)
+        self.text("(native)", px_r + 28, MCU_Y + 6, 1.5)
 
         # Generate GPIO labels with 15mm wire stubs
         for _pn, (side, gpio, yoff) in ESP_PINS.items():
@@ -102,10 +102,6 @@ class MCUSheet(SchematicSheet):
 
             if isinstance(gpio, int):
                 net = GPIO_NETS.get(gpio, f"GPIO{gpio}")
-            elif gpio == "TX0":
-                net = "UART_TX0"
-            elif gpio == "RX0":
-                net = GPIO_NETS.get(44, "JOY_Y")
             else:
                 net = gpio
 
@@ -149,16 +145,12 @@ class MCUSheet(SchematicSheet):
         ty += 5
         self.text("Face:  GPIO2=A 48=B 47=X 21=Y", tx, ty)
         ty += 5
-        self.text("Sys:   GPIO18=START 0=SELECT 35=L 19=R", tx, ty)
+        self.text("Sys:   GPIO18=START 0=SELECT 35=L 43=R", tx, ty)
         ty += 8
-        self.text("Joystick (ADC, optional):", tx, ty, 2, True)
+        self.text("USB (native, firmware flash + debug):", tx, ty, 2, True)
         ty += 5
-        self.text("GPIO20=X_AXIS (ADC2_CH9)", tx, ty)
-        ty += 5
-        self.text("GPIO44/RX0=Y_AXIS (ADC2_CH7)", tx, ty)
+        self.text("GPIO19=D-  GPIO20=D+", tx, ty)
         ty += 8
         self.text("Reserved (do not use):", tx, ty, 2, True)
         ty += 5
         self.text("GPIO26-32 = Octal PSRAM (internal)", tx, ty)
-        ty += 5
-        self.text("GPIO43 = TX0 (debug UART output)", tx, ty)

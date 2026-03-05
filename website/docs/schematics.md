@@ -33,9 +33,9 @@ Complete electrical design for the ESP32 Emu Turbo, split into 7 detailed schema
     <h4>6. Controls</h4>
     <p>12 buttons + debounce</p>
   </a>
-  <a href="#sheet-7--joystick" className="sheet-card">
-    <h4>7. Joystick</h4>
-    <p>PSP analog (optional)</p>
+  <a href="#sheet-7--usb-data" className="sheet-card">
+    <h4>7. USB Data</h4>
+    <p>Native USB (flash + debug)</p>
   </a>
 </div>
 
@@ -83,8 +83,8 @@ make render-schematics    # Export SVG + PDF
               │ 8080 ‖    │  └────────┘  │  └───┬────┘  └─────────┘
               └───────────┘              │      │
                                    ┌─────┴──┐  ┌┴─────────────┐
-                                   │Joystick│  │ESP32-S3-MINI │
-                                   │(opt.)  │  │  -1 (v2)     │
+                                   │USB Data│  │ESP32-S3-MINI │
+                                   │(D-/D+) │  │  -1 (v2)     │
                                    └────────┘  │  I2S → Audio │
                                                └──────────────┘
 ```
@@ -158,11 +158,11 @@ ESP32-S3-WROOM-1 N16R8 with all 35 GPIO connections grouped by function, decoupl
 | **D-pad** | 40, 41, 42, 1 | UP, DOWN, LEFT, RIGHT | GPIO |
 | **Face** | 2, 48, 47, 21 | A, B, X, Y | GPIO |
 | **System** | 18, 0 | START, SELECT | GPIO |
-| **Shoulder** | 35, 19 | L, R | GPIO |
-| **Joystick** | 20, 44 | JOY_X, JOY_Y | ADC |
+| **Shoulder** | 35, 43 | L, R | GPIO |
+| **USB Data** | 19, 20 | USB_D-, USB_D+ | USB |
 
 :::info Reserved GPIOs
-GPIO26–32 are used internally by the PSRAM. GPIO43 (TX0) is reserved for debug UART.
+GPIO26–32 are used internally by the PSRAM. GPIO19/20 are the native USB D-/D+ pins (firmware flash + debug console via USB CDC).
 :::
 
 ---
@@ -261,31 +261,23 @@ SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module ha
 | D-pad | UP, DOWN, LEFT, RIGHT | 40, 41, 42, 1 |
 | Face | A, B, X, Y | 2, 48, 47, 21 |
 | System | START, SELECT | 18, 0 |
-| Shoulder | L, R | 35, 19 |
+| Shoulder | L, R | 35, 43 |
 
 ---
 
-## Sheet 7 — Joystick
+## Sheet 7 — USB Data
 
-PSP-style analog joystick (optional) with 2 ADC channels.
+Native USB data lines for firmware flashing and debug console (replaces UART debug).
 
-<div className="schematic-container">
+| Signal | GPIO | Function |
+|--------|------|----------|
+| USB_D- | GPIO19 | USB data minus (native USB) |
+| USB_D+ | GPIO20 | USB data plus (native USB) |
 
-![Joystick Schematic](/img/schematics/07-joystick.svg)
+USB-C now carries both **power** (charging via IP5306) and **data** (firmware flash + CDC debug console). This replaces the previous UART debug approach (GPIO43 TX0) with native USB, which is faster and requires no external UART adapter.
 
-</div>
-
-<a className="pdf-download" href="/img/schematics/07-joystick.pdf" target="_blank">PDF</a>
-
-| Signal | GPIO | ADC Channel | Range |
-|--------|------|-------------|-------|
-| X axis | GPIO20 | ADC2_CH9 | 0–3.3V, center ~1.65V |
-| Y axis | GPIO44 (RX0) | ADC2_CH7 | 0–3.3V, center ~1.65V |
-
-The joystick is optional — the D-pad provides full SNES control. 12-bit ADC resolution (4096 steps).
-
-:::caution
-GPIO44 shares the RX0 UART pin. When the joystick is connected, debug UART input is unavailable (TX0 on GPIO43 still works for output).
+:::info Joystick removed
+The optional PSP joystick (previously GPIO20/GPIO44) has been removed. The D-pad provides full SNES/NES control. GPIO43 (previously TX0 for UART debug) is now used for BTN_R.
 :::
 
 ---
@@ -311,7 +303,7 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 | SPI_CLK | GPIO 15 (was I2S_BCLK) | GPIO 12 | Main → MINI-1 |
 | SPI_MOSI | GPIO 16 (was I2S_LRCLK) | GPIO 11 | Main → MINI-1 |
 | SPI_MISO | GPIO 17 (was I2S_DOUT) | GPIO 13 | MINI-1 → Main |
-| SPI_CS | GPIO 20 (was JOY_X) | GPIO 10 | Main → MINI-1 |
+| SPI_CS | GPIO 20 (was USB_D+) | GPIO 10 | Main → MINI-1 |
 
 ### I2S Bus (Coprocessor → PAM8403)
 
@@ -328,8 +320,8 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 | GPIO 15 | I2S_BCLK → PAM8403 | SPI_CLK → MINI-1 | Audio path moves to coprocessor |
 | GPIO 16 | I2S_LRCLK → PAM8403 | SPI_MOSI → MINI-1 | Audio path moves to coprocessor |
 | GPIO 17 | I2S_DOUT → PAM8403 | SPI_MISO ← MINI-1 | Audio path moves to coprocessor |
-| GPIO 20 | Joystick X (optional) | SPI_CS → MINI-1 | Joystick X sacrificed for coprocessor |
+| GPIO 20 | USB_D+ (native USB) | SPI_CS → MINI-1 | USB D+ reassigned for coprocessor |
 
 :::tip Clean GPIO reuse
-The 3 I2S pins freed by moving audio to the coprocessor are reused for SPI communication — no GPIOs wasted. Only the optional joystick X-axis (GPIO 20) is sacrificed for the SPI chip select.
+The 3 I2S pins freed by moving audio to the coprocessor are reused for SPI communication — no GPIOs wasted. GPIO 20 (USB_D+ in v1) is reassigned to SPI chip select; in v2, USB native data is no longer available (debug via SPI or UART instead).
 :::

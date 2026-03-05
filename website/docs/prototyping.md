@@ -143,18 +143,15 @@ For each button, wire a 6x6mm tact switch with a 10kΩ pull-up resistor:
 | START | GPIO18 | Orange |
 | SELECT | GPIO0 | Orange |
 | L | GPIO35 | Purple |
-| R | GPIO19 | Purple |
+| R | GPIO43 | Purple |
 
-### Step 7: Joystick (Optional)
+### Step 7: USB Data (Native USB)
 
-Connect the PSP-style joystick:
+GPIO19 and GPIO20 are used for native USB data (D-/D+). On the DevKit, these are already connected to the USB-C connector — no additional wiring needed. USB-C now carries both power (charging) and data (firmware flash + debug console).
 
-| Joystick Pin | Wire to |
-|---|---|
-| VCC | 3.3V rail |
-| GND | GND rail |
-| X axis | GPIO20 (ADC) |
-| Y axis | GPIO33 (ADC) |
+:::info Joystick removed
+The optional PSP joystick has been removed from the design. The D-pad provides full SNES/NES control.
+:::
 
 ## Wiring Checklist
 

@@ -259,12 +259,13 @@ All 33 GPIO pins have been cross-verified between three sources with **zero disc
 | D-pad | GPIO 40, 41, 42, 1 | ✅ | ✅ | ✅ |
 | Face buttons | GPIO 2, 48, 47, 21 | ✅ | ✅ | ✅ |
 | System buttons | GPIO 18, 0 | ✅ | ✅ | ✅ |
-| Shoulder buttons | GPIO 35, 19 | ✅ | ✅ | ✅ |
+| Shoulder buttons | GPIO 35, 43 | ✅ | ✅ | ✅ |
 | I2C (IP5306) | GPIO 33, 34 | ✅ | ✅ | ✅ |
 
 **Notes:**
 - MENU and SELECT share GPIO 0 in Retro-Go (intentional — 12 physical buttons, 13 logical)
-- Joystick (GPIO 20, 44) is in the schematic but optional (not in firmware config)
+- GPIO 19/20 are used for native USB data (D-/D+) — firmware flash + CDC debug console
+- GPIO 43 is BTN_R (was TX0 UART debug, replaced by USB native)
 - GPIO 26–32 are reserved for Octal PSRAM (cannot be used)
 
 #### Display driver: `st7796s_i80.h`
@@ -817,7 +818,7 @@ GPIO 17 (I2S_DOUT)         ───────→ PAM8403 DIN
 
 **Notes:**
 - The main ESP32-S3's I2S pins (GPIO 15–17) become SPI pins in v2 — clean reuse, no wasted GPIOs.
-- GPIO 20 (was optional joystick X-axis in v1) serves as SPI chip select. The joystick Y-axis (GPIO 44) remains available for a single-axis input if needed.
+- GPIO 20 (USB_D+ in v1) serves as SPI chip select in v2. Native USB is no longer available in v2 (debug via SPI or UART instead).
 - The MINI-1 uses its own GPIO 15–17 for I2S output to the PAM8403 — the same pin numbers as v1, making the audio output path identical.
 
 #### Performance: v1 vs v2

@@ -10,8 +10,8 @@ GPIO_NETS: dict[int, str] = {
     15: "I2S_BCLK", 16: "I2S_LRCK", 17: "I2S_DOUT",
     40: "BTN_UP", 41: "BTN_DOWN", 42: "BTN_LEFT", 1: "BTN_RIGHT",
     2: "BTN_A", 48: "BTN_B", 47: "BTN_X", 21: "BTN_Y",
-    18: "BTN_START", 0: "BTN_SELECT", 35: "BTN_L", 19: "BTN_R",
-    20: "JOY_X", 44: "JOY_Y",
+    18: "BTN_START", 0: "BTN_SELECT", 35: "BTN_L", 43: "BTN_R",
+    19: "USB_D-", 20: "USB_D+",
 }
 
 # ESP32-S3 pin# -> (side, gpio#_or_name, y_offset_from_center)
@@ -26,7 +26,7 @@ ESP_PINS: dict[int, tuple] = {
     24: ("R", 47, 27.94), 25: ("R", 48, 25.4), 26: ("R", 45, 22.86), 27: ("R", 0, 20.32),
     28: ("R", 35, 17.78), 29: ("R", 36, 15.24), 30: ("R", 37, 12.7), 31: ("R", 38, 10.16),
     32: ("R", 39, 7.62), 33: ("R", 40, 5.08), 34: ("R", 41, 2.54), 35: ("R", 42, 0),
-    36: ("R", "TX0", -5.08), 37: ("R", "RX0", -7.62), 38: ("R", 1, -10.16), 39: ("R", 2, -12.7),
+    36: ("R", 43, -5.08), 37: ("R", 44, -7.62), 38: ("R", 1, -10.16), 39: ("R", 2, -12.7),
     40: ("B", "GND", 0), 41: ("B", "GND", 2.54),
 }
 
@@ -43,7 +43,7 @@ BUTTON_NETS = [
     "BTN_A", "BTN_B", "BTN_X", "BTN_Y",
     "BTN_START", "BTN_SELECT", "BTN_L", "BTN_R",
 ]
-JOYSTICK_NETS = ["JOY_X", "JOY_Y"]
+USB_DATA_NETS = ["USB_D+", "USB_D-"]
 
 
 def _get_sheet_defs():
@@ -54,7 +54,6 @@ def _get_sheet_defs():
     from .sheets.audio import AudioSheet
     from .sheets.sd_card import SDCardSheet
     from .sheets.controls import ControlsSheet
-    from .sheets.joystick import JoystickSheet
 
     return [
         {"filename": "01-power-supply.kicad_sch", "module": PowerSupplySheet},
@@ -63,7 +62,6 @@ def _get_sheet_defs():
         {"filename": "04-audio.kicad_sch", "module": AudioSheet},
         {"filename": "05-sd-card.kicad_sch", "module": SDCardSheet},
         {"filename": "06-controls.kicad_sch", "module": ControlsSheet},
-        {"filename": "07-joystick.kicad_sch", "module": JoystickSheet},
     ]
 
 

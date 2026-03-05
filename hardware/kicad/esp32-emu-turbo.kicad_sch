@@ -81,17 +81,6 @@
       (at 202 182 0)
       (effects (font (size 1.27 1.27))))
   )
-  (sheet (at 40 195) (size 120 30)
-    (stroke (width 0.001) (type solid))
-    (fill (type none))
-    (uuid "00000008-cafe-4000-8000-000000000008")
-    (property "Sheetname" "Joystick"
-      (at 42 193 0)
-      (effects (font (size 1.27 1.27))))
-    (property "Sheetfile" "07-joystick.kicad_sch"
-      (at 42 227 0)
-      (effects (font (size 1.27 1.27))))
-  )
 
   (sheet_instances
     (path "/" (page "1"))
@@ -101,6 +90,5 @@
     (path "/00000005-cafe-4000-8000-000000000005" (page "5"))
     (path "/00000006-cafe-4000-8000-000000000006" (page "6"))
     (path "/00000007-cafe-4000-8000-000000000007" (page "7"))
-    (path "/00000008-cafe-4000-8000-000000000008" (page "8"))
   )
 )

@@ -17,7 +17,6 @@ SHEETS=(
     "04-audio"
     "05-sd-card"
     "06-controls"
-    "07-joystick"
 )
 
 echo "==> Exporting ${#SHEETS[@]} schematic sheets to SVG..."

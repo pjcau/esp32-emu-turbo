@@ -121,7 +121,7 @@ These components are **NOT provided by JLCPCB** and must be purchased from AliEx
 | **LiPo 3.7V 5000mAh** (105080)                       | ~$6-8  | Plug into JST PH connector (J3)                         | No — plug-in connector |
 | **ILI9488 3.95" bare LCD panel** (40P FPC, touch NC) | ~$3.95 | Insert 40-pin FPC ribbon into J4 connector, close latch | No — plug-in FPC       |
 | **28mm 8Ω speaker**                                  | ~$0.80 | Solder 2 wires to pads on PCB                           | Yes — 2 solder points  |
-| **PSP joystick** (optional)                          | ~$2    | Solder to pin header on PCB                             | Yes — 4 solder points  |
+| ~~PSP joystick~~ (removed)                           | —      | Removed — GPIOs reassigned to USB data and BTN_R        | —                      |
 
 :::tip Display purchase
 Buy the **bare LCD panel** (NOT a module with PCB breakout):
@@ -171,7 +171,7 @@ The design uses a **hierarchical schematic** with a root file referencing 7 sub-
 | 4     | `04-audio.kicad_sch`        | PAM8403 + speaker (SPK1)                            |
 | 5     | `05-sd-card.kicad_sch`      | Micro SD SPI interface                              |
 | 6     | `06-controls.kicad_sch`     | 13 buttons + pull-ups + debounce caps               |
-| 7     | `07-joystick.kicad_sch`     | PSP joystick (optional)                             |
+| 7     | `07-usb-data.kicad_sch`     | Native USB data (D-/D+, firmware flash + debug)     |
 
 Total: **68 unique component references** across all sheets, **65 assembled by JLCPCB**.
 
@@ -289,14 +289,14 @@ Script: `python3 scripts/short_circuit_analysis.py`
 **GPIO Mapping:**
 - 35/45 GPIOs used, no conflicts with PSRAM (GPIO 26-32)
 - Strapping pins documented (GPIO0, GPIO3, GPIO45, GPIO46)
-- Joystick optional: GPIO44 (JOY_Y) needs reassignment for ADC
+- GPIO19/20 used for native USB data (D-/D+); GPIO43 reassigned from TX0 to BTN_R
 
 Script: `python3 scripts/simulate_circuit.py`
 
 ### Schematic/PCB Consistency — PASS
 
 - All **64 JLCPCB CPL components** matched between schematic, PCB, and CPL
-- 4 off-board components excluded: battery (BT1), display module (U4), joystick (J2), speaker (SPK1)
+- 3 off-board components excluded: battery (BT1), display module (U4), speaker (SPK1)
 - PCB: 241 trace segments, 202 vias, 45 nets, 65 footprints
 
 Script: `python3 scripts/verify_schematic_pcb.py`
@@ -343,7 +343,7 @@ The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom s
 | GPIO 15 (main ESP32) | I2S_BCLK → PAM8403    | SPI_CLK → U7 (MINI-1)  |
 | GPIO 16 (main ESP32) | I2S_LRCLK → PAM8403   | SPI_MOSI → U7 (MINI-1) |
 | GPIO 17 (main ESP32) | I2S_DOUT → PAM8403    | SPI_MISO ← U7 (MINI-1) |
-| GPIO 20 (main ESP32) | Joystick X (optional) | SPI_CS → U7 (MINI-1)   |
+| GPIO 20 (main ESP32) | USB_D+ (native USB)   | SPI_CS → U7 (MINI-1)   |
 | U7 GPIO 15           | —                     | I2S_BCLK → PAM8403     |
 | U7 GPIO 16           | —                     | I2S_LRCLK → PAM8403    |
 | U7 GPIO 17           | —                     | I2S_DOUT → PAM8403     |

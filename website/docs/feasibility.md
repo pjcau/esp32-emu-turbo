@@ -55,9 +55,9 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
               +------------+              |              | L, R    |
                                           |              +---------+
                                     +-----+-----+
-                                    | Joystick  |
-                                    | PSP-style |
-                                    | (optional)|
+                                    | USB Data  |
+                                    | D-/D+     |
+                                    | (native)  |
                                     +-----------+
 ```
 
@@ -70,7 +70,7 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
 | SD Card | SPI | ~4 (MOSI, MISO, CLK, CS) |
 | Buttons (12 keys: D-pad, A, B, X, Y, Start, Select, L, R) | Direct GPIO | ~12 |
 | Audio DAC (I2S) | I2S | ~3 (BCLK, LRCK, DATA) |
-| Analog joystick | ADC | ~2 (X, Y) |
+| USB data (native) | USB | ~2 (D-, D+) |
 | **Total (8-bit display)** | | **~34** |
 | **Total (SPI display)** | | **~26** |
 

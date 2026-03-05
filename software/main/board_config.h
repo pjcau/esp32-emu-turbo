@@ -71,7 +71,12 @@
 #define BTN_START            GPIO_NUM_18
 #define BTN_SELECT          GPIO_NUM_0
 #define BTN_L               GPIO_NUM_35
-#define BTN_R               GPIO_NUM_19
+#define BTN_R               GPIO_NUM_43
+
+/* ── USB: native USB on ESP32-S3 (firmware flashing + debug) ────── */
+
+#define USB_DP              GPIO_NUM_20
+#define USB_DN              GPIO_NUM_19
 
 /* Button bitmask positions */
 #define BTN_MASK_UP         (1 << 0)
