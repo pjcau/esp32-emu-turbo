@@ -1,0 +1,27 @@
+# .claudeignore — Patterns for files Claude should NOT access directly
+# Uses gitignore-style glob patterns
+# Adapted from RobinHamers/claude_hooks
+
+# Secrets and credentials
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*credentials*
+
+# Large binary files (waste tokens if read)
+*.zip
+*.gz
+*.tar
+*.bin
+*.elf
+*.hex
+
+# Node modules
+node_modules/
+
+# Build artifacts
+software/build/
+website/build/
+website/.docusaurus/
