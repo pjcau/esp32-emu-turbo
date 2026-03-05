@@ -51,3 +51,6 @@ hardware/kicad/~*.lck
 
 # Pipeline checkpoint (runtime state for pipeline-resume skill)
 .claude/pipeline-checkpoint.json
+
+# Claude Code compaction backups (runtime artifacts from pre-compact-backup hook)
+.claude/backups/

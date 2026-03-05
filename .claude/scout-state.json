@@ -1,5 +1,5 @@
 {
-  "last_run": "2026-03-05T10:30:00Z",
+  "last_run": "2026-03-05T18:00:00Z",
   "seen_repos": [
     "agent-sh/agentsys",
     "agent-sh/agnix",
@@ -81,7 +81,13 @@
     "more-io/claude-apple-bridges",
     "cuemath/dotclaude",
     "insightflo/claude-imple-skills",
-    "xiaowangzi-rgb/sentry-query-skill"
+    "xiaowangzi-rgb/sentry-query-skill",
+    "Edmonds-Commerce-Limited/claude-code-hooks-daemon",
+    "dlaww-wq/mindmap-viewer",
+    "RobinHamers/claude_hooks",
+    "sametacar/claude-sounds",
+    "delphinus/homebrew-claude-code-hooks",
+    "Mohammadjavad2412/claude"
   ],
   "integrated_patterns": [
     "enforce-script-failure-report",
@@ -95,7 +101,9 @@
     "prompt-skill-suggest",
     "context-bundle-builder",
     "pipeline-checkpoint-resume",
-    "context-budget-discipline"
+    "context-budget-discipline",
+    "pre-compact-backup",
+    "claudeignore-guard"
   ],
-  "search_rotation_index": 2
+  "search_rotation_index": 5
 }
