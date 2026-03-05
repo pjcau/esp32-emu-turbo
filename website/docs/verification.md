@@ -210,12 +210,114 @@ GPIO19 and GPIO20 carry USB D- and D+ for firmware flashing and CDC debug consol
 
 ---
 
+## 4. Pre-Production Net Audit
+
+Full audit of every ESP32-S3 GPIO connection, verified across four sources: `config.py` (GPIO mapping), PCB traces, `board_config.h` (firmware), and documentation.
+
+### Display — 8080 Parallel (14/14 routed)
+
+| GPIO | Signal | Net | Segments | Vias | Status |
+|:-----|:-------|:----|:---------|:-----|:-------|
+| 4 | LCD_D0 | 6 | 6 | 4 | OK |
+| 5 | LCD_D1 | 7 | 6 | 4 | OK |
+| 6 | LCD_D2 | 8 | 6 | 4 | OK |
+| 7 | LCD_D3 | 9 | 6 | 4 | OK |
+| 8 | LCD_D4 | 10 | 10 | 6 | OK |
+| 9 | LCD_D5 | 11 | 6 | 4 | OK |
+| 10 | LCD_D6 | 12 | 7 | 4 | OK |
+| 11 | LCD_D7 | 13 | 7 | 4 | OK |
+| 12 | LCD_CS | 14 | 10 | 6 | OK |
+| 13 | LCD_RST | 15 | 6 | 4 | OK |
+| 14 | LCD_DC | 16 | 10 | 6 | OK |
+| 46 | LCD_WR | 17 | 8 | 6 | OK |
+| 3 | LCD_RD | 18 | 6 | 4 | OK |
+| 45 | LCD_BL | 19 | 6 | 4 | OK |
+
+### SD Card — SPI (4/4 routed)
+
+| GPIO | Signal | Net | Segments | Vias | Status |
+|:-----|:-------|:----|:---------|:-----|:-------|
+| 36 | SD_MOSI | 20 | 7 | 6 | OK |
+| 37 | SD_MISO | 21 | 7 | 6 | OK |
+| 38 | SD_CLK | 22 | 7 | 6 | OK |
+| 39 | SD_CS | 23 | 7 | 6 | OK |
+
+### Audio — I2S + PAM8403 (3/3 routed)
+
+| GPIO | Signal | Net | Segments | Vias | Status |
+|:-----|:-------|:----|:---------|:-----|:-------|
+| 17 | I2S_DOUT | 26 | 5 | 2 | OK |
+| — | SPK+ | 42 | 4 | 2 | OK |
+| — | SPK- | 43 | 3 | 2 | OK |
+
+:::info I2S_BCLK and I2S_LRCK — intentionally unrouted
+GPIO15 (I2S_BCLK, net 24) and GPIO16 (I2S_LRCK, net 25) are allocated in the ESP-IDF I2S driver but have **no PCB traces by design**. The PAM8403 is an analog Class-D amplifier — it has no I2S input. Only I2S_DOUT carries the audio signal (PDM/sigma-delta) to the PAM8403 analog inputs (INR/INL).
+:::
+
+### Buttons — GPIO Input (12/12 routed)
+
+| GPIO | Signal | Net | Segments | Vias | Status |
+|:-----|:-------|:----|:---------|:-----|:-------|
+| 40 | BTN_UP | 27 | 7 | 5 | OK |
+| 41 | BTN_DOWN | 28 | 7 | 5 | OK |
+| 42 | BTN_LEFT | 29 | 7 | 5 | OK |
+| 1 | BTN_RIGHT | 30 | 7 | 5 | OK |
+| 2 | BTN_A | 31 | 7 | 5 | OK |
+| 48 | BTN_B | 32 | 8 | 5 | OK |
+| 47 | BTN_X | 33 | 8 | 5 | OK |
+| 21 | BTN_Y | 34 | 8 | 5 | OK |
+| 18 | BTN_START | 35 | 7 | 5 | OK |
+| 0 | BTN_SELECT | 36 | 8 | 5 | OK |
+| 35 | BTN_L | 37 | 5 | 2 | OK |
+| 43 | BTN_R | 38 | 6 | 4 | OK |
+
+### USB — Native (5/5 routed)
+
+| GPIO | Signal | Net | Segments | Vias | Status |
+|:-----|:-------|:----|:---------|:-----|:-------|
+| 20 | USB_D+ | 40 | 5 | 2 | OK |
+| 19 | USB_D- | 41 | 4 | 2 | OK |
+| — | VBUS | 2 | 7 | 3 | OK |
+| — | USB_CC1 | 48 | 3 | 0 | OK |
+| — | USB_CC2 | 49 | 3 | 2 | OK |
+
+### Power (5/5 routed)
+
+| Signal | Net | Segments | Vias | Status |
+|:-------|:----|:---------|:-----|:-------|
+| GND | 1 | 66 | 49 | OK |
+| VBUS | 2 | 7 | 3 | OK |
+| +5V | 3 | 12 | 7 | OK |
+| +3V3 | 4 | 26 | 21 | OK |
+| BAT+ | 5 | 12 | 6 | OK |
+| LX | 46 | 3 | 0 | OK |
+
+### Summary
+
+| Category | Routed | Total | Result |
+|:---------|:-------|:------|:-------|
+| Display (8080) | 14 | 14 | **PASS** |
+| SD Card (SPI) | 4 | 4 | **PASS** |
+| Audio (I2S) | 3 | 3 | **PASS** |
+| Buttons | 12 | 12 | **PASS** |
+| USB (native) | 5 | 5 | **PASS** |
+| Power | 6 | 6 | **PASS** |
+| **Total** | **44** | **44** | **ALL PASS** |
+
+Cross-reference validation:
+- `config.py` ↔ `board_config.h`: all GPIO assignments match
+- `config.py` ↔ `snes-hardware.md`: all documentation matches
+- `_PIN_TO_GPIO` mapping: 36 pins verified, all correct
+- Zero orphaned nets (all defined signals are routed or intentionally unconnected)
+
+---
+
 ## Running Verification
 
 ### Fast commands (recommended)
 
 ```bash
-# Quick DFM check — 31 tests, 1.4s, no Docker needed
+# Quick DFM check — 88 tests, ~2s, no Docker needed
 make verify-fast
 
 # Full pipeline — generate + DFM + DRC + gerbers + connectivity (~5s)
@@ -257,7 +359,7 @@ make verify-all    # DRC + simulation + consistency + short circuit
 Or individually:
 
 ```bash
-python3 scripts/verify_dfm_v2.py         # 31 DFM guard tests
+python3 scripts/verify_dfm_v2.py         # 88 DFM guard tests
 python3 scripts/drc_native.py --run      # JLCPCB design rules (smart analysis)
 python3 scripts/simulate_circuit.py      # Power/timing simulation
 python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync
