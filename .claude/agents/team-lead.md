@@ -99,6 +99,17 @@ Task(subagent_type="cad-engineer", model="haiku", ...)
 
 **When to escalate to Opus**: If a teammate's task involves ambiguous requirements, complex cross-domain reasoning, or novel architectural decisions, consider using `opus` instead.
 
+## Context Budget Discipline
+
+Long pipeline runs (generate -> verify -> release) consume significant context. Follow these rules to prevent context exhaustion:
+
+1. **Load files just-in-time** -- do not pre-read files that might be needed later. Read them only when the current step requires them.
+2. **Prefer summary over raw output** -- when a verification script outputs 64 test results, summarize as "62/64 pass, 2 failures: [list]" instead of pasting the full output.
+3. **Delegate heavy steps to subagents** -- each subagent gets its own context window. A PCB generate + verify + release pipeline should use 2-3 subagents, not one monolithic run.
+4. **Use /pipeline-resume for retries** -- if a pipeline fails mid-run, use `/pipeline-resume` to restart from the last checkpoint instead of re-running everything.
+5. **Prune intermediate output** -- after a step succeeds, you only need its summary (pass/fail + key metrics), not the full log.
+6. **Max 3 file reads per delegation** -- when giving context to a subagent, include at most 3 relevant files. Point to CLAUDE.md and MEMORY.md for the rest.
+
 ## Communication Style
 
 - Be concise and action-oriented

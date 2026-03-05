@@ -80,6 +80,16 @@
         ]
       },
       {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/context-bundle-builder.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Edit",
         "hooks": [
           {
@@ -91,6 +101,11 @@
             "type": "command",
             "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(generate_pcb/|release_jlcpcb/|footprints|jlcpcb_export|\\.kicad_pcb)'; then echo '\\n>>> PCB/PCBA file modified — remember to run DFA verification: python3 scripts/verify_dfa.py'; fi",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/context-bundle-builder.py",
+            "timeout": 5
           }
         ]
       },
@@ -101,6 +116,11 @@
             "type": "command",
             "command": "if echo \"$CLAUDE_FILE_PATH\" | grep -qE '(generate_pcb/|release_jlcpcb/|footprints|jlcpcb_export|\\.kicad_pcb)'; then echo '\\n>>> PCB/PCBA file modified — remember to run DFA verification: python3 scripts/verify_dfa.py'; fi",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/context-bundle-builder.py",
+            "timeout": 5
           }
         ]
       }
