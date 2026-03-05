@@ -111,6 +111,11 @@ if echo "$PROMPT_LC" | grep -qE '\b(stl|export|print)\b.*\b(enclosure|case)\b'; 
     SUGGESTIONS="$SUGGESTIONS /enclosure-export (STL export),"
 fi
 
+# --- Pipeline resume ---
+if echo "$PROMPT_LC" | grep -qE '\b(resume|continue|retry)\b.*\b(pipeline|generate|release)\b|\bpipeline.*fail'; then
+    SUGGESTIONS="$SUGGESTIONS /pipeline-resume (resume failed pipeline),"
+fi
+
 # --- Scout ---
 if echo "$PROMPT_LC" | grep -qE '\b(scout|discover|search.*pattern|find.*skill)\b'; then
     SUGGESTIONS="$SUGGESTIONS /scout (pattern discovery),"
