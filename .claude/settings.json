@@ -23,6 +23,16 @@
         ]
       },
       {
+        "matcher": "Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/check-claudeignore.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
         "matcher": "Edit",
         "hooks": [
           {
@@ -33,6 +43,11 @@
           {
             "type": "command",
             "command": "./.claude/hooks/pre-pcb-edit-guard.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/check-claudeignore.sh",
             "timeout": 5
           }
         ]
@@ -49,6 +64,11 @@
             "type": "command",
             "command": "./.claude/hooks/pre-pcb-edit-guard.sh",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/check-claudeignore.sh",
+            "timeout": 5
           }
         ]
       },
@@ -58,6 +78,11 @@
           {
             "type": "command",
             "command": "./.claude/hooks/pre-safety-guard.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/check-claudeignore.sh",
             "timeout": 5
           }
         ]
@@ -121,6 +146,17 @@
             "type": "command",
             "command": "./.claude/hooks/context-bundle-builder.py",
             "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./.claude/hooks/pre-compact-backup.py",
+            "timeout": 10
           }
         ]
       }

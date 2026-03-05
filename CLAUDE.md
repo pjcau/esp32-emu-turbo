@@ -191,9 +191,11 @@ graph TB
 | UserPromptSubmit | (all prompts) | Suggests relevant skills based on keyword matching |
 | PreToolUse | `Bash`, `Edit`, `Write`, `Read` | Safety guard (prevents dangerous operations) |
 | PreToolUse | `Edit`, `Write` | PCB edit guard (prevents direct .kicad_pcb edits) |
+| PreToolUse | `Read`, `Edit`, `Write`, `Grep` | .claudeignore guard (blocks access to ignored files) |
 | PostToolUse | `Bash` (generate_pcb/release) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
 | PostToolUse | `Bash` (project scripts) | Enforces failure reporting before manual workarounds |
 | PostToolUse | `Edit`, `Write` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| PreCompact | (before compaction) | Saves session state backup to `.claude/backups/` |
 | Stop | (after response) | Auto-runs DFM verification if PCB files changed |
 
 **MANDATORY**: After ANY change to PCB generator, footprints, routing, BOM, CPL, or JLCPCB export files, you MUST run `python3 scripts/verify_dfa.py` and confirm all 9 checks pass before committing.
