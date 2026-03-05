@@ -45,3 +45,6 @@ hardware/kicad/~*.lck
 
 # Claude Code local settings (personal overrides)
 .claude/settings.local.json
+
+# Claude Code session logs (runtime artifacts from context-bundle-builder)
+.claude/session_logs/
