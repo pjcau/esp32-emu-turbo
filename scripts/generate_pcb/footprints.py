@@ -317,14 +317,15 @@ def tf01a(layer="B"):
         pads.append(_pad(name, "smd", "rect", x, y, w, h, layers))
 
     # NPTH locating holes
+    # Datasheet: component pegs fit ø1.00mm holes (PCB Layout "2-∅1.00")
     pads.append(
         f'    (pad "" np_thru_hole circle (at -4.95 5.566)'
-        f' (size 0.5 0.5) (drill 0.5)'
+        f' (size 1.0 1.0) (drill 1.0)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
     pads.append(
         f'    (pad "" np_thru_hole circle (at 3.05 5.566)'
-        f' (size 0.5 0.5) (drill 0.5)'
+        f' (size 1.0 1.0) (drill 1.0)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
 
@@ -382,14 +383,15 @@ def msk12c02(layer="B"):
     pads.append(_pad("4d", "smd", "rect", 3.6, 1.7, 1.2, 0.7, layers))
 
     # NPTH mounting holes
+    # Datasheet: component pegs are ø0.75mm, PCB holes ø0.90mm (0.15mm clearance)
     pads.append(
         f'    (pad "" np_thru_hole circle (at -1.5 0.55)'
-        f' (size 0.45 0.45) (drill 0.45)'
+        f' (size 0.9 0.9) (drill 0.9)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
     pads.append(
         f'    (pad "" np_thru_hole circle (at 1.5 0.55)'
-        f' (size 0.45 0.45) (drill 0.45)'
+        f' (size 0.9 0.9) (drill 0.9)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
 
