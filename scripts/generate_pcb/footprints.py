@@ -253,14 +253,15 @@ def usb_c_16p(layer="B"):
                      drill=0.60, solder_mask_margin=-0.1))
 
     # NPTH positioning holes (no pad, no net)
+    # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm
     pads.append(
         f'    (pad "" np_thru_hole circle (at -2.89 -1.305)'
-        f' (size 0.35 0.35) (drill 0.35)'
+        f' (size 0.65 0.65) (drill 0.65)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
     pads.append(
         f'    (pad "" np_thru_hole circle (at 2.89 -1.305)'
-        f' (size 0.35 0.35) (drill 0.35)'
+        f' (size 0.65 0.65) (drill 0.65)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
 
