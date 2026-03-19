@@ -1444,7 +1444,9 @@ def test_drill_trace_clearance():
     # → 43 (JLCPCB footprint alignment: pad position shifts)
     # → 50 (BTN_R rerouted GPIO19→GPIO43; FPC GND vias 0.15→0.20mm drill;
     #        _PIN_TO_GPIO fix for pins 36-39: BTN_RIGHT/BTN_A paths changed)
-    BASELINE = 50
+    # → 51 (NPTH holes enlarged: TF-01A ø0.5→ø1.0, MSK12C02 ø0.45→ø0.9,
+    #        USB-C ø0.35→ø0.65 — per manufacturer datasheets)
+    BASELINE = 51
     check(
         f"Drill-to-trace violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(unique_drills)} holes × {len(segs)} segs)",
