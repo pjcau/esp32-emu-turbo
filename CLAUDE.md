@@ -60,7 +60,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 ```
 team-lead (sonnet) ──── orchestrator, 0 skills
   ├── pcb-engineer (opus) ───── 20 skills
-  ├── software-dev (opus) ───── 3 skills
+  ├── software-dev (opus) ───── 4 skills
   └── cad-engineer (haiku) ──── 3 skills
 
 plan-reviewer (opus) ── pre-implementation plan review (PCB/routing/BOM changes)
@@ -75,7 +75,7 @@ PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
 SW  ↔ CAD: website/docs/  (renders + documentation)
 ```
 
-### Skills Map (29 total)
+### Skills Map (30 total)
 
 #### PCB-Engineer — 21 skills
 
@@ -88,13 +88,14 @@ SW  ↔ CAD: website/docs/  (renders + documentation)
 
 **Workflow pipeline:** `/pcb-schematic` → `/pcb-board` → `/pcb-components` → `/pcb-routing` → `/generate` → `/verify` → `/release`
 
-#### Software-Dev — 3 skills
+#### Software-Dev — 4 skills
 
 | Skill | Description |
 |-------|-------------|
 | `/firmware-build` | Build, flash, test ESP-IDF firmware via Docker |
 | `/firmware-sync` | Verify GPIO pins match between firmware and schematic |
 | `/website-dev` | Develop, build, deploy Docusaurus website |
+| `/doc` | Audit docs against source-of-truth files, fix outdated values |
 
 #### CAD-Engineer — 3 skills
 
@@ -116,7 +117,7 @@ SW  ↔ CAD: website/docs/  (renders + documentation)
 graph TB
     TL["TEAM-LEAD<br/><i>sonnet • orchestrator</i>"]
     PCB["PCB-ENGINEER<br/><i>opus • 20 skills</i>"]
-    SW["SOFTWARE-DEV<br/><i>opus • 3 skills</i>"]
+    SW["SOFTWARE-DEV<br/><i>opus • 4 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>haiku • 3 skills</i>"]
 
     TL -->|coordinates| PCB
@@ -166,6 +167,7 @@ graph TB
         s_fw_build["/firmware-build"]
         s_fw_sync["/firmware-sync"]
         s_web["/website-dev"]
+        s_doc["/doc"]
     end
     SW --- SW_SKILLS
 

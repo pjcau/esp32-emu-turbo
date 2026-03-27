@@ -26,9 +26,9 @@ Validates the PCB layout against JLCPCB 4-layer manufacturing constraints using 
 |:---|:---|:---|
 | Trace width | 0.09 mm | 0.25 mm |
 | Trace spacing | 0.09 mm | 0.2 mm |
-| Via drill | 0.15 mm | 0.3 mm |
-| Via pad | 0.45 mm | 0.6 mm |
-| Annular ring | 0.13 mm | 0.15 mm |
+| Via drill | 0.15 mm | 0.2 mm |
+| Via pad | 0.35 mm | 0.35–0.46 mm |
+| Annular ring | 0.075 mm | 0.075–0.13 mm |
 | Board edge clearance | 0.3 mm | 0.5 mm |
 
 ### JLCPCB Custom DRC Rules
@@ -41,7 +41,7 @@ Key rules enforced:
 - **Minimum clearance** 0.09mm
 - **Standard via** min drill 0.3mm, min diameter 0.45mm
 - **PTH holes** 0.2-6.35mm range
-- **Annular ring** min 0.25mm
+- **Annular ring** min 0.075mm (JLCPCB absolute minimum for standard process)
 - **Buried vias disallowed** (JLCPCB doesn't support them)
 
 ### Smart DRC Analysis

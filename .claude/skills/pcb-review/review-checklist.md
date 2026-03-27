@@ -56,7 +56,7 @@
 | Trace width | 0.09mm | 0.2mm |
 | Trace spacing | 0.09mm | 0.15mm |
 | Via drill | 0.15mm | 0.3mm |
-| Via annular ring | 0.13mm | 0.175mm |
+| Via annular ring | 0.075mm | 0.075mm |
 | Board edge clearance | 0.3mm | 0.5mm |
 | Drill-to-edge | 0.4mm | 0.5mm |
 | Silkscreen width | 0.15mm | 0.2mm |

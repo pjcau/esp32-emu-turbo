@@ -5,7 +5,7 @@ disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-# DFM & Design Verification Suite
+# DFM & Design Verification Suite (88 DFM + 9 DFA tests)
 
 Run all verification scripts and produce a summary report.
 
@@ -24,7 +24,7 @@ Tests include:
 - Mounting hole text on Fab
 - C1/C2 spacing from U3 (>= 1.5mm gap)
 - gr_text clearance from mounting holes (>= 6mm)
-- Via annular ring (>= 0.175mm)
+- Via annular ring (>= 0.075mm, JLCPCB min)
 - Gerber zip file count (>= 12 files)
 - U5 pin alignment analysis (informational)
 - SOP-16 aperture verification

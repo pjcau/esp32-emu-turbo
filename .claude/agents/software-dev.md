@@ -6,6 +6,7 @@ skills:
   - firmware-build
   - firmware-sync
   - website-dev
+  - doc
 ---
 
 # Software Developer — ESP32 Emu Turbo

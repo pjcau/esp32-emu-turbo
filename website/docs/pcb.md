@@ -257,9 +257,9 @@ Script: `python3 scripts/short_circuit_analysis.py`
 | -------------------- | ---------- | ----------------------------- | ------ |
 | Trace width          | 0.09mm     | 0.2mm (signal), 0.5mm (power) | PASS   |
 | Trace spacing        | 0.09mm     | 0.2mm                         | PASS   |
-| Via drill            | 0.15mm     | 0.3mm                         | PASS   |
-| Via pad              | 0.45mm     | 0.6mm                         | PASS   |
-| Annular ring         | 0.13mm     | 0.15mm                        | PASS   |
+| Via drill            | 0.15mm     | 0.2mm                         | PASS   |
+| Via pad              | 0.35mm     | 0.35–0.46mm                   | PASS   |
+| Annular ring         | 0.075mm    | 0.075–0.13mm                  | PASS   |
 | Board edge clearance | 0.3mm      | 0.5mm                         | PASS   |
 
 **DRC Engine:** KiCad native DRC with [JLCPCB custom rules](https://github.com/tinfever/KiCAD-Custom-DRC-Rules-for-JLCPCB-with-Unit-Tests) (`hardware/kicad/esp32-emu-turbo.kicad_dru`)

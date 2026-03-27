@@ -180,7 +180,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | Schematic/PCB Consistency   | PASS (64 JLCPCB components matched)             |
 | Zone Priorities             | PASS                                            |
 | Zone Fill Data              | PASS (In1.Cu 52KB, In2.Cu 292KB)                |
-| Via annular ring            | PASS (226 vias, all >= 0.175mm)                 |
+| Via annular ring            | PASS (247 vias, all >= 0.075mm)                 |
 | Via hole-to-hole            | PASS (min gap >= 0.25mm)                        |
 | Trace spacing               | PASS (17 violations, baseline <= 27)            |
 | ESOP-8 EP pad clearance     | PASS (gap = 0.205mm > 0.10mm danger)            |

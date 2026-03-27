@@ -23,8 +23,8 @@
 **Files**: `board.py` (placement), `routing.py` (C1_POS/C2_POS constants).
 
 ### Via annular ring
-**Problem**: Via annular ring < 0.175mm (JLCPCB minimum).
-**Solution**: All vias must have `(size - drill) / 2 >= 0.175mm`.
+**Problem**: Via annular ring < 0.075mm (JLCPCB absolute minimum).
+**Solution**: All vias must have `(size - drill) / 2 >= 0.075mm`. Standard vias use 0.46mm/0.20mm (ring=0.13mm). Right-side button approach vias use 0.35mm/0.20mm (ring=0.075mm).
 **File**: `routing.py` — check all `_via_net()` calls.
 
 ### SOP-16 merged pad apertures

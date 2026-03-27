@@ -41,7 +41,7 @@ The test suite covers 43 DFM tests + 9 DFA tests:
 | 1-4 | CPL positions | 4 | J1, SW_PWR, U1, U5 position/rotation in JLCPCB CPL |
 | 5-6 | Silkscreen | 2 | Reference/Value on Fab layer, mounting holes on Fab |
 | 7-8 | Spacing | 2 | C1/C2-U3 gap >= 1.5mm, gr_text >= 6mm from holes |
-| 9 | Via ring | 1 | Annular ring >= 0.175mm on all vias |
+| 9 | Via ring | 1 | Annular ring >= 0.075mm on all vias |
 | 10 | Gerbers | 1 | gerbers.zip has >= 12 files |
 | 11-12 | Footprints | 2 | U5 pin alignment analysis, SOP-16 aperture |
 | 13-15 | KiCad DRC | 3 | copper_edge=0, hole_to_hole=0, silk issues=0 |
