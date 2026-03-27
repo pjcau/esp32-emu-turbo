@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 700" font-family="monospace">
+  <defs>
+    <pattern id="hatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#4a4" stroke-width="1.5"/>
+    </pattern>
+    <pattern id="scratch" patternUnits="userSpaceOnUse" width="3" height="3" patternTransform="rotate(30)">
+      <line x1="0" y1="0" x2="0" y2="3" stroke="#556b2f" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" font-size="20" font-weight="bold" fill="#333">C19 Via-to-VBUS — Layer View (AFTER Rework)</text>
+  <text x="450" y="55" text-anchor="middle" font-size="13" fill="#4a4">Scraped F.Cu copper isolates vias from VBUS</text>
+
+  <!-- ============ F.Cu Layer ============ -->
+  <rect x="50" y="80" width="800" height="120" rx="5" fill="#1a1a2e" stroke="#4a4" stroke-width="2"/>
+  <text x="60" y="100" font-size="14" font-weight="bold" fill="#44ff44">F.Cu (Top — Display side) AFTER SCRAPING</text>
+
+  <!-- VBUS horizontal trace - intact -->
+  <rect x="100" y="145" width="350" height="12" fill="#ff4444" opacity="0.9" rx="2"/>
+  <text x="275" y="140" text-anchor="middle" font-size="11" fill="#ff8888">VBUS horizontal - INTACT</text>
+
+  <!-- VBUS vertical trace - intact -->
+  <rect x="444" y="95" width="12" height="100" fill="#ff4444" opacity="0.9" rx="2"/>
+  <text x="480" y="110" font-size="11" fill="#ff8888">VBUS vertical - INTACT</text>
+
+  <!-- Scraped gap around GND via -->
+  <rect x="358" y="140" width="44" height="20" fill="#556b2f" opacity="0.6" rx="2"/>
+  <text x="380" y="137" text-anchor="middle" font-size="9" fill="#8fbc8f">scraped 0.3mm</text>
+
+  <!-- GND via on F.Cu - ISOLATED -->
+  <circle cx="380" cy="165" r="16" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <circle cx="380" cy="165" r="4" fill="#44ff44"/>
+  <text x="380" y="195" text-anchor="middle" font-size="11" font-weight="bold" fill="#44ff44">Via 1 GND ISOLATED</text>
+
+  <!-- Gap indicator GND -->
+  <text x="425" y="155" font-size="10" fill="#8fbc8f">gap 0.3mm ✓</text>
+
+  <!-- Scraped gap around +5V via -->
+  <rect x="440" y="118" width="20" height="34" fill="#556b2f" opacity="0.6" rx="2"/>
+
+  <!-- +5V via on F.Cu - ISOLATED -->
+  <circle cx="460" cy="135" r="16" fill="none" stroke="#4488ff" stroke-width="3"/>
+  <circle cx="460" cy="135" r="4" fill="#4488ff"/>
+  <text x="510" y="130" font-size="11" font-weight="bold" fill="#4488ff">Via 2 +5V ISOLATED</text>
+
+  <!-- Gap indicator +5V -->
+  <text x="510" y="148" font-size="10" fill="#8fbc8f">gap 0.3mm ✓</text>
+
+  <!-- NO short path -->
+  <text x="680" y="115" font-size="12" font-weight="bold" fill="#44ff44">VBUS isolated ✓</text>
+  <text x="680" y="135" font-size="12" font-weight="bold" fill="#44ff44">GND isolated ✓</text>
+  <text x="680" y="155" font-size="12" font-weight="bold" fill="#44ff44">+5V isolated ✓</text>
+  <text x="680" y="180" font-size="11" fill="#8fbc8f">No contact on F.Cu</text>
+
+  <!-- ============ In1.Cu Layer (GND) ============ -->
+  <rect x="50" y="210" width="800" height="100" rx="5" fill="#0a2a0a" stroke="#4a4" stroke-width="2"/>
+  <text x="60" y="230" font-size="14" font-weight="bold" fill="#44ff44">In1.Cu (GND Plane) — UNCHANGED</text>
+
+  <!-- GND copper fill -->
+  <rect x="80" y="240" width="740" height="50" fill="url(#hatch)" opacity="0.3"/>
+  <rect x="80" y="240" width="740" height="50" fill="#1a4a1a" opacity="0.5"/>
+
+  <!-- GND via STILL connected -->
+  <circle cx="380" cy="265" r="14" fill="#44ff44" opacity="0.8"/>
+  <circle cx="380" cy="265" r="4" fill="#fff"/>
+  <text x="380" y="300" text-anchor="middle" font-size="10" fill="#44ff44">● STILL CONNECTED to GND ✓</text>
+
+  <!-- +5V via isolated -->
+  <circle cx="460" cy="265" r="14" fill="none" stroke="#666" stroke-width="2" stroke-dasharray="4,2"/>
+  <circle cx="460" cy="265" r="4" fill="#666"/>
+  <text x="460" y="300" text-anchor="middle" font-size="10" fill="#888">○ thermal relief</text>
+
+  <!-- Key explanation -->
+  <text x="650" y="260" font-size="11" fill="#8fbc8f">Via barrel passes through</text>
+  <text x="650" y="275" font-size="11" fill="#8fbc8f">F.Cu scrape zone intact.</text>
+  <text x="650" y="290" font-size="11" fill="#8fbc8f">Inner connection unaffected.</text>
+
+  <!-- ============ In2.Cu Layer (+5V) ============ -->
+  <rect x="50" y="320" width="800" height="100" rx="5" fill="#0a0a2e" stroke="#44f" stroke-width="2"/>
+  <text x="60" y="340" font-size="14" font-weight="bold" fill="#4488ff">In2.Cu (+5V Plane) — UNCHANGED</text>
+
+  <!-- +5V copper fill -->
+  <rect x="80" y="350" width="740" height="50" fill="#1a1a4a" opacity="0.5"/>
+
+  <!-- +5V via STILL connected -->
+  <circle cx="460" cy="375" r="14" fill="#4488ff" opacity="0.8"/>
+  <circle cx="460" cy="375" r="4" fill="#fff"/>
+  <text x="460" y="410" text-anchor="middle" font-size="10" fill="#4488ff">● STILL CONNECTED to +5V ✓</text>
+
+  <!-- GND via isolated -->
+  <circle cx="380" cy="375" r="14" fill="none" stroke="#666" stroke-width="2" stroke-dasharray="4,2"/>
+  <circle cx="380" cy="375" r="4" fill="#666"/>
+  <text x="380" y="410" text-anchor="middle" font-size="10" fill="#888">○ thermal relief</text>
+
+  <!-- ============ B.Cu Layer ============ -->
+  <rect x="50" y="430" width="800" height="120" rx="5" fill="#1a1a2e" stroke="#c84" stroke-width="2"/>
+  <text x="60" y="450" font-size="14" font-weight="bold" fill="#ffaa44">B.Cu (Bottom — ESP32 side) — UNCHANGED</text>
+
+  <!-- C19 capacitor -->
+  <rect x="350" y="475" width="140" height="40" fill="#665533" stroke="#aa8844" stroke-width="2" rx="3"/>
+  <text x="420" y="500" text-anchor="middle" font-size="13" font-weight="bold" fill="#ffcc66">C19 (1206)</text>
+
+  <!-- C19 pad GND -->
+  <rect x="330" y="480" width="25" height="30" fill="#44ff44" opacity="0.7" rx="2"/>
+  <text x="342" y="530" text-anchor="middle" font-size="10" fill="#44ff44">GND pad</text>
+
+  <!-- C19 pad +5V -->
+  <rect x="485" y="480" width="25" height="30" fill="#4488ff" opacity="0.7" rx="2"/>
+  <text x="497" y="530" text-anchor="middle" font-size="10" fill="#4488ff">+5V pad</text>
+
+  <!-- Traces to vias -->
+  <line x1="342" y1="480" x2="380" y2="460" stroke="#44ff44" stroke-width="2"/>
+  <line x1="497" y1="480" x2="460" y2="460" stroke="#4488ff" stroke-width="2"/>
+
+  <!-- Via barrels (vertical connections) -->
+  <line x1="380" y1="165" x2="380" y2="495" stroke="#44ff44" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.5"/>
+  <line x1="460" y1="135" x2="460" y2="495" stroke="#4488ff" stroke-width="1.5" stroke-dasharray="3,3" opacity="0.5"/>
+
+  <!-- ============ Legend ============ -->
+  <rect x="50" y="570" width="800" height="120" rx="8" fill="#111" stroke="#555" stroke-width="1"/>
+  <text x="60" y="595" font-size="13" font-weight="bold" fill="#44ff44">AFTER Rework — Correct Power Path:</text>
+
+  <!-- Correct path GND -->
+  <circle cx="90" cy="618" r="6" fill="#44ff44"/>
+  <text x="105" y="622" font-size="12" fill="#fff">C19 GND pad (B.Cu) → via barrel → In1.Cu GND plane → all GND connections</text>
+
+  <!-- Correct path +5V -->
+  <circle cx="90" cy="645" r="6" fill="#4488ff"/>
+  <text x="105" y="649" font-size="12" fill="#fff">C19 +5V pad (B.Cu) → via barrel → In2.Cu +5V plane → all +5V connections</text>
+
+  <!-- VBUS separate -->
+  <circle cx="90" cy="672" r="6" fill="#ff4444"/>
+  <text x="105" y="676" font-size="12" fill="#fff">VBUS trace (F.Cu) → isolated, goes only to USB-C and IP5306 input</text>
+</svg>
