@@ -15,21 +15,41 @@ from pathlib import Path
 # KiCad 3D model base variable (KICAD9 var resolves in KiCad 9.x/10 nightly)
 M = "${KICAD9_3DMODEL_DIR}"
 
-# Footprint name → 3D model path mapping
-# Paths use KiCad environment variable so they work in Docker and GUI
+# Footprint name → (3D model path, offset_xyz, rotation_xyz)
+# Offsets/rotations compensate for differences between custom footprints
+# and KiCad standard library footprints the 3D models were designed for.
 MODEL_MAP = {
-    "R_0805":       f"{M}/Resistor_SMD.3dshapes/R_0805_2012Metric.step",
-    "C_0805":       f"{M}/Capacitor_SMD.3dshapes/C_0805_2012Metric.step",
-    "C_1206":       f"{M}/Capacitor_SMD.3dshapes/C_1206_3216Metric.step",
-    "LED_0805":     f"{M}/LED_SMD.3dshapes/LED_0805_2012Metric.step",
-    "SOT-223":      f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-223.step",
-    "ESOP-8":       f"{M}/Package_SO.3dshapes/SOIC-8_3.9x4.9mm_P1.27mm.step",
-    "SOP-16":       f"{M}/Package_SO.3dshapes/SOIC-16_3.9x9.9mm_P1.27mm.step",
-    "ESP32-S3-WROOM-1-N16R8": f"{M}/RF_Module.3dshapes/ESP32-WROOM-32.step",
-    "USB-C-16P":    f"{M}/Connector_USB.3dshapes/USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal.step",
-    "JST-PH-2P":   f"{M}/Connector_JST.3dshapes/JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical.step",
-    "SS-12D00G3":   f"{M}/Button_Switch_SMD.3dshapes/SW_SPDT_PCM12.step",
-    "SW-SMD-5.1x5.1": f"{M}/Button_Switch_SMD.3dshapes/SW_SPST_TL3342.step",
+    "R_0805":       (f"{M}/Resistor_SMD.3dshapes/R_0805_2012Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    "C_0805":       (f"{M}/Capacitor_SMD.3dshapes/C_0805_2012Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    "C_1206":       (f"{M}/Capacitor_SMD.3dshapes/C_1206_3216Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    "LED_0805":     (f"{M}/LED_SMD.3dshapes/LED_0805_2012Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    # SOT-223 (AMS1117): on B.Cu, 270° + 180° = 450° → 90°
+    "SOT-223":      (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-223.step",
+                     (0, 0, 0), (0, 0, 90)),
+    # ESOP-8 (IP5306): on B.Cu, 0° + 180° = 180°
+    "ESOP-8":       (f"{M}/Package_SO.3dshapes/SOIC-8_3.9x4.9mm_P1.27mm.step",
+                     (0, 0, 0), (0, 0, 180)),
+    # SOP-16 (PAM8403): on B.Cu with 90° placement rotation, needs 180°+90° = 270°
+    "SOP-16":       (f"{M}/Package_SO.3dshapes/SOIC-16_3.9x9.9mm_P1.27mm.step",
+                     (0, 0, 0), (0, 0, 270)),
+    # ESP32: on B.Cu, 180° rotation + Y offset 3mm for pin alignment
+    "ESP32-S3-WROOM-1-N16R8": (f"{M}/RF_Module.3dshapes/ESP32-WROOM-32.step",
+                     (0, 3.0, 0), (0, 0, 180)),
+    # USB-C: on B.Cu, 180° rotation + Y offset for origin alignment
+    "USB-C-16P":    (f"{M}/Connector_USB.3dshapes/USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal.step",
+                     (0, 1.3, 0), (0, 0, 180)),
+    # JST-PH-2P: custom centered on (0,0), standard has pin 1 at origin
+    "JST-PH-2P":   (f"{M}/Connector_JST.3dshapes/JST_PH_B2B-PH-K_1x02_P2.00mm_Vertical.step",
+                     (-1.0, 0, 0), (0, 0, 0)),
+    # MSK12C02 slide switch: on B.Cu, 180° + small Y offset
+    "SS-12D00G3":   (f"{M}/Button_Switch_SMD.3dshapes/SW_SPDT_PCM12.step",
+                     (0, 0.25, 0), (0, 0, 180)),
+    "SW-SMD-5.1x5.1": (f"{M}/Button_Switch_SMD.3dshapes/SW_SPST_TL3342.step",
+                     (0, 0, 0), (0, 0, 0)),
     # No good match — skip these:
     # "SMD-4x4x2"  → Crystal (no exact 4x4 match in library)
     # "FPC-40P-0.5mm" → FPC connector (no exact 40P match)
@@ -39,9 +59,9 @@ MODEL_MAP = {
 }
 
 MODEL_TEMPLATE = """		(model "{path}"
-			(offset (xyz 0 0 0))
+			(offset (xyz {ox} {oy} {oz}))
 			(scale (xyz 1 1 1))
-			(rotate (xyz 0 0 0))
+			(rotate (xyz {rx} {ry} {rz}))
 		)
 """
 
@@ -85,10 +105,13 @@ def inject_models(pcb_text: str) -> tuple[str, dict]:
                 continue
 
             # Find matching 3D model
-            model_path = MODEL_MAP.get(fp_name)
-            if model_path:
+            mapping = MODEL_MAP.get(fp_name)
+            if mapping:
+                model_path, (ox, oy, oz), (rx, ry, rz) = mapping
                 # Insert model entry before the last closing paren
-                model_entry = MODEL_TEMPLATE.format(path=model_path).rstrip()
+                model_entry = MODEL_TEMPLATE.format(
+                    path=model_path, ox=ox, oy=oy, oz=oz,
+                    rx=rx, ry=ry, rz=rz).rstrip()
                 # Insert before the last line (which is the closing paren)
                 fp_lines.insert(-1, model_entry)
                 stats["matched"] += 1
