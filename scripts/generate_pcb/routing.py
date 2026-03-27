@@ -2661,16 +2661,27 @@ def _passive_traces():
         parts.append(_via_net(c18_p2[0], c18_p2[1] + 2.5, n_gnd))
 
     # C19 near L1: VOUT decoupling, pad "1" -> +5V via, pad "2" -> GND via
+    # POWER SHORT FIX: C19 vias overlapped VBUS F.Cu traces causing all-rail-to-GND short.
+    # VBUS horizontal @y=61.0 (width 0.5mm) and VBUS vertical @x=111.0 (width 0.5mm).
+    # Old +5V via @(111.5,56.5) overlapped VBUS vert by -0.20mm.
+    # Old GND via @(108.5,60.5) overlapped VBUS horiz by -0.20mm.
     c19_p1 = _pad("C19", "1")
     c19_p2 = _pad("C19", "2")
     if c19_p1:
-        parts.append(_seg(c19_p1[0], c19_p1[1], c19_p1[0], c19_p1[1] - 2,
+        # FIX: route B.Cu horizontal RIGHT to x=113 (clear VBUS vert @x=111.25),
+        # then B.Cu vertical UP to via. Gap: 113-0.45-111.25 = 1.30mm ✓
+        safe_x = 113.0
+        parts.append(_seg(c19_p1[0], c19_p1[1], safe_x, c19_p1[1],
                           "B.Cu", W_SIG, NET_ID["+5V"]))
-        parts.append(_via_net(c19_p1[0], c19_p1[1] - 2, NET_ID["+5V"]))
+        parts.append(_seg(safe_x, c19_p1[1], safe_x, c19_p1[1] - 2,
+                          "B.Cu", W_SIG, NET_ID["+5V"]))
+        parts.append(_via_net(safe_x, c19_p1[1] - 2, NET_ID["+5V"]))
     if c19_p2:
-        parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 2,
+        # FIX: reduce Y offset from +2 to +1.0 to clear VBUS horiz @y=61.
+        # Via @(108.5,59.5): top=59.95, VBUS bottom=60.75, gap=0.80mm ✓
+        parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 1.0,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c19_p2[0], c19_p2[1] + 2, n_gnd))
+        parts.append(_via_net(c19_p2[0], c19_p2[1] + 1.0, n_gnd))
 
     # R16 IP5306 KEY pull-up: now handled in _power_traces()
 
