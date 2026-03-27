@@ -56,16 +56,23 @@ def get_all_pad_positions():
             ph = float(sz_match.group(2))
             pad_num = num_match.group(1) if num_match else "?"
 
-            # B.Cu mirroring: negate X
-            if layer_char == "B":
-                px = -px
+            # Transform order: rotate → mirror_X → translate
+            # (matches _compute_pads in routing.py and KiCad convention)
 
-            # Apply rotation
+            # Step 1: Apply rotation
             rot_rad = math.radians(rot)
             cos_r = math.cos(rot_rad)
             sin_r = math.sin(rot_rad)
-            abs_x = fx + px * cos_r - py * sin_r
-            abs_y = fy + px * sin_r + py * cos_r
+            rx = px * cos_r - py * sin_r
+            ry = px * sin_r + py * cos_r
+
+            # Step 2: B.Cu mirroring: negate X (after rotation)
+            if layer_char == "B":
+                rx = -rx
+
+            # Step 3: Translate to board coordinates
+            abs_x = fx + rx
+            abs_y = fy + ry
 
             # Rotate pad dimensions
             if abs(rot % 360) in (90, 270):
