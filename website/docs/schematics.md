@@ -103,15 +103,16 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 
 <a className="pdf-download" href="/img/schematics/01-power-supply.pdf" target="_blank">PDF</a>
 
-| Ref | Component | Value | Purpose |
-|-----|-----------|-------|---------|
-| J1 | USB-C connector | — | 5V power input |
-| R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) |
-| U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) |
-| BT1 | Battery | LiPo 3.7V 5000mAh | 105080 cell |
-| U3 | LDO regulator | AMS1117-3.3 | 5V to 3.3V, 800mA max |
-| C1 | Capacitor | 10 µF | LDO input decoupling |
-| C2 | Capacitor | 22 µF tantalum | LDO output stability |
+| Ref | Component | Value | Purpose | Datasheet |
+|-----|-----------|-------|---------|-----------|
+| J1 | USB-C connector | — | 5V power input | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
+| R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
+| U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
+| BT1 | Battery | LiPo 3.7V 5000mAh | 105080 cell | — |
+| U3 | LDO regulator | AMS1117-3.3 | 5V to 3.3V, 800mA max | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
+| L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
+| C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
+| C2 | Capacitor | 22 µF tantalum | LDO output stability | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 
 ### Power Budget
 
@@ -140,12 +141,12 @@ ESP32-S3-WROOM-1 N16R8 with all 35 GPIO connections grouped by function, decoupl
 
 <a className="pdf-download" href="/img/schematics/02-mcu.pdf" target="_blank">PDF</a>
 
-| Ref | Component | Value | Purpose |
-|-----|-----------|-------|---------|
-| U1 | MCU module | ESP32-S3-WROOM-1 N16R8 | 16MB Flash, 8MB PSRAM |
-| R3 | Resistor | 10 kΩ | EN pull-up (keep-alive) |
-| C3 | Capacitor | 100 nF | EN reset delay (RC = 1ms) |
-| C4 | Capacitor | 100 nF | 3V3 decoupling |
+| Ref | Component | Value | Purpose | Datasheet |
+|-----|-----------|-------|---------|-----------|
+| U1 | MCU module | ESP32-S3-WROOM-1 N16R8 | 16MB Flash, 8MB PSRAM | [PDF](/datasheets/U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf) |
+| R3 | Resistor | 10 kΩ | EN pull-up (keep-alive) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
+| C3 | Capacitor | 100 nF | EN reset delay (RC = 1ms) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C4 | Capacitor | 100 nF | 3V3 decoupling | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 
 ### GPIO Assignment
 
@@ -195,14 +196,14 @@ I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker
 
 <a className="pdf-download" href="/img/schematics/04-audio.pdf" target="_blank">PDF</a>
 
-| Ref | Component | Value | Purpose |
-|-----|-----------|-------|---------|
-| U5 | Amplifier | PAM8403 | Filterless Class-D, 3W/ch |
-| C22 | Capacitor | 0.47 µF | DC-blocking cap in series on audio input |
-| R20, R21 | Resistor | 20 kΩ | Bias resistors on INL/INR to GND |
-| C21 | Capacitor | 100 nF | VREF bypass capacitor |
-| C23, C24, C25 | Capacitor | 1 µF | VDD and PVDD decoupling caps |
-| LS1 | Speaker | 28mm 8Ω 0.5W | Mono output |
+| Ref | Component | Value | Purpose | Datasheet |
+|-----|-----------|-------|---------|-----------|
+| U5 | Amplifier | PAM8403 | Filterless Class-D, 3W/ch | [PDF](/datasheets/U5_PAM8403_C5122557.pdf) |
+| C22 | Capacitor | 0.47 µF | DC-blocking cap in series on audio input | — |
+| R20, R21 | Resistor | 20 kΩ | Bias resistors on INL/INR to GND | — |
+| C21 | Capacitor | 100 nF | VREF bypass capacitor | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C23, C24, C25 | Capacitor | 1 µF | VDD and PVDD decoupling caps | — |
+| LS1 | Speaker | 28mm 8Ω 0.5W | Mono output | — |
 
 :::note
 The PAM8403 is powered from the +5V rail for maximum headroom. Only one channel is used for mono audio. ESP32-S3 I2S with DMA provides low-CPU-overhead audio streaming. The passive components (C21–C25, R20–R21) follow the PAM8403 datasheet application circuit for proper biasing, DC blocking, and power supply decoupling.
@@ -222,6 +223,10 @@ Micro SD card module via SPI bus for ROM storage (SNES ROMs up to 6MB, FAT32).
 
 <a className="pdf-download" href="/img/schematics/05-sd-card.pdf" target="_blank">PDF</a>
 
+| Ref | Component | Datasheet |
+|-----|-----------|-----------|
+| U6 | Micro SD slot (TF-01A) | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
+
 | Signal | GPIO | Direction |
 |--------|------|-----------|
 | MOSI | GPIO36 | ESP32 → SD |
@@ -235,7 +240,7 @@ SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module ha
 
 ## Sheet 6 — Controls
 
-12 tact switches (SNES layout) with individual 10kΩ pull-up + 100nF debounce per button.
+12 tact switches (SNES layout) with individual 10kΩ pull-up + 100nF debounce per button. Tact switch datasheet: [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf).
 
 <div className="schematic-container">
 

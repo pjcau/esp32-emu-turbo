@@ -253,28 +253,31 @@ Most AliExpress sellers offer **free shipping**. Delivery time: **2-4 weeks** (s
 
 For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are sourced from LCSC for JLCPCB assembly.
 
-| Ref | Component | Package | LCSC | Class |
-|-----|-----------|---------|------|-------|
-| U1 | ESP32-S3-WROOM-1-N16R8 | Module | C2913202 | Extended |
-| U2 | IP5306 charger+boost IC | eSOP-8 | C181692 | Extended |
-| U3 | AMS1117-3.3 LDO | SOT-223 | C6186 | Basic |
-| U5 | PAM8403 audio amplifier | SOP-16 | C5122557 | Extended |
-| J1 | USB-C 16-pin connector | SMT | C2765186 | Extended |
-| U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended |
-| J4 | FPC 40-pin 0.5mm (display) | SMT | TBD | Extended |
-| J3 | JST PH 2-pin (battery) | THT | C173752 | Extended |
-| L1 | 1µH inductor 4.5A | SMD 4×4 | C280579 | Extended |
-| SW1–SW12 | SMT tact switch 5.1×5.1mm | SMT | C318884 | Extended |
-| R1–R2 | 5.1kΩ 0805 | 0805 | C27834 | Basic |
-| R3–R15 | 10kΩ 0805 | 0805 | C17414 | Basic |
-| R16 | 100kΩ 0805 | 0805 | C149504 | Basic |
-| C3–C16 | 100nF 0805 | 0805 | C49678 | Basic |
-| C1,C17,C18 | 10µF 0805 | 0805 | C15850 | Basic |
-| C2,C19 | 22µF 1206 | 1206 | C29632 | Basic |
-| C21 | 100nF VREF bypass (PAM8403) | 0805 | C49678 | Basic |
-| C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C1525 | Basic |
-| C23,C24,C25 | 1µF decoupling (PAM8403 VDD/PVDD) | 0805 | C15849 | Basic |
-| R20,R21 | 20kΩ bias (PAM8403 INL/INR) | 0805 | C4184 | Basic |
+| Ref | Component | Package | LCSC | Class | Datasheet |
+|-----|-----------|---------|------|-------|-----------|
+| U1 | ESP32-S3-WROOM-1-N16R8 | Module | C2913202 | Extended | [PDF](/datasheets/U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf) |
+| U2 | IP5306 charger+boost IC | eSOP-8 | C181692 | Extended | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
+| U3 | AMS1117-3.3 LDO | SOT-223 | C6186 | Basic | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
+| U5 | PAM8403 audio amplifier | SOP-16 | C5122557 | Extended | [PDF](/datasheets/U5_PAM8403_C5122557.pdf) |
+| J1 | USB-C 16-pin connector | SMT | C2765186 | Extended | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
+| U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
+| J4 | FPC 40-pin 0.5mm (display) | SMT | C2856812 | Extended | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
+| J3 | JST PH 2-pin (battery) | THT | C173752 | Extended | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| L1 | 1µH inductor 4.5A | SMD 4×4 | C280579 | Extended | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
+| SW1–SW13 | SMT tact switch 5.1×5.1mm | SMT | C318884 | Extended | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
+| SW_PWR | Slide switch SS-12D00G3 | SMT | C431540 | Extended | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
+| LED1 | Red LED 0805 | 0805 | C84256 | Basic | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
+| LED2 | Green LED 0805 | 0805 | C19171391 | Basic | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
+| R1–R2 | 5.1kΩ 0805 | 0805 | C27834 | Basic | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
+| R3–R15 | 10kΩ 0805 | 0805 | C17414 | Basic | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
+| R16 | 100kΩ 0805 | 0805 | C149504 | Basic | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| R17,R18 | 1kΩ 0805 | 0805 | C17513 | Basic | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
+| R20,R21 | 20kΩ bias (PAM8403 INL/INR) | 0805 | C4184 | Basic | — |
+| C3–C16,C21 | 100nF 0805 | 0805 | C49678 | Basic | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C1,C17,C18 | 10µF 0805 | 0805 | C15850 | Basic | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
+| C2,C19 | 22µF 1206 | 1206 | C29632 | Basic | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
+| C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C1525 | Basic | — |
+| C23,C24,C25 | 1µF decoupling (PAM8403 VDD/PVDD) | 0805 | C15849 | Basic | — |
 
 **Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.
 
