@@ -75,7 +75,8 @@ Progressive optimization of the snes9x core for ESP32-S3.
 
 ## PCB Design
 
-![PCB Layout](/website/static/img/pcb/pcb-combined.png)
+![PCB Bottom](/website/static/img/renders/pcba-bottom.png)
+![PCB Top](/website/static/img/renders/pcba-iso-front.png)
 
 | Parameter          | Value                                |
 | ------------------ | ------------------------------------ |
