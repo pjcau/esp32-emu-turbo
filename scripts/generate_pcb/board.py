@@ -266,6 +266,56 @@ def _silkscreen_labels():
         "B.Fab", 1.2,
     ))
 
+    # ── Passive component labels (B.SilkS) ────────────────────────
+    # Group labels for the pull-up and debounce rows (13 components each)
+    # Pull-ups: R4-R15,R19 at y=46, x=43..103 (5mm spacing)
+    parts.append(P.gr_text(
+        "R4-R15,R19  10k", 73, 43.5, "B.SilkS", 0.6,
+    ))
+    # Debounce caps: C5-C16,C20 at y=50, x=43..103
+    parts.append(P.gr_text(
+        "C5-C16,C20  100nF", 73, 52.5, "B.SilkS", 0.6,
+    ))
+
+    # Individual power passives — label offset to clear 0805 body (~2x1.2mm)
+    _lbl = 0.5  # text size for individual labels
+    _passive_labels = [
+        # (ref, value, x, y, label_dx, label_dy)
+        # USB CC pull-downs
+        ("R1", "5.1k", 74.0, 67.0, 0, -2.0),
+        ("R2", "5.1k", 86.0, 67.0, 0, -2.0),
+        # ESP32 decoupling
+        ("R3", "10k", 65.0, 42.0, 0, -2.0),
+        ("C3", "100nF", 69.5, 42.0, 0, -2.0),
+        ("C4", "100nF", 92.0, 42.0, 0, -2.0),
+        # LED resistors
+        ("R17", "1k", 25.0, 65.0, 0, -2.0),
+        ("R18", "1k", 32.0, 65.0, 0, -2.0),
+        # IP5306 area
+        ("R16", "100k", 115.0, 52.5, 0, -2.0),
+        ("C17", "10uF", 110.0, 35.0, 4.5, 0),  # offset RIGHT to avoid IP5306 label above
+        ("C18", "10uF", 118.0, 55.0, 0, 2.5),
+        ("C19", "22uF", 110.0, 58.5, 0, 2.5),
+        # AMS1117 caps
+        ("C1", "10uF", 122.0, 48.5, 0, -2.0),
+        ("C2", "22uF", 125.0, 62.5, 0, -2.0),
+        # Inductor
+        ("L1", "1uH", 110.0, 52.5, -4.5, 0),  # offset LEFT to avoid R16 pad at (115, 52.5)
+        # PAM8403 passives — right side of U5
+        ("C21", "100nF", 38.0, 23.5, 0, -2.0),  # offset UP to avoid C21 pad
+        ("C22", "0.47u", 33.175, 20.0, -3.5, 0),
+        ("R20", "20k", 38.0, 26.8, 3.5, 0),
+        ("C23", "1uF", 38.0, 29.5, 3.5, 0),
+        ("R21", "20k", 38.0, 32.2, 3.5, 0),
+        # PAM8403 passives — above/below U5
+        ("C24", "1uF", 29.365, 22.0, -3.0, 0),
+        ("C25", "1uF", 31.5, 37.5, 0, 2.5),
+    ]
+    for ref, val, cx, cy, dx, dy in _passive_labels:
+        parts.append(P.gr_text(
+            f"{ref} {val}", cx + dx, cy + dy, "B.SilkS", _lbl,
+        ))
+
     return "".join(parts)
 
 

@@ -14,7 +14,7 @@ All production files in `release_jlcpcb/` are verified and ready for ordering:
 - **R17/R18 BOM fix** — LCSC part C11702 (0402) replaced with C17513 (correct 0805 package)
 - **ESP32-S3 pin layout** — corrected from 2-side (wrong) to 3-side layout (L:1-14, B:15-26, R:27-40)
 - **MSK12C02 slide switch** — replaced THT footprint with correct 7-pad SMD (matching C431540)
-- **64 components** in BOM/CPL matched against schematic and PCB
+- **71 components** in BOM/CPL matched against schematic and PCB
 - **0 DRC errors**, all pre-production checks passed
 :::
 
@@ -66,11 +66,15 @@ The bottom side hosts the main circuitry:
 | R3–R15         | 10k (pull-ups)              | C17414        | R_0805    |
 | R16            | 100k                        | C149504       | R_0805    |
 | R17, R18       | 1k                          | C17513        | R_0805    |
+| R19            | 10k (INL pull-down)          | C17414        | R_0805    |
+| R20, R21       | 20k (PAM8403 gain set)       | C4184         | R_0805    |
 | C1, C17, C18   | 10uF                        | C15850        | C_0805    |
 | C2, C19        | 22uF                        | C12891        | C_1206    |
 | C3–C16         | 100nF                       | C49678        | C_0805    |
+| C20            | 0.47uF (PAM8403 bypass)     | C1537         | C_0805    |
+| C21–C25        | 1uF (PAM8403 input/output)  | C28323        | C_0805    |
 
-**Total SMT components:** 20 unique part types, ~55 individual placements.
+**Total SMT components:** 23 unique part types, ~62 individual placements.
 
 ---
 
@@ -178,7 +182,7 @@ The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5
 | Ref     | Component               | JLCPCB Part # | Footprint            |  Qty |
 | :------ | :---------------------- | :------------ | :------------------- | ---: |
 | **U7**  | ESP32-S3-MINI-1-N8      | C2913206      | Module (15.4×20.5mm) |    1 |
-| C21,C22 | 100nF 0805 (decoupling) | C49678        | C_0805               |    2 |
+| C26,C27 | 100nF 0805 (decoupling) | C49678        | C_0805               |    2 |
 
 ### v2 Cost Impact
 

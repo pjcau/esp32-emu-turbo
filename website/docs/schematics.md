@@ -198,10 +198,14 @@ I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
 | U5 | Amplifier | PAM8403 | Filterless Class-D, 3W/ch |
+| C22 | Capacitor | 0.47 µF | DC-blocking cap in series on audio input |
+| R20, R21 | Resistor | 20 kΩ | Bias resistors on INL/INR to GND |
+| C21 | Capacitor | 100 nF | VREF bypass capacitor |
+| C23, C24, C25 | Capacitor | 1 µF | VDD and PVDD decoupling caps |
 | LS1 | Speaker | 28mm 8Ω 0.5W | Mono output |
 
 :::note
-The PAM8403 is powered from the +5V rail for maximum headroom. Only one channel is used for mono audio. ESP32-S3 I2S with DMA provides low-CPU-overhead audio streaming.
+The PAM8403 is powered from the +5V rail for maximum headroom. Only one channel is used for mono audio. ESP32-S3 I2S with DMA provides low-CPU-overhead audio streaming. The passive components (C21–C25, R20–R21) follow the PAM8403 datasheet application circuit for proper biasing, DC blocking, and power supply decoupling.
 :::
 
 ---
@@ -225,7 +229,7 @@ Micro SD card module via SPI bus for ROM storage (SNES ROMs up to 6MB, FAT32).
 | CLK | GPIO38 | ESP32 → SD |
 | CS | GPIO39 | ESP32 → SD |
 
-SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module has a built-in level shifter (3.3V safe).
+SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module has a built-in level shifter (3.3V safe). On the PCB, the SD card slot VCC and GND pins are connected via vias to the inner power planes (+3V3 and GND) for clean power delivery with minimal trace length.
 
 ---
 
@@ -293,8 +297,8 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
 | U7 | ESP32-S3-MINI-1-N8 | Module | Audio coprocessor (SPC700 + I2S) |
-| C21 | Capacitor | 100 nF | 3V3 decoupling |
-| C22 | Capacitor | 100 nF | EN decoupling |
+| C26 | Capacitor | 100 nF | 3V3 decoupling |
+| C27 | Capacitor | 100 nF | EN decoupling |
 
 ### SPI Bus (Main ESP32-S3 → Coprocessor)
 

@@ -271,6 +271,10 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | C3–C16 | 100nF 0805 | 0805 | C49678 | Basic |
 | C1,C17,C18 | 10µF 0805 | 0805 | C15850 | Basic |
 | C2,C19 | 22µF 1206 | 1206 | C29632 | Basic |
+| C21 | 100nF VREF bypass (PAM8403) | 0805 | C49678 | Basic |
+| C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C1525 | Basic |
+| C23,C24,C25 | 1µF decoupling (PAM8403 VDD/PVDD) | 0805 | C15849 | Basic |
+| R20,R21 | 20kΩ bias (PAM8403 INL/INR) | 0805 | C4184 | Basic |
 
 **Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.
 
@@ -281,7 +285,7 @@ The v2 PCB adds an ESP32-S3-MINI-1-N8 as a dedicated audio coprocessor (see [Pha
 | Ref | Component | Package | LCSC | Class | Unit cost |
 |-----|-----------|---------|------|-------|-----------|
 | U7 | ESP32-S3-MINI-1-N8 | Module (15.4×20.5mm) | C2913206 | Extended | $3.25 |
-| C21,C22 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
+| C26,C27 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
 
 **v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything.
 
