@@ -59,7 +59,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ```
 team-lead (sonnet) ──── orchestrator, 0 skills
-  ├── pcb-engineer (opus) ───── 20 skills
+  ├── pcb-engineer (opus) ───── 21 skills
   ├── software-dev (opus) ───── 4 skills
   └── cad-engineer (haiku) ──── 3 skills
 
@@ -75,13 +75,13 @@ PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
 SW  ↔ CAD: website/docs/  (renders + documentation)
 ```
 
-### Skills Map (30 total)
+### Skills Map (31 total)
 
-#### PCB-Engineer — 21 skills
+#### PCB-Engineer — 22 skills
 
 | Category | Skills |
 |----------|--------|
-| **Pipeline (5)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/render` (SVG + animation) · `/check` (DRC + 3D + gerbers) |
+| **Pipeline (6)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/render` (SVG + animation) · `/pcba-render` (3D raytraced PCBA) · `/check` (DRC + 3D + gerbers) |
 | **Verification (7)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (6-domain scored) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) |
 | **Fix & Debug (4)** | `/dfm-fix` (fix DFM issues) · `/fix-rotation` (CPL rotation) · `/jlcpcb-check` (3D alignment) · `/jlcpcb-parts` (BOM + LCSC search) |
 | **MCP Design (5)** | `/pcb-schematic` (schematic ops) · `/pcb-components` (placement) · `/pcb-routing` (traces + vias) · `/pcb-library` (footprints) · `/pcb-board` (board setup) |
@@ -116,7 +116,7 @@ SW  ↔ CAD: website/docs/  (renders + documentation)
 ```mermaid
 graph TB
     TL["TEAM-LEAD<br/><i>sonnet • orchestrator</i>"]
-    PCB["PCB-ENGINEER<br/><i>opus • 20 skills</i>"]
+    PCB["PCB-ENGINEER<br/><i>opus • 22 skills</i>"]
     SW["SOFTWARE-DEV<br/><i>opus • 4 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>haiku • 3 skills</i>"]
 
@@ -132,6 +132,7 @@ graph TB
         s_generate["/generate"]
         s_release["/release"]
         s_render["/render"]
+        s_pcba_render["/pcba-render"]
         s_check["/check"]
     end
 
