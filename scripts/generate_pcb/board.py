@@ -199,73 +199,71 @@ def _silkscreen_labels():
 
     # ── Front silkscreen (buttons + LEDs + display outline) ──
 
-    # Display outline on front silkscreen (display module sits here)
+    # Display outline label on front silkscreen
     dx, dy = enc_to_pcb(*DISPLAY_ENC)
     dw2, dh2 = DISPLAY_W / 2, DISPLAY_H / 2
     parts.append(P.gr_text(
         "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 2,
-        "F.Fab", 1.0,  # DFM: Fab avoids silk_over_copper
+        "F.SilkS", 1.0,
     ))
 
-    # Board title (below display outline bottom to avoid silk_overlap)
+    # Board title on front Fab layer — J1 shield pads at Y=73.9 block SilkS
+    # at board bottom. Using F.Fab for DFM safety (visible in 2D renders).
     parts.append(P.gr_text(
-        "ESP32 EMU Turbo CPJ&CP v1.0", CX, CY + 33,
-        "F.Fab", 1.5,  # DFM: F.Fab avoids silk_over_copper near mounting holes
+        "ESP32-EMU-TURBO  CPJ & CP", CX, 73.0,
+        "F.Fab", 1.5,
     ))
 
-    # Button group labels (front)
+    # Button group labels (front silkscreen)
     px, py = enc_to_pcb(*DPAD_ENC)
-    parts.append(P.gr_text("D-PAD", px, py - 15, "F.Fab"))
+    parts.append(P.gr_text("D-PAD", px, py - 15, "F.SilkS"))
     px, py = enc_to_pcb(*ABXY_ENC)
-    parts.append(P.gr_text("ABXY", px, py - 16, "F.Fab"))
+    parts.append(P.gr_text("ABXY", px, py - 16, "F.SilkS"))
 
     # Menu button label (front)
     px, py = enc_to_pcb(*MENU_ENC)
-    parts.append(P.gr_text("MENU", px, py - 5, "F.Fab", 0.8))
+    parts.append(P.gr_text("MENU", px, py - 5, "F.SilkS", 0.8))
 
     # LED labels (front side, bottom-left)
     px, py = enc_to_pcb(*LED_CHARGE_ENC)
-    parts.append(P.gr_text("CHG", px, py + 3, "F.Fab", 0.8))
+    parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 0.8))
     px, py = enc_to_pcb(*LED_FULL_ENC)
-    parts.append(P.gr_text("FULL", px, py + 3, "F.Fab", 0.8))
+    parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 0.8))
 
-    # ── Back silkscreen (everything else) ──
+    # ── Back silkscreen (IC + connector labels, visible in 3D renders) ──
     px, py = enc_to_pcb(*ESP32_ENC)
-    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.Fab"))
+    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS"))
     px, py = enc_to_pcb(*IP5306_ENC)
-    parts.append(P.gr_text("IP5306", px, py - 10, "B.Fab", 0.8))
+    parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*AMS1117_ENC)
-    parts.append(P.gr_text("AMS1117", px - 3, py - 6, "B.Fab", 0.8))  # DFM: B.Fab avoids silk_over_copper
+    parts.append(P.gr_text("AMS1117", px + 5, py - 3, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*PAM8403_ENC)
-    parts.append(P.gr_text("PAM8403", px, py - 5, "B.Fab", 0.8))  # DFM: B.Fab avoids silk_over_copper
+    parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 0.8))
 
     # Connector labels (back side)
     px, py = enc_to_pcb(*USBC_ENC)
-    parts.append(P.gr_text("USB-C", px, py - 5, "B.Fab", 0.8))
+    parts.append(P.gr_text("USB-C", px, py - 5, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*SD_ENC)
-    parts.append(P.gr_text("SD", px, py - 5, "B.Fab", 0.8))  # DFM: B.Fab avoids silk_over_copper
+    parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 0.8))
 
     # Power switch label (back side)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    parts.append(P.gr_text("PWR", px, py - 5, "B.Fab", 0.8))
+    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.8))
 
     # Speaker label (back side)
     px, py = enc_to_pcb(*SPEAKER_ENC)
-    parts.append(P.gr_text("SPEAKER", px, py, "B.Fab", 0.8))
+    parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 0.8))
 
-    # Shoulder button labels (back side — rotated 90°, aligned to top edge)
+    # Shoulder button labels (back side)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    parts.append(P.gr_text("L", px, py + 5, "B.Fab", 0.8))
+    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    parts.append(P.gr_text("R", px, py + 5, "B.Fab", 0.8))
+    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.8))
 
-    # Board title (back side, top center)
-    # DFM: moved from B.SilkS to B.Fab to avoid silkscreen-to-hole DFM warnings.
-    # B.Fab is a documentation layer (not manufactured) — prevents silkscreen
-    # clearance violations near mounting holes at (10,7) and (150,7).
+    # Board title (back side, Fab layer — J1 pads at Y=73.9 block SilkS)
     parts.append(P.gr_text(
-        "ESP32-EMU-TURBO CPJ&CP 2026", CX, 3.0,
-        "B.Fab", 0.8,
+        "ESP32-EMU-TURBO  CPJ & CP  2026", CX, 73.0,
+        "B.Fab", 1.2,
     ))
 
     return "".join(parts)
@@ -404,6 +402,16 @@ def _component_placeholders():
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)
     placements.append(("C19", "C_1206", lx, ly + 6, 0, "B.Cu"))
 
+    # PAM8403 passive components (B.Cu)
+    # PAM8403 passives — spread ~2mm from body for clean layout
+    placements.append(("C22", "C_0805", *routing.C22_POS, 90, "B.Cu"))  # DC-blocking
+    placements.append(("R20", "R_0805", *routing.R20_POS, 0, "B.Cu"))   # INL bias
+    placements.append(("R21", "R_0805", *routing.R21_POS, 0, "B.Cu"))   # INR bias
+    placements.append(("C21", "C_0805", *routing.C21_POS, 0, "B.Cu"))   # VREF bypass
+    placements.append(("C23", "C_0805", *routing.C23_POS, 90, "B.Cu"))  # VDD decoupling
+    placements.append(("C24", "C_0805", *routing.C24_POS, 90, "B.Cu"))  # PVDD top
+    placements.append(("C25", "C_0805", *routing.C25_POS, 90, "B.Cu"))  # PVDD bottom
+
     # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
     # C1 at amx-1 to keep pads outside FPC slot zone (slot starts at x=125.5)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
@@ -440,8 +448,10 @@ def _component_placeholders():
         mirror = " (justify mirror)" if "B." in layer else ""
         ref_y, val_y = _text_offsets.get(fp_name, (-3, 3))
 
-        # ALL footprints: text on Fab layer (eliminates silkscreen-to-pad DFM)
+        # ALL refs on Fab layer — SilkS causes silk_over_copper DFM violations.
+        # Component labels added as separate gr_text in _silkscreen_labels().
         text_layer = "F.Fab" if layer_char == "F" else "B.Fab"
+        ref_layer = text_layer
         text_size = 0.6 if fp_name in _passive_fps else 1
 
         parts.append(
@@ -449,7 +459,7 @@ def _component_placeholders():
             f' (layer "{layer}")\n'
             f'    (uuid "{P.uid()}")\n'
             f'    (property "Reference" "{ref}"'
-            f' (at 0 {ref_y} 0) (layer "{text_layer}")'
+            f' (at 0 {ref_y} 0) (layer "{ref_layer}")'
             f' (effects (font (size {text_size} {text_size})'
             f' (thickness 0.2)){mirror}))\n'
             f'    (property "Value" "{fp_name}"'

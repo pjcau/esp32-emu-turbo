@@ -240,16 +240,16 @@ def usb_c_16p(layer="B"):
 
     # Shield THT oval pads (2 pads per pin number, pins 13-14)
     # Pin 13: left side, pin 14: right side
-    # Front (near signal pads): 1.100 x 2.000mm, drill 0.600mm
-    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.0, THT,
+    # Front (near signal pads): 1.700 x 2.000mm, drill 0.600mm
+    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.7, 2.0, THT,
                      drill=0.60, solder_mask_margin=-0.1))
-    pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.1, 2.0, THT,
+    pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.7, 2.0, THT,
                      drill=0.60, solder_mask_margin=-0.1))
-    # Rear: 1.200 x 1.800mm, drill 0.600mm
+    # Rear: 1.400 x 1.800mm, drill 0.600mm
     # Use 13b/14b names to avoid JLCPCB 0mm pad-spacing for same-named pads
-    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
+    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.4, 1.8, THT,
                      drill=0.60, solder_mask_margin=-0.1))
-    pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.2, 1.8, THT,
+    pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.4, 1.8, THT,
                      drill=0.60, solder_mask_margin=-0.1))
 
     # NPTH positioning holes (no pad, no net)
