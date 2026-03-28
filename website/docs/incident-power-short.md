@@ -10,6 +10,7 @@ sidebar_position: 13
 **Severity:** Critical (board non-functional)
 **Affected boards:** 5/5 (100%) — design bug, not component failure
 **Status:** Root cause identified, fix applied in routing.py, boards reworkable
+**Update 2026-03-28:** BUG #3 discovered (LCD_RST bridge), full 44-violation map completed
 
 ## Symptoms
 
@@ -317,9 +318,80 @@ AFTER (fixed):
 
 **Estimated time per board: ~10 minutes**
 
+## BUG #3: LCD_RST Bridges VBUS and GND (discovered 2026-03-28)
+
+After physically fixing BUG #1 and #2, boards still showed a VBUS-to-GND short. A deeper analysis revealed a **third short** that was listed in the original collision report (items #9 and #10 in the "Power vs Signal" category) but not recognized as a power bridge.
+
+### Root cause
+
+A 40mm-long LCD_RST trace on F.Cu at y=33.0 passes over **two different power vias**:
+
+| Via | Net | Position | Overlap |
+|-----|-----|----------|---------|
+| ESP32 GND via | GND | (81.50, 32.96) | -0.475mm |
+| C17 VBUS via | VBUS | (110.95, 33.00) | -0.515mm |
+
+```
+F.Cu layer — y = 33mm (under display area)
+
+  x=79.4                    CUT x=95           x=110.95    x=119.6
+  ====o==============================X=============o================
+      GND via              scrape here          VBUS via
+   (81.50, 32.96)                            (110.95, 33.00)
+
+  GND <---- LCD_RST copper ----> VBUS  =  DIRECT BRIDGE
+```
+
+### Why it was missed
+
+The original analysis (section 12.B) listed these as two separate "Power vs Signal" violations. The pairwise check found LCD_RST overlapping a VBUS via and LCD_RST overlapping a GND via independently, but did not recognize that **together** they formed a power-to-power bridge through the shared signal copper.
+
+### Rework
+
+On F.Cu (front/display side), cut the LCD_RST trace at **x=95, y=33** (center of board). LCD_RST still functions via B.Cu routing to the FPC connector.
+
+### DFM test added
+
+`test_power_bridge_detection()` now groups violations by trace and flags when a single trace touches vias from 2+ different power nets.
+
+## Complete Violation Map (44 total)
+
+Full analysis of **all 44 routing violations** found on the manufactured PCB (commit `adc073b`), including 8 power bridges, 19 single-net shorts, and rework procedures for each:
+
+**[Complete Short Circuit Map and Rework Guide](https://github.com/pjcau/esp32-emu-turbo/blob/main/hardware/debug/all-shorts-rework.md)**
+
+### Summary
+
+| Severity | Count | Description |
+|----------|-------|-------------|
+| CRITICAL | 3 | Power-to-power bridges (BUG #1, #2, #3) |
+| HIGH | 5 | +3V3-to-GND bridges via button/USB signal traces |
+| MEDIUM | 19 | Signal stuck to single power net |
+| MARGINAL | 11 | Gap 0-0.05mm, may not manifest |
+| **Total** | **44** | |
+
+### Assessment
+
+After fixing BUGs #1-3, power rails should work. However, with 24 additional signal-to-power shorts, the board has limited functionality: display, SD card, several buttons, and USB data lines are affected. A new PCB revision with corrected routing is needed for full functionality.
+
+## New DFM Tests Added (2026-03-28)
+
+Four tests added to `verify_dfm_v2.py` to prevent recurrence:
+
+| Test | What it catches | Old PCB violations |
+|------|----------------|--------------------|
+| `test_via_annular_ring_trace_clearance` | Via copper (not just drill) overlapping traces | 72 |
+| `test_signal_power_via_overlap` | Signal trace touching any power via | 32 |
+| `test_trace_crossing_same_layer` | Perpendicular trace crossings | 55 |
+| `test_power_bridge_detection` | Signal trace bridging 2+ power nets | 6 |
+
+**Root cause of test gap:** `test_drill_trace_clearance` (test 42) used drill radius (0.175mm) instead of annular ring copper radius (0.45mm) — a 0.275mm blind spot per via.
+
 ## Lessons Learned
 
 1. **Via placement must be checked against power traces** — the collision grid reported this, but violations were not treated as blocking errors
 2. **Power-net overlaps must be fatal** — any cross-net overlap with gap < 0mm should fail the build
 3. **Late component moves need clearance re-verification** — C19 was moved during a DFM fix without rechecking its via paths against existing F.Cu routes
 4. **Separate power violations from signal violations** — 2 critical power shorts were hidden among 180+ signal violations in the collision report
+5. **Bridge detection requires grouping, not just pairwise checks** — two "signal vs power" violations on the same trace form a power bridge (BUG #3)
+6. **Test the right dimension** — drill radius != copper radius; the annular ring extends 0.275mm beyond the drill edge

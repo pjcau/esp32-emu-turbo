@@ -1902,6 +1902,297 @@ def test_j4_display_pin_reversal():
         )
 
 
+def test_via_annular_ring_trace_clearance():
+    """Test: Via annular ring copper maintains clearance from different-net traces.
+
+    CRITICAL FIX: test_drill_trace_clearance (test 42) uses drill radius
+    (via["drill"]/2) but the COPPER extends to via["size"]/2. For our standard
+    0.9/0.35 vias, the annular ring extends 0.275mm beyond the drill edge.
+    A trace can pass test 42 yet physically overlap the copper by 0.275mm.
+
+    This test uses the actual copper radius (via_size/2) to check clearance.
+    """
+    print("\n── Via Annular Ring to Trace Clearance Test ──")
+    MIN_CLR = 0.10  # mm — JLCPCB minimum copper-to-copper
+
+    segs = _cached_segments()
+    vias = _cached_vias()
+
+    # Index segments by layer
+    segs_by_layer = {}
+    for s in segs:
+        segs_by_layer.setdefault(s["layer"], []).append(s)
+
+    violations = []
+    for v in vias:
+        vx, vy = v["x"], v["y"]
+        copper_r = v["size"] / 2.0  # annular ring radius (NOT drill radius)
+        v_net = v["net"]
+        if v_net == 0:
+            continue
+        # Vias have copper on F.Cu and B.Cu
+        for layer in ("F.Cu", "B.Cu"):
+            for s in segs_by_layer.get(layer, []):
+                if s["net"] == 0 or s["net"] == v_net:
+                    continue
+                dist = _point_to_segment_dist(vx, vy, s)
+                gap = dist - copper_r - s["w"] / 2.0
+                if gap < MIN_CLR:
+                    violations.append(
+                        f"via@({vx:.1f},{vy:.1f}) sz={v['size']} net={v_net} "
+                        f"vs {layer} net={s['net']} "
+                        f"({s['x1']:.1f},{s['y1']:.1f})-"
+                        f"({s['x2']:.1f},{s['y2']:.1f}) w={s['w']} "
+                        f"gap={gap:.3f}mm"
+                    )
+
+    # Baseline: current design has some inherent proximity in dense areas.
+    # This catches the 0.275mm blind spot from test 42 (drill vs copper).
+    BASELINE = 0
+    check(
+        f"Via annular ring to trace gap >= {MIN_CLR}mm "
+        f"({len(violations)} violations)",
+        len(violations) <= BASELINE,
+        f"{len(violations)} violations (baseline {BASELINE}): "
+        + "; ".join(violations[:5]),
+    )
+
+
+def test_signal_power_via_overlap():
+    """Test: No signal trace overlaps ANY power via annular ring (single-net).
+
+    Complement to test_power_bridge_detection which requires 2+ different power
+    nets. This test catches the simpler case: a signal trace touching even ONE
+    power via creates a signal-to-power short. For example, BTN_Y overlapping
+    a +3V3 via makes the button permanently read HIGH.
+    """
+    print("\n── Signal-to-Power Via Overlap Test ──")
+
+    segs = _cached_segments()
+    vias = _cached_vias()
+
+    # Read net names from PCB file
+    net_names = {}
+    with open(PCB_FILE) as f:
+        for m in re.finditer(r'\(net\s+(\d+)\s+"([^"]*)"\)', f.read()):
+            net_names[int(m.group(1))] = m.group(2)
+
+    POWER_NETS = {"GND", "VBUS", "+5V", "+3V3", "BAT+"}
+    power_net_ids = {nid for nid, name in net_names.items() if name in POWER_NETS}
+    power_vias = [v for v in vias if v["net"] in power_net_ids]
+
+    violations = []
+    for seg in segs:
+        seg_net = seg["net"]
+        if seg_net == 0 or seg_net in power_net_ids:
+            continue  # skip unnetted and power-net traces
+
+        seg_name = net_names.get(seg_net, f"net{seg_net}")
+
+        for via in power_vias:
+            if via["net"] == seg_net:
+                continue
+            vr = via["size"] / 2.0
+            sw = seg["w"] / 2.0
+            dist = _point_to_segment_dist(via["x"], via["y"], seg)
+            gap = dist - vr - sw
+            if gap < 0:
+                via_name = net_names.get(via["net"], f"net{via['net']}")
+                violations.append(
+                    f"{seg['layer']} {seg_name} "
+                    f"({seg['x1']:.1f},{seg['y1']:.1f})->"
+                    f"({seg['x2']:.1f},{seg['y2']:.1f}) "
+                    f"overlaps {via_name} via "
+                    f"({via['x']:.1f},{via['y']:.1f}) "
+                    f"gap={gap:.3f}mm"
+                )
+
+    check(
+        f"No signal traces overlap power via copper "
+        f"({len(violations)} overlaps found)",
+        len(violations) == 0,
+        f"Signal-power overlaps:\n" + "\n".join(f"    {v}" for v in violations[:10])
+        if violations else "",
+    )
+
+
+def test_trace_crossing_same_layer():
+    """Test: No two different-net traces cross on the same copper layer.
+
+    Existing test_trace_spacing uses _seg_min_dist() which only handles
+    PARALLEL axis-aligned segments. Perpendicular crossings (e.g., a horizontal
+    trace crossing a vertical trace) are completely invisible to that check.
+    This test detects actual 2D segment intersections.
+    """
+    print("\n── Trace Crossing Same Layer Test ──")
+
+    segs = _cached_segments()
+
+    by_layer = {}
+    for s in segs:
+        if "Cu" in s["layer"]:
+            by_layer.setdefault(s["layer"], []).append(s)
+
+    def segments_cross(s1, s2):
+        """Check if two segments' copper areas overlap (2D intersection
+        accounting for trace width)."""
+        # For axis-aligned segments, use direct geometry
+        tol = 0.01
+        s1_horiz = abs(s1["y1"] - s1["y2"]) < tol
+        s1_vert = abs(s1["x1"] - s1["x2"]) < tol
+        s2_horiz = abs(s2["y1"] - s2["y2"]) < tol
+        s2_vert = abs(s2["x1"] - s2["x2"]) < tol
+
+        # Horizontal vs Vertical crossing (most common case)
+        if s1_horiz and s2_vert:
+            h, v = s1, s2
+        elif s1_vert and s2_horiz:
+            h, v = s2, s1
+        else:
+            return None  # skip parallel or diagonal (handled elsewhere)
+
+        hx_lo = min(h["x1"], h["x2"])
+        hx_hi = max(h["x1"], h["x2"])
+        hy = h["y1"]
+        hw = h["w"] / 2.0
+
+        vx = v["x1"]
+        vy_lo = min(v["y1"], v["y2"])
+        vy_hi = max(v["y1"], v["y2"])
+        vw = v["w"] / 2.0
+
+        # Check if intersection point is within both segments (with width)
+        if (hx_lo - vw <= vx <= hx_hi + vw and
+                vy_lo - hw <= hy <= vy_hi + hw):
+            # Compute copper-to-copper gap at crossing point
+            x_gap = min(abs(vx - hx_lo), abs(vx - hx_hi))
+            y_gap = min(abs(hy - vy_lo), abs(hy - vy_hi))
+            # If the crossing point is INSIDE both segments (not just at ends)
+            if hx_lo <= vx <= hx_hi and vy_lo <= hy <= vy_hi:
+                return 0.0  # direct overlap at crossing
+            # Near-miss at segment endpoint
+            gap_x = max(0, max(hx_lo - vx, vx - hx_hi)) - vw
+            gap_y = max(0, max(vy_lo - hy, hy - vy_hi)) - hw
+            return max(gap_x, gap_y)
+
+        return None  # no crossing
+
+    violations = []
+    for layer, layer_segs in by_layer.items():
+        n = len(layer_segs)
+        for i in range(n):
+            for j in range(i + 1, n):
+                s1, s2 = layer_segs[i], layer_segs[j]
+                if s1["net"] == 0 or s2["net"] == 0:
+                    continue
+                if s1["net"] == s2["net"]:
+                    continue
+                gap = segments_cross(s1, s2)
+                if gap is not None and gap <= 0:
+                    violations.append(
+                        f"{layer}: net{s1['net']} "
+                        f"({s1['x1']:.1f},{s1['y1']:.1f})->"
+                        f"({s1['x2']:.1f},{s1['y2']:.1f}) "
+                        f"crosses net{s2['net']} "
+                        f"({s2['x1']:.1f},{s2['y1']:.1f})->"
+                        f"({s2['x2']:.1f},{s2['y2']:.1f})"
+                    )
+
+    check(
+        f"No different-net trace crossings on same layer "
+        f"({len(violations)} crossings found)",
+        len(violations) == 0,
+        f"Crossings:\n" + "\n".join(f"    {v}" for v in violations[:10])
+        if violations else "",
+    )
+
+
+def test_power_bridge_detection():
+    """Test: No signal trace bridges two different power-net vias.
+
+    A signal trace that overlaps via_A (net=VBUS) AND via_B (net=GND) creates
+    a direct power-to-power short through the signal copper, even though the
+    trace itself is a signal net. This is the root cause of BUG #3 (LCD_RST
+    bridging VBUS and GND on F.Cu) which was missed by pairwise checks.
+
+    For every trace segment, collects all power vias it overlaps (gap < 0).
+    If a single segment touches vias from 2+ different power nets, it's a
+    CRITICAL bridge — the board will have a power short.
+    """
+    print("\n── Power Bridge Detection Test ──")
+
+    segs = _cached_segments()
+    vias = _cached_vias()
+
+    # Read net names from PCB file
+    net_names = {}
+    with open(PCB_FILE) as f:
+        for m in re.finditer(r'\(net\s+(\d+)\s+"([^"]*)"\)', f.read()):
+            net_names[int(m.group(1))] = m.group(2)
+
+    POWER_NETS = {"GND", "VBUS", "+5V", "+3V3", "BAT+"}
+    power_net_ids = {nid for nid, name in net_names.items() if name in POWER_NETS}
+
+    # Collect power vias
+    power_vias = [v for v in vias if v["net"] in power_net_ids]
+
+    def seg_via_overlap(seg, via):
+        """Return gap (negative = overlap) between segment and via annular ring."""
+        vx, vy = via["x"], via["y"]
+        vr = via["size"] / 2.0
+        sw = seg["w"] / 2.0
+        dist = _point_to_segment_dist(vx, vy, seg)
+        return dist - sw - vr
+
+    # For each segment, find all power vias it overlaps (gap < 0)
+    bridges = []
+    for seg in segs:
+        seg_net = seg["net"]
+        if seg_net in power_net_ids:
+            continue  # power trace touching power via = expected
+        if seg_net == 0:
+            continue
+
+        touched_power = {}  # power_net_name -> list of via details
+        for via in power_vias:
+            if via["net"] == seg_net:
+                continue  # same net
+            # Vias span all layers, so check regardless of segment layer
+            gap = seg_via_overlap(seg, via)
+            if gap < 0:
+                via_name = net_names.get(via["net"], f"net{via['net']}")
+                if via_name not in touched_power:
+                    touched_power[via_name] = []
+                touched_power[via_name].append({
+                    "x": via["x"], "y": via["y"],
+                    "gap": gap,
+                })
+
+        if len(touched_power) >= 2:
+            seg_name = net_names.get(seg_net, f"net{seg_net}")
+            nets_bridged = sorted(touched_power.keys())
+            details = []
+            for pn in nets_bridged:
+                for v in touched_power[pn]:
+                    details.append(f"{pn}@({v['x']:.1f},{v['y']:.1f}) "
+                                   f"gap={v['gap']:.3f}")
+            bridges.append(
+                f"{seg['layer']} {seg_name} "
+                f"({seg['x1']:.1f},{seg['y1']:.1f})->"
+                f"({seg['x2']:.1f},{seg['y2']:.1f}) "
+                f"bridges {' + '.join(nets_bridged)}: "
+                f"{'; '.join(details)}"
+            )
+
+    check(
+        f"No signal traces bridge 2+ power nets "
+        f"({len(bridges)} bridges found)",
+        len(bridges) == 0,
+        f"CRITICAL bridges:\n" + "\n".join(f"    {b}" for b in bridges)
+        if bridges else "",
+    )
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -1946,6 +2237,10 @@ if __name__ == "__main__":
     test_batch_pin_net_assignment()
     test_j4_fpc_orientation()
     test_j4_display_pin_reversal()
+    test_via_annular_ring_trace_clearance()
+    test_signal_power_via_overlap()
+    test_trace_crossing_same_layer()
+    test_power_bridge_detection()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")
