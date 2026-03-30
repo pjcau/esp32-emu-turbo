@@ -119,7 +119,7 @@ SHOULDER_R_ENC = (65, 32)
 FPC_ENC = (55, 2)      # Next to FPC slot, right side (vertical)
 
 # USB-C (bottom center edge)
-USBC_ENC = (0, -BOARD_H / 2 + 3.5)  # 3.5mm from bottom edge (DFM: shield pads clear edge by 0.225mm)
+USBC_ENC = (0, -BOARD_H / 2 + 3.8)  # 3.8mm from bottom edge (DFM: shield pads clear edge by 0.525mm)
 
 # SD card slot (bottom right)
 SD_ENC = (60, -BOARD_H / 2 + 8)
@@ -140,7 +140,7 @@ PAM8403_ENC = (-50, 8)
 # L1 inductor (near IP5306, with clearance)
 INDUCTOR_ENC = (30, -15)
 # JST PH battery connector (center, below passives, back)
-JST_BAT_ENC = (0, -20)
+JST_BAT_ENC = (0, -25)
 
 
 def _board_outline():
@@ -216,9 +216,9 @@ def _silkscreen_labels():
 
     # Button group labels (front silkscreen)
     px, py = enc_to_pcb(*DPAD_ENC)
-    parts.append(P.gr_text("D-PAD", px, py - 15, "F.SilkS"))
+    parts.append(P.gr_text("D-PAD", px, py - 20, "F.SilkS"))
     px, py = enc_to_pcb(*ABXY_ENC)
-    parts.append(P.gr_text("ABXY", px, py - 16, "F.SilkS"))
+    parts.append(P.gr_text("ABXY", px, py - 20, "F.SilkS"))
 
     # Menu button label (front)
     px, py = enc_to_pcb(*MENU_ENC)
@@ -245,6 +245,14 @@ def _silkscreen_labels():
     parts.append(P.gr_text("USB-C", px, py - 5, "B.SilkS", 0.8))
     px, py = enc_to_pcb(*SD_ENC)
     parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 0.8))
+
+    # Battery connector label (back side)
+    px, py = enc_to_pcb(*JST_BAT_ENC)
+    parts.append(P.gr_text("BATT", px, py - 5, "B.SilkS", 0.8))
+
+    # FPC display connector label (back side)
+    px, py = enc_to_pcb(*FPC_ENC)
+    parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 0.8))
 
     # Power switch label (back side)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
@@ -468,6 +476,11 @@ def _component_placeholders():
     placements.append(("C1", "C_0805", amx - 3, amy - 7, 0, "B.Cu"))  # DFM: was amx-1, too close to FPC slot
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
+    # ── Fiducial markers (F.Cu, at least 5mm from board edges) ──
+    placements.append(("FID1", "Fiducial", 5, 5, 0, "F.Cu"))
+    placements.append(("FID2", "Fiducial", 155, 5, 0, "F.Cu"))
+    placements.append(("FID3", "Fiducial", 5, 70, 0, "F.Cu"))
+
     # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)
     _text_offsets = {
         "ESP32-S3-WROOM-1-N16R8": (-15, 15),
@@ -481,6 +494,7 @@ def _component_placeholders():
         "JST-PH-2P": (-3, 3),
         "SS-12D00G3": (-4, 4),
         "SMD-4x4x2": (-4, 4),
+        "Fiducial": (-2, 2),
     }
 
     # Passives: put text on Fab layer (not silkscreen) to avoid DFM violations

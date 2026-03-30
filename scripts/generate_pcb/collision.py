@@ -19,8 +19,8 @@ from typing import Dict, List, Optional, Set, Tuple
 LAYER_IDX = {"F.Cu": 0, "B.Cu": 1}
 
 # ── JLCPCB DFM clearance rules (edge-to-edge minimums, mm) ──────
-CLEARANCE_TRACE_TRACE = 0.10   # trace-to-trace, same layer, different net
-CLEARANCE_TRACE_PAD = 0.10     # trace edge to pad edge, different net
+CLEARANCE_TRACE_TRACE = 0.15   # trace-to-trace, same layer, different net
+CLEARANCE_TRACE_PAD = 0.15     # trace edge to pad edge, different net
 CLEARANCE_VIA_TRACE = 0.15     # via drill edge to trace edge
 CLEARANCE_VIA_VIA = 0.25       # via drill to via drill (hole-to-hole)
 CLEARANCE_VIA_PAD = 0.15       # via annular ring edge to pad edge

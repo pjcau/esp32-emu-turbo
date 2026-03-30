@@ -242,15 +242,15 @@ def usb_c_16p(layer="B"):
     # Pin 13: left side, pin 14: right side
     # Front (near signal pads): 1.700 x 2.000mm, drill 0.600mm
     pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.7, 2.0, THT,
-                     drill=0.60, solder_mask_margin=-0.1))
+                     drill=0.60, solder_mask_margin=0))
     pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.7, 2.0, THT,
-                     drill=0.60, solder_mask_margin=-0.1))
+                     drill=0.60, solder_mask_margin=0))
     # Rear: 1.400 x 1.800mm, drill 0.600mm
     # Use 13b/14b names to avoid JLCPCB 0mm pad-spacing for same-named pads
     pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.4, 1.8, THT,
-                     drill=0.60, solder_mask_margin=-0.1))
+                     drill=0.60, solder_mask_margin=0))
     pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.4, 1.8, THT,
-                     drill=0.60, solder_mask_margin=-0.1))
+                     drill=0.60, solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
     # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm
@@ -416,6 +416,17 @@ def inductor_4x4(layer="B"):
     ]
 
 
+# ── Fiducial marker (1mm SMD pad, 2mm mask opening) ─────────────
+def fiducial(layer="F"):
+    layers = SMD_F if layer == "F" else SMD_B
+    # No paste layer — remove paste from layers string
+    layers_no_paste = layers.replace(' "F.Paste"', '').replace(' "B.Paste"', '')
+    return [
+        _pad("1", "smd", "circle", 0, 0, 1.0, 1.0, layers_no_paste,
+             solder_mask_margin=0.5),
+    ]
+
+
 # ── Footprint registry ───────────────────────────────────────────
 # Maps footprint name -> (pad_generator, default_layer)
 FOOTPRINTS = {
@@ -435,6 +446,7 @@ FOOTPRINTS = {
     "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
     "Speaker-22mm": (speaker_22mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),
+    "Fiducial": (fiducial, "F"),
 }
 
 
