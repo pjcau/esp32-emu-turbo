@@ -1,0 +1,244 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1400" font-family="monospace">
+  <rect width="1200" height="1400" fill="#0d1117"/>
+
+  <text x="600" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#ffaa44">FIX 9-27 — Short segnale → potenza [MEDIUM]</text>
+  <text x="600" y="50" text-anchor="middle" font-size="13" fill="#aaa">Raschiatura singola — NO ponticello — la trace resta funzionante</text>
+
+  <!-- Legend -->
+  <rect x="20" y="65" width="350" height="100" rx="6" fill="#161b22" stroke="#333"/>
+  <text x="30" y="85" font-size="12" font-weight="bold" fill="#ccc">LEGENDA NET:</text>
+  <rect x="30" y="95" width="30" height="8" fill="#44aaff" rx="2"/><text x="70" y="103" font-size="11" fill="#88ccff">+3V3</text>
+  <rect x="140" y="95" width="30" height="8" fill="#44ff44" rx="2"/><text x="180" y="103" font-size="11" fill="#88ff88">GND</text>
+  <rect x="250" y="95" width="30" height="8" fill="#ff4444" rx="2"/><text x="290" y="103" font-size="11" fill="#ff8888">VBUS</text>
+  <rect x="30" y="120" width="30" height="8" fill="#ffaa44" rx="2"/><text x="70" y="128" font-size="11" fill="#ffcc66">Segnale (trace)</text>
+  <rect x="200" y="120" width="20" height="12" fill="#556b2f" stroke="#8fbc8f" stroke-width="1"/><text x="230" y="131" font-size="11" fill="#8fbc8f">Raschiare qui</text>
+
+  <!-- Technique diagram -->
+  <rect x="420" y="65" width="760" height="100" rx="6" fill="#161b22" stroke="#555"/>
+  <text x="800" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#ccc">TECNICA: raschia ~0.5mm di rame attorno all'annular ring della via</text>
+
+  <!-- Before -->
+  <rect x="440" y="100" width="160" height="50" rx="4" fill="#1a1a2e" stroke="#c44"/>
+  <text x="520" y="115" text-anchor="middle" font-size="10" fill="#c44">PRIMA</text>
+  <rect x="460" y="125" width="120" height="4" fill="#ffaa44" rx="1"/>
+  <circle cx="520" cy="127" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <circle cx="520" cy="127" r="2" fill="#44ff44"/>
+
+  <!-- Arrow -->
+  <text x="620" y="130" font-size="16" fill="#888">→</text>
+
+  <!-- After -->
+  <rect x="650" y="100" width="160" height="50" rx="4" fill="#1a1a2e" stroke="#4a4"/>
+  <text x="730" y="115" text-anchor="middle" font-size="10" fill="#4a4">DOPO</text>
+  <rect x="670" y="125" width="40" height="4" fill="#ffaa44" rx="1"/>
+  <rect x="750" y="125" width="40" height="4" fill="#ffaa44" rx="1"/>
+  <circle cx="730" cy="127" r="10" fill="none" stroke="#44ff44" stroke-width="3" stroke-dasharray="4,2"/>
+  <circle cx="730" cy="127" r="2" fill="#44ff44"/>
+  <rect x="715" y="120" width="30" height="14" fill="#556b2f" opacity="0.5"/>
+
+  <text x="1050" y="130" text-anchor="middle" font-size="10" fill="#aaa">Il segnale continua</text>
+  <text x="1050" y="143" text-anchor="middle" font-size="10" fill="#aaa">a funzionare!</text>
+
+  <!-- ========== F.Cu FIXES ========== -->
+  <rect x="20" y="180" width="570" height="810" rx="8" fill="#1a1a2e" stroke="#ff6644" stroke-width="2"/>
+  <text x="305" y="205" text-anchor="middle" font-size="16" font-weight="bold" fill="#ff6644">F.Cu (lato TOP)</text>
+
+  <!-- FIX 9 -->
+  <rect x="35" y="220" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="240" font-size="13" font-weight="bold" fill="#ffaa44">#9 BTN_Y → +3V3</text>
+  <text x="45" y="258" font-size="11" fill="#aaa">Via +3V3 @ (70.45, 44.00) — overlap -0.475mm</text>
+  <text x="45" y="273" font-size="11" fill="#ff8888">Effetto: BTN_Y fisso a +3V3 (bottone non funziona)</text>
+  <circle cx="540" cy="245" r="10" fill="none" stroke="#44aaff" stroke-width="3"/>
+  <text x="540" y="249" text-anchor="middle" font-size="8" font-weight="bold" fill="#44aaff">3V3</text>
+  <rect x="520" y="255" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+  <text x="540" y="263" text-anchor="middle" font-size="7" fill="#cfc">raschia</text>
+
+  <!-- FIX 10 -->
+  <rect x="35" y="295" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="315" font-size="13" font-weight="bold" fill="#ffaa44">#10 USB_D+ → GND</text>
+  <text x="45" y="333" font-size="11" fill="#aaa">Via GND @ (85.05, 66.00) — overlap -0.425mm</text>
+  <text x="45" y="348" font-size="11" fill="#ff8888">Effetto: USB_D+ a GND (USB non funziona)</text>
+  <circle cx="540" cy="320" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="540" y="324" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="520" y="330" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 11 -->
+  <rect x="35" y="370" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="390" font-size="13" font-weight="bold" fill="#ffaa44">#11 LCD_DC → GND</text>
+  <text x="45" y="408" font-size="11" fill="#aaa">Via GND @ (109.05, 37.00) — overlap -0.395mm</text>
+  <text x="45" y="423" font-size="11" fill="#ff8888">Effetto: LCD_DC a GND (display non risponde)</text>
+  <circle cx="540" cy="395" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="540" y="399" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="520" y="405" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 12-13 -->
+  <rect x="35" y="445" width="540" height="75" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="465" font-size="13" font-weight="bold" fill="#ffaa44">#12-13 BTN_DOWN → +3V3 (2 via!)</text>
+  <text x="45" y="483" font-size="11" fill="#aaa">Via 1: +3V3 @ (25.95, 63.00) — overlap -0.375mm</text>
+  <text x="45" y="498" font-size="11" fill="#aaa">Via 2: +3V3 @ (32.95, 63.00) — overlap -0.375mm</text>
+  <text x="45" y="513" font-size="11" fill="#ff8888">Effetto: BTN_DOWN fisso a +3V3 — raschiare ENTRAMBE</text>
+  <circle cx="520" cy="475" r="10" fill="none" stroke="#44aaff" stroke-width="3"/>
+  <text x="520" y="479" text-anchor="middle" font-size="8" font-weight="bold" fill="#44aaff">3V3</text>
+  <circle cx="555" cy="475" r="10" fill="none" stroke="#44aaff" stroke-width="3"/>
+  <text x="555" y="479" text-anchor="middle" font-size="8" font-weight="bold" fill="#44aaff">3V3</text>
+  <rect x="505" y="487" width="65" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 18 -->
+  <rect x="35" y="530" width="540" height="65" rx="5" fill="#161b22" stroke="#cc4"/>
+  <text x="45" y="550" font-size="13" font-weight="bold" fill="#ffaa44">#18 BTN_A → GND (anche FIX 7 su B.Cu!)</text>
+  <text x="45" y="568" font-size="11" fill="#aaa">Via GND @ (76.80, 67.12) — overlap -0.250mm</text>
+  <text x="45" y="583" font-size="11" fill="#ff8888">Effetto: BTN_A anche a GND su F.Cu</text>
+  <circle cx="540" cy="555" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="540" y="559" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="520" y="565" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 20-22 -->
+  <rect x="35" y="605" width="540" height="85" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="625" font-size="13" font-weight="bold" fill="#ffaa44">#20-22 BTN_SELECT → +3V3 (3 via!)</text>
+  <text x="45" y="643" font-size="11" fill="#aaa">Via 1: +3V3 @ (62.05, 44.60) — overlap -0.075mm</text>
+  <text x="45" y="658" font-size="11" fill="#aaa">Via 2: +3V3 @ (67.05, 44.60) — overlap -0.075mm</text>
+  <text x="45" y="673" font-size="11" fill="#aaa">Via 3: +3V3 @ (72.05, 44.60) — overlap -0.075mm</text>
+  <text x="45" y="685" font-size="11" fill="#ff8888">Raschiare tutte e 3 su F.Cu</text>
+  <circle cx="510" cy="640" r="8" fill="none" stroke="#44aaff" stroke-width="2"/>
+  <circle cx="535" cy="640" r="8" fill="none" stroke="#44aaff" stroke-width="2"/>
+  <circle cx="560" cy="640" r="8" fill="none" stroke="#44aaff" stroke-width="2"/>
+
+  <!-- FIX 23 -->
+  <rect x="35" y="700" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="720" font-size="13" font-weight="bold" fill="#ffaa44">#23 BTN_R → GND</text>
+  <text x="45" y="738" font-size="11" fill="#aaa">Via GND @ (123.50, 64.50) — overlap -0.075mm</text>
+  <text x="45" y="753" font-size="11" fill="#ff8888">Effetto: BTN_R fisso a GND</text>
+  <circle cx="540" cy="725" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="540" y="729" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="520" y="735" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 26 -->
+  <rect x="35" y="775" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="45" y="795" font-size="13" font-weight="bold" fill="#ffaa44">#26 LCD_D6 → +3V3</text>
+  <text x="45" y="813" font-size="11" fill="#aaa">Via +3V3 @ (88.75, 21.01) — overlap -0.040mm</text>
+  <text x="45" y="828" font-size="11" fill="#ff8888">Effetto: LCD_D6 fisso a +3V3</text>
+  <circle cx="540" cy="800" r="10" fill="none" stroke="#44aaff" stroke-width="3"/>
+  <text x="540" y="804" text-anchor="middle" font-size="8" font-weight="bold" fill="#44aaff">3V3</text>
+  <rect x="520" y="810" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- Total F.Cu count -->
+  <text x="305" y="970" text-anchor="middle" font-size="14" font-weight="bold" fill="#ff6644">Totale F.Cu: 11 raschiature</text>
+
+  <!-- ========== B.Cu FIXES ========== -->
+  <rect x="610" y="180" width="570" height="810" rx="8" fill="#1a1a2e" stroke="#4488ff" stroke-width="2"/>
+  <text x="895" y="205" text-anchor="middle" font-size="16" font-weight="bold" fill="#4488ff">B.Cu (lato BOTTOM)</text>
+
+  <!-- FIX 14 -->
+  <rect x="625" y="220" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="240" font-size="13" font-weight="bold" fill="#ffaa44">#14 LCD_D0 → GND</text>
+  <text x="635" y="258" font-size="11" fill="#aaa">Via GND @ (134.50, 34.85) — overlap -0.450mm</text>
+  <text x="635" y="273" font-size="11" fill="#ff8888">Effetto: LCD_D0 fisso a GND (dato bit 0)</text>
+  <circle cx="1130" cy="245" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="1130" y="249" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="1110" y="255" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 15 -->
+  <rect x="625" y="295" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="315" font-size="13" font-weight="bold" fill="#ffaa44">#15 SD_CS → GND</text>
+  <text x="635" y="333" font-size="11" fill="#aaa">Via GND @ (153.50, 34.85) — overlap -0.450mm</text>
+  <text x="635" y="348" font-size="11" fill="#ff8888">Effetto: SD card non funziona!</text>
+  <circle cx="1130" cy="320" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="1130" y="324" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="1110" y="330" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 16 -->
+  <rect x="625" y="370" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="390" font-size="13" font-weight="bold" fill="#ffaa44">#16 LCD_D5 → GND</text>
+  <text x="635" y="408" font-size="11" fill="#aaa">Via GND @ (134.50, 34.85) — overlap -0.350mm</text>
+  <text x="635" y="423" font-size="11" fill="#ff8888">Effetto: LCD_D5 fisso a GND (dato bit 5)</text>
+  <circle cx="1130" cy="395" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="1130" y="399" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="1110" y="405" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 17 -->
+  <rect x="625" y="445" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="465" font-size="13" font-weight="bold" fill="#ffaa44">#17 BTN_B → GND</text>
+  <text x="635" y="483" font-size="11" fill="#aaa">Via GND @ (143.00, 50.25) — overlap -0.275mm</text>
+  <text x="635" y="498" font-size="11" fill="#ff8888">Effetto: BTN_B fisso a GND (bottone non funziona)</text>
+  <circle cx="1130" cy="470" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="1130" y="474" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="1110" y="480" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 19 -->
+  <rect x="625" y="520" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="540" font-size="13" font-weight="bold" fill="#ffaa44">#19 LCD_D7 → GND</text>
+  <text x="635" y="558" font-size="11" fill="#aaa">Via GND @ (81.50, 32.96) — overlap -0.145mm</text>
+  <text x="635" y="573" font-size="11" fill="#ff8888">Effetto: LCD_D7 fisso a GND (dato bit 7)</text>
+  <circle cx="1130" cy="545" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="1130" y="549" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="1110" y="555" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 24 -->
+  <rect x="625" y="595" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="615" font-size="13" font-weight="bold" fill="#ffaa44">#24 BTN_SELECT → +3V3 (B.Cu seg.)</text>
+  <text x="635" y="633" font-size="11" fill="#aaa">Via +3V3 @ (72.05, 44.60) — overlap -0.075mm</text>
+  <text x="635" y="648" font-size="11" fill="#ff8888">Effetto: BTN_SELECT fisso +3V3 (anche su B.Cu)</text>
+  <circle cx="1130" cy="620" r="10" fill="none" stroke="#44aaff" stroke-width="3"/>
+  <text x="1130" y="624" text-anchor="middle" font-size="8" font-weight="bold" fill="#44aaff">3V3</text>
+  <rect x="1110" y="630" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 25 -->
+  <rect x="625" y="670" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="690" font-size="13" font-weight="bold" fill="#ffaa44">#25 LCD_D4 → GND</text>
+  <text x="635" y="708" font-size="11" fill="#aaa">Via GND @ (134.50, 34.85) — overlap -0.050mm</text>
+  <text x="635" y="723" font-size="11" fill="#ff8888">Effetto: LCD_D4 fisso a GND (dato bit 4)</text>
+  <circle cx="1130" cy="695" r="10" fill="none" stroke="#44ff44" stroke-width="3"/>
+  <text x="1130" y="699" text-anchor="middle" font-size="8" font-weight="bold" fill="#44ff44">GND</text>
+  <rect x="1110" y="705" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- FIX 27 -->
+  <rect x="625" y="745" width="540" height="65" rx="5" fill="#161b22" stroke="#444"/>
+  <text x="635" y="765" font-size="13" font-weight="bold" fill="#ffaa44">#27 LCD_D4 → VBUS</text>
+  <text x="635" y="783" font-size="11" fill="#aaa">Via VBUS @ (110.95, 33.00) — overlap -0.000mm</text>
+  <text x="635" y="798" font-size="11" fill="#ff8888">Effetto: LCD_D4 tocca VBUS (5V su data!)</text>
+  <circle cx="1130" cy="770" r="10" fill="none" stroke="#ff4444" stroke-width="3"/>
+  <text x="1130" y="774" text-anchor="middle" font-size="7" font-weight="bold" fill="#ff4444">VBUS</text>
+  <rect x="1110" y="780" width="40" height="10" fill="#556b2f" opacity="0.6" stroke="#8fbc8f" rx="2"/>
+
+  <!-- Total B.Cu count -->
+  <text x="895" y="970" text-anchor="middle" font-size="14" font-weight="bold" fill="#4488ff">Totale B.Cu: 8 raschiature</text>
+
+  <!-- ========== SUMMARY ========== -->
+  <rect x="20" y="1010" width="1160" height="190" rx="8" fill="#161b22" stroke="#888" stroke-width="2"/>
+  <text x="600" y="1040" text-anchor="middle" font-size="18" font-weight="bold" fill="#ccc">RIEPILOGO FIX 9-27</text>
+
+  <text x="60" y="1070" font-size="14" fill="#ffaa44">Segnali su F.Cu (11 raschiature):</text>
+  <text x="80" y="1090" font-size="12" fill="#aaa">BTN_Y, USB_D+, LCD_DC, BTN_DOWN(x2), BTN_A, BTN_SELECT(x3), BTN_R, LCD_D6</text>
+
+  <text x="60" y="1120" font-size="14" fill="#ffaa44">Segnali su B.Cu (8 raschiature):</text>
+  <text x="80" y="1140" font-size="12" fill="#aaa">LCD_D0, SD_CS, LCD_D5, BTN_B, LCD_D7, BTN_SELECT, LCD_D4, LCD_D4(VBUS)</text>
+
+  <text x="60" y="1175" font-size="13" font-weight="bold" fill="#4f4">Azione per tutti: raschiare ~0.5mm di rame attorno all'annular ring della via</text>
+  <text x="60" y="1195" font-size="13" font-weight="bold" fill="#4f4">NON serve ponticello — la trace resta connessa al suo percorso</text>
+
+  <!-- Net stats -->
+  <rect x="20" y="1220" width="380" height="160" rx="8" fill="#1a1a2e" stroke="#44aaff"/>
+  <text x="210" y="1250" text-anchor="middle" font-size="14" font-weight="bold" fill="#44aaff">Via +3V3 coinvolte: 8</text>
+  <text x="40" y="1275" font-size="11" fill="#88ccff">#9  BTN_Y    @ (70.45, 44.00)</text>
+  <text x="40" y="1292" font-size="11" fill="#88ccff">#12 BTN_DOWN @ (25.95, 63.00)</text>
+  <text x="40" y="1309" font-size="11" fill="#88ccff">#13 BTN_DOWN @ (32.95, 63.00)</text>
+  <text x="40" y="1326" font-size="11" fill="#88ccff">#20-22 BTN_SELECT (3 via)</text>
+  <text x="40" y="1343" font-size="11" fill="#88ccff">#24 BTN_SELECT @ B.Cu</text>
+  <text x="40" y="1360" font-size="11" fill="#88ccff">#26 LCD_D6   @ (88.75, 21.01)</text>
+
+  <rect x="420" y="1220" width="380" height="160" rx="8" fill="#1a1a2e" stroke="#44ff44"/>
+  <text x="610" y="1250" text-anchor="middle" font-size="14" font-weight="bold" fill="#44ff44">Via GND coinvolte: 10</text>
+  <text x="440" y="1275" font-size="11" fill="#88ff88">#10 USB_D+  @ (85.05, 66.00)</text>
+  <text x="440" y="1292" font-size="11" fill="#88ff88">#11 LCD_DC  @ (109.05, 37.00)</text>
+  <text x="440" y="1309" font-size="11" fill="#88ff88">#14,16,25 LCD @ (134.50, 34.85)</text>
+  <text x="440" y="1326" font-size="11" fill="#88ff88">#15 SD_CS   @ (153.50, 34.85)</text>
+  <text x="440" y="1343" font-size="11" fill="#88ff88">#17 BTN_B   @ (143.00, 50.25)</text>
+  <text x="440" y="1360" font-size="11" fill="#88ff88">#18 BTN_A   @ (76.80, 67.12)</text>
+
+  <rect x="820" y="1220" width="360" height="160" rx="8" fill="#1a1a2e" stroke="#ff4444"/>
+  <text x="1000" y="1250" text-anchor="middle" font-size="14" font-weight="bold" fill="#ff4444">Via VBUS coinvolte: 1</text>
+  <text x="840" y="1275" font-size="11" fill="#ff8888">#27 LCD_D4  @ (110.95, 33.00)</text>
+  <text x="840" y="1305" font-size="11" fill="#ff8888">ATTENZIONE: 5V su linea dati!</text>
+  <text x="840" y="1325" font-size="11" fill="#ff8888">Raschiare con cura per</text>
+  <text x="840" y="1345" font-size="11" fill="#ff8888">evitare danni al display</text>
+</svg>

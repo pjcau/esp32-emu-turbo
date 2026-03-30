@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 750" font-family="monospace">
+  <rect width="1000" height="750" fill="#0d1117"/>
+  <text x="500" y="30" text-anchor="middle" font-size="20" font-weight="bold" fill="#ff8844">FIX 7 — BTN_A bridge +3V3-GND [HIGH]</text>
+  <text x="500" y="50" text-anchor="middle" font-size="13" fill="#aaa">B.Cu — trace verticale x=52.5mm — 4 tagli + ponticello AWG30</text>
+  <text x="500" y="68" text-anchor="middle" font-size="12" fill="#ff8888">Nota: BTN_A ha anche FIX #18 su F.Cu (GND) — controllare dopo!</text>
+
+  <!-- Legend -->
+  <rect x="20" y="80" width="220" height="140" rx="6" fill="#161b22" stroke="#333"/>
+  <text x="30" y="100" font-size="12" font-weight="bold" fill="#ccc">LEGENDA NET:</text>
+  <rect x="30" y="110" width="40" height="8" fill="#44aaff" rx="2"/><text x="80" y="118" font-size="11" fill="#88ccff">+3V3</text>
+  <rect x="30" y="130" width="40" height="8" fill="#44ff44" rx="2"/><text x="80" y="138" font-size="11" fill="#88ff88">GND</text>
+  <rect x="30" y="150" width="40" height="8" fill="#ff6666" rx="2"/><text x="80" y="158" font-size="11" fill="#ff9999">BTN_A (segnale)</text>
+  <rect x="30" y="170" width="12" height="12" fill="#ff0" opacity="0.5"/><text x="50" y="181" font-size="11" fill="#ff0">TAGLIO</text>
+  <rect x="30" y="190" width="40" height="4" fill="#00ffaa" rx="1"/><text x="80" y="195" font-size="11" fill="#00ffaa">Ponticello AWG30</text>
+
+  <!-- BEFORE -->
+  <rect x="30" y="230" width="450" height="480" rx="8" fill="#1a1a2e" stroke="#c44" stroke-width="2"/>
+  <text x="255" y="255" text-anchor="middle" font-size="16" font-weight="bold" fill="#ff4444">PRIMA — B.Cu, x=52.5mm</text>
+
+  <rect x="250" y="290" width="7" height="380" fill="#ff6666" opacity="0.9" rx="1"/>
+  <text x="230" y="310" text-anchor="end" font-size="10" fill="#ff9999">BTN_A</text>
+  <text x="230" y="322" text-anchor="end" font-size="9" fill="#ff9999">w=0.25mm</text>
+
+  <circle cx="253" cy="380" r="22" fill="none" stroke="#44aaff" stroke-width="4"/>
+  <circle cx="253" cy="380" r="5" fill="#44aaff"/>
+  <text x="290" y="375" font-size="11" font-weight="bold" fill="#44aaff">Via +3V3</text>
+  <text x="290" y="388" font-size="9" fill="#44aaff">(52.05, 44.60)</text>
+  <rect x="240" y="365" width="26" height="30" fill="#ff0" opacity="0.3"/>
+
+  <circle cx="253" cy="500" r="22" fill="none" stroke="#44ff44" stroke-width="4"/>
+  <circle cx="253" cy="500" r="5" fill="#44ff44"/>
+  <text x="290" y="495" font-size="11" font-weight="bold" fill="#44ff44">Via GND</text>
+  <text x="290" y="508" font-size="9" fill="#44ff44">(52.05, 52.00)</text>
+  <rect x="240" y="485" width="26" height="30" fill="#ff0" opacity="0.3"/>
+
+  <text x="255" y="680" text-anchor="middle" font-size="12" font-weight="bold" fill="#ff0">+3V3 &lt;-- rame --&gt; GND = BRIDGE!</text>
+  <text x="253" y="295" text-anchor="middle" font-size="10" fill="#888">verso ESP32</text>
+  <text x="253" y="665" text-anchor="middle" font-size="10" fill="#888">verso bottone A</text>
+
+  <!-- AFTER -->
+  <rect x="520" y="230" width="460" height="480" rx="8" fill="#1a1a2e" stroke="#4a4" stroke-width="2"/>
+  <text x="750" y="255" text-anchor="middle" font-size="16" font-weight="bold" fill="#44ff44">DOPO — 4 tagli + ponticello</text>
+
+  <rect x="740" y="290" width="7" height="60" fill="#ff6666" opacity="0.9" rx="1"/>
+  <text x="770" y="310" font-size="10" fill="#ff9999">ATTIVO</text>
+
+  <rect x="730" y="350" width="27" height="8" fill="#0d1117" stroke="#ff0" stroke-width="2"/>
+  <text x="695" y="358" text-anchor="end" font-size="11" font-weight="bold" fill="#ff0">A y=44.0</text>
+
+  <circle cx="743" cy="380" r="22" fill="none" stroke="#44aaff" stroke-width="4" stroke-dasharray="6,3"/>
+  <circle cx="743" cy="380" r="5" fill="#44aaff"/>
+  <text x="780" y="380" font-size="10" fill="#44aaff">+3V3 ISOLATA</text>
+
+  <rect x="730" y="407" width="27" height="8" fill="#0d1117" stroke="#ff0" stroke-width="2"/>
+  <text x="695" y="415" text-anchor="end" font-size="11" font-weight="bold" fill="#ff0">B y=45.2</text>
+
+  <rect x="740" y="417" width="7" height="70" fill="#ff6666" opacity="0.15" rx="1"/>
+  <text x="770" y="455" font-size="9" fill="#555">MORTO</text>
+
+  <rect x="730" y="487" width="27" height="8" fill="#0d1117" stroke="#ff0" stroke-width="2"/>
+  <text x="695" y="495" text-anchor="end" font-size="11" font-weight="bold" fill="#ff0">C y=51.4</text>
+
+  <circle cx="743" cy="517" r="22" fill="none" stroke="#44ff44" stroke-width="4" stroke-dasharray="6,3"/>
+  <circle cx="743" cy="517" r="5" fill="#44ff44"/>
+  <text x="780" y="517" font-size="10" fill="#44ff44">GND ISOLATA</text>
+
+  <rect x="730" y="543" width="27" height="8" fill="#0d1117" stroke="#ff0" stroke-width="2"/>
+  <text x="695" y="551" text-anchor="end" font-size="11" font-weight="bold" fill="#ff0">D y=52.6</text>
+
+  <rect x="740" y="555" width="7" height="80" fill="#ff6666" opacity="0.9" rx="1"/>
+  <text x="770" y="600" font-size="10" fill="#ff9999">ATTIVO</text>
+
+  <path d="M743,350 Q700,350 700,310 Q700,280 680,280 L680,560 Q680,590 700,590 Q720,590 743,555" fill="none" stroke="#00ffaa" stroke-width="3" stroke-dasharray="8,4"/>
+  <text x="660" y="440" text-anchor="end" font-size="11" font-weight="bold" fill="#00ffaa">PONTICELLO</text>
+  <text x="660" y="455" text-anchor="end" font-size="9" fill="#00ffaa">sopra A → sotto D</text>
+
+  <!-- Warning about FIX 18 -->
+  <rect x="520" y="660" width="460" height="45" rx="6" fill="#2a2a1a" stroke="#cc4"/>
+  <text x="750" y="678" text-anchor="middle" font-size="11" fill="#ffa">BTN_A anche su F.Cu @ (76.80, 67.12) tocca GND</text>
+  <text x="750" y="693" text-anchor="middle" font-size="11" font-weight="bold" fill="#ff0">Fare anche FIX #18 (raschiatura singola F.Cu)</text>
+</svg>
