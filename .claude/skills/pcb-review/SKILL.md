@@ -1,64 +1,105 @@
 ---
 name: pcb-review
-description: Comprehensive PCB design review — power, signal, thermal, EMI, manufacturability, mechanical
+description: Comprehensive PCB design review — 8 domains, 100-point scoring, JLCPCB DFM rules, datasheet pin verification
 disable-model-invocation: true
-allowed-tools: Bash, Read, Grep, Glob, WebSearch
+allowed-tools: Bash, Read, Grep, Glob, Agent
 ---
 
 # PCB Design Review
 
-Comprehensive design review of the PCB layout, analyzing 6 key domains like a senior PCB engineer would. Produces a scored report with actionable improvement suggestions.
+Comprehensive design review of the PCB layout, analyzing 8 key domains like a senior PCB engineer would. Produces a scored report with actionable improvement suggestions.
+
+## Sources
+
+- JLCPCB manufacturing rules: `.claude/skills/pcb-review/review-checklist.md`
+- JLCPCB blog best practices: trace angles, 3W rule, decoupling, impedance control, stackup
+- Component datasheets: `hardware/datasheets/`
+- DFM reference: `.claude/skills/dfm-fix/dfm-reference.md`
 
 ## Steps
 
-### 1. Run the automated review
+### 1. Run automated checks
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 python3 scripts/pcb_review.py
+python3 scripts/verify_dfm_v2.py
+python3 scripts/verify_polarity.py
+python3 scripts/verify_dfa.py
 ```
 
-### 2. Review findings
+### 2. Manual review against checklist
 
-The script analyzes 6 domains (scored 1-10 each):
+Read `review-checklist.md` and verify each domain:
 
-| Domain | What it checks |
-|--------|---------------|
-| Power Integrity | Decoupling caps near ICs, power trace widths, GND plane coverage |
-| Signal Integrity | Bus trace length matching, parallel trace crosstalk, high-speed routing |
-| Thermal | Power IC thermal relief, via count, copper area for heat spreading |
-| Manufacturability | JLCPCB min trace/space, drill sizes, annular rings |
-| EMI/EMC | Ground plane continuity, signal return paths, decoupling strategy |
-| Mechanical | Mounting hole symmetry, connector accessibility, FPC strain relief |
+| # | Domain (points) | Key checks |
+|---|-----------------|------------|
+| 1 | Power Integrity (15) | Trace widths for current, decoupling caps near ICs, GND/power planes |
+| 2 | Signal Integrity (15) | Bus matching, USB diff pair, 3W rule, 45° traces, impedance |
+| 3 | Thermal (10) | Thermal vias, EP pad connections, copper area, IC spacing |
+| 4 | JLCPCB DFM (20) | Trace/pad/via spacing, mask bridge, copper-to-edge, fiducials |
+| 5 | EMI/EMC (10) | GND plane continuity, return paths, decoupling strategy |
+| 6 | Component Polarity (15) | Pin-1 vs datasheet, LED polarity, CPL rotation, BOM-CPL match |
+| 7 | Mechanical (10) | Mounting holes, connector access, NPTH sizes, board outline |
+| 8 | Documentation (5) | LCSC parts, gerbers, silkscreen, assembly variants |
 
-### 3. Address priority items
+### 3. Datasheet verification (Domain 6)
 
-Focus on the Top 5 improvements suggested by the review.
+For each IC/connector, read the datasheet from `hardware/datasheets/` and verify:
+- Pin 1 location matches footprint orientation
+- Net assignments match datasheet pinout
+- CPL rotation produces correct JLCPCB placement
+- Passive component values match typical application circuit
 
-### 4. Re-run to verify
+### 4. Current capacity check (Domain 1)
 
-After making changes, regenerate and re-run:
+Verify power trace widths against current requirements:
+- VBUS/BAT+: up to 2.1A (IP5306 charger) → need ≥0.76mm (30mil)
+- +5V: up to 1A → need ≥0.25mm (10mil)
+- +3V3: up to 0.5A → need ≥0.13mm (5mil)
+- LX (inductor): up to 2.1A pulsed → need ≥0.76mm (30mil)
+
+### 5. Generate report
+
+Format findings as:
+
+```
+## PCB Design Review Report
+
+| # | Domain | Score | Key Finding |
+|---|--------|-------|-------------|
+| 1 | Power Integrity | ?/15 | ... |
+| 2 | Signal Integrity | ?/15 | ... |
+| 3 | Thermal | ?/10 | ... |
+| 4 | JLCPCB DFM | ?/20 | ... |
+| 5 | EMI/EMC | ?/10 | ... |
+| 6 | Component Polarity | ?/15 | ... |
+| 7 | Mechanical | ?/10 | ... |
+| 8 | Documentation | ?/5 | ... |
+| **TOTAL** | | **?/100** | ... |
+
+### Top 5 Priority Fixes
+1. ...
+2. ...
+```
+
+### 6. Fix and re-verify
+
+After making changes:
 ```bash
 python3 -m scripts.generate_pcb hardware/kicad
-python3 scripts/pcb_review.py
+python3 scripts/verify_dfm_v2.py
+python3 scripts/verify_polarity.py
 ```
-
-## Summary Report Format
-
-| Domain | Score | Key Finding |
-|--------|-------|-------------|
-| Power Integrity | ?/10 | ... |
-| Signal Integrity | ?/10 | ... |
-| Thermal | ?/10 | ... |
-| Manufacturability | ?/10 | ... |
-| EMI/EMC | ?/10 | ... |
-| Mechanical | ?/10 | ... |
-| **OVERALL** | **?/60** | ... |
 
 ## Key Files
 
+- `.claude/skills/pcb-review/review-checklist.md` — Full scoring criteria + JLCPCB rules reference
+- `hardware/datasheets/` — Component datasheets for pin verification
 - `scripts/pcb_review.py` — Automated review script
-- `.claude/skills/pcb-review/review-checklist.md` — Detailed scoring criteria
-- `scripts/drc_check.py` — Reuses parse_pcb() for PCB parsing
-- `scripts/generate_pcb/board.py` — Component positions
-- `scripts/generate_pcb/routing.py` — Trace routing constants
+- `scripts/verify_dfm_v2.py` — DFM verification (114 tests)
+- `scripts/verify_polarity.py` — Polarity/pin assignment tests
+- `scripts/verify_dfa.py` — Assembly verification (9 tests)
+- `scripts/generate_pcb/routing.py` — Trace routing
+- `scripts/generate_pcb/board.py` — Component placement
+- `scripts/generate_pcb/jlcpcb_export.py` — CPL/BOM export
