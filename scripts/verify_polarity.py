@@ -584,9 +584,9 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("R16", "2", "IP5306_KEY")
 
     def test_led_resistors_power(self):
-        """R17/R18: +3V3 side correct."""
-        self._check_strict("R17", "1", "+3V3")
-        self._check_strict("R18", "1", "+3V3")
+        """R17/R18: +3V3 on pad 2 (B.Cu left, toward LED anode)."""
+        self._check_strict("R17", "2", "+3V3")
+        self._check_strict("R18", "2", "+3V3")
 
     def test_decoupling_caps(self):
         """C1-C4, C17-C19: correct power/GND polarity."""
@@ -606,9 +606,9 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("C19", "2", "GND")
 
     def test_leds_gnd(self):
-        """LED1/LED2: cathode (pad 2) connected to GND."""
-        self._check_strict("LED1", "2", "GND")
-        self._check_strict("LED2", "2", "GND")
+        """LED1/LED2: cathode (pad 1) connected to GND per NCD0805R1 datasheet."""
+        self._check_strict("LED1", "1", "GND")
+        self._check_strict("LED2", "1", "GND")
 
     def test_front_buttons_signal(self):
         """SW1-SW10: signal pad on correct button net."""
