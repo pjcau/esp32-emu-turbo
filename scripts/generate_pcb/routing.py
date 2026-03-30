@@ -938,10 +938,30 @@ def _power_traces():
     # Fix: move via to am_tab[0] = 125.0 (same X as tab pad) to stay clear of C1 at x=122.95.
     v3_via_x = am_tab[0]   # 125.0 — same X as AMS1117 tab, clear of C1 (at x=122.95)
     v3_via_y = am_tab[1] - 3
-    # B.Cu vertical from tab pad down to via
+    # B.Cu vertical from tab pad down to via (widened to 0.5mm for power delivery)
     parts.append(_seg(v3_via_x, am_tab[1], v3_via_x, v3_via_y,
-                       "B.Cu", 0.4, n_3v3))
+                       "B.Cu", W_PWR, n_3v3))
     parts.append(_via_net(v3_via_x, v3_via_y, n_3v3))
+
+    # ── AMS1117 thermal vias: 2x2 grid under tab pad (pin 4) ──────
+    # Tab pad center at am_tab = (125.0, 52.35), size 3.6x1.8mm.
+    # Tab = VOUT (+3V3). Thermal vias connect tab to In2.Cu +3V3 zone.
+    # 2x2 grid with ~1.0mm spacing, centered on tab pad.
+    # Via size 0.50mm, drill 0.20mm (annular ring 0.15mm, JLCPCB OK).
+    # Positions: (124.5, 52.0), (125.5, 52.0), (124.5, 52.7), (125.5, 52.7)
+    # All within tab pad bounds (x=123.2..126.8, y=51.45..53.25).
+    # Clearance to existing +3V3 via at (125.0, 49.35): dy=2.65mm >> 0.25mm OK.
+    _therm_via_positions = [
+        (am_tab[0] - 0.5, am_tab[1] - 0.35),  # (124.5, 52.0)
+        (am_tab[0] + 0.5, am_tab[1] - 0.35),  # (125.5, 52.0)
+        (am_tab[0] - 0.5, am_tab[1] + 0.35),  # (124.5, 52.7)
+        (am_tab[0] + 0.5, am_tab[1] + 0.35),  # (125.5, 52.7)
+    ]
+    for tvx, tvy in _therm_via_positions:
+        parts.append(_via_net(tvx, tvy, n_3v3, size=0.50, drill=0.20))
+        # Short B.Cu stub from via to tab pad center (ensures DFM connectivity check)
+        parts.append(_seg(tvx, tvy, am_tab[0], tvy, "B.Cu", W_PWR, n_3v3))
+
     # DFM FIX: removed F.Cu horizontal from x=125 to x=100.5 at y=49.35 — this trace
     # crossed the VBUS F.Cu vertical at x=111, gap=0mm (DANGER violation).
     # The AMS1117 tab via at (125, 49.35) connects directly to In2.Cu +3V3 zone which
@@ -959,7 +979,7 @@ def _power_traces():
         parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.5, n_3v3,
                               size=0.50, drill=0.20))
         parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0],
-                           esp_3v3[1] - 2.5, "B.Cu", 0.4, n_3v3))
+                           esp_3v3[1] - 2.5, "B.Cu", W_PWR, n_3v3))
 
     # ── BAT+: IP5306 -> JST battery connector ─────────────────
     # DFM: ip_bat at x=107 same as ip_sw — offset BAT+ via to separate column.
@@ -3097,9 +3117,9 @@ def _passive_traces():
     am_tab = _pad("U3", "4")
     if c2_p1 and am_tab:
         parts.append(_seg(c2_p1[0], c2_p1[1], am_tab[0], c2_p1[1],
-                          "B.Cu", W_SIG, n_3v3))
+                          "B.Cu", W_PWR, n_3v3))
         parts.append(_seg(am_tab[0], c2_p1[1], am_tab[0], am_tab[1],
-                          "B.Cu", W_SIG, n_3v3))
+                          "B.Cu", W_PWR, n_3v3))
     if c2_p2:
         parts.append(_seg(c2_p2[0], c2_p2[1], c2_p2[0], c2_p2[1] + 2,
                           "B.Cu", W_SIG, n_gnd))
@@ -3179,6 +3199,9 @@ def _led_traces():
     n_3v3 = NET_ID["+3V3"]
     n_gnd = NET_ID["GND"]
 
+    # Per-LED internal net: R pad1 → via → LED anode (pad2)
+    _led_ra_nets = [NET_ID["LED1_RA"], NET_ID["LED2_RA"]]
+
     pairs = [("R17", "LED1"), ("R18", "LED2")]
     for i, (r_ref, led_ref) in enumerate(pairs):
         r_p1 = _pad(r_ref, "1")   # B.Cu: x+0.95 (mirrored) — RIGHT
@@ -3187,6 +3210,8 @@ def _led_traces():
         led_p2 = _pad(led_ref, "2")  # F.Cu: x+0.95 — RIGHT (anode)
         if not (r_p1 and r_p2 and led_p1 and led_p2):
             continue
+
+        n_ra = _led_ra_nets[i]  # internal resistor-to-anode net
 
         # +3V3 via → R pad 2 (B.Cu, LEFT side of resistor)
         via_3v3_y = r_p2[1] - 2.35
@@ -3199,10 +3224,10 @@ def _led_traces():
         # DFM: mid_y=66.25 (between R_pad bottom at 65.65 and LED top at 66.85)
         mid_y = r_p1[1] + 1.25
         parts.append(_seg(r_p1[0], r_p1[1], r_p1[0], mid_y,
-                          "B.Cu", W_SIG, 0))
-        parts.append(P.via(r_p1[0], mid_y, size=0.8, drill=0.35, net=0))
+                          "B.Cu", W_SIG, n_ra))
+        parts.append(_via_net(r_p1[0], mid_y, n_ra, size=0.8, drill=0.35))
         parts.append(_seg(led_p2[0], mid_y, led_p2[0], led_p2[1],
-                          "F.Cu", W_SIG, 0))
+                          "F.Cu", W_SIG, n_ra))
 
         # LED pad 1/Cathode (F.Cu, LEFT) → GND via
         # Offset GND via LEFT to avoid same-X column as +3V3 via

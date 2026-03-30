@@ -165,6 +165,9 @@ NET_LIST = [
     (48, "USB_CC1"), (49, "USB_CC2"),
     # PAM8403 internal reference
     (50, "PAM_VREF"),
+    # LED resistor-to-anode internal nets
+    (51, "LED1_RA"),
+    (52, "LED2_RA"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}
