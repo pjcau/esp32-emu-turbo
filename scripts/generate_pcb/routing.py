@@ -122,10 +122,10 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
         _MH_DETOUR_IDX[mh_key] = detour_idx + 1
 
         # Vias for MH detour layer transitions.
-        # AR = (0.51-0.25)/2 = 0.13mm = JLCPCB min 0.13mm.
+        # JLCDFM FIX: AR raised from 0.13mm to 0.155mm (>= 0.15mm recommended).
         # Drill 0.25mm (KiCad default min 0.30mm flags DRC but JLCPCB accepts 0.25mm).
-        via_sz, via_dr = 0.51, 0.25
-        via_r = via_sz / 2  # 0.255mm
+        via_sz, via_dr = 0.56, 0.25
+        via_r = via_sz / 2  # 0.28mm
 
         # Check if trace Y is inside the physical drill circle.
         # Mounting holes are NPTH with drill=2.5mm, radius=1.25mm.
@@ -1566,12 +1566,11 @@ def _spi_traces():
         #   70.0 gives 2.0mm < 2.25mm → KEEPOUT VIOLATION. Use 70.5 → 2.5mm ✓.
         # i=1 (SD_MISO): post_slot_x=146, BTN_R via at (146.85,68.7).
         #   At stagger_y=68.0: gap=0.050mm < 0.25mm (AABB dx=-0.05mm) → keep at 67.5.
-        # i=3 (SD_CS): post_slot_x moved to 153.5 (see above), stagger_y remains 72.0.
-        #   Via at (153.5,72.0): clear of U6.11 (153.05 > 148.36 right edge) ✓
-        #   MH(150,68) dist=5.32mm, margin=2.62mm ✓
-        # via-via gaps: 66→67.5: 0.6mm ✓, 70.5→72.0: x=152.5 vs 153.5 → far apart ✓
-        _stagger_map = {0: 66.0, 1: 67.5, 2: 70.5, 3: 72.0}
-        stagger_y = _stagger_map[i]  # max=72.0 < 74.5 (board bottom keepout) ✓
+        # JLCDFM FIX: SD_CS (i=3) stagger_y moved from 72.0 to 71.0 to clear
+        # U6 NPTH at (144.95, 72.566) drill=1.0mm. At y=72.0: gap=-0.034mm.
+        # At y=71.0: gap to NPTH=0.966mm ✓, SD_CLK via(152.5,70.5): 0.618mm ✓
+        _stagger_map = {0: 66.0, 1: 67.5, 2: 70.5, 3: 71.0}
+        stagger_y = _stagger_map[i]  # max=71.0 < 74.5 (board bottom keepout) ✓
 
         # Step 1: B.Cu horizontal stub RIGHT from ESP32 pad to shared via column.
         # Via at shared_via_x=72.2: left edge 71.90, gap to ESP32 pad (71.60) = 0.30mm ✓
@@ -2897,7 +2896,23 @@ def _button_traces():
         # 5.25mm to ESP32 pad at (71.25, 27.32) — no B.Cu obstacles at this Y
         # (BTN_L vert ends at y=28.59, BTN_DOWN ends at y=29.86).
         approach_r = 76.20
-        parts.append(_seg(sx_r, chan_y_r, approach_r, chan_y_r,
+        # JLCDFM FIX: BTN_R F.Cu at y=65.40 crosses SW13 (menu button) pads
+        # 3,4 at (139/145, 65.05) size 1.2x0.9mm. Pad bottom edge=65.50,
+        # trace edge=65.50 at y=65.40+0.10=65.50 → 0mm gap.
+        # Fix: F.Cu Y-jog around SW13 pads to y=64.0 (clear of pad top 64.60
+        # by 0.50mm). USB D- at (79-92, y=64.58) is outside jog x range.
+        _sw13_jog_y = 64.00
+        _sw13_jog_in = 146.50    # right of SW13 pad4 right edge (145.6)
+        _sw13_jog_out = 137.00   # left of SW13 pad3 left edge (138.4)
+        parts.append(_seg(sx_r, chan_y_r, _sw13_jog_in, chan_y_r,
+                           "F.Cu", W_DATA, net_r))
+        parts.append(_seg(_sw13_jog_in, chan_y_r, _sw13_jog_in, _sw13_jog_y,
+                           "F.Cu", W_DATA, net_r))
+        parts.append(_seg(_sw13_jog_in, _sw13_jog_y, _sw13_jog_out, _sw13_jog_y,
+                           "F.Cu", W_DATA, net_r))
+        parts.append(_seg(_sw13_jog_out, _sw13_jog_y, _sw13_jog_out, chan_y_r,
+                           "F.Cu", W_DATA, net_r))
+        parts.append(_seg(_sw13_jog_out, chan_y_r, approach_r, chan_y_r,
                            "F.Cu", W_DATA, net_r))
         parts.append(_via_net(approach_r, chan_y_r, net_r, size=0.50, drill=0.20))
 

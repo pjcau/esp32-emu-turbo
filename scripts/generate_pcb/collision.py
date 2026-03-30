@@ -204,24 +204,35 @@ class CollisionGrid:
                 else:
                     continue
 
+                # Pre-assigned nets for known THT pads (needed because
+                # net=0 pads are skipped in collision queries)
+                _KNOWN_PAD_NETS = {
+                    ("J1", "13"): 1,   # GND (shield)
+                    ("J1", "14"): 1,   # GND (shield)
+                    ("J1", "13b"): 1,  # GND (shield rear)
+                    ("J1", "14b"): 1,  # GND (shield rear)
+                    ("J3", "1"): 5,    # BAT+ (JST pin 1)
+                    ("J3", "2"): 1,    # GND (JST pin 2)
+                }
+                pad_net = _KNOWN_PAD_NETS.get((ref, str(num)), 0)
                 obs = Obstacle(
                     xmin=round(px - pw / 2, 4),
                     ymin=round(py - ph / 2, 4),
                     xmax=round(px + pw / 2, 4),
                     ymax=round(py + ph / 2, 4),
-                    net=0,  # unknown until first trace touches
+                    net=pad_net,
                     kind="pad",
                     label=f"{ref}:{num}",
                 )
                 self.index.insert(layer_idx, obs)
                 # Also insert on the other layer if it's a THT pad
                 # (through-hole pads appear on both layers)
-                if _is_tht_ref(ref):
+                if _is_tht_pad(ref, str(num)):
                     other_idx = 1 - layer_idx
                     obs2 = Obstacle(
                         xmin=obs.xmin, ymin=obs.ymin,
                         xmax=obs.xmax, ymax=obs.ymax,
-                        net=0, kind="pad",
+                        net=pad_net, kind="pad",
                         label=f"{ref}:{num}",
                     )
                     self.index.insert(other_idx, obs2)
@@ -548,11 +559,21 @@ def _suggest_nudge(x1: float, y1: float, x2: float, y2: float,
     return "adjust position"
 
 
-def _is_tht_ref(ref: str) -> bool:
-    """Check if a component reference is a through-hole type."""
-    # JST connector (J3), mounting holes (MH*) are THT
-    # For this board, most components are SMD
-    return ref in ("J3",)
+def _is_tht_pad(ref: str, num: str) -> bool:
+    """Check if a specific pad is through-hole type.
+
+    THT pads have copper on both F.Cu and B.Cu layers, so obstacles
+    must be registered on both layers for proper collision detection.
+    Only THT-specific pads are registered on both layers, not all pads
+    of a component that happens to contain some THT pads.
+    """
+    # J1 (USB-C 16P): shield pads 13/14/13b/14b are THT (drill 0.60mm)
+    # J3 (JST PH 2P): both pins (1, 2) are THT (drill 0.85mm)
+    _THT_PADS = {
+        ("J1", "13"), ("J1", "14"), ("J1", "13b"), ("J1", "14b"),
+        ("J3", "1"), ("J3", "2"),
+    }
+    return (ref, num) in _THT_PADS
 
 
 # ── Justified suppressions ─────────────────────────────────────────
