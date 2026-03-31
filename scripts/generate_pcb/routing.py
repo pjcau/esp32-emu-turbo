@@ -239,8 +239,8 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
             #     idx0 R-vert x=110.0 y=[33.0,38.12]: 32.30 not in range. OK
             #     idx1 L-vert x=101.55 y=[34.60,36.845]: 32.30 not in range. OK
             #     idx1 R-vert x=108.20 y=[34.60,36.845]: 32.30 not in range. OK
-            _left_cols = [101.00, 101.55, 99.50]
-            _right_cols = [110.00, 108.20, 111.50]
+            _left_cols = [101.01, 101.55, 99.50]  # DFM: idx0 was 101.00 (gap=0.145 to BTN_START@100.45). At 101.01: gap=0.155mm ✓, gap to idx1@101.55=0.16mm ✓
+            _right_cols = [110.00, 108.22, 111.50]  # DFM: idx1 was 108.20 (gap=0.14 to strategy-A via@107.68). At 108.22: gap=0.16mm ✓
             x_left = _left_cols[min(south_idx, 2)]
             x_right = _right_cols[min(south_idx, 2)]
 
@@ -343,7 +343,7 @@ DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)] + ["C20"]
 
 # Power passives (synced with board.py placements)
 R1_POS = (74.0, 67.0)    # USB CC1 pull-down (ux-6, uy-5)
-R2_POS = (86.0, 67.0)    # USB CC2 pull-down (ux+6, uy-5)
+R2_POS = (78.0, 67.0)    # USB CC2 pull-down (moved near R1, B.Cu-only route)
 R3_POS = (65.0, 42.0)    # ESP32 decoupling
 R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
@@ -723,7 +723,7 @@ def _power_traces():
     #   F.Cu horiz at y=61: BTN_UP@y=62 gap=|62-61|-0.125-0.25=0.625mm ✓
     #   F.Cu vert at x=108: same as old route (ip_vbus_via_x=108) ✓
     vbus_fcu_y = 61.0   # 1mm above highest button F.Cu channel (BTN_UP@62.0)
-    vbus_fcu_start_x = usb_vbus[0] - 0.4  # x=82.0, short stub clear of CC1
+    vbus_fcu_start_x = usb_vbus[0] - 0.15  # DFM: was -0.4 (x=82.0, gap=-0.05 to J3:1). At 82.25: gap=0.20mm ✓
     ip_vbus_via_x = ip_vbus[0] - 2  # 108.0
     ip_vbus_via_y = ip_vbus[1] - 0.5  # DFM: 0.5mm above pad to clear U2[EP]
 
@@ -769,14 +769,11 @@ def _power_traces():
     ]
     for gvx, gvy in gnd_via_positions:
         parts.append(_via_net(gvx, gvy, n_gnd))
-    # USB-C GND: offset -2 (y=67.125), default via(0.9) hit BTN_A F.Cu at y=66.80
-    # (gap=-0.250mm). Small via(0.46,r=0.23) at y-2:
-    # gap = |67.125-66.80|-0.23-0.125 = 0.325-0.355 = -0.03mm. Still FAIL.
-    # Move X LEFT to avoid BTN_A entirely: x=76.80-0.80=76.0. BTN_A F.Cu at y=66.80
-    # spans x=52.45..130.30, so still crosses x=76.0. Can't avoid in X.
-    # Via must fit between BTN_A F.Cu(y=66.80) and BTN_B F.Cu(y=68.00).
-    # Center at y=67.40: gap to each = 0.60-0.23-0.125=0.245mm ≥ 0.15mm ✓
-    usb_gnd_via_y = 67.40  # midpoint between BTN_A(66.80) and BTN_B(68.00) F.Cu channels
+    # USB-C GND: route via ABOVE button channels to avoid blocking the
+    # BTN_A-BTN_B corridor (needed for CC1 F.Cu routing at y=67.2).
+    # Via at y=66.0: gap to BTN_A(y=66.8) = 66.8-0.125-(66.0+0.25)=0.425mm ✓
+    #               gap to BTN_R(y=65.4) = 66.0-0.25-(65.4+0.10)=0.25mm ✓
+    usb_gnd_via_y = 66.2  # above BTN_A(66.8), clears CC1 F.Cu at y=67.4 and BTN_R via(76.20,65.40)
     parts.append(_via_net(usb_gnd[0], usb_gnd_via_y, n_gnd, size=0.50, drill=0.20))
 
     # B.Cu stubs from IC GND pads to vias
@@ -2141,60 +2138,62 @@ def _usb_traces():
     n_cc1 = NET_ID["USB_CC1"]
     n_cc2 = NET_ID["USB_CC2"]
 
-    usb_cc1 = _pad("J1", "4")    # CC1 pad (was A5)
-    usb_cc2 = _pad("J1", "10")   # CC2 pad (was B5)
-    r1_p1 = _pad("R1", "1")      # signal side
-    r1_p2 = _pad("R1", "2")      # GND side
-    r2_p1 = _pad("R2", "1")      # signal side
-    r2_p2 = _pad("R2", "2")      # GND side
+    usb_cc1 = _pad("J1", "4")    # CC1 pad at (81.25, 68.825)
+    usb_cc2 = _pad("J1", "10")   # CC2 pad at (78.25, 68.825)
+    r1_p1 = _pad("R1", "1")      # signal side at (74.95, 67.0)
+    r1_p2 = _pad("R1", "2")      # GND side at (73.05, 67.0)
+    r2_p1 = _pad("R2", "1")      # signal side at (78.95, 67.0)
+    r2_p2 = _pad("R2", "2")      # GND side at (77.05, 67.0)
 
-    # CC1 → R1: route BELOW pad level to avoid crossing D+/D-/VBUS verticals.
-    # DFM FIX: old route went UP from CC1 pad (x=81.25,y=68.255) then horizontal LEFT
-    # to R1p1 at y=66 — this crossed D+ vert (x=80.25), D- vert (x=79.75), and CC2 horiz.
-    # Fix: CC1 goes DOWN (increasing y) to y=70.5, then LEFT to r1p1 x, then UP to r1p1 y.
-    # CC2 goes RIGHT at pad level to x=87.5 (past R2p1=86.95), DOWN to y=69.5, LEFT, UP to R2.
-    # D+/D- go UP (decreasing y) and never reach y=69.5+, so no crossing with CC routes.
-    if usb_cc2 and r2_p1:
-        # CC2: DOWN first to clear J1 pads, then RIGHT to R2.
-        # SHORT FIX: horizontal on F.Cu (was B.Cu) to avoid crossing CC1 B.Cu vert
-        # at x=81.25 (y=68.255-73.505). CC2 B.Cu horiz at y=72.0 crossed CC1 at (81.25,72).
-        # Fix: B.Cu DOWN → via to F.Cu → F.Cu horizontal → via to B.Cu → B.Cu UP to R2.
-        # F.Cu at y=72.0 is clear in x=78-87 (BTN_START at y=71.6 is 0.4mm away, edge gap 0.15mm).
-        cc2_below_j1 = 72.50  # below J1 pads (~70) and btn channels (62-71.6), clears BTN_START via at y=71.6
-        parts.append(_seg(usb_cc2[0], usb_cc2[1], usb_cc2[0], cc2_below_j1,
-                           "B.Cu", W_SIG, n_cc2))
-        parts.append(_via_net(usb_cc2[0], cc2_below_j1, n_cc2, size=0.50, drill=0.20))
-        parts.append(_seg(usb_cc2[0], cc2_below_j1, r2_p1[0], cc2_below_j1,
-                           "F.Cu", W_SIG, n_cc2))
-        parts.append(_via_net(r2_p1[0], cc2_below_j1, n_cc2, size=0.50, drill=0.20))
-        parts.append(_seg(r2_p1[0], cc2_below_j1, r2_p1[0], r2_p1[1],
-                           "B.Cu", W_SIG, n_cc2))
-
+    # CC1 → R1: route UP from pad then LEFT on F.Cu (avoids J1 shield pads).
+    # OLD ROUTE went DOWN to y=73.5 through J1:14/14b shield pads → 3 collisions.
+    # FIX: go UP from CC1 pad to y=67.4 (between BTN_A@66.8 and BTN_B@68.0),
+    #       via to F.Cu, F.Cu horiz LEFT to R1:1 x, via to B.Cu, B.Cu stub to pad.
+    # USB GND via moved from y=67.4 to y=66.0 to clear this corridor.
+    # Clearances:
+    #   B.Cu vert x=81.25 vs D+ vert x=80.25: gap=0.775mm ✓
+    #   B.Cu vert x=81.25 vs VBUS vert x=82.25: gap=0.625mm ✓
+    #   F.Cu y=67.4 vs BTN_A(y=66.8): gap=67.4-66.8-0.125-0.125=0.35mm ✓
+    #   F.Cu y=67.4 vs BTN_B(y=68.0): gap=68.0-67.4-0.125-0.125=0.35mm ✓
+    #   CC1 vias at y=67.4 (r=0.25): gap to BTN_A(66.925)=0.225mm ✓, BTN_B(67.875)=0.225mm ✓
+    #   F.Cu horiz x=[74.95,81.25]: USB GND via now at y=66.0 (clear) ✓
     if usb_cc1 and r1_p1:
-        # CC1: DOWN past BTN_R vert, then LEFT to R1p1 x, UP to R1p1 y.
-        # BTN_R now routes to GPIO43 (different path), but keep safe Y margin.
-        cc1_low_y = usb_cc1[1] + 4.375   # 73.5 — edge clearance fix, clears CC2 via at y=72.50
-        parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], cc1_low_y,
+        _cc1_fcu_y = 67.40  # midpoint between BTN_A(66.8) and BTN_B(68.0)
+        parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], _cc1_fcu_y,
                            "B.Cu", W_SIG, n_cc1))
-        parts.append(_seg(usb_cc1[0], cc1_low_y, r1_p1[0], cc1_low_y,
-                           "B.Cu", W_SIG, n_cc1))
-        parts.append(_seg(r1_p1[0], cc1_low_y, r1_p1[0], r1_p1[1],
+        parts.append(_via_net(usb_cc1[0], _cc1_fcu_y, n_cc1, size=0.50, drill=0.20))
+        parts.append(_seg(usb_cc1[0], _cc1_fcu_y, r1_p1[0], _cc1_fcu_y,
+                           "F.Cu", W_SIG, n_cc1))
+        parts.append(_via_net(r1_p1[0], _cc1_fcu_y, n_cc1, size=0.50, drill=0.20))
+        parts.append(_seg(r1_p1[0], _cc1_fcu_y, r1_p1[0], r1_p1[1],
                            "B.Cu", W_SIG, n_cc1))
 
-    # R1/R2 GND side → GND vias (offset 1.5mm from pad to avoid via-in-pad)
+    # CC2 → R2: B.Cu only (R2 moved near J1, no layer change needed).
+    # R2 at (78, 67): pad1 at (78.95, 67.0). J1:10 at (78.25, 68.825).
+    # Route: B.Cu vertical UP from J1:10 to y=67.0, then B.Cu stub RIGHT to R2:1.
+    # Clearances:
+    #   B.Cu vert x=78.25 vs D- vert x=79.75: gap=1.25mm ✓
+    #   B.Cu vert x=78.25 vs J1:14 pad x=74.975-76.375: gap=1.875mm ✓
+    #   B.Cu horiz y=67.0 vs CC1 F.Cu y=67.4: different layer ✓
+    #   R2:1(78.95) vs CC1 via(81.25,67.4): gap=2.3mm ✓
+    if usb_cc2 and r2_p1:
+        parts.append(_seg(usb_cc2[0], usb_cc2[1], usb_cc2[0], r2_p1[1],
+                           "B.Cu", W_SIG, n_cc2))
+        parts.append(_seg(usb_cc2[0], r2_p1[1], r2_p1[0], r2_p1[1],
+                           "B.Cu", W_SIG, n_cc2))
+
+    # R1/R2 GND side → GND vias (offset from pad to avoid via-in-pad)
     if r1_p2:
-        gnd_via_y1 = r1_p2[1] - 1.5  # 1.5mm above pad
+        gnd_via_y1 = r1_p2[1] - 1.5  # 65.5mm — above pad
         parts.append(_seg(r1_p2[0], r1_p2[1], r1_p2[0],
                           gnd_via_y1, "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(r1_p2[0], gnd_via_y1, n_gnd, size=0.50, drill=0.20))
     if r2_p2:
-        # DFM FIX: was 1.5mm → via at (85.05, 65.5), clipping D+ F.Cu at y=65.255.
-        # D+ F.Cu at y=65.255 AABB y=[65.155, 65.355]. Via at 65.5 AABB y=[65.05, 65.95].
-        # Overlap_y=0.305mm → violation. Fix: move via to y=66.0 (1.0mm offset).
-        # Via AABB y=[65.55, 66.45]. Gap to D+ trace: max(65.155-66.45, 65.55-65.355, 0)=0.195mm ✓
-        # Gap to D- F.Cu (y=64.005): 1.445mm ✓  Gap to BTN_A F.Cu (y=66.8): 0.225mm ✓
-        # Gap to VBUS B.Cu (y=68.255): 1.555mm ✓
-        gnd_via_y2 = r2_p2[1] - 3.0  # DFM: 64.0mm — clears BTN_R F.Cu (y=65.40), USB_D+ (y=66.12), USB_D- (y=64.88) ✓
+        # R2:2 at (77.05, 67.0). GND via at y=63.8 (between ch1=63.2 and ch2=64.4).
+        # y=65.5 collides with BTN_R F.Cu at y=65.4 (gap=-0.25mm).
+        # At y=63.8: gap to ch2(64.4)=64.275-64.05=0.225mm ✓
+        #            gap to ch1(63.2)=63.55-63.325=0.225mm ✓
+        gnd_via_y2 = r2_p2[1] - 3.2  # 63.8mm — clears BTN_R F.Cu ✓
         parts.append(_seg(r2_p2[0], r2_p2[1], r2_p2[0],
                           gnd_via_y2, "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(r2_p2[0], gnd_via_y2, n_gnd, size=0.50, drill=0.20))
@@ -2255,9 +2254,51 @@ def _button_traces():
     # Button vx columns are ~0.4mm apart (MIN_VX_GAP), so adjacent approach vias
     # at (vx, cy) overlap in X. With dy=1.0mm: dy_outer=0.1mm < 0.25mm min.
     # At dy=1.2mm: dy_outer=0.3mm >= 0.25mm ✓
-    # Last channel: 62.0 + 9*1.2 = 72.8mm < 74.5mm keepout ✓
+    #
+    # J1 SHIELD PAD AVOIDANCE: J1 front shield pads (J1:13, J1:14) at y=69.375,
+    # pad 1.7x2.0mm → AABB y=[68.375, 70.375]. Channels at y=69.2 (i=6) and
+    # y=70.4 (i=7) cross these pads. Fix: skip over the pad zone by inserting
+    # a 2.4mm gap after channel 5 (y=68.0). Channels 6-9 start at y=70.8
+    # (70.375 + 0.125 + 0.30 = 70.80, gap to front pad bottom=0.30mm ✓).
+    # J1 rear pads at y=72.575-74.575. Last channel: 70.8+3*1.2=74.4 — gap
+    # to rear pad bottom (74.575): 74.575-74.4-0.125=0.05mm. Need to keep
+    # channels 6-9 at 70.8+i*1.2 = 70.8,72.0,73.2,74.4. Channel 9 (y=74.4)
+    # crosses rear pads! BUT: channel 9 is BTN_SELECT whose F.Cu channel
+    # only spans x=30-73 (doesn't reach J1:14 at x=74.82). ✓
+    # Channel 8 (y=73.2) = BTN_START whose F.Cu spans x=10-91, crossing J1
+    # rear pads at x=74.82-76.52 and 83.48-85.18 at y=73.2. Rear pad AABB
+    # y=[72.575,74.575]: 73.2 is inside. BUT BTN_START is a LEFT-side button
+    # with approach_x near x=88 — the F.Cu channel goes from x=10 to x=91,
+    # crossing the rear pads. Gap = 73.2-72.575-0.125 = 0.50mm ONLY for the
+    # trace, but THT pads extend 1.0mm in Y → trace at y=73.2 vs pad center
+    # y=73.575, gap=73.575-73.2-1.0-0.125 = negative. COLLISION!
+    #
+    # Fix: use non-uniform spacing. Channels 6-7 in the front-rear gap
+    # (y=70.8, 71.4). Channels 8-9 resume at safe Y above gap:
+    # Channel 8 at y=68.0+1.2*3=71.6 using original formula skipping 2 slots.
+    # FINAL: CC2 via eliminated (R2 moved near J1, B.Cu-only route).
+    # Channels 0-5 at 62.0+i*1.2 (normal), channels 6-7 at 70.8+k*0.75
+    # (=70.80, 71.55), channel 8 at 72.35, channel 9 at 72.86.
+    # Ch6-Ch7 via-via AABB: dy_edge=0.29, dx_edge=0.05 → gap=0.294mm ≥ 0.25mm ✓
+    # Ch7-Ch8 via-trace: 72.35-71.55-0.23-0.125=0.445mm ✓
+    # Ch8-Ch9 via-trace: 72.86-72.35-0.23-0.125=0.155mm ✓
+    # Ch8 vs J1:13b pad(72.675): trace top=72.475, gap=0.20mm ✓
+    # Ch9 vs J1 pads: F.Cu stops at x~73, doesn't reach J1:14b(x=74.975) ✓
+    _J1_FRONT_PAD_BOTTOM = 70.375  # front shield pad bottom edge
     for i, b in enumerate(btn_data):
-        b["chan_y"] = 62.0 + i * 1.2
+        if i <= 5:
+            # Channels 0-5: normal spacing below J1 pad zone
+            b["chan_y"] = 62.0 + i * 1.2
+        elif i <= 7:
+            # Channels 6-7 (BTN_X, BTN_Y): jump over J1 front pads
+            k = i - 6  # 0, 1
+            b["chan_y"] = _J1_FRONT_PAD_BOTTOM + 0.125 + 0.30 + k * 0.75  # 70.80, 71.55
+        elif i == 8:
+            # Channel 8 (BTN_START): above BTN_Y, CC2 via zone now free
+            b["chan_y"] = 72.35
+        else:
+            # Channel 9 (BTN_SELECT): above BTN_START, via-trace clearance
+            b["chan_y"] = 72.86
 
     # Assign approach columns near ESP32
     # Avoid passive pull-up traces at x = 43+i*5 ± 0.95, y=46-50
@@ -2583,6 +2624,9 @@ def _button_traces():
         parts.append(_via_net(vx, cy, net, size=_btn_via_sz, drill=0.20))
 
         # 3. F.Cu: horizontal to approach column
+        # J1 shield pad avoidance: channels 6-7 (BTN_X, BTN_Y) are now assigned
+        # to y=70.8/71.55 (between front/rear J1 shield pads), avoiding the
+        # J1 front pad zone entirely. No bypass needed.
         parts.append(_seg(vx, cy, ax, cy, "F.Cu", W_SIG, net))
         parts.append(_via_net(ax, cy, net, size=_btn_via_sz, drill=0.20))
 

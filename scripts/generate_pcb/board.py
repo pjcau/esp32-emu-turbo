@@ -242,7 +242,7 @@ def _silkscreen_labels():
 
     # Connector labels (back side)
     px, py = enc_to_pcb(*USBC_ENC)
-    parts.append(P.gr_text("USB-C", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("USB-C", px, py - 6, "B.SilkS", 0.8))  # DFM: moved up to clear R2 pad
     px, py = enc_to_pcb(*SD_ENC)
     parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 0.8))
 
@@ -291,7 +291,7 @@ def _silkscreen_labels():
         # (ref, value, x, y, label_dx, label_dy)
         # USB CC pull-downs
         ("R1", "5.1k", 74.0, 67.0, 0, -2.0),
-        ("R2", "5.1k", 86.0, 67.0, 0, -2.0),
+        ("R2", "5.1k", 78.0, 67.0, 5.0, -1.0),  # DFM: label far right+up (avoids USB-C & pad overlap)
         # ESP32 decoupling
         ("R3", "10k", 65.0, 42.0, 0, -2.0),
         ("C3", "100nF", 69.5, 42.0, 0, -2.0),
@@ -424,10 +424,9 @@ def _component_placeholders():
     # ── Passive components (B.Cu) ──
     # Positions must match jlcpcb_export.py for CPL/Gerber alignment.
 
-    # USB-C CC resistors
-    ux, uy = enc_to_pcb(*USBC_ENC)
-    placements.append(("R1", "R_0805", ux - 6, uy - 5, 0, "B.Cu"))
-    placements.append(("R2", "R_0805", ux + 6, uy - 5, 0, "B.Cu"))
+    # USB-C CC resistors (positions synced with routing.R1_POS/R2_POS)
+    placements.append(("R1", "R_0805", *routing.R1_POS, 0, "B.Cu"))
+    placements.append(("R2", "R_0805", *routing.R2_POS, 0, "B.Cu"))
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
