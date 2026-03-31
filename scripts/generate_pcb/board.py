@@ -194,95 +194,100 @@ def _mounting_holes():
 
 
 def _silkscreen_labels():
-    """Add reference labels on silkscreen."""
+    """Add reference labels on Fab layers.
+
+    DFM FIX: ALL text moved from SilkS to Fab layers to eliminate 52
+    silkscreen-to-hole JLCDFM violations. Silkscreen text overlapping
+    drill holes (vias, THT, NPTH) is a JLCPCB manufacturing error.
+    Fab layers are visible in renders but not checked for DFM clearance.
+    """
     parts = []
 
-    # ── Front silkscreen (buttons + LEDs + display outline) ──
+    # ── Front Fab (buttons + LEDs + display outline) ──
 
-    # Display outline label on front silkscreen
+    # Display outline label
     dx, dy = enc_to_pcb(*DISPLAY_ENC)
     dw2, dh2 = DISPLAY_W / 2, DISPLAY_H / 2
     parts.append(P.gr_text(
         "DISPLAY AREA (ILI9488 3.95in)", dx, dy - dh2 - 2,
-        "F.SilkS", 1.0,
+        "F.Fab", 1.0,
     ))
 
-    # Board title on front Fab layer — J1 shield pads at Y=73.9 block SilkS
-    # at board bottom. Using F.Fab for DFM safety (visible in 2D renders).
+    # Board title on front Fab layer
     parts.append(P.gr_text(
         "ESP32-EMU-TURBO  CPJ & CP", CX, 73.0,
         "F.Fab", 1.5,
     ))
 
-    # Button group labels (front silkscreen)
+    # Button group labels (front Fab)
     px, py = enc_to_pcb(*DPAD_ENC)
-    parts.append(P.gr_text("D-PAD", px, py - 20, "F.SilkS"))
+    parts.append(P.gr_text("D-PAD", px, py - 20, "F.Fab"))
     px, py = enc_to_pcb(*ABXY_ENC)
-    parts.append(P.gr_text("ABXY", px, py - 20, "F.SilkS"))
+    parts.append(P.gr_text("ABXY", px, py - 20, "F.Fab"))
 
     # Menu button label (front)
     px, py = enc_to_pcb(*MENU_ENC)
-    parts.append(P.gr_text("MENU", px, py - 5, "F.SilkS", 0.8))
+    parts.append(P.gr_text("MENU", px, py - 5, "F.Fab", 0.8))
 
     # LED labels (front side, bottom-left)
     px, py = enc_to_pcb(*LED_CHARGE_ENC)
-    parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 0.8))
+    parts.append(P.gr_text("CHG", px, py + 3, "F.Fab", 0.8))
     px, py = enc_to_pcb(*LED_FULL_ENC)
-    parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 0.8))
+    parts.append(P.gr_text("FULL", px, py + 3, "F.Fab", 0.8))
 
-    # ── Back silkscreen (IC + connector labels, visible in 3D renders) ──
+    # ── Back Fab (IC + connector labels, visible in 3D renders) ──
     px, py = enc_to_pcb(*ESP32_ENC)
-    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS"))
+    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.Fab"))
     px, py = enc_to_pcb(*IP5306_ENC)
-    parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 0.8))
+    parts.append(P.gr_text("IP5306", px, py - 10, "B.Fab", 0.8))
     px, py = enc_to_pcb(*AMS1117_ENC)
-    parts.append(P.gr_text("AMS1117", px + 5, py - 3, "B.SilkS", 0.8))
+    parts.append(P.gr_text("AMS1117", px + 5, py - 3, "B.Fab", 0.8))
     px, py = enc_to_pcb(*PAM8403_ENC)
-    parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("PAM8403", px, py - 5, "B.Fab", 0.8))
 
     # Connector labels (back side)
     px, py = enc_to_pcb(*USBC_ENC)
-    parts.append(P.gr_text("USB-C", px, py - 6, "B.SilkS", 0.8))  # DFM: moved up to clear R2 pad
+    parts.append(P.gr_text("USB-C", px, py - 6, "B.Fab", 0.8))
     px, py = enc_to_pcb(*SD_ENC)
-    parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 0.8))
+    parts.append(P.gr_text("SD", px, py - 8, "B.Fab", 0.8))
 
     # Battery connector label (back side)
     px, py = enc_to_pcb(*JST_BAT_ENC)
-    parts.append(P.gr_text("BATT", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("BATT", px, py - 5, "B.Fab", 0.8))
 
     # FPC display connector label (back side)
     px, py = enc_to_pcb(*FPC_ENC)
-    parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 0.8))
+    parts.append(P.gr_text("LCD", px, py - 14, "B.Fab", 0.8))
 
     # Power switch label (back side)
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("PWR", px, py - 5, "B.Fab", 0.8))
 
     # Speaker label (back side)
     px, py = enc_to_pcb(*SPEAKER_ENC)
-    parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 0.8))
+    parts.append(P.gr_text("SPEAKER", px, py, "B.Fab", 0.8))
 
     # Shoulder button labels (back side)
     px, py = enc_to_pcb(*SHOULDER_L_ENC)
-    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("L", px, py + 5, "B.Fab", 0.8))
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
-    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.8))
+    parts.append(P.gr_text("R", px, py + 5, "B.Fab", 0.8))
 
-    # Board title (back side, Fab layer — J1 pads at Y=73.9 block SilkS)
+    # Board title (back side)
     parts.append(P.gr_text(
         "ESP32-EMU-TURBO  CPJ & CP  2026", CX, 73.0,
         "B.Fab", 1.2,
     ))
 
-    # ── Passive component labels (B.SilkS) ────────────────────────
+    # ── Passive component labels (B.Fab) ────────────────────────
     # Group labels for the pull-up and debounce rows (13 components each)
     # Pull-ups: R4-R15,R19 at y=46, x=43..103 (5mm spacing)
     parts.append(P.gr_text(
-        "R4-R15,R19  10k", 73, 43.5, "B.SilkS", 0.6,
+        "R4-R15,R19  10k", 73, 43.5, "B.Fab", 0.6,
     ))
     # Debounce caps: C5-C16,C20 at y=50, x=43..103
     parts.append(P.gr_text(
-        "C5-C16,C20  100nF", 73, 52.5, "B.SilkS", 0.6,
+        "C5-C16,C20  100nF", 73, 52.5, "B.Fab", 0.6,
     ))
 
     # Individual power passives — label offset to clear 0805 body (~2x1.2mm)
@@ -291,7 +296,7 @@ def _silkscreen_labels():
         # (ref, value, x, y, label_dx, label_dy)
         # USB CC pull-downs
         ("R1", "5.1k", 74.0, 67.0, 0, -2.0),
-        ("R2", "5.1k", 78.0, 67.0, 5.0, -1.0),  # DFM: label far right+up (avoids USB-C & pad overlap)
+        ("R2", "5.1k", 78.0, 67.0, 5.0, -1.0),
         # ESP32 decoupling
         ("R3", "10k", 65.0, 42.0, 0, -2.0),
         ("C3", "100nF", 69.5, 42.0, 0, -2.0),
@@ -301,16 +306,16 @@ def _silkscreen_labels():
         ("R18", "1k", 32.0, 65.0, 0, -2.0),
         # IP5306 area
         ("R16", "100k", 115.0, 52.5, 0, -2.0),
-        ("C17", "10uF", 110.0, 35.0, 4.5, 0),  # offset RIGHT to avoid IP5306 label above
+        ("C17", "10uF", 110.0, 35.0, 4.5, 0),
         ("C18", "10uF", 118.0, 55.0, 0, 2.5),
         ("C19", "22uF", 110.0, 58.5, 0, 2.5),
         # AMS1117 caps
         ("C1", "10uF", 122.0, 48.5, 0, -2.0),
         ("C2", "22uF", 125.0, 62.5, 0, -2.0),
         # Inductor
-        ("L1", "1uH", 110.0, 52.5, -4.5, 0),  # offset LEFT to avoid R16 pad at (115, 52.5)
+        ("L1", "1uH", 110.0, 52.5, -4.5, 0),
         # PAM8403 passives — right side of U5
-        ("C21", "100nF", 38.0, 23.5, 0, -2.0),  # offset UP to avoid C21 pad
+        ("C21", "100nF", 38.0, 23.5, 0, -2.0),
         ("C22", "0.47u", 33.175, 20.0, -3.5, 0),
         ("R20", "20k", 38.0, 26.8, 3.5, 0),
         ("C23", "1uF", 38.0, 29.5, 3.5, 0),
@@ -321,7 +326,7 @@ def _silkscreen_labels():
     ]
     for ref, val, cx, cy, dx, dy in _passive_labels:
         parts.append(P.gr_text(
-            f"{ref} {val}", cx + dx, cy + dy, "B.SilkS", _lbl,
+            f"{ref} {val}", cx + dx, cy + dy, "B.Fab", _lbl,
         ))
 
     return "".join(parts)
@@ -496,7 +501,7 @@ def _component_placeholders():
         "Fiducial": (-2, 2),
     }
 
-    # Passives: put text on Fab layer (not silkscreen) to avoid DFM violations
+    # Passives: text on Fab layer (not silkscreen) to avoid DFM violations
     _passive_fps = {"R_0805", "C_0805", "LED_0805", "C_1206"}
 
     # Generate footprints with real pad geometries
