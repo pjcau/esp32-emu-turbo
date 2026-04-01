@@ -236,7 +236,7 @@ def usb_c_16p(layer="B"):
     ]
     for name, x in narrow_pads:
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.3, 1.1, layers,
-                         solder_mask_margin=0))
+                         solder_mask_margin=0.05))
 
     # Shield pads (pins 13-14) — SMD on both sides + NPTH for mechanical.
     # Converted from thru_hole to SMD to eliminate JLCPCB THT-to-SMD violations.
@@ -250,14 +250,8 @@ def usb_c_16p(layer="B"):
                      solder_mask_margin=0))
     pads.append(_pad("14b", "smd", "oval", 4.325, 2.375, 1.4, 1.8, layers,
                      solder_mask_margin=0))
-    # NPTH mechanical anchors for shield pins (ø0.60mm)
-    for sx in [-4.325, 4.325]:
-        for sy in [-1.825, 2.375]:
-            pads.append(
-                f'    (pad "" np_thru_hole circle (at {sx} {sy})'
-                f' (size 0.6 0.6) (drill 0.6)'
-                f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
-            )
+    # No NPTH anchors — SMD shield pads provide sufficient mechanical hold.
+    # Removed to avoid JLCPCB THT-to-SMD false positives in DFM.
 
     # NPTH positioning holes (no pad, no net)
     # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm
