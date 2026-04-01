@@ -66,5 +66,16 @@ services:
       - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
     command: idf.py -p ${ESP_PORT:-/dev/ttyUSB0} flash monitor
 
+  # External DFM analysis (KiBot + Tracespace)
+  kibot:
+    build:
+      context: ./docker/kibot
+    platform: linux/amd64
+    volumes:
+      - ./hardware/kicad:/project
+      - ./release_jlcpcb:/release:ro
+      - ./hardware/kicad/external-dfm-output:/output
+    working_dir: /project
+
 volumes:
   idf-build-cache:

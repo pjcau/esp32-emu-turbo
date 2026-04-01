@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa pcb-check \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -72,6 +72,9 @@ export-gerbers-fast: generate-pcb ## Export Gerbers (local kicad-cli + Docker zo
 
 fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
 	@$(T) fast-check ./scripts/fast-check.sh
+
+external-dfm: ## External DFM analysis via KiBot + Tracespace (Docker)
+	@$(T) external-dfm bash scripts/external-dfm.sh
 
 release-prep: generate-pcb export-gerbers-fast verify-all verify-dfa render-pcb ## Full release pipeline (fast gerber export)
 	@echo "Release prep complete: PCB generated, verified, rendered"

@@ -54,3 +54,6 @@ hardware/kicad/~*.lck
 
 # Claude Code compaction backups (runtime artifacts from pre-compact-backup hook)
 .claude/backups/
+
+# External DFM analysis output (KiBot + Tracespace)
+hardware/kicad/external-dfm-output/

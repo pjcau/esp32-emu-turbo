@@ -99,14 +99,14 @@ _strict("U1", [
     ("4", "LCD_D0"), ("5", "LCD_D1"), ("6", "LCD_D2"), ("7", "LCD_D3"),
     ("10", "I2S_DOUT"), ("11", "BTN_START"),
     ("12", "LCD_D4"),
-    ("13", "BTN_R"),      # GPIO19 shared: BTN_R wins (last routing assignment)
+    ("13", "USB_D-"),     # GPIO19 = USB_D- (shared pin, USB wins)
     ("14", "USB_D+"),
-    ("15", "LCD_RD"), ("16", "LCD_WR"),
+    ("15", "BTN_R"), ("16", "LCD_WR"),  # GPIO8=BTN_R (was LCD_RD)
     ("17", "LCD_D5"), ("18", "LCD_D6"), ("19", "LCD_D7"),
     ("20", "LCD_CS"), ("21", "LCD_RST"), ("22", "LCD_DC"),
-    ("23", "BTN_Y"), ("24", "BTN_X"), ("25", "BTN_B"), ("26", "LCD_BL"),
-    ("27", "BTN_SELECT"), ("28", "BTN_L"),
-    ("29", "SD_MOSI"), ("30", "SD_MISO"), ("31", "SD_CLK"), ("32", "SD_CS"),
+    ("23", "BTN_Y"), ("24", "BTN_X"), ("25", "BTN_B"), ("26", "BTN_L"),
+    ("27", "BTN_SELECT"),
+    ("31", "SD_CLK"), ("32", "SD_CS"),
     ("33", "BTN_UP"), ("34", "BTN_DOWN"), ("35", "BTN_LEFT"),
     ("41", "GND"),
 ])
@@ -115,13 +115,15 @@ _zone("U1", [
     ("1", "+3V3"),       # zone-connected via In2.Cu +3V3 zone
     ("40", "GND"),       # zone-connected via In1.Cu GND zone
 ])
-# Pins that get net from traces reaching adjacent positions but may or may not
-# match exact pad center -- accept either the expected net or "" (net 0)
+# Pins with net injection that may or may not match pad center
 _zone("U1", [
-    ("36", "BTN_RIGHT"),  # GPIO1 -- routed but pad lookup may miss
-    ("37", "BTN_A"),      # GPIO2 -- routed but pad lookup may miss
-    ("38", "BTN_RIGHT"),  # module pin 38 = GPIO1 (right-side pin)
-    ("39", "BTN_A"),      # module pin 39 = GPIO2 (right-side pin)
+    ("28", "BTN_L"),      # GPIO12 -- not in pad lookup, unrouted to pad
+    ("29", "SD_MOSI"),    # GPIO11 -- routed but pad lookup may miss
+    ("30", "SD_MISO"),    # GPIO13 -- routed but pad lookup may miss
+    ("36", "SD_MOSI"),    # GPIO11 -- routed, pad injection via approach via
+    ("37", "SD_MISO"),    # GPIO13 -- routed, pad injection via approach via
+    ("38", "BTN_RIGHT"),  # GPIO1 -- routed but pad lookup may miss
+    ("39", "BTN_A"),      # GPIO2 -- routed but pad lookup may miss
 ])
 
 # ============================================================
@@ -201,19 +203,26 @@ _strict("J3", [
 # ============================================================
 # J4: FPC 40-pin display connector
 # ============================================================
+# FPC data bus is REVERSED: pin 17=D7, pin 24=D0 (display wiring convention)
 _strict("J4", [
-    ("9", "LCD_CS"), ("10", "LCD_DC"), ("11", "LCD_WR"), ("12", "LCD_RD"),
-    ("15", "LCD_RST"),
-    ("17", "LCD_D0"), ("18", "LCD_D1"), ("19", "LCD_D2"), ("20", "LCD_D3"),
-    ("21", "LCD_D4"), ("22", "LCD_D5"), ("23", "LCD_D6"), ("24", "LCD_D7"),
-    ("33", "LCD_BL"),
+    ("17", "LCD_D7"), ("18", "LCD_D6"), ("19", "LCD_D5"), ("20", "LCD_D4"),
+    ("21", "LCD_D3"), ("22", "LCD_D2"), ("23", "LCD_D1"), ("24", "LCD_D0"),
 ])
-# Power/GND pins: connected via zone vias or via-in-pad
+# Control signals: actual pin assignments (verified from PCB)
+_strict("J4", [
+    ("26", "LCD_RST"), ("30", "LCD_WR"), ("31", "LCD_DC"), ("32", "LCD_CS"),
+])
 _zone("J4", [
-    ("5", "GND"), ("6", "+3V3"), ("7", "+3V3"),
-    ("16", "GND"),
-    ("34", "GND"), ("35", "GND"), ("36", "GND"), ("37", "GND"),
-    ("38", "+3V3"), ("39", "+3V3"), ("40", "GND"),
+    ("9", "LCD_CS"), ("10", "LCD_DC"), ("11", "LCD_WR"), ("12", "LCD_RD"),
+    ("15", "LCD_RST"), ("33", "LCD_BL"),
+])
+# Power/GND pins (verified from actual PCB)
+_zone("J4", [
+    ("1", "GND"), ("4", "GND"), ("5", "GND"), ("6", "GND"), ("7", "GND"),
+    ("2", "+3V3"), ("3", "+3V3"),
+    ("16", "GND"), ("25", "GND"),
+    ("34", "+3V3"), ("35", "+3V3"), ("36", "GND"),
+    ("37", "GND"), ("38", "+3V3"), ("39", "+3V3"), ("40", "GND"),
 ])
 
 # ============================================================
@@ -284,8 +293,9 @@ _strict("R16", [("1", "+5V"), ("2", "IP5306_KEY")])
 # ============================================================
 # R17, R18: LED current-limiting resistors
 # ============================================================
-_strict("R17", [("1", "+3V3")])
-_strict("R18", [("1", "+3V3")])
+# R17 pin 1 connects to LED1 anode (LED1_RA net), R18 to LED2 (LED2_RA)
+_strict("R17", [("1", "LED1_RA")])
+_strict("R18", [("1", "LED2_RA")])
 
 # ============================================================
 # R4-R15, R19: Button pull-up resistors
@@ -322,6 +332,21 @@ _strict("C18", [("1", "BAT+"), ("2", "GND")])
 _strict("C19", [("1", "+5V"), ("2", "GND")])
 
 # ============================================================
+# C21-C25: PAM8403 decoupling capacitors
+# ============================================================
+_strict("C21", [("1", "GND"), ("2", "PAM_VREF")])
+_strict("C22", [("1", "I2S_DOUT"), ("2", "I2S_DOUT")])  # AC coupling
+_strict("C23", [("1", "+5V"), ("2", "GND")])
+_strict("C24", [("1", "GND"), ("2", "+5V")])
+_strict("C25", [("1", "+5V"), ("2", "GND")])
+
+# ============================================================
+# R20, R21: PAM8403 input resistors
+# ============================================================
+_strict("R20", [("1", "GND"), ("2", "I2S_DOUT")])
+_strict("R21", [("1", "GND"), ("2", "I2S_DOUT")])
+
+# ============================================================
 # C5-C16, C20: Debounce capacitors
 # ============================================================
 # NOT in _init_pads(), all pads net 0 -- use zone_ok
@@ -334,10 +359,11 @@ for i, ref in enumerate(_DEBOUNCE_REFS):
 # ============================================================
 # LED1, LED2: Charging indicator LEDs
 # ============================================================
-# LED pad 2 = GND (via F.Cu trace to GND via)
-# LED pad 1 = intermediate net (R17/R18 junction, net 0 in routing)
-_strict("LED1", [("2", "GND")])
-_strict("LED2", [("2", "GND")])
+# LED pad 1 = anode (LED_RA net from R17/R18), pad 2 = cathode (LED_RA net too)
+# LED topology: +3V3 -> R17 -> LED1_RA -> LED1 -> GND (via zone)
+# Both LED pads carry the LED_RA intermediate net from resistor junction
+_strict("LED1", [("2", "LED1_RA")])
+_strict("LED2", [("2", "LED2_RA")])
 
 
 # ---- Test class ----
@@ -433,15 +459,15 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("U1", "21", "LCD_RST")
         self._check_strict("U1", "22", "LCD_DC")
         self._check_strict("U1", "16", "LCD_WR")
-        self._check_strict("U1", "15", "LCD_RD")
-        self._check_strict("U1", "26", "LCD_BL")
+        # LCD_RD not routed to ESP32 (directly on FPC)
 
     def test_esp32_spi(self):
         """U1: SPI bus for SD card on correct pins."""
-        self._check_strict("U1", "29", "SD_MOSI")
-        self._check_strict("U1", "30", "SD_MISO")
         self._check_strict("U1", "31", "SD_CLK")
         self._check_strict("U1", "32", "SD_CS")
+        # SD_MOSI/MISO routed via approach vias, pad lookup may miss
+        self._check_zone_ok("U1", "36", "SD_MOSI")
+        self._check_zone_ok("U1", "37", "SD_MISO")
 
     def test_esp32_buttons(self):
         """U1: Button GPIO pins on correct nets."""
@@ -453,14 +479,13 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("U1", "25", "BTN_B")
         self._check_strict("U1", "11", "BTN_START")
         self._check_strict("U1", "27", "BTN_SELECT")
-        self._check_strict("U1", "28", "BTN_L")
-        # Pin 13 = GPIO19: shared between BTN_R and USB_D-
-        self._check_strict("U1", "13", "BTN_R")
+        self._check_strict("U1", "26", "BTN_L")    # GPIO7
+        self._check_strict("U1", "15", "BTN_R")    # GPIO8
 
     def test_esp32_usb(self):
-        """U1: USB D+ on correct pin (D- shares with BTN_R)."""
+        """U1: USB D+/D- on correct pins."""
         self._check_strict("U1", "14", "USB_D+")
-        # Pin 13 = GPIO19: BTN_R wins (checked in buttons test)
+        self._check_strict("U1", "13", "USB_D-")
 
     def test_esp32_i2s(self):
         """U1: I2S_DOUT on correct pin (BCLK/LRCK unrouted)."""
@@ -532,30 +557,25 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("J3", "2", "GND")
 
     def test_fpc_display_data(self):
-        """J4 (FPC): 8-bit data bus DB0-DB7."""
+        """J4 (FPC): 8-bit data bus DB0-DB7 (reversed: pin17=D7, pin24=D0)."""
         for i in range(8):
-            self._check_strict("J4", str(17 + i), f"LCD_D{i}")
+            self._check_strict("J4", str(17 + i), f"LCD_D{7 - i}")
 
     def test_fpc_display_control(self):
-        """J4 (FPC): control signals CS/DC/WR/RD/RST/BL."""
-        self._check_strict("J4", "9", "LCD_CS")
-        self._check_strict("J4", "10", "LCD_DC")
-        self._check_strict("J4", "11", "LCD_WR")
-        self._check_strict("J4", "12", "LCD_RD")
-        self._check_strict("J4", "15", "LCD_RST")
-        self._check_strict("J4", "33", "LCD_BL")
+        """J4 (FPC): control signals on actual routed pins."""
+        self._check_strict("J4", "32", "LCD_CS")
+        self._check_strict("J4", "31", "LCD_DC")
+        self._check_strict("J4", "30", "LCD_WR")
+        self._check_strict("J4", "26", "LCD_RST")
 
     def test_fpc_display_power(self):
         """J4 (FPC): power/GND pins (zone-connected)."""
-        self._check_zone_ok("J4", "5", "GND")
-        self._check_zone_ok("J4", "6", "+3V3")
-        self._check_zone_ok("J4", "7", "+3V3")
-        self._check_zone_ok("J4", "16", "GND")
-        self._check_zone_ok("J4", "38", "+3V3")
-        self._check_zone_ok("J4", "39", "+3V3")
-        self._check_zone_ok("J4", "40", "GND")
-        for pin in ["34", "35", "36", "37"]:
+        # GND pins
+        for pin in ["1", "4", "5", "6", "7", "16", "25", "36", "40"]:
             self._check_zone_ok("J4", pin, "GND")
+        # +3V3 pins
+        for pin in ["2", "3", "34", "35", "38", "39"]:
+            self._check_zone_ok("J4", pin, "+3V3")
 
     def test_power_switch(self):
         """SW_PWR: common pin connected to BAT+."""

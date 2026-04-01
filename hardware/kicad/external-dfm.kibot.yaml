@@ -1,0 +1,53 @@
+kibot:
+  version: 1
+
+global:
+  out_dir: /output
+
+preflight:
+  # Run KiCad DRC — don't abort on errors (we want to continue to ERC + report)
+  drc:
+    enabled: true
+    ignore_unconnected: false
+    dont_stop: true
+  # Run KiCad ERC
+  erc:
+    enabled: true
+    dont_stop: true
+  # Zone fill check
+  check_zone_fills: true
+
+outputs:
+  # Full design report (manufacturer-oriented)
+  - name: design_report
+    type: report
+    comment: "Full design report with Eurocircuits classification"
+    options:
+      template: full
+      do_convert: false
+      eurocircuits_class_target: "10F"
+      stencil_thickness: 0.12
+      mm_digits: 3
+
+  # BOM generation for cross-check
+  - name: bom_check
+    type: bom
+    comment: "BOM for cross-reference with JLCPCB"
+    options:
+      output: "bom-kibot.csv"
+      format: CSV
+      columns:
+        - field: References
+        - field: Value
+        - field: Footprint
+        - field: Quantity Per PCB
+      group_fields: ["Value", "Footprint"]
+      normalize_values: true
+
+  # DRC-focused simple report
+  - name: drc_report
+    type: report
+    comment: "Simple DRC-focused report"
+    options:
+      template: simple
+      output: "drc-summary.txt"
