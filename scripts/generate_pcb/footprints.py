@@ -112,7 +112,7 @@ def esp32_s3_wroom1(layer="B"):
 #      JLCPCB 3D model leads and eliminate pin-left/pin-right edge violations
 def sw_smd_5_1(layer="F"):
     layers = SMD_F if layer == "F" else SMD_B
-    pw, ph = 1.2, 0.9   # IPC-SM-782 standard for 5.1x5.1 tact switch
+    pw, ph = 1.0, 0.7   # Reduced from 1.2x0.9 for JLCPCB pad spacing DFM
     cx, cy = 3.0, 1.85
     return [
         _pad("1", "smd", "rect", -cx, -cy, pw, ph, layers),
