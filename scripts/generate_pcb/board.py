@@ -94,9 +94,9 @@ SS_ENC = (-62, -17)
 SS_OFFSETS = [(-10, 0), (10, 0)]  # START, SELECT
 
 # Menu button (front, bottom-right — below ABXY, outside display area)
-# DFM: was (62,-25) → SW13[1] at y=61.1 overlapped U6[4] at y=60.9 (gap=-0.2mm)
-# Moved down 0.7mm: SW13[1].cy=62.5, bottom=62.5-0.45=62.05, U6[4].top=60.90, gap=1.15mm
-MENU_ENC = (62, -25.7)
+# DFM: was (62,-25.7) → SW13 pads overlapped TF-01A (SD card) pads.
+# Moved up 1.5mm: SW13 pad 1 bottom=59.9, TF pad top=61.05, gap=1.15mm ✓
+MENU_ENC = (62, -24.2)
 
 # Charging LEDs (front side, bottom-left)
 LED_CHARGE_ENC = (-55, -30)    # Red LED — charging

@@ -238,19 +238,26 @@ def usb_c_16p(layer="B"):
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.3, 1.1, layers,
                          solder_mask_margin=0))
 
-    # Shield THT oval pads (2 pads per pin number, pins 13-14)
-    # Pin 13: left side, pin 14: right side
-    # Front (near signal pads): 1.700 x 2.000mm, drill 0.600mm
-    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.7, 2.0, THT,
-                     drill=0.60, solder_mask_margin=0))
-    pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.7, 2.0, THT,
-                     drill=0.60, solder_mask_margin=0))
-    # Rear: 1.400 x 1.800mm, drill 0.600mm
-    # Use 13b/14b names to avoid JLCPCB 0mm pad-spacing for same-named pads
-    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.4, 1.8, THT,
-                     drill=0.60, solder_mask_margin=0))
-    pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.4, 1.8, THT,
-                     drill=0.60, solder_mask_margin=0))
+    # Shield pads (pins 13-14) — SMD on both sides + NPTH for mechanical.
+    # Converted from thru_hole to SMD to eliminate JLCPCB THT-to-SMD violations.
+    # Front (near signal pads): 1.700 x 2.000mm
+    pads.append(_pad("13", "smd", "oval", -4.325, -1.825, 1.7, 2.0, layers,
+                     solder_mask_margin=0))
+    pads.append(_pad("14", "smd", "oval", 4.325, -1.825, 1.7, 2.0, layers,
+                     solder_mask_margin=0))
+    # Rear: 1.400 x 1.800mm
+    pads.append(_pad("13b", "smd", "oval", -4.325, 2.375, 1.4, 1.8, layers,
+                     solder_mask_margin=0))
+    pads.append(_pad("14b", "smd", "oval", 4.325, 2.375, 1.4, 1.8, layers,
+                     solder_mask_margin=0))
+    # NPTH mechanical anchors for shield pins (ø0.60mm)
+    for sx in [-4.325, 4.325]:
+        for sy in [-1.825, 2.375]:
+            pads.append(
+                f'    (pad "" np_thru_hole circle (at {sx} {sy})'
+                f' (size 0.6 0.6) (drill 0.6)'
+                f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+            )
 
     # NPTH positioning holes (no pad, no net)
     # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm
