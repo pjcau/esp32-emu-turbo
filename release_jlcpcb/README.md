@@ -67,7 +67,24 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v3.0 — 2026-04-01 (current)
+### v3.1 — 2026-04-01 (current)
+
+**JLCPCB DFM iteration + routing fixes + CPL corrections:**
+
+- **Via annular ring**: 0.55→0.60mm standard, 0.50→0.55mm tight (AR ≥0.175mm)
+- **USB-C shield pads**: THT→SMD (eliminates THT-to-SMD errors)
+- **Pad spacing**: fine-pitch pads 0.30→0.15mm width (gap 0.35mm)
+- **USB-C wide pads**: 0.55→0.35mm, shield 1.7→1.1mm
+- **Tact switch pads**: 1.2×0.9→1.0×0.7mm (gap to PAM8403 0.45mm)
+- **FPC pad height**: 1.5→1.0mm
+- **TF-01A signal pads**: 0.60→0.50mm
+- **Fiducials**: removed (JLCPCB panel fiducials)
+- **15 routing collisions fixed**: via-pad overlap, via-via gaps, trace-via clearance
+- **R1/R2 CPL position**: synced with routing.py (was 8mm off for R2)
+- **SW13 (Menu)**: moved 1.5mm up (was overlapping SD card pads)
+- **Verification**: DFM 114/114, DFA 9/9, collision grid 34→19
+
+### v3.0 — 2026-04-01
 
 **Major DFM overhaul + full JLCDFM compliance + 3D PCBA renders:**
 
