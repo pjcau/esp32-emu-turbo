@@ -215,11 +215,10 @@ def _build_placements():
     #   y=46   Pull-up resistors (R4-R15, R19) x=43..103
     #   y=50   Debounce caps (C5-C16, C20) x=43..103
 
-    # USB-C CC resistors — use actual board.py positions (R2 was moved near J1)
-    from scripts.generate_pcb.routing import R2_POS
-    ux, uy = enc_to_pcb(*USBC_ENC)
+    # USB-C CC resistors — use actual routing.py positions
+    from scripts.generate_pcb.routing import R1_POS, R2_POS
     p.append(("R1", "5.1k", "R_0805",
-              ux - 6, uy - 5, 0, "bottom"))
+              R1_POS[0], R1_POS[1], 0, "bottom"))
     p.append(("R2", "5.1k", "R_0805",
               R2_POS[0], R2_POS[1], 0, "bottom"))
 
