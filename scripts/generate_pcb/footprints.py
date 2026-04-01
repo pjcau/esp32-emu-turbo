@@ -213,8 +213,8 @@ def usb_c_16p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Wide signal pads (pins 1, 2, 11, 12): 0.450 x 1.100mm at y=-2.375
-    # DFM: was 0.550mm (gap to neighbor=0.250mm). Now 0.450mm (gap=0.350mm ✓)
+    # Wide signal pads (pins 1, 2, 11, 12): 0.350 x 1.100mm at y=-2.375
+    # DFM: 0.350mm gives gap=0.450mm to neighbors
     wide_pads = [
         ("1",  -3.200),   # GND
         ("2",  -2.400),   # VBUS
@@ -222,10 +222,11 @@ def usb_c_16p(layer="B"):
         ("12",  3.200),   # GND
     ]
     for name, x in wide_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.45, 1.1, layers))
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.35, 1.1, layers,
+                         solder_mask_margin=-0.02))
 
-    # Narrow signal pads (pins 3-10): 0.180 x 1.100mm, 0.500mm pitch at y=-2.375
-    # DFM: 0.180mm gives gap=0.320mm (JLCPCB needs >0.30mm)
+    # Narrow signal pads (pins 3-10): 0.150 x 1.100mm, 0.500mm pitch at y=-2.375
+    # DFM: 0.150mm gives gap=0.350mm (JLCPCB absolute minimum pad width)
     narrow_pads = [
         ("3",  -1.750),
         ("4",  -1.250),
@@ -237,8 +238,8 @@ def usb_c_16p(layer="B"):
         ("10",  1.750),
     ]
     for name, x in narrow_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.18, 1.1, layers,
-                         solder_mask_margin=0))
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.15, 1.1, layers,
+                         solder_mask_margin=-0.02))
 
     # Shield pads (pins 13-14) — SMD to avoid THT-to-SMD violations.
     # Front: 1.1mm width for 0.25mm gap to signal pads 1/12.
@@ -272,13 +273,13 @@ def usb_c_16p(layer="B"):
 
 # ── FPC 40-pin 0.5mm pitch (display connector, LCSC C2856812) ────
 # Ref: JLCPCB/EasyEDA package FPC-SMD_40P-P0.50_FPC-05F-40PH20
-# 40 signal pads at y=-1.288, size 0.180 x 1.500mm, 0.500mm pitch
-# DFM: 0.180mm gives gap=0.320mm (JLCPCB needs >0.30mm)
+# 40 signal pads at y=-1.288, size 0.150 x 1.500mm, 0.500mm pitch
+# DFM: 0.150mm gives gap=0.350mm (JLCPCB absolute minimum pad width)
 # 2 mounting pads (pins 41-42): 2.000 x 2.500mm at y=+1.288
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.18, 1.5
+    pw, ph = 0.15, 1.5
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
@@ -286,7 +287,7 @@ def fpc_40p(layer="B"):
     for i in range(40):
         x = -9.75 + i * 0.5
         pads.append(_pad(str(i + 1), "smd", "rect", x, -1.288, pw, ph, layers,
-                         solder_mask_margin=0))
+                         solder_mask_margin=-0.02))
 
     # 2 mounting pads (pins 41-42): 2.000 x 2.500mm
     pads.append(_pad("41", "smd", "rect", 11.44, 1.288, 2.0, 2.5, layers))
