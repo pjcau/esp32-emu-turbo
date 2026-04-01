@@ -223,7 +223,8 @@ def usb_c_16p(layer="B"):
     for name, x in wide_pads:
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.55, 1.1, layers))
 
-    # Narrow signal pads (pins 3-10): 0.300 x 1.100mm, 0.500mm pitch at y=-2.375
+    # Narrow signal pads (pins 3-10): 0.250 x 1.100mm, 0.500mm pitch at y=-2.375
+    # DFM: was 0.300mm (gap=0.200mm, JLCPCB error). Now 0.250mm (gap=0.250mm ✓)
     narrow_pads = [
         ("3",  -1.750),
         ("4",  -1.250),
@@ -235,14 +236,14 @@ def usb_c_16p(layer="B"):
         ("10",  1.750),
     ]
     for name, x in narrow_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.3, 1.1, layers,
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.25, 1.1, layers,
                          solder_mask_margin=0))
 
     # Shield pads (pins 13-14) — SMD to avoid THT-to-SMD violations.
-    # Front: reduced from 1.7→1.3mm width for 0.20mm gap to signal pads 1/12.
-    pads.append(_pad("13", "smd", "oval", -4.325, -1.825, 1.3, 2.0, layers,
+    # Front: 1.1mm width for 0.25mm gap to signal pads 1/12.
+    pads.append(_pad("13", "smd", "oval", -4.325, -1.825, 1.1, 2.0, layers,
                      solder_mask_margin=0))
-    pads.append(_pad("14", "smd", "oval", 4.325, -1.825, 1.3, 2.0, layers,
+    pads.append(_pad("14", "smd", "oval", 4.325, -1.825, 1.1, 2.0, layers,
                      solder_mask_margin=0))
     # Rear: 1.4 x 1.8mm (no signal pads nearby)
     pads.append(_pad("13b", "smd", "oval", -4.325, 2.375, 1.4, 1.8, layers,
@@ -270,12 +271,13 @@ def usb_c_16p(layer="B"):
 
 # ── FPC 40-pin 0.5mm pitch (display connector, LCSC C2856812) ────
 # Ref: JLCPCB/EasyEDA package FPC-SMD_40P-P0.50_FPC-05F-40PH20
-# 40 signal pads at y=-1.288, size 0.300 x 1.500mm, 0.500mm pitch
+# 40 signal pads at y=-1.288, size 0.250 x 1.500mm, 0.500mm pitch
+# DFM: was 0.300mm (gap=0.200mm, JLCPCB error). Now 0.250mm (gap=0.250mm ✓)
 # 2 mounting pads (pins 41-42): 2.000 x 2.500mm at y=+1.288
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.3, 1.5
+    pw, ph = 0.25, 1.5
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
