@@ -279,7 +279,7 @@ def usb_c_16p(layer="B"):
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.15, 1.5
+    pw, ph = 0.15, 1.0  # DFM: was 1.5, reduced to minimize pad overlap area
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
