@@ -236,16 +236,15 @@ def usb_c_16p(layer="B"):
     ]
     for name, x in narrow_pads:
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.3, 1.1, layers,
-                         solder_mask_margin=0.05))
+                         solder_mask_margin=0))
 
-    # Shield pads (pins 13-14) — SMD on both sides + NPTH for mechanical.
-    # Converted from thru_hole to SMD to eliminate JLCPCB THT-to-SMD violations.
-    # Front (near signal pads): 1.700 x 2.000mm
-    pads.append(_pad("13", "smd", "oval", -4.325, -1.825, 1.7, 2.0, layers,
+    # Shield pads (pins 13-14) — SMD to avoid THT-to-SMD violations.
+    # Front: reduced from 1.7→1.3mm width for 0.20mm gap to signal pads 1/12.
+    pads.append(_pad("13", "smd", "oval", -4.325, -1.825, 1.3, 2.0, layers,
                      solder_mask_margin=0))
-    pads.append(_pad("14", "smd", "oval", 4.325, -1.825, 1.7, 2.0, layers,
+    pads.append(_pad("14", "smd", "oval", 4.325, -1.825, 1.3, 2.0, layers,
                      solder_mask_margin=0))
-    # Rear: 1.400 x 1.800mm
+    # Rear: 1.4 x 1.8mm (no signal pads nearby)
     pads.append(_pad("13b", "smd", "oval", -4.325, 2.375, 1.4, 1.8, layers,
                      solder_mask_margin=0))
     pads.append(_pad("14b", "smd", "oval", 4.325, 2.375, 1.4, 1.8, layers,

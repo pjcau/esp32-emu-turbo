@@ -480,16 +480,10 @@ def _component_placeholders():
     placements.append(("C1", "C_0805", amx - 3, amy - 7, 0, "B.Cu"))  # DFM: was amx-1, too close to FPC slot
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
-    # ── Fiducial markers (both sides, at least 5mm from board edges) ──
-    # JLCPCB requires ≥2 fiducials on each assembly side.
-    # F.Cu (top — buttons/LEDs)
+    # ── Fiducial markers (F.Cu only — JLCPCB uses panel fiducials for B.Cu) ──
     placements.append(("FID1", "Fiducial", 5, 5, 0, "F.Cu"))
     placements.append(("FID2", "Fiducial", 155, 5, 0, "F.Cu"))
     placements.append(("FID3", "Fiducial", 5, 70, 0, "F.Cu"))
-    # B.Cu (bottom — ICs/connectors, main assembly side)
-    placements.append(("FID4", "Fiducial", 155, 70, 0, "B.Cu"))
-    placements.append(("FID5", "Fiducial", 5, 37.5, 0, "B.Cu"))
-    placements.append(("FID6", "Fiducial", 155, 37.5, 0, "B.Cu"))
 
     # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)
     _text_offsets = {
