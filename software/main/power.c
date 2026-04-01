@@ -35,6 +35,13 @@ static esp_err_t ip5306_read_reg(uint8_t reg, uint8_t *val)
 
 esp_err_t power_init(void)
 {
+#ifndef IP5306_I2C_SDA
+    /* Non-I2C variant of IP5306 — no battery monitoring available.
+     * The IP5306 still works for charging and boost, just no status readback. */
+    ESP_LOGI(TAG, "IP5306 non-I2C variant — battery monitoring not available");
+    s_available = false;
+    return ESP_OK;
+#else
     ESP_LOGI(TAG, "Initializing IP5306 power management (I2C)");
 
     /* I2C master bus */
@@ -79,6 +86,7 @@ esp_err_t power_init(void)
     }
 
     return ESP_OK;
+#endif  /* IP5306_I2C_SDA */
 }
 
 int power_get_battery_percent(void)

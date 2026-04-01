@@ -27,7 +27,8 @@ esp_err_t display_draw_color_bars(void);
 esp_err_t display_fill(uint16_t color);
 
 /**
- * Set backlight brightness (0 = off, 255 = max).
+ * Set backlight brightness. No-op on current PCB (backlight hardwired to 3V3).
+ * Kept for API compatibility with future revisions that may add PWM control.
  */
 void display_set_backlight(uint8_t brightness);
 

@@ -12,8 +12,6 @@
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_vendor.h"
 #include "esp_lcd_st7796.h"
-#include "driver/ledc.h"
-
 #include <string.h>
 #include <stdlib.h>
 
@@ -21,35 +19,12 @@ static const char *TAG = "display";
 
 static esp_lcd_panel_handle_t s_panel = NULL;
 
-/* ── Backlight PWM ─────────────────────────────────────────────────── */
-
-static void backlight_init(void)
-{
-    ledc_timer_config_t timer_cfg = {
-        .speed_mode      = LEDC_LOW_SPEED_MODE,
-        .timer_num       = LCD_BL_LEDC_TIMER,
-        .duty_resolution = LEDC_TIMER_8_BIT,
-        .freq_hz         = LCD_BL_LEDC_FREQ,
-        .clk_cfg         = LEDC_AUTO_CLK,
-    };
-    ledc_timer_config(&timer_cfg);
-
-    ledc_channel_config_t ch_cfg = {
-        .speed_mode = LEDC_LOW_SPEED_MODE,
-        .channel    = LCD_BL_LEDC_CHANNEL,
-        .timer_sel  = LCD_BL_LEDC_TIMER,
-        .intr_type  = LEDC_INTR_DISABLE,
-        .gpio_num   = LCD_BL,
-        .duty       = 0,  /* start OFF (GPIO45 must be LOW at boot) */
-        .hpoint     = 0,
-    };
-    ledc_channel_config(&ch_cfg);
-}
-
+/* Backlight is hardwired to 3V3 via resistor on PCB — no GPIO control.
+ * display_set_backlight() is a no-op for API compatibility. */
 void display_set_backlight(uint8_t brightness)
 {
-    ledc_set_duty(LEDC_LOW_SPEED_MODE, LCD_BL_LEDC_CHANNEL, brightness);
-    ledc_update_duty(LEDC_LOW_SPEED_MODE, LCD_BL_LEDC_CHANNEL);
+    (void)brightness;
+    ESP_LOGD(TAG, "Backlight is hardwired ON (no PWM control)");
 }
 
 /* ── Panel init ────────────────────────────────────────────────────── */
@@ -59,7 +34,7 @@ esp_err_t display_init(void)
     ESP_LOGI(TAG, "Initializing ST7796S 8-bit i80 parallel display");
 
     /* Backlight PWM — start OFF before display init */
-    backlight_init();
+    /* Backlight: no init needed (hardwired to 3V3 on PCB) */
 
     /* Configure the i80 bus */
     esp_lcd_i80_bus_handle_t i80_bus = NULL;
@@ -117,8 +92,7 @@ esp_err_t display_init(void)
     /* Clear to black */
     display_fill(0x0000);
 
-    /* Turn on backlight */
-    display_set_backlight(LCD_BL_LEDC_DUTY);
+    /* Backlight is always on (hardwired to 3V3 on PCB) */
 
     ESP_LOGI(TAG, "Display initialized: %dx%d, %d-bit i80 @ %d MHz",
              LCD_H_RES, LCD_V_RES, LCD_BIT_WIDTH, LCD_CLK_HZ / 1000000);
