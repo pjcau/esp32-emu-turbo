@@ -40,6 +40,8 @@ VIA_STD = 0.60       # standard via OD (AR=0.20mm with drill 0.20)
 VIA_STD_DRILL = 0.20
 VIA_TIGHT = 0.55     # tight-corridor via OD (AR=0.175mm)
 VIA_TIGHT_DRILL = 0.20
+VIA_MIN = 0.46       # minimum via OD (AR=0.13mm — JLCPCB absolute minimum)
+VIA_MIN_DRILL = 0.20
 
 # ── Board geometry ────────────────────────────────────────────────
 BOARD_W = 160.0
@@ -759,7 +761,10 @@ def _power_traces():
     # ESP32 GND pad (pin 41) to GND via (+3.0mm to clear thermal pad bottom edge at 31.91)
     # DFM: was single vertical at x=81.5 (esp_gnd[0]). Gap to LCD_D7 B.Cu vert at x=81.905
     # was only 0.055mm (DANGER). Fix: horizontal LEFT to x=80.0, then vertical.
-    gnd_offset_x = esp_gnd[0] - 1.5  # x=80.0 — left of LCD_D7 at x=81.905, gap=1.355mm
+    # DFM FIX: was -1.5 (x=80.0), LCD_RST via at (79.365,34.305) right edge=79.665.
+    # GND via (0.60) left edge=79.70: gap=0.035mm < 0.15mm VIOLATION.
+    # At -1.3 (x=80.2): left edge=79.90, gap=0.235mm >= 0.15mm ✓
+    gnd_offset_x = esp_gnd[0] - 1.3  # x=80.2 — clear of LCD_RST via AND LCD_D7
     # ESP32 GND: thermal pad (pin 41) at (81.5, 29.96), size 3.9x3.9 → top edge at y=28.01.
     # Via at +2mm = y=31.96 is INSIDE pad (pad bottom at y=31.91).  Use +2.5mm → y=32.46
     # (gap = 32.46 - 31.91 - 0.45 = 0.10mm OK).
@@ -802,19 +807,18 @@ def _power_traces():
                        "B.Cu", W_PWR, n_gnd))
     # ESP32 GND stub: reduce width to 0.3mm for horizontal from pad to gnd_offset_x.
     # DFM FIX: W_PWR=0.6 (hw=0.30) too wide for LCD_D7 gap. Use 0.3mm (hw=0.15):
-    # right edge=81.65, LCD_D7 left edge=81.805 → gap=0.155mm ≥ 0.10mm ✓
+    # right edge=80.35, LCD_D7 left edge=81.805 → gap=1.455mm ✓
     parts.append(_seg(esp_gnd[0], esp_gnd[1], gnd_offset_x, esp_gnd[1],
                        "B.Cu", 0.3, n_gnd))
     esp_gnd_via_y = esp_gnd[1] + 5.04  # y=35.0 — above LCD_RST B.Cu vert endpoint (33.04)
     # DFM FIX: reduced from W_PWR to 0.4mm for LCD_RST via clearance.
-    # LCD_RST via at (79.365,33.035) r=0.25, right edge=79.615.
-    # GND at x=80.0 w=0.4: left edge=79.80, gap=0.185mm >= 0.15mm ✓
+    # LCD_RST via at (79.365,34.305) r=0.30 (VIA_STD), right edge=79.665.
+    # GND at x=80.2 w=0.4: left edge=80.0, gap=0.335mm >= 0.15mm ✓
     parts.append(_seg(gnd_offset_x, esp_gnd[1], gnd_offset_x, esp_gnd_via_y,
                        "B.Cu", 0.4, n_gnd))
-    # DFM FIX: ESP32 GND via uses small 0.46/0.20mm to clear LCD_RST B.Cu vert at x=79.36.
-    # Default via(0.9) at (80.0,35.0): left edge 79.55, LCD_RST right edge 79.46 → gap=0.09mm < 0.15mm.
-    # Small via(0.46) at (80.0,35.0): left edge 79.77, LCD_RST right edge 79.46 → gap=0.31mm ✓
-    # Via-via to LCD_RST via(79.36,33.04): dist=sqrt(0.64²+1.96²)=2.06, gap=2.06-0.23-0.23=1.60mm ✓
+    # DFM FIX: ESP32 GND via at (80.2,35.04). LCD_RST via at (79.365,34.305) r=0.30.
+    # Via-via: dx=0.835, dy=0.735, dist=1.112. Gap=1.112-0.30-0.30=0.512mm ≥ 0.25mm ✓
+    # GND via left edge=79.90, LCD_RST right edge=79.665: gap=0.235mm ≥ 0.15mm ✓
     parts.append(_via_net(gnd_offset_x, esp_gnd_via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
     # JST GND pad to offset via (LEFT, away from BAT+ pad)
     parts.append(_seg(jst_n[0], jst_n[1], jst_n[0] - 2, jst_n[1],
@@ -997,16 +1001,16 @@ def _power_traces():
     # The AMS1117 tab via at (125, 49.35) connects directly to In2.Cu +3V3 zone which
     # covers the full board, so a second via at x=100.5 is redundant.
     # ESP32 +3V3: via near pin 2 with B.Cu stub
-    # DFM: Via 0.55mm (r=0.275) must fit between LCD_D7 F.Cu (y=20.5) and LCD_D6 F.Cu (y=21.5).
-    # Both traces w=0.2. Safe zone: y ∈ [20.975, 21.025]. Use y=21.0 (center).
-    # Offset 2.51mm: via at y=23.51-2.51=21.0.
-    # Gap to LCD_D7 (y=20.5, w=0.2): |21.0-20.5|-0.275-0.10 = 0.125mm ≥ 0.10 ✓
-    # Gap to LCD_D6 (y=21.5, w=0.2): |21.5-21.0|-0.275-0.10 = 0.125mm ≥ 0.10 ✓
-    # Gap to U1:1 pad (y=22.24): 21.79-(21.0+0.275) = 0.515mm ✓
+    # DFM: Via must fit between LCD_D7 F.Cu (y=20.5) and LCD_D6 F.Cu (y=21.5).
+    # Both traces w=0.2 (hw=0.10). Via at y=21.0 (center).
+    # VIA_MIN (0.46mm, r=0.23): gap to LCD_D7 = |21.0-20.5|-0.23-0.10 = 0.17mm ≥ 0.15mm ✓
+    #                           gap to LCD_D6 = |21.5-21.0|-0.23-0.10 = 0.17mm ≥ 0.15mm ✓
+    # VIA_STD (0.60mm, r=0.30): gap = 0.10mm < 0.15mm VIOLATION.
+    # Gap to U1:1 pad (y=22.24): 21.79-(21.0+0.23) = 0.56mm ✓
     esp_3v3 = _pad("U1", "2")  # pin 2 = +3V3 power input
     if esp_3v3:
         parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.51, n_3v3,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
+                              size=VIA_MIN, drill=VIA_MIN_DRILL))
         parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0],
                            esp_3v3[1] - 2.51, "B.Cu", W_PWR, n_3v3))
 
@@ -1350,20 +1354,23 @@ def _display_traces():
     # B.Cu stub from pad (133.71) to via (133.45): horizontal, does not cross cols.
     # FPC GND/power vias between approach columns 3 (x=133.10) and 4 (x=133.80).
     # JLCPCB requires drill ≥ 0.20mm / size ≥ 0.46mm for annular ring ≥ 0.13mm.
-    # Gap to approach col at 134.1: 134.1-133.60-0.25-0.10=0.15mm >= 0.15mm ✓
-    # Gap to col3 at 133.10: 133.60-133.10-0.25-0.10=0.15mm >= 0.15mm ✓
-    # Tight corridor: approach cols at x=133.10 and x=133.80.
-    # VIA_TIGHT (0.55mm): gap = 133.80-133.60-0.275-0.10=0.125mm (marginal).
+    # Tight corridor: approach cols at x=133.10 (w=0.2, edge 133.20) and x=134.10 (w=0.2, edge 134.00).
+    # VIA_MIN (0.46mm, r=0.23): gap to 133.20 = 133.60-0.23-133.20 = 0.17mm ≥ 0.15mm ✓
+    #                           gap to 134.00 = 134.00-133.60-0.23 = 0.17mm ≥ 0.15mm ✓
+    # VIA_TIGHT (0.55mm, r=0.275): gap = 0.125mm < 0.15mm VIOLATION.
     VIA_X_PWR = 133.60
-    VIA_PWR_SIZE = VIA_TIGHT   # AR=(0.55-0.20)/2=0.175mm ≥ 0.15mm JLCPCB ✓
-    VIA_PWR_DRILL = VIA_TIGHT_DRILL
+    VIA_PWR_SIZE = VIA_MIN     # AR=(0.46-0.20)/2=0.13mm — JLCPCB absolute minimum ✓
+    VIA_PWR_DRILL = VIA_MIN_DRILL
 
-    # Pin 40 (y=25.75): move via UP 0.5mm to separate from +3V3 pin 39 (y=26.25)
+    # Pin 40 (y=25.75): move via UP to separate from +3V3 pin 39 (y=26.25)
+    # DFM FIX: was -0.5 (y=25.25), bottom edge=24.975, FPC pad 42 top=25.06 → overlap 0.085mm.
+    # At -0.25 (y=25.50): bottom edge=25.225, gap to pad 42 top=0.165mm ≥ 0.15mm ✓
+    # Gap to pin 39 via (y=26.25): |26.25-25.50|-0.275-0.275=0.20mm > 0.15mm ✓
     for pin in [40]:
         pos = _fpc_display_pin(pin)
         if pos:
             px, py = pos[0], pos[1]
-            via_y = py - 0.5  # y=25.25
+            via_y = py - 0.25  # y=25.50 — clear of FPC mounting pad 42
             parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", W_DATA, n_gnd))
             parts.append(_seg(VIA_X_PWR, py, VIA_X_PWR, via_y, "B.Cu", W_DATA, n_gnd))
             parts.append(_via_net(VIA_X_PWR, via_y, n_gnd,
@@ -1631,11 +1638,14 @@ def _spi_traces():
         #   70.0 gives 2.0mm < 2.25mm → KEEPOUT VIOLATION. Use 70.5 → 2.5mm ✓.
         # i=1 (SD_MISO): post_slot_x=146, BTN_R via at (146.85,68.7).
         #   At stagger_y=68.0: gap=0.050mm < 0.25mm (AABB dx=-0.05mm) → keep at 67.5.
-        # JLCDFM FIX: SD_CS (i=3) stagger_y moved from 72.0 to 71.0 to clear
+        # JLCDFM FIX: SD_CS (i=3) stagger_y moved from 72.0 to 71.25 to clear
         # U6 NPTH at (144.95, 72.566) drill=1.0mm. At y=72.0: gap=-0.034mm.
-        # At y=71.0: gap to NPTH=0.966mm ✓, SD_CLK via(152.5,70.5): 0.618mm ✓
-        _stagger_map = {0: 66.0, 1: 67.5, 2: 70.5, 3: 71.0}
-        stagger_y = _stagger_map[i]  # max=71.0 < 74.5 (board bottom keepout) ✓
+        # At y=71.25: gap to NPTH=0.816mm ✓
+        # DFM FIX: was 71.0 — F.Cu trace at y=71.0 too close to SD_CLK vias at y=70.5:
+        #   gap = |71.0-70.5|-0.30-0.10 = 0.10mm < 0.15mm VIOLATION.
+        # At y=71.25: gap = |71.25-70.5|-0.30-0.10 = 0.35mm ≥ 0.15mm ✓
+        _stagger_map = {0: 66.0, 1: 67.5, 2: 70.5, 3: 71.25}
+        stagger_y = _stagger_map[i]  # max=71.25 < 74.5 (board bottom keepout) ✓
 
         # Step 1: B.Cu horizontal stub RIGHT from ESP32 pad to shared via column.
         # Via at shared_via_x=72.2: left edge 71.90, gap to ESP32 pad (71.60) = 0.30mm ✓
