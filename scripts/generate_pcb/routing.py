@@ -997,14 +997,13 @@ def _power_traces():
     # Tab = VOUT (+3V3). Thermal vias connect tab to In2.Cu +3V3 zone.
     # 2x2 grid with ~1.0mm spacing, centered on tab pad.
     # Via size 0.50mm, drill 0.20mm (annular ring 0.15mm, JLCPCB OK).
-    # Positions: (124.5, 52.0), (125.5, 52.0), (124.5, 52.7), (125.5, 52.7)
+    # Positions: 2x2 grid, ±0.50mm Y spacing for copper gap ≥0.40mm.
     # All within tab pad bounds (x=123.2..126.8, y=51.45..53.25).
-    # Clearance to existing +3V3 via at (125.0, 49.35): dy=2.65mm >> 0.25mm OK.
     _therm_via_positions = [
-        (am_tab[0] - 0.5, am_tab[1] - 0.35),  # (124.5, 52.0)
-        (am_tab[0] + 0.5, am_tab[1] - 0.35),  # (125.5, 52.0)
-        (am_tab[0] - 0.5, am_tab[1] + 0.35),  # (124.5, 52.7)
-        (am_tab[0] + 0.5, am_tab[1] + 0.35),  # (125.5, 52.7)
+        (am_tab[0] - 0.5, am_tab[1] - 0.50),  # (124.5, 51.85)
+        (am_tab[0] + 0.5, am_tab[1] - 0.50),  # (125.5, 51.85)
+        (am_tab[0] - 0.5, am_tab[1] + 0.50),  # (124.5, 52.85)
+        (am_tab[0] + 0.5, am_tab[1] + 0.50),  # (125.5, 52.85)
     ]
     for tvx, tvy in _therm_via_positions:
         parts.append(_via_net(tvx, tvy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
