@@ -215,12 +215,13 @@ def _build_placements():
     #   y=46   Pull-up resistors (R4-R15, R19) x=43..103
     #   y=50   Debounce caps (C5-C16, C20) x=43..103
 
-    # USB-C CC resistors
+    # USB-C CC resistors — use actual board.py positions (R2 was moved near J1)
+    from scripts.generate_pcb.routing import R2_POS
     ux, uy = enc_to_pcb(*USBC_ENC)
     p.append(("R1", "5.1k", "R_0805",
               ux - 6, uy - 5, 0, "bottom"))
     p.append(("R2", "5.1k", "R_0805",
-              ux + 6, uy - 5, 0, "bottom"))
+              R2_POS[0], R2_POS[1], 0, "bottom"))
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
