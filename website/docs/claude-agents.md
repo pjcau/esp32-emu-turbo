@@ -130,7 +130,7 @@ graph TB
 | Category | Skills | Description |
 |----------|--------|-------------|
 | **Pipeline (5)** | `/generate`, `/release`, `/release-prep`, `/render`, `/check` | Full PCB generation → JLCPCB export flow |
-| **Verification (6)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis` | 43 DFM + 9 DFA tests, DRC checks, layout scoring |
+| **Verification (6)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis` | 114 DFM + 9 DFA tests, DRC checks, layout scoring |
 | **Fix & Debug (4)** | `/dfm-fix`, `/fix-rotation`, `/jlcpcb-check`, `/jlcpcb-parts` | Automated issue resolution |
 | **MCP Design (5)** | `/pcb-schematic`, `/pcb-components`, `/pcb-routing`, `/pcb-library`, `/pcb-board` | Direct KiCad manipulation via MCP protocol |
 
@@ -273,7 +273,7 @@ Rules that prevent agents from getting stuck in loops:
 
 | Target | Time | Description |
 |--------|------|-------------|
-| `make verify-fast` | ~1.5s | Quick DFM check (43 tests) |
+| `make verify-fast` | ~1.5s | Quick DFM check (114 tests) |
 | `make verify-dfa` | ~1.1s | Quick DFA check (9 assembly tests) |
 | `make verify-all` | ~1.6s | All verification checks (DFM + DFA + DRC + sim + consistency) |
 | `make fast-check` | ~5s | Full pipeline (local kicad-cli) |

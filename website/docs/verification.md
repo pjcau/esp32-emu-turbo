@@ -155,8 +155,8 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 | Source | Components |
 |:---|:---|
 | Schematic (7 sub-sheets) | 68 unique refs |
-| PCB footprints | 65 refs |
-| JLCPCB CPL (assembly) | 64 refs |
+| PCB footprints | 78 refs |
+| JLCPCB CPL (assembly) | 71 refs |
 
 ### Off-board components (correct exclusions)
 
@@ -317,7 +317,7 @@ Cross-reference validation:
 ### Fast commands (recommended)
 
 ```bash
-# Quick DFM check — 88 tests, ~2s, no Docker needed
+# Quick DFM check — 114 tests, ~2s, no Docker needed
 make verify-fast
 
 # Full pipeline — generate + DFM + DRC + gerbers + connectivity (~5s)
@@ -359,7 +359,7 @@ make verify-all    # DRC + simulation + consistency + short circuit
 Or individually:
 
 ```bash
-python3 scripts/verify_dfm_v2.py         # 88 DFM guard tests
+python3 scripts/verify_dfm_v2.py         # 114 DFM guard tests
 python3 scripts/drc_native.py --run      # JLCPCB design rules (smart analysis)
 python3 scripts/simulate_circuit.py      # Power/timing simulation
 python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync

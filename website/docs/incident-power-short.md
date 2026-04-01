@@ -202,7 +202,7 @@ parts.append(_via_net(safe_x, c19_p1[1] - 2, NET_ID["+5V"]))
 | GND | (108.5, 60.5) | (108.5, 59.5) | 0.80mm | PASS |
 | +5V | (111.5, 56.5) | (113.0, 56.5) | 1.30mm | PASS |
 
-All 88 DFM tests and 9 DFA assembly tests pass after regeneration.
+All 114 DFM tests and 9 DFA assembly tests pass after regeneration.
 
 ## Rework Procedure for Existing Boards
 
