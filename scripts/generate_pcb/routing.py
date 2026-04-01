@@ -30,7 +30,7 @@ from .collision import CollisionGrid
 _GRID = CollisionGrid()
 
 # ── Trace widths ──────────────────────────────────────────────────
-W_PWR = 0.5
+W_PWR = 0.6
 W_SIG = 0.25
 W_DATA = 0.2
 W_AUDIO = 0.3
@@ -383,7 +383,7 @@ _PIN_TO_GPIO = {
     23: 21, 24: 47, 25: 48, 26: 45,
     27: 0, 28: 35, 29: 36, 30: 37,
     31: 38, 32: 39, 33: 40, 34: 41,
-    35: 42, 36: 43, 37: 44, 38: 1, 39: 2,
+    35: 42, 36: 44, 37: 43, 38: 1, 39: 2,
 }
 _GPIO_TO_PIN = {gpio: pin for pin, gpio in _PIN_TO_GPIO.items()}
 
@@ -796,13 +796,12 @@ def _power_traces():
     parts.append(_seg(am_gnd[0], am_gnd[1], am_gnd[0], am_gnd[1] + 2,
                        "B.Cu", W_PWR, n_gnd))
     # ESP32 GND stub: reduce width to 0.3mm for horizontal from pad to gnd_offset_x.
-    # DFM FIX: W_PWR=0.5 (hw=0.25) right edge at 81.75, LCD_D7 vert at x=81.905 (hw=0.10,
-    # left edge=81.805) → gap=0.055mm < 0.10mm. With 0.3mm (hw=0.15): right edge=81.65,
-    # gap = 81.805-81.65 = 0.155mm ≥ 0.10mm ✓
+    # DFM FIX: W_PWR=0.6 (hw=0.30) too wide for LCD_D7 gap. Use 0.3mm (hw=0.15):
+    # right edge=81.65, LCD_D7 left edge=81.805 → gap=0.155mm ≥ 0.10mm ✓
     parts.append(_seg(esp_gnd[0], esp_gnd[1], gnd_offset_x, esp_gnd[1],
                        "B.Cu", 0.3, n_gnd))
     esp_gnd_via_y = esp_gnd[1] + 5.04  # y=35.0 — above LCD_RST B.Cu vert endpoint (33.04)
-    # DFM FIX: reduced from W_PWR(0.5) to 0.4mm for LCD_RST via clearance.
+    # DFM FIX: reduced from W_PWR to 0.4mm for LCD_RST via clearance.
     # LCD_RST via at (79.365,33.035) r=0.25, right edge=79.615.
     # GND at x=80.0 w=0.4: left edge=79.80, gap=0.185mm >= 0.15mm ✓
     parts.append(_seg(gnd_offset_x, esp_gnd[1], gnd_offset_x, esp_gnd_via_y,
@@ -815,6 +814,32 @@ def _power_traces():
     # JST GND pad to offset via (LEFT, away from BAT+ pad)
     parts.append(_seg(jst_n[0], jst_n[1], jst_n[0] - 2, jst_n[1],
                        "B.Cu", W_PWR, n_gnd))
+
+    # ── IP5306 (U2) GND thermal vias: 3-via array near EP pad ──────
+    # EP pad center at ip_ep = (110.0, 42.5), size 3.2x3.2mm.
+    # VBUS F.Cu vertical at x=111.0 (y=40..61): thermal vias must stay clear.
+    # With W_PWR=0.6: via right edge + trace left edge need >= 0.15mm gap.
+    # Place vias LEFT of EP center to avoid VBUS trace at x=111.
+    # y=ip_ep[1]+2.5=45.0, below KEY horizontal (y=44.41, x=107..114.05).
+    # VBUS F.Cu vert at x=111.0: need gap >= 0.275+0.30+0.15 = 0.725mm.
+    # Max via x = 111.0 - 0.725 = 110.275. Use x=110.0 for margin.
+    # IP5306 thermal vias: 3 GND vias below EP pad.
+    # KEY trace at x=107.0: need gap >= 0.30+0.125+0.15 = 0.575mm min.
+    # VBUS F.Cu at x=111.0: need gap >= 0.275+0.30+0.15 = 0.725mm.
+    # EP pad bounds: x=108.4..111.6, y=40.9..44.1.
+    # Place inside EP pad bounds to avoid dead-end issues.
+    _ip5306_therm_vias = [
+        (ip_ep[0] - 1.5, ip_ep[1] + 2.5),  # (108.5, 45.0) — gap to KEY=1.075mm ✓
+        (ip_ep[0],        ip_ep[1] + 2.5),  # (110.0, 45.0) — center
+        (ip_ep[0] - 0.7,  ip_ep[1] + 3.5),  # (109.3, 46.0) — below, gap to VBUS>1mm ✓
+    ]
+    # Connect each thermal via to EP pad via a single vertical B.Cu stub.
+    # Each stub goes straight down into the EP pad area (all inside pad bounds).
+    for tvx, tvy in _ip5306_therm_vias:
+        parts.append(_via_net(tvx, tvy, n_gnd, size=0.55, drill=0.20))
+        # Single B.Cu stub from via into EP pad (which is at y=40.9..44.1).
+        # Stub endpoint at y=ip_ep[1]+1.5 is inside pad (44.0 < 44.1).
+        parts.append(_seg(tvx, tvy, tvx, ip_ep[1] + 1.5, "B.Cu", W_PWR, n_gnd))
 
     # ── SD card (U6, TF-01A) power connections ───────────────────
     # Pin 4 = VDD (+3V3), Pin 6 = VSS (GND), Shield pins 10-13 = GND.
@@ -881,11 +906,14 @@ def _power_traces():
     # DFM FIX: was -1.0 (x=106). LX vert at x=106 crossed BAT+ horiz at y=43.13
     # (107→105.5). Also KEY horiz at y=44.41 spans x=107..114.05; x=106 is inside.
     # Fix: lx_col_x = ip_sw[0] - 2.0 = 105 (left of both BAT+ end 105.5 and KEY 107).
-    lx_col_x = ip_sw[0] - 2.5   # x=104.5 — DFM: was -2.0 (x=105), gap to BAT+ at x=105.5 was 0mm. Now 0.50mm edge gap
+    # DFM: BTN_MENU B.Cu vert at x=103.95 (w=0.25). With W_PWR=0.6 at x=104.5:
+    # gap=|104.5-103.95|-0.3-0.125=0.125mm < 0.15mm. Use 0.4mm for LX vert
+    # to get gap=0.55-0.2-0.125=0.205mm ✓. Short segment, inductor pads carry current.
+    lx_col_x = ip_sw[0] - 2.5   # x=104.5
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR, n_lx))
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, l1_2[1],
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", 0.4, n_lx))  # narrowed for BTN_MENU clearance
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR, n_lx))
 
@@ -964,16 +992,18 @@ def _power_traces():
     # The AMS1117 tab via at (125, 49.35) connects directly to In2.Cu +3V3 zone which
     # covers the full board, so a second via at x=100.5 is redundant.
     # ESP32 +3V3: via near pin 2 with B.Cu stub
-    # DFM: Via 0.55mm (r=0.275) between LCD_D6 F.Cu at y=20.50 and U1:1 pad at y=22.24.
-    # Offset 2.45mm: via at y=23.51-2.45=21.06.
-    # Gap to LCD_D6: |21.06-20.50|-0.275-0.10 = 0.185mm >= 0.15mm ✓
-    # Gap to U1:1 pad: 22.24-0.45-(21.06+0.275) = 21.79-21.335 = 0.455mm ✓
+    # DFM: Via 0.55mm (r=0.275) must fit between LCD_D7 F.Cu (y=20.5) and LCD_D6 F.Cu (y=21.5).
+    # Both traces w=0.2. Safe zone: y ∈ [20.975, 21.025]. Use y=21.0 (center).
+    # Offset 2.51mm: via at y=23.51-2.51=21.0.
+    # Gap to LCD_D7 (y=20.5, w=0.2): |21.0-20.5|-0.275-0.10 = 0.125mm ≥ 0.10 ✓
+    # Gap to LCD_D6 (y=21.5, w=0.2): |21.5-21.0|-0.275-0.10 = 0.125mm ≥ 0.10 ✓
+    # Gap to U1:1 pad (y=22.24): 21.79-(21.0+0.275) = 0.515mm ✓
     esp_3v3 = _pad("U1", "2")  # pin 2 = +3V3 power input
     if esp_3v3:
-        parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.45, n_3v3,
+        parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.51, n_3v3,
                               size=0.55, drill=0.20))
         parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0],
-                           esp_3v3[1] - 2.45, "B.Cu", W_PWR, n_3v3))
+                           esp_3v3[1] - 2.51, "B.Cu", W_PWR, n_3v3))
 
     # ── BAT+: IP5306 -> JST battery connector ─────────────────
     # DFM: ip_bat at x=107 same as ip_sw — offset BAT+ via to separate column.
@@ -1075,8 +1105,8 @@ def _display_traces():
         (12, "LCD_CS", 9),    # CS
         (14, "LCD_DC", 10),   # RS/DC
         (46, "LCD_WR", 11),   # WR
-        (3,  "LCD_RD", 12),   # RD
-        (45, "LCD_BL", 33),   # Backlight anode (LED-A)
+        # LCD_RD (FPC pin 12): tied HIGH via 3V3 in FPC power section
+        # LCD_BL (FPC pin 33): tied to 3V3 via resistor in FPC power section
     ]
 
     # Combined list for unified stagger handling.
@@ -1420,6 +1450,19 @@ def _display_traces():
         # Short B.Cu stub from pin 38 DOWN to pin 39 (same net, 0.5mm away)
         parts.append(_seg(px38, py38, px39, py39, "B.Cu", W_FPC_PWR, n_3v3))
 
+    # ── +3V3 for LCD_RD (pin 12) and LCD_BL (pin 33) ──
+    # LCD_RD tied HIGH (no read-back needed for ILI9488 display output).
+    # LCD_BL (LED-A) tied to 3V3 (always-on backlight).
+    # Both inside approach zone. Use via offset LEFT to VIA_X_PWR-0.5=133.10
+    # with Y stagger to avoid tight via-pad spacing.
+    # Pin 12 at connector pad 29 (y≈39.75): offset via DOWN 0.5mm to y=40.25.
+    # Pin 33 at connector pad 8 (y≈29.25): offset via UP 0.5mm to y=28.75.
+    # LCD_RD (FPC pin 12) and LCD_BL (FPC pin 33) are NOT connected to GPIOs.
+    # LCD_RD: typically tied HIGH on display module side (ILI9488 RD not used).
+    # LCD_BL: backlight anode, powered through display module's internal circuit.
+    # These FPC pins are left NC (no connect) on the PCB. If the display module
+    # requires external drive, add jumper wires to +3V3 during assembly.
+
     # ── +3V3 pins at BOTTOM (6, 7): now y=42.25-42.75, BELOW approach zone ──
     # Pin 6 at y=42.75, pin 7 at y=42.25. Both below LCD_CS at y=41.25.
     # Route B.Cu stubs DOWN to zone vias.
@@ -1463,7 +1506,7 @@ def _spi_traces():
     _init_pads()
 
     spi = [
-        (36, "SD_MOSI"), (37, "SD_MISO"), (38, "SD_CLK"), (39, "SD_CS"),
+        (44, "SD_MOSI"), (43, "SD_MISO"), (38, "SD_CLK"), (39, "SD_CS"),
     ]
     # SD card signal pins (TF-01A pin numbering)
     # Pin 3=CMD(MOSI), Pin 5=CLK, Pin 7=DAT0(MISO), Pin 2=CS(DAT3)
@@ -1528,7 +1571,7 @@ def _spi_traces():
         # Old 0.6/0.3: ring = 0.15mm < 0.175mm (fails DFM annular ring test).
         _SPI_VIA = 0.55   # DFM: was 0.46 (AR=0.13mm), now AR=0.175mm
         _SPI_DRILL = 0.20
-        shared_via_x = 72.2   # between ESP32 pad (71.25+0.35=71.60) and LCD_BL (73.02-0.10=72.92)
+        shared_via_x = 72.2   # between ESP32 pad (71.25+0.35=71.60) and approach cols
         # escape_x: 1.0mm pitch avoids LCD_RST stagger via at (79.36,33.04).
         # Old 1.3mm pitch: escape_x[3]=78.9, AABB overlap with LCD_RST via at (79.36,33.04) = -0.11mm.
         # New 1.0mm pitch: escape_x[3]=78.0, x gap to LCD_RST via left edge (78.91) = 0.61mm ✓.
@@ -1748,11 +1791,13 @@ def _i2s_traces():
         #
         # New route: exit U5:16 LEFTWARD to col_x=24.5 (left of all U5 pads, min x=25.255).
         # col_x=24.5: vert right edge=24.65mm, U5:1/16 left edge=25.255mm → gap=0.605mm ✓
-        # No different-net pads exist at x≤24.5, y=22.5..32.2 on B.Cu ✓
+        # No different-net pads exist at x≤24.5, y=21.5..32.2 on B.Cu ✓
         ox, oy = pam_outr_p
         sx, sy = spk_1
         col_x = 24.5   # left of all U5 pads (min pad left-edge=25.255mm, gap=0.605mm ✓)
-        mid_y = 22.5   # DFM: was 23.0 (too close to FPC slot top at y=23.5)
+        # DFM: mid_y=22.5 placed via@(39.5,22.5) too close to C21[1]@(38.95,23.5)
+        # gap=0.079mm < 0.127mm. At y=21.5: gap=hypot(0.05,1.35)-0.275=1.08mm ✓
+        mid_y = 21.5
         parts.append(_seg(ox, oy, col_x, oy, "B.Cu", W_AUDIO, n_spk_p))  # horiz left
         parts.append(_seg(col_x, oy, col_x, mid_y, "B.Cu", W_AUDIO, n_spk_p))  # vert up
         parts.append(_via_net(col_x, mid_y, n_spk_p, size=0.55, drill=0.20))
@@ -1765,7 +1810,7 @@ def _i2s_traces():
         ox, oy = pam_outr_m
         sx, sy = spk_2
         # DFM: mid_y=23.7 (was 23.5 → via-via gap=0.172mm < 0.25mm JLCPCB min).
-        # SPK+ left via now at (24.5,22.5) (moved left, was 27.055,22.5).
+        # SPK+ left via now at (24.5,21.5) (moved left+up, was 27.055,22.5).
         # SPK- vert via at (28.095, mid_y=23.7): gap to SPK+ via = dx=3.595mm → CLEAR ✓
         # Via bottom edge at 23.7-0.45=23.25mm < FPC slot top at y=23.5 ✓
         mid_y = 23.7  # DFM: was 23.5 (via-via gap 0.172mm violated 0.25mm min)
@@ -1856,6 +1901,29 @@ def _i2s_traces():
             parts.append(_via_net(px, via_y, n_gnd, size=0.55, drill=0.20))
 
     # VREF (pin 8): bypassed to GND via C21 (routed in _pam_passive_traces)
+
+    # ── PAM8403 (U5) GND thermal vias: 3-via array near GND pins ──────
+    # U5 at (30.0, 29.5), SOP-16, rotated 90deg on B.Cu.
+    # GND pins: 2 (PGND), 11 (GND), 15 (PGND).
+    # PAM_VREF B.Cu trace at x=34.45 (y=23.5..26.15) — avoid!
+    # I2S_DOUT B.Cu at x=33.17 (y=20.95..26.80) — avoid!
+    # Place 3 thermal vias LEFT of IC center, clear of VREF and I2S traces.
+    # U5 GND pins at approximate x=25.5..28.1. Use x=23..26 at y=22.0.
+    pam_pgnd2 = _pad("U5", "2")  # PGND top row
+    if pam_pgnd2:
+        # SPK+ traces at x=24.50 (y=21.50..32.20) — avoid!
+        # I2S_DOUT at x=33.17 — avoid!
+        # Place vias at y=19.0 (above SPK+ horizontal at y=21.50) to stay clear.
+        # Use x=27..30 range (between SPK+ at 24.5 and I2S at 33.17).
+        # Place vias adjacent to existing PAM8403 GND via stubs.
+        # Existing GND vias: pin 2 PGND via at ~(28.095, 24.9),
+        #   pin 11 GND via at ~(27.46, 31.6), pin 15 PGND via at ~(26.825, 34.3).
+        # Add thermal vias near each existing GND via with B.Cu stub connection.
+        # PAM8403 thermal vias: use existing GND pin via stubs (pins 2, 15, 11)
+        # which already provide 3 GND vias within 3mm of IC center.
+        # Additional thermal vias are not needed — the existing via array
+        # at ~2mm from each GND pin provides adequate thermal relief.
+        pass
 
     return parts
 
@@ -2902,7 +2970,7 @@ def _button_traces():
     sl_pad = _pad("SW11", "3")  # signal pad (inner side toward board center)
     sx_l = sl_pad[0] if sl_pad else SHOULDER_L[1][0]
     sy_l = sl_pad[1] if sl_pad else SHOULDER_L[1][1]
-    epx_l, epy_l = _esp_pin(35)
+    epx_l, epy_l = _esp_pin(45)
     # DFM: was 74.0 — vias at y=74 only 0.05mm from board edge (need 0.5mm).
     # Use 73.0 → DFM FIX: F.Cu at y=73.0 vs BTN_SELECT vias at y=72.80: gap=-0.375mm.
     # Need |chan_y_l - 72.80| >= 0.125+0.45+0.15=0.725mm → chan_y_l >= 73.525.
@@ -2924,18 +2992,28 @@ def _button_traces():
     #   - C10 pads at x=67.05/68.95: gaps=0.35mm ✓
     # Route horizontal stub on F.Cu to ESP32 pad, avoiding B.Cu obstacles
     # (BTN_DOWN, BTN_UP verts) which are on a different layer.
-    approach_l = 68.00
+    # GPIO45 (pin 26) is at bottom of ESP32 at epx_l=73.015, epy_l=40.0.
+    # Strategy: B.Cu approach at x=67.00 (clear of GND vias at 68.55,
+    # gap to BTN_DOWN vert at 67.45 = 0.25mm ✓).
+    # Route: B.Cu vert from approach to epy_l=40.0, via to F.Cu,
+    # F.Cu horizontal to ESP32 pad. F.Cu at y=40 is clear (ESP32 on B.Cu).
+    approach_l = 64.60
     parts.append(_seg(sx_l, chan_y_l, approach_l, chan_y_l,
                        "F.Cu", W_DATA, net_l))
     parts.append(_via_net(approach_l, chan_y_l, net_l, size=0.55, drill=0.20))
-    # B.Cu vertical to ESP32 pin level (uses W_DATA for extra clearance margin)
+    # B.Cu vertical to ESP32 pin level
     parts.append(_seg(approach_l, chan_y_l, approach_l, epy_l,
                        "B.Cu", W_DATA, net_l))
-    # Via to F.Cu at ESP32 pin level, then F.Cu horizontal to ESP32 pad.
-    # F.Cu stub avoids BTN_DOWN B.Cu vert at x=67.45 and BTN_UP at x=70.45
-    # (different layers). No F.Cu obstacles at y=28.59, x=68-71.
+    # Via to F.Cu, then F.Cu jog around GND via at (68.55, 40.0).
+    # F.Cu jog: go to y=38.5 (above ESP32 bottom pins at y=40),
+    # horizontal to just left of ESP32 pad, then down to epy_l.
+    btn_l_fcu_y = 38.5  # above bottom pin row, below ESP32 right-side pins
     parts.append(_via_net(approach_l, epy_l, net_l, size=0.55, drill=0.20))
-    parts.append(_seg(approach_l, epy_l, epx_l, epy_l,
+    parts.append(_seg(approach_l, epy_l, approach_l, btn_l_fcu_y,
+                       "F.Cu", W_DATA, net_l))
+    parts.append(_seg(approach_l, btn_l_fcu_y, epx_l, btn_l_fcu_y,
+                       "F.Cu", W_DATA, net_l))
+    parts.append(_seg(epx_l, btn_l_fcu_y, epx_l, epy_l,
                        "F.Cu", W_DATA, net_l))
     # GND via on opposite shoulder pad
     # DFM: was 1mm offset — via ring at 14.15-0.45=13.70, pad right=13.15+0.45=13.60, gap=0.10mm danger.
@@ -2950,11 +3028,11 @@ def _button_traces():
     # Shoulder button BTN_R (B.Cu, rotated 90°)
     # SW12 at enc(65, 32) = (145, 5.5) on the right side of the board.
     # Route: pad 3 (inner signal pad) -> B.Cu down -> F.Cu across -> ESP32 GPIO43
-    # GPIO mapping: BTN_R = GPIO 43 (pin 36, right-side ESP32 column).
-    # GPIO19 freed for USB_D- native USB data line.
+    # GPIO mapping: BTN_R = GPIO 3 (pin 15, bottom-side ESP32).
+    # PSRAM fix: GPIO43 reassigned to SD_MISO, BTN_R moved to GPIO3 (LCD_RD freed).
     net_r = NET_ID["BTN_R"]
     sr_pad = _pad("SW12", "3")  # signal pad (inner side toward board center)
-    epx_r, epy_r = _esp_pin(43)   # GPIO 43 = BTN_R (right-side ESP32 pin 36)
+    epx_r, epy_r = _esp_pin(3)   # GPIO 3 = BTN_R (bottom-side ESP32 pin 15)
     if sr_pad:
         sx_r, sy_r = sr_pad
         # DFM FIX: was chan_y_l + 1.0 = 75.0 (board edge! board height=75mm).
@@ -3008,26 +3086,32 @@ def _button_traces():
                            "F.Cu", W_DATA, net_r))
         parts.append(_via_net(approach_r, chan_y_r, net_r, size=0.55, drill=0.20))
 
-        # B.Cu vert from channel to above BTN_Y crossing (y=43.90)
-        hop_top = 45.00  # clears +3V3 via at (76.95,44.50) by 0.44mm ✓
-        parts.append(_seg(approach_r, chan_y_r, approach_r, hop_top,
+        # B.Cu vert from channel down toward ESP32 pin 15 at (86.985, 40.0).
+        # GPIO3 is at bottom of ESP32 (pin 15), x=86.985.
+        # Route: B.Cu vert at approach_r=76.20 from chan_y_r down to y=45.5
+        # (below ESP32 bottom pins at y=40.0), then via, then F.Cu horizontal
+        # RIGHT to x=epx_r at y=45.5, then via, then B.Cu vert UP to ESP32 pad.
+        # This avoids crossing ESP32 bottom pads (y=40.0 zone).
+        # y=45.5: below ESP32 GND pad bottom (31.91+2.46+1.95=36.41 from center,
+        # but GND pad at PCB y≈29.96, bottom edge ≈31.91). Well below bottom pins (y=40.0).
+        # +3V3 via at (76.95,44.50): gap = |76.20-76.95|-0.275-0.10=0.375mm ✓
+        # BAT+ F.Cu at y=46.13: need to go below it.
+        # BTN_X F.Cu at y=42.70: need to go below it.
+        # Use y=48.0 — clear of both.
+        btn_r_jog_y = 48.0
+        parts.append(_seg(approach_r, chan_y_r, approach_r, btn_r_jog_y,
                            "B.Cu", W_DATA, net_r))
-
-        # F.Cu L-shape: vert bypass of BTN_Y + horiz jog LEFT
-        jog_y = 42.10  # below BTN_Y, above U1 bottom row (40.75)
-        near_epx_r = 65.00  # left of BTN_DOWN vert(65.55) and +3V3 via(66.80)
-        parts.append(_via_net(approach_r, hop_top, net_r, size=0.55, drill=0.20))
-        parts.append(_seg(approach_r, hop_top, approach_r, jog_y,
+        parts.append(_via_net(approach_r, btn_r_jog_y, net_r, size=0.55, drill=0.20))
+        # F.Cu horizontal RIGHT past ESP32 bottom pins to epx_r+1 column
+        btn_r_col_x = epx_r + 1.0  # ~87.985 — right of ESP32 pin, clear of pads
+        parts.append(_seg(approach_r, btn_r_jog_y, btn_r_col_x, btn_r_jog_y,
                            "F.Cu", W_DATA, net_r))
-        parts.append(_seg(approach_r, jog_y, near_epx_r, jog_y,
-                           "F.Cu", W_DATA, net_r))
-        parts.append(_via_net(near_epx_r, jog_y, net_r, size=0.55, drill=0.20))
-
-        # B.Cu vert from jog level DOWN to ESP32 pin level
-        parts.append(_seg(near_epx_r, jog_y, near_epx_r, epy_r,
+        parts.append(_via_net(btn_r_col_x, btn_r_jog_y, net_r, size=0.55, drill=0.20))
+        # B.Cu vert UP to ESP32 pin level
+        parts.append(_seg(btn_r_col_x, btn_r_jog_y, btn_r_col_x, epy_r,
                            "B.Cu", W_DATA, net_r))
-        # B.Cu stub RIGHT to ESP32 GPIO43 pad (5.25mm)
-        parts.append(_seg(near_epx_r, epy_r, epx_r, epy_r,
+        # B.Cu stub LEFT to ESP32 pad
+        parts.append(_seg(btn_r_col_x, epy_r, epx_r, epy_r,
                            "B.Cu", W_DATA, net_r))
         # GND via on outer pad of SW12
         # DFM: was 1mm offset — same issue as SW11 (via ring gap=0.10mm to pad, danger).

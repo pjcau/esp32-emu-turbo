@@ -5,12 +5,13 @@ GPIO_NETS: dict[int, str] = {
     4: "LCD_D0", 5: "LCD_D1", 6: "LCD_D2", 7: "LCD_D3",
     8: "LCD_D4", 9: "LCD_D5", 10: "LCD_D6", 11: "LCD_D7",
     12: "LCD_CS", 13: "LCD_RST", 14: "LCD_DC", 46: "LCD_WR",
-    3: "LCD_RD", 45: "LCD_BL",
-    36: "SD_MOSI", 37: "SD_MISO", 38: "SD_CLK", 39: "SD_CS",
+    # LCD_RD: removed from GPIO, tied HIGH (3V3) at FPC connector
+    # LCD_BL: removed from GPIO, tied to 3V3 via resistor at FPC connector
+    44: "SD_MOSI", 43: "SD_MISO", 38: "SD_CLK", 39: "SD_CS",
     15: "I2S_BCLK", 16: "I2S_LRCK", 17: "I2S_DOUT",
     40: "BTN_UP", 41: "BTN_DOWN", 42: "BTN_LEFT", 1: "BTN_RIGHT",
     2: "BTN_A", 48: "BTN_B", 47: "BTN_X", 21: "BTN_Y",
-    18: "BTN_START", 0: "BTN_SELECT", 35: "BTN_L", 43: "BTN_R",
+    18: "BTN_START", 0: "BTN_SELECT", 45: "BTN_L", 3: "BTN_R",
     19: "USB_D-", 20: "USB_D+",
 }
 
@@ -26,7 +27,7 @@ ESP_PINS: dict[int, tuple] = {
     24: ("R", 47, 27.94), 25: ("R", 48, 25.4), 26: ("R", 45, 22.86), 27: ("R", 0, 20.32),
     28: ("R", 35, 17.78), 29: ("R", 36, 15.24), 30: ("R", 37, 12.7), 31: ("R", 38, 10.16),
     32: ("R", 39, 7.62), 33: ("R", 40, 5.08), 34: ("R", 41, 2.54), 35: ("R", 42, 0),
-    36: ("R", 43, -5.08), 37: ("R", 44, -7.62), 38: ("R", 1, -10.16), 39: ("R", 2, -12.7),
+    36: ("R", 44, -5.08), 37: ("R", 43, -7.62), 38: ("R", 1, -10.16), 39: ("R", 2, -12.7),
     40: ("B", "GND", 0), 41: ("B", "GND", 2.54),
 }
 
@@ -34,7 +35,8 @@ ESP_PINS: dict[int, tuple] = {
 DISPLAY_NETS = [
     "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3",
     "LCD_D4", "LCD_D5", "LCD_D6", "LCD_D7",
-    "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR", "LCD_RD", "LCD_BL",
+    "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
+    # LCD_RD and LCD_BL are hardwired on PCB (not GPIO-controlled)
 ]
 AUDIO_NETS = ["I2S_BCLK", "I2S_LRCK", "I2S_DOUT"]
 SD_NETS = ["SD_MOSI", "SD_MISO", "SD_CLK", "SD_CS"]

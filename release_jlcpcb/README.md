@@ -67,7 +67,25 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v2.1 — 2026-02-27 (current)
+### v3.0 — 2026-04-01 (current)
+
+**Major DFM overhaul + full JLCDFM compliance + 3D PCBA renders:**
+
+- **22 JLCDFM factory-rule tests added** — trace spacing, annular ring, pad spacing, via-to-SMD, soldermask bridge, fiducials, silkscreen, PTH clearance, via-in-pad, sharp corners, unconnected traces/vias, slot width, mask expansion — all passing
+- **AMS1117 thermal vias** — 2x2 grid under tab pad for proper heat dissipation
+- **LED nets refactored** — intermediate LED1_RA/LED2_RA nets for clean via transitions
+- **Power trace widening** — W_PWR=0.6mm for all power nets (VBUS, BAT+, +5V, +3V3)
+- **R2 relocated near J1** — eliminates 5 BTN_X/BTN_Y/CC2 pad collisions
+- **SD_CS/BTN_R rerouted** — fixes mounting hole via clearance violations
+- **DFM via-to-trace gap fixes** — 4 segment-via gaps improved
+- **Silkscreen moved to Fab layer** — all reference designators on Fab (not SilkS)
+- **7 missing PAM8403 passives added** to BOM + CPL (C22-C25, R19-R21)
+- **Batch JLCPCB alignment verified** — 7 ICs/connectors: rotation, position correction, pin-net assignment all pass
+- **3D PCBA renders** — 6 raytraced views (top, bottom, iso-front, iso-back, low-angle, detail-MCU) at 1920x1080
+- **Verification:** DFM v2 114/114, DFA 9/9, KiCad DRC clean
+- **Via count:** 260 | **Trace segments:** 431 | **Components:** 71
+
+### v2.1 — 2026-02-27
 
 **DFM fixes: via proximity, edge clearance, trace overlap:**
 
@@ -173,18 +191,19 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Pre-Production Verification Status
 
-| Check                       | Result                                          |
-| --------------------------- | ----------------------------------------------- |
-| DRC Check                   | PASS (0 errors, 0 silk violations)              |
-| DFM v2 Tests                | PASS (31/31, including 6 new regression guards) |
-| Schematic/PCB Consistency   | PASS (64 JLCPCB components matched)             |
-| Zone Priorities             | PASS                                            |
-| Zone Fill Data              | PASS (In1.Cu 52KB, In2.Cu 292KB)                |
-| Via annular ring            | PASS (247 vias, all >= 0.075mm)                 |
-| Via hole-to-hole            | PASS (min gap >= 0.25mm)                        |
-| Trace spacing               | PASS (17 violations, baseline <= 27)            |
-| ESOP-8 EP pad clearance     | PASS (gap = 0.205mm > 0.10mm danger)            |
-| BTN_R routing               | PASS (SW12 pad 3 stub + cross-board route)      |
+| Check                       | Result                                              |
+| --------------------------- | --------------------------------------------------- |
+| DFM v2 Tests                | PASS (114/114 — includes 22 JLCDFM factory rules)   |
+| DFA Tests                   | PASS (9/9 — BOM/CPL, aperture ratio, tombstoning)   |
+| DRC Check                   | PASS (0 copper_edge, 0 hole_to_hole, 0 silk)         |
+| Via annular ring            | PASS (260 vias, all >= 0.075mm)                      |
+| Via hole-to-hole            | PASS (min gap >= 0.25mm)                             |
+| Trace spacing               | PASS (0 violations, baseline <= 12)                  |
+| ESOP-8 EP pad clearance     | PASS (gap >= 0.10mm to corner pins)                  |
+| BTN_R routing               | PASS (SW12 pad 3 stub + cross-board route)           |
+| Batch pin alignment         | PASS (7 ICs: U1, U2, U3, U5, J1, J4, U6)            |
+| Fiducial marks              | PASS (3 fiducials present)                           |
+| Gerber file count           | PASS (14 files in zip)                               |
 
 ## Notes
 

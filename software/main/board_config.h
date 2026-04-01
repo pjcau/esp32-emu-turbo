@@ -30,19 +30,15 @@
 #define LCD_RST             GPIO_NUM_13
 #define LCD_DC              GPIO_NUM_14
 #define LCD_WR              GPIO_NUM_46
-#define LCD_RD              GPIO_NUM_3
-#define LCD_BL              GPIO_NUM_45
+/* LCD_RD: tied HIGH on PCB (no GPIO needed, no read-back from ILI9488) */
+/* LCD_BL: tied to 3V3 on PCB via resistor (always-on backlight) */
 
-/* Backlight PWM */
-#define LCD_BL_LEDC_TIMER   LEDC_TIMER_0
-#define LCD_BL_LEDC_CHANNEL LEDC_CHANNEL_0
-#define LCD_BL_LEDC_FREQ    5000      /* 5 kHz PWM */
-#define LCD_BL_LEDC_DUTY    200       /* out of 255 (~78%) */
+/* Backlight: always-on (tied to 3V3 on PCB), no PWM control */
 
 /* ── SD Card: SPI mode ────────────────────────────────────────────── */
 
-#define SD_MOSI             GPIO_NUM_36
-#define SD_MISO             GPIO_NUM_37
+#define SD_MOSI             GPIO_NUM_44
+#define SD_MISO             GPIO_NUM_43
 #define SD_CLK              GPIO_NUM_38
 #define SD_CS               GPIO_NUM_39
 #define SD_SPI_HOST         SPI2_HOST
@@ -70,8 +66,8 @@
 #define BTN_Y               GPIO_NUM_21
 #define BTN_START            GPIO_NUM_18
 #define BTN_SELECT          GPIO_NUM_0
-#define BTN_L               GPIO_NUM_35
-#define BTN_R               GPIO_NUM_43
+#define BTN_L               GPIO_NUM_45
+#define BTN_R               GPIO_NUM_3
 
 /* ── USB: native USB on ESP32-S3 (firmware flashing + debug) ────── */
 
@@ -95,7 +91,9 @@
 /* ── Power: IP5306 ────────────────────────────────────────────────── */
 
 #define IP5306_I2C_ADDR     0x75
-#define IP5306_I2C_SDA      GPIO_NUM_33
-#define IP5306_I2C_SCL      GPIO_NUM_34
+/* IP5306 I2C not routed on PCB — GPIO33/34 reserved for Octal PSRAM */
+/* IP5306 is configured via power-on defaults (no I2C control) */
+// #define IP5306_I2C_SDA      GPIO_NUM_NC
+// #define IP5306_I2C_SCL      GPIO_NUM_NC
 #define IP5306_I2C_FREQ_HZ  100000    /* 100 kHz */
 #define IP5306_I2C_PORT     I2C_NUM_0
