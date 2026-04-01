@@ -223,7 +223,7 @@ def usb_c_16p(layer="B"):
     ]
     for name, x in wide_pads:
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.35, 1.1, layers,
-                         solder_mask_margin=-0.02))
+                         solder_mask_margin=0))
 
     # Narrow signal pads (pins 3-10): 0.150 x 1.100mm, 0.500mm pitch at y=-2.375
     # DFM: 0.150mm gives gap=0.350mm (JLCPCB absolute minimum pad width)
@@ -239,7 +239,7 @@ def usb_c_16p(layer="B"):
     ]
     for name, x in narrow_pads:
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.15, 1.1, layers,
-                         solder_mask_margin=-0.02))
+                         solder_mask_margin=0))
 
     # Shield pads (pins 13-14) — SMD to avoid THT-to-SMD violations.
     # Front: 1.1mm width for 0.25mm gap to signal pads 1/12.
@@ -287,7 +287,7 @@ def fpc_40p(layer="B"):
     for i in range(40):
         x = -9.75 + i * 0.5
         pads.append(_pad(str(i + 1), "smd", "rect", x, -1.288, pw, ph, layers,
-                         solder_mask_margin=-0.02))
+                         solder_mask_margin=0))
 
     # 2 mounting pads (pins 41-42): 2.000 x 2.500mm
     pads.append(_pad("41", "smd", "rect", 11.44, 1.288, 2.0, 2.5, layers))
