@@ -224,8 +224,8 @@ def usb_c_16p(layer="B"):
     for name, x in wide_pads:
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.45, 1.1, layers))
 
-    # Narrow signal pads (pins 3-10): 0.200 x 1.100mm, 0.500mm pitch at y=-2.375
-    # DFM: was 0.300mm (gap=0.200mm). Now 0.200mm (gap=0.300mm, well above JLCPCB min)
+    # Narrow signal pads (pins 3-10): 0.180 x 1.100mm, 0.500mm pitch at y=-2.375
+    # DFM: 0.180mm gives gap=0.320mm (JLCPCB needs >0.30mm)
     narrow_pads = [
         ("3",  -1.750),
         ("4",  -1.250),
@@ -237,7 +237,7 @@ def usb_c_16p(layer="B"):
         ("10",  1.750),
     ]
     for name, x in narrow_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.20, 1.1, layers,
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.18, 1.1, layers,
                          solder_mask_margin=0))
 
     # Shield pads (pins 13-14) — SMD to avoid THT-to-SMD violations.
@@ -272,13 +272,13 @@ def usb_c_16p(layer="B"):
 
 # ── FPC 40-pin 0.5mm pitch (display connector, LCSC C2856812) ────
 # Ref: JLCPCB/EasyEDA package FPC-SMD_40P-P0.50_FPC-05F-40PH20
-# 40 signal pads at y=-1.288, size 0.200 x 1.500mm, 0.500mm pitch
-# DFM: was 0.300mm (gap=0.200mm). Now 0.200mm (gap=0.300mm, well above JLCPCB min)
+# 40 signal pads at y=-1.288, size 0.180 x 1.500mm, 0.500mm pitch
+# DFM: 0.180mm gives gap=0.320mm (JLCPCB needs >0.30mm)
 # 2 mounting pads (pins 41-42): 2.000 x 2.500mm at y=+1.288
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.20, 1.5
+    pw, ph = 0.18, 1.5
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
@@ -302,11 +302,12 @@ def tf01a(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Signal pins 1-9 at y=-5.276, 1.1mm pitch, size 0.600 x 1.300mm
+    # Signal pins 1-9 at y=-5.276, 1.1mm pitch, size 0.500 x 1.300mm
+    # DFM: was 0.600mm (gap to shield pad 10 = 0.300mm). Now 0.500mm (gap=0.400mm ✓)
     # Pin 1 (DAT2) at x=+2.240, descending to pin 9 (DET) at x=-6.560
     signal_x = [2.24, 1.14, 0.04, -1.06, -2.16, -3.26, -4.36, -5.46, -6.56]
     for i, x in enumerate(signal_x):
-        pads.append(_pad(str(i + 1), "smd", "rect", x, -5.276, 0.6, 1.3,
+        pads.append(_pad(str(i + 1), "smd", "rect", x, -5.276, 0.5, 1.3,
                          layers))
 
     # Shield/GND pads — IMPORTANT: pin 10 at -X, pin 12 at +X (not mirrored)
