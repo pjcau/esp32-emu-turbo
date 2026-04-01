@@ -35,6 +35,12 @@ W_SIG = 0.25
 W_DATA = 0.2
 W_AUDIO = 0.3
 
+# ── Via sizes (JLCPCB 4-layer: AR >= 0.15mm recommended) ─────────
+VIA_STD = 0.60       # standard via OD (AR=0.20mm with drill 0.20)
+VIA_STD_DRILL = 0.20
+VIA_TIGHT = 0.55     # tight-corridor via OD (AR=0.175mm)
+VIA_TIGHT_DRILL = 0.20
+
 # ── Board geometry ────────────────────────────────────────────────
 BOARD_W = 160.0
 BOARD_H = 75.0
@@ -122,9 +128,8 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
         _MH_DETOUR_IDX[mh_key] = detour_idx + 1
 
         # Vias for MH detour layer transitions.
-        # JLCDFM FIX: AR raised from 0.13mm to 0.155mm (>= 0.15mm recommended).
-        # Drill 0.25mm (KiCad default min 0.30mm flags DRC but JLCPCB accepts 0.25mm).
-        via_sz, via_dr = 0.56, 0.25
+        # JLCDFM FIX: AR=0.20mm with VIA_STD (0.60/0.20).
+        via_sz, via_dr = VIA_STD, VIA_STD_DRILL
         via_r = via_sz / 2  # 0.28mm
 
         # Check if trace Y is inside the physical drill circle.
@@ -774,7 +779,7 @@ def _power_traces():
     # Via at y=66.0: gap to BTN_A(y=66.8) = 66.8-0.125-(66.0+0.25)=0.425mm ✓
     #               gap to BTN_R(y=65.4) = 66.0-0.25-(65.4+0.10)=0.25mm ✓
     usb_gnd_via_y = 66.2  # above BTN_A(66.8), clears CC1 F.Cu at y=67.4 and BTN_R via(76.20,65.40)
-    parts.append(_via_net(usb_gnd[0], usb_gnd_via_y, n_gnd, size=0.55, drill=0.20))
+    parts.append(_via_net(usb_gnd[0], usb_gnd_via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # B.Cu stubs from IC GND pads to vias
     parts.append(_seg(usb_gnd[0], usb_gnd[1], usb_gnd[0], usb_gnd_via_y,
@@ -810,7 +815,7 @@ def _power_traces():
     # Default via(0.9) at (80.0,35.0): left edge 79.55, LCD_RST right edge 79.46 → gap=0.09mm < 0.15mm.
     # Small via(0.46) at (80.0,35.0): left edge 79.77, LCD_RST right edge 79.46 → gap=0.31mm ✓
     # Via-via to LCD_RST via(79.36,33.04): dist=sqrt(0.64²+1.96²)=2.06, gap=2.06-0.23-0.23=1.60mm ✓
-    parts.append(_via_net(gnd_offset_x, esp_gnd_via_y, n_gnd, size=0.55, drill=0.20))
+    parts.append(_via_net(gnd_offset_x, esp_gnd_via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
     # JST GND pad to offset via (LEFT, away from BAT+ pad)
     parts.append(_seg(jst_n[0], jst_n[1], jst_n[0] - 2, jst_n[1],
                        "B.Cu", W_PWR, n_gnd))
@@ -836,7 +841,7 @@ def _power_traces():
     # Connect each thermal via to EP pad via a single vertical B.Cu stub.
     # Each stub goes straight down into the EP pad area (all inside pad bounds).
     for tvx, tvy in _ip5306_therm_vias:
-        parts.append(_via_net(tvx, tvy, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(tvx, tvy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
         # Single B.Cu stub from via into EP pad (which is at y=40.9..44.1).
         # Stub endpoint at y=ip_ep[1]+1.5 is inside pad (44.0 < 44.1).
         parts.append(_seg(tvx, tvy, tvx, ip_ep[1] + 1.5, "B.Cu", W_PWR, n_gnd))
@@ -859,14 +864,14 @@ def _power_traces():
         # Solution: drop via directly at pad (via-in-pad). The 0.46mm via fits within
         # the 0.6mm x 1.3mm pad. Via connects B.Cu pad to In2.Cu +3V3 zone.
         # Pin 4 at x≈141.06 is outside +5V island (x=105-140), so In2.Cu = +3V3 ✓
-        parts.append(_via_net(sd_vdd[0], sd_vdd[1], n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(sd_vdd[0], sd_vdd[1], n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
 
     if sd_vss:
         # GND to SD VSS (pin 6): via-in-pad to reach In1.Cu GND zone.
         # DFM: BTN_B trace at x=142.80 is 0.46mm from pin 6 at x=143.26.
         # Any B.Cu stub would collide. Via-in-pad avoids routing entirely.
         # 0.46mm via fits within the 0.6mm x 1.3mm pad.
-        parts.append(_via_net(sd_vss[0], sd_vss[1], n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(sd_vss[0], sd_vss[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     if sd_sh10:
         # GND via near shield pin 10 (front-left, x≈147.76, y≈62.57).
@@ -874,7 +879,7 @@ def _power_traces():
         sd_sh10_via_x = sd_sh10[0] + 1.0
         parts.append(_seg(sd_sh10[0], sd_sh10[1], sd_sh10_via_x, sd_sh10[1],
                            "B.Cu", 0.3, n_gnd))
-        parts.append(_via_net(sd_sh10_via_x, sd_sh10[1], n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(sd_sh10_via_x, sd_sh10[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     if sd_sh12:
         # GND via near shield pin 12 (rear-right, x≈132.24, y≈72.28).
@@ -882,7 +887,7 @@ def _power_traces():
         sd_sh12_via_x = sd_sh12[0] - 1.0
         parts.append(_seg(sd_sh12[0], sd_sh12[1], sd_sh12_via_x, sd_sh12[1],
                            "B.Cu", 0.3, n_gnd))
-        parts.append(_via_net(sd_sh12_via_x, sd_sh12[1], n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(sd_sh12_via_x, sd_sh12[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── +5V: IP5306 VOUT (pin 8) -> AMS1117 input ──────────────
     # VOUT via to +5V zone on In2.Cu
@@ -983,7 +988,7 @@ def _power_traces():
         (am_tab[0] + 0.5, am_tab[1] + 0.35),  # (125.5, 52.7)
     ]
     for tvx, tvy in _therm_via_positions:
-        parts.append(_via_net(tvx, tvy, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(tvx, tvy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         # Short B.Cu stub from via to tab pad center (ensures DFM connectivity check)
         parts.append(_seg(tvx, tvy, am_tab[0], tvy, "B.Cu", W_PWR, n_3v3))
 
@@ -1001,7 +1006,7 @@ def _power_traces():
     esp_3v3 = _pad("U1", "2")  # pin 2 = +3V3 power input
     if esp_3v3:
         parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.51, n_3v3,
-                              size=0.55, drill=0.20))
+                              size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0],
                            esp_3v3[1] - 2.51, "B.Cu", W_PWR, n_3v3))
 
@@ -1217,7 +1222,7 @@ def _display_traces():
             # then place the via at (escape_x, stagger_y).
             U1_GND_X1, U1_GND_X2 = 79.55, 83.45
             U1_GND_Y1, U1_GND_Y2 = 28.01, 31.91
-            VIA_R_DEFAULT = 0.275  # default via size 0.55, radius 0.275
+            VIA_R_DEFAULT = VIA_STD / 2  # default via radius
 
             via_inside_gnd = (U1_GND_X1 <= epx <= U1_GND_X2 and
                               U1_GND_Y1 <= stagger_y <= U1_GND_Y2)
@@ -1243,7 +1248,7 @@ def _display_traces():
                 # 1b. B.Cu vertical further UP from stagger_y to escape_y (above GND pad top=28.01)
                 parts.append(_seg(epx, stagger_y, epx, escape_y,
                                   "B.Cu", W_DATA, net))
-                parts.append(_via_net(epx, escape_y, net, size=0.55, drill=0.20))
+                parts.append(_via_net(epx, escape_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
                 # 1c. F.Cu horizontal from epx to col_x at escape_y.
                 # CROSSING FIX: was B.Cu horiz from epx to escape_x, then B.Cu escape_x to col_x.
                 # GPIO10 (epx=83.175) B.Cu horiz at escape_y=20.50 from x=83.175→78.95 crossed
@@ -1251,28 +1256,28 @@ def _display_traces():
                 # Merged: single F.Cu horiz from epx to col_x (skip intermediate escape_x stop).
                 parts.append(_seg(epx, escape_y, col_x, escape_y,
                                   "F.Cu", W_DATA, net))
-                parts.append(_via_net(col_x, escape_y, net, size=0.55, drill=0.20))
+                parts.append(_via_net(col_x, escape_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
             else:
                 # 1. B.Cu vertical from pad up to stagger level
                 parts.append(_seg(epx, epy, epx, stagger_y,
                                   "B.Cu", W_DATA, net))
-                parts.append(_via_net(epx, stagger_y, net, size=0.55, drill=0.20))
+                parts.append(_via_net(epx, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
                 # 2. F.Cu horizontal to col_x (detour around mounting holes)
                 parts.extend(_mh_detour_h(epx, stagger_y, col_x,
                                           "F.Cu", W_DATA, net))
-                parts.append(_via_net(col_x, stagger_y, net, size=0.55, drill=0.20))
+                parts.append(_via_net(col_x, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
         else:
             # Side pins: horizontal stub right to via
             via1_x = epx + 2.0  # DFM: was 1.5 (too close to col_x vias)
             parts.append(_seg(epx, epy, via1_x, epy,
                               "B.Cu", W_DATA, net))
-            parts.append(_via_net(via1_x, epy, net, size=0.55, drill=0.20))
+            parts.append(_via_net(via1_x, epy, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
             # F.Cu horizontal to col_x (detour around mounting holes)
             parts.extend(_mh_detour_h(via1_x, epy, col_x,
                                       "F.Cu", W_DATA, net))
-            parts.append(_via_net(col_x, epy, net, size=0.55, drill=0.20))
+            parts.append(_via_net(col_x, epy, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # 3. B.Cu vertical up to bypass level (above slot)
         # For via_inside_gnd signals: col_x via is at escape_y (not stagger_y)
@@ -1284,12 +1289,12 @@ def _display_traces():
             from_y = epy
         parts.append(_seg(col_x, from_y, col_x, bypass_y,
                           "B.Cu", W_DATA, net))
-        parts.append(_via_net(col_x, bypass_y, net, size=0.55, drill=0.20))
+        parts.append(_via_net(col_x, bypass_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # 4. F.Cu horizontal across slot to unique approach column apx
         parts.append(_seg(col_x, bypass_y, apx, bypass_y,
                           "F.Cu", W_DATA, net))
-        parts.append(_via_net(apx, bypass_y, net, size=0.55, drill=0.20))
+        parts.append(_via_net(apx, bypass_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # 5. B.Cu vertical from bypass_y down to FPC pin Y level
         parts.append(_seg(apx, bypass_y, apx, fpy, "B.Cu", W_DATA, net))
@@ -1347,10 +1352,11 @@ def _display_traces():
     # JLCPCB requires drill ≥ 0.20mm / size ≥ 0.46mm for annular ring ≥ 0.13mm.
     # Gap to approach col at 134.1: 134.1-133.60-0.25-0.10=0.15mm >= 0.15mm ✓
     # Gap to col3 at 133.10: 133.60-133.10-0.25-0.10=0.15mm >= 0.15mm ✓
-    # Cannot use 0.55mm via here (corridor too narrow), 0.50mm is maximum.
+    # Tight corridor: approach cols at x=133.10 and x=133.80.
+    # VIA_TIGHT (0.55mm): gap = 133.80-133.60-0.275-0.10=0.125mm (marginal).
     VIA_X_PWR = 133.60
-    VIA_PWR_SIZE = 0.50  # AR=(0.50-0.20)/2=0.15mm >= 0.127mm JLCPCB min ✓
-    VIA_PWR_DRILL = 0.20
+    VIA_PWR_SIZE = VIA_TIGHT   # AR=(0.55-0.20)/2=0.175mm ≥ 0.15mm JLCPCB ✓
+    VIA_PWR_DRILL = VIA_TIGHT_DRILL
 
     # Pin 40 (y=25.75): move via UP 0.5mm to separate from +3V3 pin 39 (y=26.25)
     for pin in [40]:
@@ -1415,11 +1421,11 @@ def _display_traces():
         vx2 = 143.50  # right of net32 vert at x=142.80 (gap=0.70-0.23-0.15=0.32mm)
         vy = 50.25
         parts.append(_seg(px, py, stub_x, py, "B.Cu", 0.3, n_gnd))
-        parts.append(_via_net(stub_x, py, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(stub_x, py, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(stub_x, py, vx2, py, "F.Cu", 0.3, n_gnd))
-        parts.append(_via_net(vx2, py, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(vx2, py, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(vx2, py, vx2, vy, "B.Cu", 0.3, n_gnd))
-        parts.append(_via_net(vx2, vy, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(vx2, vy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     pos16 = _fpc_display_pin(16)
     if pos16:
@@ -1475,7 +1481,7 @@ def _display_traces():
         px7, py7 = pos7[0], pos7[1]
         # Route DOWN to zone via below connector
         vx, vy = 132.0, 50.25  # separate x from GND at 134.5
-        parts.append(_via_net(vx, vy, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(vx, vy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         # DFM FIX: pin 6 (42.75) stubs to pin 7 (42.25), then routes LEFT.
         # This avoids a collinear overlap (pin6→safe_y duplicated by pin7→pin6 stub).
         # Pin 7 at safe_y=42.25 is further from GND via at (133.10,43.25):
@@ -1488,7 +1494,7 @@ def _display_traces():
     elif pos6:
         px6, py6 = pos6[0], pos6[1]
         vx, vy = 132.0, 50.25
-        parts.append(_via_net(vx, vy, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(vx, vy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(px6, py6, vx, py6, "B.Cu", 0.3, n_3v3))
         parts.append(_seg(vx, py6, vx, vy, "B.Cu", 0.3, n_3v3))
 
@@ -1569,8 +1575,8 @@ def _spi_traces():
         # Small vias (0.6mm) ensure clearance at the ESP32 pin column.
         # Via size 0.7/0.3: annular ring = (0.7-0.3)/2 = 0.20mm >= 0.175mm JLCPCB minimum ✓
         # Old 0.6/0.3: ring = 0.15mm < 0.175mm (fails DFM annular ring test).
-        _SPI_VIA = 0.55   # DFM: was 0.46 (AR=0.13mm), now AR=0.175mm
-        _SPI_DRILL = 0.20
+        _SPI_VIA = VIA_STD    # AR=(0.60-0.20)/2=0.20mm ✓
+        _SPI_DRILL = VIA_STD_DRILL
         shared_via_x = 72.2   # between ESP32 pad (71.25+0.35=71.60) and approach cols
         # escape_x: 1.0mm pitch avoids LCD_RST stagger via at (79.36,33.04).
         # Old 1.3mm pitch: escape_x[3]=78.9, AABB overlap with LCD_RST via at (79.36,33.04) = -0.11mm.
@@ -1679,7 +1685,7 @@ def _spi_traces():
         else:
             parts.append(_seg(post_slot_x, bypass_y, post_slot_x, stagger_y,
                               "B.Cu", W_DATA, net))
-        parts.append(_via_net(post_slot_x, stagger_y, net, size=0.55, drill=0.20))
+        parts.append(_via_net(post_slot_x, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # Step 8: F.Cu horizontal to SD pad X, then B.Cu vert to SD pad Y.
         # CROSSING FIX: old B.Cu horizontal from post_slot_x to sdx at stagger_y caused crossings:
@@ -1687,7 +1693,7 @@ def _spi_traces():
         #   SD_CLK vert at x=143, SD_CS vert at x=142, and SD_MISO approach vert at x=144.36.
         # Fix: use F.Cu for the stagger horizontal. F.Cu does not cross B.Cu verts.
         parts.append(_seg(post_slot_x, stagger_y, sdx, stagger_y, "F.Cu", W_DATA, net))
-        parts.append(_via_net(sdx, stagger_y, net, size=0.55, drill=0.20))
+        parts.append(_via_net(sdx, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
         if abs(stagger_y - sdy) > 0.01:
             parts.append(_seg(sdx, stagger_y, sdx, sdy, "B.Cu", W_DATA, net))
 
@@ -1749,10 +1755,10 @@ def _i2s_traces():
         parts.append(_seg(epx, epy, mountain_x, epy, "B.Cu", W_DATA, n_dout))
         # B.Cu: mountain column UP to mountain_y
         parts.append(_seg(mountain_x, epy, mountain_x, mountain_y, "B.Cu", W_DATA, n_dout))
-        parts.append(_via_net(mountain_x, mountain_y, n_dout, size=0.55, drill=0.20))
+        parts.append(_via_net(mountain_x, mountain_y, n_dout, size=VIA_STD, drill=VIA_STD_DRILL))
         # F.Cu: horizontal across board at y=18.0 (clear of all LCD B.Cu verts — different layer) ✓
         parts.append(_seg(mountain_x, mountain_y, inrx, mountain_y, "F.Cu", W_DATA, n_dout))
-        parts.append(_via_net(inrx, mountain_y, n_dout, size=0.55, drill=0.20))
+        parts.append(_via_net(inrx, mountain_y, n_dout, size=VIA_STD, drill=VIA_STD_DRILL))
         # B.Cu: vertical down through C22 DC-blocking cap (in-series) to INR pad
         # C22 at (33.175, 20.0) rotated 90° on B.Cu: pad1 at (33.175, 19.05), pad2 at (33.175, 20.95)
         c22_p1 = _pad("C22", "1")
@@ -1800,9 +1806,9 @@ def _i2s_traces():
         mid_y = 21.5
         parts.append(_seg(ox, oy, col_x, oy, "B.Cu", W_AUDIO, n_spk_p))  # horiz left
         parts.append(_seg(col_x, oy, col_x, mid_y, "B.Cu", W_AUDIO, n_spk_p))  # vert up
-        parts.append(_via_net(col_x, mid_y, n_spk_p, size=0.55, drill=0.20))
+        parts.append(_via_net(col_x, mid_y, n_spk_p, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(col_x, mid_y, sx, mid_y, "F.Cu", W_AUDIO, n_spk_p))
-        parts.append(_via_net(sx, mid_y, n_spk_p, size=0.55, drill=0.20))
+        parts.append(_via_net(sx, mid_y, n_spk_p, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(sx, mid_y, sx, sy, "B.Cu", W_AUDIO, n_spk_p))
 
     if pam_outr_m and spk_2:
@@ -1815,9 +1821,9 @@ def _i2s_traces():
         # Via bottom edge at 23.7-0.45=23.25mm < FPC slot top at y=23.5 ✓
         mid_y = 23.7  # DFM: was 23.5 (via-via gap 0.172mm violated 0.25mm min)
         parts.append(_seg(ox, oy, ox, mid_y, "B.Cu", W_AUDIO, n_spk_m))
-        parts.append(_via_net(ox, mid_y, n_spk_m, size=0.55, drill=0.20))
+        parts.append(_via_net(ox, mid_y, n_spk_m, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(ox, mid_y, sx, mid_y, "F.Cu", W_AUDIO, n_spk_m))
-        parts.append(_via_net(sx, mid_y, n_spk_m, size=0.55, drill=0.20))
+        parts.append(_via_net(sx, mid_y, n_spk_m, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(sx, mid_y, sx, sy, "B.Cu", W_AUDIO, n_spk_m))
 
     # ── PAM8403 +5V: chain on each row, single via per row
@@ -1839,7 +1845,7 @@ def _i2s_traces():
         via_y = pam_vdd6[1] + 2.0  # outward from IC (downward = larger y)
         parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
                           pam_vdd6[0], via_y, "B.Cu", W_PWR, n_5v))
-        parts.append(_via_net(pam_vdd6[0], via_y, n_5v, size=0.55, drill=0.20))
+        parts.append(_via_net(pam_vdd6[0], via_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # DFM FIX: removed F.Cu bridge trace (net3 +5V at x=107 F.Cu crossed
         # 8+ LCD data bus horizontal traces at y=26..35 on F.Cu, gap=0mm).
@@ -1862,7 +1868,7 @@ def _i2s_traces():
         pvdd13_via_y = pam_pvdd13[1] - 3.5  # DFM: was 2.0 (overlapped SW4[2])
         parts.append(_seg(pam_pvdd13[0], pam_pvdd13[1],
                           pam_pvdd13[0], pvdd13_via_y, "B.Cu", W_PWR, n_5v))
-        parts.append(_via_net(pam_pvdd13[0], pvdd13_via_y, n_5v, size=0.55, drill=0.20))
+        parts.append(_via_net(pam_pvdd13[0], pvdd13_via_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # B.Cu bridge: connect top row (PVDD4) to bottom row (PVDD13)
     # DFM FIX: bridge goes from PVDD4 to the via position (not PVDD13) to avoid
@@ -1898,7 +1904,7 @@ def _i2s_traces():
             px, py = p
             via_y = py + (2.1 if py > 30 else -2.0)  # outward; 2.1mm clears BTN_Y via ✓
             parts.append(_seg(px, py, px, via_y, "B.Cu", W_PWR, n_gnd))
-            parts.append(_via_net(px, via_y, n_gnd, size=0.55, drill=0.20))
+            parts.append(_via_net(px, via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # VREF (pin 8): bypassed to GND via C21 (routed in _pam_passive_traces)
 
@@ -1969,7 +1975,7 @@ def _pam_passive_traces():
                           _gnd_vx, r20_p1[1] - 1.5,
                           "B.Cu", W_DATA, n_gnd))
         parts.append(_via_net(_gnd_vx, r20_p1[1] - 1.5,
-                              n_gnd, size=0.55, drill=0.20))
+                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── R21: INR (pin 10) → R21 → GND via
     # R21 at (36.0, 32.200) rot 0: pad1 at ~(35.05, 32.2), pad2 at ~(36.95, 32.2)
@@ -1981,11 +1987,11 @@ def _pam_passive_traces():
         # BTN_RIGHT runs B.Cu vert at x=34.20 from y=30.65 downward.
         # Route: INR (33.175,32.2) → via to F.Cu → F.Cu horiz to R21 pad2 x
         # → via back to B.Cu at R21 pad2.
-        parts.append(_via_net(pam_inr[0], pam_inr[1], n_dout, size=0.55, drill=0.20))
+        parts.append(_via_net(pam_inr[0], pam_inr[1], n_dout, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(pam_inr[0], pam_inr[1],
                           r21_p2[0], r21_p2[1],
                           "F.Cu", W_DATA, n_dout))
-        parts.append(_via_net(r21_p2[0], r21_p2[1], n_dout, size=0.55, drill=0.20))
+        parts.append(_via_net(r21_p2[0], r21_p2[1], n_dout, size=VIA_STD, drill=VIA_STD_DRILL))
         # GND stub from R21 pad 1 (far pad): go DOWN 1.5mm then via
         # DFM FIX: via shifted left 0.10mm for SPK+ clearance at x=39.5
         _gnd_vx = r21_p1[0] - 0.10
@@ -1993,7 +1999,7 @@ def _pam_passive_traces():
                           _gnd_vx, r21_p1[1] + 1.5,
                           "B.Cu", W_DATA, n_gnd))
         parts.append(_via_net(_gnd_vx, r21_p1[1] + 1.5,
-                              n_gnd, size=0.55, drill=0.20))
+                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── C21: VREF (pin 8) → C21 → GND via
     # C21 at (36.5, 24.5) rot 0: pad1 at ~(35.55, 24.5), pad2 at ~(37.45, 24.5)
@@ -2030,7 +2036,7 @@ def _pam_passive_traces():
                           _gnd_vx, c21_p1[1] + 1.0,
                           "B.Cu", W_DATA, n_gnd))
         parts.append(_via_net(_gnd_vx, c21_p1[1] + 1.0,
-                              n_gnd, size=0.55, drill=0.20))
+                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── C23: VDD (pin 6) decoupling → GND via
     # C23 at (36.0, 29.5) rotated 90°: pads at ~(36.0, 28.55) and ~(36.0, 30.45)
@@ -2049,13 +2055,13 @@ def _pam_passive_traces():
                           pam_vdd6[0], bridge_y,
                           "B.Cu", W_SIG, n_5v))
         # Via to F.Cu
-        parts.append(_via_net(pam_vdd6[0], bridge_y, n_5v, size=0.55, drill=0.20))
+        parts.append(_via_net(pam_vdd6[0], bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
         # F.Cu: horiz right to C23 column (crosses I2S_DOUT B.Cu vert safely)
         parts.append(_seg(pam_vdd6[0], bridge_y,
                           c23_p1[0], bridge_y,
                           "F.Cu", W_SIG, n_5v))
         # Via back to B.Cu
-        parts.append(_via_net(c23_p1[0], bridge_y, n_5v, size=0.55, drill=0.20))
+        parts.append(_via_net(c23_p1[0], bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
         # B.Cu: vert down to C23 pad 1
         parts.append(_seg(c23_p1[0], bridge_y,
                           c23_p1[0], c23_p1[1],
@@ -2065,7 +2071,7 @@ def _pam_passive_traces():
                           c23_p2[0], c23_p2[1] + 0.5,
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c23_p2[0], c23_p2[1] + 0.5,
-                              n_gnd, size=0.55, drill=0.20))
+                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── C24: PVDD (pin 4) decoupling → GND via
     # C24 at (29.365, 24.5) rotated 90°: pads at ~(29.365, 23.55) and ~(29.365, 25.45)
@@ -2083,7 +2089,7 @@ def _pam_passive_traces():
                           c24_p1[0], c24_p1[1] - 0.5,
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c24_p1[0], c24_p1[1] - 0.5,
-                              n_gnd, size=0.55, drill=0.20))
+                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── C25: PVDD (pin 13) decoupling → GND via
     # C25 at (31.5, 35.0) rotated 90°: pads at ~(31.5, 34.05) and ~(31.5, 35.95)
@@ -2116,7 +2122,7 @@ def _pam_passive_traces():
                           c25_p2[0], c25_p2[1] + 0.5,
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c25_p2[0], c25_p2[1] + 0.5,
-                              n_gnd, size=0.55, drill=0.20))
+                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts
 
@@ -2161,12 +2167,12 @@ def _usb_traces():
                        "B.Cu", W_DATA, n_dp))
     parts.append(_seg(usb_dp[0], dp_via_y, dp_via_x, dp_via_y,
                        "B.Cu", W_DATA, n_dp))
-    parts.append(_via_net(dp_via_x, dp_via_y, n_dp, size=0.55, drill=0.20))
+    parts.append(_via_net(dp_via_x, dp_via_y, n_dp, size=VIA_STD, drill=VIA_STD_DRILL))
     # 2. F.Cu horizontal to approach column
     dp_col_x = dp_x + 1.5   # DFM fix: was +2 (gap to GND cap 0.575mm vs 0.075mm)
     parts.append(_seg(dp_via_x, dp_via_y, dp_col_x, dp_via_y,
                        "F.Cu", W_DATA, n_dp))
-    parts.append(_via_net(dp_col_x, dp_via_y, n_dp, size=0.55, drill=0.20))
+    parts.append(_via_net(dp_col_x, dp_via_y, n_dp, size=VIA_STD, drill=VIA_STD_DRILL))
     # 3. B.Cu vertical up to ESP32 pin Y
     parts.append(_seg(dp_col_x, dp_via_y, dp_col_x, dp_y,
                        "B.Cu", W_DATA, n_dp))
@@ -2181,7 +2187,7 @@ def _usb_traces():
     dm_via_y = usb_dm[1] - 4.25  # was -4; lower D- via to increase Y gap from D+ via
     parts.append(_seg(usb_dm[0], usb_dm[1], usb_dm[0], dm_via_y,
                        "B.Cu", W_DATA, n_dm))
-    parts.append(_via_net(usb_dm[0], dm_via_y, n_dm, size=0.55, drill=0.20))
+    parts.append(_via_net(usb_dm[0], dm_via_y, n_dm, size=VIA_STD, drill=VIA_STD_DRILL))
     # SHORT FIX: dm_col_x moved from +2.5 to +3.0 to clear C4 GND via at (91.05,40.0).
     # Old: dm_col_x=91.25, GND via at 91.05 → edge gap |91.25-91.05|-0.10-0.125=-0.025mm.
     # v2: dm_col_x=91.75 → edge gap to via (91.05+0.45)=91.50 → 91.75-91.50-0.10=0.15mm ✓
@@ -2192,7 +2198,7 @@ def _usb_traces():
     dm_col_x = dm_x + 2.90   # 91.65 — clears C4 GND via (0.80mm) and R14 +3V3 stub (gap 0.175mm)
     parts.append(_seg(usb_dm[0], dm_via_y, dm_col_x, dm_via_y,
                        "F.Cu", W_DATA, n_dm))
-    parts.append(_via_net(dm_col_x, dm_via_y, n_dm, size=0.55, drill=0.20))
+    parts.append(_via_net(dm_col_x, dm_via_y, n_dm, size=VIA_STD, drill=VIA_STD_DRILL))
     parts.append(_seg(dm_col_x, dm_via_y, dm_col_x, dm_y,
                        "B.Cu", W_DATA, n_dm))
     # USB_D- terminates at ESP32 pin 13 (GPIO 19). BTN_R moved to GPIO 43.
@@ -2228,10 +2234,10 @@ def _usb_traces():
         _cc1_fcu_y = 67.40  # midpoint between BTN_A(66.8) and BTN_B(68.0)
         parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], _cc1_fcu_y,
                            "B.Cu", W_SIG, n_cc1))
-        parts.append(_via_net(usb_cc1[0], _cc1_fcu_y, n_cc1, size=0.55, drill=0.20))
+        parts.append(_via_net(usb_cc1[0], _cc1_fcu_y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(usb_cc1[0], _cc1_fcu_y, r1_p1[0], _cc1_fcu_y,
                            "F.Cu", W_SIG, n_cc1))
-        parts.append(_via_net(r1_p1[0], _cc1_fcu_y, n_cc1, size=0.55, drill=0.20))
+        parts.append(_via_net(r1_p1[0], _cc1_fcu_y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(r1_p1[0], _cc1_fcu_y, r1_p1[0], r1_p1[1],
                            "B.Cu", W_SIG, n_cc1))
 
@@ -2254,7 +2260,7 @@ def _usb_traces():
         gnd_via_y1 = r1_p2[1] - 1.5  # 65.5mm — above pad
         parts.append(_seg(r1_p2[0], r1_p2[1], r1_p2[0],
                           gnd_via_y1, "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(r1_p2[0], gnd_via_y1, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(r1_p2[0], gnd_via_y1, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
     if r2_p2:
         # R2:2 at (77.05, 67.0). GND via at y=63.8 (between ch1=63.2 and ch2=64.4).
         # y=65.5 collides with BTN_R F.Cu at y=65.4 (gap=-0.25mm).
@@ -2263,7 +2269,7 @@ def _usb_traces():
         gnd_via_y2 = r2_p2[1] - 3.2  # 63.8mm — clears BTN_R F.Cu ✓
         parts.append(_seg(r2_p2[0], r2_p2[1], r2_p2[0],
                           gnd_via_y2, "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(r2_p2[0], gnd_via_y2, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(r2_p2[0], gnd_via_y2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts
 
@@ -2686,11 +2692,11 @@ def _button_traces():
         # Ring = (0.50-0.20)/2 = 0.15mm >= 0.127mm JLCPCB min ✓
         # Cannot use 0.55mm here: BTN_Y/BTN_X vx corridor near FPC slot too narrow.
         _btn_is_right = b["bx"] >= CX
-        _btn_via_sz = 0.50
+        _btn_via_sz = VIA_TIGHT  # AR=0.175mm, tight corridor near FPC
 
         # 1. F.Cu: signal pad to via
         parts.append(_seg(spx, spy, vx, spy, "F.Cu", W_SIG, net))
-        parts.append(_via_net(vx, spy, net, size=_btn_via_sz, drill=0.20))
+        parts.append(_via_net(vx, spy, net, size=_btn_via_sz, drill=VIA_TIGHT_DRILL))
 
         # 2. B.Cu: vertical from button via to F.Cu channel
         # COLLISION FIX: BTN_B (SW6) B.Cu vert at vx=142.80 collides with
@@ -2717,14 +2723,14 @@ def _button_traces():
             parts.append(_seg(vx, _jog_y2, vx, cy, "B.Cu", W_SIG, net))
         else:
             parts.append(_seg(vx, spy, vx, cy, "B.Cu", W_SIG, net))
-        parts.append(_via_net(vx, cy, net, size=_btn_via_sz, drill=0.20))
+        parts.append(_via_net(vx, cy, net, size=_btn_via_sz, drill=VIA_TIGHT_DRILL))
 
         # 3. F.Cu: horizontal to approach column
         # J1 shield pad avoidance: channels 6-7 (BTN_X, BTN_Y) are now assigned
         # to y=70.8/71.55 (between front/rear J1 shield pads), avoiding the
         # J1 front pad zone entirely. No bypass needed.
         parts.append(_seg(vx, cy, ax, cy, "F.Cu", W_SIG, net))
-        parts.append(_via_net(ax, cy, net, size=_btn_via_sz, drill=0.20))
+        parts.append(_via_net(ax, cy, net, size=_btn_via_sz, drill=VIA_TIGHT_DRILL))
 
         # 4-5. Route to ESP32 pad: B.Cu vertical + F.Cu horizontal.
         # DFM: do NOT place a via at (epx, stagger_y) or (epx, epy) because epx may
@@ -2765,7 +2771,7 @@ def _button_traces():
             # B.Cu vertical from approach column to stagger Y
             # (LED +3V3 stubs at x=25.95/32.95 now avoided by approach column allocation)
             parts.append(_seg(ax, cy, ax, stagger_y, "B.Cu", W_SIG, net))
-            parts.append(_via_net(ax, stagger_y, net, size=0.55, drill=0.20))
+            parts.append(_via_net(ax, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
             # F.Cu horizontal toward ESP32 pad.
             # stagger_y > 40.0: LCD_BL B.Cu vert (x=73.015) ends at y=40.0 — no conflict ✓
             # +3V3 B.Cu vert at x=70.45 spans y=42..44 (net4).
@@ -2847,7 +2853,7 @@ def _button_traces():
                 near_epx = epx + 3.0   # DFM: was +2.0 (0.1mm gap to approach via)
             parts.append(_seg(ax, stagger_y, near_epx, stagger_y,
                               "F.Cu", W_SIG, net))
-            parts.append(_via_net(near_epx, stagger_y, net, size=0.55, drill=0.20))
+            parts.append(_via_net(near_epx, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
             # B.Cu: horizontal to pad X, then vertical to pad Y (no extra via)
             parts.append(_seg(near_epx, stagger_y, epx, stagger_y,
                               "B.Cu", W_SIG, net))
@@ -2865,7 +2871,7 @@ def _button_traces():
             else:
                 parts.append(_seg(ax, cy, ax, epy, "B.Cu", W_SIG, net))
                 # Transition to F.Cu at approach column (no via at epx)
-                parts.append(_via_net(ax, epy, net, size=0.55, drill=0.20))
+                parts.append(_via_net(ax, epy, net, size=VIA_STD, drill=VIA_STD_DRILL))
                 # F.Cu horizontal OUTWARD (away from board center) to avoid LCD signal verts.
                 # DFM FIX: was epx+2 if epx<CX else epx-2 (INWARD) — B.Cu stub spanned LCD_BL.
                 # Fix: go OUTWARD:
@@ -2874,7 +2880,7 @@ def _button_traces():
                 near_epx = epx - 2.0 if epx < CX else epx + 2.0
                 parts.append(_seg(ax, epy, near_epx, epy,
                                   "F.Cu", W_SIG, net))
-                parts.append(_via_net(near_epx, epy, net, size=0.55, drill=0.20))
+                parts.append(_via_net(near_epx, epy, net, size=VIA_STD, drill=VIA_STD_DRILL))
                 # B.Cu short horizontal stub to pad
                 parts.append(_seg(near_epx, epy, epx, epy,
                                   "B.Cu", W_SIG, net))
@@ -2942,7 +2948,7 @@ def _button_traces():
             # DFM: was 0.35/0.2 (AR=0.075mm VIOLATION!) and 0.46/0.2 (AR=0.13mm marginal).
             # All button GND vias now use 0.50/0.20 (AR=0.15mm >= 0.127mm JLCPCB min).
             # Cannot use 0.55mm: tight corridor near FPC slot and LCD approach columns.
-            gnd_via_sz, gnd_via_drill = 0.50, 0.2
+            gnd_via_sz, gnd_via_drill = VIA_TIGHT, VIA_TIGHT_DRILL
             # L-shape: horizontal inward, then short segment to via.
             # DFM v6: SW8 (BTN_Y) routes GND via RIGHT then DOWN to avoid
             # BTN_X F.Cu signal at y=40.65 (x=129.80→139.00) and LCD columns.
@@ -2980,7 +2986,7 @@ def _button_traces():
 
     # B.Cu vertical from shoulder button pad to channel
     parts.append(_seg(sx_l, sy_l, sx_l, chan_y_l, "B.Cu", W_SIG, net_l))
-    parts.append(_via_net(sx_l, chan_y_l, net_l, size=0.55, drill=0.20))
+    parts.append(_via_net(sx_l, chan_y_l, net_l, size=VIA_STD, drill=VIA_STD_DRILL))
     # F.Cu horizontal to approach column
     # DFM v6: was approach_l = 72.50 (epx_l+1.25) — 0.515mm corridor between
     # +3V3 stubs (x=72.05) and U1:26 pad (x=72.565). Trace edge overlapped U1:26
@@ -3000,7 +3006,7 @@ def _button_traces():
     approach_l = 64.60
     parts.append(_seg(sx_l, chan_y_l, approach_l, chan_y_l,
                        "F.Cu", W_DATA, net_l))
-    parts.append(_via_net(approach_l, chan_y_l, net_l, size=0.55, drill=0.20))
+    parts.append(_via_net(approach_l, chan_y_l, net_l, size=VIA_STD, drill=VIA_STD_DRILL))
     # B.Cu vertical to ESP32 pin level
     parts.append(_seg(approach_l, chan_y_l, approach_l, epy_l,
                        "B.Cu", W_DATA, net_l))
@@ -3008,7 +3014,7 @@ def _button_traces():
     # F.Cu jog: go to y=38.5 (above ESP32 bottom pins at y=40),
     # horizontal to just left of ESP32 pad, then down to epy_l.
     btn_l_fcu_y = 38.5  # above bottom pin row, below ESP32 right-side pins
-    parts.append(_via_net(approach_l, epy_l, net_l, size=0.55, drill=0.20))
+    parts.append(_via_net(approach_l, epy_l, net_l, size=VIA_STD, drill=VIA_STD_DRILL))
     parts.append(_seg(approach_l, epy_l, approach_l, btn_l_fcu_y,
                        "F.Cu", W_DATA, net_l))
     parts.append(_seg(approach_l, btn_l_fcu_y, epx_l, btn_l_fcu_y,
@@ -3023,7 +3029,7 @@ def _button_traces():
         gnd_via_x = sl_gnd[0] + 1.5  # DFM: was 1.0mm (gap=0.10mm danger)
         parts.append(_seg(sl_gnd[0], sl_gnd[1], gnd_via_x, sl_gnd[1],
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(gnd_via_x, sl_gnd[1], n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(gnd_via_x, sl_gnd[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # Shoulder button BTN_R (B.Cu, rotated 90°)
     # SW12 at enc(65, 32) = (145, 5.5) on the right side of the board.
@@ -3057,7 +3063,7 @@ def _button_traces():
 
         # B.Cu vertical from shoulder-R pad down to channel
         parts.append(_seg(sx_r, sy_r, sx_r, chan_y_r, "B.Cu", W_SIG, net_r))
-        parts.append(_via_net(sx_r, chan_y_r, net_r, size=0.55, drill=0.20))
+        parts.append(_via_net(sx_r, chan_y_r, net_r, size=VIA_STD, drill=VIA_STD_DRILL))
         # DFM v6: approach_r at x=76.20 with F.Cu L-shape jog to x=66.00.
         # The ESP32 area (x=67-77) is heavily congested: U1:23 pads, SPI vias,
         # GND verts, D-pad approach stubs. Route bypasses everything on F.Cu,
@@ -3084,7 +3090,7 @@ def _button_traces():
                            "F.Cu", W_DATA, net_r))
         parts.append(_seg(_sw13_jog_out, chan_y_r, approach_r, chan_y_r,
                            "F.Cu", W_DATA, net_r))
-        parts.append(_via_net(approach_r, chan_y_r, net_r, size=0.55, drill=0.20))
+        parts.append(_via_net(approach_r, chan_y_r, net_r, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # B.Cu vert from channel down toward ESP32 pin 15 at (86.985, 40.0).
         # GPIO3 is at bottom of ESP32 (pin 15), x=86.985.
@@ -3101,12 +3107,12 @@ def _button_traces():
         btn_r_jog_y = 48.0
         parts.append(_seg(approach_r, chan_y_r, approach_r, btn_r_jog_y,
                            "B.Cu", W_DATA, net_r))
-        parts.append(_via_net(approach_r, btn_r_jog_y, net_r, size=0.55, drill=0.20))
+        parts.append(_via_net(approach_r, btn_r_jog_y, net_r, size=VIA_STD, drill=VIA_STD_DRILL))
         # F.Cu horizontal RIGHT past ESP32 bottom pins to epx_r+1 column
         btn_r_col_x = epx_r + 1.0  # ~87.985 — right of ESP32 pin, clear of pads
         parts.append(_seg(approach_r, btn_r_jog_y, btn_r_col_x, btn_r_jog_y,
                            "F.Cu", W_DATA, net_r))
-        parts.append(_via_net(btn_r_col_x, btn_r_jog_y, net_r, size=0.55, drill=0.20))
+        parts.append(_via_net(btn_r_col_x, btn_r_jog_y, net_r, size=VIA_STD, drill=VIA_STD_DRILL))
         # B.Cu vert UP to ESP32 pin level
         parts.append(_seg(btn_r_col_x, btn_r_jog_y, btn_r_col_x, epy_r,
                            "B.Cu", W_DATA, net_r))
@@ -3121,7 +3127,7 @@ def _button_traces():
             gnd_via_x_r = sr_gnd[0] + 1.5  # DFM: was 1.0mm (gap=0.10mm danger)
             parts.append(_seg(sr_gnd[0], sr_gnd[1], gnd_via_x_r, sr_gnd[1],
                               "B.Cu", W_SIG, n_gnd))
-            parts.append(_via_net(gnd_via_x_r, sr_gnd[1], n_gnd, size=0.55, drill=0.20))
+            parts.append(_via_net(gnd_via_x_r, sr_gnd[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts
 
@@ -3174,7 +3180,7 @@ def _passive_traces():
                           "B.Cu", W_SIG, n_3v3))
         parts.append(_seg(via_x, ry, via_x, via_y_pu,
                           "B.Cu", W_SIG, n_3v3))
-        parts.append(_via_net(via_x, via_y_pu, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(via_x, via_y_pu, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # Debounce caps: GND via at cap pad
     for i, ref in enumerate(DEBOUNCE_REFS):
@@ -3190,7 +3196,7 @@ def _passive_traces():
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_seg(via_x_db, cy, via_x_db, cy + 2,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(via_x_db, cy + 2, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(via_x_db, cy + 2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # Connect pull-up outputs to debounce cap inputs (R->C junction)
     btn_nets = [
@@ -3230,13 +3236,13 @@ def _passive_traces():
         via_y = c3_p1[1] + 2.5   # 42.0 + 2.5 = 44.5 (below C3, clear of net34 F.Cu at y=43.9)
         parts.append(_seg(c3_p1[0], c3_p1[1], c3_p1[0], via_y,
                           "B.Cu", W_SIG, n_3v3))
-        parts.append(_via_net(c3_p1[0], via_y, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(c3_p1[0], via_y, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
     # C3 pad "2" -> GND via
     c3_p2 = _pad("C3", "2")
     if c3_p2:
         parts.append(_seg(c3_p2[0], c3_p2[1], c3_p2[0], c3_p2[1] - 2,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c3_p2[0], c3_p2[1] - 2, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(c3_p2[0], c3_p2[1] - 2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C4 near ESP32: pad "1" -> +3V3 via (DFM: was 1.0mm, overlapped pad edge by 0.1mm)
     c4_p1 = _pad("C4", "1")
@@ -3244,7 +3250,7 @@ def _passive_traces():
     if c4_p1:
         parts.append(_seg(c4_p1[0], c4_p1[1], c4_p1[0], c4_p1[1] - 1.4,
                           "B.Cu", W_SIG, n_3v3))
-        parts.append(_via_net(c4_p1[0], c4_p1[1] - 1.4, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(c4_p1[0], c4_p1[1] - 1.4, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
     if c4_p2:
         parts.append(_seg(c4_p2[0], c4_p2[1], c4_p2[0], c4_p2[1] - 2,
                           "B.Cu", W_SIG, n_gnd))
@@ -3252,7 +3258,7 @@ def _passive_traces():
         # x=91.70 more clearance (edge gap 0.15mm vs 0.10mm at 0.90mm).
         # Annular ring = (0.80-0.30)/2 = 0.25mm >= JLCPCB 0.13mm min ✓
         parts.append(_via_net(c4_p2[0], c4_p2[1] - 2, n_gnd,
-                              size=0.55, drill=0.20))
+                              size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C1 AMS1117 input: pad "1" -> +5V via, pad "2" -> GND via
     # DFM: 2.5mm offset (was 2mm) to avoid via-in-pad with 0805 (1.3mm tall pad)
@@ -3261,11 +3267,11 @@ def _passive_traces():
     if c1_p1:
         parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] - 2.5,
                           "B.Cu", W_SIG, n_5v))
-        parts.append(_via_net(c1_p1[0], c1_p1[1] - 2.5, n_5v, size=0.55, drill=0.20))
+        parts.append(_via_net(c1_p1[0], c1_p1[1] - 2.5, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
     if c1_p2:
         parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] - 2.5,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c1_p2[0], c1_p2[1] - 2.5, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(c1_p2[0], c1_p2[1] - 2.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C2 AMS1117 output: pad "1" -> AMS1117 tab (+3V3), pad "2" -> GND via
     c2_p1 = _pad("C2", "1")
@@ -3279,7 +3285,7 @@ def _passive_traces():
     if c2_p2:
         parts.append(_seg(c2_p2[0], c2_p2[1], c2_p2[0], c2_p2[1] + 2,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c2_p2[0], c2_p2[1] + 2, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(c2_p2[0], c2_p2[1] + 2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C17 near IP5306: VIN decoupling, pad "1" -> VBUS via, pad "2" -> GND via
     # DFM FIX: VBUS via at y-2=33.0 hit LCD_RST F.Cu at y=33.04 (gap=-0.295mm).
@@ -3294,11 +3300,11 @@ def _passive_traces():
         c17_vbus_via_y = c17_p1[1] - 1.35  # y=33.65 — between LCD_RST(33.04) and LCD_RD(34.30)
         parts.append(_seg(c17_p1[0], c17_p1[1], c17_p1[0], c17_vbus_via_y,
                           "B.Cu", W_SIG, NET_ID["VBUS"]))
-        parts.append(_via_net(c17_p1[0], c17_vbus_via_y, NET_ID["VBUS"], size=0.55, drill=0.20))
+        parts.append(_via_net(c17_p1[0], c17_vbus_via_y, NET_ID["VBUS"], size=VIA_STD, drill=VIA_STD_DRILL))
     if c17_p2:
         parts.append(_seg(c17_p2[0], c17_p2[1], c17_p2[0], c17_p2[1] + 2.5,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c17_p2[0], c17_p2[1] + 2.5, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(c17_p2[0], c17_p2[1] + 2.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C18 near IP5306: BAT decoupling, pad "1" -> BAT+ via, pad "2" -> GND via
     # DFM: 2.5mm offset (was 2mm) to avoid via overlap with IP5306 pads
@@ -3307,11 +3313,11 @@ def _passive_traces():
     if c18_p1:
         parts.append(_seg(c18_p1[0], c18_p1[1], c18_p1[0], c18_p1[1] - 2.5,
                           "B.Cu", W_SIG, NET_ID["BAT+"]))
-        parts.append(_via_net(c18_p1[0], c18_p1[1] - 2.5, NET_ID["BAT+"], size=0.55, drill=0.20))
+        parts.append(_via_net(c18_p1[0], c18_p1[1] - 2.5, NET_ID["BAT+"], size=VIA_STD, drill=VIA_STD_DRILL))
     if c18_p2:
         parts.append(_seg(c18_p2[0], c18_p2[1], c18_p2[0], c18_p2[1] + 2.5,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c18_p2[0], c18_p2[1] + 2.5, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(c18_p2[0], c18_p2[1] + 2.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C19 near L1: VOUT decoupling, pad "1" -> +5V via, pad "2" -> GND via
     # POWER SHORT FIX: C19 vias overlapped VBUS F.Cu traces causing all-rail-to-GND short.
@@ -3328,13 +3334,13 @@ def _passive_traces():
                           "B.Cu", W_SIG, NET_ID["+5V"]))
         parts.append(_seg(safe_x, c19_p1[1], safe_x, c19_p1[1] - 2,
                           "B.Cu", W_SIG, NET_ID["+5V"]))
-        parts.append(_via_net(safe_x, c19_p1[1] - 2, NET_ID["+5V"], size=0.55, drill=0.20))
+        parts.append(_via_net(safe_x, c19_p1[1] - 2, NET_ID["+5V"], size=VIA_STD, drill=VIA_STD_DRILL))
     if c19_p2:
         # FIX: reduce Y offset from +2 to +1.0 to clear VBUS horiz @y=61.
         # Via @(108.5,59.5): top=59.95, VBUS bottom=60.75, gap=0.80mm ✓
         parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 1.0,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c19_p2[0], c19_p2[1] + 1.0, n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(c19_p2[0], c19_p2[1] + 1.0, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # R16 IP5306 KEY pull-up: now handled in _power_traces()
 
@@ -3371,7 +3377,7 @@ def _led_traces():
 
         # +3V3 via → R pad 2 (B.Cu, LEFT side of resistor)
         via_3v3_y = r_p2[1] - 2.35
-        parts.append(_via_net(r_p2[0], via_3v3_y, n_3v3, size=0.55, drill=0.20))
+        parts.append(_via_net(r_p2[0], via_3v3_y, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(r_p2[0], via_3v3_y, r_p2[0], r_p2[1],
                           "B.Cu", W_SIG, n_3v3))
 
@@ -3390,7 +3396,7 @@ def _led_traces():
         gnd_via_x = led_p1[0] - 0.7
         parts.append(_seg(led_p1[0], led_p1[1], gnd_via_x, led_p1[1],
                           "F.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(gnd_via_x, led_p1[1], n_gnd, size=0.55, drill=0.20))
+        parts.append(_via_net(gnd_via_x, led_p1[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts
 
