@@ -6,7 +6,7 @@ from ..sheet_base import SchematicSheet
 class AudioSheet(SchematicSheet):
     title = "Audio - I2S -> PAM8403 -> Speaker"
     page_number = 4
-    needed_symbols = ["PAM8403_Module", "Speaker"]
+    needed_symbols = ["PAM8403_Module", "Speaker", "C", "R"]
 
     def build(self):
         # Title
@@ -57,6 +57,69 @@ class AudioSheet(SchematicSheet):
         self.wire(ax + 10.16, spk_minus_y, spk_x - 10, spk_minus_y)
         self.wire(spk_x - 10, spk_minus_y, spk_x - 10, spk_y + 0.635)
         self.wire(spk_x - 10, spk_y + 0.635, spk_x - 3.81, spk_y + 0.635)
+
+        # --- PAM8403 passive components (per datasheet application circuit) ---
+        self.text("PAM8403 Passives:", 30, 135, 2.54, True)
+
+        # VREF bypass capacitor (C21, 100nF) — pin VREF to GND
+        c21x, c21y = ax + 30, ay + 25
+        self.sym("C", "C21", "100nF", c21x, c21y, ["1", "2"])
+        self.wire(c21x, c21y - 3.81, c21x, c21y - 10)
+        self.wire(c21x, c21y - 10, ax + 10.16, c21y - 10)
+        self.gnd(c21x, c21y + 8)
+        self.wire(c21x, c21y + 3.81, c21x, c21y + 8)
+        self.text("VREF bypass", c21x + 3, c21y)
+
+        # DC-blocking capacitor (C22, 0.47uF) — input coupling
+        c22x, c22y = ax - 45, ay + 3.81
+        self.sym("C", "C22", "0.47uF", c22x, c22y, ["1", "2"])
+        self.wire(c22x + 3.81, c22y, c22x + 15, c22y)
+        self.wire(c22x - 3.81, c22y, c22x - 8, c22y)
+        self.glabel("I2S_DOUT", c22x - 8, c22y, 0, "input")
+        self.text("DC-block", c22x - 3, c22y - 5)
+
+        # INL bias resistor (R20, 20k) — input bias to VREF
+        r20x, r20y = ax - 35, ay + 18
+        self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
+        self.wire(r20x, r20y - 3.81, r20x, c22y)
+        self.gnd(r20x, r20y + 8)
+        self.wire(r20x, r20y + 3.81, r20x, r20y + 8)
+        self.text("INL bias", r20x + 3, r20y)
+
+        # INR bias resistor (R21, 20k) — input bias to VREF
+        r21x, r21y = ax - 25, ay + 18
+        self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"])
+        self.wire(r21x, r21y - 3.81, r21x, c22y)
+        self.gnd(r21x, r21y + 8)
+        self.wire(r21x, r21y + 3.81, r21x, r21y + 8)
+        self.text("INR bias", r21x + 3, r21y)
+
+        # VDD decoupling (C23, 1uF) — VDD pin to GND
+        c23x, c23y = ax - 20, ay - 20
+        self.sym("C", "C23", "1uF", c23x, c23y, ["1", "2"])
+        self.glabel("+5V", c23x, c23y - 8, 0, "input")
+        self.wire(c23x, c23y - 3.81, c23x, c23y - 8)
+        self.gnd(c23x, c23y + 8)
+        self.wire(c23x, c23y + 3.81, c23x, c23y + 8)
+        self.text("VDD decoupl.", c23x + 3, c23y)
+
+        # PVDD top bypass (C24, 1uF) — power output stage
+        c24x, c24y = ax, ay - 20
+        self.sym("C", "C24", "1uF", c24x, c24y, ["1", "2"])
+        self.glabel("+5V", c24x, c24y - 8, 0, "input")
+        self.wire(c24x, c24y - 3.81, c24x, c24y - 8)
+        self.gnd(c24x, c24y + 8)
+        self.wire(c24x, c24y + 3.81, c24x, c24y + 8)
+        self.text("PVDD top", c24x + 3, c24y)
+
+        # PVDD bottom bypass (C25, 1uF) — power output stage
+        c25x, c25y = ax + 20, ay - 20
+        self.sym("C", "C25", "1uF", c25x, c25y, ["1", "2"])
+        self.glabel("+5V", c25x, c25y - 8, 0, "input")
+        self.wire(c25x, c25y - 3.81, c25x, c25y - 8)
+        self.gnd(c25x, c25y + 8)
+        self.wire(c25x, c25y + 3.81, c25x, c25y + 8)
+        self.text("PVDD bottom", c25x + 3, c25y)
 
         # Notes
         ny = 165
