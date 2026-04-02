@@ -141,6 +141,9 @@ PAM8403_ENC = (-50, 8)
 INDUCTOR_ENC = (30, -15)
 # JST PH battery connector (center, below passives, back)
 JST_BAT_ENC = (0, -25)
+# Reset and Boot buttons (back side, right of USB-C — dev kit style)
+RESET_ENC = (15, -28)     # EN pin to GND — hardware reset
+BOOT_ENC = (25, -28)      # GPIO0 to GND — download mode when held during reset
 
 
 def _board_outline():
@@ -425,6 +428,12 @@ def _component_placeholders():
 
     px, py = enc_to_pcb(*JST_BAT_ENC)
     placements.append(("J3", "JST-PH-2P", px, py, 0, "B.Cu"))
+
+    # Reset and Boot buttons (B.Cu, right of USB-C — dev kit style)
+    px, py = enc_to_pcb(*RESET_ENC)
+    placements.append(("SW_RST", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
+    px, py = enc_to_pcb(*BOOT_ENC)
+    placements.append(("SW_BOOT", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
 
     # ── Passive components (B.Cu) ──
     # Positions must match jlcpcb_export.py for CPL/Gerber alignment.

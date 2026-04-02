@@ -338,6 +338,9 @@ MENU = ("SW13", enc(62, -25))
 # Shoulder buttons on B.Cu (back side, rotated 90deg, aligned to top edge)
 SHOULDER_L = ("SW11", enc(-65, 32))
 SHOULDER_R = ("SW12", enc(65, 32))
+# Reset and Boot buttons on B.Cu (right of USB-C, dev kit style)
+RESET_BTN = ("SW_RST", enc(15, -28))   # EN to GND
+BOOT_BTN = ("SW_BOOT", enc(25, -28))   # GPIO0 to GND
 
 # LED positions (F.Cu)
 LED1 = enc(-55, -30)   # (25.0, 67.5) Red - charging
@@ -488,6 +491,13 @@ def _init_pads():
     ref_r, pos_r = SHOULDER_R
     _PADS[ref_r] = _compute_pads("SW-SMD-5.1x5.1",
                                   pos_r[0], pos_r[1], 90, "B")
+    # B.Cu reset and boot buttons
+    ref_rst, pos_rst = RESET_BTN
+    _PADS[ref_rst] = _compute_pads("SW-SMD-5.1x5.1",
+                                    pos_rst[0], pos_rst[1], 0, "B")
+    ref_boot, pos_boot = BOOT_BTN
+    _PADS[ref_boot] = _compute_pads("SW-SMD-5.1x5.1",
+                                     pos_boot[0], pos_boot[1], 0, "B")
 
     # Key passives with explicit routing
     passive_placements = [
@@ -3467,6 +3477,92 @@ def _led_traces():
     return parts
 
 
+def _reset_boot_traces():
+    """Reset and Boot button traces (B.Cu, dev kit style).
+
+    SW_RST: EN pin to GND (hardware reset)
+      - GND pads (3,4) connect via GND plane (In1.Cu) through vias
+      - Signal pads (1,2) connect to EN net via stub + via to In1/In2
+        then short B.Cu stub to R3/C3 EN junction
+
+    SW_BOOT: GPIO0 to GND (download mode when held during reset)
+      - GND pads (3,4) connect via GND plane (In1.Cu) through vias
+      - Signal pads (1,2) connect to BTN_SELECT net (GPIO0)
+        Simple GND via — the button just shorts GPIO0 to GND when pressed
+
+    Routing strategy: short B.Cu stubs + vias only. Avoids the dense
+    button vertical trace zone (x=43-103, y=42-65) by using minimal stubs.
+    """
+    parts = []
+    _init_pads()
+    n_gnd = NET_ID["GND"]
+    n_en = NET_ID["EN"]
+    n_sel = NET_ID["BTN_SELECT"]
+
+    # ── SW_RST (Reset) ──
+    # Pads after B.Cu mirroring: p1=(98,63.65) p2=(92,63.65) p3=(98,67.35) p4=(92,67.35)
+    rst_p1 = _pad("SW_RST", "1")
+    rst_p2 = _pad("SW_RST", "2")
+    rst_p3 = _pad("SW_RST", "3")
+    rst_p4 = _pad("SW_RST", "4")
+
+    if rst_p3:
+        # GND: pad 3 → short stub down → via to In1.Cu GND plane
+        parts.append(_seg(rst_p3[0], rst_p3[1], rst_p3[0], rst_p3[1] + 2.0,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(rst_p3[0], rst_p3[1] + 2.0, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    if rst_p4:
+        parts.append(_seg(rst_p4[0], rst_p4[1], rst_p4[0], rst_p4[1] + 2.0,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(rst_p4[0], rst_p4[1] + 2.0, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    if rst_p1:
+        # EN signal: pad 1 (right pad at x=98) → short B.Cu stub up
+        # → via to assign EN net. Long-distance connection to C3 pad 1
+        # (EN junction at 70.45, 42.0) left for manual routing.
+        # Via at y=60.0: clears VBUS F.Cu (y=61, w=0.6→edge 60.7).
+        # Via edge at 60.0+0.3=60.3, gap=60.7-60.3=0.4mm ≥ 0.1mm ✓
+        via_y = 60.0
+        parts.append(_seg(rst_p1[0], rst_p1[1], rst_p1[0], via_y,
+                          "B.Cu", W_SIG, n_en))
+        parts.append(_via_net(rst_p1[0], via_y, n_en,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── SW_BOOT (Boot/Download mode) ──
+    # Pads after B.Cu mirroring: p1=(108,63.65) p2=(102,63.65) p3=(108,67.35) p4=(102,67.35)
+    boot_p1 = _pad("SW_BOOT", "1")
+    boot_p2 = _pad("SW_BOOT", "2")
+    boot_p3 = _pad("SW_BOOT", "3")
+    boot_p4 = _pad("SW_BOOT", "4")
+
+    if boot_p3:
+        # GND: pad 3 → stub down → via
+        parts.append(_seg(boot_p3[0], boot_p3[1], boot_p3[0], boot_p3[1] + 2.0,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(boot_p3[0], boot_p3[1] + 2.0, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    if boot_p4:
+        parts.append(_seg(boot_p4[0], boot_p4[1], boot_p4[0], boot_p4[1] + 2.0,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(boot_p4[0], boot_p4[1] + 2.0, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    if boot_p2:
+        # BTN_SELECT (GPIO0): pad 2 (left at x=102) → short B.Cu stub up
+        # → via to assign BTN_SELECT net.
+        # Using pad 2 (x=102) instead of pad 1 (x=108) to avoid GND via
+        # at (108.5, 59.5). Via at y=60.0, x=102: clear of VBUS F.Cu ✓
+        via_y = 60.0
+        parts.append(_seg(boot_p2[0], boot_p2[1], boot_p2[0], via_y,
+                          "B.Cu", W_SIG, n_sel))
+        parts.append(_via_net(boot_p2[0], via_y, n_sel,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    return parts
+
+
 def _power_zones():
     """Copper pour zones for power distribution."""
     parts = []
@@ -3533,6 +3629,7 @@ def generate_all_traces():
     all_parts.extend(_button_traces())
     all_parts.extend(_passive_traces())
     all_parts.extend(_led_traces())
+    all_parts.extend(_reset_boot_traces())
     all_parts.extend(_power_zones())
 
     # Report collision violations

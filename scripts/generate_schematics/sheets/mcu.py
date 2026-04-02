@@ -8,7 +8,7 @@ class MCUSheet(SchematicSheet):
     title = "MCU - ESP32-S3-WROOM-1 N16R8"
     page_number = 2
     paper = "A3"
-    needed_symbols = ["ESP32-S3-WROOM-1", "C", "R"]
+    needed_symbols = ["ESP32-S3-WROOM-1", "C", "R", "SW_Push"]
 
     def build(self):
         # Title
@@ -52,6 +52,27 @@ class MCUSheet(SchematicSheet):
         self.gnd(c_en_x, c_en_y + 8)
         self.wire(c_en_x, c_en_y + 3.81, c_en_x, c_en_y + 8)
         self.text("RC reset delay", c_en_x - 15, c_en_y + 3, 1.5)
+
+        # --- RESET button (EN to GND, active-low) ---
+        sw_rst_x = c_en_x
+        sw_rst_y = c_en_y + 18
+        self.sym("SW_Push", "SW_RST", "RESET", sw_rst_x, sw_rst_y, ["1", "2"])
+        self.wire(sw_rst_x, sw_rst_y - 3.81, sw_rst_x, c_en_y + 3.81)
+        self.gnd(sw_rst_x, sw_rst_y + 8)
+        self.wire(sw_rst_x, sw_rst_y + 3.81, sw_rst_x, sw_rst_y + 8)
+        self.text("Reset (EN->GND)", sw_rst_x - 18, sw_rst_y, 1.5)
+
+        # --- BOOT button (GPIO0 to GND, enter download mode) ---
+        sw_boot_x = c_en_x - 15
+        sw_boot_y = c_en_y + 18
+        self.sym("SW_Push", "SW_BOOT", "BOOT", sw_boot_x, sw_boot_y, ["1", "2"])
+        self.glabel("BTN_SELECT", sw_boot_x, sw_boot_y - 8, 0, "bidirectional")
+        self.wire(sw_boot_x, sw_boot_y - 3.81, sw_boot_x, sw_boot_y - 8)
+        self.gnd(sw_boot_x, sw_boot_y + 8)
+        self.wire(sw_boot_x, sw_boot_y + 3.81, sw_boot_x, sw_boot_y + 8)
+        self.text("Boot (GPIO0->GND)", sw_boot_x - 20, sw_boot_y, 1.5)
+        self.text("Hold BOOT + press RESET", sw_boot_x - 20, sw_boot_y + 12, 1.5)
+        self.text("to enter download mode", sw_boot_x - 20, sw_boot_y + 16, 1.5)
 
         # --- Decoupling cap (100nF near 3V3) ---
         c_dec_x = px_l - 15

@@ -168,6 +168,8 @@ NET_LIST = [
     # LED resistor-to-anode internal nets
     (51, "LED1_RA"),
     (52, "LED2_RA"),
+    # EN reset net (ESP32 EN pin — active-low reset)
+    (53, "EN"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

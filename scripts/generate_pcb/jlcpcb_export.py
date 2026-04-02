@@ -206,6 +206,15 @@ def _build_placements():
     p.append(("J3", "JST-PH-2P",
               "JST-PH-2P-Vertical", jx, jy, 0, "bottom"))
 
+    # Reset and Boot buttons (back side, right of USB-C)
+    from scripts.generate_pcb.board import RESET_ENC, BOOT_ENC
+    x, y = enc_to_pcb(*RESET_ENC)
+    p.append(("SW_RST", "SW_Push",
+              "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
+    x, y = enc_to_pcb(*BOOT_ENC)
+    p.append(("SW_BOOT", "SW_Push",
+              "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
+
     # ── Passive components (back side) ────────────────────────────
     # All passives have >= 3mm center-to-center spacing.
     # Layout rows (Y increases downward in KiCad):
