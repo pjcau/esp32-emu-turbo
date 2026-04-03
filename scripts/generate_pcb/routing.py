@@ -39,7 +39,7 @@ W_AUDIO = 0.3
 # ── Via sizes (JLCPCB 4-layer: AR >= 0.15mm recommended) ─────────
 VIA_STD = 0.60       # standard via OD (AR=0.20mm with drill 0.20)
 VIA_STD_DRILL = 0.20
-VIA_TIGHT = 0.55     # tight-corridor via OD (AR=0.175mm)
+VIA_TIGHT = 0.60     # tight-corridor via OD (AR=0.20mm — matches VIA_STD, eliminates JLCPCB warnings)
 VIA_TIGHT_DRILL = 0.20
 VIA_MIN = 0.50       # minimum via OD (AR=0.15mm — JLCPCB recommended minimum)
 VIA_MIN_DRILL = 0.20
@@ -1065,9 +1065,9 @@ def _power_traces():
         # New gap: |116.55-115.40|=1.15mm ✓ (via right edge 114.95+0.45=115.40)
         _r16_via_x = r16_p1[0] - 1.0  # shift LEFT away from C18
         parts.append(_seg(r16_p1[0], r16_p1[1], _r16_via_x, r16_p1[1],
-                           "B.Cu", W_SIG, n_5v))
+                           "B.Cu", W_PWR, n_5v))
         parts.append(_seg(_r16_via_x, r16_p1[1], _r16_via_x, r16_p1[1] + 2,
-                           "B.Cu", W_SIG, n_5v))
+                           "B.Cu", W_PWR, n_5v))
         parts.append(_via_net(_r16_via_x, r16_p1[1] + 2, n_5v))
 
     # ── +3V3: AMS1117 output via outside +5V zone ─────────────
@@ -2194,19 +2194,19 @@ def _pam_passive_traces():
         # B.Cu: vert up from VDD pin 6 to bridge_y
         parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
                           pam_vdd6[0], bridge_y,
-                          "B.Cu", W_SIG, n_5v))
+                          "B.Cu", W_PWR, n_5v))
         # Via to F.Cu
         parts.append(_via_net(pam_vdd6[0], bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
         # F.Cu: horiz right to C23 column (crosses I2S_DOUT B.Cu vert safely)
         parts.append(_seg(pam_vdd6[0], bridge_y,
                           c23_p1[0], bridge_y,
-                          "F.Cu", W_SIG, n_5v))
+                          "F.Cu", W_PWR, n_5v))
         # Via back to B.Cu
         parts.append(_via_net(c23_p1[0], bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
         # B.Cu: vert down to C23 pad 1
         parts.append(_seg(c23_p1[0], bridge_y,
                           c23_p1[0], c23_p1[1],
-                          "B.Cu", W_SIG, n_5v))
+                          "B.Cu", W_PWR, n_5v))
         # GND stub from C23 pad 2: go DOWN 0.5mm then via
         parts.append(_seg(c23_p2[0], c23_p2[1],
                           c23_p2[0], c23_p2[1] + 0.5,
@@ -2224,7 +2224,7 @@ def _pam_passive_traces():
         # Trace from PVDD pin 4 up to C24 pad 2 (closer to pin, same x column)
         parts.append(_seg(pam_pvdd4[0], pam_pvdd4[1],
                           c24_p2[0], c24_p2[1],
-                          "B.Cu", W_SIG, n_5v))
+                          "B.Cu", W_PWR, n_5v))
         # GND via above C24 pad 1
         parts.append(_seg(c24_p1[0], c24_p1[1],
                           c24_p1[0], c24_p1[1] - 0.5,
@@ -2254,10 +2254,10 @@ def _pam_passive_traces():
         # endpoint is near the GND trace, and pad-to-trace gap applies. Acceptable.
         parts.append(_seg(pam_pvdd13[0], pam_pvdd13[1],
                           pam_pvdd13[0], c25_p1[1],
-                          "B.Cu", W_SIG, n_5v))
+                          "B.Cu", W_PWR, n_5v))
         parts.append(_seg(pam_pvdd13[0], c25_p1[1],
                           c25_p1[0], c25_p1[1],
-                          "B.Cu", W_SIG, n_5v))
+                          "B.Cu", W_PWR, n_5v))
         # GND via below C25 pad 2
         parts.append(_seg(c25_p2[0], c25_p2[1],
                           c25_p2[0], c25_p2[1] + 0.5,
@@ -2619,6 +2619,21 @@ def _button_traces():
         (31.05, 0.625),   # R18[2] / LED2[1] column
         (32.95, 0.625),   # R18[1] / LED2[2] column
     ]
+    # U5 (PAM8403 SOP-16) pad columns: button B.Cu verticals must avoid U5 pads.
+    # Pad half-width 0.3mm + trace half-width 0.125mm + clearance 0.10mm = 0.525mm.
+    # Use 0.55mm for margin. Only add columns where button verticals can reach
+    # (y span ~20-75 covers U5 pads at y=26.8 and y=32.2).
+    # Pin 8/9 at x=34.445 (VREF/NC), pin 3/14 at x=28.095 (-OUT_L/-OUT_R).
+    _u5_forbidden_x = [
+        (25.555, 0.55),   # U5 pins 1/16 (+OUT_L/+OUT_R)
+        (26.825, 0.55),   # U5 pins 2/15 (PGND)
+        (28.095, 0.55),   # U5 pins 3/14 (-OUT_L/-OUT_R)
+        (29.365, 0.55),   # U5 pins 4/13 (PVDD)
+        (30.635, 0.55),   # U5 pins 5/12 (MUTE/SHDN)
+        (31.905, 0.55),   # U5 pins 6/11 (VDD/GND)
+        (33.175, 0.55),   # U5 pins 7/10 (INL/INR)
+        (34.445, 0.55),   # U5 pins 8/9 (VREF/NC)
+    ]
 
     # LCD approach columns on B.Cu: apx = 131.0 + k*0.70 for k=0..13
     # (DFM v4 moved from 134.5+k*0.45 to 131.0+k*0.70 to avoid SD conflict)
@@ -2698,6 +2713,10 @@ def _button_traces():
         # Any B.Cu vertical here is crossed by ALL LCD step-6 horizontal stubs
         if _FPC_ENTRY_X1 < vx < _FPC_ENTRY_X2:
             return True
+        # U5 (PAM8403) pad columns: B.Cu verticals must not cross U5 pads
+        for u5x, u5m in _u5_forbidden_x:
+            if abs(vx - u5x) < u5m:
+                return True
         # LCD post-slot B.Cu verticals: long verticals spanning most of board height
         for lcd_x, margin in _lcd_post_slot_xs:
             if abs(vx - lcd_x) < margin:
@@ -3526,7 +3545,7 @@ def _passive_traces():
     c1_p2 = _pad("C1", "2")
     if c1_p1:
         parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] - 2.5,
-                          "B.Cu", W_SIG, n_5v))
+                          "B.Cu", W_PWR, n_5v))
         parts.append(_via_net(c1_p1[0], c1_p1[1] - 2.5, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
     if c1_p2:
         parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] - 2.5,
