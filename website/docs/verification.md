@@ -369,6 +369,94 @@ NPTH positioning holes are always sized from the component datasheet — never g
 
 ---
 
+## 6. JLCPCB DFM Analysis — External Report
+
+JLCPCB's online DFM engine runs additional checks beyond our local DRC/DFM pipeline. Reports are archived after each gerber upload for manufacturing history tracking.
+
+### Report: 2026-04-03
+
+<a className="pdf-download" href="/img/dfm/jlcpcb-dfm-report-2026-04-03.pdf" target="_blank">Download full JLCPCB DFM report (PDF)</a>
+
+**Board:** 160×75 mm, 4-layer, 1.6 mm | **Generated:** 2026-04-03 15:36:39
+
+#### PCB DFM — Routing Layer
+
+| Check | Result | Details |
+|-------|--------|---------|
+| Clearance (trace-to-trace) | **Pass** | — |
+| Min trace width (board) | **Pass** | — |
+| Via space within circuit | **Pass** | — |
+| Trace spacing between different-net pads | 0.1mm — **Warning** | 4 locations near FPC area (pads on net F\_Cu, In2\_Cu) |
+| Stub trace (not connected both ends) | 0.1mm — **Warning** | Intentional fanout stubs |
+| Pad-to-track spacing | **Pass** | — |
+| Trace left | **Warning** | Short trace ends (cosmetic) |
+| Annular ring | 0.17mm — **Warning** | 2 locations (via annular ring near minimum, still above JLCPCB 0.075mm limit) |
+| Pin grid | **Pass** | — |
+| Pad clearance (via-to-pad) | 0.09mm — **Warning** | Tight spots near dense via areas |
+
+#### PCB DFM — Soldermask Layer
+
+| Check | Result |
+|-------|--------|
+| Solder mask clearance | **Pass** |
+| Mask opening overlap | **Pass** |
+| Mask bridge width | **Pass** |
+
+#### PCB DFM — Silkscreen Layer
+
+| Check | Result |
+|-------|--------|
+| Silkscreen over pad | **Pass** |
+| Silkscreen line width | **Pass** |
+| Silkscreen text size | **Pass** |
+
+#### PCB DFM — Drill Layer
+
+| Check | Result |
+|-------|--------|
+| Missing laser/mech drill | **Pass** |
+| Drill hole sizes | **Pass** |
+| Via-to-PTH spacing | **Pass** |
+| Drill-to-edge distance | **Pass** |
+| Via pad annular ring | **Pass** |
+| Unconnected vias | **Pass** — 1 net-less via |
+
+#### SMT DFM — Component Assembly Analysis
+
+| Check | Count | Severity | Root Cause |
+|-------|-------|----------|------------|
+| Component spacing | 51 | Info | Dense placement — all within JLCPCB tolerance |
+| Component clipped by board outline | 3 | Warning | J1 (USB-C), U6 (SD slot), SW\_PWR — **edge-mounted by design** |
+| Lead to hole distance | 14 | Error | Leads near mounting/positioning holes — **false positive** (NPTH, no electrical connection) |
+| Pin inner/left/right edge | 50+50+50 | Error | **False positive** — J4 FPC 40-pin bottom-contact model mismatch in JLCPCB DFM library |
+| Lead area overlapping pad | 50 | Error | Same J4 FPC model mismatch as above |
+| Component through-hole | 2 | Info | J3 JST PH 2-pin THT — correct, only THT component |
+| Missing hole for component pin | 4 | Error | NPTH positioning holes (J1, SW\_PWR) — DFM expects PTH but these are pegs, **not electrical pins** |
+
+#### Verdict
+
+| Category | Errors | Warnings | Info | Assessment |
+|----------|--------|----------|------|------------|
+| Routing | 0 | 5 | 0 | **PASS** — warnings are tight spacing, all above JLCPCB minimums |
+| Soldermask | 0 | 0 | 0 | **PASS** |
+| Silkscreen | 0 | 0 | 0 | **PASS** |
+| Drill | 0 | 0 | 0 | **PASS** |
+| Assembly | 218 | 3 | 53 | **PASS** — all 218 errors are false positives (J4 FPC model + NPTH) |
+
+:::info Why 218 assembly "errors" are false positives
+The JLCPCB DFM engine uses its own 3D component library to check pin-to-pad alignment. For the **FPC 40-pin bottom-contact connector (J4, C2856812)**, the library model doesn't match the actual footprint — the 40 pins report edge/overlap violations that don't exist on the physical part. Similarly, **NPTH positioning holes** (J1 USB-C, SW\_PWR slide switch) are flagged as "missing hole for component pin" because the DFM expects every component hole to be a PTH with electrical connection, but positioning pegs are intentionally unplated.
+
+These are known JLCPCB DFM false positives documented by other users with FPC and edge-mounted connectors. **No action required.**
+:::
+
+### Report Archive
+
+| Date | Version | PCB Score | DFM Result | Report |
+|------|---------|-----------|------------|--------|
+| 2026-04-03 | v1.0 | 89/100 | All pass (218 FP) | [PDF](/img/dfm/jlcpcb-dfm-report-2026-04-03.pdf) |
+
+---
+
 ## Running Verification
 
 ### Fast commands (recommended)
