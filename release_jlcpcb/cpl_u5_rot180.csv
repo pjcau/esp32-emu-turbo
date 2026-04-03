@@ -9,7 +9,7 @@ SW7,SW_Push,SW-SMD-5.1x5.1,142.00mm,42.50mm,0,Top
 SW8,SW_Push,SW-SMD-5.1x5.1,133.00mm,32.50mm,0,Top
 SW9,SW_Push,SW-SMD-5.1x5.1,8.00mm,54.50mm,0,Top
 SW10,SW_Push,SW-SMD-5.1x5.1,28.00mm,54.50mm,0,Top
-SW13,SW_Push,SW-SMD-5.1x5.1,142.00mm,63.20mm,0,Top
+SW13,SW_Push,SW-SMD-5.1x5.1,142.00mm,61.70mm,0,Top
 LED1,Red,LED_0805,25.00mm,67.50mm,0,Top
 LED2,Green,LED_0805,32.00mm,67.50mm,0,Top
 SW11,SW_Push,SW-SMD-5.1x5.1,15.00mm,5.50mm,90,Bottom
@@ -24,8 +24,10 @@ U3,AMS1117-3.3,SOT-223,125.00mm,55.50mm,0,Bottom
 U5,PAM8403,SOP-16,30.00mm,29.50mm,180,Bottom
 L1,1uH,SMD-4x4x2,110.00mm,52.50mm,0,Bottom
 J3,JST-PH-2P,JST-PH-2P-Vertical,80.00mm,62.50mm,0,Bottom
-R1,5.1k,R_0805,74.00mm,66.20mm,0,Bottom
-R2,5.1k,R_0805,86.00mm,66.20mm,0,Bottom
+SW_RST,SW_Push,SW-SMD-5.1x5.1,95.00mm,65.50mm,0,Bottom
+SW_BOOT,SW_Push,SW-SMD-5.1x5.1,105.00mm,65.50mm,0,Bottom
+R1,5.1k,R_0805,74.00mm,67.00mm,0,Bottom
+R2,5.1k,R_0805,78.00mm,67.00mm,0,Bottom
 R3,10k,R_0805,65.00mm,42.00mm,0,Bottom
 C3,100nF,C_0805,69.50mm,42.00mm,0,Bottom
 C4,100nF,C_0805,92.00mm,42.00mm,0,Bottom

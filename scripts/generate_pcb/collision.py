@@ -24,7 +24,7 @@ CLEARANCE_TRACE_PAD = 0.15     # trace edge to pad edge, different net
 CLEARANCE_VIA_TRACE = 0.15     # via drill edge to trace edge
 CLEARANCE_VIA_VIA = 0.25       # via drill to via drill (hole-to-hole)
 CLEARANCE_VIA_PAD = 0.15       # via annular ring edge to pad edge
-CLEARANCE_EDGE = 0.50          # board edge / FPC slot keepout
+CLEARANCE_EDGE = 0.30          # board edge keepout (JLCPCB recommended: 0.30mm copper-to-edge)
 
 # Sentinel net that collides with everything (slot, edges, mounting holes)
 NET_BARRIER = -999
@@ -256,8 +256,14 @@ class CollisionGrid:
 
     def register_board_edges(self, board_w: float = 160.0,
                              board_h: float = 75.0,
-                             keepout: float = 0.5):
-        """Register board edge keepout strips on both layers."""
+                             keepout: float = 0.01):
+        """Register board edge keepout strips on both layers.
+
+        keepout: thin strip width representing the board edge itself.
+        CLEARANCE_EDGE (0.30mm) is the actual copper-to-edge gap requirement.
+        Total clearance from board edge = keepout + CLEARANCE_EDGE ≈ 0.31mm
+        which matches JLCPCB recommended 0.30mm copper-to-edge minimum.
+        """
         edges = [
             (0, 0, board_w, keepout, "top_edge"),
             (0, board_h - keepout, board_w, board_h, "bottom_edge"),

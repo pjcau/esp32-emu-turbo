@@ -31,6 +31,7 @@ _GRID = CollisionGrid()
 
 # ── Trace widths ──────────────────────────────────────────────────
 W_PWR = 0.6
+W_PWR_HIGH = 0.76     # High-current power: VBUS, BAT+, LX (≥2.1A, 1oz Cu, 10°C rise)
 W_SIG = 0.25
 W_DATA = 0.2
 W_AUDIO = 0.3
@@ -750,25 +751,25 @@ def _power_traces():
 
     # 1. B.Cu stub from USB VBUS pad LEFT to x=82.0
     parts.append(_seg(usb_vbus[0], usb_vbus[1], vbus_fcu_start_x, usb_vbus[1],
-                       "B.Cu", W_PWR, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
     # 2. B.Cu vertical UP from y=68.255 to y=61.0 (above all button F.Cu channels)
     parts.append(_seg(vbus_fcu_start_x, usb_vbus[1], vbus_fcu_start_x, vbus_fcu_y,
-                       "B.Cu", W_PWR, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
     # 3. via to F.Cu at (82.0, 61.0)
     parts.append(_via_net(vbus_fcu_start_x, vbus_fcu_y, n_vbus))
     # 4. F.Cu horizontal to IP5306 approach column
     parts.append(_seg(vbus_fcu_start_x, vbus_fcu_y, ip_vbus_via_x, vbus_fcu_y,
-                       "F.Cu", W_PWR, n_vbus))
+                       "F.Cu", W_PWR_HIGH, n_vbus))
     # 5. F.Cu vertical down to IP5306 pin level
     parts.append(_seg(ip_vbus_via_x, vbus_fcu_y, ip_vbus_via_x, ip_vbus_via_y,
-                       "F.Cu", W_PWR, n_vbus))
+                       "F.Cu", W_PWR_HIGH, n_vbus))
     # 6. via to B.Cu at IP5306 approach
     parts.append(_via_net(ip_vbus_via_x, ip_vbus_via_y, n_vbus))
     # 7. B.Cu stub: via -> IP5306 VBUS pad (horizontal then vertical)
     parts.append(_seg(ip_vbus_via_x, ip_vbus_via_y, ip_vbus_via_x, ip_vbus[1],
-                       "B.Cu", W_PWR, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
     parts.append(_seg(ip_vbus_via_x, ip_vbus[1], ip_vbus[0], ip_vbus[1],
-                       "B.Cu", W_PWR, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
 
     # ── GND: vias to In1.Cu GND zone ──────────────────────────
     # GND vias near key components
@@ -939,11 +940,11 @@ def _power_traces():
     # to get gap=0.55-0.2-0.125=0.205mm ✓. Short segment, inductor pads carry current.
     lx_col_x = ip_sw[0] - 2.5   # x=104.5
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, l1_2[1],
                        "B.Cu", 0.4, n_lx))  # narrowed for BTN_MENU clearance
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", W_PWR_HIGH, n_lx))
 
     # ── BAT+ side of L1: L1 pin 1 to BAT+ zone ─────────────
     # DFM: offset 3.0mm (was 2.0). L1[1]@(111.7,52.5) pad size 1.4x3.4mm -> half_h=1.7.
@@ -957,9 +958,9 @@ def _power_traces():
     bat_via_y = l1_1[1] - 3     # 49.5 — above L1[1] pad top (50.8mm) by 0.85mm
     parts.append(_via_net(bat_via_x, bat_via_y, n_bat))
     parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], bat_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(l1_1[0], bat_via_y, bat_via_x, bat_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
 
     # ── KEY: IP5306 pin 5 -> R16 pull-up to +5V ─────────────
     # B.Cu route from KEY pin down to R16 area
@@ -1046,22 +1047,22 @@ def _power_traces():
     bat_col_x = ip_bat[0] - 1.5   # x=105.5, left of KEY span (107..114.05)
     bat_via_y = ip_bat[1] + 3
     parts.append(_seg(ip_bat[0], ip_bat[1], bat_col_x, ip_bat[1],
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(bat_col_x, ip_bat[1], bat_col_x, bat_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
     # DFM: was via at jst_p[0]=81 giving 0.10mm gap to R12[2] (borderline). Then tried 78
     # which hit R11[1]/R11[2] with gap=0.0mm. Use midpoint x=80.5 (0.60mm gap to both).
     bat_approach_x = 80.5  # DFM: midpoint between R11@78 and R12@83 (gap 0.60mm to each)
     parts.append(_seg(bat_col_x, bat_via_y, bat_approach_x, bat_via_y,
-                       "F.Cu", W_PWR, n_bat))
+                       "F.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat))
     # B.Cu: horizontal to JST pad X, then vertical down to JST pad
     parts.append(_seg(bat_approach_x, bat_via_y, jst_p[0], bat_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(jst_p[0], bat_via_y, jst_p[0], jst_p[1],
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
 
     # ── Power switch -> BAT+ junction ──────────────────────────
     # DFM FIX v1: was F.Cu long vertical at x=39.25, y=46.13..70.05.
@@ -1075,17 +1076,17 @@ def _power_traces():
     BAT_COL_X = 38.0  # DFM: separate column for long B.Cu vertical (avoids SPK+ at x=39.5)
     sw_via_y = sw_com[1] - 2  # short B.Cu stub down from switch pad
     parts.append(_seg(sw_com[0], sw_com[1], sw_com[0], sw_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(sw_com[0], sw_via_y, n_bat))
     # B.Cu horizontal from sw_com X to separate column, then long vertical down
     parts.append(_seg(sw_com[0], sw_via_y, BAT_COL_X, sw_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(BAT_COL_X, sw_via_y, BAT_COL_X, bat_via_y,
-                       "B.Cu", W_PWR, n_bat))
+                       "B.Cu", W_PWR_HIGH, n_bat))
     # F.Cu horizontal from BAT_COL_X to JST pad (at bat_via_y level)
     parts.append(_via_net(BAT_COL_X, bat_via_y, n_bat))
     parts.append(_seg(BAT_COL_X, bat_via_y, jst_p[0], bat_via_y,
-                       "F.Cu", W_PWR, n_bat))
+                       "F.Cu", W_PWR_HIGH, n_bat))
 
     # USB CC pull-down resistor GND traces are in _usb_traces()
 
@@ -1963,17 +1964,30 @@ def _i2s_traces():
     # U5 GND pins at approximate x=25.5..28.1. Use x=23..26 at y=22.0.
     pam_pgnd2 = _pad("U5", "2")  # PGND top row
     if pam_pgnd2:
-        # SPK+ traces at x=24.50 (y=21.50..32.20) — avoid!
-        # I2S_DOUT at x=33.17 — avoid!
-        # Place vias at y=19.0 (above SPK+ horizontal at y=21.50) to stay clear.
-        # Use x=27..30 range (between SPK+ at 24.5 and I2S at 33.17).
-        # Place vias adjacent to existing PAM8403 GND via stubs.
-        # Existing GND vias: pin 2 PGND via at ~(28.095, 24.9),
-        #   pin 11 GND via at ~(27.46, 31.6), pin 15 PGND via at ~(26.825, 34.3).
-        # Add thermal vias near each existing GND via with B.Cu stub connection.
-        # Note: PAM8403 thermal relief via existing GND pin vias (pins 2, 11, 15)
-        # at ~3-5mm from IC center. Additional vias would overlap existing routing.
-        pass
+        # Add 3 dedicated thermal GND vias near PAM8403 center (30.0, 29.5).
+        # Existing GND pin vias at ~3-5mm; these thermal vias at ~2-3mm.
+        # Constraints:
+        #   SPK+ B.Cu at x=24.50 — stay right of x=25.5
+        #   I2S_DOUT B.Cu at x=33.17 — stay left of x=32.0
+        #   PAM_VREF B.Cu at x=34.45 — stay left
+        #   OUTL+ at y≈24.9, OUTL- at y≈34.3 — place between
+        # Place 3 vias in a column at x=26.5 (between SPK+ and IC center):
+        #   y=27.0, y=29.5, y=32.0 — spanning the IC vertically
+        # Gap to SPK+ B.Cu (x=24.50, w=0.3): 26.5-24.50-0.15-0.30=1.55mm ✓
+        # Gap to pin 2 via (x=28.095): |28.095-26.5|-0.30-0.30=0.995mm ✓
+        _pam_therm_vias = [
+            (26.5, 27.0),   # near PGND pin 2 area
+            (26.5, 29.5),   # IC center Y
+            (26.5, 32.0),   # near PGND pin 15 area
+        ]
+        for idx, (tvx, tvy) in enumerate(_pam_therm_vias):
+            parts.append(_via_net(tvx, tvy, n_gnd,
+                                  size=VIA_STD, drill=VIA_STD_DRILL))
+        # Connect thermal vias with B.Cu segments (split at each via for connectivity)
+        for idx in range(len(_pam_therm_vias) - 1):
+            x1, y1 = _pam_therm_vias[idx]
+            x2, y2 = _pam_therm_vias[idx + 1]
+            parts.append(_seg(x1, y1, x2, y2, "B.Cu", W_SIG, n_gnd))
 
     return parts
 
@@ -2409,11 +2423,11 @@ def _button_traces():
         elif i <= 7:
             # Channels 6-7 (BTN_X, BTN_Y): jump over J1 front pads
             # DFM FIX (KiBot external): ch6 (BTN_X) at y=70.80 had hole_clearance
-            # 0.15mm to SW_PWR pad 4b at (36.4, 71.4). Shift DOWN to 70.60.
-            # Gap to J1 front pad bottom (70.375): 70.60-70.375-0.125=0.10mm ✓
-            # Gap to SW_PWR 4b: sqrt(0.05^2+0.80^2)-0.45=0.35mm ✓
+            # 0.15mm to SW_PWR pad 4b at (36.4, 71.4). Shift DOWN to 70.65.
+            # Gap to J1 front pad bottom (70.375): 70.65-70.375-0.125=0.15mm ✓ (was 0.10mm)
+            # Gap to SW_PWR 4b: sqrt(0.05^2+0.75^2)-0.45=0.30mm ✓
             k = i - 6  # 0, 1
-            b["chan_y"] = _J1_FRONT_PAD_BOTTOM + 0.125 + 0.10 + k * 0.75  # 70.60, 71.35
+            b["chan_y"] = _J1_FRONT_PAD_BOTTOM + 0.125 + 0.15 + k * 0.75  # 70.65, 71.40
         elif i == 8:
             # Channel 8 (BTN_START): ABOVE SW_PWR NPTH zone AND shoulder GND vias.
             # DFM FIX (KiBot external): NPTH at (38.5, 72.55) drill 0.9mm,

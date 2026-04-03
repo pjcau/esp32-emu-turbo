@@ -280,6 +280,15 @@ _strict("SW12", [("3", "BTN_R")])
 _zone("SW12", [("2", "GND")])
 
 # ============================================================
+# SW_RST: Reset button (EN pin to GND)
+# SW_BOOT: Boot button (GPIO0/BTN_SELECT to GND)
+# ============================================================
+_strict("SW_RST", [("1", "EN")])
+_zone("SW_RST", [("3", "GND"), ("4", "GND")])
+_strict("SW_BOOT", [("2", "BTN_SELECT")])
+_zone("SW_BOOT", [("3", "GND"), ("4", "GND")])
+
+# ============================================================
 # R1, R2: USB CC pull-down resistors (5.1k)
 # ============================================================
 _strict("R1", [("1", "USB_CC1"), ("2", "GND")])
@@ -648,6 +657,15 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_zone_ok("SW11", "2", "GND")
         self._check_strict("SW12", "3", "BTN_R")
         self._check_zone_ok("SW12", "2", "GND")
+
+    def test_reset_boot_buttons(self):
+        """SW_RST/SW_BOOT: reset and boot buttons on correct nets."""
+        self._check_strict("SW_RST", "1", "EN")
+        self._check_zone_ok("SW_RST", "3", "GND")
+        self._check_zone_ok("SW_RST", "4", "GND")
+        self._check_strict("SW_BOOT", "2", "BTN_SELECT")
+        self._check_zone_ok("SW_BOOT", "3", "GND")
+        self._check_zone_ok("SW_BOOT", "4", "GND")
 
     def test_pullup_resistors(self):
         """R4-R15, R19: pull-up pads (zone-connected, may be net 0)."""
