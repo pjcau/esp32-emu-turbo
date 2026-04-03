@@ -2018,6 +2018,117 @@ def test_signal_power_via_overlap():
     )
 
 
+def test_trace_through_ic_pad():
+    """Test: No trace passes through an IC/connector pad on a different net.
+
+    Catches traces routed through component pad areas that will create
+    short circuits when the component is soldered. This includes:
+    - Active pads (net != 0) overlapped by different-net traces (CRITICAL)
+    - NC pads (net == 0) of ICs/connectors overlapped by traces (HIGH)
+
+    NC pads of passive components (R, C, L) are excluded because their
+    pad-to-trace overlaps are typically intended connections where the
+    pad net assignment is missing from the PCB file.
+    """
+    print("\n── Trace Through IC/Connector Pad Test ──")
+
+    segs = _cached_segments()
+    pads = _get_cache()["pads"]
+
+    # Only check IC, connector, and switch footprints (not passives)
+    IC_PREFIXES = ("U", "J", "SW")
+    ic_pads = [p for p in pads if any(p["ref"].startswith(pfx) for pfx in IC_PREFIXES)]
+
+    # Read net names from PCB file
+    net_names = {}
+    with open(PCB_FILE) as f:
+        for m in re.finditer(r'\(net\s+(\d+)\s+"([^"]*)"\)', f.read()):
+            net_names[int(m.group(1))] = m.group(2)
+
+    # Known safe NC pins (internally disconnected per datasheet, or
+    # intended same-net connections with missing net assignment in PCB).
+    SAFE_NC = {
+        # PAM8403 (U5): pins 2, 9, 12 are true NC per datasheet
+        ("U5", "2"), ("U5", "9"), ("U5", "12"),
+        # PAM8403 (U5): pin 8 = VREF output, PAM_VREF trace is intended connection
+        ("U5", "8"),
+        # FPC J4: pin 42 is mounting pad (no internal connection)
+        ("J4", "42"),
+        # ESP32-S3 (U1): pin 1 = 3V3 power (config.py), net not assigned in PCB
+        ("U1", "1"),
+        # IP5306 (U2): pins 3, 4 are true NC per datasheet
+        ("U2", "3"), ("U2", "4"),
+        # AMS1117 (U3): pin 2 = Vout (+3V3), trace is intended connection
+        ("U3", "2"),
+        # SD card module (U6): pins 8, 9 are unused (card detect / write protect)
+        ("U6", "8"), ("U6", "9"),
+        # MSK12C02 power switch (SW_PWR): shell/mounting pads, no internal connection
+        ("SW_PWR", "4a"), ("SW_PWR", "4b"), ("SW_PWR", "4c"), ("SW_PWR", "4d"),
+    }
+
+    # Index pads by layer
+    pads_by_layer: dict[str, list] = {}
+    for p in ic_pads:
+        pads_by_layer.setdefault(p["layer"], []).append(p)
+
+    # Also check vias (they exist on all layers)
+    vias = _cached_vias()
+
+    critical = []
+    high = []
+
+    for s in segs:
+        s_net = s["net"]
+        if s_net == 0:
+            continue
+        sw = s["w"]
+        sx1, sy1, sx2, sy2 = s["x1"], s["y1"], s["x2"], s["y2"]
+        seg_xmin = min(sx1, sx2) - sw / 2
+        seg_xmax = max(sx1, sx2) + sw / 2
+        seg_ymin = min(sy1, sy2) - sw / 2
+        seg_ymax = max(sy1, sy2) + sw / 2
+
+        for p in pads_by_layer.get(s["layer"], []):
+            if s_net == p["net"] and p["net"] != 0:
+                continue  # same net = intended connection
+            px, py, pw, ph = p["x"], p["y"], p["w"], p["h"]
+            pad_xmin = px - pw / 2
+            pad_xmax = px + pw / 2
+            pad_ymin = py - ph / 2
+            pad_ymax = py + ph / 2
+
+            # AABB overlap
+            if (seg_xmax > pad_xmin and seg_xmin < pad_xmax and
+                    seg_ymax > pad_ymin and seg_ymin < pad_ymax):
+                s_name = net_names.get(s_net, f"net{s_net}")
+                p_name = net_names.get(p["net"], "NC") if p["net"] != 0 else "NC"
+                entry = (f"{p['ref']}[{p['num']}]({p_name}) "
+                         f"← {s_name} {s['layer']}")
+
+                if p["net"] != 0:
+                    critical.append(entry)
+                elif (p["ref"], p["num"]) not in SAFE_NC:
+                    high.append(entry)
+
+    # Deduplicate
+    critical = sorted(set(critical))
+    high = sorted(set(high))
+
+    if critical:
+        for v in critical[:10]:
+            print(f"    CRITICAL: {v}")
+    if high:
+        for v in high[:10]:
+            print(f"    HIGH: {v}")
+
+    check(
+        f"No traces through IC/connector pads (different-net) "
+        f"({len(critical)} critical, {len(high)} high)",
+        len(critical) == 0 and len(high) == 0,
+        f"{len(critical)} critical + {len(high)} high violations",
+    )
+
+
 def test_trace_crossing_same_layer():
     """Test: No two different-net traces cross on the same copper layer.
 
@@ -3450,6 +3561,7 @@ if __name__ == "__main__":
     test_j4_display_pin_reversal()
     test_via_annular_ring_trace_clearance()
     test_signal_power_via_overlap()
+    test_trace_through_ic_pad()
     test_trace_crossing_same_layer()
     test_power_bridge_detection()
 
