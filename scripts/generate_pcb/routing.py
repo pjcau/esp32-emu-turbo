@@ -1525,10 +1525,13 @@ def _display_traces():
         # DFM v5: route via F.Cu to avoid crossing B.Cu approach columns.
         # B.Cu stub from FPC pad LEFT to via, F.Cu horiz RIGHT past approach columns,
         # via back to B.Cu, B.Cu vert DOWN to zone via.
-        stub_x = VIA_X_PWR - 0.5  # clear of approach columns
+        # JLCPCB DFM FIX: via at (133.10, 43.75) gap=0.14mm to J4[38] at
+        # (133.712, 44.25). Nudge LEFT by 0.10mm: stub_x=133.00, via right
+        # edge=133.30, J4[38] pad left=133.562, gap=0.262mm ✓
+        stub_x = VIA_X_PWR - 0.6  # was -0.5 (133.10), now 133.00
         vx2 = 143.50  # right of net32 vert at x=142.80 (gap=0.70-0.23-0.15=0.32mm)
         vy = 50.25
-        # DFM FIX (KiBot external): via at (133.1, 43.25) gap=0.14mm to J4:35
+        # DFM FIX (KiBot external): via at (133.0, 43.25) gap=0.14mm to J4:35
         # (+3V3) at y=42.75. Move via DOWN to y+0.5=43.75 for gap=0.375mm ✓
         via_y = py + 0.5
         # GND stubs widened from 0.3→0.4mm for better current handling.
@@ -3015,6 +3018,33 @@ def _button_traces():
                     # Push right past both +3V3 vias to x=73.25.
                     # BTN_L_VERT_X check: abs(73.25-72.50)=0.75 > 0.725 → no further push ✓
                     _ne = 73.25
+                # JLCPCB DFM FIX: after R9→73.25, via at (73.25, 45.1) OD=0.60
+                # overlaps R10 pad 1 at (73.95, 46.0) size 1.0x1.3 (gap=0.02mm).
+                # Fix: use VIA_MIN (0.46mm, r=0.23) and shift X to 73.05.
+                # R10 pad AABB: [73.45, 45.35, 74.45, 46.65].
+                # Via at (73.05, 45.1) r=0.23: [72.82, 44.87, 73.28, 45.33].
+                # dx=73.45-73.28=0.17, dy=45.35-45.33=0.02 → gap=sqrt(0.0293)=0.171mm ✓
+                # BTN_L_VERT_X: abs(73.05-72.50)=0.55. With VIA_MIN clearance:
+                #   via_r(0.23)+trace_hw(0.10)+gap(0.15)=0.48. 0.55>0.48 ✓
+                # +3V3 via(72.05,44.6) AABB: via at (73.05,45.1) r=0.23:
+                #   dx=73.05-0.23-(72.05+0.275)=72.82-72.325=0.495mm ✓
+                _ne_via_size = VIA_STD
+                _ne_via_drill = VIA_STD_DRILL
+                R10_PAD_AABB = (73.45, 45.35, 74.45, 46.65)  # R10 pad 1
+                _ne_r = VIA_STD / 2
+                _ne_box = (_ne - _ne_r, stagger_y - _ne_r,
+                           _ne + _ne_r, stagger_y + _ne_r)
+                _dx = max(0, R10_PAD_AABB[0] - _ne_box[2],
+                          _ne_box[0] - R10_PAD_AABB[2])
+                _dy = max(0, R10_PAD_AABB[1] - _ne_box[3],
+                          _ne_box[1] - R10_PAD_AABB[3])
+                _r10_gap = _m.sqrt(_dx**2 + _dy**2)
+                if _r10_gap < 0.15:
+                    # Switch to VIA_MIN and shift X left
+                    _ne_via_size = VIA_MIN
+                    _ne_via_drill = VIA_MIN_DRILL
+                    _ne_r_min = VIA_MIN / 2  # 0.23
+                    _ne = R10_PAD_AABB[0] - _ne_r_min - 0.17  # 73.05
                 near_epx = _ne
             else:
                 # DFM v3: BTN_R approach via@(91.0,37.48) vs near_epx via@(90.0,37.48): gap=0.1mm.
@@ -3022,9 +3052,11 @@ def _button_traces():
                 # For BTN_R (i=0 for right-side buttons), approach≈91.55. Distance to near_epx=92:
                 # 92-91.55=0.45mm gap (size 0.9 each) → insufficient. Use epx+3.0: 93-91.55=1.45, gap=0.55mm ✓
                 near_epx = epx + 3.0   # DFM: was +2.0 (0.1mm gap to approach via)
+                _ne_via_size = VIA_STD
+                _ne_via_drill = VIA_STD_DRILL
             parts.append(_seg(ax, stagger_y, near_epx, stagger_y,
                               "F.Cu", W_SIG, net))
-            parts.append(_via_net(near_epx, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
+            parts.append(_via_net(near_epx, stagger_y, net, size=_ne_via_size, drill=_ne_via_drill))
             # B.Cu: horizontal to pad X, then vertical to pad Y (no extra via)
             parts.append(_seg(near_epx, stagger_y, epx, stagger_y,
                               "B.Cu", W_SIG, net))
