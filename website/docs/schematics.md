@@ -106,13 +106,22 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | J1 | USB-C connector | — | 5V power input | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
+| J3 | JST PH 2-pin connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
 | R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
+| R16 | Resistor | 100 kΩ | IP5306 KEY pin pull-down | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| R17 | Resistor | 1 kΩ | LED1 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
+| R18 | Resistor | 1 kΩ | LED2 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
 | BT1 | Battery | LiPo 3.7V 5000mAh | 105080 cell | — |
 | U3 | LDO regulator | AMS1117-3.3 | 5V to 3.3V, 800mA max | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
+| LED1 | Red LED | 0805 | Charging indicator (IP5306) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
+| LED2 | Green LED | 0805 | Fully charged indicator (IP5306) | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
+| SW_PWR | Slide switch | SS-12D00G3 | Power on/off | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
 | C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
-| C2 | Capacitor | 22 µF tantalum | LDO output stability | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
+| C2 | Capacitor | 22 µF | LDO output stability | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
+| C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
+| C19 | Capacitor | 22 µF | Bulk capacitor | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 
 ### Power Budget
 
@@ -147,6 +156,8 @@ ESP32-S3-WROOM-1 N16R8 with all 35 GPIO connections grouped by function, decoupl
 | R3 | Resistor | 10 kΩ | EN pull-up (keep-alive) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
 | C3 | Capacitor | 100 nF | EN reset delay (RC = 1ms) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C4 | Capacitor | 100 nF | 3V3 decoupling | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| SW_RST | Tact switch | — | EN reset (pulls EN low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
+| SW_BOOT | Tact switch | — | Boot mode (pulls GPIO0 low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 
 ### GPIO Assignment
 
@@ -171,6 +182,10 @@ GPIO26–32 are used internally by the PSRAM. GPIO19/20 are the native USB D-/D+
 ## Sheet 3 — Display
 
 ILI9488 4.0" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A(backlight), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
+
+| Ref | Component | Value | Purpose | Datasheet |
+|-----|-----------|-------|---------|-----------|
+| J4 | FPC connector | 40-pin 0.5mm bottom contact | Display ribbon cable | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
 
 <div className="schematic-container">
 
@@ -199,10 +214,10 @@ I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | U5 | Amplifier | PAM8403 | Filterless Class-D, 3W/ch | [PDF](/datasheets/U5_PAM8403_C5122557.pdf) |
-| C22 | Capacitor | 0.47 µF | DC-blocking cap in series on audio input | — |
-| R20, R21 | Resistor | 20 kΩ | Bias resistors on INL/INR to GND | — |
-| C21 | Capacitor | 100 nF | VREF bypass capacitor | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
-| C23, C24, C25 | Capacitor | 1 µF | VDD and PVDD decoupling caps | — |
+| C21 | Capacitor | 100 nF (C49678) | VREF bypass capacitor | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C22 | Capacitor | 0.47 µF (C1525) | DC-blocking cap on audio input | — |
+| C23, C24, C25 | Capacitor | 1 µF (C15849) | VDD and PVDD decoupling caps | — |
+| R20, R21 | Resistor | 20 kΩ (C4184) | Bias resistors on INL/INR to GND | — |
 | LS1 | Speaker | 28mm 8Ω 0.5W | Mono output | — |
 
 :::note
@@ -240,7 +255,7 @@ SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module ha
 
 ## Sheet 6 — Controls
 
-12 tact switches (SNES layout) with individual 10kΩ pull-up + 100nF debounce per button. Tact switch datasheet: [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf).
+13 tact switches (SNES layout + MENU) with individual 10kΩ pull-up + 100nF debounce per button. Plus SW_RST (reset) and SW_BOOT (boot mode) on Sheet 2. Tact switch datasheet: [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf).
 
 <div className="schematic-container">
 
@@ -250,7 +265,7 @@ SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module ha
 
 <a className="pdf-download" href="/img/schematics/06-controls.pdf" target="_blank">PDF</a>
 
-### Button Circuit (repeated 12×)
+### Button Circuit (repeated 13×)
 
 ```
 +3V3 ──[10kΩ R]──┬──── GPIO_x (global label)
@@ -265,12 +280,17 @@ SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module ha
 
 **Idle** = HIGH (3.3V via pull-up), **Pressed** = LOW (grounded through switch).
 
-| Group | Buttons | GPIOs |
-|-------|---------|-------|
-| D-pad | UP, DOWN, LEFT, RIGHT | 40, 41, 42, 1 |
-| Face | A, B, X, Y | 2, 48, 47, 21 |
-| System | START, SELECT | 18, 0 |
-| Shoulder | L, R | 35, 43 |
+| Ref | Component | Value | Purpose |
+|-----|-----------|-------|---------|
+| R4–R15, R19 | Resistor | 10 kΩ (C17414) | Button pull-ups (12 + MENU) |
+| C5–C16, C20 | Capacitor | 100 nF (C49678) | Button debounce (12 + MENU) |
+
+| Group | Buttons | Switches | GPIOs |
+|-------|---------|----------|-------|
+| D-pad | UP, DOWN, LEFT, RIGHT | SW1–SW4 | 40, 41, 42, 1 |
+| Face | A, B, X, Y | SW5–SW8 | 2, 48, 47, 21 |
+| System | START, SELECT, MENU | SW9, SW10, SW13 | 18, 0, — |
+| Shoulder | L, R | SW11, SW12 | 35, 43 |
 
 ---
 
