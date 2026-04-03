@@ -31,6 +31,7 @@ R2,5.1k,R_0805,78.00mm,67.00mm,0,Bottom
 R3,10k,R_0805,65.00mm,42.00mm,0,Bottom
 C3,100nF,C_0805,69.50mm,42.00mm,0,Bottom
 C4,100nF,C_0805,92.00mm,42.00mm,0,Bottom
+C26,100nF,C_0805,91.50mm,21.00mm,90,Bottom
 R17,1k,R_0805,25.00mm,65.00mm,0,Bottom
 R18,1k,R_0805,32.00mm,65.00mm,0,Bottom
 R4,10k,R_0805,43.00mm,46.00mm,0,Bottom

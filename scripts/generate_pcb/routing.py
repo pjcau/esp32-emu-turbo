@@ -41,7 +41,7 @@ VIA_STD = 0.60       # standard via OD (AR=0.20mm with drill 0.20)
 VIA_STD_DRILL = 0.20
 VIA_TIGHT = 0.55     # tight-corridor via OD (AR=0.175mm)
 VIA_TIGHT_DRILL = 0.20
-VIA_MIN = 0.46       # minimum via OD (AR=0.13mm — JLCPCB absolute minimum)
+VIA_MIN = 0.50       # minimum via OD (AR=0.15mm — JLCPCB recommended minimum)
 VIA_MIN_DRILL = 0.20
 
 # ── Board geometry ────────────────────────────────────────────────
@@ -364,6 +364,7 @@ C1_POS = (122.0, 48.5)   # AMS1117 input cap — DFM: was 124.0 (pad/via too clo
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
+C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
 C17_POS = (110.0, 35.0)  # IP5306 cap
 C18_POS = (118.0, 55.0)  # IP5306 cap — DFM: moved to (118,55) below display trace zone (was 116 hit col_x; 131 hit SW8)
 C19_POS = (110.0, 58.5)  # IP5306 bat cap (lx, ly+6)
@@ -524,6 +525,8 @@ def _init_pads():
         ("C25", "C_0805", *C25_POS, 90, "B"),
         ("R20", "R_0805", *R20_POS, 0, "B"),
         ("R21", "R_0805", *R21_POS, 0, "B"),
+        # ESP32 VDD bypass (rotated 90° to separate +3V3/GND routing)
+        ("C26", "C_0805", *C26_POS, 90, "B"),
     ]
     for ref, fp, cx, cy, rot, lc in passive_placements:
         _PADS[ref] = _compute_pads(fp, cx, cy, rot, lc)
@@ -2306,9 +2309,39 @@ def _usb_traces():
     parts.append(_seg(usb_dp[0], dp_via_y, dp_via_x, dp_via_y,
                        "B.Cu", W_DATA, n_dp))
     parts.append(_via_net(dp_via_x, dp_via_y, n_dp, size=VIA_STD, drill=VIA_STD_DRILL))
-    # 2. F.Cu horizontal to approach column
+    # 2. F.Cu horizontal to approach column — with meander for D+/D- length matching.
+    # D- is 4.57mm longer than D+.  3 U-shaped meander loops (amplitude=0.50mm)
+    # add 3×2×0.50 = 3.0mm extra → mismatch reduced from 4.57mm to ~1.57mm (< 2mm ✓).
+    # Meander goes DOWN (increase y, away from BTN_R F.Cu at y=65.3).
+    # Constraints: BTN_R F.Cu at y=65.3 (above), BTN_A F.Cu at y=66.8 (below).
+    # Peak at y+0.50=66.425. Gap to BTN_A: 66.8-66.425-0.10-0.10=0.175mm ≥ 0.15mm ✓
+    # Gap from base to BTN_R: 65.925-65.3-0.10-0.10=0.425mm ✓
     dp_col_x = dp_x + 1.5   # DFM fix: was +2 (gap to GND cap 0.575mm vs 0.075mm)
-    parts.append(_seg(dp_via_x, dp_via_y, dp_col_x, dp_via_y,
+    _amp = 0.50              # meander amplitude (mm)
+    _n = 3                   # number of U-loops
+    _uw = 1.5                # U-loop width (horizontal at peak)
+    _gap = 1.0               # horizontal gap between loops at base
+    _mx = 82.0               # meander start X
+    _my = dp_via_y + _amp    # meander peak Y
+    # Lead-in straight
+    parts.append(_seg(dp_via_x, dp_via_y, _mx, dp_via_y, "F.Cu", W_DATA, n_dp))
+    # 3 U-shaped loops with horizontal bridges at base level
+    for _i in range(_n):
+        _lx = _mx + _i * (_uw + _gap)
+        # Down into U
+        parts.append(_seg(_lx, dp_via_y, _lx, _my, "F.Cu", W_DATA, n_dp))
+        # Across at peak
+        parts.append(_seg(_lx, _my, _lx + _uw, _my, "F.Cu", W_DATA, n_dp))
+        # Up out of U
+        parts.append(_seg(_lx + _uw, _my, _lx + _uw, dp_via_y, "F.Cu", W_DATA, n_dp))
+        # Horizontal bridge to next loop (except after last)
+        if _i < _n - 1:
+            _nx = _mx + (_i + 1) * (_uw + _gap)
+            parts.append(_seg(_lx + _uw, dp_via_y, _nx, dp_via_y,
+                               "F.Cu", W_DATA, n_dp))
+    # Lead-out straight
+    _end_x = _mx + (_n - 1) * (_uw + _gap) + _uw
+    parts.append(_seg(_end_x, dp_via_y, dp_col_x, dp_via_y,
                        "F.Cu", W_DATA, n_dp))
     parts.append(_via_net(dp_col_x, dp_via_y, n_dp, size=VIA_STD, drill=VIA_STD_DRILL))
     # 3. B.Cu vertical up to ESP32 pin Y
@@ -3465,6 +3498,26 @@ def _passive_traces():
         # x=91.70 more clearance (edge gap 0.15mm vs 0.10mm at 0.90mm).
         # Annular ring = (0.80-0.30)/2 = 0.25mm >= JLCPCB 0.13mm min ✓
         parts.append(_via_net(c4_p2[0], c4_p2[1] - 2, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # C26 ESP32 VDD bypass (rotated 90°): pad "1" -> +3V3, pad "2" -> GND.
+    # Cap at (91.5, 21.0) rot=90 on B.Cu (mirrored). After rotate+mirror:
+    # pad "1" at (91.5, y_above), pad "2" at (91.5, y_below).
+    # Pad "1" (+3V3): horizontal trace to existing +3V3 via at (88.75, 21.0).
+    # Pad "2" (GND): vertical stub to GND via below.
+    c26_p1 = _pad("C26", "1")
+    c26_p2 = _pad("C26", "2")
+    if c26_p1:
+        # Route to existing +3V3 via at (88.75, 21.0): horizontal then short vertical
+        parts.append(_seg(c26_p1[0], c26_p1[1], 88.75, c26_p1[1],
+                          "B.Cu", W_SIG, n_3v3))
+        parts.append(_seg(88.75, c26_p1[1], 88.75, 21.0,
+                          "B.Cu", W_SIG, n_3v3))
+    if c26_p2:
+        # GND via — short stub away from +3V3 trace
+        parts.append(_seg(c26_p2[0], c26_p2[1], c26_p2[0], c26_p2[1] + 1.5,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(c26_p2[0], c26_p2[1] + 1.5, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C1 AMS1117 input: pad "1" -> +5V via, pad "2" -> GND via

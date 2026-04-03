@@ -235,6 +235,9 @@ def _build_placements():
     p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
     p.append(("C3", "100nF", "C_0805", 69.5, 42, 0, "bottom"))  # DFM: synced with board.py
     p.append(("C4", "100nF", "C_0805", 92, 42, 0, "bottom"))  # DFM: synced with board.py
+    from scripts.generate_pcb.routing import C26_POS
+    p.append(("C26", "100nF", "C_0805",
+              C26_POS[0], C26_POS[1], 90, "bottom"))  # ESP32 VDD bypass
 
     # LED current-limiting resistors (B.Cu, above LEDs on F.Cu)
     # Must match board.py: R17 at (25, 65), R18 at (32, 65)
