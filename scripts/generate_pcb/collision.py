@@ -573,10 +573,11 @@ def _is_tht_pad(ref: str, num: str) -> bool:
     Only THT-specific pads are registered on both layers, not all pads
     of a component that happens to contain some THT pads.
     """
-    # J1 (USB-C 16P): shield pads 13/14/13b/14b are THT (drill 0.60mm)
+    # J1 (USB-C 16P): pads 13/14/13b/14b are SMD on B.Cu only in the footprint
+    # (layers "B.Cu" "B.Paste" "B.Mask"), no F.Cu copper.  Removed from THT set
+    # to avoid false F.Cu collisions with button channels at y=73-74.
     # J3 (JST PH 2P): both pins (1, 2) are THT (drill 0.85mm)
     _THT_PADS = {
-        ("J1", "13"), ("J1", "14"), ("J1", "13b"), ("J1", "14b"),
         ("J3", "1"), ("J3", "2"),
     }
     return (ref, num) in _THT_PADS

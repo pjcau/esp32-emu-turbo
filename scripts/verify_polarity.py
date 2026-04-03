@@ -712,7 +712,7 @@ class PolarityVerificationTest(unittest.TestCase):
 
         unchecked = []
         for ref in sorted(self.all_refs):
-            if ref.startswith("H") or ref.startswith("TP"):
+            if ref.startswith("H") or ref.startswith("TP") or ref.startswith("FID"):
                 continue
             if ref not in checked_refs:
                 unchecked.append(ref)

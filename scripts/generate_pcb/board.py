@@ -489,8 +489,12 @@ def _component_placeholders():
     placements.append(("C1", "C_0805", amx - 3, amy - 7, 0, "B.Cu"))  # DFM: was amx-1, too close to FPC slot
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
-    # Fiducials removed — JLCPCB uses panel-level fiducials for alignment.
-    # Board-level fiducials caused 3 DFM warnings per fiducial.
+    # Board-level fiducials at opposite corners for pick-and-place alignment.
+    # 1mm copper dot, 2mm mask opening (0.5mm margin), no paste.
+    # FID1 at (12, 12): 5.4mm from MH(10,7), copper gap=3.14mm ✓
+    # FID2 at (148, 63): 5.4mm from MH(150,68), copper gap=3.14mm ✓
+    placements.append(("FID1", "Fiducial", 12, 12, 0, "F.Cu"))
+    placements.append(("FID2", "Fiducial", 148, 63, 0, "F.Cu"))
 
     # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)
     _text_offsets = {
