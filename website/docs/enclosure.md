@@ -32,22 +32,22 @@ make render-enclosure
 ## Rendered Views
 
 ### Front (Display Side)
-![Front View](/img/renders/enclosure-front.png)
+![Front View](/img/renders/enclosure/enclosure-front.png)
 
 ### Back (Battery Side)
-![Back View](/img/renders/enclosure-back.png)
+![Back View](/img/renders/enclosure/enclosure-back.png)
 
 ### Top (Shoulder Buttons)
-![Top View](/img/renders/enclosure-top.png)
+![Top View](/img/renders/enclosure/enclosure-top.png)
 
 ### Exploded View
-![Exploded View](/img/renders/enclosure-exploded.png)
+![Exploded View](/img/renders/enclosure/enclosure-exploded.png)
 
 ### Cross-Section (XZ plane)
-![Cross-Section View](/img/renders/enclosure-cross-section.png)
+![Cross-Section View](/img/renders/enclosure/enclosure-cross-section.png)
 
 ### Fit Check (bottom shell + PCB + battery)
-![Fit Check View](/img/renders/enclosure-fit-check.png)
+![Fit Check View](/img/renders/enclosure/enclosure-fit-check.png)
 
 ## Features
 

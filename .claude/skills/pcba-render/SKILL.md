@@ -33,7 +33,7 @@ This maps 61 footprints to KiCad standard STEP models (resistors, caps, ICs, con
 Run all 6 camera presets. Each takes ~5s (raytracing).
 
 ```bash
-OUT="website/static/img/renders"
+OUT="website/static/img/renders/pcba"
 PCB="/tmp/pcba-render.kicad_pcb"
 W=1920; H=1080
 
@@ -100,10 +100,10 @@ done
 ### 4. Verify Output
 
 ```bash
-ls -lh website/static/img/renders/pcba-*.png
+ls -lh website/static/img/renders/pcba/pcba-*.png
 echo "---"
 echo "Renders complete. Open in browser:"
-echo "  open website/static/img/renders/pcba-iso-front.png"
+echo "  open website/static/img/renders/pcba/pcba-iso-front.png"
 ```
 
 ### 5. Cleanup

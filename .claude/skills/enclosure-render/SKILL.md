@@ -49,7 +49,7 @@ This renders 7 views at 1920x1080 resolution to `website/static/img/renders/`.
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 
 docker compose run --rm openscad \
-    -o "/output/enclosure-front.png" \
+    -o "/output/enclosure/enclosure-front.png" \
     --imgsize "1920,1080" \
     --camera "0,0,12.5,25,0,340,500" \
     -D 'part="assembly"' \
@@ -77,7 +77,7 @@ Available individual parts: `case_top`, `case_bottom`, `part_display`, `part_dpa
 ## Post-render Verification
 
 ```bash
-ls -la website/static/img/renders/enclosure-*.png
+ls -la website/static/img/renders/enclosure/enclosure-*.png
 ```
 
 Expected 7 files: `enclosure-front.png`, `enclosure-back.png`, `enclosure-top.png`, `enclosure-exploded.png`, `enclosure-cross-section.png`, `enclosure-fit-check.png`, `enclosure-pcb.png`.

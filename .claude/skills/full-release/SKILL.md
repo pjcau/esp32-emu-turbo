@@ -192,7 +192,7 @@ ls release_jlcpcb/gerbers/ | wc -l
 echo "=== SVG Renders ==="
 ls website/static/img/pcb/*.svg 2>/dev/null | wc -l
 echo "=== PCBA Renders ==="
-ls website/static/img/renders/pcba-*.png 2>/dev/null | wc -l
+ls website/static/img/renders/pcba/pcba-*.png 2>/dev/null | wc -l
 ```
 
 ### Step 10: Git commit
@@ -240,6 +240,6 @@ After release is ready:
 - `release_jlcpcb/bom.csv` — Bill of Materials
 - `release_jlcpcb/cpl.csv` — Component Placement List
 - `website/static/img/pcb/` — SVG renders + animation
-- `website/static/img/renders/pcba-*.png` — 3D raytraced PCBA views
+- `website/static/img/renders/pcba/pcba-*.png` — 3D raytraced PCBA views
 - `scripts/verify_dfm_v2.py` — DFM verification (114 tests)
 - `scripts/verify_dfa.py` — DFA verification (9 tests)

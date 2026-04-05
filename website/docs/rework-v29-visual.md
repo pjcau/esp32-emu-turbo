@@ -32,7 +32,7 @@ Questi cortocircuiti impediscono l'accensione della board. **Lato FRONTE (F.Cu, 
 
 ### FIX 1 — VBUS → GND via
 
-![FIX 1](/img/renders/v29-fix1.png)
+![FIX 1](/img/renders/rework/v29-fix1.png)
 
 | | Dettaglio |
 |---|---|
@@ -46,7 +46,7 @@ Questi cortocircuiti impediscono l'accensione della board. **Lato FRONTE (F.Cu, 
 
 ### FIX 2 — VBUS → +5V via
 
-![FIX 2](/img/renders/v29-fix2.png)
+![FIX 2](/img/renders/rework/v29-fix2.png)
 
 | | Dettaglio |
 |---|---|
@@ -60,7 +60,7 @@ Questi cortocircuiti impediscono l'accensione della board. **Lato FRONTE (F.Cu, 
 
 ### FIX 3 — LCD_RST ponte VBUS↔GND
 
-![FIX 3](/img/renders/v29-fix3.png)
+![FIX 3](/img/renders/rework/v29-fix3.png)
 
 | | Dettaglio |
 |---|---|
@@ -80,7 +80,7 @@ Trace verticali B.Cu che attraversano sia una via +3V3 sia una via GND, creando 
 
 ### FIX 4 — USB_D- ponte +3V3↔GND
 
-![FIX 4](/img/renders/v29-fix4.png)
+![FIX 4](/img/renders/rework/v29-fix4.png)
 
 | | Dettaglio |
 |---|---|
@@ -94,7 +94,7 @@ Trace verticali B.Cu che attraversano sia una via +3V3 sia una via GND, creando 
 
 ### FIX 5 — BTN_UP ponte +3V3↔GND
 
-![FIX 5](/img/renders/v29-fix5.png)
+![FIX 5](/img/renders/rework/v29-fix5.png)
 
 | | Dettaglio |
 |---|---|
@@ -107,7 +107,7 @@ Trace verticali B.Cu che attraversano sia una via +3V3 sia una via GND, creando 
 
 ### FIX 6 — BTN_LEFT ponte +3V3↔GND
 
-![FIX 6](/img/renders/v29-fix6.png)
+![FIX 6](/img/renders/rework/v29-fix6.png)
 
 | | Dettaglio |
 |---|---|
@@ -120,7 +120,7 @@ Trace verticali B.Cu che attraversano sia una via +3V3 sia una via GND, creando 
 
 ### FIX 7 — BTN_A ponte +3V3↔GND
 
-![FIX 7](/img/renders/v29-fix7.png)
+![FIX 7](/img/renders/rework/v29-fix7.png)
 
 | | Dettaglio |
 |---|---|
@@ -133,7 +133,7 @@ Trace verticali B.Cu che attraversano sia una via +3V3 sia una via GND, creando 
 
 ### FIX 8 — BTN_L ponte +3V3↔GND
 
-![FIX 8](/img/renders/v29-fix8.png)
+![FIX 8](/img/renders/rework/v29-fix8.png)
 
 | | Dettaglio |
 |---|---|
@@ -153,7 +153,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 9 — BTN_Y → +3V3 (F.Cu)
 
-![FIX 9](/img/renders/v29-fix9.png)
+![FIX 9](/img/renders/rework/v29-fix9.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -161,7 +161,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 10 — USB_D+ → GND (F.Cu)
 
-![FIX 10](/img/renders/v29-fix10.png)
+![FIX 10](/img/renders/rework/v29-fix10.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -169,7 +169,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 11 — LCD_DC → GND (F.Cu)
 
-![FIX 11](/img/renders/v29-fix11.png)
+![FIX 11](/img/renders/rework/v29-fix11.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -177,8 +177,8 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 12-13 — BTN_DOWN → +3V3 (F.Cu, 2 punti)
 
-![FIX 12](/img/renders/v29-fix12.png)
-![FIX 13](/img/renders/v29-fix13.png)
+![FIX 12](/img/renders/rework/v29-fix12.png)
+![FIX 13](/img/renders/rework/v29-fix13.png)
 
 | # | Via | Gap | Fix |
 |---|-----|-----|-----|
@@ -187,7 +187,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 14, 16, 25 — LCD_D0/D5/D4 → GND (B.Cu, stessa via)
 
-![FIX 14](/img/renders/v29-fix14.png)
+![FIX 14](/img/renders/rework/v29-fix14.png)
 
 | # | Signal | Via | Gap |
 |---|--------|-----|-----|
@@ -199,7 +199,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 15 — SD_CS → GND (B.Cu)
 
-![FIX 15](/img/renders/v29-fix15.png)
+![FIX 15](/img/renders/rework/v29-fix15.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -207,7 +207,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 17 — BTN_B → GND (B.Cu)
 
-![FIX 17](/img/renders/v29-fix17.png)
+![FIX 17](/img/renders/rework/v29-fix17.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -215,7 +215,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 18 — BTN_A → GND (F.Cu)
 
-![FIX 18](/img/renders/v29-fix18.png)
+![FIX 18](/img/renders/rework/v29-fix18.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -223,7 +223,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 19 — LCD_D7 → GND (B.Cu)
 
-![FIX 19](/img/renders/v29-fix19.png)
+![FIX 19](/img/renders/rework/v29-fix19.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -231,10 +231,10 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 20-22, 24 — BTN_SELECT → +3V3 (F.Cu + B.Cu, 4 punti)
 
-![FIX 20](/img/renders/v29-fix20.png)
-![FIX 21](/img/renders/v29-fix21.png)
-![FIX 22](/img/renders/v29-fix22.png)
-![FIX 24](/img/renders/v29-fix24.png)
+![FIX 20](/img/renders/rework/v29-fix20.png)
+![FIX 21](/img/renders/rework/v29-fix21.png)
+![FIX 22](/img/renders/rework/v29-fix22.png)
+![FIX 24](/img/renders/rework/v29-fix24.png)
 
 | # | Layer | Via | Gap |
 |---|-------|-----|-----|
@@ -247,7 +247,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 23 — BTN_R → GND (F.Cu)
 
-![FIX 23](/img/renders/v29-fix23.png)
+![FIX 23](/img/renders/rework/v29-fix23.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -255,7 +255,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 26 — LCD_D6 → +3V3 (F.Cu)
 
-![FIX 26](/img/renders/v29-fix26.png)
+![FIX 26](/img/renders/rework/v29-fix26.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
@@ -263,7 +263,7 @@ Signal trace che tocca UNA sola via power. Non crea ponte power-power ma blocca 
 
 ### FIX 27 — LCD_D4 → VBUS (B.Cu)
 
-![FIX 27](/img/renders/v29-fix27.png)
+![FIX 27](/img/renders/rework/v29-fix27.png)
 
 | Trace | Via | Gap | Effetto | Fix |
 |-------|-----|-----|---------|-----|
