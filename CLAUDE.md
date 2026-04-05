@@ -59,7 +59,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ```
 team-lead (sonnet) ──── orchestrator, 0 skills
-  ├── pcb-engineer (opus) ───── 21 skills
+  ├── pcb-engineer (opus) ───── 22 skills
   ├── software-dev (opus) ───── 4 skills
   └── cad-engineer (haiku) ──── 3 skills
 
@@ -75,14 +75,14 @@ PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
 SW  ↔ CAD: website/docs/  (renders + documentation)
 ```
 
-### Skills Map (32 total)
+### Skills Map (33 total)
 
-#### PCB-Engineer — 23 skills
+#### PCB-Engineer — 24 skills
 
 | Category | Skills |
 |----------|--------|
 | **Pipeline (7)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/full-release` (all verifications + renders + JLCPCB package) · `/render` (SVG + animation) · `/pcba-render` (3D raytraced PCBA) · `/check` (DRC + 3D + gerbers) |
-| **Verification (7)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (6-domain scored) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) |
+| **Verification (8)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (6-domain scored) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) · `/jlcpcb-validate` (JLCPCB manufacturing rules) |
 | **Fix & Debug (4)** | `/dfm-fix` (fix DFM issues) · `/fix-rotation` (CPL rotation) · `/jlcpcb-check` (3D alignment) · `/jlcpcb-parts` (BOM + LCSC search) |
 | **MCP Design (5)** | `/pcb-schematic` (schematic ops) · `/pcb-components` (placement) · `/pcb-routing` (traces + vias) · `/pcb-library` (footprints) · `/pcb-board` (board setup) |
 
@@ -212,6 +212,7 @@ Config: `.claude/settings.json` (hooks section)
 | `make fast-check` | Full pipeline with local kicad-cli (~5s) |
 | `make verify-fast` | Quick DFM check only (43 tests, 1.4s) |
 | `make verify-dfa` | Quick DFA check (9 assembly tests) |
+| `make validate-jlcpcb` | JLCPCB manufacturing validation (drill, edge, copper, gerbers) |
 | `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |
 | `make release-prep` | Full pipeline: generate → gerbers → verify → render |
 | `make firmware-sync-check` | Verify GPIO sync, fail on mismatch |

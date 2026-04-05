@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -60,6 +60,9 @@ verify-fast: ## Quick DFM check only (1.4s)
 
 verify-dfa: ## Quick DFA check (assembly verification, 9 tests)
 	@$(T) verify-dfa python3 scripts/verify_dfa.py
+
+validate-jlcpcb: ## JLCPCB manufacturing validation (drill, edge, copper, gerbers)
+	@$(T) validate-jlcpcb python3 scripts/validate_jlcpcb.py
 
 firmware-sync-check: ## Verify GPIO sync between firmware and schematic (fail on mismatch)
 	@$(T) firmware-sync-check python3 scripts/verify_schematic_pcb.py

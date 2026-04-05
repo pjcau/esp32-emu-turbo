@@ -26,6 +26,7 @@ python3 scripts/pcb_review.py
 python3 scripts/verify_dfm_v2.py
 python3 scripts/verify_polarity.py
 python3 scripts/verify_dfa.py
+python3 scripts/validate_jlcpcb.py
 ```
 
 ### 2. Manual review against checklist
@@ -37,7 +38,7 @@ Read `review-checklist.md` and verify each domain:
 | 1 | Power Integrity (15) | Trace widths for current, decoupling caps near ICs, GND/power planes |
 | 2 | Signal Integrity (15) | Bus matching, USB diff pair, 3W rule, 45° traces, impedance |
 | 3 | Thermal (10) | Thermal vias, EP pad connections, copper area, IC spacing |
-| 4 | JLCPCB DFM (20) | Trace/pad/via spacing, mask bridge, copper-to-edge, fiducials |
+| 4 | JLCPCB DFM (20) | Trace/pad/via spacing, mask bridge, copper-to-edge, fiducials, `validate_jlcpcb.py` |
 | 5 | EMI/EMC (10) | GND plane continuity, return paths, decoupling strategy |
 | 6 | Component Polarity (15) | Pin-1 vs datasheet, LED polarity, CPL rotation, BOM-CPL match |
 | 7 | Mechanical (10) | Mounting holes, connector access, NPTH sizes, board outline |
@@ -90,6 +91,7 @@ After making changes:
 python3 -m scripts.generate_pcb hardware/kicad
 python3 scripts/verify_dfm_v2.py
 python3 scripts/verify_polarity.py
+python3 scripts/validate_jlcpcb.py
 ```
 
 ## Key Files
@@ -100,6 +102,7 @@ python3 scripts/verify_polarity.py
 - `scripts/verify_dfm_v2.py` — DFM verification (114 tests)
 - `scripts/verify_polarity.py` — Polarity/pin assignment tests
 - `scripts/verify_dfa.py` — Assembly verification (9 tests)
+- `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (22 tests)
 - `scripts/generate_pcb/routing.py` — Trace routing
 - `scripts/generate_pcb/board.py` — Component placement
 - `scripts/generate_pcb/jlcpcb_export.py` — CPL/BOM export

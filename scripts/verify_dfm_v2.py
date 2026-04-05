@@ -404,6 +404,101 @@ def _point_to_segment_dist(px, py, s):
     return ((px - cx) ** 2 + (py - cy) ** 2) ** 0.5
 
 
+def _segment_to_rect_gap(s, px, py, pw, ph):
+    """Minimum copper gap between a trace segment and an axis-aligned rectangular pad.
+
+    The trace has half-width s["w"]/2 and the pad is pw x ph centered at (px, py).
+    Returns the edge-to-edge gap (negative means overlap).
+
+    Uses segment-to-rectangle minimum distance: finds the closest point on the
+    segment to the rectangle, then subtracts half-trace-width.
+    """
+    import math
+    hw, hh = pw / 2.0, ph / 2.0
+    # Rectangle bounds
+    rx_min, rx_max = px - hw, px + hw
+    ry_min, ry_max = py - hh, py + hh
+
+    # Sample points along the segment and find minimum distance to rectangle
+    # For exact computation: clamp each segment point to the rectangle
+    ax, ay = s["x1"], s["y1"]
+    bx, by = s["x2"], s["y2"]
+
+    def _point_to_rect_dist(qx, qy):
+        """Distance from point to axis-aligned rectangle."""
+        # Clamp point to rectangle
+        cx = max(rx_min, min(rx_max, qx))
+        cy = max(ry_min, min(ry_max, qy))
+        return math.sqrt((qx - cx) ** 2 + (qy - cy) ** 2)
+
+    # Exact: check segment vs each of the 4 rectangle edges
+    # But for axis-aligned pads, a simpler approach:
+    # Find closest point on segment to the rectangle (analytical)
+
+    # Check all rectangle corners against segment
+    min_dist = float("inf")
+    for cx, cy in [(rx_min, ry_min), (rx_min, ry_max),
+                   (rx_max, ry_min), (rx_max, ry_max)]:
+        d = _point_to_segment_dist(cx, cy, s)
+        if d < min_dist:
+            min_dist = d
+
+    # Check segment endpoints against rectangle
+    for qx, qy in [(ax, ay), (bx, by)]:
+        d = _point_to_rect_dist(qx, qy)
+        if d < min_dist:
+            min_dist = d
+
+    # Check segment vs each rectangle edge (4 edges)
+    edges = [
+        (rx_min, ry_min, rx_max, ry_min),  # bottom
+        (rx_max, ry_min, rx_max, ry_max),  # right
+        (rx_max, ry_max, rx_min, ry_max),  # top
+        (rx_min, ry_max, rx_min, ry_min),  # left
+    ]
+    for ex1, ey1, ex2, ey2 in edges:
+        d = _seg_seg_dist(ax, ay, bx, by, ex1, ey1, ex2, ey2)
+        if d < min_dist:
+            min_dist = d
+
+    return min_dist - s["w"] / 2.0
+
+
+def _seg_seg_dist(ax, ay, bx, by, cx, cy, dx, dy):
+    """Minimum distance between two line segments AB and CD."""
+    import math
+
+    def _pt_seg(px, py, sx, sy, ex, ey):
+        vx, vy = ex - sx, ey - sy
+        ln2 = vx * vx + vy * vy
+        if ln2 < 1e-12:
+            return math.sqrt((px - sx) ** 2 + (py - sy) ** 2)
+        t = max(0.0, min(1.0, ((px - sx) * vx + (py - sy) * vy) / ln2))
+        qx, qy = sx + t * vx, sy + t * vy
+        return math.sqrt((px - qx) ** 2 + (py - qy) ** 2)
+
+    # Check if segments intersect
+    def _cross(ux, uy, vx, vy):
+        return ux * vy - uy * vx
+
+    rx, ry = bx - ax, by - ay
+    sx, sy = dx - cx, dy - cy
+    denom = _cross(rx, ry, sx, sy)
+    qpx, qpy = cx - ax, cy - ay
+    if abs(denom) > 1e-12:
+        t = _cross(qpx, qpy, sx, sy) / denom
+        u = _cross(qpx, qpy, rx, ry) / denom
+        if 0 <= t <= 1 and 0 <= u <= 1:
+            return 0.0  # segments intersect
+
+    # No intersection — minimum is endpoint-to-segment
+    d1 = _pt_seg(ax, ay, cx, cy, dx, dy)
+    d2 = _pt_seg(bx, by, cx, cy, dx, dy)
+    d3 = _pt_seg(cx, cy, ax, ay, bx, by)
+    d4 = _pt_seg(dx, dy, ax, ay, bx, by)
+    return min(d1, d2, d3, d4)
+
+
 def test_trace_spacing():
     """Test 16: Trace spacing regression guard — no new parallel trace violations.
 
@@ -439,9 +534,9 @@ def test_trace_spacing():
                         f"({s2['x1']},{s2['y1']})-({s2['x2']},{s2['y2']})"
                     )
 
-    # Baseline: 12 violations from dense areas (USB-C, pull-ups, ESP32 fan-out)
-    # Reduced from 27 → 12 after layer-swap routing fixes (Cat 1-5)
-    BASELINE = 12
+    # Baseline reduced to 0: all trace-trace spacing violations resolved.
+    # History: 27 → 12 (layer-swap) → 0 (routing cleanup)
+    BASELINE = 0
     check(f"Trace spacing violations <= baseline {BASELINE} ({len(violations)} found)",
           len(violations) <= BASELINE,
           f"{len(violations)} violations (baseline {BASELINE}): {violations[:3]}")
@@ -1440,15 +1535,10 @@ def test_drill_trace_clearance():
                         f"gap={gap:.3f}mm"
                     )
 
-    # Baseline: 41 violations from dense areas (GND vias near signal traces,
-    # display bus vias on SPI traces). Reduced from 45 → 41 after layer-swap
-    # routing fixes (Cat 1-5). Guards against regressions.
-    # → 43 (JLCPCB footprint alignment: pad position shifts)
-    # → 50 (BTN_R rerouted GPIO19→GPIO43; FPC GND vias 0.15→0.20mm drill;
-    #        _PIN_TO_GPIO fix for pins 36-39: BTN_RIGHT/BTN_A paths changed)
-    # → 51 (NPTH holes enlarged: TF-01A ø0.5→ø1.0, MSK12C02 ø0.45→ø0.9,
-    #        USB-C ø0.35→ø0.65 — per manufacturer datasheets)
-    BASELINE = 51
+    # Baseline reduced to 0: same-net filtering already present, all real
+    # drill-to-trace violations resolved in routing.
+    # History: 45 → 41 → 43 → 50 → 51 → 0 (routing cleanup)
+    BASELINE = 0
     check(
         f"Drill-to-trace violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(unique_drills)} holes × {len(segs)} segs)",
@@ -1490,10 +1580,8 @@ def test_trace_pad_different_net_clearance():
                 continue
             if s["net"] == p["net"]:
                 continue
-            # Conservative pad radius = half-diagonal of bounding box
-            pad_r = ((p["w"] / 2) ** 2 + (p["h"] / 2) ** 2) ** 0.5
-            dist = _point_to_segment_dist(p["x"], p["y"], s)
-            gap = dist - pad_r - s["w"] / 2.0
+            # Use precise rectangular pad geometry instead of half-diagonal
+            gap = _segment_to_rect_gap(s, p["x"], p["y"], p["w"], p["h"])
             if gap < MIN_CLR:
                 violations.append(
                     f"seg net={s['net']} {s['layer']} "
@@ -1502,25 +1590,11 @@ def test_trace_pad_different_net_clearance():
                     f"@({p['x']},{p['y']}) gap={gap:.3f}mm"
                 )
 
-    # Baseline: 78 violations from dense areas (ESOP-8 exposed pad,
-    # FPC pin proximity, speaker/battery traces near IC pads).
-    # Guards against regressions — count must not increase.
-    # Reduced 140 → 106 (SPK+/+5V fixes) → 78 (layer-swap Cat 1-5 fixes)
-    # → 79 (+3V3 pin 39 L-shape escape added 1 trace-pad proximity)
-    # → 80 (VBUS B.Cu vertical at x=82 extended to y=61 passes CC1 pad at x=81.25)
-    # → 81 (MH@(105,37.5) B.Cu detour segment proximity to nearby pad)
-    # → 82 (MH detour crossing fix: wider detour columns shift trace endpoints)
-    # → 83 (net10 wide bypass detour: B.Cu path x=[100,111.5] y=32.3 near VBUS area)
-    # → 87 (FPC pin 5 GND via moved up 0.5mm: new B.Cu stub + pad net reassignment
-    #        exposes 4 pre-existing VBUS/BAT+ proximity conditions)
-    # → 103 (JLCPCB footprint alignment: J1/J4/U6/SW_PWR pad positions shifted to
-    #         match EasyEDA library; conservative half-diagonal metric reports new
-    #         proximity from shifted pads — no real copper overlap)
-    # → 127 (FPC pin reversal fix: display pin N → connector pad 41-N. Approach
-    #         columns idx=3,4,5 now extend further south (fpy increased), crossing
-    #         more J4 pads. Structural: B.Cu approach columns at x=133.10/133.80
-    #         pass through 1.5mm-wide FPC pads centered at x=133.71)
-    BASELINE = 127
+    # Metric upgraded from half-diagonal circle to exact rectangle distance.
+    # History: 140 → 127 (half-diag) → reduced with rectangle metric.
+    # Remaining violations are structural: FPC approach columns through J4 pads,
+    # traces running between dense IC pins.
+    BASELINE = 0
     check(
         f"Trace-to-pad violations <= baseline {BASELINE} "
         f"({len(violations)} found, {len(segs)} segs × {len(pads)} pads)",
