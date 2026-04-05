@@ -146,6 +146,10 @@ def esop8(layer="B"):
     # EP edges at y=±1.4mm; corner pin edges at y=±1.605mm; gap=0.205mm > 0.10mm
     pads.append(_pad("EP", "smd", "rect", 0, 0, 3.4, 2.8, layers))
 
+    # Pin-1 marker on Fab layer (matches SOP-16 convention)
+    fab = "B.Fab" if layer == "B" else "F.Fab"
+    pads.append(_fp_circle(-2.5, -2.2, 0.3, fab))
+
     return pads
 
 

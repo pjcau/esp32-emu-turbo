@@ -4,10 +4,11 @@ All traces use only horizontal and vertical segments (L-shaped or
 Z-shaped paths).  No diagonal lines.
 
 Trace widths:
-  - Power:  0.5mm (VBUS, +5V, +3V3, BAT+, GND returns)
-  - Signal: 0.25mm (buttons, passives)
-  - Data:   0.2mm  (display bus, SPI, I2S, USB)
-  - Audio:  0.3mm  (PAM8403 -> speaker)
+  - Power high: 0.76mm (VBUS, BAT+, LX — up to 2.1A)
+  - Power:      0.60mm (+5V, +3V3, GND returns)
+  - Audio:      0.30mm (PAM8403 -> speaker)
+  - Signal:     0.25mm (buttons, passives)
+  - Data:       0.20mm (display bus, SPI, I2S, USB)
 
 Layout notes:
   - FPC slot at enc(47, 2) creates a 3x24mm vertical cutout
@@ -1014,14 +1015,18 @@ def _power_traces():
     # DFM FIX: was -1.0 (x=106). LX vert at x=106 crossed BAT+ horiz at y=43.13
     # (107→105.5). Also KEY horiz at y=44.41 spans x=107..114.05; x=106 is inside.
     # Fix: lx_col_x = ip_sw[0] - 2.0 = 105 (left of both BAT+ end 105.5 and KEY 107).
-    # DFM: BTN_MENU B.Cu vert at x=103.95 (w=0.25). With W_PWR=0.6 at x=104.5:
-    # gap=|104.5-103.95|-0.3-0.125=0.125mm < 0.15mm. Use 0.4mm for LX vert
-    # to get gap=0.55-0.2-0.125=0.205mm ✓. Short segment, inductor pads carry current.
-    lx_col_x = ip_sw[0] - 2.5   # x=104.5
+    # DFM: BTN_MENU B.Cu vert at x=104.0 (w=0.25), BAT+ vert at x=105.5 (w=0.76).
+    # BAT+ via at (105.5,46.1) sz=0.9 → left edge 105.05.
+    # LX at x=104.55, w=0.55: right edge=104.825
+    #   BTN_MENU gap: |104.55-104.0|-0.275-0.125 = 0.15mm ✓
+    #   BAT+ vert gap: 105.12-104.825 = 0.295mm ≥ 0.25mm ✓
+    #   BAT+ via gap: 105.05-104.825 = 0.225mm ≥ 0.10mm ✓
+    # At 0.55mm / 1oz Cu: ~1.3A capacity (10°C rise), adequate for pulsed LX.
+    lx_col_x = ip_sw[0] - 2.45   # x=104.55
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, l1_2[1],
-                       "B.Cu", 0.4, n_lx))  # narrowed for BTN_MENU clearance
+                       "B.Cu", 0.55, n_lx))  # was 0.4mm, widened for LX current
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
 
