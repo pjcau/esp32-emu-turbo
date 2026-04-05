@@ -241,19 +241,24 @@ def usb_c_16p(layer="B"):
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.15, 1.1, layers,
                          solder_mask_margin=0))
 
-    # Shield pads (pins 13-14) — SMD to avoid THT-to-SMD violations.
-    # Front: 1.1mm width for 0.25mm gap to signal pads 1/12.
-    pads.append(_pad("13", "smd", "oval", -4.325, -1.825, 1.1, 2.0, layers,
-                     solder_mask_margin=0))
-    pads.append(_pad("14", "smd", "oval", 4.325, -1.825, 1.1, 2.0, layers,
-                     solder_mask_margin=0))
-    # Rear: 1.4 x 1.8mm (no signal pads nearby)
+    # Shield pads (pins 13-14) — Front THT for mechanical strength (handheld).
+    # JLCPCB component model (C2765186) expects THT shield tabs; SMD caused
+    # "Missing hole for component pin" DFM errors.
+    # Front tabs: THT with drill 0.6mm, pad 1.1x2.0mm,
+    #   annular ring (1.1-0.6)/2 = 0.25mm ✓. Gap to signal pad 1/12: 0.40mm ✓.
+    #   PCB y≈69.375 — gap to BTN_X F.Cu ch6 at y=70.65: 0.70mm ✓.
+    # Rear tabs: SMD — BTN_START F.Cu trace at y=73.955 is 0.38mm from
+    #   rear pad top (y=73.575), too close for any THT drill. Rear pads
+    #   provide supplementary hold; front THT tabs carry mechanical load.
+    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.0, THT,
+                     drill=0.6, solder_mask_margin=0))
+    pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.1, 2.0, THT,
+                     drill=0.6, solder_mask_margin=0))
+    # Rear: keep SMD to avoid F.Cu BTN_START trace conflict.
     pads.append(_pad("13b", "smd", "oval", -4.325, 2.375, 1.4, 1.8, layers,
                      solder_mask_margin=0))
     pads.append(_pad("14b", "smd", "oval", 4.325, 2.375, 1.4, 1.8, layers,
                      solder_mask_margin=0))
-    # No NPTH anchors — SMD shield pads provide sufficient mechanical hold.
-    # Removed to avoid JLCPCB THT-to-SMD false positives in DFM.
 
     # NPTH positioning holes (no pad, no net)
     # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm

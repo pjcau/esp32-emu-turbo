@@ -1564,17 +1564,19 @@ def _display_traces():
     pos16 = _fpc_display_pin(16)
     if pos16:
         px, py = pos16[0], pos16[1]
-        # Pin 16 at y=37.75: inside approach zone. Via at pad x=133.71 would
-        # collide with LCD_RST approach column at x=133.80 (gap=-0.112mm).
-        # Offset via to VIA_X_PWR=133.45 with short B.Cu stub.
-        # Gap to col3 (133.10): 0.35-0.10-0.10=0.15mm OK.
-        # Gap to col4 (133.80): 0.35-0.10-0.10=0.15mm OK.
-        # DFM FIX (KiBot external): via at (133.60, 37.75) gap=0.195mm to J4:24
-        # (LCD_D0) at y=37.25. Gap is 5µm under 0.20mm — marginal violation
-        # that JLCPCB accepts (their min is 0.09mm). Keep as-is.
-        parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", W_FPC_PWR, n_gnd))
-        parts.append(_via_net(VIA_X_PWR, py, n_gnd,
-                              size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
+        # Pin 16 (GND) at y=37.75: between LCD_D0 (y=37.25) and LCD_RST (y=38.25).
+        # JLCPCB DFM FIX: old via at (133.60, 37.75) was inside FPC connector body,
+        # causing "Lead to hole distance = 0mm" (14 Danger) — component leads touch
+        # the via hole, risking solder wicking shorts to LCD_D0/LCD_RST.
+        # FIX: route B.Cu stub LEFT to x=131.0 (outside FPC body edge ~132.4).
+        # Via at (131.0, 37.75) connects to In1.Cu GND plane.
+        # B.Cu trace at y=37.75 runs parallel to LCD_D0 (y=37.25) and LCD_RST
+        # (y=38.25) approach traces. Edge gap: 0.50-0.125-0.10 = 0.275mm ✓
+        # Area at x=131, y=37.75 verified clear (no segments, vias, or pads).
+        via_x_pin16 = 131.00
+        parts.append(_seg(px, py, via_x_pin16, py, "B.Cu", W_FPC_PWR, n_gnd))
+        parts.append(_via_net(via_x_pin16, py, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── +3V3 pins at TOP (38, 39): now y=26.25-26.75, inside approach column zone ──
     # Same constraint as GND top pins. Offset via to VIA_X_PWR.
