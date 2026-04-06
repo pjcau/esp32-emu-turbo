@@ -361,7 +361,7 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (122.0, 48.5)   # AMS1117 input cap — DFM: was 124.0 (pad/via too close to FPC slot)
+C1_POS = (121.5, 50.0)   # AMS1117 input cap — moved closer to U3 (7.9mm vs 9.1mm). Was (122,48.5)
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
@@ -1495,8 +1495,8 @@ def _display_traces():
         if pos:
             px, py = pos[0], pos[1]
             via_y = py - 0.25  # y=25.50 — clear of FPC mounting pad 42
-            parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", W_DATA, n_gnd))
-            parts.append(_seg(VIA_X_PWR, py, VIA_X_PWR, via_y, "B.Cu", W_DATA, n_gnd))
+            parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", W_SIG, n_gnd))
+            parts.append(_seg(VIA_X_PWR, py, VIA_X_PWR, via_y, "B.Cu", W_SIG, n_gnd))
             parts.append(_via_net(VIA_X_PWR, via_y, n_gnd,
                                   size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
 
@@ -2187,7 +2187,7 @@ def _pam_passive_traces():
         _gnd_vx = r20_p1[0] - 0.10
         parts.append(_seg(r20_p1[0], r20_p1[1],
                           _gnd_vx, r20_p1[1] - 1.5,
-                          "B.Cu", W_DATA, n_gnd))
+                          "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(_gnd_vx, r20_p1[1] - 1.5,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
@@ -2211,7 +2211,7 @@ def _pam_passive_traces():
         _gnd_vx = r21_p1[0] - 0.10
         parts.append(_seg(r21_p1[0], r21_p1[1],
                           _gnd_vx, r21_p1[1] + 1.5,
-                          "B.Cu", W_DATA, n_gnd))
+                          "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(_gnd_vx, r21_p1[1] + 1.5,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
@@ -2248,7 +2248,7 @@ def _pam_passive_traces():
         _gnd_vx = c21_p1[0] - 0.10
         parts.append(_seg(c21_p1[0], c21_p1[1],
                           _gnd_vx, c21_p1[1] + 1.0,
-                          "B.Cu", W_DATA, n_gnd))
+                          "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(_gnd_vx, c21_p1[1] + 1.0,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 

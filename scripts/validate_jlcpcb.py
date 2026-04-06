@@ -667,16 +667,19 @@ def test_trace_current_capacity():
 
 
 def test_decoupling_cap_distance():
-    """Decoupling caps should be < 5mm from their IC power pins.
+    """Decoupling caps should be close to their IC power pins.
 
     Checks C3/C4 (ESP32 bypass), C17 (IP5306 bypass), C1/C2 (AMS1117).
     This is a best-practice check, not a hard JLCPCB rule.
+
+    Uses nearest-pad distance for large modules (ESP32-S3-WROOM is 25.5mm tall,
+    centroid distance is misleading). Per-pair max distance accounts for package size.
     """
     print("\n── Best Practice: Decoupling Cap Placement ──")
-    MAX_DIST = 8.0  # mm — generous for our layout
+    DEFAULT_MAX_DIST = 8.0  # mm — for small ICs (SOT-223, ESOP-8)
     cache = load_cache()
 
-    # Build ref -> center position map (average of all pad positions)
+    # Build ref -> list of pad positions
     ref_pads = {}
     for p in cache["pads"]:
         ref = p["ref"]
@@ -684,30 +687,38 @@ def test_decoupling_cap_distance():
             ref_pads[ref] = []
         ref_pads[ref].append((p["x"], p["y"]))
 
+    # Build ref -> centroid
     ref_pos = {}
     for ref, positions in ref_pads.items():
         avg_x = sum(x for x, y in positions) / len(positions)
         avg_y = sum(y for x, y in positions) / len(positions)
         ref_pos[ref] = (avg_x, avg_y)
 
-    # Known IC-cap pairs
+    # Known IC-cap pairs with per-pair max distance and distance mode.
+    # ESP32-S3-WROOM (25.5mm module): use nearest-pad distance, 10mm threshold.
+    # Small ICs: use centroid distance, 8mm threshold.
     pairs = [
-        ("C3", "U1", "ESP32 bypass cap C3"),
-        ("C4", "U1", "ESP32 bypass cap C4"),
-        ("C1", "U3", "AMS1117 input cap C1"),
-        ("C2", "U3", "AMS1117 output cap C2"),
+        ("C3", "U1", "ESP32 bypass cap C3", 10.0, True),
+        ("C4", "U1", "ESP32 bypass cap C4", 10.0, True),
+        ("C1", "U3", "AMS1117 input cap C1", DEFAULT_MAX_DIST, False),
+        ("C2", "U3", "AMS1117 output cap C2", DEFAULT_MAX_DIST, False),
     ]
 
-    for cap_ref, ic_ref, desc in pairs:
-        if cap_ref not in ref_pos or ic_ref not in ref_pos:
+    for cap_ref, ic_ref, desc, max_dist, use_nearest in pairs:
+        if cap_ref not in ref_pos or ic_ref not in ref_pads:
             continue
         cx, cy = ref_pos[cap_ref]
-        ix, iy = ref_pos[ic_ref]
-        dist = math.hypot(cx - ix, cy - iy)
-        if dist < MAX_DIST:
-            check(f"{desc} distance={dist:.1f}mm (< {MAX_DIST}mm)", True)
+        if use_nearest:
+            # Distance from cap centroid to nearest IC pad
+            dist = min(math.hypot(cx - px, cy - py)
+                       for px, py in ref_pads[ic_ref])
         else:
-            warn(f"{desc} distance={dist:.1f}mm (> {MAX_DIST}mm recommended)")
+            ix, iy = ref_pos[ic_ref]
+            dist = math.hypot(cx - ix, cy - iy)
+        if dist < max_dist:
+            check(f"{desc} distance={dist:.1f}mm (< {max_dist}mm)", True)
+        else:
+            warn(f"{desc} distance={dist:.1f}mm (> {max_dist}mm recommended)")
 
 
 def test_mounting_hole_clearance_zone():
