@@ -153,7 +153,19 @@
 | Component courtyard | -1 | No overlapping courtyards (min 0.25mm gap) |
 | Passives match datasheet | -1 | All cap/resistor values match schematic |
 
-## 7. Mechanical (10 points)
+## 7. Datasheet Physical Compliance (automated via `verify_datasheet.py`)
+
+| Check | Points | Criteria |
+|-------|--------|----------|
+| Pin count per IC | -2 per IC | Every IC/connector pad count must match datasheet |
+| Pad pitch | -2 per comp | Measured pitch within ±0.35mm of datasheet |
+| Pad span / body size | -3 per IC | Cross-body pad span matches package (e.g. SOP-16 narrow 3.9mm, not SOIC-16W 7.5mm) |
+| NPTH count | -2 per comp | Positioning hole count matches datasheet |
+| NPTH drill size | -2 per comp | NPTH drill diameter matches datasheet (±0.05mm) |
+| THT drill size | -1 per comp | Through-hole drill matches datasheet (±0.1mm) |
+| Datasheet files | -1 | All component datasheets present in `hardware/datasheets/` |
+
+## 8. Mechanical (10 points)
 
 | Check | Points | Criteria |
 |-------|--------|----------|

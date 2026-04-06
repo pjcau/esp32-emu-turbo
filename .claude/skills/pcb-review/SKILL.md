@@ -44,7 +44,21 @@ Read `review-checklist.md` and verify each domain:
 | 7 | Mechanical (10) | Mounting holes, connector access, NPTH sizes, board outline |
 | 8 | Documentation (5) | LCSC parts, gerbers, silkscreen, assembly variants |
 
-### 3. Datasheet verification (Domain 6)
+### 3. Datasheet physical verification
+
+```bash
+python3 scripts/verify_datasheet.py
+```
+
+Automated cross-check of PCB vs datasheets (29 tests):
+- Pin count per component (ICs, connectors, passives, switches)
+- Pad pitch matches datasheet (0.5mm FPC, 1.27mm SOIC, 2.0mm JST, etc.)
+- Pad span / body dimensions (catches wrong package, e.g. SOP-16 vs SOIC-16W)
+- NPTH positioning hole count and drill size
+- THT drill sizes (JST, USB shield tabs)
+- Datasheet PDF presence in `hardware/datasheets/`
+
+### 3b. Manual datasheet verification (Domain 6)
 
 For each IC/connector, read the datasheet from `hardware/datasheets/` and verify:
 - Pin 1 location matches footprint orientation
@@ -102,6 +116,7 @@ python3 scripts/validate_jlcpcb.py
 - `scripts/verify_dfm_v2.py` — DFM verification (114 tests)
 - `scripts/verify_polarity.py` — Polarity/pin assignment tests
 - `scripts/verify_dfa.py` — Assembly verification (9 tests)
+- `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
 - `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (22 tests)
 - `scripts/generate_pcb/routing.py` — Trace routing
 - `scripts/generate_pcb/board.py` — Component placement

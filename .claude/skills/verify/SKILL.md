@@ -48,6 +48,20 @@ Tests include:
 - CPL file presence and component positions
 - Polarity-sensitive component verification
 
+### 1c. Datasheet Physical Verification (29 tests)
+
+```bash
+python3 scripts/verify_datasheet.py
+```
+
+Cross-checks PCB component physical characteristics against datasheets:
+- Pin count per component (ICs, connectors, passives, switches)
+- Pad pitch (0.5mm, 1.27mm, 2.0mm etc.)
+- Pad span / body dimensions (catches wrong package variants)
+- NPTH positioning hole count and drill size
+- THT drill sizes
+- Datasheet PDF presence
+
 ### 2. Design Rule Check (JLCPCB rules)
 
 ```bash
@@ -88,6 +102,7 @@ After running all tests, summarize results in a table:
 |-------|-------|------|------|--------|
 | DFM v2 | 64 | ? | ? | PASS/FAIL |
 | DFA | 9 | ? | ? | PASS/FAIL |
+| Datasheet | 29 | ? | ? | PASS/FAIL |
 | DRC | ? | ? | ? | PASS/FAIL |
 | Connectivity | ? | ? | ? | PASS/FAIL |
 | Schematic sync | ? | ? | ? | PASS/FAIL |
@@ -98,6 +113,7 @@ Report any failures with details and suggested fixes.
 
 - `scripts/verify_dfm_v2.py` — DFM verification (64 tests, includes JLCPCB alignment)
 - `scripts/verify_dfa.py` — DFA verification (9 tests)
+- `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
 - `scripts/drc_check.py` — Design rule check
 - `scripts/test_pcb_connectivity.py` — Connectivity test
 - `scripts/verify_schematic_pcb.py` — Schematic/PCB sync
