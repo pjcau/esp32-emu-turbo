@@ -346,23 +346,20 @@ def tf01a(layer="B"):
     return pads
 
 
-# ── JST PH 2-pin (through-hole, C173752) ────────────────────────
-# Standard JST PH pin diameter: 0.64mm → hole = 0.85mm (0.21mm clearance)
-# JLCPCB DFM requires ≥0.80mm for standard JST PH press-fit
-# NOTE: THT is correct — inner layer zone shorts are prevented by zone
-# keepouts around THT pads (automatic in KiCad zone fill).
+# ── JST PH 2-pin SMD (C265082) ──────────────────────────────────
+# SMD version avoids inner layer shorts (BAT+ vs GND/+3V3 zones).
+# DO NOT change to THT without updating: BOM, CPL, inject-3d-models,
+# verify_datasheet, board.py, collision.py, docs, and rendering.
 def jst_ph_2p(layer="B"):
-    """JST PH 2-pin THT (S2B-PH-K-S, LCSC C173752).
+    """JST PH 2-pin SMD (S2B-PH-SM4-TB, LCSC C265082).
 
-    Through-hole version — connector body on B.Cu (bottom side).
-    Pins go through board, soldered on F.Cu.
-    Pins: ø0.64mm, drill 0.85mm, pad 1.6mm round, pitch 2.0mm.
+    SMD version — pads on B.Cu only, no through-hole.
+    Signal pads: 1.0×2.5mm, pitch 2.0mm.
     """
+    layers = SMD_B if layer == "B" else SMD_F
     return [
-        _pad("1", "thru_hole", "circle", -1.0, 0, 1.6, 1.6,
-             THT, drill=0.85),
-        _pad("2", "thru_hole", "circle", 1.0, 0, 1.6, 1.6,
-             THT, drill=0.85),
+        _pad("1", "smd", "rect", -1.0, 0, 1.0, 2.5, layers),
+        _pad("2", "smd", "rect", 1.0, 0, 1.0, 2.5, layers),
     ]
 
 
