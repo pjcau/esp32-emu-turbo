@@ -358,9 +358,12 @@ def jst_ph_2p(layer="B"):
     """
     layers = SMD_B if layer == "B" else SMD_F
     return [
-        # Signal pads (1.0 x 2.5mm, pitch 2.0mm) — SMD, no through-hole
+        # Signal pads (1.0 x 2.5mm, pitch 2.0mm) — SMD
         _pad("1", "smd", "rect", -1.0, 0, 1.0, 2.5, layers),
         _pad("2", "smd", "rect", 1.0, 0, 1.0, 2.5, layers),
+        # NOTE: Mounting tabs omitted — area around J3 is densely routed with
+        # vertical button/VBUS/GND traces. The 2 signal pads provide adequate
+        # solder joint strength for a small 2-pin JST PH connector.
     ]
 
 

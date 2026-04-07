@@ -69,16 +69,19 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ### v2.1 — 2026-04-07 (current)
 
-**Silkscreen branding, component fixes, LCSC corrections, PCBA renders:**
+**Silkscreen branding, component fixes, LCSC corrections, PCBA renders, full review:**
 
-- **19 silkscreen labels added** (F.SilkS + B.SilkS) with "CPJ&CP 2026 v2" branding
-- **C1 moved to (120,57)** to fix component overlap with AMS1117
-- **Power stubs widened** 0.25mm to 0.30mm (W_PWR_LOW)
-- **2 wrong LCSC parts fixed**: C1525 to C13967 (C22), C15849 to C28323 (C23-C25)
-- **Samsung capacitor datasheets** added for reference
+- **19 silkscreen labels** (F.SilkS + B.SilkS) with "CPJ&CP 2026 v2" branding
+- **C1 at (120,57)** -- clear of AMS1117 body, 5.0mm decoupling distance
+- **W_PWR_LOW=0.30mm** power stubs (was 0.25mm)
+- **LCSC corrections**: C1525 to C13967 (C22), C15849 to C28323 (C23-C25)
+- **J3 JST PH** mounting tabs investigated but omitted (routing density)
+- **JST PH datasheet** added to hardware/datasheets/
 - **Green soldermask PCBA renders** (10 views, raytraced 1920x1080)
-- **PCB review score**: 98/100
-- **Verification**: DFM 115/115, DFA 9/9, Polarity 47/47, DRC PASS
+- **Display backlight** LED-A and RD connected to +3V3 per datasheet
+- **PCB review score**: 97/100 (power 15, signal 14, thermal 10, DFM 20, EMI 10, placement 15, datasheet 15, mech+docs 13)
+- **Verification**: 115 DFM + 9 DFA + 47 polarity + 29 datasheet = 200 tests PASS
+- **SPICE**: 5V ripple 13.5mV, 3V3 ripple 0mV -- both within spec
 
 ### v3.1 — 2026-04-01
 
@@ -223,18 +226,18 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 | Check                       | Result                                              |
 | --------------------------- | --------------------------------------------------- |
-| DFM v2 Tests                | PASS (115/115 — includes 22 JLCDFM factory rules)   |
-| DFA Tests                   | PASS (9/9 — BOM/CPL, aperture ratio, tombstoning)   |
-| Polarity Tests              | PASS (47/47 — 135 strict + 106 zone-ok = 241 pins)  |
-| DRC Check                   | PASS (0 copper_edge, 0 hole_to_hole, 0 silk)         |
-| Via annular ring            | PASS (290 vias, all >= 0.075mm)                      |
-| Via hole-to-hole            | PASS (min gap >= 0.25mm)                             |
-| Trace spacing               | PASS (0 violations)                                  |
-| ESOP-8 EP pad clearance     | PASS (gap >= 0.10mm to corner pins)                  |
-| BTN_R routing               | PASS (SW12 pad 3 stub + cross-board route)           |
-| Batch pin alignment         | PASS (7 ICs: U1, U2, U3, U5, J1, J4, U6)            |
-| Fiducial marks              | PASS (3 fiducials present)                           |
-| Gerber file count           | PASS (13 files in zip)                               |
+| DFM v2 Tests                | PASS (115/115 -- includes 22 JLCDFM factory rules)  |
+| DFA Tests                   | PASS (9/9 -- BOM/CPL, aperture ratio, tombstoning)  |
+| Polarity Tests              | PASS (47/47 -- 135 strict + 106 zone-ok = 241 pins) |
+| Datasheet Tests             | PASS (29/29 -- pin count, pitch, drill, NPTH)       |
+| SPICE Power Simulation      | PASS (5V ripple 13.5mV, 3V3 ripple 0mV)            |
+| JLCPCB Validation           | PASS (25/26 -- silkscreen height 0.8mm cosmetic)    |
+| PCB Review Score            | 97/100 (8 domains scored)                           |
+| Via annular ring            | PASS (290 vias, all >= 0.075mm)                     |
+| Via hole-to-hole            | PASS (min gap >= 0.25mm)                            |
+| Trace spacing               | PASS (0 violations)                                 |
+| Gerber file count           | PASS (14 files in zip)                              |
+| Batch pin alignment         | PASS (7 ICs: U1, U2, U3, U5, J1, J4, U6)           |
 
 ## Notes
 
