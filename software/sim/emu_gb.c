@@ -62,6 +62,7 @@ static int gb_init(const uint8_t *rom, size_t size, const rom_info_t *info) {
     }
 
     gnuboy_set_framebuffer(g_gb_fb);
+    gnuboy_set_soundbuffer(g_audio_buf, sizeof(g_audio_buf));
 
     if (gnuboy_load_rom((const void *)rom, size) != 0) {
         printf("[GB] ERROR: ROM loading failed\n");

@@ -100,11 +100,11 @@ static int test_core(const char *rom_dir, const test_case_t *tc) {
         return 1;
     }
 
-    /* Run 60 frames */
+    /* Run 180 frames (~3 seconds — enough for boot screens to produce audio) */
     int video_ok = 0, audio_ok = 0;
     int16_t audio_buf[2048];
 
-    for (int frame = 0; frame < 60; frame++) {
+    for (int frame = 0; frame < 180; frame++) {
         core->set_input(0);  /* no buttons */
         if (core->run_frame() != 0) {
             printf("  FAIL: run_frame crashed at frame %d\n", frame);
@@ -131,11 +131,11 @@ static int test_core(const char *rom_dir, const test_case_t *tc) {
     }
 
     /* Display result */
-    printf("  Frames:   60/60 OK\n");
+    printf("  Frames:   180/180 OK\n");
     printf("  Video:    %s (non-zero pixels in framebuffer)\n", video_ok ? "PASS" : "FAIL");
-    printf("  Audio:    %s (non-zero samples generated)\n", audio_ok ? "PASS" : "WARN (silent)");
+    printf("  Audio:    %s (non-zero samples in 180 frames)\n", audio_ok ? "PASS" : "WARN (ROM may be silent during boot)");
 
-    int pass = video_ok;  /* audio can be silent on some ROMs */
+    int pass = video_ok;  /* video is mandatory, audio depends on ROM content */
 
     core->shutdown();
     signal(SIGABRT, SIG_DFL);
