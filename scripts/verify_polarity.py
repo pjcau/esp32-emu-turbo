@@ -781,6 +781,64 @@ class PolarityVerificationTest(unittest.TestCase):
             f"J4 signal-to-slot gap ({avg_sig - slot_right:.1f}mm) too large"
         )
 
+    # ── Datasheet mandatory connection rules ──
+
+    def test_display_backlight_connected(self):
+        """Display LED-A (pin 33, pad 8) must be connected to +3V3.
+
+        ILI9488 datasheet: LED-A = backlight anode (2.9-3.3V).
+        Without this, the display backlight is off and screen is black.
+        """
+        self._check_strict("J4", "8", "+3V3")
+
+    def test_display_rd_tied_high(self):
+        """Display RD (pin 12, pad 29) must be tied HIGH (+3V3).
+
+        ILI9488 8080 write-only mode: RD must not float.
+        """
+        self._check_strict("J4", "29", "+3V3")
+
+    def test_pam8403_shdn_not_floating(self):
+        """PAM8403 /SHDN (pin 12) must be tied HIGH (+5V).
+
+        Datasheet: active-low shutdown, no internal pull-up.
+        Floating = undefined state, amp may be in shutdown.
+        """
+        self._check_strict("U5", "12", "+5V")
+
+    def test_pam8403_mute_not_floating(self):
+        """PAM8403 /MUTE (pin 5) must be tied HIGH (+5V).
+
+        Datasheet: active-low mute, no internal pull-up.
+        Floating = undefined state, may produce noise.
+        """
+        self._check_strict("U5", "5", "+5V")
+
+    def test_display_mode_select_pins(self):
+        """Display IM0/IM1/IM2 must be correctly tied for 8080 8-bit parallel.
+
+        IM2=0(GND), IM1=1(+3V3), IM0=1(+3V3) per ILI9488 datasheet.
+        """
+        self._check_zone_ok("J4", "1", "GND")     # pad 1 = display pin 40 = IM2
+        self._check_zone_ok("J4", "2", "+3V3")     # pad 2 = display pin 39 = IM1
+        self._check_zone_ok("J4", "3", "+3V3")     # pad 3 = display pin 38 = IM0
+
+    def test_display_backlight_cathodes(self):
+        """Display LED-K (pins 34-36, pads 5-7) must be connected to GND.
+
+        ILI9488 datasheet: 3 cathode pins for 8-chip white LED backlight.
+        """
+        for pad in ["5", "6", "7"]:
+            self._check_zone_ok("J4", pad, "GND")
+
+    def test_display_power_rails(self):
+        """Display VDDI (pin 6) and VDDA (pin 7) must be connected to +3V3.
+
+        ILI9488 datasheet: VDDI = I/O logic, VDDA = analog/digital power.
+        """
+        self._check_zone_ok("J4", "35", "+3V3")    # pad 35 = display pin 6 = VDDI
+        self._check_zone_ok("J4", "34", "+3V3")    # pad 34 = display pin 7 = VDDA
+
 
 # ---- Standalone runner with summary ----
 

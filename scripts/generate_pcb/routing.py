@@ -1606,17 +1606,31 @@ def _display_traces():
         parts.append(_seg(px38, py38, px39, py39, "B.Cu", W_FPC_PWR, n_3v3))
 
     # ── +3V3 for LCD_RD (pin 12) and LCD_BL (pin 33) ──
-    # LCD_RD tied HIGH (no read-back needed for ILI9488 display output).
-    # LCD_BL (LED-A) tied to 3V3 (always-on backlight).
-    # Both inside approach zone. Use via offset LEFT to VIA_X_PWR-0.5=133.10
-    # with Y stagger to avoid tight via-pad spacing.
-    # Pin 12 at connector pad 29 (y≈39.75): offset via DOWN 0.5mm to y=40.25.
-    # Pin 33 at connector pad 8 (y≈29.25): offset via UP 0.5mm to y=28.75.
-    # LCD_RD (FPC pin 12) and LCD_BL (FPC pin 33) are NOT connected to GPIOs.
-    # LCD_RD: typically tied HIGH on display module side (ILI9488 RD not used).
-    # LCD_BL: backlight anode, powered through display module's internal circuit.
-    # These FPC pins are left NC (no connect) on the PCB. If the display module
-    # requires external drive, add jumper wires to +3V3 during assembly.
+    # LCD_RD tied HIGH (read strobe disabled — display is write-only).
+    # LCD_BL (LED-A) tied to +3V3 (always-on backlight, per ILI9488 datasheet:
+    #   pin 33 LED-A = backlight anode 2.9-3.3V, pins 34-36 LED-K = cathodes to GND).
+    # Route LEFT from FPC pads to vias that connect to In2.Cu +3V3 zone.
+    # VIA_X_PWR (133.6) conflicts with LCD_WR/GND approach traces.
+    # LCD data approach verticals: LCD_D7@131.70, LCD_D6@131.00, LCD_D5@134.50.
+    # RD via at x=131.0, y=39.75: ABOVE LCD_D6 end (y=34.25) — clear.
+    # LED-A via at x=132.5, y=29.25: between LCD_D7 right edge (131.80) and
+    #   J4 GND stub (133.585). Gap: 0.45mm to LCD_D7, 0.83mm to GND. ✓
+    pos_rd = _fpc_display_pin(12)   # RD at pad 29 (y≈39.75)
+    pos_bl = _fpc_display_pin(33)   # LED-A at pad 8 (y≈29.25)
+
+    if pos_rd:
+        px, py = pos_rd[0], pos_rd[1]
+        via_x = 131.0  # above LCD_D6 end (y=34.25), pin16 GND via (y=37.75)
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
+        parts.append(_via_net(via_x, py, n_3v3,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    if pos_bl:
+        px, py = pos_bl[0], pos_bl[1]
+        via_x = 132.5  # between LCD_D7 (131.80) and J4 GND stubs (133.58)
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
+        parts.append(_via_net(via_x, py, n_3v3,
+                              size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     # ── +3V3 pins at BOTTOM (6, 7): now y=42.25-42.75, BELOW approach zone ──
     # Pin 6 at y=42.75, pin 7 at y=42.25. Both below LCD_CS at y=41.25.
