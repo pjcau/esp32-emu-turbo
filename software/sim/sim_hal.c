@@ -165,7 +165,9 @@ int sim_init(void) {
     }
 
     if (sim_display_init() != 0) return -1;
-    if (sim_audio_init() != 0) return -1;
+    if (sim_audio_init() != 0) {
+        printf("[SIM] WARNING: Audio not available (no ALSA in container)\n");
+    }
     if (sim_sd_init() != 0) return -1;
 
     printf("[SIM] All subsystems initialized\n");
