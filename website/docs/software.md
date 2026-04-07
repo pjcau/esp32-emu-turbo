@@ -1120,6 +1120,28 @@ make benchmark-run
 make benchmark-vnc
 ```
 
+### Interactive Simulator via VNC
+
+The full SDL2 simulator (ROM browser + all 7 emulator cores) can run inside Docker with VNC access — no local SDL2 installation needed.
+
+```bash
+# Launch simulator with VNC
+docker compose run --rm -p 5901:5901 -p 6080:6080 sim-vnc
+```
+
+Then open in your browser: **http://localhost:6080/vnc.html** (password: `esp32`)
+
+Controls (keyboard via VNC):
+- **W/A/S/D** — D-pad
+- **J/K** — A/B buttons
+- **U/I** — X/Y buttons
+- **Enter** — Start
+- **Backspace** — Select
+- **Q/E** — L/R shoulder
+- **ESC** — Back to menu
+
+The simulator runs the same emulator cores as the ESP32-S3 firmware, rendering at 480x320 RGB565 — identical to the ILI9488 display output.
+
 ### Emulator Screenshots
 
 Captured from the native SDL2 simulator running the same emulator cores at 480x320 RGB565.

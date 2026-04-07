@@ -110,6 +110,25 @@ services:
     tty: true
     command: ["bash", "/run-vnc.sh"]
 
+  # Native SDL2 simulator via VNC (browser access)
+  sim-vnc:
+    build:
+      context: ./docker/qemu-esp32
+    volumes:
+      - ./software:/project
+      - ./test-roms:/test-roms:ro
+      - ./docker/qemu-esp32/run-sim-vnc.sh:/run-sim-vnc.sh:ro
+    working_dir: /project/sim
+    ports:
+      - "5901:5901"
+      - "6080:6080"
+    environment:
+      - SDL_VIDEODRIVER=x11
+      - DISPLAY=:99
+    stdin_open: true
+    tty: true
+    command: ["bash", "/run-sim-vnc.sh", "/test-roms"]
+
   # External DFM analysis (KiBot + Tracespace)
   kibot:
     build:

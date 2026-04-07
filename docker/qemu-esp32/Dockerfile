@@ -35,6 +35,7 @@ RUN pip3 install --break-system-packages esptool
 # Install Xvfb + x11vnc + noVNC for headless display
 RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb x11vnc xauth novnc websockify \
+    libsdl2-dev make \
     && rm -rf /var/lib/apt/lists/*
 
 # Working directory
