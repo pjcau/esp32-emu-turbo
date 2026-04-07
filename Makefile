@@ -100,6 +100,19 @@ firmware-monitor: ## Open serial monitor only (no flash)
 firmware-clean: ## Clean firmware build artifacts
 	docker compose run --rm idf-build idf.py fullclean
 
+# ── QEMU CPU Benchmark ──────────────────────────────────────────────
+
+benchmark-build: ## Build QEMU benchmark firmware (Docker + ESP-IDF)
+	@$(T) benchmark-build docker compose run --rm qemu-bench-build
+
+benchmark-run: ## Run CPU benchmark in QEMU (ESP32-S3 @ 240MHz)
+	@$(T) benchmark-run docker compose run --rm qemu-bench-run
+
+benchmark: benchmark-build benchmark-run ## Build + run full benchmark
+
+benchmark-vnc: benchmark-build ## Run QEMU with VNC display (connect vnc://localhost:5900)
+	docker compose run --rm -p 5900:5900 qemu-interactive
+
 # ── Retro-Go emulator (Phase 2) ─────────────────────────────────────
 
 RETRO_GO_COMPOSE = docker compose -f docker-compose.retro-go.yml

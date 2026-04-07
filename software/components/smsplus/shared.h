@@ -3,11 +3,11 @@
 
 typedef unsigned char uint8;
 typedef unsigned short int uint16;
-typedef unsigned long int uint32;
+typedef unsigned int uint32;  /* must be 4 bytes — unsigned long is 8 on 64-bit */
 
 typedef signed char int8;
 typedef signed short int int16;
-typedef signed long int int32;
+typedef signed int int32;  /* must be 4 bytes */
 
 #include <assert.h>
 #include <stdio.h>

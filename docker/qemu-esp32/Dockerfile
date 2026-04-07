@@ -22,7 +22,8 @@ RUN git clone --depth 1 -b v5.5.4 https://github.com/espressif/esp-idf.git $IDF_
 
 # Install QEMU ESP32 (pre-built binary from Espressif)
 RUN cd /tmp && \
-    curl -LO https://github.com/espressif/qemu/releases/download/esp-develop-9.2.2-20250817/qemu-xtensa-softmmu-esp_develop_9.2.2_20250817-$(dpkg --print-architecture)-linux-gnu.tar.xz && \
+    ARCH=$(dpkg --print-architecture | sed 's/arm64/aarch64/;s/amd64/x86_64/') && \
+    curl -LO https://github.com/espressif/qemu/releases/download/esp-develop-9.2.2-20250817/qemu-xtensa-softmmu-esp_develop_9.2.2_20250817-${ARCH}-linux-gnu.tar.xz && \
     mkdir -p /opt/qemu && \
     tar xf qemu-xtensa-softmmu-*.tar.xz -C /opt/qemu --strip-components=1 && \
     rm qemu-xtensa-softmmu-*.tar.xz && \
@@ -30,6 +31,11 @@ RUN cd /tmp && \
 
 # Install esptool for flash image creation
 RUN pip3 install --break-system-packages esptool
+
+# Install Xvfb + x11vnc + noVNC for headless display
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    xvfb x11vnc xauth novnc websockify \
+    && rm -rf /var/lib/apt/lists/*
 
 # Working directory
 WORKDIR /project

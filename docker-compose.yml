@@ -66,6 +66,50 @@ services:
       - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
     command: idf.py -p ${ESP_PORT:-/dev/ttyUSB0} flash monitor
 
+  # QEMU ESP32-S3 benchmark — build firmware
+  qemu-bench-build:
+    build:
+      context: ./docker/qemu-esp32
+    volumes:
+      - ./software:/project
+      - ./test-roms:/test-roms:ro
+      - qemu-bench-cache:/project/benchmark/build
+    working_dir: /project/benchmark
+    command: ["bash", "-c", "mkdir -p spiffs_data && cp /test-roms/nes/owlia.nes /test-roms/sms/silvervalley.sms /test-roms/gb/blarggs-cpu-instrs.gb /test-roms/gbc/ucity.gbc /test-roms/gg/Swabby-GG-1.11.gg /test-roms/pce/reflectron.pce /test-roms/snes/superbossgaiden.sfc spiffs_data/ && idf.py set-target esp32s3 && idf.py build && esptool.py --chip esp32s3 merge_bin --fill-flash-size 16MB -o build/flash_image.bin 0x0 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0x20000 build/esp32-emu-benchmark.bin && echo BUILD_OK"]
+
+  # QEMU ESP32-S3 benchmark — run in emulator
+  qemu-bench-run:
+    build:
+      context: ./docker/qemu-esp32
+    volumes:
+      - ./software:/project
+      - qemu-bench-cache:/project/benchmark/build
+    working_dir: /project/benchmark
+    environment:
+      - SDL_VIDEODRIVER=dummy
+      - SDL_AUDIODRIVER=dummy
+      - XDG_RUNTIME_DIR=/tmp
+    command: ["bash", "-c", "timeout 600 qemu-system-xtensa -nographic -machine esp32s3 -m 32M -global driver=ssi_psram,property=is_octal,value=true -drive file=build/flash_image.bin,if=mtd,format=raw -global driver=timer.esp32.timg,property=wdt_disable,value=true -serial mon:stdio -no-reboot 2>&1 || true"]
+
+  # QEMU ESP32-S3 interactive — VNC display + UART input
+  qemu-interactive:
+    build:
+      context: ./docker/qemu-esp32
+    volumes:
+      - ./software:/project
+      - ./docker/qemu-esp32/run-vnc.sh:/run-vnc.sh:ro
+      - qemu-bench-cache:/project/benchmark/build
+    working_dir: /project/benchmark
+    ports:
+      - "5901:5901"
+      - "6080:6080"
+    environment:
+      - SDL_VIDEODRIVER=x11
+      - DISPLAY=:99
+    stdin_open: true
+    tty: true
+    command: ["bash", "/run-vnc.sh"]
+
   # External DFM analysis (KiBot + Tracespace)
   kibot:
     build:
@@ -79,3 +123,4 @@ services:
 
 volumes:
   idf-build-cache:
+  qemu-bench-cache:

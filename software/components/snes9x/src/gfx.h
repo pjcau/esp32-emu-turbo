@@ -3,6 +3,7 @@
 #ifndef _GFX_H_
 #define _GFX_H_
 
+#include <stddef.h>
 #include "port.h"
 #include "ppu.h"
 #include "snes9x.h"

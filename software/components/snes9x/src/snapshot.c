@@ -1,5 +1,6 @@
 /* This file is part of Snes9x. See LICENSE file. */
 
+#include <stdio.h>
 #include "snes9x.h"
 #include "memmap.h"
 #include "ppu.h"
