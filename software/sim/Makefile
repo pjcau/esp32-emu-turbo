@@ -42,9 +42,15 @@ SRCS = sim_main.c sim_hal.c sim_display.c sim_input.c sim_audio.c sim_sdcard.c \
 CFLAGS += $(CORE_INC) -Wno-implicit-function-declaration
 TARGET = emu-turbo-sim
 
-.PHONY: all run clean
+.PHONY: all run clean test_all
 
 all: $(TARGET)
+
+TEST_SRCS = test_all_cores.c sim_hal.c sim_display.c sim_input.c sim_audio.c sim_sdcard.c \
+            rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c $(CORE_SRCS)
+
+test_all: $(TEST_SRCS)
+	$(CC) $(CFLAGS) $(SDL_CFLAGS) -o test_all_cores $^ $(LDFLAGS)
 
 $(TARGET): $(SRCS)
 	$(CC) $(CFLAGS) $(SDL_CFLAGS) -o $@ $^ $(LDFLAGS)
