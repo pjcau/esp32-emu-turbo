@@ -996,13 +996,6 @@ def _power_traces():
                            "B.Cu", 0.4, n_gnd))
         parts.append(_via_net(sd_stitch_x, sd_sh12[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # ── GND stitching vias in open board areas ─────────────────
-    # Improves EMI return paths and In1.Cu GND plane connectivity.
-    # These are standalone vias connected via zone fill (no trace stubs).
-    # Positions chosen in sparse areas (>10mm from nearest GND via).
-    for sx, sy in [(50, 12), (110, 12), (48, 65), (70, 58), (118, 35), (145, 25)]:
-        parts.append(_via_net(sx, sy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
-
     # ── +5V: IP5306 VOUT (pin 8) -> AMS1117 input ──────────────
     # VOUT via to +5V zone on In2.Cu
     # DFM FIX: old via at (ip_vout[0], ip_vout[1]-2) = (107, 38.59) is 2mm from
