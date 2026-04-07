@@ -81,12 +81,6 @@ The bottom side hosts the main circuitry:
 
 ## JLCPCB Quote Breakdown (5 units)
 
-<div style={{textAlign: 'center'}}>
-
-![JLCPCB Quote](/img/manufacturing/jlcpcb-quote.png)
-
-</div>
-
 ### PCB Fabrication
 
 | Item             |       Cost |
