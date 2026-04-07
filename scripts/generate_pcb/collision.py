@@ -576,7 +576,7 @@ def _is_tht_pad(ref: str, num: str) -> bool:
     # J1 (USB-C 16P): pads 13/14/13b/14b are SMD on B.Cu only in the footprint
     # (layers "B.Cu" "B.Paste" "B.Mask"), no F.Cu copper.  Removed from THT set
     # to avoid false F.Cu collisions with button channels at y=73-74.
-    # J3 (JST PH 2P): both pins (1, 2) are SMD (C265082)
+    # J3 (JST PH 2P): both pins (1, 2) are SMD (C265003)
     _THT_PADS = {
         ("J3", "1"), ("J3", "2"),
     }

@@ -140,7 +140,7 @@ PAM8403_ENC = (-50, 8)
 # L1 inductor (near IP5306, with clearance)
 INDUCTOR_ENC = (30, -15)
 # JST PH battery connector (center, below passives, back)
-# SMD version (C265082) — pads on B.Cu only, no through-hole
+# SMD version (C265003) — pads on B.Cu only, no through-hole
 JST_BAT_ENC = (0, -25)
 # Reset and Boot buttons (back side, right of USB-C — dev kit style)
 RESET_ENC = (15, -28)     # EN pin to GND — hardware reset

@@ -130,7 +130,7 @@ DATASHEET_SPECS = {
         "datasheet": "J3_JST-PH-2P-SMD_C265003.pdf",
         "footprint": "JST-PH-2P",
         "signal_pins": 2,
-        "smd": True,            # SMD version (C265082)
+        "smd": True,            # SMD version (C265003)
         "pitch_mm": 2.0,         # JST PH standard pitch
         "body_w_mm": 6.0,
         "body_h_mm": 4.5,
