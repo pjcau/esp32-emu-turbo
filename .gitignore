@@ -63,3 +63,5 @@ test-roms/*.nes
 test-roms/*.rom
 software/sim/sim_test_native
 software/sim/sim_test
+software/sim/emu-turbo-sim
+software/sim/test_nes
