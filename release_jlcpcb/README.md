@@ -67,7 +67,20 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v2.2 — 2026-04-07 (current)
+### v2.3 — 2026-04-07 (current)
+
+**J3 battery connector final fix — rotation 180° + position correction:**
+
+- **J3 (JST PH-2P) rotated 180°** — cable opening points UP toward ESP32, away from USB-C
+- **CPL position correction (0, -3.5mm)** — aligns JLCPCB C295747 3D model pins to gerber pads
+- **board.py/routing.py**: J3 footprint at 180°, routing adjusted (BAT+ approach x=79.75, GND via UP)
+- **JLCPCB DFM report**: all checks pass (uploaded PDF verified)
+- **PCB review score**: 99/100 (silkscreen height cosmetic -1)
+- **Verification**: 115 DFM + 9 DFA + 47 polarity + 29 datasheet + 25 JLCPCB = 225 tests PASS
+- **SPICE**: 5V ripple 13.5mV, 3V3 ripple 0mV
+- **Via count**: 284 | **Trace segments**: 483 | **Components**: 75
+
+### v2.2 — 2026-04-07
 
 **J3 battery connector rotation fix + routing adjustment:**
 
