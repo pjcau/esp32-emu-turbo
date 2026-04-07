@@ -59,6 +59,12 @@ static int emu_sms_init(const uint8_t *rom, size_t size, const rom_info_t *info)
     int w = g_is_gg ? 160 : 256;
     int h = g_is_gg ? 144 : 192;
 
+    /* Initialize option defaults (sets option.sndrate, option.country, etc.)
+     * Must be called BEFORE load_rom/system_poweron since sound_init()
+     * reads option.sndrate, not snd.sample_rate directly. */
+    system_reset_config();
+    option.sndrate = EMU_AUDIO_RATE;
+
     /* Setup bitmap */
     g_screen_buf = calloc(256 * 240, 1);
     if (!g_screen_buf) return -1;
@@ -70,14 +76,7 @@ static int emu_sms_init(const uint8_t *rom, size_t size, const rom_info_t *info)
     bitmap.pitch = 256;
     bitmap.granularity = 1;
 
-    /* Setup sound */
-    memset(&snd, 0, sizeof(snd));
-    snd.sample_rate = EMU_AUDIO_RATE;
-    snd.fps = 60;
-    snd.fm_clock = 3579545;
-    snd.psg_clock = 3579545;
-
-    /* Load ROM */
+    /* Load ROM (calls set_rom_config which sets sms.console, sms.display, etc.) */
     if (load_rom((void *)rom, size, size) != 1) {
         printf("[SMS] ERROR: ROM loading failed\n");
         free(g_screen_buf);
@@ -119,10 +118,11 @@ static const uint16_t *emu_sms_get_fb(void) { return g_fb; }
 static int emu_sms_get_audio(int16_t *buf, int max) {
     int n = snd.sample_count;
     if (n > max) n = max;
-    if (n > 0 && snd.output[0]) {
-        /* Mix L+R to mono */
+    if (n > 0 && snd.stream[STREAM_PSG_L] && snd.stream[STREAM_PSG_R]) {
+        /* Mix PSG L+R streams to mono (snd.output is not allocated
+         * because mixer_callback is NULL; read raw PSG streams instead) */
         for (int i = 0; i < n; i++) {
-            buf[i] = (snd.output[0][i] + snd.output[1][i]) / 2;
+            buf[i] = (snd.stream[STREAM_PSG_L][i] + snd.stream[STREAM_PSG_R][i]) / 2;
         }
     }
     return n;

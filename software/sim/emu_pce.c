@@ -31,8 +31,11 @@ uint8_t *osd_gfx_framebuffer(int width, int height) {
 
 void osd_vsync(void) {
     /* Convert palette-indexed → RGB565, scale to 480×320 */
-    uint16_t *pal = PalettePCE(16);  /* 16-bit RGB565 palette */
-    if (pal) memcpy(g_palette, pal, 256 * sizeof(uint16_t));
+    uint16_t *pal = PalettePCE(16);  /* 16-bit RGB565 palette (malloc'd) */
+    if (pal) {
+        memcpy(g_palette, pal, 256 * sizeof(uint16_t));
+        free(pal);
+    }
 
     int scale_h = EMU_SCREEN_H;
     int scale_w = (g_pce_w * EMU_SCREEN_H) / g_pce_h;
@@ -87,7 +90,9 @@ static int pce_core_init(const uint8_t *rom, size_t size, const rom_info_t *info
 
 static int pce_core_run_frame(void) {
     if (!g_initialized) return -1;
-    pce_run();  /* runs one frame, calls osd_gfx_framebuffer + osd_vsync */
+    osd_input_read(PCE.Joypad.regs);
+    pce_run();       /* runs one frame, calls osd_gfx_framebuffer to render pixels */
+    osd_vsync();     /* convert indexed pixels → RGB565 in g_fb */
     return 0;
 }
 
