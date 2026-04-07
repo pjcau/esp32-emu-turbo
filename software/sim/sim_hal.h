@@ -68,8 +68,11 @@ void sim_display_destroy(void);
 /** Poll button state (returns bitmask) */
 uint16_t sim_buttons_read(void);
 
-/** Check if quit requested (window close or ESC) */
+/** Check if quit requested (window close) */
 bool sim_quit_requested(void);
+
+/** Check if back/ESC requested (returns true once, then resets) */
+bool sim_back_requested(void);
 
 /* ── Audio ───────────────────────────────────────────────── */
 

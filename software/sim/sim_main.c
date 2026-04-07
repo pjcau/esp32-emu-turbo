@@ -359,7 +359,7 @@ int main(int argc, char **argv) {
         }
 
         case ST_ROM_CHECK: {
-            if (pressed & SIM_BTN_B) {
+            if ((pressed & SIM_BTN_B) || sim_back_requested()) {
                 state = ST_ROM_BROWSER;
                 screen_rom_browser(selected_rom);
             }
@@ -398,8 +398,9 @@ int main(int argc, char **argv) {
             int samples = g_active_core->get_audio(audio_buf, EMU_AUDIO_BUF);
             if (samples > 0) audio_sim_write(audio_buf, samples);
 
-            /* SELECT+START = back to browser */
-            if ((buttons & SIM_BTN_SELECT) && (buttons & SIM_BTN_START)) {
+            /* ESC or SELECT+START = back to browser */
+            if (sim_back_requested() ||
+                ((buttons & SIM_BTN_SELECT) && (buttons & SIM_BTN_START))) {
                 g_active_core->shutdown();
                 g_active_core = NULL;
                 state = ST_ROM_BROWSER;

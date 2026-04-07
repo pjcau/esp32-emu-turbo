@@ -18,6 +18,7 @@ static SDL_Renderer *g_renderer = NULL;
 static SDL_Texture  *g_texture = NULL;
 static uint16_t      g_framebuffer[SIM_LCD_WIDTH * SIM_LCD_HEIGHT];
 static bool          g_quit = false;
+static bool          g_back = false;  /* ESC pressed — go back, don't quit */
 
 int sim_display_init(void) {
     g_window = SDL_CreateWindow(
@@ -109,6 +110,11 @@ bool sim_quit_requested(void) {
     return g_quit;
 }
 
+bool sim_back_requested(void) {
+    if (g_back) { g_back = false; return true; }
+    return false;
+}
+
 /* ── Audio ───────────────────────────────────────────────── */
 
 static SDL_AudioDeviceID g_audio_dev = 0;
@@ -187,9 +193,9 @@ void sim_poll_events(void) {
         case SDL_KEYUP: {
             bool pressed = (e.type == SDL_KEYDOWN);
 
-            /* ESC = quit */
+            /* ESC = back (not quit — only window close quits) */
             if (e.key.keysym.scancode == SDL_SCANCODE_ESCAPE) {
-                g_quit = true;
+                g_back = true;
                 break;
             }
 
