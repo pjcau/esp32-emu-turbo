@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install ESP-IDF v5.4
 ENV IDF_PATH=/opt/esp-idf
 ENV IDF_TOOLS_PATH=/opt/espressif
-RUN git clone --depth 1 -b v5.4 https://github.com/espressif/esp-idf.git $IDF_PATH \
+RUN git clone --depth 1 -b v5.5.4 https://github.com/espressif/esp-idf.git $IDF_PATH \
     && cd $IDF_PATH && git submodule update --init --depth 1 --recursive \
     && ./install.sh esp32s3 \
     && echo ". $IDF_PATH/export.sh" >> /etc/bash.bashrc
