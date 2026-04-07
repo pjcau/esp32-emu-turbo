@@ -65,3 +65,11 @@ software/sim/sim_test_native
 software/sim/sim_test
 software/sim/emu-turbo-sim
 software/sim/test_nes
+
+# Benchmark build artifacts
+software/benchmark/build/
+software/benchmark/sdkconfig
+software/benchmark/sdkconfig.old
+software/benchmark/dependencies.lock
+software/benchmark/managed_components/
+software/benchmark/spiffs_data/
