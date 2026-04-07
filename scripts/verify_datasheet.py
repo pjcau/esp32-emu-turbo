@@ -126,15 +126,15 @@ DATASHEET_SPECS = {
         "tht_drill_mm": 0.6,     # front shield tab drill
     },
     "J3": {
-        "name": "JST PH 2-pin",
+        "name": "JST PH 2-pin SMD",
         "datasheet": "J3_JST-PH-2pin_C173752.pdf",
         "footprint": "JST-PH-2P",
         "signal_pins": 2,
+        "smd": True,             # SMD version (C265082) — no THT drill holes
         "pitch_mm": 2.0,         # JST PH standard pitch
         "body_w_mm": 6.0,
         "body_h_mm": 4.5,
         "npth_count": 0,
-        "tht_drill_mm": 0.85,    # pin ø0.64mm + clearance
     },
     "J4": {
         "name": "FPC 40-pin 0.5mm",
@@ -431,8 +431,16 @@ class TestDatasheetCompliance(unittest.TestCase):
                                    f"{spec['tht_drill_mm']}mm, got {p['drill']}mm")
 
     def test_tht_drill_J3_JST(self):
-        """J3 JST PH: THT drill = 0.85mm"""
+        """J3 JST PH SMD: verify no THT pads (SMD version has no drill holes)"""
         spec = DATASHEET_SPECS["J3"]
+        if spec.get("smd"):
+            # SMD connector — verify NO through-hole pads exist
+            tht_pads = [p for p in _unique_pads(self.pad_groups.get("J3", []))
+                        if p["type"] == "thru_hole"]
+            self.assertEqual(len(tht_pads), 0,
+                             f"J3 SMD: found {len(tht_pads)} THT pads "
+                             f"(expected 0 for SMD connector)")
+            return
         tht_pads = [p for p in _unique_pads(self.pad_groups.get("J3", []))
                     if p["type"] == "thru_hole"]
         self.assertGreater(len(tht_pads), 0, "J3: no THT pads found")
