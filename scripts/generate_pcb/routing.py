@@ -361,7 +361,7 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (121.5, 48.5)   # AMS1117 input cap — 7.8mm from U3, 2.3mm pad gap to tab
+C1_POS = (122.0, 55.0)   # AMS1117 input cap — 3.7mm from U3 VIN pin (was 7.8mm)
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
@@ -993,6 +993,13 @@ def _power_traces():
                            "B.Cu", 0.4, n_gnd))
         parts.append(_via_net(sd_stitch_x, sd_sh12[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
+    # ── GND stitching vias in open board areas ─────────────────
+    # Improves EMI return paths and In1.Cu GND plane connectivity.
+    # These are standalone vias connected via zone fill (no trace stubs).
+    # Positions chosen in sparse areas (>10mm from nearest GND via).
+    for sx, sy in [(50, 12), (110, 12), (48, 65), (70, 58), (118, 35), (145, 25)]:
+        parts.append(_via_net(sx, sy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+
     # ── +5V: IP5306 VOUT (pin 8) -> AMS1117 input ──────────────
     # VOUT via to +5V zone on In2.Cu
     # DFM FIX: old via at (ip_vout[0], ip_vout[1]-2) = (107, 38.59) is 2mm from
@@ -1017,16 +1024,16 @@ def _power_traces():
     # Fix: lx_col_x = ip_sw[0] - 2.0 = 105 (left of both BAT+ end 105.5 and KEY 107).
     # DFM: BTN_MENU B.Cu vert at x=104.0 (w=0.25), BAT+ vert at x=105.5 (w=0.76).
     # BAT+ via at (105.5,46.1) sz=0.9 → left edge 105.05.
-    # LX at x=104.55, w=0.55: right edge=104.825
-    #   BTN_MENU gap: |104.55-104.0|-0.275-0.125 = 0.15mm ✓
-    #   BAT+ vert gap: 105.12-104.825 = 0.295mm ≥ 0.25mm ✓
-    #   BAT+ via gap: 105.05-104.825 = 0.225mm ≥ 0.10mm ✓
-    # At 0.55mm / 1oz Cu: ~1.3A capacity (10°C rise), adequate for pulsed LX.
+    # LX at x=104.55, w=0.60: right edge=104.85
+    #   BTN_MENU gap: |104.55-104.0|-0.30-0.125 = 0.125mm ≥ 0.10mm ✓
+    #   BAT+ vert gap: 105.12-104.85 = 0.27mm ≥ 0.25mm ✓
+    #   BAT+ via gap: 105.05-104.85 = 0.20mm ≥ 0.10mm ✓
+    # At 0.60mm / 1oz Cu: ~1.4A capacity (10°C rise), adequate for pulsed LX.
     lx_col_x = ip_sw[0] - 2.45   # x=104.55
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, l1_2[1],
-                       "B.Cu", 0.55, n_lx))  # was 0.4mm, widened for LX current
+                       "B.Cu", W_PWR, n_lx))  # 0.60mm — max width within BTN_MENU/BAT+ corridor
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
 
@@ -1079,9 +1086,8 @@ def _power_traces():
     # ── +3V3: AMS1117 output via outside +5V zone ─────────────
     # AMS1117 VOUT (pin 2) and tab (pin 4) are +3V3
     # Route to via outside +5V zone (x < 100)
-    # DFM: v3_via at am_tab[0]-2 = 123.0, y=49.35 overlaps C1 pad1 at (122.95,48.5).
-    # Fix: move via to am_tab[0] = 125.0 (same X as tab pad) to stay clear of C1 at x=122.95.
-    v3_via_x = am_tab[0]   # 125.0 — same X as AMS1117 tab, clear of C1 (at x=122.95)
+    # v3_via at am_tab[0] = 125.0 (same X as tab pad), clear of C1 (now at x=121.5, y=55)
+    v3_via_x = am_tab[0]   # 125.0
     v3_via_y = am_tab[1] - 3
     # B.Cu vertical from tab pad down to via (widened to 0.5mm for power delivery)
     parts.append(_seg(v3_via_x, am_tab[1], v3_via_x, v3_via_y,
@@ -3698,18 +3704,23 @@ def _passive_traces():
         parts.append(_via_net(c26_p2[0], c26_p2[1] + 1.5, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # C1 AMS1117 input: pad "1" -> +5V via, pad "2" -> GND via
-    # DFM: 2.5mm offset (was 2mm) to avoid via-in-pad with 0805 (1.3mm tall pad)
+    # C1 AMS1117 input: pad "1" -> +5V (near VIN), pad "2" -> GND via
+    # C1 at (122.0, 55.0), close to VIN pin at (122.70, 58.65) — 3.7mm
+    # Vias route DOWN (+y) to avoid U3 tab pad at (125.0, 52.35) above
     c1_p1 = _pad("C1", "1")
     c1_p2 = _pad("C1", "2")
     if c1_p1:
-        parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] - 2.5,
+        # +5V via below C1 pad 1 — y+2.5 to clear AMS1117 VIN via at (122.70,56.65)
+        # pad1 ~(122.95,55), via at (122.95,57.5): dist to VIN via = 0.89mm ✓
+        parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] + 2.5,
                           "B.Cu", W_PWR, n_5v))
-        parts.append(_via_net(c1_p1[0], c1_p1[1] - 2.5, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c1_p1[0], c1_p1[1] + 2.5, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
     if c1_p2:
-        parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] - 2.5,
+        # GND via below C1 pad 2 — y+1.5, staggered from pad 1 via
+        # pad2 ~(121.05,55), via at (121.05,56.5): dist to pad1 via = 2.15mm ✓
+        parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] + 1.5,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c1_p2[0], c1_p2[1] - 2.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c1_p2[0], c1_p2[1] + 1.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C2 AMS1117 output: pad "1" -> AMS1117 tab (+3V3), pad "2" -> GND via
     c2_p1 = _pad("C2", "1")

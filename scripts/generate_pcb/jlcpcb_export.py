@@ -278,9 +278,9 @@ def _build_placements():
     p.append(("R20", "20k", "R_0805", 38.0, 26.5, 0, "bottom"))
     p.append(("R21", "20k", "R_0805", 38.0, 32.5, 0, "bottom"))
 
-    # ── AMS1117 support caps (±7mm spacing for DFM clearance) ──
+    # ── AMS1117 support caps ──
     p.append(("C1", "10uF", "C_0805",
-              amx - 3.5, amy - 7, 0, "bottom"))  # DFM: synced with board.py
+              amx - 3.0, amy - 0.5, 0, "bottom"))  # near VIN pin (3.7mm)
     p.append(("C2", "22uF", "C_1206",
               amx, amy + 7, 0, "bottom"))
 

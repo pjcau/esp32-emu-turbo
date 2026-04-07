@@ -1,12 +1,12 @@
-%TF.GenerationSoftware,KiCad,Pcbnew,9.0.8-9.0.8~ubuntu24.04.1*%
-%TF.CreationDate,2026-04-07T12:46:32+02:00*%
+%TF.GenerationSoftware,KiCad,Pcbnew,10.0.0*%
+%TF.CreationDate,2026-04-07T14:16:24+02:00*%
 %TF.ProjectId,esp32-emu-turbo,65737033-322d-4656-9d75-2d747572626f,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Paste,Bot*%
 %TF.FilePolarity,Positive*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 9.0.8-9.0.8~ubuntu24.04.1) date 2026-04-07 12:46:32*
+G04 Created by KiCad (PCBNEW 10.0.0) date 2026-04-07 14:16:24*
 %MOMM*%
 %LPD*%
 G01*
@@ -443,8 +443,8 @@ X31500000Y-38450000D03*
 %TD*%
 D32*
 %TO.C,C1*%
-X122450000Y-48500000D03*
-X120550000Y-48500000D03*
+X122950000Y-55000000D03*
+X121050000Y-55000000D03*
 %TD*%
 D34*
 %TO.C,C2*%

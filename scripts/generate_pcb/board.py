@@ -197,12 +197,11 @@ def _mounting_holes():
 
 
 def _silkscreen_labels():
-    """Add reference labels on Fab layers.
+    """Add labels on Fab layers + selective silkscreen for key components.
 
-    DFM FIX: ALL text moved from SilkS to Fab layers to eliminate 52
-    silkscreen-to-hole JLCDFM violations. Silkscreen text overlapping
-    drill holes (vias, THT, NPTH) is a JLCPCB manufacturing error.
-    Fab layers are visible in renders but not checked for DFM clearance.
+    DFM FIX: Most text on Fab layers to avoid silkscreen-to-hole violations.
+    Only key IC/connector labels and branding are on SilkS, positioned in
+    clear zones away from vias and drill holes.
     """
     parts = []
 
@@ -237,6 +236,21 @@ def _silkscreen_labels():
     parts.append(P.gr_text("CHG", px, py + 3, "F.Fab", 0.8))
     px, py = enc_to_pcb(*LED_FULL_ENC)
     parts.append(P.gr_text("FULL", px, py + 3, "F.Fab", 0.8))
+
+    # ── Front Silkscreen — labels + branding ──
+    px, py = enc_to_pcb(*DPAD_ENC)
+    parts.append(P.gr_text("D-PAD", px, py - 20, "F.SilkS"))
+    px, py = enc_to_pcb(*ABXY_ENC)
+    parts.append(P.gr_text("ABXY", px, py - 20, "F.SilkS"))
+    px, py = enc_to_pcb(*MENU_ENC)
+    parts.append(P.gr_text("MENU", px, py - 5, "F.SilkS", 0.8))
+    px, py = enc_to_pcb(*LED_CHARGE_ENC)
+    parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 0.8))
+    px, py = enc_to_pcb(*LED_FULL_ENC)
+    parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 0.8))
+    parts.append(P.gr_text(
+        "CPJ&CP 2026 v2", CX, 73.0, "F.SilkS", 1.2,
+    ))
 
     # ── Back Fab (IC + connector labels, visible in 3D renders) ──
     px, py = enc_to_pcb(*ESP32_ENC)
@@ -282,6 +296,40 @@ def _silkscreen_labels():
         "B.Fab", 1.2,
     ))
 
+    # ── Back Silkscreen — all component labels + branding ──
+    # ICs
+    px, py = enc_to_pcb(*ESP32_ENC)
+    parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS", 1.0))
+    px, py = enc_to_pcb(*IP5306_ENC)
+    parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*AMS1117_ENC)
+    parts.append(P.gr_text("AMS1117", px + 5, py - 3, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*PAM8403_ENC)
+    parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 0.8))
+    # Connectors
+    px, py = enc_to_pcb(*USBC_ENC)
+    parts.append(P.gr_text("USB-C", px, py - 6, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*SD_ENC)
+    parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*JST_BAT_ENC)
+    parts.append(P.gr_text("BATT", px, py - 5, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*FPC_ENC)
+    parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*PWR_SWITCH_ENC)
+    parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 0.8))
+    # Speaker + shoulder buttons
+    px, py = enc_to_pcb(*SPEAKER_ENC)
+    parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*SHOULDER_L_ENC)
+    parts.append(P.gr_text("L", px, py + 5, "B.SilkS", 0.8))
+    px, py = enc_to_pcb(*SHOULDER_R_ENC)
+    parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 0.8))
+
+    # Branding (back side, top edge — clear of all vias and components)
+    parts.append(P.gr_text(
+        "CPJ&CP 2026 v2", CX, 3.0, "B.SilkS", 1.2,
+    ))
+
     # ── Passive component labels (B.Fab) ────────────────────────
     # Group labels for the pull-up and debounce rows (13 components each)
     # Pull-ups: R4-R15,R19 at y=46, x=43..103 (5mm spacing)
@@ -313,7 +361,7 @@ def _silkscreen_labels():
         ("C18", "10uF", 118.0, 55.0, 0, 2.5),
         ("C19", "22uF", 110.0, 58.5, 0, 2.5),
         # AMS1117 caps
-        ("C1", "10uF", 121.5, 50.0, 0, -2.0),
+        ("C1", "10uF", 122.0, 55.0, 0, -2.0),
         ("C2", "22uF", 125.0, 62.5, 0, -2.0),
         # Inductor
         ("L1", "1uH", 110.0, 52.5, -4.5, 0),
@@ -487,7 +535,7 @@ def _component_placeholders():
     # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
     # C1 at amx-1 to keep pads outside FPC slot zone (slot starts at x=125.5)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("C1", "C_0805", amx - 3.5, amy - 7, 0, "B.Cu"))  # DFM: 7.8mm from U3, 2.3mm pad gap to tab
+    placements.append(("C1", "C_0805", amx - 3.0, amy - 0.5, 0, "B.Cu"))  # near VIN pin (3.7mm)
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
     # Board-level fiducials at opposite corners for pick-and-place alignment.
@@ -498,6 +546,9 @@ def _component_placeholders():
     # copper gap=2.75mm ✓. No vias nearby ✓.
     placements.append(("FID1", "Fiducial", 12, 12, 0, "F.Cu"))
     placements.append(("FID2", "Fiducial", 150, 63, 0, "F.Cu"))
+    # FID3 at (12, 63): 5.4mm from MH(10,68), provides 3-point alignment
+    # for JLCPCB fine-pitch SMT (J4 FPC 0.5mm, ESP32).
+    placements.append(("FID3", "Fiducial", 12, 63, 0, "F.Cu"))
 
     # Per-footprint text Y offsets to clear pads (silkscreen-to-pad DFM)
     _text_offsets = {
