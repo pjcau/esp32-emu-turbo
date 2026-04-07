@@ -30,12 +30,17 @@ This maps 61 footprints to KiCad standard STEP models (resistors, caps, ICs, con
 
 ### 2. Render All Views
 
-Run all 6 camera presets. Each takes ~5s (raytracing).
+Run all 11 camera presets. Each takes ~5s (raytracing). Launch in parallel for speed.
+
+IMPORTANT: For bottom-side isometric/detail views, you MUST combine `--side bottom` with `--rotate`.
+Using only `--rotate` with positive X angles does NOT flip to the bottom — it just tilts the top view.
 
 ```bash
 OUT="website/static/img/renders/pcba"
 PCB="/tmp/pcba-render.kicad_pcb"
 W=1920; H=1080
+
+# ── TOP SIDE (front: buttons, LEDs) ────────────────────────
 
 # View 1: Top — flat orthogonal, studio lighting
 kicad-cli pcb render -o "$OUT/pcba-top.png" \
@@ -44,28 +49,21 @@ kicad-cli pcb render -o "$OUT/pcba-top.png" \
   --light-top 0.85 --light-camera 0.3 --light-side 0.4 \
   "$PCB"
 
-# View 2: Bottom — back side with components
-kicad-cli pcb render -o "$OUT/pcba-bottom.png" \
-  --width $W --height $H --side bottom \
-  --quality high --floor --background opaque \
-  --light-top 0.85 --light-camera 0.3 --light-side 0.4 \
-  "$PCB"
-
-# View 3: Isometric front-left — hero shot
+# View 2: Top isometric front-left — hero shot
 kicad-cli pcb render -o "$OUT/pcba-iso-front.png" \
   --width $W --height $H --rotate "-45,0,30" \
   --quality high --perspective --floor --background opaque \
   --zoom 0.7 --light-top 0.9 --light-camera 0.4 --light-side 0.5 \
   "$PCB"
 
-# View 4: Isometric back-right — alternate angle
+# View 3: Top isometric back-right — alternate angle
 kicad-cli pcb render -o "$OUT/pcba-iso-back.png" \
   --width $W --height $H --rotate "-45,0,210" \
   --quality high --perspective --floor --background opaque \
   --zoom 0.7 --light-top 0.9 --light-camera 0.4 --light-side 0.5 \
   "$PCB"
 
-# View 5: Low angle — dramatic perspective
+# View 4: Top low angle — dramatic perspective
 kicad-cli pcb render -o "$OUT/pcba-low-angle.png" \
   --width $W --height $H --rotate "-25,0,20" \
   --quality high --perspective --floor --background opaque \
@@ -73,9 +71,57 @@ kicad-cli pcb render -o "$OUT/pcba-low-angle.png" \
   --light-side-elevation 30 \
   "$PCB"
 
-# View 6: Detail — ESP32 + connector area (zoomed)
+# View 5: Top detail — button + LED area (zoomed)
 kicad-cli pcb render -o "$OUT/pcba-detail-mcu.png" \
   --width $W --height $H --rotate "-40,0,15" \
+  --quality high --perspective --background opaque \
+  --zoom 2.0 --pan "2,1,0" \
+  --light-top 0.85 --light-camera 0.5 --light-side 0.4 \
+  "$PCB"
+
+# ── BOTTOM SIDE (back: ESP32, ICs, connectors) ────────────
+# NOTE: All bottom views use --side bottom + --rotate
+
+# View 6: Bottom — flat orthogonal
+kicad-cli pcb render -o "$OUT/pcba-bottom.png" \
+  --width $W --height $H --side bottom \
+  --quality high --floor --background opaque \
+  --light-top 0.85 --light-camera 0.3 --light-side 0.4 \
+  "$PCB"
+
+# View 7: Bottom isometric front-left
+kicad-cli pcb render -o "$OUT/pcba-bottom-iso-front.png" \
+  --width $W --height $H --side bottom --rotate "-45,0,30" \
+  --quality high --perspective --floor --background opaque \
+  --zoom 0.7 --light-top 0.9 --light-camera 0.4 --light-side 0.5 \
+  "$PCB"
+
+# View 8: Bottom isometric back-right
+kicad-cli pcb render -o "$OUT/pcba-bottom-iso-back.png" \
+  --width $W --height $H --side bottom --rotate "-45,0,210" \
+  --quality high --perspective --floor --background opaque \
+  --zoom 0.7 --light-top 0.9 --light-camera 0.4 --light-side 0.5 \
+  "$PCB"
+
+# View 9: Bottom low angle — dramatic
+kicad-cli pcb render -o "$OUT/pcba-bottom-low-angle.png" \
+  --width $W --height $H --side bottom --rotate "-25,0,20" \
+  --quality high --perspective --floor --background opaque \
+  --zoom 0.6 --light-top 0.7 --light-camera 0.5 --light-side 0.6 \
+  --light-side-elevation 30 \
+  "$PCB"
+
+# View 10: Bottom detail — ESP32 + USB-C area (zoomed)
+kicad-cli pcb render -o "$OUT/pcba-bottom-detail-mcu.png" \
+  --width $W --height $H --side bottom --rotate "-40,0,15" \
+  --quality high --perspective --background opaque \
+  --zoom 2.0 --pan "2,1,0" \
+  --light-top 0.85 --light-camera 0.5 --light-side 0.4 \
+  "$PCB"
+
+# View 11: Bottom detail — power area (IP5306, AMS1117, PAM8403)
+kicad-cli pcb render -o "$OUT/pcba-bottom-detail-power.png" \
+  --width $W --height $H --side bottom --rotate "-40,0,195" \
   --quality high --perspective --background opaque \
   --zoom 2.0 --pan "2,1,0" \
   --light-top 0.85 --light-camera 0.5 --light-side 0.4 \
@@ -114,14 +160,19 @@ rm -f /tmp/pcba-render.kicad_pcb
 
 ## Camera Preset Reference
 
-| View | Rotation | Zoom | Floor | Use Case |
-|------|----------|------|-------|----------|
-| Top | side=top | 1.0 | yes | Documentation, BOM review |
-| Bottom | side=bottom | 1.0 | yes | Back-side inspection |
-| Iso Front | -45,0,30 | 0.7 | yes | Hero shot, README |
-| Iso Back | -45,0,210 | 0.7 | yes | Alternate marketing angle |
-| Low Angle | -25,0,20 | 0.6 | yes | Dramatic product shot |
-| Detail MCU | -40,0,15 | 2.0 | no | Component review |
+| # | View | Side | Rotation | Zoom | Floor | Use Case |
+|---|------|------|----------|------|-------|----------|
+| 1 | Top | top | — | 1.0 | yes | Documentation, BOM review |
+| 2 | Top Iso Front | — | -45,0,30 | 0.7 | yes | Hero shot, README |
+| 3 | Top Iso Back | — | -45,0,210 | 0.7 | yes | Alternate marketing angle |
+| 4 | Top Low Angle | — | -25,0,20 | 0.6 | yes | Dramatic product shot |
+| 5 | Top Detail | — | -40,0,15 | 2.0 | no | Button/LED area zoom |
+| 6 | Bottom | bottom | — | 1.0 | yes | Back-side inspection |
+| 7 | Bottom Iso Front | bottom | -45,0,30 | 0.7 | yes | ESP32/ICs overview |
+| 8 | Bottom Iso Back | bottom | -45,0,210 | 0.7 | yes | Alternate back angle |
+| 9 | Bottom Low Angle | bottom | -25,0,20 | 0.6 | yes | Dramatic back shot |
+| 10 | Bottom Detail MCU | bottom | -40,0,15 | 2.0 | no | ESP32 + USB-C zoom |
+| 11 | Bottom Detail Power | bottom | -40,0,195 | 2.0 | no | IP5306/AMS1117/PAM8403 zoom |
 
 ## Lighting Presets
 

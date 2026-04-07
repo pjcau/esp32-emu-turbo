@@ -21,33 +21,38 @@ static int g_is_gg = 0;
 static uint8_t *g_screen_buf = NULL;
 
 static void scale_to_fb(int src_w, int src_h) {
-    /* Scale source → 480×320 centered, maintaining aspect ratio */
-    int scale_h = EMU_SCREEN_H;
-    int scale_w = (src_w * EMU_SCREEN_H) / src_h;
-    if (scale_w > EMU_SCREEN_W) {
-        scale_w = EMU_SCREEN_W;
-        scale_h = (src_h * EMU_SCREEN_W) / src_w;
-    }
-    int off_x = (EMU_SCREEN_W - scale_w) / 2;
-    int off_y = (EMU_SCREEN_H - scale_h) / 2;
-
-    /* Get palette */
+    /* 8-bit indexed → RGB565 via render_copy_palette */
     uint16_t palette[256];
+    memset(palette, 0, sizeof(palette));
+    /* Force palette dirty — smsplus only sets it on CRAM writes,
+     * but we need it every frame for correct color output */
+    render_mark_palette_dirty();
     render_copy_palette(palette);
 
     memset(g_fb, 0, sizeof(g_fb));
 
     int vp_x = bitmap.viewport.x;
     int vp_y = bitmap.viewport.y;
+    int vp_w = bitmap.viewport.w;
+    int vp_h = bitmap.viewport.h;
 
-    for (int dy = 0; dy < scale_h; dy++) {
-        int sy = vp_y + (dy * src_h) / scale_h;
-        for (int dx = 0; dx < scale_w; dx++) {
-            int sx = vp_x + (dx * src_w) / scale_w;
-            uint8_t idx = g_screen_buf[sy * bitmap.pitch + sx];
-            int px = off_x + dx, py = off_y + dy;
-            if (px < EMU_SCREEN_W && py < EMU_SCREEN_H)
-                g_fb[py * EMU_SCREEN_W + px] = palette[idx & 0x1F];
+    /* Use viewport dimensions if available, else fallback to src_w/src_h */
+    if (vp_w > 0) src_w = vp_w;
+    if (vp_h > 0) src_h = vp_h;
+
+    static int dbg = 0;
+    if (dbg++ < 5) printf("[SMS] vp: x=%d y=%d w=%d h=%d pitch=%d src=%dx%d\n",
+                           vp_x, vp_y, vp_w, vp_h, bitmap.pitch, src_w, src_h);
+
+    int off_x = (EMU_SCREEN_W - src_w) / 2;
+    int off_y = (EMU_SCREEN_H - src_h) / 2;
+
+    for (int y = 0; y < src_h && (off_y + y) < EMU_SCREEN_H; y++) {
+        /* retro-go reads at: bitmap.data + y*pitch + viewport.x */
+        const uint8_t *row = (uint8_t *)bitmap.data + y * bitmap.pitch + vp_x;
+        uint16_t *dst = &g_fb[(off_y + y) * EMU_SCREEN_W + off_x];
+        for (int x = 0; x < src_w && (off_x + x) < EMU_SCREEN_W; x++) {
+            dst[x] = palette[row[x]];
         }
     }
 }
@@ -66,13 +71,16 @@ static int emu_sms_init(const uint8_t *rom, size_t size, const rom_info_t *info)
     option.sndrate = EMU_AUDIO_RATE;
 
     /* Setup bitmap */
-    g_screen_buf = calloc(256 * 240, 1);
+    /* retro-go uses width=256, pitch=256, buffer oversized to handle viewport borders.
+     * render.c copies (w + 2*x) bytes per row. With w=256, x=14 → 284 bytes.
+     * Set pitch=256 and allocate oversized buffer (256 * 256 = 65536, enough for overflow). */
+    g_screen_buf = calloc(256 * 256, 1);
     if (!g_screen_buf) return -1;
 
     memset(&bitmap, 0, sizeof(bitmap));
     bitmap.data = g_screen_buf;
     bitmap.width = 256;
-    bitmap.height = 240;
+    bitmap.height = 192;
     bitmap.pitch = 256;
     bitmap.granularity = 1;
 

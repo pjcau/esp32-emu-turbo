@@ -843,6 +843,11 @@ static inline void parse_satb(int line)
   }
 }
 
+void render_mark_palette_dirty(void)
+{
+  pal_dirty = 1;
+}
+
 bool render_copy_palette(uint16* palette)
 {
   if (pal_dirty == 0 || palette == NULL)

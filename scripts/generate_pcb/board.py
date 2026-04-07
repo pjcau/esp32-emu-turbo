@@ -476,7 +476,7 @@ def _component_placeholders():
     placements.append(("L1", "SMD-4x4x2", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*JST_BAT_ENC)
-    placements.append(("J3", "JST-PH-2P", px, py, 0, "B.Cu"))
+    placements.append(("J3", "JST-PH-2P-SMD", px, py, 0, "B.Cu"))
 
     # Reset and Boot buttons (B.Cu, right of USB-C — dev kit style)
     px, py = enc_to_pcb(*RESET_ENC)
@@ -564,7 +564,7 @@ def _component_placeholders():
         "ESOP-8": (-5, 5),
         "SOT-223": (-5, 5),
         "Speaker-22mm": (-13, 13),
-        "JST-PH-2P": (-3, 3),
+        "JST-PH-2P-SMD": (-3, 3),
         "SS-12D00G3": (-4, 4),
         "SMD-4x4x2": (-4, 4),
         "Fiducial": (-2, 2),

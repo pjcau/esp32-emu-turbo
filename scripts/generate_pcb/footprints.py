@@ -459,7 +459,7 @@ FOOTPRINTS = {
     "USB-C-16P": (usb_c_16p, "B"),
     "FPC-40P-0.5mm": (fpc_40p, "B"),
     "TF-01A": (tf01a, "B"),
-    "JST-PH-2P": (jst_ph_2p, "B"),
+    "JST-PH-2P-SMD": (jst_ph_2p, "B"),
     "R_0805": (passive_0805, "B"),
     "C_0805": (passive_0805, "B"),
     "LED_0805": (passive_0805, "F"),

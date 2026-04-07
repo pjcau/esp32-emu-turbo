@@ -476,7 +476,7 @@ def _init_pads():
         ("U3", "SOT-223", *AMS1117, 0, "B"),
         ("U5", "SOP-16", *PAM8403, 90, "B"),
         ("L1", "SMD-4x4x2", *L1, 0, "B"),
-        ("J3", "JST-PH-2P", *JST, 0, "B"),
+        ("J3", "JST-PH-2P-SMD", *JST, 0, "B"),
         ("SPK1", "Speaker-22mm", *SPEAKER, 0, "B"),
         ("SW_PWR", "SS-12D00G3", *PWR_SW, 0, "B"),
     ]
