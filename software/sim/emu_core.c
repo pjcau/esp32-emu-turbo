@@ -169,7 +169,8 @@ static void stub_shutdown(void) { printf("[EMU] Core shutdown\n"); }
         .set_input = stub_set_input, .reset = stub_reset, .shutdown = stub_shutdown, \
     };
 
-DEFINE_CORE(nes,  256, 240, 60)
+/* NES uses real nofrendo core — see emu_nes.c */
+extern const emu_core_t nes_real_core;
 DEFINE_CORE(snes, 256, 224, 60)
 DEFINE_CORE(gb,   160, 144, 60)
 DEFINE_CORE(gbc,  160, 144, 60)
@@ -180,7 +181,7 @@ DEFINE_CORE(pce,  256, 240, 60)
 
 const emu_core_t *emu_get_core(platform_t platform) {
     switch (platform) {
-    case PLATFORM_NES:  return &nes_core;
+    case PLATFORM_NES:  return &nes_real_core;
     case PLATFORM_SNES: return &snes_core;
     case PLATFORM_GB:   return &gb_core;
     case PLATFORM_GBC:  return &gbc_core;
