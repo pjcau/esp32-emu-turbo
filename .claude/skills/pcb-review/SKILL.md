@@ -29,6 +29,31 @@ python3 scripts/verify_dfa.py
 python3 scripts/validate_jlcpcb.py
 ```
 
+### 1b. Run ERC (Electrical Rules Check)
+
+```bash
+python3 scripts/erc_check.py --run
+```
+
+Runs KiCad native ERC on the hierarchical schematic. Categorizes 730+ violations:
+- **Generator artifacts** (suppressed): grid alignment, wiring stubs, library symbols — inherent to Python-generated schematics
+- **Real issues**: pin_not_connected, power_pin_not_driven, pin_to_pin conflicts
+- **Critical**: pin_to_pin (output↔output) must be zero for production
+
+### 1c. Run SPICE power supply simulation
+
+```bash
+python3 scripts/spice_power_check.py
+```
+
+Requires: `ngspice` (`brew install ngspice`)
+
+Simulates IP5306 boost → AMS1117 LDO → ESP32 load:
+- +5V rail ripple at 500kHz switching (must be < 150mV)
+- +3V3 rail ripple under load steps (must be < 50mV)
+- Decoupling cap effectiveness (C17, C27, C1, C19)
+- ESP32 WiFi burst response (200mA → 350mA in 10µs)
+
 ### 2. Manual review against checklist
 
 Read `review-checklist.md` and verify each domain:
@@ -113,11 +138,13 @@ python3 scripts/validate_jlcpcb.py
 - `.claude/skills/pcb-review/review-checklist.md` — Full scoring criteria + JLCPCB rules reference
 - `hardware/datasheets/` — Component datasheets for pin verification
 - `scripts/pcb_review.py` — Automated review script
-- `scripts/verify_dfm_v2.py` — DFM verification (114 tests)
+- `scripts/verify_dfm_v2.py` — DFM verification (115 tests)
 - `scripts/verify_polarity.py` — Polarity/pin assignment tests
 - `scripts/verify_dfa.py` — Assembly verification (9 tests)
 - `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
-- `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (22 tests)
+- `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (26 tests)
+- `scripts/erc_check.py` — ERC automation (KiCad native, artifact filtering)
+- `scripts/spice_power_check.py` — ngspice power supply simulation (+5V/+3V3 ripple, load transient)
 - `scripts/generate_pcb/routing.py` — Trace routing
 - `scripts/generate_pcb/board.py` — Component placement
 - `scripts/generate_pcb/jlcpcb_export.py` — CPL/BOM export
