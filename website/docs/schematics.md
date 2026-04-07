@@ -106,7 +106,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | J1 | USB-C connector | — | 5V power input | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
-| J3 | JST PH 2-pin SMD connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| J3 | JST PH 2-pin SMD connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C265082.pdf) |
 | R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
 | R16 | Resistor | 100 kΩ | IP5306 KEY pin pull-down | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R17 | Resistor | 1 kΩ | LED1 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |

@@ -316,7 +316,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 14 component holes + 6 mounting holes + 290 vias = **310 drill operations**
+**Total holes:** 12 component holes + 6 mounting holes + 284 vias = **302 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -353,17 +353,17 @@ Standard M2.5 mounting holes at board corners and center, no electrical connecti
 | J3 pin pitch vs datasheet | 2.00 mm (datasheet: 2.0 mm) | **PASS** |
 
 :::tip NPTH Rule
-NPTH positioning holes are always sized from the component datasheet — never guessed. The drill diameter must exceed the component peg diameter by 0.10–0.20 mm for reliable insertion during assembly. All 8 NPTH holes in this design follow this rule.
+NPTH positioning holes are always sized from the component datasheet — never guessed. The drill diameter must exceed the component peg diameter by 0.10–0.20 mm for reliable insertion during assembly. All 6 NPTH holes in this design follow this rule.
 :::
 
 ### Via Summary
 
 | Type | Count | Drill Range | Annular Ring | Status |
 |------|-------|-------------|--------------|--------|
-| Signal vias | 290 | 0.20 mm | ≥ 0.075 mm | **PASS** |
-| Component NPTH | 8 | 0.65–1.00 mm | — (no pad) | **PASS** |
+| Signal vias | 284 | 0.20 mm | ≥ 0.075 mm | **PASS** |
+| Component NPTH | 6 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
-| Component SMD (J3) | — | — | — | **PASS** |
+| Component SMD (J3 C265082) | — | — | — | **PASS** |
 
 **Result: 22/22 checks passed — no short circuit risk, all drills match datasheets.**
 
@@ -430,7 +430,7 @@ JLCPCB's online DFM engine runs additional checks beyond our local DRC/DFM pipel
 | Lead to hole distance | 14 | Error | Leads near mounting/positioning holes — **false positive** (NPTH, no electrical connection) |
 | Pin inner/left/right edge | 50+50+50 | Error | **False positive** — J4 FPC 40-pin bottom-contact model mismatch in JLCPCB DFM library |
 | Lead area overlapping pad | 50 | Error | Same J4 FPC model mismatch as above |
-| Component through-hole | 0 | Info | J3 is now SMD (C265082) — no THT components remain |
+| Component through-hole | 0 | Info | J3 is now SMD (C265082) — no THT connectors on board |
 | Missing hole for component pin | 4 | Error | NPTH positioning holes (J1, SW\_PWR) — DFM expects PTH but these are pegs, **not electrical pins** |
 
 #### Verdict

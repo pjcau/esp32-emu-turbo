@@ -160,14 +160,14 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 | **Risk** | None — conservative oversizing improves thermal contact. |
 | **Action** | None. |
 
-### JST PH 2-pin (J3) — Drill slightly oversized
+### JST PH 2-pin (J3) — Now SMD (C265082)
 
 | Detail | Value |
 |--------|-------|
-| **Datasheet** | 0.70-0.80mm recommended hole |
-| **PCB** | 0.85mm |
-| **Risk** | None — intentional for JLCPCB minimum drill (0.80mm). Provides easier pin insertion. |
-| **Action** | None. Documented in MEMORY.md as intentional. |
+| **Change** | Reverted from THT (C173752) to SMD (C265082, S2B-PH-SM4-TB) |
+| **PCB** | SMD pads on B.Cu, no through-holes |
+| **Risk** | None — SMD eliminates drill concerns. |
+| **Action** | None. |
 
 ---
 
