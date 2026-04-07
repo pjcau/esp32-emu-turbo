@@ -859,3 +859,7 @@ bool render_copy_palette(uint16* palette)
   pal_dirty = 0;
   return true;
 }
+
+uint8 *render_get_internal_buffer(void) { return internal_buffer; }
+int render_get_vdp_mode(void) { return vdp.mode; }
+
