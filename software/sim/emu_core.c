@@ -169,8 +169,14 @@ static void stub_shutdown(void) { printf("[EMU] Core shutdown\n"); }
         .set_input = stub_set_input, .reset = stub_reset, .shutdown = stub_shutdown, \
     };
 
-/* NES uses real nofrendo core — see emu_nes.c */
-extern const emu_core_t nes_real_core;
+/* Real cores — see emu_*.c adapter files */
+extern const emu_core_t nes_real_core;   /* emu_nes.c (nofrendo) */
+extern const emu_core_t gb_real_core;    /* emu_gb.c (gnuboy) */
+extern const emu_core_t gbc_real_core;   /* emu_gb.c (gnuboy) */
+extern const emu_core_t sms_real_core;   /* emu_sms.c (smsplus) */
+extern const emu_core_t gg_real_core;    /* emu_sms.c (smsplus) */
+extern const emu_core_t pce_real_core;   /* emu_pce.c (pce-go) */
+extern const emu_core_t snes_real_core;  /* emu_snes.c (snes9x) */
 DEFINE_CORE(snes, 256, 224, 60)
 DEFINE_CORE(gb,   160, 144, 60)
 DEFINE_CORE(gbc,  160, 144, 60)
@@ -182,13 +188,13 @@ DEFINE_CORE(pce,  256, 240, 60)
 const emu_core_t *emu_get_core(platform_t platform) {
     switch (platform) {
     case PLATFORM_NES:  return &nes_real_core;
-    case PLATFORM_SNES: return &snes_core;
-    case PLATFORM_GB:   return &gb_core;
-    case PLATFORM_GBC:  return &gbc_core;
-    case PLATFORM_GEN:  return &gen_core;
-    case PLATFORM_SMS:  return &sms_core;
-    case PLATFORM_GG:   return &gg_core;
-    case PLATFORM_PCE:  return &pce_core;
+    case PLATFORM_SNES: return &snes_core;   /* stub — snes9x needs ESP-IDF build */
+    case PLATFORM_GB:   return &gb_real_core;
+    case PLATFORM_GBC:  return &gbc_real_core;
+    case PLATFORM_GEN:  return &gen_core;      /* stub — no genesis core yet */
+    case PLATFORM_SMS:  return &sms_real_core;
+    case PLATFORM_GG:   return &gg_real_core;
+    case PLATFORM_PCE:  return &pce_real_core;
     default: return NULL;
     }
 }
