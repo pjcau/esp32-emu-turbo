@@ -72,5 +72,5 @@ C24,1uF,C_0805,29.36mm,22.00mm,90,Bottom
 C25,1uF,C_0805,31.50mm,37.50mm,90,Bottom
 R20,20k,R_0805,38.00mm,26.50mm,0,Bottom
 R21,20k,R_0805,38.00mm,32.50mm,0,Bottom
-C1,10uF,C_0805,122.00mm,55.00mm,0,Bottom
+C1,10uF,C_0805,120.00mm,57.00mm,0,Bottom
 C2,22uF,C_1206,125.00mm,62.50mm,0,Bottom

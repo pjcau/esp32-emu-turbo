@@ -362,7 +362,7 @@ def _silkscreen_labels():
         ("C18", "10uF", 116.0, 49.0, 0, 2.5),
         ("C19", "22uF", 110.0, 58.5, 0, 2.5),
         # AMS1117 caps
-        ("C1", "10uF", 122.0, 55.0, 0, -2.0),
+        ("C1", "10uF", 120.0, 57.0, 0, -2.0),
         ("C2", "22uF", 125.0, 62.5, 0, -2.0),
         # Inductor
         ("L1", "1uH", 110.0, 52.5, -4.5, 0),
@@ -539,7 +539,7 @@ def _component_placeholders():
     # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
     # C1 at amx-1 to keep pads outside FPC slot zone (slot starts at x=125.5)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("C1", "C_0805", amx - 3.0, amy - 0.5, 0, "B.Cu"))  # near VIN pin (3.7mm)
+    placements.append(("C1", "C_0805", amx - 5.0, amy + 1.5, 0, "B.Cu"))  # left of SOT-223 body, 3.2mm from VIN
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
     # Board-level fiducials at opposite corners for pick-and-place alignment.

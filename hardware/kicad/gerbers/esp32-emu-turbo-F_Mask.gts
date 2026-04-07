@@ -1,12 +1,12 @@
 %TF.GenerationSoftware,KiCad,Pcbnew,10.0.0*%
-%TF.CreationDate,2026-04-07T14:16:24+02:00*%
+%TF.CreationDate,2026-04-07T15:35:34+02:00*%
 %TF.ProjectId,esp32-emu-turbo,65737033-322d-4656-9d75-2d747572626f,rev?*%
 %TF.SameCoordinates,Original*%
 %TF.FileFunction,Soldermask,Top*%
 %TF.FilePolarity,Negative*%
 %FSLAX46Y46*%
 G04 Gerber Fmt 4.6, Leading zero omitted, Abs format (unit mm)*
-G04 Created by KiCad (PCBNEW 10.0.0) date 2026-04-07 14:16:24*
+G04 Created by KiCad (PCBNEW 10.0.0) date 2026-04-07 15:35:34*
 %MOMM*%
 %LPD*%
 G01*
@@ -18,8 +18,7 @@ G04 APERTURE LIST*
 %ADD14C,0.650000*%
 %ADD15C,1.000000*%
 %ADD16C,0.900000*%
-%ADD17C,1.600000*%
-%ADD18C,2.000000*%
+%ADD17C,2.000000*%
 G04 APERTURE END LIST*
 D10*
 %TO.C,*%
@@ -135,11 +134,6 @@ X41500000Y-72550000D03*
 X38500000Y-72550000D03*
 %TD*%
 D17*
-%TO.C,J3*%
-X81000000Y-62500000D03*
-X79000000Y-62500000D03*
-%TD*%
-D18*
 %TO.C,FID1*%
 X12000000Y-12000000D03*
 %TD*%

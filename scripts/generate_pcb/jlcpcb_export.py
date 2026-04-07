@@ -281,7 +281,7 @@ def _build_placements():
 
     # ── AMS1117 support caps ──
     p.append(("C1", "10uF", "C_0805",
-              amx - 3.0, amy - 0.5, 0, "bottom"))  # near VIN pin (3.7mm)
+              amx - 5.0, amy + 1.5, 0, "bottom"))  # left of SOT-223 body (3.2mm from VIN)
     p.append(("C2", "22uF", "C_1206",
               amx, amy + 7, 0, "bottom"))
 

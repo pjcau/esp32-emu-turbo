@@ -361,7 +361,7 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (122.0, 55.0)   # AMS1117 input cap — 3.7mm from U3 VIN pin (was 7.8mm)
+C1_POS = (120.0, 57.0)   # AMS1117 input cap — 3.2mm from VIN, left of SOT-223 body
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
@@ -3710,17 +3710,17 @@ def _passive_traces():
     c1_p1 = _pad("C1", "1")
     c1_p2 = _pad("C1", "2")
     if c1_p1:
-        # +5V via below C1 pad 1 — y+2.5 to clear AMS1117 VIN via at (122.70,56.65)
-        # pad1 ~(122.95,55), via at (122.95,57.5): dist to VIN via = 0.89mm ✓
-        parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] + 2.5,
+        # +5V via below C1 pad 1 — pad1 ~(120.95,57), via at (120.95,59)
+        # Clear of AMS1117 VIN via (122.70,56.65): dist=2.9mm ✓
+        parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] + 2.0,
                           "B.Cu", W_PWR, n_5v))
-        parts.append(_via_net(c1_p1[0], c1_p1[1] + 2.5, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c1_p1[0], c1_p1[1] + 2.0, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
     if c1_p2:
-        # GND via below C1 pad 2 — y+1.5, staggered from pad 1 via
-        # pad2 ~(121.05,55), via at (121.05,56.5): dist to pad1 via = 2.15mm ✓
-        parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] + 1.5,
+        # GND via below C1 pad 2 — pad2 ~(119.05,57), via at (119.05,59)
+        # Staggered Y from pad1 via for clearance
+        parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] + 2.0,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c1_p2[0], c1_p2[1] + 1.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c1_p2[0], c1_p2[1] + 2.0, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C2 AMS1117 output: pad "1" -> AMS1117 tab (+3V3), pad "2" -> GND via
     c2_p1 = _pad("C2", "1")

@@ -122,7 +122,7 @@ def test_c1_c2_spacing():
     c2_y = float(cpl["C2"]["Mid Y"].replace("mm", ""))
     u3_y = float(cpl["U3"]["Mid Y"].replace("mm", ""))
 
-    check("C1 Mid Y = 55.00mm", abs(c1_y - 55.00) < 0.01, f"got {c1_y}")
+    check("C1 Mid Y = 57.00mm", abs(c1_y - 57.00) < 0.01, f"got {c1_y}")
     check("C2 Mid Y = 62.50mm", abs(c2_y - 62.50) < 0.01, f"got {c2_y}")
 
     # C1 now beside U3 (not above) — check min distance to VIN pin
