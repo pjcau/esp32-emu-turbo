@@ -953,3 +953,123 @@ python3 rg_tool.py --target=esp32-emu-turbo flash
 # /roms/pce/  — .pce files
 # /roms/gen/  — .bin/.md files
 ```
+
+---
+
+## Desktop Simulator
+
+SDL2-based hardware simulator that runs on macOS/Linux without physical hardware. Uses the same HAL interface as the ESP32 firmware — the emulator cores are identical on both platforms.
+
+### Architecture
+
+```
+┌─── ESP32 Hardware (PCB) ───┐    ┌─── Simulator (SDL2) ──────────┐
+│                             │    │                                 │
+│ ILI9488 480×320             │    │ SDL2 window 480×320             │
+│  └─ 8080 parallel bus       │◄──►│  └─ sim_display_write()         │
+│  └─ GPIO 4-11,12-14,46     │    │                                 │
+│                             │    │                                 │
+│ 12 tact switches            │    │ Keyboard WASD/JK/UI             │
+│  └─ GPIO 40,41,42,1,...     │◄──►│  └─ sim_buttons_read()          │
+│                             │    │                                 │
+│ I2S → PAM8403 → Speaker    │    │ SDL2 audio 32kHz mono           │
+│  └─ GPIO 15,16,17           │◄──►│  └─ sim_audio_write()           │
+│                             │    │                                 │
+│ SPI → SD card (TF-01A)     │    │ Host filesystem (test-roms/)    │
+│  └─ GPIO 44,43,38,39        │◄──►│  └─ sdcard_sim_load_rom()       │
+└─────────────────────────────┘    └─────────────────────────────────┘
+```
+
+### Quick Start
+
+```bash
+# Build simulator (requires: brew install sdl2)
+cd software/sim && make
+
+# Run with ROM browser
+./scripts/sim-run.sh run
+
+# Or run directly
+./software/sim/emu-turbo-sim ./test-roms
+```
+
+### Controls
+
+| Key | Button | Key | Button |
+|-----|--------|-----|--------|
+| W | UP | J | A |
+| A | LEFT | K | B |
+| S | DOWN | U | X |
+| D | RIGHT | I | Y |
+| Enter | START | Backspace | SELECT |
+| Q | L | E | R |
+| ESC | Back to ROM browser | Window close | Quit |
+
+### Launcher Flow
+
+1. **Boot** → hardware init (display, input, audio, SD card)
+2. **HW Test** → all subsystems checked → press START
+3. **ROM Browser** → recursive scan of `test-roms/` → UP/DOWN + A to select
+4. **ROM Check** → header validation (iNES, SNES, GB, Genesis, SMS, GG, PCE) → press START
+5. **Emulation** → real-time emulation at 60fps → ESC to go back
+
+### ROM Validation
+
+The ROM checker (`rom_check.c`) validates headers for all 8 platforms:
+
+| Platform | Check | Fields |
+|----------|-------|--------|
+| NES | iNES header (NES\x1A) | Mapper, PRG/CHR sizes, mirroring |
+| SNES | LoROM/HiROM checksum | Title, ROM type, RAM size |
+| GB/GBC | Nintendo logo + header checksum | Title, MBC type, ROM banks |
+| Genesis | SEGA signature at 0x100 | Domestic title, region |
+| SMS/GG | TMR SEGA at 0x7FF0 | Region code |
+| PCE | Size validation | Copier header detection |
+
+### Emulator Cores
+
+| Platform | Core | Status | Native Resolution |
+|----------|------|--------|-------------------|
+| **NES** | nofrendo | **Working** | 256×240 @ 60fps |
+| SNES | snes9x (planned) | Stub | 256×224 @ 60fps |
+| GB/GBC | gnuboy (planned) | Stub | 160×144 @ 60fps |
+| Genesis | genesis-plus (planned) | Stub | 320×224 @ 60fps |
+| SMS | genesis-plus (planned) | Stub | 256×192 @ 60fps |
+| GG | genesis-plus (planned) | Stub | 160×144 @ 60fps |
+| PCE | pce-go (planned) | Stub | 256×240 @ 60fps |
+
+The NES core (nofrendo) is fully integrated with:
+- 6502 CPU emulation, PPU (video), APU (audio)
+- 56 mapper support (covers ~95% of NES games)
+- Palette-indexed → RGB565 conversion with nearest-neighbor scaling
+- Audio output at 32kHz matching ESP32 I2S configuration
+
+### File Structure
+
+```
+software/
+  sim/
+    sim_main.c          — Launcher (boot → browser → check → emulate)
+    sim_hal.h/c         — SDL2 HAL (display, buttons, audio)
+    sim_display.c       — Display driver (SDL2 window)
+    sim_input.c         — Input driver (keyboard mapping)
+    sim_audio.c         — Audio driver (SDL2 audio output)
+    sim_sdcard.c        — SD card driver (host filesystem)
+    rom_check.h/c       — ROM validation (8 platforms)
+    emu_core.h          — Generic emulator core interface
+    emu_core.c          — Stub cores for all platforms
+    emu_nes.c           — NES adapter (nofrendo → emu_core_t)
+    font8x8.h           — 8×8 pixel font for text rendering
+    Makefile            — Native build (gcc + SDL2)
+  components/
+    nofrendo/           — NES emulator core (69 C files, from retro-go)
+      nes/              — CPU, PPU, APU, memory, ROM, input
+      mappers/          — 56 mapper implementations
+  main/
+    main.c              — ESP32 firmware (same test sequence)
+    display.h/c         — ESP32 display driver (8080 parallel)
+    input.h/c           — ESP32 input driver (GPIO)
+    audio.h/c           — ESP32 audio driver (I2S)
+    sdcard.h/c          — ESP32 SD card driver (SPI)
+    board_config.h      — GPIO pin definitions (source of truth)
+```

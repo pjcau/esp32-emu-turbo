@@ -10,7 +10,7 @@ Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) 
 
 :::tip Release v2.1
 All production files in `release_jlcpcb/` are verified and ready for ordering:
-- **115 DFM tests** and **9 DFA assembly tests** pass (100%)
+- **115 DFM tests**, **9 DFA assembly tests**, and **26 JLCPCB validation tests** pass
 - **PCB review score:** 98/100
 - **19 silkscreen labels** added on F.SilkS/B.SilkS for component identification
 - **W_PWR_LOW = 0.30mm** trace width added for power stubs
@@ -58,7 +58,7 @@ The bottom side hosts the main circuitry:
 | **U3**         | AMS1117-3.3 (LDO regulator) | C6186         | SOT-223   |
 | **U5**         | PAM8403 (audio amplifier)   | C5122557      | SOP-16    |
 | **J1**         | USB-C connector (16-pin)    | C2765186      | USB-C-SMD |
-| **J3**         | JST-PH 2-pin (battery)      | C173752       | JST-PH-2  |
+| **J3**         | JST-PH 2-pin SMD (battery)  | C265082       | JST-PH-2P-SMD |
 | **J4**         | FPC 40-pin 0.5mm (display)  | C2856812      | FPC-40P   |
 | **L1**         | 1uH 5A inductor             | C280579       | SMD-4x    |
 | **SW_PWR**     | Slide switch (power)        | C431540       | SS-12D0   |

@@ -135,7 +135,7 @@ graph TB
 | Category | Skills | Description |
 |----------|--------|-------------|
 | **Pipeline (7)** | `/generate`, `/release`, `/release-prep`, `/full-release`, `/render`, `/pcba-render`, `/check` | Full PCB generation → JLCPCB export flow |
-| **Verification (8)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 115 DFM + 9 DFA tests, DRC checks, layout scoring |
+| **Verification (8)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 115 DFM + 9 DFA + 26 JLCPCB tests, DRC checks, layout scoring |
 | **Fix & Debug (4)** | `/dfm-fix`, `/fix-rotation`, `/jlcpcb-check`, `/jlcpcb-parts` | Automated issue resolution |
 | **MCP Design (5)** | `/pcb-schematic`, `/pcb-components`, `/pcb-routing`, `/pcb-library`, `/pcb-board` | Direct KiCad manipulation via MCP protocol |
 

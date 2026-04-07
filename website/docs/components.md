@@ -262,7 +262,7 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | J1 | USB-C 16-pin connector | SMT | C2765186 | Extended | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
 | U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
 | J4 | FPC 40-pin 0.5mm (display) | SMT | C2856812 | Extended | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
-| J3 | JST PH 2-pin (battery) | THT | C173752 | Extended | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| J3 | JST PH 2-pin SMD (battery) | SMT | C265082 | Extended | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
 | L1 | 1µH inductor 4.5A | SMD 4×4 | C280579 | Extended | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | SW1–SW13,SW_RST,SW_BOOT | SMT tact switch 5.1×5.1mm | SMT | C318884 | Extended | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | SW_PWR | Slide switch SS-12D00G3 | SMT | C431540 | Extended | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |

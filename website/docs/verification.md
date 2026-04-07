@@ -316,7 +316,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 16 component holes + 6 mounting holes + 290 vias = **312 drill operations**
+**Total holes:** 14 component holes + 6 mounting holes + 290 vias = **310 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -327,7 +327,7 @@ Positioning holes (NPTH) must match the component peg diameter with adequate cle
 | J1 | USB-C 16P (C2765186) | 2x NPTH | 0.65 mm | ø0.65(2X) | ø0.50 mm | 0.15 mm | **PASS** |
 | U6 | TF-01A SD slot (C91145) | 2x NPTH | 1.00 mm | 2-∅1.00 | ø0.80 mm | 0.20 mm | **PASS** |
 | SW_PWR | MSK12C02 slide switch (C431540) | 2x NPTH | 0.90 mm | ø0.75 pegs | ø0.75 mm | 0.15 mm | **PASS** |
-| J3 | JST PH 2-pin (C173752) | 2x THT | 0.85 mm | ø0.7 +0.1/-0 | ø0.50 mm pins | 0.35 mm | **PASS** |
+| J3 | JST PH 2-pin SMD (C265082) | SMD | — | — | — | — | **PASS** |
 
 ### Mounting Holes (6x NPTH, 2.5 mm)
 
@@ -363,7 +363,7 @@ NPTH positioning holes are always sized from the component datasheet — never g
 | Signal vias | 290 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 8 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
-| Component THT (J3) | 2 | 0.85 mm | 0.375 mm | **PASS** |
+| Component SMD (J3) | — | — | — | **PASS** |
 
 **Result: 22/22 checks passed — no short circuit risk, all drills match datasheets.**
 
@@ -430,7 +430,7 @@ JLCPCB's online DFM engine runs additional checks beyond our local DRC/DFM pipel
 | Lead to hole distance | 14 | Error | Leads near mounting/positioning holes — **false positive** (NPTH, no electrical connection) |
 | Pin inner/left/right edge | 50+50+50 | Error | **False positive** — J4 FPC 40-pin bottom-contact model mismatch in JLCPCB DFM library |
 | Lead area overlapping pad | 50 | Error | Same J4 FPC model mismatch as above |
-| Component through-hole | 2 | Info | J3 JST PH 2-pin THT — correct, only THT component |
+| Component through-hole | 0 | Info | J3 is now SMD (C265082) — no THT components remain |
 | Missing hole for component pin | 4 | Error | NPTH positioning holes (J1, SW\_PWR) — DFM expects PTH but these are pegs, **not electrical pins** |
 
 #### Verdict
@@ -624,10 +624,13 @@ Or individually:
 ```bash
 python3 scripts/verify_dfm_v2.py         # 115 DFM guard tests
 python3 scripts/drc_native.py --run      # JLCPCB design rules (smart analysis)
+python3 scripts/erc_check.py --run       # ERC (Electrical Rules Check) on schematics
 python3 scripts/simulate_circuit.py      # Power/timing simulation
+python3 scripts/spice_power_check.py     # SPICE power supply ripple/transient simulation
 python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync
 python3 scripts/test_pcb_connectivity.py # Electrical connectivity
 python3 scripts/analyze_pad_distances.py # Pad spacing analysis
+python3 scripts/validate_jlcpcb.py       # JLCPCB manufacturing rules (26 tests)
 ```
 
 ### Automatically (Husky pre-commit hook)
