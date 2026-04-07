@@ -316,7 +316,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 16 component holes + 6 mounting holes + 269 vias = **291 drill operations**
+**Total holes:** 16 component holes + 6 mounting holes + 290 vias = **312 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -360,7 +360,7 @@ NPTH positioning holes are always sized from the component datasheet — never g
 
 | Type | Count | Drill Range | Annular Ring | Status |
 |------|-------|-------------|--------------|--------|
-| Signal vias | 269 | 0.20 mm | ≥ 0.075 mm | **PASS** |
+| Signal vias | 290 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 8 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
 | Component THT (J3) | 2 | 0.85 mm | 0.375 mm | **PASS** |
@@ -510,7 +510,7 @@ Aggregate assessment across all verification sources to estimate the probability
 
 | Verification Source | Tests | Passed | Failed | Rate |
 |---------------------|-------|--------|--------|------|
-| Local DFM v2 | 114 | 114 | 0 | 100% |
+| Local DFM v2 | 115 | 115 | 0 | 100% |
 | Local DFA assembly | 9 | 9 | 0 | 100% |
 | Polarity verification | 40 | 40 | 0 | 100% |
 | Hole & drill audit | 22 | 22 | 0 | 100% |
@@ -519,13 +519,13 @@ Aggregate assessment across all verification sources to estimate the probability
 | JLCPCB silkscreen | 3 | 3 | 0 | 100% |
 | JLCPCB drill | 8 | 8 | 0 | 100% |
 | JLCPCB SMT assembly | 10 | 10 | 0 | 100% |
-| **Total** | **224** | **224** | **0** | **100%** |
+| **Total** | **225** | **225** | **0** | **100%** |
 
 ### Risk Matrix
 
 | Risk Category | Severity (0–5) | Evidence | Mitigation |
 |---------------|----------------|----------|------------|
-| Electrical shorts | **0** | 291 drill ops verified, all clearances >0.15mm | — |
+| Electrical shorts | **0** | 312 drill ops verified, all clearances >0.15mm | — |
 | Wrong component values | **0** | BOM ↔ schematic ↔ PCB synced, 40/40 polarity, 239 pin-net checks | — |
 | PCB manufacturing reject | **0** | JLCPCB DFM: 0 errors on routing/mask/silk/drill | — |
 | PCBA assembly defect | **0** | AR warnings reduced 77 to 23 (VIA\_MIN 0.15mm), 2 fiducials detected, CPL rotation variants for U5 | — |
@@ -544,7 +544,7 @@ Manufacturing confidence = (1 - risk/max_risk) × 100
 
 | Metric | Value | Assessment |
 |--------|-------|------------|
-| Automated test pass rate | **224/224 (100%)** | All checks green |
+| Automated test pass rate | **225/225 (100%)** | All checks green |
 | JLCPCB DFM errors | **0** | Ready for order |
 | JLCPCB routing warnings | **25** (was 81) | -69% reduction |
 | Risk score | **1/35** (was 4/35) | Very low risk |
@@ -560,7 +560,7 @@ Manufacturing confidence = (1 - risk/max_risk) × 100
 | Fiducial marks FID1/FID2 at diagonal corners | 2 warnings | **0** | Assembly accuracy |
 
 :::tip What 97% confidence means
-Based on 224 automated checks (100% pass rate), 0 JLCPCB DFM errors, and a risk score of just 1/35, there is a **97% probability that the first PCB + PCBA batch will work correctly without rework**. The only remaining risk (1/35) is:
+Based on 225 automated checks (100% pass rate), 0 JLCPCB DFM errors, and a risk score of just 1/35, there is a **97% probability that the first PCB + PCBA batch will work correctly without rework**. The only remaining risk (1/35) is:
 - USB D+/D- mismatch of 1.57mm — within USB 2.0 Full Speed spec (tolerance ~25mm at 12MHz), used only for firmware flash and debug console
 
 This is a **production-ready** design.
@@ -580,7 +580,7 @@ This is a **production-ready** design.
 ### Fast commands (recommended)
 
 ```bash
-# Quick DFM check — 114 tests, ~2s, no Docker needed
+# Quick DFM check — 115 tests, ~2s, no Docker needed
 make verify-fast
 
 # Full pipeline — generate + DFM + DRC + gerbers + connectivity (~5s)
@@ -622,7 +622,7 @@ make verify-all    # DRC + simulation + consistency + short circuit
 Or individually:
 
 ```bash
-python3 scripts/verify_dfm_v2.py         # 114 DFM guard tests
+python3 scripts/verify_dfm_v2.py         # 115 DFM guard tests
 python3 scripts/drc_native.py --run      # JLCPCB design rules (smart analysis)
 python3 scripts/simulate_circuit.py      # Power/timing simulation
 python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync

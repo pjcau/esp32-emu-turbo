@@ -8,12 +8,13 @@ sidebar_position: 9
 
 Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) — minimum order of 5 units with full SMT assembly.
 
-:::tip Release v1.6 (2026-02-21)
+:::tip Release v2.1
 All production files in `release_jlcpcb/` are verified and ready for ordering:
-- **JLCPCB DFM footprint fix** — all 8 flagged components (J4, U1, U6, SW_PWR, U5, J1, SW11, SW12) corrected with pad geometries from KiCad 10 standard library and JLCPCB/EasyEDA official component library
-- **R17/R18 BOM fix** — LCSC part C11702 (0402) replaced with C17513 (correct 0805 package)
-- **ESP32-S3 pin layout** — corrected from 2-side (wrong) to 3-side layout (L:1-14, B:15-26, R:27-40)
-- **MSK12C02 slide switch** — replaced THT footprint with correct 7-pad SMD (matching C431540)
+- **115 DFM tests** and **9 DFA assembly tests** pass (100%)
+- **PCB review score:** 98/100
+- **19 silkscreen labels** added on F.SilkS/B.SilkS for component identification
+- **W_PWR_LOW = 0.30mm** trace width added for power stubs
+- **LCSC parts fixed:** C22 = C13967 (0.47uF), C23-C25 = C28323 (1uF)
 - **75 components** in BOM/CPL matched against schematic and PCB
 - **0 DRC errors**, all pre-production checks passed
 :::
@@ -68,11 +69,11 @@ The bottom side hosts the main circuitry:
 | R17, R18       | 1k                          | C17513        | R_0805    |
 | R19            | 10k (INL pull-down)          | C17414        | R_0805    |
 | R20, R21       | 20k (PAM8403 gain set)       | C4184         | R_0805    |
-| C1, C17, C18   | 10uF                        | C15850        | C_0805    |
+| C1, C17, C18, C27 | 10uF                     | C15850        | C_0805    |
 | C2, C19        | 22uF                        | C12891        | C_1206    |
-| C3–C16         | 100nF                       | C49678        | C_0805    |
-| C20            | 0.47uF (PAM8403 bypass)     | C1537         | C_0805    |
-| C21–C25        | 1uF (PAM8403 input/output)  | C28323        | C_0805    |
+| C3–C16,C20,C21,C26 | 100nF                  | C49678        | C_0805    |
+| C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
+| C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
 
 **Total SMT components:** 24 unique part types, ~75 individual placements.
 
