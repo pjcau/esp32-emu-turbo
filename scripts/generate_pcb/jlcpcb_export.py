@@ -55,7 +55,7 @@ _JLCPCB_POS_CORRECTIONS = {
     "J1": (0, 0),         # USB-C: footprint now matches JLCPCB C2765186 exactly
     "J4": (0, 0),         # FPC: footprint now matches JLCPCB C2856812 exactly
     "SW_PWR": (0, 0),     # MSK12C02: footprint now matches JLCPCB C431540 exactly
-    "J3": (0, -2.0),     # JST PH 2P: model origin offset from pad center at 180° rotation
+    "J3": (0, -3.5),     # JST PH 2P: model origin offset from pad center at 180° rotation
 }
 
 # ── Per-component rotation overrides (bypass formula) ──
