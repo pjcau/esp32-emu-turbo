@@ -43,8 +43,8 @@
 <rect x="514.8" y="147.0" width="8" height="30" rx="1" fill="#8b6914" stroke="#a0832a" stroke-width="0.5" opacity="0.7"/>
 <line x1="350.20000000000005" y1="264.0" x2="464.0" y2="264.0" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
 <line x1="464.0" y1="264.0" x2="464.0" y2="180.38" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
-<line x1="442.0" y1="204.54" x2="342.0" y2="204.54" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
-<line x1="172.0" y1="204.54" x2="344.0" y2="204.54" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
+<line x1="442.0" y1="204.54" x2="339.0" y2="204.54" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
+<line x1="172.0" y1="204.54" x2="339.0" y2="204.54" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
 <line x1="342.54" y1="172.46" x2="424.12" y2="172.46" stroke="#4488ff" stroke-width="0.6400000000000001" stroke-linecap="round" opacity="0.7"/>
 <line x1="460.0" y1="172.46" x2="516.0" y2="172.46" stroke="#4488ff" stroke-width="0.6400000000000001" stroke-linecap="round" opacity="0.7"/>
 <line x1="516.0" y1="40.0" x2="583.2" y2="40.0" stroke="#4488ff" stroke-width="0.6400000000000001" stroke-linecap="round" opacity="0.7"/>
@@ -184,8 +184,8 @@
 <circle cx="469.6" cy="202.0" r="0.9" fill="#1a1a1a"/>
 <circle cx="529.2" cy="262.6" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="529.2" cy="262.6" r="0.9" fill="#1a1a1a"/>
-<circle cx="328.0" cy="270.0" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="328.0" cy="270.0" r="0.9" fill="#1a1a1a"/>
+<circle cx="332.0" cy="274.0" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="332.0" cy="274.0" r="0.9" fill="#1a1a1a"/>
 <circle cx="327.2" cy="284.8" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="327.2" cy="284.8" r="0.6" fill="#1a1a1a"/>
 <circle cx="340.8" cy="160.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
@@ -214,18 +214,6 @@
 <circle cx="544.96" cy="309.104" r="0.6" fill="#1a1a1a"/>
 <circle cx="538.96" cy="309.104" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="538.96" cy="309.104" r="0.6" fill="#1a1a1a"/>
-<circle cx="220.0" cy="68.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="220.0" cy="68.0" r="0.6" fill="#1a1a1a"/>
-<circle cx="460.0" cy="68.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="460.0" cy="68.0" r="0.6" fill="#1a1a1a"/>
-<circle cx="212.0" cy="280.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="212.0" cy="280.0" r="0.6" fill="#1a1a1a"/>
-<circle cx="300.0" cy="252.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="300.0" cy="252.0" r="0.6" fill="#1a1a1a"/>
-<circle cx="492.0" cy="160.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="492.0" cy="160.0" r="0.6" fill="#1a1a1a"/>
-<circle cx="600.0" cy="120.0" r="1.2" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="600.0" cy="120.0" r="0.6" fill="#1a1a1a"/>
 <circle cx="450.0" cy="176.38" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="450.0" cy="176.38" r="0.9" fill="#1a1a1a"/>
 <circle cx="510.8" cy="246.6" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
@@ -248,8 +236,8 @@
 <circle cx="375.0" cy="104.0" r="0.46" fill="#1a1a1a"/>
 <circle cx="442.0" cy="204.54" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="442.0" cy="204.54" r="0.9" fill="#1a1a1a"/>
-<circle cx="342.0" cy="204.54" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
-<circle cx="342.0" cy="204.54" r="0.9" fill="#1a1a1a"/>
+<circle cx="339.0" cy="204.54" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
+<circle cx="339.0" cy="204.54" r="0.9" fill="#1a1a1a"/>
 <circle cx="177.0" cy="293.2" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>
 <circle cx="177.0" cy="293.2" r="0.9" fill="#1a1a1a"/>
 <circle cx="172.0" cy="204.54" r="1.8" fill="#d4af37" stroke="#1a1a1a" stroke-width="0.5"/>

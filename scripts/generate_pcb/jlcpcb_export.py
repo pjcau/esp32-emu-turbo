@@ -204,7 +204,7 @@ def _build_placements():
     # JST battery connector
     jx, jy = enc_to_pcb(*JST_BAT_ENC)
     p.append(("J3", "JST-PH-2P-SMD",
-              "JST-PH-2P-SMD", jx, jy, 0, "bottom"))
+              "JST-PH-2P-SMD", jx, jy, 90, "bottom"))
 
     # Reset and Boot buttons (back side, right of USB-C)
     from scripts.generate_pcb.board import RESET_ENC, BOOT_ENC

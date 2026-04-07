@@ -24,7 +24,7 @@ int sim_display_init(void) {
     g_window = SDL_CreateWindow(
         "ESP32 Emu Turbo — Simulator",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        SIM_LCD_WIDTH * 2, SIM_LCD_HEIGHT * 2,  /* 2x scale */
+        SIM_LCD_WIDTH, SIM_LCD_HEIGHT,  /* 1x native — no scaling artifacts */
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
     );
     if (!g_window) {

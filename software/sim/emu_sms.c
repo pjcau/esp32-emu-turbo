@@ -21,24 +21,33 @@ static int g_is_gg = 0;
 static uint8_t *g_screen_buf = NULL;
 
 static void scale_to_fb(int src_w, int src_h) {
+    /* Get the VDP palette (32 entries, RGB565 byte-swapped for ESP32) */
     uint16_t palette[256];
     memset(palette, 0, sizeof(palette));
     render_mark_palette_dirty();
     render_copy_palette(palette);
+
+    /* Un-swap bytes: palette_sync() stores big-endian for ESP32 SPI,
+     * but SDL expects native (little-endian on x86/ARM Mac) */
+    for (int i = 0; i < 256; i++) {
+        palette[i] = (palette[i] << 8) | (palette[i] >> 8);
+    }
 
     memset(g_fb, 0, sizeof(g_fb));
 
     if (bitmap.viewport.w > 0) src_w = bitmap.viewport.w;
     if (bitmap.viewport.h > 0) src_h = bitmap.viewport.h;
 
+    int vp_x = bitmap.viewport.x;  /* horizontal offset in internal_buffer */
+    int vp_y = bitmap.viewport.y;  /* vertical offset (overscan border rows) */
     int off_x = (EMU_SCREEN_W - src_w) / 2;
     int off_y = (EMU_SCREEN_H - src_h) / 2;
 
     for (int y = 0; y < src_h && (off_y + y) < EMU_SCREEN_H; y++) {
-        const uint8_t *row = (uint8_t *)bitmap.data + y * bitmap.pitch;
+        const uint8_t *row = (uint8_t *)bitmap.data + (y + vp_y) * bitmap.pitch + vp_x;
         uint16_t *dst = &g_fb[(off_y + y) * EMU_SCREEN_W + off_x];
         for (int x = 0; x < src_w && (off_x + x) < EMU_SCREEN_W; x++) {
-            dst[x] = palette[row[x]];
+            dst[x] = palette[row[x] & 0x1F];
         }
     }
 }
@@ -79,6 +88,13 @@ static int emu_sms_init(const uint8_t *rom, size_t size, const rom_info_t *info)
         return -1;
     }
 
+    /* Force console type from file extension — set_rom_config may default to SMS2
+     * if the ROM lacks the "TMR SEGA" header at 0x7ff0 */
+    if (g_is_gg && !IS_GG) {
+        sms.console = CONSOLE_GG;
+        printf("[SMS] Forced console to Game Gear (no TMR SEGA header)\n");
+    }
+
     system_poweron();
     g_initialized = 1;
     printf("[SMS] smsplus ready: %s (%zuKB)\n", info->title, size / 1024);
@@ -108,7 +124,9 @@ static int emu_sms_run_frame(void) {
     return 0;
 }
 
-static const uint16_t *emu_sms_get_fb(void) { return g_fb; }
+static const uint16_t *emu_sms_get_fb(void) {
+    return g_fb;
+}
 
 static int emu_sms_get_audio(int16_t *buf, int max) {
     int n = snd.sample_count;

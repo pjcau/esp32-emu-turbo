@@ -476,7 +476,7 @@ def _init_pads():
         ("U3", "SOT-223", *AMS1117, 0, "B"),
         ("U5", "SOP-16", *PAM8403, 90, "B"),
         ("L1", "SMD-4x4x2", *L1, 0, "B"),
-        ("J3", "JST-PH-2P-SMD", *JST, 0, "B"),
+        ("J3", "JST-PH-2P-SMD", *JST, 90, "B"),
         ("SPK1", "Speaker-22mm", *SPEAKER, 0, "B"),
         ("SW_PWR", "SS-12D00G3", *PWR_SW, 0, "B"),
     ]
@@ -797,7 +797,7 @@ def _power_traces():
         (ip_ep[0] + 2.4, ip_ep[1] + 3),   # IP5306 GND (via at x=112.4, right of pads)
         (am_gnd[0], am_gnd[1] + 2),       # AMS1117 GND
         # ESP32 GND via handled separately below (needs small via for clearance)
-        (jst_n[0] - 2, jst_n[1]),          # JST GND (offset AWAY from BAT+ pad)
+        (jst_n[0] - 2, jst_n[1]),          # JST GND (offset LEFT, away from VBUS at x=82.55)
     ]
     for gvx, gvy in gnd_via_positions:
         parts.append(_via_net(gvx, gvy, n_gnd))
@@ -912,7 +912,7 @@ def _power_traces():
     parts.append(_via_net(_ams_therm_via_x, _ams_gnd_via_y2, n_gnd,
                           size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # JST GND pad to offset via (LEFT, away from BAT+ pad)
+    # JST GND pad to offset via (LEFT, away from VBUS at x=82.55)
     parts.append(_seg(jst_n[0], jst_n[1], jst_n[0] - 2, jst_n[1],
                        "B.Cu", W_PWR, n_gnd))
 
@@ -1140,14 +1140,15 @@ def _power_traces():
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
-    bat_approach_x = 80.5  # DFM: midpoint between R11@78 and R12@83 (gap 0.60mm to each)
+    bat_approach_x = 79.75  # DFM: between R11@78 and R12@83, offset left for J3@180° pad clearance
     parts.append(_seg(bat_col_x, bat_via_y, bat_approach_x, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat))
-    # B.Cu: horizontal to JST pad X, then vertical down to JST pad
-    parts.append(_seg(bat_approach_x, bat_via_y, jst_p[0], bat_via_y,
+    # B.Cu: vertical from approach via down to pad Y, then horizontal to pad X
+    # DFM: at 180° rotation jst_p is at x=79; vertical at x=80.5 avoids net34 at x=78.95
+    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, jst_p[1],
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(jst_p[0], bat_via_y, jst_p[0], jst_p[1],
+    parts.append(_seg(bat_approach_x, jst_p[1], jst_p[0], jst_p[1],
                        "B.Cu", W_PWR_HIGH, n_bat))
 
     # ── Power switch -> BAT+ junction ──────────────────────────
@@ -1169,9 +1170,9 @@ def _power_traces():
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(BAT_COL_X, sw_via_y, BAT_COL_X, bat_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
-    # F.Cu horizontal from BAT_COL_X to JST pad (at bat_via_y level)
+    # F.Cu horizontal from BAT_COL_X to approach via (at bat_via_y level)
     parts.append(_via_net(BAT_COL_X, bat_via_y, n_bat))
-    parts.append(_seg(BAT_COL_X, bat_via_y, jst_p[0], bat_via_y,
+    parts.append(_seg(BAT_COL_X, bat_via_y, bat_approach_x, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
 
     # USB CC pull-down resistor GND traces are in _usb_traces()

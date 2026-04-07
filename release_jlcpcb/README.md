@@ -67,7 +67,21 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v2.1 — 2026-04-07 (current)
+### v2.2 — 2026-04-07 (current)
+
+**J3 battery connector rotation fix + routing adjustment:**
+
+- **J3 (JST PH-2P) rotated 90°** — cable opening now points toward ESP32 (was toward USB-C at 0°)
+- **board.py**: J3 footprint rotation 0° → 90° (pads vertical)
+- **routing.py**: J3 pad computation updated, BAT+ approach column shifted to x=79.75, GND via offset LEFT (away from VBUS)
+- **jlcpcb_export.py**: J3 CPL rotation synced to 90°, removed override entry
+- **Dead-end trace fixed**: F.Cu BAT+ segment trimmed to approach via (was 0.25mm past)
+- **PCB review score**: 99/100 (silkscreen text height cosmetic -1)
+- **Verification**: 115 DFM + 9 DFA + 47 polarity + 29 datasheet = 200 tests PASS
+- **PCBA renders**: 11 raytraced views at 1920x1080
+- **Via count**: 284 | **Trace segments**: 483 | **Components**: 75
+
+### v2.1 — 2026-04-07
 
 **Silkscreen branding, component fixes, LCSC corrections, PCBA renders, full review:**
 
@@ -232,8 +246,8 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | Datasheet Tests             | PASS (29/29 -- pin count, pitch, drill, NPTH)       |
 | SPICE Power Simulation      | PASS (5V ripple 13.5mV, 3V3 ripple 0mV)            |
 | JLCPCB Validation           | PASS (25/26 -- silkscreen height 0.8mm cosmetic)    |
-| PCB Review Score            | 97/100 (8 domains scored)                           |
-| Via annular ring            | PASS (290 vias, all >= 0.075mm)                     |
+| PCB Review Score            | 99/100 (8 domains scored)                           |
+| Via annular ring            | PASS (284 vias, all >= 0.075mm)                     |
 | Via hole-to-hole            | PASS (min gap >= 0.25mm)                            |
 | Trace spacing               | PASS (0 violations)                                 |
 | Gerber file count           | PASS (14 files in zip)                              |
