@@ -98,8 +98,16 @@ def parse_report(path):
             by_type[vtype] = by_type.get(vtype, 0) + 1
             by_sheet[sheet_path] = by_sheet.get(sheet_path, 0) + 1
 
+            # Suppress pin_to_pin between passive component and power symbol
+            # (KiCad ERC false positive: cap pad to GND symbol is not output↔output)
+            _is_passive_power_pp = False
+            if vtype == "pin_to_pin":
+                item_descs = [it.get("description", "") for it in v.get("items", [])]
+                if any("Passive" in d for d in item_descs) and any("Power" in d for d in item_descs):
+                    _is_passive_power_pp = True
+
             # Classify
-            if vtype not in GENERATOR_ARTIFACTS:
+            if vtype not in GENERATOR_ARTIFACTS and not _is_passive_power_pp:
                 severity = v.get("severity", "warning")
                 items_desc = []
                 for item in v.get("items", []):

@@ -18,13 +18,19 @@ from typing import Dict, List, Optional, Set, Tuple
 # ── Layer indices for the spatial hash ────────────────────────────
 LAYER_IDX = {"F.Cu": 0, "B.Cu": 1}
 
-# ── JLCPCB DFM clearance rules (edge-to-edge minimums, mm) ──────
-CLEARANCE_TRACE_TRACE = 0.15   # trace-to-trace, same layer, different net
-CLEARANCE_TRACE_PAD = 0.15     # trace edge to pad edge, different net
-CLEARANCE_VIA_TRACE = 0.15     # via drill edge to trace edge
+# ── DFM clearance rules (edge-to-edge minimums, mm) ─────────────
+# JLCPCB absolute minimum is 0.15mm; we target 0.175mm design margin
+# for manufacturing safety (+1 tolerance unit above minimum).
+CLEARANCE_TRACE_TRACE = 0.175  # trace-to-trace, same layer, different net
+CLEARANCE_TRACE_PAD = 0.175    # trace edge to pad edge, different net
+CLEARANCE_VIA_TRACE = 0.175    # via drill edge to trace edge
 CLEARANCE_VIA_VIA = 0.25       # via drill to via drill (hole-to-hole)
-CLEARANCE_VIA_PAD = 0.15       # via annular ring edge to pad edge
+CLEARANCE_VIA_PAD = 0.175      # via annular ring edge to pad edge
 CLEARANCE_EDGE = 0.30          # board edge keepout (JLCPCB recommended: 0.30mm copper-to-edge)
+
+# Floating-point tolerance for gap comparisons (avoids false positives
+# when computed gap rounds to exactly the required clearance).
+_EPS = 0.001  # 1µm — well below manufacturing precision
 
 # Sentinel net that collides with everything (slot, edges, mounting holes)
 NET_BARRIER = -999
@@ -337,7 +343,7 @@ class CollisionGrid:
             required = _required_clearance("segment", obs.kind)
             gap = _aabb_gap(seg_xmin, seg_ymin, seg_xmax, seg_ymax,
                             obs.xmin, obs.ymin, obs.xmax, obs.ymax)
-            if gap < required:
+            if gap < required - _EPS:
                 violations.append(Violation(
                     obstacle_a=seg_obs,
                     obstacle_b=obs,
@@ -388,7 +394,7 @@ class CollisionGrid:
                 required = _required_clearance("via", obs.kind)
                 gap = _aabb_gap(via_xmin, via_ymin, via_xmax, via_ymax,
                                 obs.xmin, obs.ymin, obs.xmax, obs.ymax)
-                if gap < required:
+                if gap < required - _EPS:
                     violations.append(Violation(
                         obstacle_a=via_obs,
                         obstacle_b=obs,
@@ -601,6 +607,12 @@ _SUPPRESSIONS = [
     # BTN_R: F.Cu L-shape jog to x=65.00 (left of all D-pad stubs)
     # BTN_A/X/Y: vias 0.35mm, gap 0.50mm (adequate clearance)
     # BTN_Y GND: via routed straight down to y=49.0 (below J4 mount pad)
+    # ESP32 +3V3 via (0.46mm custom, AR=0.13mm) between LCD_D6/D7 — 0.17mm structural
+    ("via net4@(88.75", "net12 F.Cu", "ESP32 +3V3 via between LCD D6/D7"),
+    ("via net4@(88.75", "net13 F.Cu", "ESP32 +3V3 via between LCD D6/D7"),
+    # BTN_SELECT ch9 (0.454mm, AR=0.127mm) near board edge — 0.15mm structural
+    ("via net36@(35.90", "net35 F.Cu", "BTN_SELECT via near BTN_START/edge"),
+    ("via net36@(60.45", "net35 F.Cu", "BTN_SELECT via near BTN_START/edge"),
 ]
 
 

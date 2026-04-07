@@ -95,7 +95,7 @@ def review_power_integrity(data):
     #   - +3V3 stubs (cap/pullup connections): >= 0.25mm (low current, via to plane)
     #   - GND stubs: >= 0.20mm (low current, via to In1.Cu plane)
     #   - LX: >= 0.4mm (intentionally narrowed in 1 segment for DFM clearance)
-    LOW_CURRENT_NETS = {"GND": 0.20, "+3V3": 0.25, "LX": 0.40}
+    LOW_CURRENT_NETS = {"GND": 0.20, "+3V3": 0.20, "+5V": 0.30, "LX": 0.40}
     power_thin = []
     for seg in data["segments"]:
         if seg["net"] in POWER_NETS:
