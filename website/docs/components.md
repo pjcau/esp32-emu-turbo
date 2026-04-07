@@ -276,8 +276,8 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | C3–C16,C20,C21 | 100nF 0805 | 0805 | C49678 | Basic | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C1,C17,C18 | 10µF 0805 | 0805 | C15850 | Basic | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C2,C19 | 22µF 1206 | 1206 | C12891 | Basic | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
-| C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C1525 | Basic | — |
-| C23,C24,C25 | 1µF decoupling (PAM8403 VDD/PVDD) | 0805 | C15849 | Basic | — |
+| C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C13967 | Basic | — |
+| C23,C24,C25 | 1µF decoupling (PAM8403 VDD/PVDD) | 0805 | C28323 | Basic | — |
 
 **Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.
 

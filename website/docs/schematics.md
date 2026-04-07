@@ -282,8 +282,8 @@ I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker
 |-----|-----------|-------|---------|-----------|
 | U5 | Amplifier | PAM8403 | Filterless Class-D, 3W/ch | [PDF](/datasheets/U5_PAM8403_C5122557.pdf) |
 | C21 | Capacitor | 100 nF (C49678) | VREF bypass capacitor | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
-| C22 | Capacitor | 0.47 µF (C1525) | DC-blocking cap on audio input | — |
-| C23, C24, C25 | Capacitor | 1 µF (C15849) | VDD and PVDD decoupling caps | — |
+| C22 | Capacitor | 0.47 µF (C13967) | DC-blocking cap on audio input | — |
+| C23, C24, C25 | Capacitor | 1 µF (C28323) | VDD and PVDD decoupling caps | — |
 | R20, R21 | Resistor | 20 kΩ (C4184) | Bias resistors on INL/INR to GND | — |
 | LS1 | Speaker | 28mm 8Ω 0.5W | Mono output | — |
 

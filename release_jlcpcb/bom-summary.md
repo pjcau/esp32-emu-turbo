@@ -19,8 +19,8 @@
 | R17-R18 | 1k (LED limiting) | 0805 | C17513 | Basic | 2 | ~$0.002 |
 | R20-R21 | 20k (PAM8403 INL/INR bias) | 0805 | C4184 | Basic | 2 | ~$0.002 |
 | C3-C16,C20-C21 | 100nF (decoupling) | 0805 | C49678 | Basic | 16 | ~$0.002 |
-| C22 | 0.47uF (PAM8403 DC-block) | 0805 | C1525 | Basic | 1 | ~$0.005 |
-| C23-C25 | 1uF (PAM8403 VDD/PVDD) | 0805 | C15849 | Basic | 3 | ~$0.005 |
+| C22 | 0.47uF (PAM8403 DC-block) | 0805 | C13967 | Basic | 1 | ~$0.005 |
+| C23-C25 | 1uF (PAM8403 VDD/PVDD) | 0805 | C28323 | Basic | 3 | ~$0.005 |
 | C1,C17,C18 | 10uF | 0805 | C15850 | Basic | 3 | ~$0.01 |
 | C2,C19 | 22uF (tantalum/MLCC) | 1206 | C29632 | Basic | 2 | ~$0.02 |
 | SW1-SW13 | SMT tact switch | 5.1x5.1mm | C318884 | Extended | 13 | ~$0.02 |
