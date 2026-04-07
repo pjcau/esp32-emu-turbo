@@ -136,6 +136,72 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 
 **Battery life:** 5000 mAh / 290 mA ≈ **17 hours** typical gameplay
 
+### Power Path Architecture
+
+```
+                    ┌─────────────┐
+  USB-C ──VBUS──────┤ pin 1 (VIN) │
+  (5V)              │             │
+                    │   IP5306    │──pin 8 (VOUT)──► +5V ──► AMS1117 ──► +3V3
+                    │             │                           (U3)        (ESP32, LCD, SD)
+  Battery ──SW_PWR──┤ pin 6 (BAT) │
+  (3.7V)    (pin 2) │             │──pin 7 (LX)──── L1 ────► BAT+
+                    │   pin EP    │
+                    └──────┬──────┘
+                          GND
+```
+
+**Key design points:**
+- **SW_PWR** sits between battery and IP5306 pin 6 (BAT). It does NOT control USB VBUS.
+- **VBUS** goes directly to IP5306 pin 1 (VIN) — always available when USB is plugged in.
+- **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
+- **No backfeed diode needed:** IP5306 charger is internally regulated (CC/CV), boost is unidirectional.
+
+### Power States & Debug
+
+| # | USB | SW_PWR | Reset | Boot | +3V3 | ESP32 | Charging | Serial | Flash |
+|---|-----|--------|-------|------|------|-------|----------|--------|-------|
+| 1 | No | OFF | — | — | OFF | OFF | No | No | No |
+| 2 | No | ON | — | — | ON | Run | No | No | No |
+| 3 | No | ON | Press | — | ON→OFF→ON | Reset | No | No | No |
+| 4 | **Yes** | OFF | — | — | **ON** | Run | **No** | **Yes** | No |
+| 5 | **Yes** | OFF | Press | Hold | ON→OFF→ON | **DL mode** | No | No | **Yes** |
+| 6 | **Yes** | ON | — | — | ON | Run | **Yes** | **Yes** | No |
+| 7 | **Yes** | ON | Press | Hold | ON→OFF→ON | **DL mode** | Yes | No | **Yes** |
+
+**State legend:**
+- **#4–5:** USB debug/flash with battery isolated (switch OFF) — zero backfeed risk, ideal for development
+- **#6–7:** Charge-and-play — IP5306 charges battery AND powers system simultaneously
+- **DL mode:** ESP32 download mode (hold BOOT, press+release RST, release BOOT)
+
+### Flash & Debug Procedures
+
+**Flash firmware (recommended: switch OFF):**
+1. Connect USB-C cable
+2. Set SW_PWR to OFF (isolates battery)
+3. Hold **SW_BOOT**, press+release **SW_RST**, release **SW_BOOT**
+4. Run `idf.py flash` — ESP32 enters download mode
+5. Press **SW_RST** to reboot into normal mode
+
+**Serial debug monitor:**
+1. Connect USB-C cable (SW_PWR ON or OFF — both work)
+2. Run `idf.py monitor` (115200 baud via USB CDC on GPIO19/20)
+3. Press **SW_RST** to restart — monitor auto-reconnects
+
+**Charge-and-play:**
+1. Connect USB-C with SW_PWR ON
+2. System runs normally while battery charges
+3. LED1 (red) = charging, LED2 (green) = fully charged
+
+### Backfeed Protection Analysis
+
+| Path | Protection | Mechanism |
+|------|-----------|-----------|
+| VBUS → BAT+ | IP5306 internal charger | CC/CV regulated, max 1A |
+| BAT+ → VBUS | Boost unidirectional | IP5306 boost only drives BAT→VOUT |
+| USB + switch OFF | Physical isolation | SW_PWR disconnects battery from IP5306 pin 6 |
+| USB + switch ON | Charge-and-play | IP5306 manages both paths internally |
+
 ---
 
 ## Sheet 2 — MCU (ESP32-S3)
@@ -303,7 +369,7 @@ Native USB data lines for firmware flashing and debug console (replaces UART deb
 | USB_D- | GPIO19 | USB data minus (native USB) |
 | USB_D+ | GPIO20 | USB data plus (native USB) |
 
-USB-C now carries both **power** (charging via IP5306) and **data** (firmware flash + CDC debug console). This replaces the previous UART debug approach (GPIO43 TX0) with native USB, which is faster and requires no external UART adapter.
+USB-C now carries both **power** (charging via IP5306) and **data** (firmware flash + CDC debug console). This replaces the previous UART debug approach (GPIO43 TX0) with native USB, which is faster and requires no external UART adapter. See [Power States & Debug](#power-states--debug) for the full operating modes table and flash/debug procedures.
 
 :::info Joystick removed
 The optional PSP joystick (previously GPIO20/GPIO44) has been removed. The D-pad provides full SNES/NES control. GPIO43 (previously TX0 for UART debug) is now used for BTN_R.
