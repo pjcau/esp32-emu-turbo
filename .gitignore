@@ -57,3 +57,9 @@ hardware/kicad/~*.lck
 
 # External DFM analysis output (KiBot + Tracespace)
 hardware/kicad/external-dfm-output/
+test-roms/*.sfc
+test-roms/*.smc
+test-roms/*.nes
+test-roms/*.rom
+software/sim/sim_test_native
+software/sim/sim_test
