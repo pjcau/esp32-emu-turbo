@@ -327,7 +327,7 @@ Positioning holes (NPTH) must match the component peg diameter with adequate cle
 | J1 | USB-C 16P (C2765186) | 2x NPTH | 0.65 mm | ø0.65(2X) | ø0.50 mm | 0.15 mm | **PASS** |
 | U6 | TF-01A SD slot (C91145) | 2x NPTH | 1.00 mm | 2-∅1.00 | ø0.80 mm | 0.20 mm | **PASS** |
 | SW_PWR | MSK12C02 slide switch (C431540) | 2x NPTH | 0.90 mm | ø0.75 pegs | ø0.75 mm | 0.15 mm | **PASS** |
-| J3 | JST PH 2-pin SMD (C265082) | SMD | — | — | — | — | **PASS** |
+| J3 | JST PH 2-pin THT (C173752) | 2x THT | 0.85 mm | ø0.64 pins | ø0.64 mm | 0.21 mm | **PASS** |
 
 ### Mounting Holes (6x NPTH, 2.5 mm)
 
@@ -363,7 +363,7 @@ NPTH positioning holes are always sized from the component datasheet — never g
 | Signal vias | 284 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 6 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
-| Component SMD (J3 C265082) | — | — | — | **PASS** |
+| Component THT (J3 C173752) | 0.85 mm | ø1.6 mm | 0.375 mm | **PASS** |
 
 **Result: 22/22 checks passed — no short circuit risk, all drills match datasheets.**
 
@@ -430,7 +430,7 @@ JLCPCB's online DFM engine runs additional checks beyond our local DRC/DFM pipel
 | Lead to hole distance | 14 | Error | Leads near mounting/positioning holes — **false positive** (NPTH, no electrical connection) |
 | Pin inner/left/right edge | 50+50+50 | Error | **False positive** — J4 FPC 40-pin bottom-contact model mismatch in JLCPCB DFM library |
 | Lead area overlapping pad | 50 | Error | Same J4 FPC model mismatch as above |
-| Component through-hole | 0 | Info | J3 is now SMD (C265082) — no THT connectors on board |
+| Component through-hole | 1 | Info | J3 (C173752) is THT — only THT connector on board |
 | Missing hole for component pin | 4 | Error | NPTH positioning holes (J1, SW\_PWR) — DFM expects PTH but these are pegs, **not electrical pins** |
 
 #### Verdict

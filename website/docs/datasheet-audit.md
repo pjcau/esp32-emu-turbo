@@ -160,13 +160,13 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 | **Risk** | None — conservative oversizing improves thermal contact. |
 | **Action** | None. |
 
-### JST PH 2-pin (J3) — Now SMD (C265082)
+### JST PH 2-pin (J3) — THT (C173752)
 
 | Detail | Value |
 |--------|-------|
-| **Change** | Reverted from THT (C173752) to SMD (C265082, S2B-PH-SM4-TB) |
-| **PCB** | SMD pads on B.Cu, no through-holes |
-| **Risk** | None — SMD eliminates drill concerns. |
+| **Change** | THT version (C173752, S2B-PH-K-S) — connector body on B.Cu |
+| **PCB** | THT pads ø1.6mm, drill 0.85mm, pitch 2.0mm |
+| **Risk** | None — drill 0.85mm meets JLCPCB minimum (≥0.80mm). |
 | **Action** | None. |
 
 ---

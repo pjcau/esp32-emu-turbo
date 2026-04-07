@@ -42,9 +42,9 @@ MODEL_MAP = {
     # USB-C: on B.Cu, 180° rotation + Y offset for origin alignment
     "USB-C-16P":    (f"{M}/Connector_USB.3dshapes/USB_C_Receptacle_GCT_USB4105-xx-A_16P_TopMnt_Horizontal.step",
                      (0, 1.3, 0), (0, 0, 180)),
-    # JST-PH-2P: SKIPPED — KiCad has no SMD JST PH model, THT models show
-    # incorrect through-hole pins. SMD pads visible without 3D model.
-    # "JST-PH-2P": None,
+    # JST-PH-2P: THT version (C173752) — connector body on B.Cu
+    "JST-PH-2P":   (f"{M}/Connector_JST.3dshapes/JST_PH_S2B-PH-K_1x02_P2.00mm_Horizontal.step",
+                     (-1.0, 0, 0), (0, 0, 0)),
     # MSK12C02 slide switch: on B.Cu, 180° + small Y offset
     "SS-12D00G3":   (f"{M}/Button_Switch_SMD.3dshapes/SW_SPDT_PCM12.step",
                      (0, 0.25, 0), (0, 0, 180)),
