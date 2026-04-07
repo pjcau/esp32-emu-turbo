@@ -346,12 +346,12 @@ def tf01a(layer="B"):
     return pads
 
 
-# ── JST PH 2-pin SMD (C265003) ──────────────────────────────────
+# ── JST PH 2-pin SMD (C295747) ──────────────────────────────────
 # SMD version avoids inner layer shorts (BAT+ vs GND/+3V3 zones).
 # DO NOT change to THT without updating: BOM, CPL, inject-3d-models,
 # verify_datasheet, board.py, collision.py, docs, and rendering.
 def jst_ph_2p(layer="B"):
-    """JST PH 2-pin SMD (S2B-PH-SM4-TB, LCSC C265003).
+    """JST PH 2-pin SMD (S2B-PH-SM4-TB, LCSC C295747).
 
     SMD version — pads on B.Cu only, no through-hole.
     Signal pads: 1.0×2.5mm, pitch 2.0mm.

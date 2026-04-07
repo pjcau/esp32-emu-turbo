@@ -127,10 +127,10 @@ DATASHEET_SPECS = {
     },
     "J3": {
         "name": "JST PH 2-pin THT",
-        "datasheet": "J3_JST-PH-2P-SMD_C265003.pdf",
+        "datasheet": "J3_JST-PH-2P-SMD_C295747.pdf",
         "footprint": "JST-PH-2P",
         "signal_pins": 2,
-        "smd": True,            # SMD version (C265003)
+        "smd": True,            # SMD version (C295747)
         "pitch_mm": 2.0,         # JST PH standard pitch
         "body_w_mm": 6.0,
         "body_h_mm": 4.5,
