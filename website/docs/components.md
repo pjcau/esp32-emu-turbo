@@ -84,14 +84,14 @@ Portrait (native)          Landscape (gaming mode)
 | 9 | CS | Input | Chip select (active low) | GPIO12 |
 | 10 | DC/RS | Input | Data/Command select | GPIO14 |
 | 11 | WR | Input | Write strobe (8080 mode) | GPIO46 |
-| 12 | RD | Input | Read strobe (8080 mode) | GPIO3 |
+| 12 | RD | Input | Read strobe (8080 mode) | **+3V3** (tied HIGH) |
 | 13 | SPI SDI | Input | SPI data in | NC (parallel mode) |
 | 14 | SPI SDO | Output | SPI data out | NC (parallel mode) |
 | 15 | RESET | Input | Reset (active low) | GPIO13 |
 | 16 | GND | — | Ground | GND |
 | 17-24 | DB0-DB7 | I/O | 8-bit parallel data bus | GPIO4-11 |
 | 25-32 | DB8-DB15 | I/O | 16-bit extension | NC (8-bit mode) |
-| 33 | LED-A | — | Backlight anode (2.9–3.3V typ 3.1V) | GPIO45 (PWM) |
+| 33 | LED-A | — | Backlight anode (2.9–3.3V typ 3.1V) | **+3V3** (via resistor, always-on) |
 | 34-36 | LED-K | — | Backlight cathode (8 chip white LED) | **GND** |
 | 37 | GND | — | Ground | GND |
 | 38 | IM0 | Input | Interface mode select | **+3V3** (HIGH) |

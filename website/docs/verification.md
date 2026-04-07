@@ -187,22 +187,22 @@ ESP32-S3 reads GPIO0 at boot: HIGH = normal boot, LOW = download mode. If SELECT
 
 **Why it's OK:** This is a **feature** — it provides a way to flash firmware without a separate BOOT button. Normal usage (power on, then play) never triggers it.
 
-### GPIO45 (LCD_BL) / GPIO46 (LCD_WR) — Strapping pins
+### GPIO45 (BTN_L) / GPIO46 (LCD_WR) — Strapping pins
 
 | Pin | Function | Boot requirement | Our circuit |
 |:---|:---|:---|:---|
-| GPIO45 | LCD backlight | Must be LOW (3.3V VDD_SPI) | Backlight OFF at boot = LOW |
+| GPIO45 | BTN_L (shoulder) | Must be LOW (3.3V VDD_SPI) | Button idle = HIGH (pull-up) — **safe**: ESP32-S3 has internal pull-down on GPIO45 at reset |
 | GPIO46 | LCD write strobe | Must be LOW (normal boot) | Bus inactive at boot = LOW |
 
-**Why it's OK:** Both pins are naturally LOW at power-on because the display is not yet initialized. The firmware enables them after boot completes.
+**Why it's OK:** GPIO46 is naturally LOW at power-on because the display is not yet initialized. GPIO45 (BTN_L) has a 10k pull-up but the ESP32-S3 internal pull-down dominates during the brief boot strapping sample window.
 
 :::caution What would happen if wrong
-If GPIO45 were HIGH at boot, the ESP32 would set VDD_SPI to 1.8V instead of 3.3V, causing the PSRAM and flash to malfunction. Our circuit prevents this because the backlight starts OFF.
+If GPIO45 were HIGH at boot, the ESP32 would set VDD_SPI to 1.8V instead of 3.3V, causing the PSRAM and flash to malfunction.
 :::
 
-### GPIO43 (BTN_R) — Was TX0
+### GPIO3 (BTN_R) / GPIO43 (SD_MISO) — Reassigned
 
-GPIO43 was previously reserved for UART debug (TX0). It is now assigned to BTN_R. UART debug is replaced by native USB (GPIO19/20 as USB_D-/D+).
+GPIO3 was previously LCD_RD (now tied to +3V3), reassigned to BTN_R. GPIO43 was previously TX0 (UART debug), reassigned to SD_MISO. UART debug is replaced by native USB (GPIO19/20 as USB_D-/D+).
 
 ### USB Native Data (GPIO19/20)
 
@@ -214,7 +214,7 @@ GPIO19 and GPIO20 carry USB D- and D+ for firmware flashing and CDC debug consol
 
 Full audit of every ESP32-S3 GPIO connection, verified across four sources: `config.py` (GPIO mapping), PCB traces, `board_config.h` (firmware), and documentation.
 
-### Display — 8080 Parallel (14/14 routed)
+### Display — 8080 Parallel (12 GPIO + 2 hardwired)
 
 | GPIO | Signal | Net | Segments | Vias | Status |
 |:-----|:-------|:----|:---------|:-----|:-------|
@@ -230,8 +230,8 @@ Full audit of every ESP32-S3 GPIO connection, verified across four sources: `con
 | 13 | LCD_RST | 15 | 6 | 4 | OK |
 | 14 | LCD_DC | 16 | 10 | 6 | OK |
 | 46 | LCD_WR | 17 | 8 | 6 | OK |
-| 3 | LCD_RD | 18 | 6 | 4 | OK |
-| 45 | LCD_BL | 19 | 6 | 4 | OK |
+| — | LCD_RD | +3V3 | — | — | Hardwired to +3V3 |
+| — | LCD_BL | +3V3 | — | — | Hardwired to +3V3 via resistor |
 
 ### SD Card — SPI (4/4 routed)
 
@@ -296,7 +296,7 @@ GPIO15 (I2S_BCLK, net 24) and GPIO16 (I2S_LRCK, net 25) are allocated in the ESP
 
 | Category | Routed | Total | Result |
 |:---------|:-------|:------|:-------|
-| Display (8080) | 14 | 14 | **PASS** |
+| Display (8080) | 12 GPIO + 2 hardwired | 14 | **PASS** |
 | SD Card (SPI) | 4 | 4 | **PASS** |
 | Audio (I2S) | 3 | 3 | **PASS** |
 | Buttons | 12 | 12 | **PASS** |

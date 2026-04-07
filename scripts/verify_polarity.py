@@ -340,6 +340,7 @@ _strict("C26", [("1", "+3V3"), ("2", "GND")])
 _strict("C17", [("1", "VBUS"), ("2", "GND")])
 _strict("C18", [("1", "BAT+"), ("2", "GND")])
 _strict("C19", [("1", "+5V"), ("2", "GND")])
+_strict("C27", [("1", "GND"), ("2", "+5V")])  # VOUT HF decoupling near IP5306
 
 # ============================================================
 # C21-C25: PAM8403 decoupling capacitors
@@ -634,6 +635,8 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("C18", "2", "GND")
         self._check_strict("C19", "1", "+5V")
         self._check_strict("C19", "2", "GND")
+        self._check_strict("C27", "1", "GND")
+        self._check_strict("C27", "2", "+5V")
 
     def test_leds_gnd(self):
         """LED1/LED2: cathode (pad 1) connected to GND per NCD0805R1 datasheet."""

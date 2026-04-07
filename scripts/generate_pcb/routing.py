@@ -367,8 +367,9 @@ C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
 C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
 C17_POS = (110.0, 35.0)  # IP5306 cap
-C18_POS = (118.0, 55.0)  # IP5306 cap — DFM: moved to (118,55) below display trace zone (was 116 hit col_x; 131 hit SW8)
-C19_POS = (110.0, 58.5)  # IP5306 bat cap (lx, ly+6)
+C18_POS = (116.0, 49.0)  # IP5306 BAT decoupling — moved closer: 10.7mm from pin 6 (was 15.4mm)
+C19_POS = (110.0, 58.5)  # IP5306 VOUT bulk cap (lx, ly+6) — kept as bulk, C27 handles HF
+C27_POS = (108.0, 39.0)  # IP5306 VOUT HF decoupling — 2.0mm from pin 8 (new)
 
 # PAM8403 passive positions (synced with board.py placements)
 # Spread ~1.5-2mm from U5 body for cleaner layout. Body: x=[27.3,32.7] y=[24.5,34.5].
@@ -511,6 +512,7 @@ def _init_pads():
         ("C17", "C_0805", *C17_POS, 0, "B"),
         ("C18", "C_0805", *C18_POS, 0, "B"),
         ("C19", "C_1206", *C19_POS, 0, "B"),
+        ("C27", "C_0805", *C27_POS, 0, "B"),
         ("R16", "R_0805", *R16_POS, 0, "B"),
         ("R1", "R_0805", *R1_POS, 0, "B"),
         ("R2", "R_0805", *R2_POS, 0, "B"),
@@ -1144,8 +1146,6 @@ def _power_traces():
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
-    # DFM: was via at jst_p[0]=81 giving 0.10mm gap to R12[2] (borderline). Then tried 78
-    # which hit R11[1]/R11[2] with gap=0.0mm. Use midpoint x=80.5 (0.60mm gap to both).
     bat_approach_x = 80.5  # DFM: midpoint between R11@78 and R12@83 (gap 0.60mm to each)
     parts.append(_seg(bat_col_x, bat_via_y, bat_approach_x, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
@@ -3757,18 +3757,20 @@ def _passive_traces():
                           "B.Cu", W_SIG, n_gnd))
         parts.append(_via_net(c17_p2[0], c17_p2[1] + 2.7, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # C18 near IP5306: BAT decoupling, pad "1" -> BAT+ via, pad "2" -> GND via
-    # DFM: 2.5mm offset (was 2mm) to avoid via overlap with IP5306 pads
+    # C18 near IP5306: BAT decoupling at (116, 49), 10.7mm from pin 6 (was 15.4mm).
+    # Placed right of KEY vertical at x=114.05, between KEY route and R16.
+    # Pad 1 (left) -> BAT+ via UP 1.5mm: (115.5, 47.5) clears KEY horiz@y≈46.7
+    # Pad 2 (right) -> GND via DOWN 2.0mm: (116.5, 51.0) clears R16 pad@y=51.85
     c18_p1 = _pad("C18", "1")
     c18_p2 = _pad("C18", "2")
     if c18_p1:
-        parts.append(_seg(c18_p1[0], c18_p1[1], c18_p1[0], c18_p1[1] - 2.5,
+        parts.append(_seg(c18_p1[0], c18_p1[1], c18_p1[0], c18_p1[1] - 1.5,
                           "B.Cu", W_PWR_HIGH, NET_ID["BAT+"]))
-        parts.append(_via_net(c18_p1[0], c18_p1[1] - 2.5, NET_ID["BAT+"], size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c18_p1[0], c18_p1[1] - 1.5, NET_ID["BAT+"], size=VIA_STD, drill=VIA_STD_DRILL))
     if c18_p2:
-        parts.append(_seg(c18_p2[0], c18_p2[1], c18_p2[0], c18_p2[1] + 2.5,
+        parts.append(_seg(c18_p2[0], c18_p2[1], c18_p2[0], c18_p2[1] + 2.0,
                           "B.Cu", W_SIG, n_gnd))
-        parts.append(_via_net(c18_p2[0], c18_p2[1] + 2.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c18_p2[0], c18_p2[1] + 2.0, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C19 near L1: VOUT decoupling, pad "1" -> +5V via, pad "2" -> GND via
     # POWER SHORT FIX: C19 vias overlapped VBUS F.Cu traces causing all-rail-to-GND short.
@@ -3792,6 +3794,24 @@ def _passive_traces():
         parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 1.0,
                           "B.Cu", W_PWR, n_gnd))
         parts.append(_via_net(c19_p2[0], c19_p2[1] + 1.0, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # C27 near IP5306 VOUT: HF decoupling at (109, 39), 2.6mm from pin 8.
+    # C_0805 pad layout: pad 1 at RIGHT (x+0.95), pad 2 at LEFT (x-0.95).
+    # Pad 1 (right, x≈109.95) → GND via DOWN 1.5mm toward EP (same net).
+    # Pad 2 (left, x≈108.05) → +5V: short B.Cu LEFT to existing VOUT via (107.5, 39.09).
+    c27_p1 = _pad("C27", "1")
+    c27_p2 = _pad("C27", "2")
+    if c27_p2:
+        # Pad 2 (left) → +5V: reuse existing VOUT via at (107.5, 39.09)
+        parts.append(_seg(c27_p2[0], c27_p2[1], 107.5, c27_p2[1],
+                          "B.Cu", W_PWR, NET_ID["+5V"]))
+        parts.append(_seg(107.5, c27_p2[1], 107.5, 39.09,
+                          "B.Cu", W_PWR, NET_ID["+5V"]))
+    if c27_p1:
+        # Pad 1 (right) → GND via DOWN toward EP pad (same net, no clearance issue)
+        parts.append(_seg(c27_p1[0], c27_p1[1], c27_p1[0], c27_p1[1] + 1.5,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(c27_p1[0], c27_p1[1] + 1.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # R16 IP5306 KEY pull-up: now handled in _power_traces()
 
@@ -3827,18 +3847,12 @@ def _led_traces():
         n_ra = _led_ra_nets[i]  # internal resistor-to-anode net
 
         # +3V3 via → R pad 2 (B.Cu, LEFT side of resistor)
-        # DFM FIX: was -2.35 (y=62.65), gap to BTN_DOWN F.Cu(63.20)=0.125mm.
-        # BTN_UP F.Cu at y=62.0 blocks y=62.45..62.575. Move via ABOVE BTN_DOWN:
-        # At -1.20 (y=63.80): gap to BTN_DOWN F.Cu(63.20) = 63.50-63.325=0.175mm ✓
-        # gap to BTN_UP F.Cu(62.0) = 63.50-62.125=1.375mm ✓
         via_3v3_y = r_p2[1] - 1.20
         parts.append(_via_net(r_p2[0], via_3v3_y, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(r_p2[0], via_3v3_y, r_p2[0], r_p2[1],
                           "B.Cu", W_SIG, n_3v3))
 
         # R pad 1 (B.Cu, RIGHT) → via → LED pad 2/Anode (F.Cu, RIGHT)
-        # Both at x+0.95 from center → vertically aligned, clean straight via
-        # DFM: mid_y=66.25 (between R_pad bottom at 65.65 and LED top at 66.85)
         mid_y = r_p1[1] + 1.25
         parts.append(_seg(r_p1[0], r_p1[1], r_p1[0], mid_y,
                           "B.Cu", W_SIG, n_ra))
@@ -3847,7 +3861,6 @@ def _led_traces():
                           "F.Cu", W_SIG, n_ra))
 
         # LED pad 1/Cathode (F.Cu, LEFT) → GND via
-        # Offset GND via LEFT to avoid same-X column as +3V3 via
         gnd_via_x = led_p1[0] - 0.7
         parts.append(_seg(led_p1[0], led_p1[1], gnd_via_x, led_p1[1],
                           "F.Cu", W_SIG, n_gnd))

@@ -15,7 +15,7 @@ Complete electrical design for the ESP32 Emu Turbo, split into 7 detailed schema
   </a>
   <a href="#sheet-2--mcu-esp32-s3" className="sheet-card">
     <h4>2. MCU</h4>
-    <p>ESP32-S3 + 35 GPIO labels</p>
+    <p>ESP32-S3 + 33 GPIO labels</p>
   </a>
   <a href="#sheet-3--display" className="sheet-card">
     <h4>3. Display</h4>
@@ -206,7 +206,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 
 ## Sheet 2 — MCU (ESP32-S3)
 
-ESP32-S3-WROOM-1 N16R8 with all 35 GPIO connections grouped by function, decoupling capacitors, and EN reset circuit.
+ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupling capacitors, and EN reset circuit. LCD_RD and LCD_BL are hardwired to +3V3 on the PCB (not GPIO-controlled).
 
 <div className="schematic-container">
 
@@ -230,13 +230,14 @@ ESP32-S3-WROOM-1 N16R8 with all 35 GPIO connections grouped by function, decoupl
 | Function | GPIOs | Signals | Bus |
 |----------|-------|---------|-----|
 | **Display** | 4–11 | D0–D7 | 8080 data |
-| | 12, 13, 14, 46, 3, 45 | CS, RST, DC, WR, RD, BL | 8080 control |
+| | 12, 13, 14, 46 | CS, RST, DC, WR | 8080 control |
+| | — | RD, BL | Tied to +3V3 (hardwired) |
 | **Audio** | 15, 16, 17 | BCLK, LRCK, DOUT | I2S |
-| **SD Card** | 36, 37, 38, 39 | MOSI, MISO, CLK, CS | SPI |
+| **SD Card** | 44, 43, 38, 39 | MOSI, MISO, CLK, CS | SPI |
 | **D-pad** | 40, 41, 42, 1 | UP, DOWN, LEFT, RIGHT | GPIO |
 | **Face** | 2, 48, 47, 21 | A, B, X, Y | GPIO |
 | **System** | 18, 0 | START, SELECT | GPIO |
-| **Shoulder** | 35, 43 | L, R | GPIO |
+| **Shoulder** | 45, 3 | L, R | GPIO |
 | **USB Data** | 19, 20 | USB_D-, USB_D+ | USB |
 
 :::info Reserved GPIOs
@@ -310,12 +311,12 @@ Micro SD card module via SPI bus for ROM storage (SNES ROMs up to 6MB, FAT32).
 
 | Signal | GPIO | Direction |
 |--------|------|-----------|
-| MOSI | GPIO36 | ESP32 → SD |
-| MISO | GPIO37 | SD → ESP32 |
+| MOSI | GPIO44 | ESP32 → SD |
+| MISO | GPIO43 | SD → ESP32 |
 | CLK | GPIO38 | ESP32 → SD |
 | CS | GPIO39 | ESP32 → SD |
 
-SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module has a built-in level shifter (3.3V safe). On the PCB, the SD card slot VCC and GND pins are connected via vias to the inner power planes (+3V3 and GND) for clean power delivery with minimal trace length.
+SPI bus up to 40MHz. The SD module has a built-in level shifter (3.3V safe). On the PCB, the SD card slot VCC and GND pins are connected via vias to the inner power planes (+3V3 and GND) for clean power delivery with minimal trace length.
 
 ---
 
@@ -356,7 +357,7 @@ SPI bus up to 40MHz. GPIO36–39 are grouped for clean routing. The SD module ha
 | D-pad | UP, DOWN, LEFT, RIGHT | SW1–SW4 | 40, 41, 42, 1 |
 | Face | A, B, X, Y | SW5–SW8 | 2, 48, 47, 21 |
 | System | START, SELECT, MENU | SW9, SW10, SW13 | 18, 0, — |
-| Shoulder | L, R | SW11, SW12 | 35, 43 |
+| Shoulder | L, R | SW11, SW12 | 45, 3 |
 
 ---
 

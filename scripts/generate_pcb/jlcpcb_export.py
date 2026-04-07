@@ -204,7 +204,7 @@ def _build_placements():
     # JST battery connector
     jx, jy = enc_to_pcb(*JST_BAT_ENC)
     p.append(("J3", "JST-PH-2P",
-              "JST-PH-2P-Vertical", jx, jy, 0, "bottom"))
+              "JST-PH-2P-SMD", jx, jy, 0, "bottom"))
 
     # Reset and Boot buttons (back side, right of USB-C)
     from scripts.generate_pcb.board import RESET_ENC, BOOT_ENC
@@ -263,7 +263,8 @@ def _build_placements():
 
     # ── IP5306 support caps (away from mounting hole at 105,37.5) ──
     p.append(("C17", "10uF", "C_0805", 110, 35, 0, "bottom"))
-    p.append(("C18", "10uF", "C_0805", 118, 55, 0, "bottom"))  # DFM: synced with board.py
+    p.append(("C18", "10uF", "C_0805", 116, 49, 0, "bottom"))  # BAT decoupling near IP5306
+    p.append(("C27", "10uF", "C_0805", 108, 39, 0, "bottom"))  # VOUT HF decoupling near IP5306
 
     # C19 near inductor L1
     p.append(("C19", "22uF", "C_1206",

@@ -14,8 +14,8 @@ The system uses a **team-lead + 3 specialist agents** model:
 
 ```
 team-lead (Sonnet) ──── orchestrator, task coordination
-  ├── pcb-engineer (Opus) ───── 20 skills, PCB design + manufacturing
-  ├── software-dev (Opus) ───── 3 skills, firmware + website
+  ├── pcb-engineer (Opus) ───── 24 skills, PCB design + manufacturing
+  ├── software-dev (Opus) ───── 4 skills, firmware + website
   └── cad-engineer (Haiku) ──── 3 skills, OpenSCAD enclosure
 
 scout (Opus) ──── 1 skill, GitHub pattern discovery (weekly via GitHub Action)
@@ -27,8 +27,8 @@ scout (Opus) ──── 1 skill, GitHub pattern discovery (weekly via GitHub A
 graph TB
     TL["TEAM-LEAD<br/><i>sonnet - orchestrator</i>"]
 
-    PCB["PCB-ENGINEER<br/><i>opus - 20 skills</i>"]
-    SW["SOFTWARE-DEV<br/><i>opus - 3 skills</i>"]
+    PCB["PCB-ENGINEER<br/><i>opus - 24 skills</i>"]
+    SW["SOFTWARE-DEV<br/><i>opus - 4 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>haiku - 3 skills</i>"]
 
     TL -->|coordinates| PCB
@@ -39,21 +39,25 @@ graph TB
     PCB <-.->|"dimensions sync<br/>board.py 160x75mm - enclosure.scad"| CAD
     SW <-.->|"docs + renders"| CAD
 
-    subgraph PCB_PIPE["Pipeline 5"]
+    subgraph PCB_PIPE["Pipeline 7"]
         s_gen["/generate"]
         s_rel["/release"]
         s_relp["/release-prep"]
+        s_frel["/full-release"]
         s_ren["/render"]
+        s_pcba["/pcba-render"]
         s_chk["/check"]
     end
 
-    subgraph PCB_VER["Verification 6"]
+    subgraph PCB_VER["Verification 8"]
         s_ver["/verify"]
         s_dfm["/dfm-test"]
         s_drc["/drc-native"]
         s_opt["/pcb-optimize"]
         s_rev["/pcb-review"]
         s_pad["/pad-analysis"]
+        s_jalign["/jlcpcb-alignment"]
+        s_jval["/jlcpcb-validate"]
     end
 
     subgraph PCB_FIX["Fix and Debug 4"]
@@ -76,10 +80,11 @@ graph TB
     PCB --- PCB_FIX
     PCB --- PCB_MCP
 
-    subgraph SW_SK["Firmware and Web 3"]
+    subgraph SW_SK["Firmware and Web 4"]
         s_fw["/firmware-build"]
         s_sync["/firmware-sync"]
         s_web["/website-dev"]
+        s_doc["/doc"]
     end
     SW --- SW_SK
 
@@ -116,33 +121,34 @@ graph TB
 - **Isolated contexts**: each agent has its own conversation context, preventing RAM bloat
 - **Parallel execution**: independent tasks run simultaneously (e.g., PCB verify + render)
 - **Right-sized models**: Haiku for repetitive CAD tasks (cheaper, faster), Opus for complex PCB/firmware reasoning
-- **Skill-based dispatch**: 27 skills map to specific workflows, reducing prompt engineering overhead
+- **Skill-based dispatch**: 33 skills map to specific workflows, reducing prompt engineering overhead
 
 ### Why Opus for PCB and Software?
 
 - **pcb-engineer**: routing with JLCPCB constraints (clearance, drill, annular ring) requires deep multi-step reasoning. DFM violations need root-cause analysis across multiple scripts. Errors cost real money (JLCPCB rework)
 - **software-dev**: ESP-IDF firmware involves low-level GPIO, DMA, I2S, SPI debugging. Cross-domain sync (firmware ↔ schematic ↔ PCB) requires broad contextual understanding
 
-## Skills System (28 Skills)
+## Skills System (33 Skills)
 
-### PCB Engineer — 20 Skills
+### PCB Engineer — 24 Skills
 
 | Category | Skills | Description |
 |----------|--------|-------------|
-| **Pipeline (5)** | `/generate`, `/release`, `/release-prep`, `/render`, `/check` | Full PCB generation → JLCPCB export flow |
-| **Verification (6)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis` | 114 DFM + 9 DFA tests, DRC checks, layout scoring |
+| **Pipeline (7)** | `/generate`, `/release`, `/release-prep`, `/full-release`, `/render`, `/pcba-render`, `/check` | Full PCB generation → JLCPCB export flow |
+| **Verification (8)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 115 DFM + 9 DFA tests, DRC checks, layout scoring |
 | **Fix & Debug (4)** | `/dfm-fix`, `/fix-rotation`, `/jlcpcb-check`, `/jlcpcb-parts` | Automated issue resolution |
 | **MCP Design (5)** | `/pcb-schematic`, `/pcb-components`, `/pcb-routing`, `/pcb-library`, `/pcb-board` | Direct KiCad manipulation via MCP protocol |
 
 **Standard workflow:** `/pcb-schematic` → `/pcb-board` → `/pcb-components` → `/pcb-routing` → `/generate` → `/verify` → `/release`
 
-### Software Dev — 3 Skills
+### Software Dev — 4 Skills
 
 | Skill | Description |
 |-------|-------------|
 | `/firmware-build` | Build, flash, test ESP-IDF firmware via Docker |
 | `/firmware-sync` | Verify GPIO pins match between firmware and schematic |
 | `/website-dev` | Develop, build, deploy this Docusaurus website |
+| `/doc` | Audit docs against source-of-truth files, fix outdated values |
 
 ### CAD Engineer — 3 Skills
 
@@ -273,7 +279,7 @@ Rules that prevent agents from getting stuck in loops:
 
 | Target | Time | Description |
 |--------|------|-------------|
-| `make verify-fast` | ~1.5s | Quick DFM check (114 tests) |
+| `make verify-fast` | ~1.5s | Quick DFM check (115 tests) |
 | `make verify-dfa` | ~1.1s | Quick DFA check (9 assembly tests) |
 | `make verify-all` | ~1.6s | All verification checks (DFM + DFA + DRC + sim + consistency) |
 | `make fast-check` | ~5s | Full pipeline (local kicad-cli) |

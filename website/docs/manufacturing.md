@@ -14,7 +14,7 @@ All production files in `release_jlcpcb/` are verified and ready for ordering:
 - **R17/R18 BOM fix** — LCSC part C11702 (0402) replaced with C17513 (correct 0805 package)
 - **ESP32-S3 pin layout** — corrected from 2-side (wrong) to 3-side layout (L:1-14, B:15-26, R:27-40)
 - **MSK12C02 slide switch** — replaced THT footprint with correct 7-pad SMD (matching C431540)
-- **71 components** in BOM/CPL matched against schematic and PCB
+- **75 components** in BOM/CPL matched against schematic and PCB
 - **0 DRC errors**, all pre-production checks passed
 :::
 
@@ -74,7 +74,7 @@ The bottom side hosts the main circuitry:
 | C20            | 0.47uF (PAM8403 bypass)     | C1537         | C_0805    |
 | C21–C25        | 1uF (PAM8403 input/output)  | C28323        | C_0805    |
 
-**Total SMT components:** 23 unique part types, ~62 individual placements.
+**Total SMT components:** 24 unique part types, ~75 individual placements.
 
 ---
 

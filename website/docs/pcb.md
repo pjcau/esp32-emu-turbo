@@ -138,8 +138,8 @@ Buy the **bare LCD panel** (NOT a module with PCB breakout):
 All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root (v1.6, 2026-02-21):
 
 1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload, inner layers with zone fill)
-2. **BOM.csv** — `release_jlcpcb/bom.csv` (71 components)
-3. **CPL.csv** — `release_jlcpcb/cpl.csv` (71 component placements)
+2. **BOM.csv** — `release_jlcpcb/bom.csv` (75 components)
+3. **CPL.csv** — `release_jlcpcb/cpl.csv` (75 component placements)
 
 ### Order Settings
 - Layers: **4**
@@ -173,7 +173,7 @@ The design uses a **hierarchical schematic** with a root file referencing 7 sub-
 | 6     | `06-controls.kicad_sch`     | 13 buttons + pull-ups + debounce caps               |
 | 7     | `07-usb-data.kicad_sch`     | Native USB data (D-/D+, firmware flash + debug)     |
 
-Total: **75 unique component references** across all sheets, **72 assembled by JLCPCB**.
+Total: **79 unique component references** across all sheets, **75 assembled by JLCPCB**.
 
 ## Generation
 
@@ -195,7 +195,7 @@ Output files:
 - `hardware/kicad/esp32-emu-turbo.kicad_sch` — Hierarchical root schematic
 - `hardware/kicad/01-07-*.kicad_sch` — 7 sub-sheet schematics
 - `hardware/kicad/esp32-emu-turbo.kicad_pcb` — KiCad PCB layout
-- `hardware/kicad/jlcpcb/cpl.csv` — Component Placement List (72 parts)
+- `hardware/kicad/jlcpcb/cpl.csv` — Component Placement List (75 parts)
 
 ## Routing Architecture
 
@@ -205,10 +205,11 @@ All traces use **Manhattan (orthogonal) routing** — horizontal segments on F.C
 
 | Category | Width  | Nets                               |
 | -------- | ------ | ---------------------------------- |
-| Power    | 0.5mm  | VBUS, +5V, +3V3, BAT+, GND returns |
+| Power high | 0.76mm | VBUS, BAT+, LX (up to 2.1A)      |
+| Power    | 0.60mm | +5V, +3V3, GND returns             |
+| Audio    | 0.30mm | PAM8403 → speaker                  |
 | Signal   | 0.25mm | Buttons, passives                  |
-| Data     | 0.2mm  | Display bus, SPI, I2S, USB         |
-| Audio    | 0.3mm  | PAM8403 → speaker                  |
+| Data     | 0.20mm | Display bus, SPI, I2S, USB         |
 
 ### SPI Bus Routing (v1.3 fix)
 
@@ -255,7 +256,7 @@ Script: `python3 scripts/short_circuit_analysis.py`
 
 | Rule                 | JLCPCB Min | Our Design                    | Status |
 | -------------------- | ---------- | ----------------------------- | ------ |
-| Trace width          | 0.09mm     | 0.2mm (signal), 0.5mm (power) | PASS   |
+| Trace width          | 0.09mm     | 0.2mm (data), 0.6mm (power)   | PASS   |
 | Trace spacing        | 0.09mm     | 0.2mm                         | PASS   |
 | Via drill            | 0.15mm     | 0.2mm                         | PASS   |
 | Via pad              | 0.35mm     | 0.35–0.46mm                   | PASS   |
@@ -295,9 +296,9 @@ Script: `python3 scripts/simulate_circuit.py`
 
 ### Schematic/PCB Consistency — PASS
 
-- All **71 JLCPCB CPL components** matched between schematic, PCB, and CPL
+- All **75 JLCPCB CPL components** matched between schematic, PCB, and CPL
 - 3 off-board components excluded: battery (BT1), display module (U4), speaker (SPK1)
-- PCB: 431 trace segments, 260 vias, 45 nets, 78 footprints
+- PCB: 480 trace segments, 283 vias, 52 nets, 83 footprints
 
 Script: `python3 scripts/verify_schematic_pcb.py`
 
@@ -368,7 +369,7 @@ v2 Total: **78 unique component references**, **75 assembled by JLCPCB**.
 
 1. Upload `release_jlcpcb/gerbers.zip` to [jlcpcb.com](https://jlcpcb.com/)
 2. Upload `release_jlcpcb/bom.csv` and `release_jlcpcb/cpl.csv` for SMT assembly
-3. Order 5× PCBs with SMT assembly (72 components)
+3. Order 5× PCBs with SMT assembly (75 components)
 4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
 5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
 

@@ -350,9 +350,17 @@ def tf01a(layer="B"):
 # Standard JST PH pin diameter: 0.64mm → hole = 0.85mm (0.21mm clearance)
 # JLCPCB DFM requires ≥0.80mm for standard JST PH press-fit
 def jst_ph_2p(layer="B"):
+    """JST PH 2-pin SMD (S2B-PH-SM4-TB, LCSC C265082).
+
+    SMD version — no through-hole pins, display can sit flat on F.Cu.
+    Signal pads: 1.0×3.5mm, pitch 2.0mm (same pin-1/pin-2 spacing as THT).
+    Mounting tabs: 1.5×1.8mm at ±3.35mm X offset.
+    """
+    layers = SMD_B if layer == "B" else SMD_F
     return [
-        _tht("1", -1.0, 0, 1.6, 1.6, 0.85),
-        _tht("2", 1.0, 0, 1.6, 1.6, 0.85),
+        # Signal pads (1.0 x 2.5mm, pitch 2.0mm) — SMD, no through-hole
+        _pad("1", "smd", "rect", -1.0, 0, 1.0, 2.5, layers),
+        _pad("2", "smd", "rect", 1.0, 0, 1.0, 2.5, layers),
     ]
 
 

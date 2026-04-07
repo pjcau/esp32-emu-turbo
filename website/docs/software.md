@@ -253,19 +253,20 @@ All 33 GPIO pins have been cross-verified between three sources with **zero disc
 | Group | Pins | board_config.h | Retro-Go config.h | KiCad schematic |
 |:---|:---|:---|:---|:---|
 | Display data D0–D7 | GPIO 4–11 | ✅ | ✅ | ✅ |
-| Display control | GPIO 3, 12–14, 45, 46 | ✅ | ✅ | ✅ |
-| SD card SPI | GPIO 36–39 | ✅ | ✅ | ✅ |
+| Display control | GPIO 12–14, 46 | ✅ | ✅ | ✅ |
+| Display hardwired | RD, BL → +3V3 (no GPIO) | ✅ | ✅ | ✅ |
+| SD card SPI | GPIO 44, 43, 38, 39 | ✅ | ✅ | ✅ |
 | I2S audio | GPIO 15–17 | ✅ | ✅ | ✅ |
 | D-pad | GPIO 40, 41, 42, 1 | ✅ | ✅ | ✅ |
 | Face buttons | GPIO 2, 48, 47, 21 | ✅ | ✅ | ✅ |
 | System buttons | GPIO 18, 0 | ✅ | ✅ | ✅ |
-| Shoulder buttons | GPIO 35, 43 | ✅ | ✅ | ✅ |
-| I2C (IP5306) | GPIO 33, 34 | ✅ | ✅ | ✅ |
+| Shoulder buttons | GPIO 45, 3 | ✅ | ✅ | ✅ |
 
 **Notes:**
 - MENU and SELECT share GPIO 0 in Retro-Go (intentional — 12 physical buttons, 13 logical)
 - GPIO 19/20 are used for native USB data (D-/D+) — firmware flash + CDC debug console
-- GPIO 43 is BTN_R (was TX0 UART debug, replaced by USB native)
+- GPIO 3 is BTN_R, GPIO 45 is BTN_L (shoulder buttons freed by hardwiring LCD_RD/LCD_BL to +3V3)
+- GPIO 43 is SD_MISO (was TX0 UART debug, replaced by USB native)
 - GPIO 26–32 are reserved for Octal PSRAM (cannot be used)
 
 #### Display driver: `st7796s_i80.h`
@@ -279,7 +280,7 @@ Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 paralle
 | Resolution | 320x480 portrait |
 | Color format | RGB565 (16-bit) |
 | DMA | Async with 5-buffer pool |
-| Backlight | PWM via LEDC (GPIO 45) |
+| Backlight | Always-on (tied to +3V3 via resistor on PCB) |
 | Driver ID | `RG_SCREEN_DRIVER 2` |
 
 The driver uses `esp_lcd_panel_io_tx_param` for commands (CASET/RASET) and `esp_lcd_panel_io_tx_color` for async DMA pixel transfers. A completion callback recycles buffers to the pool, providing natural backpressure without explicit sync.
@@ -348,9 +349,9 @@ GPIO 4-11  (D0-D7) ────────► DB0-DB7 (8-bit data bus)
 GPIO 12    (CS)     ────────► CS  (chip select)
 GPIO 14    (DC)     ────────► DC  (data/command)
 GPIO 46    (WR)     ────────► WR  (write strobe)
-GPIO 3     (RD)     ────────► RD  (read strobe)
++3V3       (RD)     ────────► RD  (tied HIGH, no read-back)
 GPIO 13    (RST)    ────────► RST (reset)
-GPIO 45    (BL)     ────────► LED (backlight PWM via LEDC)
++3V3       (BL)     ────────► LED (always-on via resistor)
 ```
 
 GPIO4–11 form a contiguous 8-bit bus, enabling efficient DMA transfers.

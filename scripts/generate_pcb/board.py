@@ -140,6 +140,7 @@ PAM8403_ENC = (-50, 8)
 # L1 inductor (near IP5306, with clearance)
 INDUCTOR_ENC = (30, -15)
 # JST PH battery connector (center, below passives, back)
+# SMD version — no through-hole pins, display can sit flat on F.Cu
 JST_BAT_ENC = (0, -25)
 # Reset and Boot buttons (back side, right of USB-C — dev kit style)
 RESET_ENC = (15, -28)     # EN pin to GND — hardware reset
@@ -358,7 +359,7 @@ def _silkscreen_labels():
         # IP5306 area
         ("R16", "100k", 115.0, 52.5, 0, -2.0),
         ("C17", "10uF", 110.0, 35.0, 4.5, 0),
-        ("C18", "10uF", 118.0, 55.0, 0, 2.5),
+        ("C18", "10uF", 116.0, 49.0, 0, 2.5),
         ("C19", "22uF", 110.0, 58.5, 0, 2.5),
         # AMS1117 caps
         ("C1", "10uF", 122.0, 55.0, 0, -2.0),
@@ -516,11 +517,14 @@ def _component_placeholders():
 
     # IP5306 support caps
     placements.append(("C17", "C_0805", 110, 35, 0, "B.Cu"))
-    placements.append(("C18", "C_0805", 118, 55, 0, "B.Cu"))  # DFM: moved to (118,55) below display trace zone
+    placements.append(("C18", "C_0805", 116, 49, 0, "B.Cu"))  # BAT decoupling — 10.7mm from IP5306 pin 6
 
-    # C19 near inductor L1
+    # C19 near inductor L1 (VOUT bulk cap)
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)
     placements.append(("C19", "C_1206", lx, ly + 6, 0, "B.Cu"))
+
+    # C27 near IP5306 VOUT (HF decoupling, 2.6mm from pin 8)
+    placements.append(("C27", "C_0805", 108, 39, 0, "B.Cu"))
 
     # PAM8403 passive components (B.Cu)
     # PAM8403 passives — spread ~2mm from body for clean layout
