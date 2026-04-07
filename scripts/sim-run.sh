@@ -22,31 +22,41 @@ ensure_image() {
 
 case "${1:-help}" in
     build)
-        echo "Building simulator Docker image..."
-        docker build -t "$IMAGE" docker/simulator/
-        echo ""
-        echo "Compiling sim_test inside container..."
-        docker run --rm \
-            -v "$(pwd)":/project \
-            -w /project/software/sim \
-            "$IMAGE" \
-            gcc -DSIM_BUILD -o sim_test sim_test.c sim_hal.c \
-                $(docker run --rm "$IMAGE" sdl2-config --cflags --libs) -lm
-        echo "Build OK: software/sim/sim_test"
+        echo "Compiling simulator (native macOS)..."
+        cd software/sim
+        gcc -DSIM_BUILD -o sim_test_native sim_test.c sim_hal.c \
+            $(sdl2-config --cflags --libs) -lm 2>&1
+        echo "Build OK: software/sim/sim_test_native"
         ;;
 
-    test)
-        ensure_image
-        if [ ! -f software/sim/sim_test ]; then
-            echo "No binary found. Building..."
+    run)
+        if [ ! -f software/sim/sim_test_native ]; then
+            echo "No binary. Building..."
             "$0" build
         fi
+        mkdir -p roms
         echo ""
-        echo "Starting simulator with VNC display on port 5900..."
+        echo "ESP32 Emu Turbo — Simulator"
+        echo "==========================="
+        echo ""
+        echo "  D-pad:   W/A/S/D"
+        echo "  A/B:     J/K"
+        echo "  X/Y:     U/I"
+        echo "  Start:   Enter"
+        echo "  Select:  Backspace"
+        echo "  L/R:     Q/E"
+        echo "  Quit:    ESC"
+        echo ""
+        exec software/sim/sim_test_native roms
+        ;;
+
+    docker)
+        ensure_image
+        echo "Starting simulator in Docker with VNC on port 5900..."
         echo "Connect: open vnc://localhost:5900"
-        echo "Controls: WASD=D-pad, JK=AB, UI=XY, Enter=Start, Backspace=Select, QE=LR"
-        echo "Press ESC to exit."
-        echo ""
+        docker run --rm -v "$(pwd)":/project -w /project/software/sim \
+            esp32-emu-turbo-sim bash -c \
+            'gcc -DSIM_BUILD -o sim_test sim_test.c sim_hal.c $(sdl2-config --cflags --libs) -lm'
         mkdir -p roms
         docker run --rm -it \
             -v "$(pwd)":/project \
@@ -56,25 +66,14 @@ case "${1:-help}" in
             /usr/local/bin/start-vnc.sh ./sim_test /project/roms
         ;;
 
-    shell)
-        ensure_image
-        docker run --rm -it \
-            -v "$(pwd)":/project \
-            -w /project \
-            -p 5900:5900 \
-            "$IMAGE" bash
-        ;;
-
     help|*)
         echo "ESP32 Emu Turbo — SDL2 Simulator"
         echo ""
         echo "Usage: $0 <command>"
         echo ""
-        echo "  build   Build Docker image + compile simulator"
-        echo "  test    Run simulator (VNC display on port 5900)"
-        echo "  shell   Open shell in container"
+        echo "  build    Compile simulator (requires: brew install sdl2)"
+        echo "  run      Run simulator (native macOS window)"
+        echo "  docker   Run in Docker with VNC (port 5900)"
         echo ""
-        echo "Display: connect VNC to localhost:5900"
-        echo "Controls: WASD=D-pad, JK=AB, UI=XY, Enter=Start"
         ;;
 esac
