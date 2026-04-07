@@ -64,7 +64,6 @@ _JLCPCB_POS_CORRECTIONS = {
 _JLCPCB_ROT_OVERRIDES = {
     "U5": 180,   # PAM8403 (C5122557) — formula (90°→180°); 90° was wrong per JLCPCB DFM
     "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
-    "J3": 90,    # JST-PH-2P (C295747) — pad-aligned with board.py@90°; 3D model offset is visual only
 }
 
 
@@ -205,7 +204,7 @@ def _build_placements():
     # JST battery connector
     jx, jy = enc_to_pcb(*JST_BAT_ENC)
     p.append(("J3", "JST-PH-2P-SMD",
-              "JST-PH-2P-SMD", jx, jy, 90, "bottom"))
+              "JST-PH-2P-SMD", jx, jy, 180, "bottom"))
 
     # Reset and Boot buttons (back side, right of USB-C)
     from scripts.generate_pcb.board import RESET_ENC, BOOT_ENC

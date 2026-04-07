@@ -476,7 +476,7 @@ def _init_pads():
         ("U3", "SOT-223", *AMS1117, 0, "B"),
         ("U5", "SOP-16", *PAM8403, 90, "B"),
         ("L1", "SMD-4x4x2", *L1, 0, "B"),
-        ("J3", "JST-PH-2P-SMD", *JST, 90, "B"),
+        ("J3", "JST-PH-2P-SMD", *JST, 180, "B"),
         ("SPK1", "Speaker-22mm", *SPEAKER, 0, "B"),
         ("SW_PWR", "SS-12D00G3", *PWR_SW, 0, "B"),
     ]
@@ -797,7 +797,7 @@ def _power_traces():
         (ip_ep[0] + 2.4, ip_ep[1] + 3),   # IP5306 GND (via at x=112.4, right of pads)
         (am_gnd[0], am_gnd[1] + 2),       # AMS1117 GND
         # ESP32 GND via handled separately below (needs small via for clearance)
-        (jst_n[0] - 2, jst_n[1]),          # JST GND (offset LEFT, away from VBUS at x=82.55)
+        (jst_n[0], jst_n[1] - 3.5),         # JST GND (offset UP, clear of BAT+ approach at x=79.75)
     ]
     for gvx, gvy in gnd_via_positions:
         parts.append(_via_net(gvx, gvy, n_gnd))
@@ -912,8 +912,8 @@ def _power_traces():
     parts.append(_via_net(_ams_therm_via_x, _ams_gnd_via_y2, n_gnd,
                           size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # JST GND pad to offset via (LEFT, away from VBUS at x=82.55)
-    parts.append(_seg(jst_n[0], jst_n[1], jst_n[0] - 2, jst_n[1],
+    # JST GND pad to offset via (UP, clear of BAT+ approach and USB-C traces)
+    parts.append(_seg(jst_n[0], jst_n[1], jst_n[0], jst_n[1] - 3.5,
                        "B.Cu", W_PWR, n_gnd))
 
     # ── IP5306 (U2) GND thermal vias: 3-via array near EP pad ──────
