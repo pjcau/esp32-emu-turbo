@@ -320,9 +320,9 @@ def _silkscreen_labels():
         # PAM8403 passives — right side of U5
         ("C21", "100nF", 38.0, 23.5, 0, -2.0),
         ("C22", "0.47u", 33.175, 20.0, -3.5, 0),
-        ("R20", "20k", 38.0, 26.8, 3.5, 0),
+        ("R20", "20k", 38.0, 26.5, 3.5, 0),
         ("C23", "1uF", 38.0, 29.5, 3.5, 0),
-        ("R21", "20k", 38.0, 32.2, 3.5, 0),
+        ("R21", "20k", 38.0, 32.5, 3.5, 0),
         # PAM8403 passives — above/below U5
         ("C24", "1uF", 29.365, 22.0, -3.0, 0),
         ("C25", "1uF", 31.5, 37.5, 0, 2.5),
@@ -487,7 +487,7 @@ def _component_placeholders():
     # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
     # C1 at amx-1 to keep pads outside FPC slot zone (slot starts at x=125.5)
     amx, amy = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("C1", "C_0805", amx - 3.5, amy - 5.5, 0, "B.Cu"))  # DFM: moved closer to U3 (7.9mm). Was amx-3,amy-7
+    placements.append(("C1", "C_0805", amx - 3.5, amy - 7, 0, "B.Cu"))  # DFM: 7.8mm from U3, 2.3mm pad gap to tab
     placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
 
     # Board-level fiducials at opposite corners for pick-and-place alignment.

@@ -361,7 +361,7 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (121.5, 50.0)   # AMS1117 input cap — moved closer to U3 (7.9mm vs 9.1mm). Was (122,48.5)
+C1_POS = (121.5, 48.5)   # AMS1117 input cap — 7.8mm from U3, 2.3mm pad gap to tab
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
@@ -378,8 +378,8 @@ C22_POS = (33.175, 20.0) # DC-blocking cap in-line on I2S_DOUT vertical (series,
 C23_POS = (38.0, 29.5)   # VDD decoupling (pin 6 to GND) — 6.1mm from pin 6
 C24_POS = (29.365, 22.0) # PVDD decoupling (pin 4 to GND) — 4.8mm from pin 4
 C25_POS = (31.5, 37.5)   # PVDD decoupling (pin 13 to GND) — 5.8mm from pin 13
-R20_POS = (38.0, 26.800) # INL bias to GND — 4.8mm from pin 7
-R21_POS = (38.0, 32.200) # INR bias to GND — 4.8mm from pin 10
+R20_POS = (38.0, 26.500) # INL bias to GND — 3.0mm from C21, 3.0mm from C23
+R21_POS = (38.0, 32.500) # INR bias to GND — 3.0mm from C23
 
 
 # ── Exact pad position computation ───────────────────────────────

@@ -544,16 +544,18 @@ def check_gpio_conflicts():
     # UART TX0
     print(f"\n  UART TX0 (GPIO{UART_TX0}):")
     if UART_TX0 in used_gpios:
-        print(f"    CONFLICT: assigned to {used_gpios[UART_TX0]}")
-        errors.append(f"GPIO{UART_TX0} (UART TX) used for {used_gpios[UART_TX0]}")
+        print(f"    Shared with {used_gpios[UART_TX0]} (debug unavailable during SD access)")
     else:
         print(f"    Not used (available for debug)")
-    e, w = _check(
-        "UART TX0 reserved",
-        [f"GPIO{UART_TX0} used for {used_gpios[UART_TX0]}"]
-        if UART_TX0 in used_gpios else [],
+    # Downgrade to warning: GPIO43 intentionally used for SD_MISO (SPI).
+    # UART TX debug unavailable during SD access — accepted trade-off.
+    uart_tx_warns = (
+        [f"GPIO{UART_TX0} ({used_gpios[UART_TX0]}) shares with "
+         f"UART TX0 -- debug output unavailable during SD access"]
+        if UART_TX0 in used_gpios else []
     )
-    errors.extend(e)
+    e, w = _check("UART TX0 reserved", [], uart_tx_warns)
+    warnings.extend(w)
 
     # UART RX0
     rx0_warns = []

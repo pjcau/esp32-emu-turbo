@@ -275,12 +275,12 @@ def _build_placements():
     p.append(("C23", "1uF", "C_0805", 38.0, 29.5, 90, "bottom"))
     p.append(("C24", "1uF", "C_0805", 29.365, 22.0, 90, "bottom"))
     p.append(("C25", "1uF", "C_0805", 31.5, 37.5, 90, "bottom"))
-    p.append(("R20", "20k", "R_0805", 38.0, 26.8, 0, "bottom"))
-    p.append(("R21", "20k", "R_0805", 38.0, 32.2, 0, "bottom"))
+    p.append(("R20", "20k", "R_0805", 38.0, 26.5, 0, "bottom"))
+    p.append(("R21", "20k", "R_0805", 38.0, 32.5, 0, "bottom"))
 
     # ── AMS1117 support caps (±7mm spacing for DFM clearance) ──
     p.append(("C1", "10uF", "C_0805",
-              amx - 3, amy - 7, 0, "bottom"))  # DFM: match board.py (moved from amx-1)
+              amx - 3.5, amy - 7, 0, "bottom"))  # DFM: synced with board.py
     p.append(("C2", "22uF", "C_1206",
               amx, amy + 7, 0, "bottom"))
 
