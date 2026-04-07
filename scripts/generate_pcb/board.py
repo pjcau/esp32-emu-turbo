@@ -476,7 +476,7 @@ def _component_placeholders():
     placements.append(("L1", "SMD-4x4x2", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*JST_BAT_ENC)
-    placements.append(("J3", "JST-PH-2P-SMD", px, py, 180, "B.Cu"))
+    placements.append(("J3", "JST-PH-2P-SMD", px, py, 0, "B.Cu"))
 
     # Reset and Boot buttons (B.Cu, right of USB-C — dev kit style)
     px, py = enc_to_pcb(*RESET_ENC)
