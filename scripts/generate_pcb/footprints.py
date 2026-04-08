@@ -389,6 +389,19 @@ def sot23_6(layer="B"):
     ]
 
 
+# ── SOT-23-3 (BAT54C dual Schottky diode) ───────────────────────
+# KiCad standard SOT-23-3 footprint, 0.95mm pitch
+# Bottom row: pins 1,2 at y=+1.10  Top row: pin 3 at y=-1.10
+# BAT54C: pin 1=Anode1, pin 2=Anode2, pin 3=Common Cathode
+def sot23_3(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    return [
+        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 0.70, layers),
+        _pad("2", "smd", "rect", 0.95, 1.10, 0.60, 0.70, layers),
+        _pad("3", "smd", "rect", 0, -1.10, 0.60, 0.70, layers),
+    ]
+
+
 # ── 0805 passive (R, C, LED) ─────────────────────────────────────
 def passive_0805(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
@@ -488,6 +501,7 @@ FOOTPRINTS = {
     "JST-PH-2P-SMD": (jst_ph_2p, "B"),
     "R_0402": (passive_0402, "B"),
     "SOT-23-6": (sot23_6, "B"),
+    "SOT-23-3": (sot23_3, "B"),
     "R_0805": (passive_0805, "B"),
     "C_0805": (passive_0805, "B"),
     "LED_0805": (passive_0805, "F"),

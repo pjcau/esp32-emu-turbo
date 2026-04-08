@@ -88,6 +88,10 @@
 #define BTN_MASK_L          (1 << 10)
 #define BTN_MASK_R          (1 << 11)
 
+/* Menu button: SW13 triggers START+SELECT simultaneously via BAT54C diode D1.
+ * Firmware detects the combo — no dedicated GPIO needed. */
+#define BTN_MENU_COMBO      (BTN_MASK_START | BTN_MASK_SELECT)
+
 /* ── Power: IP5306 ────────────────────────────────────────────────── */
 
 #define IP5306_I2C_ADDR     0x75

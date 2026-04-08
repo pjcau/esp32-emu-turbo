@@ -93,6 +93,7 @@ PASSIVES = {
     "C19": {"value": 22e-6,  "unit": "F",   "function": "IP5306 VOUT bulk"},
     "L1":  {"value": 1e-6,   "unit": "H",   "function": "Boost inductor",
              "current_rating": 4.5},
+    "D1":  {"value": 0.3,   "unit": "V",   "function": "BAT54C dual Schottky (menu combo diode)"},
 }
 # Button debounce caps C5-C16, C20
 for i in range(5, 17):

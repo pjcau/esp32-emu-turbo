@@ -484,6 +484,9 @@ def _component_placeholders():
     px, py = enc_to_pcb(*BOOT_ENC)
     placements.append(("SW_BOOT", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
 
+    # BAT54C dual Schottky diode — menu combo (START+SELECT)
+    placements.append(("D1", "SOT-23-3", *routing.D1_POS, 0, "B.Cu"))
+
     # ── Passive components (B.Cu) ──
     # Positions must match jlcpcb_export.py for CPL/Gerber alignment.
 
@@ -573,6 +576,7 @@ def _component_placeholders():
         "SS-12D00G3": (-4, 4),
         "SMD-4x4x2": (-4, 4),
         "Fiducial": (-2, 2),
+        "SOT-23-3": (-3, 3),
     }
 
     # Passives: text on Fab layer (not silkscreen) to avoid DFM violations

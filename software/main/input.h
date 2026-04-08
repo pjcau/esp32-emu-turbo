@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "esp_err.h"
 
@@ -19,6 +20,12 @@ esp_err_t input_init(void);
  * Use BTN_MASK_* constants from board_config.h to test individual buttons.
  */
 uint16_t input_read(void);
+
+/**
+ * Check if the MENU combo is active (START+SELECT both pressed).
+ * SW13 triggers both via BAT54C dual Schottky diode D1.
+ */
+bool input_menu_pressed(uint16_t state);
 
 /**
  * Get the name of a button from its mask bit position.

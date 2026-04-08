@@ -337,7 +337,13 @@ SS = [
     ("SW9", enc(-72, -17)),   # START
     ("SW10", enc(-52, -17)),  # SELECT
 ]
-MENU = ("SW13", enc(62, -25))
+MENU = ("SW13", enc(62, -24.2))   # Synced with board.py MENU_ENC
+# BAT54C dual Schottky diode — menu combo (START+SELECT via D1)
+# Placed on B.Cu, right of SD SPI traces, near board right edge.
+# enc(76,-15) = (156, 52.5) — right of all SD traces (SD_CS max at x=153.5),
+# clear of BTN_R vert@146.85, board edge at x=160. Pin 1 at x=156.95.
+D1_DIODE = ("D1", enc(76, -15))
+D1_POS = enc(76, -15)
 # Shoulder buttons on B.Cu (back side, rotated 90deg, aligned to top edge)
 SHOULDER_L = ("SW11", enc(-65, 32))
 SHOULDER_R = ("SW12", enc(65, 32))
@@ -513,6 +519,10 @@ def _init_pads():
     ref_boot, pos_boot = BOOT_BTN
     _PADS[ref_boot] = _compute_pads("SW-SMD-5.1x5.1",
                                      pos_boot[0], pos_boot[1], 0, "B")
+
+    # BAT54C dual Schottky diode (B.Cu, near SW13 menu button)
+    ref_d1, pos_d1 = D1_DIODE
+    _PADS[ref_d1] = _compute_pads("SOT-23-3", pos_d1[0], pos_d1[1], 0, "B")
 
     # Key passives with explicit routing
     passive_placements = [
@@ -3640,12 +3650,12 @@ def _button_traces():
         # 5.25mm to ESP32 pad at (71.25, 27.32) — no B.Cu obstacles at this Y
         # (BTN_L vert ends at y=28.59, BTN_DOWN ends at y=29.86).
         approach_r = 76.20
-        # JLCDFM FIX: BTN_R F.Cu at y=65.40 crosses SW13 (menu button) pads
-        # 3,4 at (139/145, 65.05) size 1.2x0.9mm. Pad bottom edge=65.50,
-        # trace edge=65.50 at y=65.40+0.10=65.50 → 0mm gap.
-        # Fix: F.Cu Y-jog around SW13 pads to y=64.0 (clear of pad top 64.60
-        # by 0.50mm). USB D- at (79-92, y=64.58) is outside jog x range.
-        _sw13_jog_y = 64.00
+        # JLCDFM FIX: BTN_R F.Cu jog around SW13 (menu button) pads
+        # 3,4 at (139/145, 63.55) size 1.2x0.9mm. Pad bottom edge=64.00.
+        # SW13 pads now on GND net → need different-net clearance (0.15mm).
+        # Trace at W_DATA=0.2mm: half_w=0.1mm. Need y >= 64.00+0.10+0.15 = 64.25.
+        # Use y=64.50 for margin. USB D- at y=64.58 is outside jog x range.
+        _sw13_jog_y = 64.50
         _sw13_jog_in = 146.50    # right of SW13 pad4 right edge (145.6)
         _sw13_jog_out = 137.00   # left of SW13 pad3 left edge (138.4)
         parts.append(_seg(sx_r, chan_y_r, _sw13_jog_in, chan_y_r,
@@ -4105,6 +4115,129 @@ def _reset_boot_traces():
     return parts
 
 
+def _menu_diode_traces():
+    """BAT54C menu combo diode (D1) routing.
+
+    Circuit: SW13 (menu button) triggers BTN_START + BTN_SELECT simultaneously
+    via dual Schottky diode D1 (BAT54C, SOT-23-3, B.Cu).
+
+    D1 pinout (BAT54C):
+      Pin 1 (Anode 1) → BTN_START net
+      Pin 2 (Anode 2) → BTN_SELECT net
+      Pin 3 (Common Cathode) → MENU_K net → SW13 pad 2
+
+    SW13 pad 3/4 → GND (when button pressed, cathode goes LOW,
+    pulling both BTN_START and BTN_SELECT LOW through D1 anodes).
+
+    D1 position: enc(68,-23) = (148, 60.5) on B.Cu, right of SW13.
+    SW13 position: enc(62,-25) = (142, 62.5) on F.Cu.
+
+    Routing:
+      1. D1 cathode (pin 3) → via → F.Cu short trace → SW13 pad 2 (MENU_K net)
+      2. SW13 pads 3,4 → GND vias
+      3. D1 anode 1 (pin 1, BTN_START) → B.Cu trace → via → connect to
+         BTN_START pull-up/debounce junction at (R12 pad 2 area, y=46)
+      4. D1 anode 2 (pin 2, BTN_SELECT) → B.Cu trace → via → connect to
+         BTN_SELECT pull-up/debounce junction
+    """
+    parts = []
+    _init_pads()
+    n_gnd = NET_ID["GND"]
+    n_start = NET_ID["BTN_START"]
+    n_sel = NET_ID["BTN_SELECT"]
+    n_menu_k = NET_ID["MENU_K"]
+
+    # ── Assign pad nets ──
+    _PAD_NETS[("D1", "1")] = n_start    # Anode 1 → BTN_START
+    _PAD_NETS[("D1", "2")] = n_sel      # Anode 2 → BTN_SELECT
+    _PAD_NETS[("D1", "3")] = n_menu_k   # Common cathode → MENU_K
+    _PAD_NETS[("SW13", "2")] = n_menu_k  # SW13 terminal → cathode junction
+    _PAD_NETS[("SW13", "1")] = n_menu_k  # SW13 terminal (shorted pair with pad 2)
+    _PAD_NETS[("SW13", "3")] = n_gnd     # SW13 → GND
+    _PAD_NETS[("SW13", "4")] = n_gnd     # SW13 → GND (shorted pair)
+
+    # Get pad positions
+    d1_p1 = _pad("D1", "1")   # Anode 1 (BTN_START)
+    d1_p2 = _pad("D1", "2")   # Anode 2 (BTN_SELECT)
+    d1_p3 = _pad("D1", "3")   # Cathode (MENU_K)
+    sw13_p1 = _pad("SW13", "1")
+    sw13_p2 = _pad("SW13", "2")
+    sw13_p3 = _pad("SW13", "3")
+    sw13_p4 = _pad("SW13", "4")
+
+    # ── 1. D1 cathode → SW13 pad 2 (MENU_K net) ──
+    # D1 pin 3 (cathode) on B.Cu at (~156, 51.4).
+    # SW13 pad 2 is on F.Cu at (145.0, 59.85).
+    # CONSTRAINTS: SD_CLK@152.5, SD_CS@153.5 B.Cu verts, BTN_R@146.85 B.Cu vert.
+    # Cannot route B.Cu horizontal LEFT through SD traces.
+    # Strategy: via RIGHT NEXT TO D1 pin 3, then F.Cu all the way to SW13.
+    # Via at D1 pin 3 position — on B.Cu pad, switch to F.Cu immediately.
+    if d1_p3 and sw13_p2:
+        # Via right at cathode pad — no B.Cu routing needed
+        parts.append(_via_net(d1_p3[0], d1_p3[1], n_menu_k,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+        # F.Cu L-shape: via → down to SW13 pad 2 Y, then left to pad
+        parts.append(_seg(d1_p3[0], d1_p3[1], d1_p3[0], sw13_p2[1],
+                          "F.Cu", W_SIG, n_menu_k))
+        parts.append(_seg(d1_p3[0], sw13_p2[1], sw13_p2[0], sw13_p2[1],
+                          "F.Cu", W_SIG, n_menu_k))
+
+    # ── 2. SW13 GND pads → vias ──
+    # SW13 pads 3,4 at y=63.55. Route to GND vias.
+    # CONSTRAINTS:
+    #   BTN_R F.Cu jog at y=64.0 from x=137→146.5
+    #   BTN_R B.Cu vert at x=146.85, BTN_R via at (146.85, 65.29)
+    #   SD_CS B.Cu vert at x=138.86 from y=61.72 to y=71.25
+    # SW13 pad 3 at (139.0, 63.55): route LEFT+UP to GND via.
+    # CONSTRAINTS:
+    #   SD_CS B.Cu vert at x=138.86 from y=61.72 to y=71.25
+    #   U6 pad 2 on B.Cu near (139, 62)
+    #   BTN_R F.Cu jog at y=64 from x=137→146.5
+    # Route LEFT to x=135 (clear of SD_CS@138.86 by 3.86mm), then UP to via
+    if sw13_p3:
+        gnd_via_x = 135.00  # left, clear of SD_CS and U6
+        gnd_via_y = sw13_p3[1] - 2.0   # 61.55
+        parts.append(_seg(sw13_p3[0], sw13_p3[1], gnd_via_x, sw13_p3[1],
+                          "F.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_seg(gnd_via_x, sw13_p3[1], gnd_via_x, gnd_via_y,
+                          "F.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(gnd_via_x, gnd_via_y, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    # SW13 pad 4 at (145.0, 63.55): BTN_R F.Cu jog at y=64 blocks going south.
+    # Route RIGHT to x=148 (right of BTN_R jog endpoint at 146.5), then DOWN.
+    if sw13_p4:
+        gnd_jog_x = 148.00   # right of BTN_R F.Cu jog start (146.5) by 1.5mm
+        gnd_via_y = 66.50    # below BTN_R via (65.29+0.45=65.74) by 0.76mm
+        parts.append(_seg(sw13_p4[0], sw13_p4[1], gnd_jog_x, sw13_p4[1],
+                          "F.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_seg(gnd_jog_x, sw13_p4[1], gnd_jog_x, gnd_via_y,
+                          "F.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(gnd_jog_x, gnd_via_y, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── 3. D1 anode 1 (BTN_START) → via ──
+    # D1 pin 1 on B.Cu at (~156.95, 53.6) — right of all SD traces.
+    # Route DOWN to via at y+2.5.
+    if d1_p1:
+        via_y = d1_p1[1] + 2.5  # ~56.1 — below D1, clear area
+        parts.append(_seg(d1_p1[0], d1_p1[1], d1_p1[0], via_y,
+                          "B.Cu", W_SIG, n_start))
+        parts.append(_via_net(d1_p1[0], via_y, n_start,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── 4. D1 anode 2 (BTN_SELECT) → via ──
+    # D1 pin 2 on B.Cu at (~155.05, 53.6) — right of all SD traces.
+    # Route UP to via at y-2.5, separated from anode 1 direction.
+    if d1_p2:
+        via_y = d1_p2[1] - 2.5  # ~51.1 — above D1
+        parts.append(_seg(d1_p2[0], d1_p2[1], d1_p2[0], via_y,
+                          "B.Cu", W_SIG, n_sel))
+        parts.append(_via_net(d1_p2[0], via_y, n_sel,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    return parts
+
+
 def _power_zones():
     """Copper pour zones for power distribution."""
     parts = []
@@ -4172,6 +4305,7 @@ def generate_all_traces():
     all_parts.extend(_passive_traces())
     all_parts.extend(_led_traces())
     all_parts.extend(_reset_boot_traces())
+    all_parts.extend(_menu_diode_traces())
     all_parts.extend(_power_zones())
 
     # Report collision violations

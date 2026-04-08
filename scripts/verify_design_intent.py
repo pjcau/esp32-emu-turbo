@@ -438,7 +438,8 @@ def test_T5_orphan_nets(cache, net_map, net_pads):
     #   one side may be a passive on the same net)
     # IP5306_KEY: tied via resistor to BAT+ (single IC endpoint)
     # I2S_BCLK/LRCK are directly routed (pad has no net, trace connects)
-    KNOWN_SINGLE = {"LCD_BL", "LCD_RD", "I2S_BCLK", "I2S_LRCK"}
+    # BTN_MENU: legacy net, menu now uses START+SELECT combo via D1 BAT54C
+    KNOWN_SINGLE = {"LCD_BL", "LCD_RD", "I2S_BCLK", "I2S_LRCK", "BTN_MENU"}
 
     orphans = []
     for net_name in sorted(all_net_names):

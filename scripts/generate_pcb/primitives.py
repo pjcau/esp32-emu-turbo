@@ -173,6 +173,8 @@ NET_LIST = [
     # USB ESD protection: MCU-side nets after 22Ω series resistors
     (54, "USB_DP_MCU"),
     (55, "USB_DM_MCU"),
+    # Menu button: BAT54C cathode junction (D1 pin 3 → SW13 pad 2)
+    (56, "MENU_K"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

@@ -49,6 +49,9 @@ MODEL_MAP = {
                      (0, 0.25, 0), (0, 0, 180)),
     "SW-SMD-5.1x5.1": (f"{M}/Button_Switch_SMD.3dshapes/SW_SPST_TL3342.step",
                      (0, 0, 0), (0, 0, 0)),
+    # SOT-23-3 (BAT54C): on B.Cu, 180° rotation
+    "SOT-23-3":     (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-23.step",
+                     (0, 0, 0), (0, 0, 180)),
     # No good match — skip these:
     # "SMD-4x4x2"  → Crystal (no exact 4x4 match in library)
     # "FPC-40P-0.5mm" → FPC connector (no exact 40P match)

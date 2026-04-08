@@ -201,7 +201,7 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("+5V"),        "function": "MUTE — active low, tied high (unmuted)", "type": "smd"},
             "6":  {"net": _exact("+5V"),        "function": "VDD — analog power supply", "type": "smd"},
             "7":  {"net": _exact("I2S_DOUT"),   "function": "INL — left audio input", "type": "smd"},
-            "8":  {"net": _unconnected(),       "function": "VREF — internal reference (bypass cap to GND)", "type": "smd"},
+            "8":  {"net": _any_of("PAM_VREF", ""),  "function": "VREF — internal reference (bypass cap C21 to GND)", "type": "smd"},
             "9":  {"net": _unconnected(),       "function": "NC — no connection", "type": "smd"},
             "10": {"net": _exact("I2S_DOUT"),   "function": "INR — right audio input (tied to INL)", "type": "smd"},
             "11": {"net": _exact("GND"),        "function": "GND — analog ground", "type": "smd"},
@@ -439,17 +439,30 @@ for _ref, (_net, _desc) in _BUTTON_MAP.items():
 # We verify the critical passives that have specific net requirements.
 # ---------------------------------------------------------------------------
 
-# SW13: Menu button — currently an unrouted placeholder (no GPIO assigned yet)
+# SW13: Menu button — triggers START+SELECT combo via BAT54C diode D1
 COMPONENT_SPECS["SW13"] = {
-    "component": "Tact Switch (Menu button — placeholder, unrouted)",
+    "component": "Tact Switch (Menu button — START+SELECT combo via D1)",
     "lcsc": "C318884",
     "datasheet": "SW1-SW13_Tact-Switch_C318884.pdf",
     "datasheet_page": 1,
     "pins": {
-        "1": {"net": _any_of("BTN_MENU", ""),  "function": "Menu (unrouted placeholder)", "type": "smd"},
-        "2": {"net": _any_of("BTN_MENU", ""),  "function": "Menu (unrouted placeholder)", "type": "smd"},
-        "3": {"net": _any_of("GND", ""),       "function": "GND (unrouted placeholder)", "type": "smd"},
-        "4": {"net": _any_of("GND", ""),       "function": "GND (unrouted placeholder)", "type": "smd"},
+        "1": {"net": _any_of("MENU_K", ""),  "function": "Cathode junction (shorted with pad 2)", "type": "smd"},
+        "2": {"net": _any_of("MENU_K", ""),  "function": "Cathode junction (D1 common cathode)", "type": "smd"},
+        "3": {"net": _any_of("GND", ""),     "function": "GND (when pressed, pulls cathode LOW)", "type": "smd"},
+        "4": {"net": _any_of("GND", ""),     "function": "GND (shorted with pad 3)", "type": "smd"},
+    },
+}
+
+# D1: BAT54C Dual Schottky Diode (menu combo — START+SELECT)
+COMPONENT_SPECS["D1"] = {
+    "component": "BAT54C Dual Schottky Diode",
+    "lcsc": "C8655",
+    "datasheet": "D1_BAT54C-SOT23_C8655.pdf",
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("BTN_START"),   "function": "Anode 1 — Start button signal", "type": "smd"},
+        "2": {"net": _exact("BTN_SELECT"),  "function": "Anode 2 — Select button signal", "type": "smd"},
+        "3": {"net": _exact("MENU_K"),      "function": "Common cathode — to SW13", "type": "smd"},
     },
 }
 

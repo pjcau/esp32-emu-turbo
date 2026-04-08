@@ -6,6 +6,7 @@
 #include "input.h"
 #include "board_config.h"
 
+#include <stdbool.h>
 #include "esp_log.h"
 #include "driver/gpio.h"
 
@@ -66,6 +67,11 @@ uint16_t input_read(void)
         }
     }
     return state;
+}
+
+bool input_menu_pressed(uint16_t state)
+{
+    return (state & BTN_MENU_COMBO) == BTN_MENU_COMBO;
 }
 
 const char *input_button_name(int bit)

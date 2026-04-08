@@ -28,6 +28,7 @@ from .board import (
     PWR_SWITCH_ENC, LED_CHARGE_ENC, LED_FULL_ENC,
     MENU_ENC, SPEAKER_ENC,
 )
+from .routing import D1_POS
 
 
 # ── JLCPCB rotation corrections (from JLCKicadTools cpl_rotations_db.csv) ──
@@ -215,6 +216,10 @@ def _build_placements():
     x, y = enc_to_pcb(*BOOT_ENC)
     p.append(("SW_BOOT", "SW_Push",
               "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
+
+    # BAT54C dual Schottky diode — menu combo (START+SELECT)
+    p.append(("D1", "BAT54C",
+              "SOT-23-3", D1_POS[0], D1_POS[1], 0, "bottom"))
 
     # ── Passive components (back side) ────────────────────────────
     # All passives have >= 3mm center-to-center spacing.
