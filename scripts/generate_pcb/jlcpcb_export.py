@@ -66,7 +66,7 @@ _JLCPCB_POS_CORRECTIONS = {
 _JLCPCB_ROT_OVERRIDES = {
     "U5": 180,   # PAM8403 (C5122557) — formula (90°→180°); 90° was wrong per JLCPCB DFM
     "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
-    "D1": 180,   # BAT54C (C37704) — SOT-23 formula gives 90°, JLCPCB 3D needs 180°
+    "D1": 270,   # BAT54C (C37704) — 90°+180° per JLCPCB 3D alignment
 }
 
 
