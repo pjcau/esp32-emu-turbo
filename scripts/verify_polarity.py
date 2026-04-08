@@ -267,9 +267,9 @@ for ref, net_name, side in _FRONT_BUTTONS:
     _strict(ref, [(sig_pin, net_name)])
     _zone(ref, [(gnd_pin, "GND")])
 
-# SW13 (BTN_MENU): not in pad lookup, all pads have net 0
-# Still define zone-ok expectations so we test component coverage
-_zone("SW13", [("1", "BTN_MENU"), ("4", "GND")])
+# SW13 (menu button): pads 1,2 = MENU_K (cathode junction), pads 3,4 = GND
+# Net is MENU_K (not BTN_MENU) — D1 cathode connects here.
+_zone("SW13", [("1", "MENU_K"), ("2", "MENU_K"), ("3", "GND"), ("4", "GND")])
 
 # ============================================================
 # Shoulder buttons: SW11, SW12 (B.Cu, rotated 90 deg)
@@ -393,6 +393,13 @@ for i, ref in enumerate(_DEBOUNCE_REFS):
 # Both LED pads carry the LED_RA intermediate net from resistor junction
 _strict("LED1", [("2", "LED1_RA")])
 _strict("LED2", [("2", "LED2_RA")])
+
+# ============================================================
+# D1: BAT54C dual Schottky diode (menu combo)
+# ============================================================
+# Pin 1 (Anode 1) → BTN_START, Pin 2 (Anode 2) → BTN_SELECT
+# Pin 3 (Common Cathode) → MENU_K (to SW13)
+_strict("D1", [("1", "BTN_START"), ("2", "BTN_SELECT"), ("3", "MENU_K")])
 
 
 # ---- Test class ----

@@ -2687,6 +2687,17 @@ def _usb_traces():
                           gnd_via_y2, "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(r2_p2[0], gnd_via_y2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
+    # ── USB return path GND stitching vias ──────────────────────────
+    # USB D+ serpentine on F.Cu at y≈65.9-66.4, x=82-89.
+    # Nearest GND via was (92.0, 69.3) at ~5-7mm — too far for good return path.
+    # Add 2 stitching vias at y=69.0 (between BTN_B@y=68.0 and BTN_X@y=70.7),
+    # placing them ~2.8mm from USB D+ center. This brings all USB segments
+    # within 5mm of a GND via for solid return path integrity.
+    _usb_stitch_y = 69.0
+    for _stitch_x in [86.0, 88.0]:
+        parts.append(_via_net(_stitch_x, _usb_stitch_y, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
     return parts
 
 
