@@ -219,7 +219,7 @@ def _build_placements():
 
     # BAT54C dual Schottky diode — menu combo (START+SELECT)
     p.append(("D1", "BAT54C",
-              "SOT-23-3", D1_POS[0], D1_POS[1], 0, "bottom"))
+              "SOT-23", D1_POS[0], D1_POS[1], 0, "bottom"))
 
     # ── Passive components (back side) ────────────────────────────
     # All passives have >= 3mm center-to-center spacing.
