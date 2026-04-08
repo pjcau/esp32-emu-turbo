@@ -155,8 +155,8 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 | Source | Components |
 |:---|:---|
 | Schematic (7 sub-sheets) | 68 unique refs |
-| PCB footprints | 88 refs |
-| JLCPCB CPL (assembly) | 78 refs |
+| PCB footprints | 89 refs |
+| JLCPCB CPL (assembly) | 79 refs |
 
 ### Off-board components (correct exclusions)
 
@@ -316,7 +316,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 12 component holes + 6 mounting holes + 286 vias = **304 drill operations**
+**Total holes:** 12 component holes + 6 mounting holes + 293 vias = **311 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -360,7 +360,7 @@ NPTH positioning holes are always sized from the component datasheet — never g
 
 | Type | Count | Drill Range | Annular Ring | Status |
 |------|-------|-------------|--------------|--------|
-| Signal vias | 286 | 0.20 mm | ≥ 0.075 mm | **PASS** |
+| Signal vias | 293 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 6 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
 | Component THT (J3 C173752) | 0.85 mm | ø1.6 mm | 0.375 mm | **PASS** |
