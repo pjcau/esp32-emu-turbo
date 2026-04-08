@@ -751,8 +751,9 @@ def _power_traces():
     # DFM FIX (KiBot external): VBUS B.Cu vert at x=82.25 had gap=0.15mm to
     # J3:1 PTH pad (81.0, 62.5) size 1.6mm (right edge 81.8). W_PWR=0.6 hw=0.3.
     # At 82.25: left edge 81.95, gap=81.95-81.8=0.15mm < 0.20mm rule.
-    # Fix: offset -0.45 → x=usb-0.45≈82.55. Left edge 82.25, gap=82.25-81.8=0.45mm ✓
-    vbus_fcu_start_x = usb_vbus[0] + 0.15
+    # Fix: offset +0.05 → x=82.45. Left edge 82.07, gap to J3:1=82.07-81.8=0.27mm ✓
+    # Right edge 82.83, gap to J1:1 GND pad left edge (83.025)=0.195mm >= 0.175mm ✓
+    vbus_fcu_start_x = usb_vbus[0] + 0.05
     ip_vbus_via_x = ip_vbus[0] - 2  # 108.0
     ip_vbus_via_y = ip_vbus[1] - 0.5  # DFM: 0.5mm above pad to clear U2[EP]
 
@@ -811,6 +812,32 @@ def _power_traces():
     # B.Cu stubs from IC GND pads to vias
     parts.append(_seg(usb_gnd[0], usb_gnd[1], usb_gnd[0], usb_gnd_via_y,
                        "B.Cu", W_PWR, n_gnd))
+
+    # ── USB-C extra pad net assignments (GND, VBUS, Shield) ────
+    # The USB-C connector area is densely routed (D+/D-/CC1/CC2 verticals,
+    # VBUS vertical, button approach columns). Explicit B.Cu traces to most
+    # pads would cross existing routes. Instead:
+    # - Assign net IDs to pads (for DRC net awareness)
+    # - GND pads connect through In1.Cu GND zone (zone fill)
+    # - VBUS pads 9/11 link to pad 2 via short same-row stub (no crossings)
+    # - Shield THT pads connect through In1.Cu GND zone (plated holes)
+    #
+    # Pad 1 (GND): directly assign net, zone fill connects via In1.Cu
+    _PAD_NETS[("J1", "1")] = n_gnd
+    # Pad 9 (VBUS): directly assign net
+    _PAD_NETS[("J1", "9")] = n_vbus
+    # Pad 11 (VBUS): directly assign net
+    _PAD_NETS[("J1", "11")] = n_vbus
+    # Pad 9 to pad 11: no explicit stub needed — CC2 B.Cu vertical at x=78.25
+    # runs between these pads at y=68.83, blocking any horizontal stub.
+    # Both pads have VBUS net assigned; zone fill on In2.Cu connects them.
+    # Shield pads 13, 14, 13b, 14b → GND net assignment.
+    # THT pads have plated barrels connecting to In1.Cu GND zone automatically.
+    _PAD_NETS[("J1", "13")] = n_gnd
+    _PAD_NETS[("J1", "14")] = n_gnd
+    _PAD_NETS[("J1", "13b")] = n_gnd
+    _PAD_NETS[("J1", "14b")] = n_gnd
+
     # IP5306 GND: DFM FIX: was straight vertical DOWN at x=ip_ep[0]=110.
     # This crossed IP5306_KEY horizontal (114.05,44.41)→(107.00,44.41) at (110,44.41).
     # Fix: horizontal stub RIGHT to x=115 (outside KEY span 107..114.05), then vertical.
@@ -3076,7 +3103,40 @@ def _button_traces():
         # to y=70.8/71.55 (between front/rear J1 shield pads), avoiding the
         # J1 front pad zone entirely. No bypass needed.
         #
-        parts.append(_seg(vx, cy, ax, cy, "F.Cu", W_SIG, net))
+        # BTN_START (i=8, cy=73.955) F.Cu bypass around J1 rear shield THT pads:
+        # Pad 14b at (75.67, 73.58) pad 1.4x1.8mm → x=[74.97, 76.37], y=[72.68, 74.48]
+        # Pad 13b at (84.33, 73.58) pad 1.4x1.8mm → x=[83.63, 85.03], y=[72.68, 74.48]
+        # Trace at y=73.955 passes through both pads. Jog NORTH to y=72.38
+        # (0.175mm clearance above pad top at 72.68, 0.28mm gap to BTN_Y at y=71.85).
+        if i == 8:  # BTN_START — bypass J1 rear shield pads 14b and 13b
+            _bypass_y = 72.38   # safe jog Y north of pad top (72.68)
+            # Pad 14b bypass: jog at x=74.47 up, straight past, jog back at x=76.87
+            _p14b_jog_start = 74.47   # pad left (74.97) - 0.175 - 0.125 - margin
+            _p14b_jog_end = 76.87     # pad right (76.37) + 0.175 + 0.125 + margin
+            # Pad 13b bypass: jog at x=83.13 up, straight past, jog back at x=85.53
+            _p13b_jog_start = 83.13   # pad left (83.63) - 0.175 - 0.125 - margin
+            _p13b_jog_end = 85.53     # pad right (85.03) + 0.175 + 0.125 + margin
+            # Segment order: vx → pad14b_jog_start → bypass14b → pad14b_jog_end →
+            #                pad13b_jog_start → bypass13b → pad13b_jog_end → ax
+            # All segments at cy=73.955 except bypasses at _bypass_y=72.38
+            parts.append(_seg(vx, cy, _p14b_jog_start, cy, "F.Cu", W_SIG, net))
+            parts.append(_seg(_p14b_jog_start, cy, _p14b_jog_start, _bypass_y,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p14b_jog_start, _bypass_y, _p14b_jog_end, _bypass_y,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p14b_jog_end, _bypass_y, _p14b_jog_end, cy,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p14b_jog_end, cy, _p13b_jog_start, cy,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p13b_jog_start, cy, _p13b_jog_start, _bypass_y,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p13b_jog_start, _bypass_y, _p13b_jog_end, _bypass_y,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p13b_jog_end, _bypass_y, _p13b_jog_end, cy,
+                               "F.Cu", W_SIG, net))
+            parts.append(_seg(_p13b_jog_end, cy, ax, cy, "F.Cu", W_SIG, net))
+        else:
+            parts.append(_seg(vx, cy, ax, cy, "F.Cu", W_SIG, net))
         parts.append(_via_net(ax, cy, net, size=_btn_via_sz, drill=_btn_via_drill))
 
         # 4-5. Route to ESP32 pad: B.Cu vertical + F.Cu horizontal.

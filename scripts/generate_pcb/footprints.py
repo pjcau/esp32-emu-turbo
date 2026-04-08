@@ -258,11 +258,12 @@ def usb_c_16p(layer="B"):
                      drill=0.6, solder_mask_margin=0))
     pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.1, 2.0, THT,
                      drill=0.6, solder_mask_margin=0))
-    # Rear: keep SMD to avoid F.Cu BTN_START trace conflict.
-    pads.append(_pad("13b", "smd", "oval", -4.325, 2.375, 1.4, 1.8, layers,
-                     solder_mask_margin=0))
-    pads.append(_pad("14b", "smd", "oval", 4.325, 2.375, 1.4, 1.8, layers,
-                     solder_mask_margin=0))
+    # Rear: THT for mechanical strength (BTN_START trace bypasses via jog).
+    # Datasheet specifies 0.60mm holes for all 4 shield tabs.
+    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.4, 1.8, THT,
+                     drill=0.6, solder_mask_margin=0))
+    pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.4, 1.8, THT,
+                     drill=0.6, solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
     # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm
