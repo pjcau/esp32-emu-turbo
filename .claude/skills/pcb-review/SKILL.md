@@ -63,6 +63,11 @@ python3 scripts/verify_test_points.py
 | `verify_thermal_relief.py` | 4 | Missing thermal relief on zone connections |
 | `verify_ground_loops.py` | 3 | Audio-digital ground coupling |
 | `verify_test_points.py` | 18 | Missing debug probe points |
+| `verify_esd_protection.py` | 6 | Missing TVS/series resistors on USB |
+| `verify_strapping_pins.py` | 6 | ESP32 boot pin conflicts |
+| `verify_usb_return_path.py` | 3 | GND via density near USB traces |
+| `verify_sd_interface.py` | 7 | SD card SPI completeness + card detect |
+| `verify_power_resonance.py` | 4 | Power plane LC resonance frequency |
 
 ### 1c. Run datasheet verification (electrical + physical)
 
