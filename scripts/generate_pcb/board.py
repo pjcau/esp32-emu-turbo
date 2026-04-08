@@ -491,6 +491,11 @@ def _component_placeholders():
     placements.append(("R1", "R_0805", *routing.R1_POS, 0, "B.Cu"))
     placements.append(("R2", "R_0805", *routing.R2_POS, 0, "B.Cu"))
 
+    # USB ESD protection (TVS + 22Ω series resistors)
+    placements.append(("U4", "SOT-23-6", *routing.U4_POS, 0, "B.Cu"))
+    placements.append(("R22", "R_0402", *routing.R22_POS, 90, "B.Cu"))
+    placements.append(("R23", "R_0402", *routing.R23_POS, 90, "B.Cu"))
+
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
     placements.append(("C3", "C_0805", 69.5, 42, 0, "B.Cu"))  # DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm=danger). At 69.5: C3[2]=68.55, R3[1]=65.95, gap=2.60mm clear

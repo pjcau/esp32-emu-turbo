@@ -364,6 +364,31 @@ def jst_ph_2p(layer="B"):
     ]
 
 
+# ── 0402 passive (R) ─────────────────────────────────────────────
+# KiCad standard 0402_1005Metric footprint
+def passive_0402(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    return [
+        _pad("1", "smd", "rect", -0.48, 0, 0.56, 0.62, layers),
+        _pad("2", "smd", "rect", 0.48, 0, 0.56, 0.62, layers),
+    ]
+
+
+# ── SOT-23-6 (USBLC6-2SC6 ESD protection) ──────────────────────
+# KiCad standard SOT-23-6 footprint, 0.95mm pitch
+# Bottom row: pins 1,2,3 at y=+1.10  Top row: pins 6,5,4 at y=-1.10
+def sot23_6(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    return [
+        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 0.70, layers),
+        _pad("2", "smd", "rect", 0, 1.10, 0.60, 0.70, layers),
+        _pad("3", "smd", "rect", 0.95, 1.10, 0.60, 0.70, layers),
+        _pad("4", "smd", "rect", 0.95, -1.10, 0.60, 0.70, layers),
+        _pad("5", "smd", "rect", 0, -1.10, 0.60, 0.70, layers),
+        _pad("6", "smd", "rect", -0.95, -1.10, 0.60, 0.70, layers),
+    ]
+
+
 # ── 0805 passive (R, C, LED) ─────────────────────────────────────
 def passive_0805(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
@@ -461,6 +486,8 @@ FOOTPRINTS = {
     "FPC-40P-0.5mm": (fpc_40p, "B"),
     "TF-01A": (tf01a, "B"),
     "JST-PH-2P-SMD": (jst_ph_2p, "B"),
+    "R_0402": (passive_0402, "B"),
+    "SOT-23-6": (sot23_6, "B"),
     "R_0805": (passive_0805, "B"),
     "C_0805": (passive_0805, "B"),
     "LED_0805": (passive_0805, "F"),

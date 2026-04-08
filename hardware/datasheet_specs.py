@@ -100,8 +100,8 @@ COMPONENT_SPECS = {
             "10": {"net": _exact("I2S_DOUT"),   "function": "GPIO17 — I2S data out", "type": "smd"},
             "11": {"net": _exact("BTN_START"),  "function": "GPIO18 — Start button", "type": "smd"},
             "12": {"net": _exact("LCD_D4"),     "function": "GPIO8 — LCD data bus D4", "type": "smd"},
-            "13": {"net": _exact("USB_D-"),     "function": "GPIO19 — USB D-", "type": "smd"},
-            "14": {"net": _exact("USB_D+"),     "function": "GPIO20 — USB D+", "type": "smd"},
+            "13": {"net": _exact("USB_DM_MCU"), "function": "GPIO19 — USB D- (after 22Ω R23)", "type": "smd"},
+            "14": {"net": _exact("USB_DP_MCU"), "function": "GPIO20 — USB D+ (after 22Ω R22)", "type": "smd"},
             "15": {"net": _exact("BTN_R"),      "function": "GPIO3 — R shoulder button", "type": "smd"},
             "16": {"net": _exact("LCD_WR"),     "function": "GPIO46 — LCD write strobe", "type": "smd"},
             "17": {"net": _exact("LCD_D5"),     "function": "GPIO9 — LCD data bus D5", "type": "smd"},
@@ -473,6 +473,45 @@ COMPONENT_SPECS["R2"] = {
     "pins": {
         "1": {"net": _exact("USB_CC2"), "function": "CC2 signal", "type": "smd"},
         "2": {"net": _exact("GND"),     "function": "Ground", "type": "smd"},
+    },
+}
+
+# U4: USBLC6-2SC6 USB ESD TVS Diode (SOT-23-6)
+COMPONENT_SPECS["U4"] = {
+    "component": "USBLC6-2SC6 USB ESD TVS",
+    "lcsc": "C7519",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("USB_D-"), "function": "I/O1 (D-)", "type": "smd"},
+        "2": {"net": _exact("GND"),    "function": "Ground", "type": "smd"},
+        "3": {"net": _exact("USB_D+"), "function": "I/O2 (D+)", "type": "smd"},
+        "4": {"net": _exact("USB_D+"), "function": "I/O2 (D+)", "type": "smd"},
+        "5": {"net": _exact("VBUS"),   "function": "VBUS reference", "type": "smd"},
+        "6": {"net": _exact("USB_D-"), "function": "I/O1 (D-)", "type": "smd"},
+    },
+}
+
+# R22, R23: USB 22Ω series resistors (0402)
+COMPONENT_SPECS["R22"] = {
+    "component": "22R USB D+ Series Resistor",
+    "lcsc": "C25092",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("USB_DP_MCU"), "function": "ESP32 side (after resistor)", "type": "smd"},
+        "2": {"net": _exact("USB_D+"),     "function": "Connector side (before resistor)", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["R23"] = {
+    "component": "22R USB D- Series Resistor",
+    "lcsc": "C25092",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("USB_DM_MCU"), "function": "ESP32 side (after resistor)", "type": "smd"},
+        "2": {"net": _exact("USB_D-"),     "function": "Connector side (before resistor)", "type": "smd"},
     },
 }
 

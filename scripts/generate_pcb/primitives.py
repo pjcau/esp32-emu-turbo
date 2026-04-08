@@ -170,6 +170,9 @@ NET_LIST = [
     (52, "LED2_RA"),
     # EN reset net (ESP32 EN pin — active-low reset)
     (53, "EN"),
+    # USB ESD protection: MCU-side nets after 22Ω series resistors
+    (54, "USB_DP_MCU"),
+    (55, "USB_DM_MCU"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

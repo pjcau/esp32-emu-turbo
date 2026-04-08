@@ -99,8 +99,8 @@ _strict("U1", [
     ("4", "LCD_D0"), ("5", "LCD_D1"), ("6", "LCD_D2"), ("7", "LCD_D3"),
     ("10", "I2S_DOUT"), ("11", "BTN_START"),
     ("12", "LCD_D4"),
-    ("13", "USB_D-"),     # GPIO19 = USB_D- (shared pin, USB wins)
-    ("14", "USB_D+"),
+    ("13", "USB_DM_MCU"), # GPIO19 = USB D- (after 22Ω R23)
+    ("14", "USB_DP_MCU"),# GPIO20 = USB D+ (after 22Ω R22)
     ("15", "BTN_R"), ("16", "LCD_WR"),  # GPIO8=BTN_R (was LCD_RD)
     ("17", "LCD_D5"), ("18", "LCD_D6"), ("19", "LCD_D7"),
     ("20", "LCD_CS"), ("21", "LCD_RST"), ("22", "LCD_DC"),
@@ -293,6 +293,24 @@ _zone("SW_BOOT", [("3", "GND"), ("4", "GND")])
 # ============================================================
 _strict("R1", [("1", "USB_CC1"), ("2", "GND")])
 _strict("R2", [("1", "USB_CC2"), ("2", "GND")])
+
+# ============================================================
+# U4: USBLC6-2SC6 USB ESD TVS (SOT-23-6)
+# ============================================================
+# Pin 1=D-(I/O1), Pin 2=GND, Pin 3=D+(I/O2),
+# Pin 4=D+(I/O2), Pin 5=VBUS, Pin 6=D-(I/O1)
+_strict("U4", [
+    ("1", "USB_D-"), ("2", "GND"), ("3", "USB_D+"),
+    ("4", "USB_D+"), ("5", "VBUS"), ("6", "USB_D-"),
+])
+
+# ============================================================
+# R22, R23: USB 22Ω series resistors (0402)
+# ============================================================
+# R22: pad 1=USB_DP_MCU (ESP32 side), pad 2=USB_D+ (connector side)
+# R23: pad 1=USB_DM_MCU (ESP32 side), pad 2=USB_D- (connector side)
+_strict("R22", [("1", "USB_DP_MCU"), ("2", "USB_D+")])
+_strict("R23", [("1", "USB_DM_MCU"), ("2", "USB_D-")])
 
 # ============================================================
 # R16: IP5306 KEY pull-down
@@ -494,9 +512,9 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("U1", "15", "BTN_R")    # GPIO8
 
     def test_esp32_usb(self):
-        """U1: USB D+/D- on correct pins."""
-        self._check_strict("U1", "14", "USB_D+")
-        self._check_strict("U1", "13", "USB_D-")
+        """U1: USB D+/D- on correct pins (after 22Ω series resistors)."""
+        self._check_strict("U1", "14", "USB_DP_MCU")
+        self._check_strict("U1", "13", "USB_DM_MCU")
 
     def test_esp32_i2s(self):
         """U1: I2S_DOUT on correct pin (BCLK/LRCK unrouted)."""
@@ -790,16 +808,17 @@ class PolarityVerificationTest(unittest.TestCase):
         """Display LED-A (pin 33, pad 8) must be connected to +3V3.
 
         ILI9488 datasheet: LED-A = backlight anode (2.9-3.3V).
-        Without this, the display backlight is off and screen is black.
+        Pad has dedicated LCD_BL net routed to +3V3 via zone fill on In2.Cu.
         """
-        self._check_strict("J4", "8", "+3V3")
+        self._check_strict("J4", "8", "LCD_BL")
 
     def test_display_rd_tied_high(self):
         """Display RD (pin 12, pad 29) must be tied HIGH (+3V3).
 
         ILI9488 8080 write-only mode: RD must not float.
+        Pad has dedicated LCD_RD net routed to +3V3 via zone fill on In2.Cu.
         """
-        self._check_strict("J4", "29", "+3V3")
+        self._check_strict("J4", "29", "LCD_RD")
 
     def test_pam8403_shdn_not_floating(self):
         """PAM8403 /SHDN (pin 12) must be tied HIGH (+5V).

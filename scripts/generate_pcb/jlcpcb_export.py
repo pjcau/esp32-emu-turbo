@@ -232,6 +232,15 @@ def _build_placements():
     p.append(("R2", "5.1k", "R_0805",
               R2_POS[0], R2_POS[1], 0, "bottom"))
 
+    # USB ESD protection — TVS + 22Ω series resistors
+    from scripts.generate_pcb.routing import U4_POS, R22_POS, R23_POS
+    p.append(("U4", "USBLC6-2SC6", "SOT-23-6",
+              U4_POS[0], U4_POS[1], 0, "bottom"))
+    p.append(("R22", "22", "R_0402",
+              R22_POS[0], R22_POS[1], 90, "bottom"))
+    p.append(("R23", "22", "R_0402",
+              R23_POS[0], R23_POS[1], 90, "bottom"))
+
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
     p.append(("C3", "100nF", "C_0805", 69.5, 42, 0, "bottom"))  # DFM: synced with board.py

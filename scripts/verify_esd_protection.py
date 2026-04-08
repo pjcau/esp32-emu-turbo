@@ -26,6 +26,7 @@ from pcb_cache import load_cache
 
 PCB_FILE = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_pcb")
 BOM_FILE = os.path.join(BASE, "release_jlcpcb", "bom.csv")
+BOM_FILE_ALT = os.path.join(BASE, "hardware", "kicad", "jlcpcb", "bom.csv")
 SCHEMATIC_DIR = os.path.join(BASE, "hardware", "kicad")
 
 ESD_KEYWORDS = re.compile(r"TVS|ESD|USBLC|PESD|PRTR|TPD|SP05|CDSOT", re.I)
@@ -43,14 +44,19 @@ def _read_schematics():
 
 
 def _parse_bom():
-    """Parse BOM CSV, return list of dicts."""
+    """Parse BOM CSV, return list of dicts. Merges release and hardware BOMs."""
     rows = []
-    if not os.path.exists(BOM_FILE):
-        return rows
-    with open(BOM_FILE, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            rows.append(row)
+    seen_designators = set()
+    for bom_path in [BOM_FILE, BOM_FILE_ALT]:
+        if not os.path.exists(bom_path):
+            continue
+        with open(bom_path, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                desig = row.get("Designator", "")
+                if desig not in seen_designators:
+                    seen_designators.add(desig)
+                    rows.append(row)
     return rows
 
 

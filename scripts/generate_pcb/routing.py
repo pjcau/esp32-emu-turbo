@@ -383,6 +383,16 @@ C25_POS = (31.5, 37.5)   # PVDD decoupling (pin 13 to GND) — 5.8mm from pin 13
 R20_POS = (38.0, 26.500) # INL bias to GND — 3.0mm from C21, 3.0mm from C23
 R21_POS = (38.0, 32.500) # INR bias to GND — 3.0mm from C23
 
+# USB ESD protection positions (synced with board.py placements)
+# U4 (USBLC6-2SC6 SOT-23-6): placed between D+/D- approach columns.
+# Pins 3/4 (D+) overlap D+ trace at x=90.25, pins 1/6 (D-) overlap D- trace at x=91.65.
+# Pin 2 (GND) centered between traces, pin 5 (VBUS) connects via F.Cu to VBUS horizontal.
+U4_POS = (90.95, 60.0)
+# R22/R23 (22Ω 0402): inline on D+/D- B.Cu approach columns, rotated 90°.
+# R22 breaks D+ vertical at x=90.25, R23 breaks D- vertical at x=91.65.
+R22_POS = (90.25, 40.0)   # D+ 22Ω series (between TVS and ESP32 GPIO20)
+R23_POS = (91.65, 38.5)   # D- 22Ω series (between TVS and ESP32 GPIO19, clear of C4 GND via@40.0)
+
 
 # ── Exact pad position computation ───────────────────────────────
 # Computes absolute board-level coordinates for every IC/connector pad,
@@ -531,6 +541,10 @@ def _init_pads():
         ("R21", "R_0805", *R21_POS, 0, "B"),
         # ESP32 VDD bypass (rotated 90° to separate +3V3/GND routing)
         ("C26", "C_0805", *C26_POS, 90, "B"),
+        # USB ESD protection
+        ("U4", "SOT-23-6", *U4_POS, 0, "B"),
+        ("R22", "R_0402", *R22_POS, 90, "B"),
+        ("R23", "R_0402", *R23_POS, 90, "B"),
     ]
     for ref, fp, cx, cy, rot, lc in passive_placements:
         _PADS[ref] = _compute_pads(fp, cx, cy, rot, lc)
@@ -1146,7 +1160,7 @@ def _power_traces():
     # Use custom 0.46mm OD (r=0.23, AR=0.13mm >= 0.127mm JLCPCB min):
     # gap to LCD_D7 = |21.0-20.5|-0.23-0.10 = 0.17mm ≥ 0.15mm ✓
     # gap to LCD_D6 = |21.5-21.0|-0.23-0.10 = 0.17mm ≥ 0.15mm ✓
-    _V3_VIA_SIZE = 0.46   # custom: fits between LCD_D6/D7 with 0.17mm gap (AR=0.13mm)
+    _V3_VIA_SIZE = 0.46   # custom: fits between LCD_D6/D7 with 0.17mm gap (AR=0.13mm ≥ JLCPCB min)
     esp_3v3 = _pad("U1", "2")  # pin 2 = +3V3 power input
     if esp_3v3:
         parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.51, n_3v3,
@@ -2388,12 +2402,22 @@ def _pam_passive_traces():
 
 
 def _usb_traces():
-    """USB D+/D- differential pair: USB-C -> ESP32."""
+    """USB D+/D- differential pair: USB-C -> TVS (U4) -> 22Ω (R22/R23) -> ESP32.
+
+    ESD protection topology:
+      J1:6 (USB_D+) → B.Cu → via → F.Cu meander → via → B.Cu vertical
+        → TVS U4 pins 3/4 tap (pad overlap) → R22 pad 1 (USB_D+ net)
+        → R22 pad 2 (USB_DP_MCU net) → B.Cu → ESP32 GPIO20
+      J1:7 (USB_D-) → same pattern with U4 pins 1/6 and R23
+      U4 pin 2 → GND via, U4 pin 5 → via → F.Cu → VBUS horizontal
+    """
     parts = []
     _init_pads()
 
     n_dp = NET_ID["USB_D+"]
     n_dm = NET_ID["USB_D-"]
+    n_dp_mcu = NET_ID["USB_DP_MCU"]
+    n_dm_mcu = NET_ID["USB_DM_MCU"]
 
     # ESP32 USB pins
     dp_x, dp_y = _esp_pin(20)  # D+
@@ -2463,11 +2487,19 @@ def _usb_traces():
     parts.append(_seg(_end_x, dp_via_y, dp_col_x, dp_via_y,
                        "F.Cu", W_DATA, n_dp))
     parts.append(_via_net(dp_col_x, dp_via_y, n_dp, size=VIA_STD, drill=VIA_STD_DRILL))
-    # 3. B.Cu vertical up to ESP32 pin Y
-    parts.append(_seg(dp_col_x, dp_via_y, dp_col_x, dp_y,
+    # 3. B.Cu vertical to R22 pad 2 (USB_D+ net).
+    # TVS U4 pins 3/4 (D+) at x=90.00 tap in via pad overlap at y≈58.9-61.1.
+    # R22 (22Ω 0402, 90° rotation) at (90.25, 40.0):
+    #   pad 1 at (90.25, 39.52) — ESP32 side (USB_DP_MCU)
+    #   pad 2 at (90.25, 40.48) — approach side (USB_D+)
+    _r22_dp_y = 40.48     # R22 pad 2 (USB_D+ side, toward approach via)
+    _r22_mcu_y = 39.52    # R22 pad 1 (USB_DP_MCU side, toward ESP32)
+    parts.append(_seg(dp_col_x, dp_via_y, dp_col_x, _r22_dp_y,
                        "B.Cu", W_DATA, n_dp))
-    # 4. B.Cu horizontal stub to ESP32 pad
-    parts.append(_seg(dp_col_x, dp_y, dp_x, dp_y, "B.Cu", W_DATA, n_dp))
+    # 4. R22 pad 1 → B.Cu vertical + horizontal to ESP32 (USB_DP_MCU net)
+    parts.append(_seg(dp_col_x, _r22_mcu_y, dp_col_x, dp_y,
+                       "B.Cu", W_DATA, n_dp_mcu))
+    parts.append(_seg(dp_col_x, dp_y, dp_x, dp_y, "B.Cu", W_DATA, n_dp_mcu))
 
     # D-: USB-C -> ESP32 (stagger via Y to avoid drill spacing)
     # DFM FIX: dm_via_y increased by 0.25mm (from -4 to -4.25) to fix D+/D- via-via gap.
@@ -2514,15 +2546,71 @@ def _usb_traces():
                        "B.Cu", W_DATA, n_dm))
     parts.append(_seg(_c4_jog_x, _c4_pad_bot, dm_col_x, _c4_pad_bot,
                        "B.Cu", W_DATA, n_dm))
-    parts.append(_seg(dm_col_x, _c4_pad_bot, dm_col_x, dm_y,
+    # R23 (22Ω 0402, 90° rotation) at (91.65, 38.5):
+    #   pad 1 at (91.65, 38.02) — ESP32 side (USB_DM_MCU)
+    #   pad 2 at (91.65, 38.98) — approach side (USB_D-)
+    _r23_dm_y = 38.98     # R23 pad 2 (USB_D- side, toward approach via)
+    _r23_mcu_y = 38.02    # R23 pad 1 (USB_DM_MCU side, toward ESP32)
+    parts.append(_seg(dm_col_x, _c4_pad_bot, dm_col_x, _r23_dm_y,
                        "B.Cu", W_DATA, n_dm))
-    # USB_D- terminates at ESP32 pin 13 (GPIO 19). BTN_R moved to GPIO 43.
-    parts.append(_seg(dm_col_x, dm_y, dm_x, dm_y, "B.Cu", W_DATA, n_dm))
+    # R23 pad 1 → B.Cu to ESP32 pin 13 (USB_DM_MCU net). BTN_R moved to GPIO 43.
+    parts.append(_seg(dm_col_x, _r23_mcu_y, dm_col_x, dm_y,
+                       "B.Cu", W_DATA, n_dm_mcu))
+    parts.append(_seg(dm_col_x, dm_y, dm_x, dm_y, "B.Cu", W_DATA, n_dm_mcu))
+
+    # ── TVS U4 (USBLC6-2SC6) routing ────────────────────────────────
+    # Pins 1/6 (D-) and 3/4 (D+) connect via pad overlap with B.Cu
+    # approach column traces — no explicit routing needed.
+    # Pin 2 (GND): B.Cu stub to GND via below pin.
+    # Pin 5 (VBUS): B.Cu stub to via, F.Cu to VBUS horizontal at y=61.0.
+    n_gnd = NET_ID["GND"]
+    n_vbus = NET_ID["VBUS"]
+
+    # Explicit pad nets for TVS (overlap pads aren't auto-detected by _seg)
+    _PAD_NETS[("U4", "1")] = n_dm
+    _PAD_NETS[("U4", "2")] = n_gnd
+    _PAD_NETS[("U4", "3")] = n_dp
+    _PAD_NETS[("U4", "4")] = n_dp
+    _PAD_NETS[("U4", "5")] = n_vbus
+    _PAD_NETS[("U4", "6")] = n_dm
+    # Explicit pad nets for 22Ω resistors (90° rotation swaps pad Y order)
+    # R22: pad 1 at y=39.52 (ESP32 side), pad 2 at y=40.48 (approach side)
+    _PAD_NETS[("R22", "1")] = n_dp_mcu  # pad 1 = ESP32 side
+    _PAD_NETS[("R22", "2")] = n_dp      # pad 2 = approach side (USB_D+)
+    # R23: pad 1 at y=38.52 (ESP32 side), pad 2 at y=39.48 (approach side)
+    _PAD_NETS[("R23", "1")] = n_dm_mcu  # pad 1 = ESP32 side
+    _PAD_NETS[("R23", "2")] = n_dm      # pad 2 = approach side (USB_D-)
+
+    # TVS pin 2 (GND) at (90.95, 61.10) → via at y=61.9
+    # Must clear VBUS F.Cu at y=61.0 (top edge 61.38): via bottom 61.60 → gap 0.22mm ✓
+    # Must clear D- bridge via (91.65, 62.80): dist=1.14mm → gap 0.54mm ✓
+    # Gap to D+ trace (90.25): via edge (90.65) → 0.30mm ✓
+    # Gap to D- trace (91.65): via edge (91.25) → 0.30mm ✓
+    _tvs_gnd_y = 61.10  # U4 pin 2 Y
+    _tvs_gnd_via_y = 61.9
+    parts.append(_seg(90.95, _tvs_gnd_y, 90.95, _tvs_gnd_via_y,
+                       "B.Cu", W_SIG, n_gnd))
+    parts.append(_via_net(90.95, _tvs_gnd_via_y, n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # TVS pin 5 (VBUS) at (90.95, 58.90) → via → F.Cu to VBUS horizontal
+    # VBUS F.Cu runs at y=61.0 from x=82.45 to x=108 (power routing).
+    # Via at y=59.3: gap to pin 5 pad top (58.55) → 0.45mm ✓
+    #               gap to D+ trace (90.25): 0.30mm ✓
+    #               gap to D- trace (91.65): 0.30mm ✓
+    _tvs_vbus_y = 58.90  # U4 pin 5 Y
+    _tvs_vbus_via_y = 59.3
+    parts.append(_seg(90.95, _tvs_vbus_y, 90.95, _tvs_vbus_via_y,
+                       "B.Cu", W_PWR, n_vbus))
+    parts.append(_via_net(90.95, _tvs_vbus_via_y, n_vbus,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    # F.Cu stub from via down to VBUS horizontal at y=61.0
+    parts.append(_seg(90.95, _tvs_vbus_via_y, 90.95, 61.0,
+                       "F.Cu", W_PWR, n_vbus))
 
     # ── USB CC pull-down resistors ──────────────────────────────
     # CC1 (A5) → R1 pad1, CC2 (B5) → R2 pad1
     # R1/R2 pad2 → GND vias
-    n_gnd = NET_ID["GND"]
     n_cc1 = NET_ID["USB_CC1"]
     n_cc2 = NET_ID["USB_CC2"]
 

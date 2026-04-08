@@ -607,10 +607,14 @@ _SUPPRESSIONS = [
     # BTN_R: F.Cu L-shape jog to x=65.00 (left of all D-pad stubs)
     # BTN_A/X/Y: vias 0.35mm, gap 0.50mm (adequate clearance)
     # BTN_Y GND: via routed straight down to y=49.0 (below J4 mount pad)
-    # ESP32 +3V3 via (0.46mm custom, AR=0.13mm) between LCD_D6/D7 — 0.17mm structural
+    # ESP32 +3V3 via (0.46mm, AR=0.13mm) between LCD_D6/D7 — 0.17mm structural.
+    # Reducing to 0.45mm fixes gap but violates AR≥0.13mm DFM rule. Keep 0.46mm.
     ("via net4@(88.75", "net12 F.Cu", "ESP32 +3V3 via between LCD D6/D7"),
     ("via net4@(88.75", "net13 F.Cu", "ESP32 +3V3 via between LCD D6/D7"),
-    # BTN_SELECT ch9 (0.454mm, AR=0.127mm) near board edge — 0.15mm structural
+    # BTN_SELECT ch9 (0.454mm, AR=0.127mm) near board edge — 0.153mm structural.
+    # Space: BTN_START(73.955) to edge(74.99) = 1.035mm.
+    # Need: trace_hw(0.125) + gap(0.175) + via_d(0.454) + edge(0.30) = 1.054mm.
+    # Physically impossible. Within JLCPCB spec (0.15mm via-to-trace).
     ("via net36@(35.90", "net35 F.Cu", "BTN_SELECT via near BTN_START/edge"),
     ("via net36@(60.45", "net35 F.Cu", "BTN_SELECT via near BTN_START/edge"),
 ]
