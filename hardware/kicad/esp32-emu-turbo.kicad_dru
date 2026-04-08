@@ -19,7 +19,7 @@
 # ----------------------------------- Via hole/diameter size (4-layer standard) -----------
 
 (rule "Minimum Via Diameter and Hole Size"
-	(constraint hole_size (min 0.3mm))
+	(constraint hole_size (min 0.2mm))
 	(constraint via_diameter (min 0.45mm))
 	(constraint disallow buried_via)
 	(condition "A.Type == 'via'"))

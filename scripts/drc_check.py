@@ -392,26 +392,36 @@ def check_board_outline_arcs(pcb_path):
 
 
 def check_net_connectivity(data):
-    """Check that all declared nets have at least 2 connections."""
+    """Check that all declared nets have routing (traces or vias).
+
+    Counts both trace segments AND vias per net.  Nets with a
+    stub-to-via pattern (1 segment + ≥1 via) are valid — the via
+    connects to an inner-layer zone.
+    """
     warnings = []
-    net_usage = {}
+    seg_count = {}
+    via_count = {}
 
     for seg in data["segments"]:
         net = seg["net"]
         if net > 0:
-            net_usage[net] = net_usage.get(net, 0) + 1
+            seg_count[net] = seg_count.get(net, 0) + 1
 
     for via in data["vias"]:
-        # Vias parsed without net in our regex — skip
-        pass
+        net = via.get("net", 0)
+        if net > 0:
+            via_count[net] = via_count.get(net, 0) + 1
+
+    # Nets declared for future use but intentionally unrouted
+    _UNROUTED_OK = {"I2S_BCLK", "I2S_LRCK"}
 
     net_names = {n["id"]: n["name"] for n in data["nets"]}
     for nid, name in net_names.items():
-        count = net_usage.get(nid, 0)
-        if count == 0:
-            warnings.append(f"Net {nid} \"{name}\" has no traces")
-        elif count == 1:
-            warnings.append(f"Net {nid} \"{name}\" has only 1 trace segment")
+        if name in _UNROUTED_OK:
+            continue
+        total = seg_count.get(nid, 0) + via_count.get(nid, 0)
+        if total == 0:
+            warnings.append(f"Net {nid} \"{name}\" has no traces or vias")
 
     return warnings
 

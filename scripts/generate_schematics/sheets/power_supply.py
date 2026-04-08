@@ -160,6 +160,15 @@ class PowerSupplySheet(SchematicSheet):
         self.gnd(cout_x, cout_y + 8)
         self.wire(cout_x, cout_y + 3.81, cout_x, cout_y + 8)
 
+        # C27: HF decoupling (10uF) near VOUT
+        c27_x = cout_x + 15
+        c27_y = cout_y
+        self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"])
+        self.text("HF decoupling", c27_x + 3, c27_y - 5, 1.5)
+        self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
+        self.gnd(c27_x, c27_y + 8)
+        self.wire(c27_x, c27_y + 3.81, c27_x, c27_y + 8)
+
         # +5V power symbol and global label
         self.v5(215, vout_turn_y - 5)
         self.wire(215, vout_turn_y - 5, 215, vout_turn_y)

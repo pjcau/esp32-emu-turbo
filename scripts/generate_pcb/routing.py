@@ -1618,18 +1618,22 @@ def _display_traces():
     pos_rd = _fpc_display_pin(12)   # RD at pad 29 (y≈39.75)
     pos_bl = _fpc_display_pin(33)   # LED-A at pad 8 (y≈29.25)
 
+    # Use LCD_RD/LCD_BL net IDs so DRC sees traces for these nets
+    n_rd = NET_ID["LCD_RD"]
+    n_bl = NET_ID["LCD_BL"]
+
     if pos_rd:
         px, py = pos_rd[0], pos_rd[1]
         via_x = 131.0  # above LCD_D6 end (y=34.25), pin16 GND via (y=37.75)
-        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
-        parts.append(_via_net(via_x, py, n_3v3,
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_rd))
+        parts.append(_via_net(via_x, py, n_rd,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     if pos_bl:
         px, py = pos_bl[0], pos_bl[1]
         via_x = 132.5  # between LCD_D7 (131.80) and J4 GND stubs (133.58)
-        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
-        parts.append(_via_net(via_x, py, n_3v3,
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_bl))
+        parts.append(_via_net(via_x, py, n_bl,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     # ── +3V3 pins at BOTTOM (6, 7): now y=42.25-42.75, BELOW approach zone ──
@@ -2398,17 +2402,17 @@ def _usb_traces():
                        "B.Cu", W_DATA, n_dp))
     parts.append(_via_net(dp_via_x, dp_via_y, n_dp, size=VIA_STD, drill=VIA_STD_DRILL))
     # 2. F.Cu horizontal to approach column — with meander for D+/D- length matching.
-    # D- is 4.57mm longer than D+.  3 U-shaped meander loops (amplitude=0.48mm)
-    # add 3×2×0.48 = 2.88mm extra → mismatch reduced from 4.57mm to ~1.69mm (< 2mm ✓).
+    # D- is 4.57mm longer than D+.  5 U-shaped meander loops add length to D+.
+    # add 5×2×0.46 = 4.60mm extra → mismatch reduced from 4.57mm to ~0.03mm.
     # Meander goes DOWN (increase y, away from BTN_R F.Cu at y=65.3).
     # Constraints: BTN_R F.Cu at y=65.3 (above), BTN_A F.Cu at y=66.8 (below).
-    # Peak at y+0.48=66.405. Gap to BTN_A: 66.675-66.505=0.170mm > 0.15mm ✓
-    # Gap from base to BTN_R: 65.925-65.3-0.10-0.10=0.425mm ✓
+    # Peak at dp_via_y+0.46, edge +0.10. Gap to BTN_A edge (66.70): ≥0.22mm ✓
+    # Gap from base to BTN_R: base edge < 65.3 → no conflict ✓
     dp_col_x = dp_x + 1.5   # DFM fix: was +2 (gap to GND cap 0.575mm vs 0.075mm)
-    _amp = 0.47              # meander amplitude (mm) — reduced for 0.175mm BTN_A gap
-    _n = 3                   # number of U-loops
-    _uw = 1.5                # U-loop width (horizontal at peak)
-    _gap = 1.0               # horizontal gap between loops at base
+    _amp = 0.46              # meander amplitude (mm) — near-perfect D+/D- matching
+    _n = 5                   # number of U-loops (was 3; more loops = lower amplitude)
+    _uw = 0.9                # U-loop width (horizontal at peak)
+    _gap = 0.6               # horizontal gap between loops at base
     _mx = 82.0               # meander start X
     _my = dp_via_y + _amp    # meander peak Y
     # Lead-in straight

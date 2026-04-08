@@ -83,6 +83,15 @@ class MCUSheet(SchematicSheet):
         self.wire(c_dec_x, c_dec_y - 3.81, c_dec_x, c_dec_y - 8)
         self.text("Decoupling", c_dec_x - 10, c_dec_y, 1.5)
 
+        # --- C26: Additional VDD bypass (100nF, close to pin 2) ---
+        c26_x = c_dec_x + 15
+        c26_y = c_dec_y
+        self.sym("C", "C26", "100nF", c26_x, c26_y, ["1", "2"])
+        self.wire(c26_x, c26_y + 3.81, c26_x, pwr2_y)
+        self.gnd(c26_x, c26_y - 8)
+        self.wire(c26_x, c26_y - 3.81, c26_x, c26_y - 8)
+        self.text("VDD bypass", c26_x - 10, c26_y, 1.5)
+
         # --- GND pins (40, 41) at bottom ---
         self.wire(MCU_X, MCU_Y + 41.91, MCU_X, MCU_Y + 48)
         self.gnd(MCU_X, MCU_Y + 48)
