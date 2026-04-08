@@ -17,6 +17,17 @@ Verify all documentation in `website/docs/` is up-to-date with the actual codeba
 
 ## Steps
 
+### 0. Regenerate Schematics
+
+The schematics are generated from `scripts/generate_schematics/config.py` (GPIO assignments, net names, component values). They must be regenerated before auditing docs so that the `.kicad_sch` files reflect the current config.
+
+```bash
+cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
+python3 -m scripts.generate_schematics hardware/kicad
+```
+
+This regenerates all 7 schematic sheets from `config.py`. If any `.kicad_sch` file changed, it means the schematics were out of date — the docs likely are too.
+
 ### 1. Collect Source-of-Truth Values
 
 Read these files to build the ground truth:
@@ -118,6 +129,7 @@ cd website && npm run build 2>&1 | tail -5
 ## Key Files
 
 ### Source of Truth
+- `scripts/generate_schematics/` — Schematic generator (regenerate with `python3 -m scripts.generate_schematics hardware/kicad`)
 - `scripts/generate_schematics/config.py` — GPIO assignments
 - `software/main/board_config.h` — Firmware GPIO defines
 - `scripts/generate_pcb/routing.py` — Trace widths, via sizes
