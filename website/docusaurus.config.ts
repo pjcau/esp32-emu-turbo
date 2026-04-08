@@ -55,6 +55,10 @@ const config: Config = {
     },
     navbar: {
       title: 'ESP32 Emu Turbo',
+      logo: {
+        alt: 'ESP32 Emu Turbo Logo',
+        src: 'img/logo.svg',
+      },
       items: [
         {
           type: 'docSidebar',
@@ -78,31 +82,40 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Documentation',
+          title: 'Design',
           items: [
             {
               label: 'Feasibility',
-              to: '/docs/feasibility',
-            },
-            {
-              label: 'SNES Hardware',
-              to: '/docs/snes-hardware',
-            },
-            {
-              label: 'Components (BOM)',
-              to: '/docs/components',
+              to: '/docs/overview/feasibility',
             },
             {
               label: 'Schematics',
-              to: '/docs/schematics',
+              to: '/docs/design/schematics',
             },
             {
-              label: 'Prototyping',
-              to: '/docs/prototyping',
+              label: 'PCB Layout',
+              to: '/docs/design/pcb',
             },
             {
-              label: 'Enclosure',
-              to: '/docs/enclosure',
+              label: 'Components (BOM)',
+              to: '/docs/design/components',
+            },
+          ],
+        },
+        {
+          title: 'Build',
+          items: [
+            {
+              label: 'Manufacturing',
+              to: '/docs/manufacturing',
+            },
+            {
+              label: 'Verification',
+              to: '/docs/manufacturing/verification',
+            },
+            {
+              label: 'Software',
+              to: '/docs/software',
             },
           ],
         },

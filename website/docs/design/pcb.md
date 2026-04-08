@@ -1,7 +1,7 @@
 ---
 id: pcb
 title: PCB Design (JLCPCB)
-sidebar_position: 7
+sidebar_position: 3
 ---
 
 # PCB Design — JLCPCB PCBA
@@ -329,7 +329,7 @@ make export-gerbers
 
 ## v2 PCB — Audio Coprocessor
 
-The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom side of the PCB. See [Phase 5 — Software Architecture](software.md#phase-5--v2-hardware-audio-coprocessor) for the full rationale.
+The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom side of the PCB. See [Phase 5 — Software Architecture](/docs/software#phase-5--v2-hardware-audio-coprocessor) for the full rationale.
 
 ### v2 Component Placement
 

@@ -1,7 +1,7 @@
 ---
 id: rework-v2
 title: PCB v2 Rework Guide
-sidebar_position: 12
+sidebar_position: 1
 ---
 
 # PCB v2 Rework Guide

@@ -1,7 +1,7 @@
 ---
 id: schematics
 title: Electrical Schematics
-sidebar_position: 5
+sidebar_position: 2
 ---
 
 # Electrical Schematics

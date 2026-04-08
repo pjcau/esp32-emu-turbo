@@ -1,35 +1,134 @@
 /**
- * Any CSS included here will be global. The classic template
- * bundles Infima by default. Infima is a CSS framework designed to
- * work well for content-centric websites.
+ * ESP32 Emu Turbo — Deep blue gradient theme
+ * Infima CSS framework overrides for Docusaurus
  */
 
-/* You can override the default Infima variables here. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+/* ── Light mode ───────────────────────────────────────── */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: #1d4ed8;
+  --ifm-color-primary-dark: #1e40af;
+  --ifm-color-primary-darker: #1e3a8a;
+  --ifm-color-primary-darkest: #172554;
+  --ifm-color-primary-light: #2563eb;
+  --ifm-color-primary-lighter: #3b82f6;
+  --ifm-color-primary-lightest: #60a5fa;
+
+  --ifm-font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'Space Grotesk', 'Inter', sans-serif;
   --ifm-code-font-size: 95%;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --ifm-font-size-base: 16px;
+  --ifm-heading-font-weight: 600;
+  --docusaurus-highlighted-code-line-bg: rgba(29, 78, 216, 0.1);
+
+  --ifm-navbar-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --ifm-toc-border-color: #e0e7f5;
 }
 
-/* For readability concerns, you should choose a lighter palette in dark mode. */
+/* ── Dark mode ────────────────────────────────────────── */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --ifm-color-primary: #60a5fa;
+  --ifm-color-primary-dark: #3b82f6;
+  --ifm-color-primary-darker: #2563eb;
+  --ifm-color-primary-darkest: #1d4ed8;
+  --ifm-color-primary-light: #93bbfd;
+  --ifm-color-primary-lighter: #bfdbfe;
+  --ifm-color-primary-lightest: #dbeafe;
+  --docusaurus-highlighted-code-line-bg: rgba(96, 165, 250, 0.15);
+
+  --ifm-background-color: #0a1628;
+  --ifm-background-surface-color: #101d32;
+  --ifm-navbar-background-color: #0c1a2e;
+  --ifm-footer-background-color: #060e1a;
+  --ifm-toc-border-color: #1e3a5f;
 }
 
-/* Schematic SVG images */
+/* ── Navbar ───────────────────────────────────────────── */
+.navbar {
+  backdrop-filter: blur(8px);
+}
+
+.navbar__title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.navbar__logo img {
+  height: 32px;
+}
+
+/* ── Sidebar ──────────────────────────────────────────── */
+.theme-doc-sidebar-menu .menu__link {
+  font-size: 0.9rem;
+}
+
+.theme-doc-sidebar-container {
+  border-right-color: var(--ifm-toc-border-color) !important;
+}
+
+/* Category labels */
+.menu__list-item--collapsed .menu__link--sublist,
+.menu__link--sublist {
+  font-weight: 600;
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--ifm-color-primary);
+}
+
+/* ── Headings ─────────────────────────────────────────── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--ifm-heading-font-family);
+}
+
+.markdown h1:first-child {
+  font-size: 2rem;
+  letter-spacing: -0.03em;
+}
+
+/* ── Code blocks ──────────────────────────────────────── */
+.prism-code {
+  border-radius: 8px !important;
+}
+
+[data-theme='dark'] .prism-code {
+  background-color: #101d32 !important;
+}
+
+/* ── Tables ───────────────────────────────────────────── */
+table {
+  font-size: 0.9rem;
+}
+
+table th {
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+}
+
+/* ── Footer ───────────────────────────────────────────── */
+.footer {
+  border-top: 1px solid var(--ifm-toc-border-color);
+}
+
+.footer__title {
+  font-family: 'Space Grotesk', sans-serif;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+}
+
+/* ── Admonitions ──────────────────────────────────────── */
+.alert--success {
+  --ifm-alert-background-color: rgba(29, 78, 216, 0.08);
+  --ifm-alert-border-color: var(--ifm-color-primary);
+}
+
+/* ── Schematic SVG images ─────────────────────────────── */
 .schematic-container {
   background: #fff;
   border: 1px solid var(--ifm-color-emphasis-300);
@@ -46,7 +145,7 @@
 }
 
 [data-theme='dark'] .schematic-container {
-  background: #1e1e2e;
+  background: #101d32;
   border-color: var(--ifm-color-emphasis-400);
 }
 
@@ -54,7 +153,7 @@
   filter: invert(0.88) hue-rotate(180deg);
 }
 
-/* Sheet navigation cards */
+/* ── Sheet navigation cards ───────────────────────────── */
 .sheet-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -68,21 +167,23 @@
   padding: 14px 16px;
   text-decoration: none !important;
   color: inherit !important;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
 .sheet-card:hover {
   border-color: var(--ifm-color-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.15);
+  transform: translateY(-1px);
 }
 
 [data-theme='dark'] .sheet-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(96, 165, 250, 0.2);
 }
 
 .sheet-card h4 {
   margin: 0 0 4px 0;
   font-size: 0.95rem;
+  font-family: 'Space Grotesk', sans-serif;
 }
 
 .sheet-card p {
@@ -91,7 +192,7 @@
   color: var(--ifm-color-emphasis-700);
 }
 
-/* PDF download button */
+/* ── PDF download button ──────────────────────────────── */
 .pdf-download {
   display: inline-flex;
   align-items: center;
@@ -108,6 +209,30 @@
 
 .pdf-download:hover {
   border-color: var(--ifm-color-primary);
-  background: var(--ifm-color-primary-lightest);
+  background: var(--ifm-color-primary);
   color: #fff !important;
+}
+
+/* ── PCBA render images ───────────────────────────────── */
+.pcba-render {
+  text-align: center;
+  max-width: 720px;
+  margin: 16px auto;
+}
+
+.pcba-render img {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='dark'] .pcba-render img {
+  border-color: var(--ifm-color-emphasis-400);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Hero gradient ────────────────────────────────────── */
+.hero--primary {
+  background: linear-gradient(135deg, #172554 0%, #1e40af 40%, #2563eb 70%, #3b82f6 100%);
 }

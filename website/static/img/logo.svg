@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="body-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4c1d95"/>
+    </linearGradient>
+    <linearGradient id="screen-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1b4b"/>
+      <stop offset="100%" stop-color="#0f0a1a"/>
+    </linearGradient>
+  </defs>
+  <!-- Console body -->
+  <rect x="56" y="80" width="400" height="352" rx="40" fill="url(#body-grad)"/>
+  <!-- Screen bezel -->
+  <rect x="120" y="112" width="272" height="176" rx="12" fill="#1e1b4b"/>
+  <!-- Screen -->
+  <rect x="136" y="128" width="240" height="144" rx="8" fill="url(#screen-grad)"/>
+  <!-- Screen content: retro game scene -->
+  <rect x="180" y="200" width="24" height="32" rx="2" fill="#a78bfa"/>
+  <rect x="240" y="180" width="32" height="52" rx="2" fill="#6d28d9"/>
+  <rect x="300" y="210" width="20" height="22" rx="2" fill="#c4b5fd"/>
+  <!-- Scanlines effect -->
+  <g opacity="0.08">
+    <line x1="136" y1="140" x2="376" y2="140" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="148" x2="376" y2="148" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="156" x2="376" y2="156" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="164" x2="376" y2="164" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="172" x2="376" y2="172" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="180" x2="376" y2="180" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="188" x2="376" y2="188" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="196" x2="376" y2="196" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="204" x2="376" y2="204" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="212" x2="376" y2="212" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="220" x2="376" y2="220" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="228" x2="376" y2="228" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="236" x2="376" y2="236" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="244" x2="376" y2="244" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="252" x2="376" y2="252" stroke="#fff" stroke-width="1"/>
+    <line x1="136" y1="260" x2="376" y2="260" stroke="#fff" stroke-width="1"/>
+  </g>
+  <!-- D-pad -->
+  <g fill="#2d2066">
+    <rect x="112" y="332" width="72" height="24" rx="4"/>
+    <rect x="136" y="308" width="24" height="72" rx="4"/>
+  </g>
+  <!-- Action buttons -->
+  <circle cx="360" cy="332" r="16" fill="#c4b5fd"/>
+  <circle cx="400" cy="316" r="16" fill="#8b5cf6"/>
+  <circle cx="320" cy="348" r="16" fill="#ddd6fe"/>
+  <circle cx="360" cy="364" r="16" fill="#6d28d9"/>
+  <!-- Button labels -->
+  <text x="360" y="337" text-anchor="middle" fill="#1e1b4b" font-size="14" font-weight="bold" font-family="monospace">A</text>
+  <text x="400" y="321" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="monospace">B</text>
+  <text x="320" y="353" text-anchor="middle" fill="#1e1b4b" font-size="14" font-weight="bold" font-family="monospace">X</text>
+  <text x="360" y="369" text-anchor="middle" fill="#fff" font-size="14" font-weight="bold" font-family="monospace">Y</text>
+  <!-- Start/Select -->
+  <rect x="216" y="340" width="28" height="10" rx="5" fill="#2d2066"/>
+  <rect x="256" y="340" width="28" height="10" rx="5" fill="#2d2066"/>
+  <!-- ESP32 chip icon on body -->
+  <g transform="translate(232, 368)">
+    <rect x="0" y="0" width="48" height="36" rx="4" fill="#1e1b4b" opacity="0.6"/>
+    <text x="24" y="22" text-anchor="middle" fill="#a78bfa" font-size="9" font-weight="bold" font-family="monospace">ESP32</text>
+  </g>
+  <!-- Shoulder buttons -->
+  <rect x="56" y="72" width="80" height="16" rx="8" fill="#3b0f70"/>
+  <rect x="376" y="72" width="80" height="16" rx="8" fill="#3b0f70"/>
+</svg>

@@ -1,7 +1,7 @@
 ---
 id: verification
 title: Pre-Production Verification
-sidebar_position: 10
+sidebar_position: 3
 ---
 
 # Pre-Production Verification

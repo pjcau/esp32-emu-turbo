@@ -1,7 +1,7 @@
 ---
 id: incident-power-short
 title: "Incident: Power Short Circuit (PCB v1)"
-sidebar_position: 13
+sidebar_position: 3
 ---
 
 # Incident: Power Short Circuit — PCB v1

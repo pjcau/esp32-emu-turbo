@@ -1,7 +1,7 @@
 ---
 id: enclosure
 title: 3D Enclosure Design
-sidebar_position: 8
+sidebar_position: 4
 ---
 
 # 3D Enclosure Design

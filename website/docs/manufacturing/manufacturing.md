@@ -1,7 +1,8 @@
 ---
 id: manufacturing
 title: PCBA Manufacturing & Ordering
-sidebar_position: 9
+sidebar_position: 1
+slug: /manufacturing
 ---
 
 # PCBA Manufacturing & Ordering
@@ -23,7 +24,7 @@ All production files in `release_jlcpcb/` are verified and ready for ordering:
 
 ### Top Side — Controls & LEDs
 
-<div style={{textAlign: 'center'}}>
+<div style={{textAlign: 'center', maxWidth: '720px', margin: '0 auto'}}>
 
 ![PCBA Top Side](/img/manufacturing/pcba-top.png)
 
@@ -43,7 +44,7 @@ All 12 gaming buttons are surface-mounted on the top face for direct user intera
 
 ### Bottom Side — Core Electronics
 
-<div style={{textAlign: 'center'}}>
+<div style={{textAlign: 'center', maxWidth: '720px', margin: '0 auto'}}>
 
 ![PCBA Bottom Side](/img/manufacturing/pcba-bottom.png)
 
@@ -147,7 +148,7 @@ These components are **not included** in the JLCPCB order and must be connected 
 - **Battery** — LiPo 3.7V 5000mAh via JST-PH connector
 - **Speaker** — 28mm 8 ohm via solder pads
 - **SD card module** — via SPI wiring
-- **3D-printed enclosure** — see [Enclosure Design](/docs/enclosure)
+- **3D-printed enclosure** — see [Enclosure Design](/docs/design/enclosure)
 
 ### Complete prototype cost estimate
 
@@ -170,7 +171,7 @@ The one-time fees (engineering $24, stencil $16.18, setup $50.37, fixture $16.18
 
 ## v2 PCB — Audio Coprocessor Addition
 
-The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5 — Software Architecture](software.md#phase-5--v2-hardware-audio-coprocessor)). This offloads 100% of audio processing from the main ESP32-S3.
+The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5 — Software Architecture](/docs/software#phase-5--v2-hardware-audio-coprocessor)). This offloads 100% of audio processing from the main ESP32-S3.
 
 ### v2 Additional Assembly Components
 

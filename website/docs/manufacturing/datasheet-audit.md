@@ -1,7 +1,7 @@
 ---
 id: datasheet-audit
 title: Datasheet vs PCB Audit Report
-sidebar_position: 13
+sidebar_position: 4
 ---
 
 # Datasheet vs PCB Audit Report
@@ -187,7 +187,7 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 
 ## Rework Guide
 
-Physical rework instructions for existing v2 boards: see [PCB v2 Rework Guide](rework-v2.md).
+Physical rework instructions for existing v2 boards: see [PCB v2 Rework Guide](../rework/rework-v2.md).
 
 | Fix | Effort | Required? |
 |-----|--------|-----------|

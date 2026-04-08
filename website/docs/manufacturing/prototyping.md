@@ -1,7 +1,7 @@
 ---
 id: prototyping
 title: Breadboard Prototyping Guide
-sidebar_position: 6
+sidebar_position: 2
 ---
 
 # Breadboard Prototyping Guide
