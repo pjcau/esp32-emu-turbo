@@ -138,8 +138,8 @@ Buy the **bare LCD panel** (NOT a module with PCB breakout):
 All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root (v2.1):
 
 1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload, inner layers with zone fill)
-2. **BOM.csv** — `release_jlcpcb/bom.csv` (75 components)
-3. **CPL.csv** — `release_jlcpcb/cpl.csv` (75 component placements)
+2. **BOM.csv** — `release_jlcpcb/bom.csv` (78 components)
+3. **CPL.csv** — `release_jlcpcb/cpl.csv` (78 component placements)
 
 ### Order Settings
 - Layers: **4**
@@ -173,7 +173,7 @@ The design uses a **hierarchical schematic** with a root file referencing 7 sub-
 | 6     | `06-controls.kicad_sch`     | 13 buttons + pull-ups + debounce caps               |
 | 7     | `07-usb-data.kicad_sch`     | Native USB data (D-/D+, firmware flash + debug)     |
 
-Total: **79 unique component references** across all sheets, **75 assembled by JLCPCB**.
+Total: **82 unique component references** across all sheets, **78 assembled by JLCPCB**.
 
 ## Generation
 
@@ -195,7 +195,7 @@ Output files:
 - `hardware/kicad/esp32-emu-turbo.kicad_sch` — Hierarchical root schematic
 - `hardware/kicad/01-07-*.kicad_sch` — 7 sub-sheet schematics
 - `hardware/kicad/esp32-emu-turbo.kicad_pcb` — KiCad PCB layout
-- `hardware/kicad/jlcpcb/cpl.csv` — Component Placement List (75 parts)
+- `hardware/kicad/jlcpcb/cpl.csv` — Component Placement List (78 parts)
 
 ## Routing Architecture
 
@@ -297,9 +297,9 @@ Script: `python3 scripts/simulate_circuit.py`
 
 ### Schematic/PCB Consistency — PASS
 
-- All **75 JLCPCB CPL components** matched between schematic, PCB, and CPL
+- All **78 JLCPCB CPL components** matched between schematic, PCB, and CPL
 - 3 off-board components excluded: battery (BT1), display module (U4), speaker (SPK1)
-- PCB: 483 trace segments, 284 vias, 52 nets, 85 footprints
+- PCB: 504 trace segments, 286 vias, 54 nets, 88 footprints
 
 Script: `python3 scripts/verify_schematic_pcb.py`
 
@@ -360,7 +360,7 @@ The PAM8403 audio amplifier input changes from the main ESP32-S3 to the MINI-1 c
 | 1–7   | (same as v1)                     | (same as v1)                        |
 | **8** | `08-audio-coprocessor.kicad_sch` | **ESP32-S3-MINI-1-N8 + decoupling** |
 
-v2 Total: **78 unique component references**, **75 assembled by JLCPCB**.
+v2 Total: **82 unique component references**, **78 assembled by JLCPCB**.
 
 ---
 
@@ -370,7 +370,7 @@ v2 Total: **78 unique component references**, **75 assembled by JLCPCB**.
 
 1. Upload `release_jlcpcb/gerbers.zip` to [jlcpcb.com](https://jlcpcb.com/)
 2. Upload `release_jlcpcb/bom.csv` and `release_jlcpcb/cpl.csv` for SMT assembly
-3. Order 5× PCBs with SMT assembly (75 components)
+3. Order 5× PCBs with SMT assembly (78 components)
 4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
 5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
 
@@ -379,5 +379,5 @@ v2 Total: **78 unique component references**, **75 assembled by JLCPCB**.
 1. Add ESP32-S3-MINI-1-N8 to KiCad schematic (Sheet 8) and PCB layout
 2. Re-route I2S traces from U7 to U5 (PAM8403), SPI traces from U1 to U7
 3. Re-export Gerbers, BOM, and CPL for JLCPCB
-4. Order v2 PCBs with 75 assembled components
+4. Order v2 PCBs with 78 assembled components
 5. Flash coprocessor firmware via separate USB connection or SPI bootloader

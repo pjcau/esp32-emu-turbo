@@ -14,7 +14,7 @@ The system uses a **team-lead + 3 specialist agents** model:
 
 ```
 team-lead (Sonnet) ──── orchestrator, task coordination
-  ├── pcb-engineer (Opus) ───── 24 skills, PCB design + manufacturing
+  ├── pcb-engineer (Opus) ───── 25 skills, PCB design + manufacturing
   ├── software-dev (Opus) ───── 4 skills, firmware + website
   └── cad-engineer (Haiku) ──── 3 skills, OpenSCAD enclosure
 
@@ -27,7 +27,7 @@ scout (Opus) ──── 1 skill, GitHub pattern discovery (weekly via GitHub A
 graph TB
     TL["TEAM-LEAD<br/><i>sonnet - orchestrator</i>"]
 
-    PCB["PCB-ENGINEER<br/><i>opus - 24 skills</i>"]
+    PCB["PCB-ENGINEER<br/><i>opus - 25 skills</i>"]
     SW["SOFTWARE-DEV<br/><i>opus - 4 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>haiku - 3 skills</i>"]
 
@@ -49,12 +49,13 @@ graph TB
         s_chk["/check"]
     end
 
-    subgraph PCB_VER["Verification 8"]
+    subgraph PCB_VER["Verification 9"]
         s_ver["/verify"]
         s_dfm["/dfm-test"]
         s_drc["/drc-native"]
         s_opt["/pcb-optimize"]
         s_rev["/pcb-review"]
+        s_dsv["/datasheet-verify"]
         s_pad["/pad-analysis"]
         s_jalign["/jlcpcb-alignment"]
         s_jval["/jlcpcb-validate"]
@@ -121,7 +122,7 @@ graph TB
 - **Isolated contexts**: each agent has its own conversation context, preventing RAM bloat
 - **Parallel execution**: independent tasks run simultaneously (e.g., PCB verify + render)
 - **Right-sized models**: Haiku for repetitive CAD tasks (cheaper, faster), Opus for complex PCB/firmware reasoning
-- **Skill-based dispatch**: 33 skills map to specific workflows, reducing prompt engineering overhead
+- **Skill-based dispatch**: 34 skills map to specific workflows, reducing prompt engineering overhead
 
 ### Why Opus for PCB and Software?
 
@@ -130,12 +131,12 @@ graph TB
 
 ## Skills System (33 Skills)
 
-### PCB Engineer — 24 Skills
+### PCB Engineer — 25 Skills
 
 | Category | Skills | Description |
 |----------|--------|-------------|
 | **Pipeline (7)** | `/generate`, `/release`, `/release-prep`, `/full-release`, `/render`, `/pcba-render`, `/check` | Full PCB generation → JLCPCB export flow |
-| **Verification (8)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 115 DFM + 9 DFA + 26 JLCPCB tests, DRC checks, layout scoring |
+| **Verification (9)** | `/verify`, `/dfm-test`, `/drc-native`, `/pcb-optimize`, `/pcb-review`, `/datasheet-verify`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 115 DFM + 9 DFA + 26 JLCPCB tests, DRC checks, layout scoring |
 | **Fix & Debug (4)** | `/dfm-fix`, `/fix-rotation`, `/jlcpcb-check`, `/jlcpcb-parts` | Automated issue resolution |
 | **MCP Design (5)** | `/pcb-schematic`, `/pcb-components`, `/pcb-routing`, `/pcb-library`, `/pcb-board` | Direct KiCad manipulation via MCP protocol |
 

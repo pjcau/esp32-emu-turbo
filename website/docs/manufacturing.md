@@ -15,7 +15,7 @@ All production files in `release_jlcpcb/` are verified and ready for ordering:
 - **19 silkscreen labels** added on F.SilkS/B.SilkS for component identification
 - **W_PWR_LOW = 0.30mm** trace width added for power stubs
 - **LCSC parts fixed:** C22 = C13967 (0.47uF), C23-C25 = C28323 (1uF)
-- **75 components** in BOM/CPL matched against schematic and PCB
+- **78 components** in BOM/CPL matched against schematic and PCB
 - **0 DRC errors**, all pre-production checks passed
 :::
 
@@ -75,7 +75,7 @@ The bottom side hosts the main circuitry:
 | C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
 | C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
 
-**Total SMT components:** 24 unique part types, ~75 individual placements.
+**Total SMT components:** 26 unique part types, ~78 individual placements.
 
 ---
 

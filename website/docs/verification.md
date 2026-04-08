@@ -155,8 +155,8 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 | Source | Components |
 |:---|:---|
 | Schematic (7 sub-sheets) | 68 unique refs |
-| PCB footprints | 78 refs |
-| JLCPCB CPL (assembly) | 71 refs |
+| PCB footprints | 88 refs |
+| JLCPCB CPL (assembly) | 78 refs |
 
 ### Off-board components (correct exclusions)
 
@@ -237,8 +237,8 @@ Full audit of every ESP32-S3 GPIO connection, verified across four sources: `con
 
 | GPIO | Signal | Net | Segments | Vias | Status |
 |:-----|:-------|:----|:---------|:-----|:-------|
-| 36 | SD_MOSI | 20 | 7 | 6 | OK |
-| 37 | SD_MISO | 21 | 7 | 6 | OK |
+| 44 | SD_MOSI | 20 | 7 | 6 | OK |
+| 43 | SD_MISO | 21 | 7 | 6 | OK |
 | 38 | SD_CLK | 22 | 7 | 6 | OK |
 | 39 | SD_CS | 23 | 7 | 6 | OK |
 
@@ -268,8 +268,8 @@ GPIO15 (I2S_BCLK, net 24) and GPIO16 (I2S_LRCK, net 25) are allocated in the ESP
 | 21 | BTN_Y | 34 | 8 | 5 | OK |
 | 18 | BTN_START | 35 | 7 | 5 | OK |
 | 0 | BTN_SELECT | 36 | 8 | 5 | OK |
-| 35 | BTN_L | 37 | 5 | 2 | OK |
-| 43 | BTN_R | 38 | 6 | 4 | OK |
+| 45 | BTN_L | 37 | 5 | 2 | OK |
+| 3 | BTN_R | 38 | 6 | 4 | OK |
 
 ### USB — Native (5/5 routed)
 
@@ -316,7 +316,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 12 component holes + 6 mounting holes + 284 vias = **302 drill operations**
+**Total holes:** 12 component holes + 6 mounting holes + 286 vias = **304 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -360,7 +360,7 @@ NPTH positioning holes are always sized from the component datasheet — never g
 
 | Type | Count | Drill Range | Annular Ring | Status |
 |------|-------|-------------|--------------|--------|
-| Signal vias | 284 | 0.20 mm | ≥ 0.075 mm | **PASS** |
+| Signal vias | 286 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 6 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
 | Component THT (J3 C173752) | 0.85 mm | ø1.6 mm | 0.375 mm | **PASS** |
