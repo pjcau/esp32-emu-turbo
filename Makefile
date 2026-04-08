@@ -54,6 +54,9 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/short_circuit_analysis.py & \
 		python3 scripts/verify_polarity.py & \
 		python3 scripts/verify_datasheet_nets.py & \
+		python3 scripts/verify_antenna_keepout.py & \
+		python3 scripts/verify_stackup.py & \
+		python3 scripts/verify_net_class_widths.py & \
 		wait'
 
 verify-datasheet: ## Verify PCB pad-net assignments against datasheet specs (30 components, 246 checks)

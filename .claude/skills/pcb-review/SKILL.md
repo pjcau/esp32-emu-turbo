@@ -29,7 +29,42 @@ python3 scripts/verify_dfa.py
 python3 scripts/validate_jlcpcb.py
 ```
 
-### 1b. Run datasheet verification (electrical + physical)
+### 1b. Run extended verification suite (12 gap-coverage tests)
+
+```bash
+# High-risk (5 tests)
+python3 scripts/verify_antenna_keepout.py
+python3 scripts/verify_stackup.py
+python3 scripts/verify_net_class_widths.py
+python3 scripts/verify_bom_values.py
+python3 scripts/verify_power_paths.py
+
+# Medium-risk (7 tests)
+python3 scripts/verify_copper_balance.py
+python3 scripts/verify_decoupling_paths.py
+python3 scripts/verify_usb_impedance.py
+python3 scripts/verify_via_in_pad.py
+python3 scripts/verify_thermal_relief.py
+python3 scripts/verify_ground_loops.py
+python3 scripts/verify_test_points.py
+```
+
+| Script | Checks | What it catches |
+|--------|--------|-----------------|
+| `verify_antenna_keepout.py` | 5 | Copper/traces in ESP32 antenna zone (kills WiFi/BLE) |
+| `verify_stackup.py` | 5 | Wrong nets on inner plane layers |
+| `verify_net_class_widths.py` | 5 | Power traces too narrow (fuse risk) |
+| `verify_bom_values.py` | 75 | Schematic value vs BOM mismatch (wrong part assembled) |
+| `verify_power_paths.py` | 19 | Missing copper path from source to IC VDD pin |
+| `verify_copper_balance.py` | 3 | Layer imbalance causing PCB warping |
+| `verify_decoupling_paths.py` | 11 | Cap too far or poorly routed to IC |
+| `verify_usb_impedance.py` | 4 | USB trace geometry wrong for 90ohm differential |
+| `verify_via_in_pad.py` | 3 | Vias inside SMD pads (solder wicking) |
+| `verify_thermal_relief.py` | 4 | Missing thermal relief on zone connections |
+| `verify_ground_loops.py` | 3 | Audio-digital ground coupling |
+| `verify_test_points.py` | 18 | Missing debug probe points |
+
+### 1c. Run datasheet verification (electrical + physical)
 
 ```bash
 python3 scripts/verify_datasheet_nets.py
@@ -51,7 +86,7 @@ Compares PCB footprint dimensions against datasheet mechanical drawings.
 - THT drill sizes (JST, USB shield tabs)
 - Datasheet PDF presence in `hardware/datasheets/`
 
-### 1c. Run ERC (Electrical Rules Check)
+### 1d. Run ERC (Electrical Rules Check)
 
 ```bash
 python3 scripts/erc_check.py --run
@@ -62,7 +97,7 @@ Runs KiCad native ERC on the hierarchical schematic. Categorizes 730+ violations
 - **Real issues**: pin_not_connected, power_pin_not_driven, pin_to_pin conflicts
 - **Critical**: pin_to_pin (output↔output) must be zero for production
 
-### 1d. Run SPICE power supply simulation
+### 1e. Run SPICE power supply simulation
 
 ```bash
 python3 scripts/spice_power_check.py
@@ -167,6 +202,18 @@ python3 scripts/validate_jlcpcb.py
 - `scripts/verify_datasheet_nets.py` — Datasheet vs PCB net/pinout verification (246 checks)
 - `hardware/datasheet_specs.py` — Single source of truth: pin→net mapping for all 30 components
 - `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (26 tests)
+- `scripts/verify_antenna_keepout.py` — ESP32 antenna zone clearance (5 checks)
+- `scripts/verify_stackup.py` — 4-layer stackup net verification (5 checks)
+- `scripts/verify_net_class_widths.py` — Power/signal trace width enforcement (5 checks)
+- `scripts/verify_bom_values.py` — BOM vs schematic value cross-check (75 checks)
+- `scripts/verify_power_paths.py` — Power delivery path tracing (19 checks)
+- `scripts/verify_copper_balance.py` — Layer copper distribution (3 checks)
+- `scripts/verify_decoupling_paths.py` — Cap-to-IC path quality (11 checks)
+- `scripts/verify_usb_impedance.py` — USB D+/D- impedance geometry (4 checks)
+- `scripts/verify_via_in_pad.py` — Via-in-pad detection all SMD pads (3 checks)
+- `scripts/verify_thermal_relief.py` — Zone thermal relief settings (4 checks)
+- `scripts/verify_ground_loops.py` — Audio-digital ground coupling (3 checks)
+- `scripts/verify_test_points.py` — Debug probe accessibility (18 checks)
 - `scripts/erc_check.py` — ERC automation (KiCad native, artifact filtering)
 - `scripts/spice_power_check.py` — ngspice power supply simulation (+5V/+3V3 ripple, load transient)
 - `scripts/generate_pcb/routing.py` — Trace routing
