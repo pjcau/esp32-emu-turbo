@@ -82,7 +82,7 @@ SW  ↔ CAD: website/docs/  (renders + documentation)
 | Category | Skills |
 |----------|--------|
 | **Pipeline (7)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/full-release` (all verifications + renders + JLCPCB package) · `/render` (SVG + animation) · `/pcba-render` (3D raytraced PCBA) · `/check` (DRC + 3D + gerbers) |
-| **Verification (9)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (8-domain scored) · `/datasheet-verify` (pinout + physical vs datasheets) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) · `/jlcpcb-validate` (JLCPCB manufacturing rules) |
+| **Verification (10)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (8-domain scored) · `/datasheet-verify` (pinout + physical vs datasheets) · `/design-intent` (18-test cross-source adversary) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) · `/jlcpcb-validate` (JLCPCB manufacturing rules) |
 | **Fix & Debug (4)** | `/dfm-fix` (fix DFM issues) · `/fix-rotation` (CPL rotation) · `/jlcpcb-check` (3D alignment) · `/jlcpcb-parts` (BOM + LCSC search) |
 | **MCP Design (5)** | `/pcb-schematic` (schematic ops) · `/pcb-components` (placement) · `/pcb-routing` (traces + vias) · `/pcb-library` (footprints) · `/pcb-board` (board setup) |
 

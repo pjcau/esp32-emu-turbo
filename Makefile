@@ -57,7 +57,11 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/verify_antenna_keepout.py & \
 		python3 scripts/verify_stackup.py & \
 		python3 scripts/verify_net_class_widths.py & \
+		python3 scripts/verify_design_intent.py & \
 		wait'
+
+verify-intent: ## Design intent adversary (18 tests, 300+ cross-source consistency checks)
+	@$(T) verify-intent python3 scripts/verify_design_intent.py
 
 verify-datasheet: ## Verify PCB pad-net assignments against datasheet specs (30 components, 246 checks)
 	@$(T) verify-datasheet python3 scripts/verify_datasheet_nets.py

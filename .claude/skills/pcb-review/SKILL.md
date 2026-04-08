@@ -91,6 +91,26 @@ Compares PCB footprint dimensions against datasheet mechanical drawings.
 - THT drill sizes (JST, USB shield tabs)
 - Datasheet PDF presence in `hardware/datasheets/`
 
+### 1f. Run design intent adversary (cross-source consistency)
+
+```bash
+python3 scripts/verify_design_intent.py
+```
+
+**Design intent verification** (`verify_design_intent.py`, 300+ checks):
+Cross-checks GPIO assignments, net connections, and signal paths across ALL sources:
+firmware (`board_config.h`), schematic config (`config.py`), datasheet specs, and actual PCB layout.
+
+| Test | What it catches |
+|------|-----------------|
+| T1-T3 | GPIO mismatch across sources, duplicate GPIO assignments |
+| T4-T5 | Missing signal endpoints, orphan nets (0-1 pad connections) |
+| T6-T7 | Broken power chain (VBUS→+5V→+3V3), missing GND connections |
+| T8 | Button circuit incomplete (no switch or no MCU connection) |
+| T9-T11 | Reserved/invalid GPIO usage, strapping pin conflicts |
+| T12-T16 | Signal chain breaks: display, audio, SD, USB paths |
+| T17-T18 | Missing pull-ups, net naming issues |
+
 ### 1d. Run ERC (Electrical Rules Check)
 
 ```bash
