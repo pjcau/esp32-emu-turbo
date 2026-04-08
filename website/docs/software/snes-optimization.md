@@ -10,9 +10,9 @@ Progressive optimization plan to reach 60 FPS stable on SNES titles. Three softw
 
 ---
 
-## Optimization Roadmap
+## Phase 4 — SNES Optimization (60 FPS target)
 
-Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-phases over ~14 days. Target: **60 FPS stable** on standard titles (Super Mario World, Zelda ALttP, Chrono Trigger, Final Fantasy VI, Mega Man X). Baseline: ~30 FPS. See [SNES Deep Dive](#snes-deep-dive) for full technical details.
+Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-phases over ~14 days. Target: **60 FPS stable** on standard titles (Super Mario World, Zelda ALttP, Chrono Trigger, Final Fantasy VI, Mega Man X). Baseline: ~30 FPS. See below for full technical details.
 
 | Sub-phase | Step | Optimization | Days | Gain | Cumulative FPS |
 |:---|:---|:---|---:|:---|:---|
@@ -31,9 +31,7 @@ Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-
 
 ---
 
-## SNES Deep Dive
-
-### Why SNES is Hard on ESP32-S3
+## Why SNES is Hard on ESP32-S3
 
 The SNES has three CPU-intensive subsystems that must be emulated in real-time:
 
@@ -537,5 +535,3 @@ With the ESP32-S3-MINI-1 handling all audio natively (running the same Xtensa LX
 | **5.4** | SPC700 native firmware | 0.5 | Copy Phase 4.1 assembly files (`.S`) + SPC700 C emulation code to coprocessor project. Compile with `idf.py set-target esp32s3 && idf.py build`. The Xtensa assembly runs identically — same opcodes (`MULL`, `MIN`, `MAX`, `LOOP`), same register layout, same instruction timing. No porting needed. |
 | **5.5** | Main ESP32 integration | 1 | Replace I2S audio output in Retro-Go with SPI transmit to coprocessor. Add `MODE_SET` command at emulator launch. The emulator code doesn't change — only the audio output path switches from local I2S to SPI. |
 | **5.6** | Testing + latency tuning | 1 | Same `idf.py monitor` for both chips. Same serial log format. Same profiling APIs (`esp_timer_get_time()`). Can test both chips simultaneously with two USB cables. |
-
----
