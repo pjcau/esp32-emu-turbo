@@ -2295,6 +2295,9 @@ def _pam_passive_traces():
         # VREF vert bottom edge at 26.15+0.10=26.25; I2S_DOUT top edge at 26.80-0.10=26.70.
         # Gap = 0.45mm >> 0.10mm required. OK.
         _vref_start_y = pam_vref[1] - 0.65  # pad top edge = 26.800 - 0.65 = 26.15
+        # Explicit net assignment: segment starts offset from pad center so
+        # auto-detection misses it — pad 8 must carry PAM_VREF.
+        _PAD_NETS[("U5", "8")] = n_vref
         # L-shape: vert up from pad top edge to C21 y, then horiz right to C21 pad 2.
         parts.append(_seg(pam_vref[0], _vref_start_y,
                           pam_vref[0], c21_p2[1],
