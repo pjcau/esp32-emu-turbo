@@ -1,6 +1,6 @@
 /**
  * SNES Emulator Core — snes9x adapter
- * Bridges snes9x to emu_core_t interface.
+ * Bridges the retro-go snes9x port to the emu_core_t interface.
  */
 
 #ifdef SIM_BUILD
@@ -12,8 +12,7 @@
 #include <string.h>
 
 #include "../components/snes9x/snes9x.h"
-
-/* snes9x globals — declared in snes9x headers as typedefs, not struct */
+#include "emu_snes_opt.h"
 
 static uint16_t g_fb[EMU_SCREEN_W * EMU_SCREEN_H];
 static uint16_t g_buttons = 0;
@@ -22,6 +21,8 @@ static uint8_t *g_gfx_screen = NULL;
 static uint8_t *g_gfx_sub = NULL;
 static uint8_t *g_zbuf = NULL;
 static uint8_t *g_sub_zbuf = NULL;
+static const snes_profile_t *g_profile = NULL;
+static int g_frame_count = 0;
 
 /* snes9x callback: read joypad */
 uint32_t S9xReadJoypad(int32_t port) {
@@ -43,18 +44,20 @@ uint32_t S9xReadJoypad(int32_t port) {
     return pad;
 }
 
-/* Other required snes9x callbacks (no-ops for simulator) */
+/* Required snes9x platform callbacks (no-ops for simulator) */
 bool S9xReadMousePosition(int32_t w, int32_t *x, int32_t *y, uint32_t *b) { return false; }
 bool S9xReadSuperScopePosition(int32_t *x, int32_t *y, uint32_t *b) { return false; }
 void S9xMessage(int32_t type, int32_t num, const char *msg) { printf("[SNES] %s\n", msg); }
 bool S9xOpenSoundDevice(int32_t mode, bool stereo, int32_t rate) { return true; }
 void S9xAutoSaveSRAM(void) {}
 const char *S9xGetFilename(const char *ext) { static char buf[256]; snprintf(buf, 256, "/tmp/snes9x%s", ext); return buf; }
+void JustifierButtons(uint32_t *b) { if (b) *b = 0; }
+bool JustifierOffscreen(void) { return true; }
 
 static int snes_init(const uint8_t *rom, size_t size, const rom_info_t *info) {
     printf("[SNES] Initializing snes9x core...\n");
 
-    /* Allocate GFX buffers (512×478×2 for hi-res) */
+    /* Allocate GFX buffers (512x478x2 for hi-res modes) */
     size_t fb_size = 512 * 478 * 2;
     g_gfx_screen = calloc(1, fb_size);
     g_gfx_sub = calloc(1, fb_size);
@@ -72,11 +75,13 @@ static int snes_init(const uint8_t *rom, size_t size, const rom_info_t *info) {
     GFX.Pitch = 512 * 2;
 
     memset(&Settings, 0, sizeof(Settings));
-    Settings.Transparency = true;
-    Settings.SupportHiRes = false;
     Settings.SoundPlaybackRate = EMU_AUDIO_RATE;
-    Settings.Stereo = false;
     Settings.SoundBufferSize = 0;
+    Settings.CyclesPercentage = 100;
+    Settings.H_Max = SNES_CYCLES_PER_SCANLINE;
+    Settings.HBlankStart = (256 * Settings.H_Max) / SNES_HCOUNTER_MAX;
+    Settings.APUEnabled = true;
+    Settings.NextAPUEnabled = true;
 
     if (!S9xInitMemory()) { printf("[SNES] ERROR: InitMemory failed\n"); return -1; }
     if (!S9xInitAPU()) { printf("[SNES] ERROR: InitAPU failed\n"); return -1; }
@@ -84,27 +89,80 @@ static int snes_init(const uint8_t *rom, size_t size, const rom_info_t *info) {
     S9xInitSound(0, 0);
     S9xSetPlaybackRate(EMU_AUDIO_RATE);
 
-    /* Load ROM from memory */
-    if (!LoadROMMem((const uint8_t *)rom, size)) {
+    /* Load ROM: copy into Memory.ROM then call LoadROM(NULL) */
+    if (size > Memory.ROM_AllocSize) {
+        printf("[SNES] ERROR: ROM too large (%zu > %zu)\n", size, Memory.ROM_AllocSize);
+        return -1;
+    }
+    memcpy(Memory.ROM, rom, size);
+    Memory.ROM_AllocSize = size;
+    if (!LoadROM(NULL)) {
         printf("[SNES] ERROR: ROM loading failed\n");
         return -1;
     }
 
     S9xReset();
     g_initialized = 1;
+    g_frame_count = 0;
+
+    /* Select optimization profile */
+    bool is_esp32 = false;
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+    is_esp32 = true;
+#endif
+    bool has_sfx = Settings.SuperFX;
+    bool has_sa1 = Settings.SA1;
+    g_profile = snes_select_profile(size, has_sfx, has_sa1, is_esp32);
+
+    /* Apply profile settings */
+    Settings.Shutdown = g_profile->cpu_shutdown;
+    if (g_profile->audio_enabled && g_profile->audio_rate > 0) {
+        Settings.APUEnabled = true;
+        Settings.NextAPUEnabled = true;
+        Settings.HardDisableAudio = false;
+        S9xSetPlaybackRate(g_profile->audio_rate);
+    } else {
+        Settings.HardDisableAudio = true;
+    }
+
     printf("[SNES] snes9x ready: %s (%zuKB)\n", info->title, size / 1024);
+    printf("[SNES] Profile: %s (frameskip=%d, audio=%s@%dHz)\n",
+           g_profile->name, g_profile->frameskip,
+           g_profile->audio_enabled ? "on" : "off",
+           g_profile->audio_rate);
     return 0;
 }
 
 static int snes_run_frame(void) {
     if (!g_initialized) return -1;
 
+    g_frame_count++;
+
+    /* Frameskip: always run CPU, only render on draw frames */
+    bool draw = (g_profile->frameskip == 0) ||
+                ((g_frame_count % (g_profile->frameskip + 1)) == 0);
+
+    /* TODO: when skipping, could set IPPU.RenderThisFrame = false
+     * for snes9x builds that support it. For now we always render
+     * and just skip the blit to save the scaling cost. */
+
     S9xMainLoop();
 
-    /* Scale snes9x framebuffer → 480×320 */
+    if (!draw) return 0;
+
+    /* Scale snes9x framebuffer to 480x320 */
     int src_w = IPPU.RenderedScreenWidth > 0 ? IPPU.RenderedScreenWidth : 256;
     int src_h = IPPU.RenderedScreenHeight > 0 ? IPPU.RenderedScreenHeight : 224;
     int pitch = GFX.RealPitch > 0 ? GFX.RealPitch : 512 * 2;
+
+    /* Clamp hi-res to 256px if profile disables it */
+    if (!g_profile->hires_enabled && src_w > 256) {
+        src_w = 256;
+    }
+
+    /* Respect render height limit */
+    if (src_h > g_profile->render_height)
+        src_h = g_profile->render_height;
 
     int scale_h = EMU_SCREEN_H;
     int scale_w = (src_w * scale_h * 7) / (src_h * 6);  /* 7:6 aspect for SNES 8:7 PAR */

@@ -1031,18 +1031,16 @@ The ROM checker (`rom_check.c`) validates headers for all 8 platforms:
 | Platform | Core | Status | Native Resolution |
 |----------|------|--------|-------------------|
 | **NES** | nofrendo | **Working** | 256×240 @ 60fps |
-| SNES | snes9x (planned) | Stub | 256×224 @ 60fps |
-| GB/GBC | gnuboy (planned) | Stub | 160×144 @ 60fps |
-| Genesis | genesis-plus (planned) | Stub | 320×224 @ 60fps |
-| SMS | genesis-plus (planned) | Stub | 256×192 @ 60fps |
-| GG | genesis-plus (planned) | Stub | 160×144 @ 60fps |
-| PCE | pce-go (planned) | Stub | 256×240 @ 60fps |
+| **SNES** | snes9x | **Working** | 256×224 @ 60fps |
+| **GB/GBC** | gnuboy | **Working** | 160×144 @ 60fps |
+| **Genesis** | gwenesis | **Working** | 320×224 @ 60fps |
+| **SMS** | smsplus | **Working** | 256×192 @ 60fps |
+| **GG** | smsplus | **Working** | 160×144 @ 60fps |
+| **PCE** | pce-go | **Working** | 256×240 @ 60fps |
 
-The NES core (nofrendo) is fully integrated with:
-- 6502 CPU emulation, PPU (video), APU (audio)
-- 56 mapper support (covers ~95% of NES games)
-- Palette-indexed → RGB565 conversion with nearest-neighbor scaling
-- Audio output at 32kHz matching ESP32 I2S configuration
+All 7 cores are fully integrated with real emulation (no stubs). Each core implements the `emu_core_t` interface: init, run_frame, get_framebuffer (RGB565), get_audio (16-bit PCM), set_input, reset, shutdown.
+
+The SNES core includes ESP32-S3 optimization profiles (frameskip, audio rate, hi-res toggle) selectable at init time based on ROM complexity.
 
 ### File Structure
 
@@ -1057,14 +1055,23 @@ software/
     sim_sdcard.c        — SD card driver (host filesystem)
     rom_check.h/c       — ROM validation (8 platforms)
     emu_core.h          — Generic emulator core interface
-    emu_core.c          — Stub cores for all platforms
+    emu_core.c          — Core registry (routes platform → real core)
     emu_nes.c           — NES adapter (nofrendo → emu_core_t)
+    emu_snes.c          — SNES adapter (snes9x → emu_core_t)
+    emu_gb.c            — GB/GBC adapter (gnuboy → emu_core_t)
+    emu_sms.c           — SMS/GG adapter (smsplus → emu_core_t)
+    emu_pce.c           — PCE adapter (pce-go → emu_core_t)
+    emu_gen.c           — Genesis adapter (gwenesis → emu_core_t)
+    emu_snes_opt.h      — SNES ESP32 optimization profiles
     font8x8.h           — 8×8 pixel font for text rendering
     Makefile            — Native build (gcc + SDL2)
   components/
-    nofrendo/           — NES emulator core (69 C files, from retro-go)
-      nes/              — CPU, PPU, APU, memory, ROM, input
-      mappers/          — 56 mapper implementations
+    nofrendo/           — NES emulator (from retro-go)
+    snes9x/             — SNES emulator (from retro-go)
+    gnuboy/             — Game Boy / GBC emulator (from retro-go)
+    smsplus/            — Master System / Game Gear emulator (from retro-go)
+    pce-go/             — PC Engine emulator (from retro-go)
+    gwenesis/           — Sega Genesis / Mega Drive emulator (bzhxx/gwenesis)
   main/
     main.c              — ESP32 firmware (same test sequence)
     display.h/c         — ESP32 display driver (8080 parallel)

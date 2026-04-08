@@ -30,16 +30,33 @@ SMS_SRCS = $(wildcard $(SMS_DIR)/*.c) $(wildcard $(SMS_DIR)/cpu/*.c) $(wildcard 
 PCE_DIR = $(COMP)/pce-go
 PCE_SRCS = $(wildcard $(PCE_DIR)/*.c)
 
-# SNES9x excluded — too many portability issues for native macOS build.
-# SNES uses stub core. Integration requires ESP-IDF component build.
+# SNES9x (retro-go port)
+SNES_DIR = $(COMP)/snes9x
+SNES_SRCS = $(wildcard $(SNES_DIR)/src/*.c)
 
-CORE_INC = -I$(NF_DIR) -I$(NF_DIR)/nes -I$(GB_DIR) -I$(SMS_DIR) -I$(PCE_DIR)
-CORE_SRCS = $(NF_SRCS) $(GB_SRCS) $(SMS_SRCS) $(PCE_SRCS)
+# Gwenesis (Sega Genesis / Mega Drive)
+GWEN_DIR = $(COMP)/gwenesis
+GWEN_SRCS = $(GWEN_DIR)/bus/gwenesis_bus.c \
+            $(GWEN_DIR)/cpus/M68K/m68kcpu.c \
+            $(GWEN_DIR)/cpus/Z80/Z80.c \
+            $(GWEN_DIR)/io/gwenesis_io.c \
+            $(GWEN_DIR)/sound/ym2612.c \
+            $(GWEN_DIR)/sound/gwenesis_sn76489.c \
+            $(GWEN_DIR)/sound/z80inst.c \
+            $(GWEN_DIR)/vdp/gwenesis_vdp_gfx.c \
+            $(GWEN_DIR)/vdp/gwenesis_vdp_mem.c \
+            $(GWEN_DIR)/savestate/gwenesis_savestate.c
+
+CORE_INC = -I$(NF_DIR) -I$(NF_DIR)/nes -I$(GB_DIR) -I$(SMS_DIR) -I$(PCE_DIR) \
+           -I$(SNES_DIR) -I$(SNES_DIR)/src \
+           -I$(GWEN_DIR)/bus -I$(GWEN_DIR)/cpus/M68K -I$(GWEN_DIR)/cpus/Z80 \
+           -I$(GWEN_DIR)/io -I$(GWEN_DIR)/sound -I$(GWEN_DIR)/vdp -I$(GWEN_DIR)/savestate
+CORE_SRCS = $(NF_SRCS) $(GB_SRCS) $(SMS_SRCS) $(PCE_SRCS) $(SNES_SRCS) $(GWEN_SRCS)
 
 SRCS = sim_main.c sim_hal.c sim_display.c sim_input.c sim_audio.c sim_sdcard.c \
-       rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c \
+       rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c emu_snes.c emu_gen.c \
        $(CORE_SRCS)
-CFLAGS += $(CORE_INC) -Wno-implicit-function-declaration
+CFLAGS += $(CORE_INC) -Wno-implicit-function-declaration -DRIGHTSHIFT_IS_SAR -DNO_ZERO_LUT -DHAVE_STRINGS_H
 TARGET = emu-turbo-sim
 
 .PHONY: all run clean test_all test_screenshots
@@ -47,13 +64,13 @@ TARGET = emu-turbo-sim
 all: $(TARGET)
 
 TEST_SRCS = test_all_cores.c sim_hal.c sim_display.c sim_input.c sim_audio.c sim_sdcard.c \
-            rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c $(CORE_SRCS)
+            rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c emu_snes.c emu_gen.c $(CORE_SRCS)
 
 test_all: $(TEST_SRCS)
 	$(CC) $(CFLAGS) $(SDL_CFLAGS) -o test_all_cores $^ $(LDFLAGS)
 
 SCREENSHOT_SRCS = test_screenshots.c sim_hal.c sim_display.c sim_input.c sim_audio.c sim_sdcard.c \
-                  rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c $(CORE_SRCS)
+                  rom_check.c emu_core.c emu_nes.c emu_gb.c emu_sms.c emu_pce.c emu_snes.c emu_gen.c $(CORE_SRCS)
 
 test_screenshots: $(SCREENSHOT_SRCS)
 	$(CC) $(CFLAGS) $(SDL_CFLAGS) -o test_screenshots $^ $(LDFLAGS)

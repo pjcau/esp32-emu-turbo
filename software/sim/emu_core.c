@@ -177,6 +177,7 @@ extern const emu_core_t sms_real_core;   /* emu_sms.c (smsplus) */
 extern const emu_core_t gg_real_core;    /* emu_sms.c (smsplus) */
 extern const emu_core_t pce_real_core;   /* emu_pce.c (pce-go) */
 extern const emu_core_t snes_real_core;  /* emu_snes.c (snes9x) */
+extern const emu_core_t gen_real_core;   /* emu_gen.c (gwenesis) */
 DEFINE_CORE(snes, 256, 224, 60)
 DEFINE_CORE(gb,   160, 144, 60)
 DEFINE_CORE(gbc,  160, 144, 60)
@@ -188,10 +189,10 @@ DEFINE_CORE(pce,  256, 240, 60)
 const emu_core_t *emu_get_core(platform_t platform) {
     switch (platform) {
     case PLATFORM_NES:  return &nes_real_core;
-    case PLATFORM_SNES: return &snes_core;   /* stub — snes9x needs ESP-IDF build */
+    case PLATFORM_SNES: return &snes_real_core;  /* snes9x real core */
     case PLATFORM_GB:   return &gb_real_core;
     case PLATFORM_GBC:  return &gbc_real_core;
-    case PLATFORM_GEN:  return &gen_core;      /* stub — no genesis core yet */
+    case PLATFORM_GEN:  return &gen_real_core;  /* gwenesis real core */
     case PLATFORM_SMS:  return &sms_real_core;
     case PLATFORM_GG:   return &gg_real_core;
     case PLATFORM_PCE:  return &pce_real_core;
