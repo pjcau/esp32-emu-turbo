@@ -456,8 +456,8 @@ COMPONENT_SPECS["SW13"] = {
 # D1: BAT54C Dual Schottky Diode (menu combo — START+SELECT)
 COMPONENT_SPECS["D1"] = {
     "component": "BAT54C Dual Schottky Diode",
-    "lcsc": "C2099942",
-    "datasheet": "D1_BAT54C-SOT23_C2099942.pdf",
+    "lcsc": "C8655",
+    "datasheet": "D1_BAT54C-SOT23_C8655.pdf",
     "datasheet_page": 1,
     "pins": {
         "1": {"net": _exact("BTN_START"),   "function": "Anode 1 — Start button signal", "type": "smd"},
