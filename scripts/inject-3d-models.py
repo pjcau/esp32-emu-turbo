@@ -111,15 +111,24 @@ def inject_models(pcb_text: str) -> tuple[str, dict]:
             if mapping:
                 model_path, (ox, oy, oz), (rx, ry, rz) = mapping
 
-                # Detect footprint layer and placement rotation from the block
+                # Detect footprint layer and pad orientation
                 is_back = "B.Cu" in fp_block
-                fp_rot_match = re.search(r'\(at\s+[\d.-]+\s+[\d.-]+\s+([\d.-]+)\)', fp_block)
-                fp_rot = float(fp_rot_match.group(1)) if fp_rot_match else 0.0
 
-                # Compensate 3D model rotation for B.Cu components with
-                # non-zero footprint rotation (e.g., passives at 90°)
-                if is_back and fp_rot != 0:
-                    rz = (rz - fp_rot) % 360
+                # For 2-pad passives (R, C, LED), detect actual pad orientation
+                # from pad coordinates — the footprint may have rotation=0 but
+                # pads placed vertically by the generator.
+                if fp_name in ("R_0805", "C_0805", "C_1206", "LED_0805", "R_0402"):
+                    pad_positions = re.findall(
+                        r'\(pad\s+"[^"]*"\s+smd\s+\w+\s+\(at\s+([\d.-]+)\s+([\d.-]+)',
+                        fp_block)
+                    if len(pad_positions) >= 2:
+                        p1x, p1y = float(pad_positions[0][0]), float(pad_positions[0][1])
+                        p2x, p2y = float(pad_positions[1][0]), float(pad_positions[1][1])
+                        dx, dy = abs(p1x - p2x), abs(p1y - p2y)
+                        # 3D model default is horizontal; if pads are vertical, rotate 90°
+                        is_vertical = dy > dx
+                        if is_vertical:
+                            rz = (rz + 90) % 360
 
                 # Insert model entry before the last closing paren
                 model_entry = MODEL_TEMPLATE.format(
