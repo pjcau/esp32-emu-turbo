@@ -1946,8 +1946,15 @@ def _i2s_traces():
     n_5v = NET_ID["+5V"]
     n_gnd = NET_ID["GND"]
     n_dout = NET_ID["I2S_DOUT"]
+    n_bclk = NET_ID["I2S_BCLK"]
+    n_lrck = NET_ID["I2S_LRCK"]
     n_spk_p = NET_ID["SPK+"]
     n_spk_m = NET_ID["SPK-"]
+
+    # Assign I2S_BCLK/LRCK nets to U1 pads (GPIO15/16) even though
+    # PAM8403 is analog and doesn't use them — tracks design intent
+    _PAD_NETS[("U1", "8")] = n_bclk   # GPIO15 = I2S_BCLK
+    _PAD_NETS[("U1", "9")] = n_lrck   # GPIO16 = I2S_LRCK
 
     # ── Audio input: ESP32 I2S_DOUT → PAM8403 INR (pin 10) + INL (pin 7)
     epx, epy = _esp_pin(17)  # GPIO 17 = I2S_DOUT
@@ -3766,9 +3773,9 @@ def _passive_traces():
         if i == 10:
             via_x = rx - 0.80  # 92.20 — clears USB_D- vert at x=91.65 (gap=0.17mm ✓)
         parts.append(_seg(rx - 0.95, ry, via_x, ry,
-                          "B.Cu", W_DATA, n_3v3))  # W_DATA: 0.175mm gap to btn verts
+                          "B.Cu", W_SIG, n_3v3))   # W_SIG(0.25): 0.15mm gap to btn verts
         parts.append(_seg(via_x, ry, via_x, via_y_pu,
-                          "B.Cu", W_DATA, n_3v3))  # W_DATA: 0.175mm gap to btn verts
+                          "B.Cu", W_SIG, n_3v3))   # W_SIG(0.25): 0.15mm gap to btn verts
         _pu_via_sz = VIA_MIN if i == 10 else VIA_STD
         _pu_via_dr = VIA_MIN_DRILL if i == 10 else VIA_STD_DRILL
         parts.append(_via_net(via_x, via_y_pu, n_3v3, size=_pu_via_sz, drill=_pu_via_dr))

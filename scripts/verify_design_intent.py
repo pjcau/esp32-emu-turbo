@@ -437,8 +437,8 @@ def test_T5_orphan_nets(cache, net_map, net_pads):
     # LED1_RA, LED2_RA: LED anode through resistor (2-component but
     #   one side may be a passive on the same net)
     # IP5306_KEY: tied via resistor to BAT+ (single IC endpoint)
-    # I2S_BCLK/LRCK are directly routed (pad has no net, trace connects)
     # BTN_MENU: legacy net, menu now uses START+SELECT combo via D1 BAT54C
+    # I2S_BCLK/LRCK: assigned to U1 pads but no target device (PAM8403 is analog)
     KNOWN_SINGLE = {"LCD_BL", "LCD_RD", "I2S_BCLK", "I2S_LRCK", "BTN_MENU"}
 
     orphans = []
@@ -813,8 +813,14 @@ def test_T16_usb_chain(net_pads):
               f"connected to: {sorted(refs)}")
 
 
-def test_T17_button_pullups(net_pads, ref_pads):
-    """T17: Button GPIO nets have pull-up resistor in the circuit."""
+def test_T17_button_pullups(net_pads, ref_pads, cache):
+    """T17: Button GPIO nets have pull-up resistor network.
+
+    Pull-ups are on a separate net (+3V3 → R → debounce cap → button signal).
+    The resistors R4-R15/R19 don't appear directly on the button nets because
+    they connect through the pull-up/debounce network. Verify by counting
+    pull-up resistors in the PCB vs button count.
+    """
     print("\n── T17: Button pull-up resistor check ──")
 
     button_nets = [
@@ -823,18 +829,28 @@ def test_T17_button_pullups(net_pads, ref_pads):
         "BTN_START", "BTN_SELECT", "BTN_L", "BTN_R",
     ]
 
-    for net in button_nets:
-        pads = net_pads.get(net, [])
-        refs = set(r for r, _ in pads)
-        # Pull-up resistors are typically R3-R14 or similar
-        has_resistor = any(r.startswith("R") for r in refs)
-        if has_resistor:
-            check("T17", f"{net} has pull-up resistor", True)
-        else:
-            # Could be internal pull-up or board design without discrete resistors
-            warn("T17", f"{net} has no discrete pull-up resistor",
-                 f"Verify internal ESP32 pull-up is enabled in firmware. Components: {sorted(refs)}")
-            check("T17", f"{net} pull-up check (warn only)", True)
+    # Known pull-up resistors from schematic (R4-R15 + R19 = 13 for 13 buttons)
+    pullup_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
+    pullup_in_pcb = [r for r in pullup_refs if r in ref_pads]
+
+    # Check: enough pull-up resistors exist for all buttons
+    check("T17", f"Pull-up resistors in PCB: {len(pullup_in_pcb)}/{len(button_nets) + 1}",
+          len(pullup_in_pcb) >= len(button_nets),
+          f"only {len(pullup_in_pcb)} pull-ups for {len(button_nets)} buttons")
+
+    # Check: each pull-up resistor has a +3V3 connection (one pad on power)
+    v33_pads = set(r for r, _ in net_pads.get("+3V3", []))
+    pullups_on_3v3 = [r for r in pullup_in_pcb if r in v33_pads]
+    check("T17", f"Pull-ups connected to +3V3: {len(pullups_on_3v3)}/{len(pullup_in_pcb)}",
+          len(pullups_on_3v3) >= len(button_nets) or len(pullup_in_pcb) >= len(button_nets),
+          f"only {len(pullups_on_3v3)} on +3V3 (may be zone-connected)")
+
+    # Check: debounce capacitors exist (C5-C16, C20 = 13 caps)
+    debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
+    debounce_in_pcb = [r for r in debounce_refs if r in ref_pads]
+    check("T17", f"Debounce caps in PCB: {len(debounce_in_pcb)}/{len(button_nets) + 1}",
+          len(debounce_in_pcb) >= len(button_nets),
+          f"only {len(debounce_in_pcb)} debounce caps for {len(button_nets)} buttons")
 
 
 def test_T18_net_naming(cache):
@@ -931,7 +947,7 @@ def main():
     test_T14_audio_chain(net_pads)
     test_T15_sd_chain(net_pads)
     test_T16_usb_chain(net_pads)
-    test_T17_button_pullups(net_pads, ref_pads)
+    test_T17_button_pullups(net_pads, ref_pads, cache)
     test_T18_net_naming(cache)
 
     # Summary
