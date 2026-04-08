@@ -32,8 +32,8 @@ class SDCardSheet(SchematicSheet):
         # SPI signals (right side) with GPIO annotations
         self.text("SPI bus:", sx + 18, sy - 10, 2, True)
         spi_pins = [
-            ("SD_MOSI", -3.81, "GPIO36"),
-            ("SD_MISO", 0, "GPIO37"),
+            ("SD_MOSI", -3.81, "GPIO44"),
+            ("SD_MISO", 0, "GPIO43"),
             ("SD_CLK", 3.81, "GPIO38"),
         ]
         for net, yoff, gpio_note in spi_pins:

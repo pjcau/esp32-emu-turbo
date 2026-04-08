@@ -33,8 +33,8 @@ class ControlsSheet(SchematicSheet):
             # Row 0-3: System + Shoulder
             ("START", "BTN_START", "SW9", "R12", "C13", "GPIO18"),
             ("SELECT", "BTN_SELECT", "SW10", "R13", "C14", "GPIO0"),
-            ("L", "BTN_L", "SW11", "R14", "C15", "GPIO35"),
-            ("R", "BTN_R", "SW12", "R15", "C16", "GPIO43"),
+            ("L", "BTN_L", "SW11", "R14", "C15", "GPIO45"),
+            ("R", "BTN_R", "SW12", "R15", "C16", "GPIO3"),
         ]
 
         # Grid layout: 3 columns x 4 rows

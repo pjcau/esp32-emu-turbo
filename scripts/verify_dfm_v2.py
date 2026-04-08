@@ -1255,7 +1255,7 @@ def test_usb_data_routed():
     1. USB_D+ (net 40) has traces connecting J1 pad 6 to U1 pin 14 (GPIO20)
     2. USB_D- (net 41) has traces connecting J1 pad 7 to U1 pin 13 (GPIO19)
     3. No shared GPIO19/20 with button or joystick nets
-    4. BTN_R uses GPIO43 (pin 36), NOT GPIO19
+    4. BTN_R uses GPIO3 (pin 38), NOT GPIO19
     """
     print("\n── USB Data Line Routing Tests ──")
     segs = _cached_segments()
@@ -1305,7 +1305,7 @@ def test_usb_data_routed():
     )
     check("BTN_R does NOT route to GPIO19 area (x≈88.75, y≈37.48)",
           not btn_r_at_gpio19,
-          "BTN_R traces found near GPIO19 — should use GPIO43 instead")
+          "BTN_R traces found near GPIO19 — should use GPIO3 instead")
 
 
 def test_usb_pin_mapping():
@@ -2448,10 +2448,11 @@ def _board_edge_distance(px, py):
 # L1 inductor (large pads, conservative half-diagonal overstates overlap).
 # SPK1 speaker (large 3.6mm pads, traces routed underneath).
 # C3/C4 bypass caps (placed tight to ESP32), C17 (IP5306 bypass),
-# R20/R21/C21 (PAM8403 passives, placed tight to IC).
+# R20/R21/C21 (PAM8403 passives, placed tight to IC),
+# U4 (USBLC6-2SC6 SOT-23-6, 0.95mm pitch), R22/R23 (22Ω 0402 inline).
 # JLCPCB routinely manufactures these packages — their DFM review accepts them.
-_FINE_PITCH_REFS = {"U1", "U2", "U5", "U6", "J4", "J3", "J1", "L1", "SPK1",
-                    "C3", "C4", "C17", "R20", "R21", "C21"}
+_FINE_PITCH_REFS = {"U1", "U2", "U4", "U5", "U6", "J4", "J3", "J1", "L1", "SPK1",
+                    "C3", "C4", "C17", "R20", "R21", "C21", "R22", "R23"}
 
 
 def test_jlcdfm_trace_spacing():
@@ -2951,6 +2952,8 @@ def test_jlcdfm_unconnected_trace_end():
         ("B.Cu", 108.5, 44.0),
         ("B.Cu", 110.0, 44.0),
         ("B.Cu", 109.3, 44.0),
+        # TVS VBUS F.Cu stub (T-junction onto VBUS horizontal at y=61.0)
+        ("F.Cu", 90.95, 61.0),
     }
 
     # Build set of all connection points
