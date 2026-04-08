@@ -49,9 +49,9 @@ MODEL_MAP = {
                      (0, 0.25, 0), (0, 0, 180)),
     "SW-SMD-5.1x5.1": (f"{M}/Button_Switch_SMD.3dshapes/SW_SPST_TL3342.step",
                      (0, 0, 0), (0, 0, 0)),
-    # SOT-23-3 (BAT54C): on B.Cu, 180° rotation
+    # SOT-23-3 (BAT54C): on B.Cu, 90° Z rotation to align 3D model with pads
     "SOT-23-3":     (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-23.step",
-                     (0, 0, 0), (0, 0, 180)),
+                     (0, 0, 0), (0, 0, 90)),
     # No good match — skip these:
     # "SMD-4x4x2"  → Crystal (no exact 4x4 match in library)
     # "FPC-40P-0.5mm" → FPC connector (no exact 40P match)
@@ -110,6 +110,17 @@ def inject_models(pcb_text: str) -> tuple[str, dict]:
             mapping = MODEL_MAP.get(fp_name)
             if mapping:
                 model_path, (ox, oy, oz), (rx, ry, rz) = mapping
+
+                # Detect footprint layer and placement rotation from the block
+                is_back = "B.Cu" in fp_block
+                fp_rot_match = re.search(r'\(at\s+[\d.-]+\s+[\d.-]+\s+([\d.-]+)\)', fp_block)
+                fp_rot = float(fp_rot_match.group(1)) if fp_rot_match else 0.0
+
+                # Compensate 3D model rotation for B.Cu components with
+                # non-zero footprint rotation (e.g., passives at 90°)
+                if is_back and fp_rot != 0:
+                    rz = (rz - fp_rot) % 360
+
                 # Insert model entry before the last closing paren
                 model_entry = MODEL_TEMPLATE.format(
                     path=model_path, ox=ox, oy=oy, oz=oz,
