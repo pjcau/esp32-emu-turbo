@@ -27,7 +27,13 @@ python3 scripts/verify_dfm_v2.py
 python3 scripts/verify_polarity.py
 python3 scripts/verify_dfa.py
 python3 scripts/validate_jlcpcb.py
+python3 scripts/verify_bom_cpl_pcb.py
 ```
+
+**BOM/CPL/PCB cross-check** (`verify_bom_cpl_pcb.py`, 10 checks):
+Verifies all designators match across BOM, CPL, and PCB. Checks footprint names
+are JLCPCB-compatible, CPL rotations valid, positions match (with known correction
+allowances), and all LCSC part numbers present.
 
 ### 1b. Run extended verification suite (12 gap-coverage tests)
 
