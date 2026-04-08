@@ -29,7 +29,29 @@ python3 scripts/verify_dfa.py
 python3 scripts/validate_jlcpcb.py
 ```
 
-### 1b. Run ERC (Electrical Rules Check)
+### 1b. Run datasheet verification (electrical + physical)
+
+```bash
+python3 scripts/verify_datasheet_nets.py
+python3 scripts/verify_datasheet.py
+```
+
+**Datasheet net verification** (`verify_datasheet_nets.py`, 246 checks):
+Compares EVERY pad of EVERY component against the expected net from the datasheet.
+Uses `hardware/datasheet_specs.py` as single source of truth (pin→net mapping).
+- Catches: unconnected pads that should be connected, wrong net on a pad
+- Example: USB-C pad 1 should be GND, shield pads should be GND, VBUS on all 3 pins
+
+**Datasheet physical verification** (`verify_datasheet.py`, 29 tests):
+Compares PCB footprint dimensions against datasheet mechanical drawings.
+- Pin count per component (ICs, connectors, passives, switches)
+- Pad pitch (0.5mm FPC, 1.27mm SOIC, 2.0mm JST, etc.)
+- Pad span / body dimensions (catches wrong package, e.g. SOP-16 vs SOIC-16W)
+- NPTH positioning hole count and drill sizes
+- THT drill sizes (JST, USB shield tabs)
+- Datasheet PDF presence in `hardware/datasheets/`
+
+### 1c. Run ERC (Electrical Rules Check)
 
 ```bash
 python3 scripts/erc_check.py --run
@@ -40,7 +62,7 @@ Runs KiCad native ERC on the hierarchical schematic. Categorizes 730+ violations
 - **Real issues**: pin_not_connected, power_pin_not_driven, pin_to_pin conflicts
 - **Critical**: pin_to_pin (output↔output) must be zero for production
 
-### 1c. Run SPICE power supply simulation
+### 1d. Run SPICE power supply simulation
 
 ```bash
 python3 scripts/spice_power_check.py
@@ -142,6 +164,8 @@ python3 scripts/validate_jlcpcb.py
 - `scripts/verify_polarity.py` — Polarity/pin assignment tests
 - `scripts/verify_dfa.py` — Assembly verification (9 tests)
 - `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
+- `scripts/verify_datasheet_nets.py` — Datasheet vs PCB net/pinout verification (246 checks)
+- `hardware/datasheet_specs.py` — Single source of truth: pin→net mapping for all 30 components
 - `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (26 tests)
 - `scripts/erc_check.py` — ERC automation (KiCad native, artifact filtering)
 - `scripts/spice_power_check.py` — ngspice power supply simulation (+5V/+3V3 ripple, load transient)

@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -53,7 +53,11 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/verify_schematic_pcb.py & \
 		python3 scripts/short_circuit_analysis.py & \
 		python3 scripts/verify_polarity.py & \
+		python3 scripts/verify_datasheet_nets.py & \
 		wait'
+
+verify-datasheet: ## Verify PCB pad-net assignments against datasheet specs (30 components, 246 checks)
+	@$(T) verify-datasheet python3 scripts/verify_datasheet_nets.py
 
 verify-fast: ## Quick DFM check only (1.4s)
 	@$(T) verify-fast python3 scripts/verify_dfm_v2.py
