@@ -16,10 +16,10 @@ ESP32 Emu Turbo has the **most advanced Claude Code + KiCad integration** found 
 
 | Metric | Our Project | Best Alternative |
 |--------|------------|-----------------|
-| Claude Code PCB skills | **24** | 10 (atopile-agent-skill) |
+| Claude Code PCB skills | **43** | 10 (atopile-agent-skill) |
 | DFM verification tests | **115** | 0 (no comparable suite) |
 | KiCad MCP tools | **64** | 28 (Seeed-Studio) |
-| Automated checks per commit | **482+** (DFM+DFA+design intent) | ~10 (KiBot DRC) |
+| Automated checks per commit | **1150+** (DFM+DFA+electrical+adversarial+design intent) | ~10 (KiBot DRC) |
 
 ---
 
@@ -99,7 +99,7 @@ skills/
   lsp/                # Language server integration
 ```
 
-**Takeaway**: Their `.claude-plugin/` format enables marketplace distribution. We should consider packaging our 24 PCB skills as a distributable plugin for other KiCad projects.
+**Takeaway**: Their `.claude-plugin/` format enables marketplace distribution. We should consider packaging our 43 PCB skills as a distributable plugin for other KiCad projects.
 
 ### KiBot — The Automation Standard
 
@@ -143,4 +143,4 @@ KiBot (704 stars) is the most mature KiCad automation tool. Comparison:
 
 ## Conclusion
 
-The ESP32 Emu Turbo project has built the most comprehensive AI-assisted PCB design pipeline in the open-source ecosystem. With 24 Claude Code skills, 115 DFM tests, and 64 MCP tools, it significantly exceeds any other project found on GitHub. The main gap is CI/CD automation (KiBot) and plugin distribution (`.claude-plugin/` format).
+The ESP32 Emu Turbo project has built the most comprehensive AI-assisted PCB design pipeline in the open-source ecosystem. With 43 Claude Code skills, 115 DFM tests, 1150+ automated checks, and 64 MCP tools, it significantly exceeds any other project found on GitHub. The main gap is CI/CD automation (KiBot) and plugin distribution (`.claude-plugin/` format).
