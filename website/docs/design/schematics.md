@@ -373,7 +373,7 @@ Native USB data lines for firmware flashing and debug console (replaces UART deb
 USB-C now carries both **power** (charging via IP5306) and **data** (firmware flash + CDC debug console). This replaces the previous UART debug approach (GPIO43 TX0) with native USB, which is faster and requires no external UART adapter. See [Power States & Debug](#power-states--debug) for the full operating modes table and flash/debug procedures.
 
 :::info Joystick removed
-The optional PSP joystick (previously GPIO20/GPIO44) has been removed. The D-pad provides full SNES/NES control. GPIO43 (previously TX0 for UART debug) is now used for BTN_R.
+The optional PSP joystick (previously GPIO20/GPIO44) has been removed. The D-pad provides full SNES/NES control. GPIO43 (previously TX0 for UART debug) is now used for SD_MISO. BTN_R is on GPIO3.
 :::
 
 ---

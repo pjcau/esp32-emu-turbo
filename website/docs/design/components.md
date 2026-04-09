@@ -264,19 +264,19 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | J1 | USB-C 16-pin connector | SMT | C2765186 | Extended | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
 | U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
 | J4 | FPC 40-pin 0.5mm (display) | SMT | C2856812 | Extended | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
-| J3 | JST PH 2-pin THT (battery) | THT | C173752 | Extended | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| J3 | JST PH 2-pin SMD (battery) | SMD | C295747 | Extended | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
 | L1 | 1µH inductor 4.5A | SMD 4×4 | C280579 | Extended | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | SW1–SW13,SW_RST,SW_BOOT | SMT tact switch 5.1×5.1mm | SMT | C318884 | Extended | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | SW_PWR | Slide switch SS-12D00G3 | SMT | C431540 | Extended | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
 | LED1 | Red LED 0805 | 0805 | C84256 | Basic | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Green LED 0805 | 0805 | C19171391 | Basic | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
 | R1–R2 | 5.1kΩ 0805 | 0805 | C27834 | Basic | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
-| R3–R13,R15,R19 | 10kΩ 0805 | 0805 | C17414 | Basic | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
+| R4–R13,R15,R19 | 10kΩ 0805 | 0805 | C17414 | Basic | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
 | R16 | 100kΩ 0805 | 0805 | C149504 | Basic | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R17,R18 | 1kΩ 0805 | 0805 | C17513 | Basic | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | R20,R21 | 20kΩ bias (PAM8403 INL/INR) | 0805 | C4184 | Basic | — |
 | C3–C16,C20,C21,C26 | 100nF 0805 | 0805 | C49678 | Basic | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
-| C1,C17,C18,C27 | 10µF 0805 | 0805 | C15850 | Basic | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
+| C1,C17,C18,C27,C28 | 10µF 0805 | 0805 | C15850 | Basic | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C2 | 22µF tantalum | 1206 | C7171 | Basic | — |
 | C19 | 22µF 1206 | 1206 | C12891 | Basic | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 | C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C13967 | Basic | — |

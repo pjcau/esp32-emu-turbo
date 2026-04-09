@@ -78,7 +78,7 @@ ESP32 Emu Turbo has the **most advanced Claude Code + KiCad integration** found 
 | Schematic access | Yes (eeschema) | Yes (custom parser) |
 | PCB edit capability | Yes (live edit) | Yes (generator-based) |
 | DFM verification | Basic DRC | 115 custom tests + JLCPCB rules |
-| Claude integration | CLAUDE.md only | 24 skills + 5 agents + hooks |
+| Claude integration | CLAUDE.md only | 39 skills + 5 agents + hooks |
 
 **Takeaway**: Their pcbnew API approach gives real-time editing but requires a running KiCad instance. Our S-expression parser is standalone and CI-friendly. Consider adding pcbnew API as a secondary path for interactive design sessions.
 

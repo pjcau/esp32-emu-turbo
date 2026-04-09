@@ -155,7 +155,7 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 | Source | Components |
 |:---|:---|
 | Schematic (7 sub-sheets) | 68 unique refs |
-| PCB footprints | 90 refs |
+| PCB footprints | 89 refs |
 | JLCPCB CPL (assembly) | 78 refs |
 
 ### Off-board components (correct exclusions)

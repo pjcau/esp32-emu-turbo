@@ -59,25 +59,25 @@ The bottom side hosts the main circuitry:
 | **U3**         | AMS1117-3.3 (LDO regulator) | C6186         | SOT-223   |
 | **U5**         | PAM8403 (audio amplifier)   | C5122557      | SOP-16    |
 | **J1**         | USB-C connector (16-pin)    | C2765186      | USB-C-SMD |
-| **J3**         | JST-PH 2-pin THT (battery)  | C173752       | JST-PH-2P |
+| **J3**         | JST-PH 2-pin SMD (battery)  | C295747       | JST-PH-2P-SMD |
 | **J4**         | FPC 40-pin 0.5mm (display)  | C2856812      | FPC-40P   |
 | **L1**         | 1uH 5A inductor             | C280579       | SMD-4x    |
 | **SW_PWR**     | Slide switch (power)        | C431540       | SS-12D0   |
 | **SW11, SW12** | SMT tactile (L, R shoulder) | C318884       | SW-SMD    |
 | R1, R2         | 5.1k (USB-C CC)             | C27834        | R_0805    |
-| R3–R13,R15     | 10k (pull-ups)              | C17414        | R_0805    |
+| R4–R13,R15     | 10k (pull-ups)              | C17414        | R_0805    |
 | R16            | 100k                        | C149504       | R_0805    |
 | R17, R18       | 1k                          | C17513        | R_0805    |
 | R19            | 10k (INL pull-down)          | C17414        | R_0805    |
 | R20, R21       | 20k (PAM8403 gain set)       | C4184         | R_0805    |
-| C1, C17, C18, C27 | 10uF                     | C15850        | C_0805    |
+| C1, C17, C18, C27, C28 | 10uF                | C15850        | C_0805    |
 | C2             | 22uF tantalum               | C7171         | TAJB      |
 | C19            | 22uF                        | C12891        | C_1206    |
 | C3–C16,C20,C21,C26 | 100nF                  | C49678        | C_0805    |
 | C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
 | C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
 
-**Total SMT components:** 26 unique part types, ~79 individual placements.
+**Total SMT components:** 27 unique part types, 78 individual placements.
 
 ---
 
