@@ -119,7 +119,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | LED2 | Green LED | 0805 | Fully charged indicator (IP5306) | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
 | SW_PWR | Slide switch | SS-12D00G3 | Power on/off | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
 | C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
-| C2 | Capacitor | 22 µF tantalum (C7171) | LDO output stability | [PDF](/datasheets/C2_22uF-tantalum_C7171.pdf) |
+| C2 | Capacitor | 22 µF tantalum (C7171) | LDO output stability | — |
 | C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C19 | Capacitor | 22 µF | Bulk capacitor | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 
