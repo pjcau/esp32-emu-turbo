@@ -185,6 +185,21 @@ python3 scripts/verify_power_sequence.py
 | `verify_decoupling_adequacy.py` | 25 | Insufficient capacitance per IC datasheet, missing HF bypass |
 | `verify_power_sequence.py` | 26 | Power chain topology, upstream/downstream ordering, GND continuity |
 
+### 1k. Run connectivity and signal chain verification
+
+```bash
+# Component connectivity — catches phantom BOM components (2 tests)
+python3 scripts/verify_component_connectivity.py
+
+# Signal chain completeness — catches broken copper paths (53 tests)
+python3 scripts/verify_signal_chain_complete.py
+```
+
+| Script | Tests | What it catches |
+|--------|-------|-----------------|
+| `verify_component_connectivity.py` | 2 | BOM components with zero electrical connections (phantom parts) |
+| `verify_signal_chain_complete.py` | 53 | Nets that only connect to one endpoint (broken signal chains) |
+
 ### 2. Manual review against checklist
 
 Read `review-checklist.md` and verify each domain:

@@ -35,6 +35,14 @@ python3 scripts/spice_power_check.py
 | `verify_decoupling_adequacy.py` | 25 | Insufficient capacitance per IC datasheet, missing HF bypass |
 | `verify_power_sequence.py` | 26 | Power chain topology, upstream/downstream ordering, GND continuity |
 | `spice_power_check.py` | 5 | Ripple on +5V/+3V3 rails, transient response, decoupling effectiveness |
+| `verify_component_connectivity.py` | 2 | BOM components with zero electrical connections (phantom parts) |
+| `verify_signal_chain_complete.py` | 53 | Nets that only connect to one endpoint (broken signal chains) |
+
+```bash
+# 1e. Component connectivity + signal chain completeness
+python3 scripts/verify_component_connectivity.py
+python3 scripts/verify_signal_chain_complete.py
+```
 
 ### 2. Manual 30-question electrical review
 

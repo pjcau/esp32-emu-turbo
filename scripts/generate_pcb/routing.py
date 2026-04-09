@@ -4275,9 +4275,11 @@ def _reset_boot_traces():
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
     if rst_p1:
-        # EN signal: pad 1 (right pad at x=98) → short B.Cu stub up
-        # → via to assign EN net. Long-distance connection to C3 pad 1
-        # (EN junction at 70.45, 42.0) left for manual routing.
+        # EN signal: pad 1 (right pad at x=98) → short B.Cu stub up → via.
+        # KNOWN LIMITATION: SW_RST via (98,60) is NOT routed to U1 pin 3 (EN).
+        # Any F.Cu path crosses 16+ traces. ESP32-S3-WROOM-1 has internal
+        # 10k pull-up + 0.1uF on EN → chip boots without external connection.
+        # Reset requires power cycle. Route EN in next layout revision.
         # Via at y=60.0: clears VBUS F.Cu (y=61, w=0.6→edge 60.7).
         # Via edge at 60.0+0.3=60.3, gap=60.7-60.3=0.4mm ≥ 0.1mm ✓
         via_y = 60.0
