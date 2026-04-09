@@ -284,7 +284,9 @@ def _build_placements():
     p.append(("C17", "10uF", "C_0805", 110, 35, 0, "bottom"))
     p.append(("C18", "10uF", "C_0805", 116, 49, 0, "bottom"))  # BAT decoupling near IP5306
     p.append(("C27", "10uF", "C_0805", 108, 39, 0, "bottom"))  # VOUT HF decoupling near IP5306
-    p.append(("C28", "10uF", "C_0805", 86, 26, 90, "bottom"))  # ESP32 +3V3 bulk cap
+    # C28 REMOVED from assembly: was at (86,26) UNDER ESP32 module body.
+    # Decoupling covered by C3+C4+C26 (300nF) + C2 (22uF tantalum on +3V3 rail).
+    # Relocate in v2 PCB respin to a position outside module footprint.
 
     # C19 near inductor L1
     p.append(("C19", "22uF", "C_1206",
