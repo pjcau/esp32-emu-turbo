@@ -30,6 +30,8 @@ Checks:
   T16 USB chain: D+/D- reach both ESP32 and USB-C connector
   T17 Missing pull-ups: button GPIO nets without pull-up resistor pads
   T18 Net naming: detect suspicious net names (typos, inconsistent naming)
+  T19 Pin electrical conflict: nets with multiple output drivers
+  T20 ESP32-S3 IO MUX: GPIO assignments respect IO MUX constraints
 
 Usage:
     python3 scripts/verify_design_intent.py
@@ -896,6 +898,117 @@ def test_T18_net_naming(cache):
     info("T18", f"Total nets in PCB: {len(net_names)}")
 
 
+def test_T19_pin_electrical_conflicts(specs, net_pads):
+    """T19: Detect nets with multiple output drivers (electrical conflict)."""
+    print("\n── T19: Pin electrical type conflict detection ──")
+
+    # Classify pin electrical types from datasheet_specs COMPONENT_SPECS.
+    # Output-type pins: power regulators VOUT, amplifier outputs, boost outputs.
+    # Map: (ref, pin) -> "output" | "input" | "power_out" | None
+    OUTPUT_PINS = {
+        ("U2", "8"):  "power_out",   # IP5306 VOUT (+5V boost)
+        ("U3", "2"):  "power_out",   # AMS1117 VOUT (tab)
+        ("U3", "4"):  "power_out",   # AMS1117 VOUT (+3V3)
+        ("U5", "1"):  "output",      # PAM8403 OUTL+
+        ("U5", "3"):  "output",      # PAM8403 OUTL-
+        ("U5", "14"): "output",      # PAM8403 OUTR-
+        ("U5", "16"): "output",      # PAM8403 OUTR+
+        ("U5", "8"):  "output",      # PAM8403 VREF
+    }
+    # ESP32 GPIO pins used as outputs (I2S, LCD, SPI CLK/MOSI)
+    ESP_OUTPUT_SIGNALS = {
+        "I2S_BCLK", "I2S_LRCK", "I2S_DOUT",
+        "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3",
+        "LCD_D4", "LCD_D5", "LCD_D6", "LCD_D7",
+        "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
+        "SD_MOSI", "SD_CLK", "SD_CS",
+    }
+
+    # Build net -> list of output drivers
+    net_drivers = {}  # net_name -> [(ref, pin, driver_type)]
+    for ref, spec in specs.items():
+        for pin, pin_info in spec.get("pins", {}).items():
+            net_spec = pin_info.get("net", {})
+            net_name = net_spec.get("net", "")
+            if not net_name or net_spec.get("match") == "unconnected":
+                continue
+            key = (ref, pin)
+            if key in OUTPUT_PINS:
+                if net_name not in net_drivers:
+                    net_drivers[net_name] = []
+                net_drivers[net_name].append((ref, pin, OUTPUT_PINS[key]))
+            elif ref == "U1" and net_name in ESP_OUTPUT_SIGNALS:
+                if net_name not in net_drivers:
+                    net_drivers[net_name] = []
+                net_drivers[net_name].append((ref, pin, "esp_output"))
+
+    conflicts = []
+    for net_name, drivers in net_drivers.items():
+        if len(drivers) > 1:
+            drv_str = ", ".join(f"{r}.{p}({t})" for r, p, t in drivers)
+            conflicts.append(f"Net '{net_name}' has {len(drivers)} drivers: {drv_str}")
+
+    if conflicts:
+        for c in conflicts:
+            check("T19", "No multi-driver conflict", False, c)
+    else:
+        check("T19", "No nets with multiple output drivers", True)
+
+
+def test_T20_esp32_iomux_validation(config_py):
+    """T20: Verify GPIO assignments respect ESP32-S3 IO MUX constraints."""
+    print("\n── T20: ESP32-S3 IO MUX validation ──")
+
+    if not config_py:
+        warn("T20", "config.py GPIO_NETS not found or empty")
+        return
+
+    # Reserved GPIOs that CANNOT be used (SPI flash + Octal PSRAM on N16R8)
+    FLASH_RESERVED = set(range(26, 33))   # GPIO26-32: SPI flash
+    PSRAM_RESERVED = set(range(33, 38))   # GPIO33-37: Octal PSRAM
+    ALL_RESERVED = FLASH_RESERVED | PSRAM_RESERVED
+
+    # USB dedicated pins — can only be used for USB D+/D-
+    USB_PINS = {19: "USB_D-", 20: "USB_D+"}
+
+    # General-purpose GPIO ranges (via GPIO Matrix, any peripheral)
+    # GPIO0-21, GPIO38-48 (excluding reserved above)
+    VALID_GPIOS = set(range(0, 22)) | set(range(38, 49))
+
+    issues = []
+
+    for gpio, signal in config_py.items():
+        # Check reserved GPIOs
+        if gpio in ALL_RESERVED:
+            issues.append(f"GPIO{gpio} ({signal}) is reserved for "
+                          f"{'SPI flash' if gpio in FLASH_RESERVED else 'Octal PSRAM'}")
+            continue
+
+        # Check GPIO is in valid range for WROOM-1 module
+        if gpio not in VALID_GPIOS:
+            issues.append(f"GPIO{gpio} ({signal}) not available on WROOM-1 module")
+            continue
+
+        # Check USB pin usage — must match USB function
+        if gpio in USB_PINS:
+            expected_usb = USB_PINS[gpio]
+            if signal != expected_usb:
+                issues.append(f"GPIO{gpio} is USB pin ({expected_usb}) but assigned to {signal}")
+            continue
+
+        # All other GPIOs: verify peripheral compatibility via GPIO Matrix
+        # GPIO0-21, 38-48 support any peripheral via GPIO Matrix (I2S, SPI, I80 LCD, etc.)
+        # GPIO17 I2S_DOUT: I2S output via GPIO Matrix — supported on any GPIO
+        # SPI2 (FSPI) native pins GPIO11-14 for high speed, but GPIO Matrix works for SD card speeds
+        # 8080 LCD I80 peripheral: data pins must be GPIO-capable — all assigned GPIOs qualify
+
+    if issues:
+        for i in issues:
+            check("T20", "IO MUX valid", False, i)
+    else:
+        check("T20", f"All {len(config_py)} GPIO assignments valid for ESP32-S3 IO MUX", True)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -949,6 +1062,8 @@ def main():
     test_T16_usb_chain(net_pads)
     test_T17_button_pullups(net_pads, ref_pads, cache)
     test_T18_net_naming(cache)
+    test_T19_pin_electrical_conflicts(specs, net_pads)
+    test_T20_esp32_iomux_validation(config_py)
 
     # Summary
     print("\n" + "=" * 60)
