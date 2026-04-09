@@ -54,7 +54,13 @@
 #define AUDIO_SAMPLE_RATE   32000     /* 32 kHz */
 #define AUDIO_BITS          16
 
-/* ── Buttons: active-low, external 10k pull-up + 100nF debounce ── */
+/* ── Buttons: active-low, 10k pull-up + 100nF debounce ────────── */
+/* NOTE: BTN_L (GPIO45) has NO external pull-up (R14 DNP).
+ * GPIO45 is a VDD_SPI strapping pin: external pull-up would force
+ * VDD_SPI=1.8V, breaking Octal PSRAM (needs 3.3V).
+ * Firmware MUST enable internal pull-up after boot:
+ *   gpio_set_pull_mode(BTN_L, GPIO_PULLUP_ONLY);
+ * Internal pull-up (~45k) is sufficient for button debounce. */
 
 #define BTN_UP              GPIO_NUM_40
 #define BTN_DOWN            GPIO_NUM_41

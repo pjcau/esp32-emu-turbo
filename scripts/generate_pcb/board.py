@@ -534,6 +534,9 @@ def _component_placeholders():
     # C27 near IP5306 VOUT (HF decoupling, 2.6mm from pin 8)
     placements.append(("C27", "C_0805", 108, 39, 0, "B.Cu"))
 
+    # C28 ESP32 +3V3 bulk cap (10uF, 2.8mm from U1 pin 2)
+    placements.append(("C28", "C_0805", *routing.C28_POS, 90, "B.Cu"))
+
     # PAM8403 passive components (B.Cu)
     # PAM8403 passives — spread ~2mm from body for clean layout
     placements.append(("C22", "C_0805", *routing.C22_POS, 90, "B.Cu"))  # DC-blocking

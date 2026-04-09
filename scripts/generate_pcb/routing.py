@@ -373,6 +373,7 @@ C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
 C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
 C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
+C28_POS = (86.0, 26.0)   # ESP32 +3V3 bulk cap (10uF) — 3.7mm from U1 pin 2, clear of F.Cu LCD traces
 C17_POS = (110.0, 35.0)  # IP5306 cap
 C18_POS = (116.0, 49.0)  # IP5306 BAT decoupling — moved closer: 10.7mm from pin 6 (was 15.4mm)
 C19_POS = (110.0, 58.5)  # IP5306 VOUT bulk cap (lx, ly+6) — kept as bulk, C27 handles HF
@@ -564,6 +565,8 @@ def _init_pads():
         passive_placements.append((ref, "C_0805", 43 + i * 5, 50, 0, "B"))
     # R3: ESP32 strapping/pull-down resistor
     passive_placements.append(("R3", "R_0805", *R3_POS, 0, "B"))
+    # C28: ESP32 +3V3 bulk cap (10uF, 2.8mm from U1 pin 2)
+    passive_placements.append(("C28", "C_0805", *C28_POS, 90, "B"))
     for ref, fp, cx, cy, rot, lc in passive_placements:
         _PADS[ref] = _compute_pads(fp, cx, cy, rot, lc)
 
@@ -3903,6 +3906,13 @@ def _passive_traces():
     for i, ref in enumerate(PULL_UP_REFS):
         rx = 43 + i * 5
         ry = 46
+        # CRITICAL FIX: i=10 (R14, BTN_L, GPIO45) must NOT have external pull-up.
+        # GPIO45 is a VDD_SPI strapping pin: HIGH=1.8V (wrong for PSRAM), LOW=3.3V (correct).
+        # With pull-up, GPIO45=HIGH at boot → VDD_SPI=1.8V → PSRAM fails.
+        # Fix: skip +3V3 connection for R14. Firmware uses internal pull-up after boot.
+        # R14 is marked DNP (Do Not Populate) in BOM.
+        if i == 10:
+            continue  # no +3V3 pull-up for BTN_L (GPIO45 strapping pin)
         # DFM v5: shift via further LEFT to clear button B.Cu verts.
         # Default: via_x = rx-1.20, via_y = 44.5
         # Per-index overrides for specific B.Cu vert conflicts.
@@ -4041,6 +4051,21 @@ def _passive_traces():
         parts.append(_seg(c26_p2[0], c26_p2[1], c26_p2[0], c26_p2[1] + 1.5,
                           "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(c26_p2[0], c26_p2[1] + 1.5, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # C28 ESP32 +3V3 bulk cap (10uF, rotated 90°): pad "1" -> +3V3, pad "2" -> GND.
+    # At (86,24), 2.8mm from U1 pin 2. Improves PSRAM burst transient response.
+    c28_p1 = _pad("C28", "1")
+    c28_p2 = _pad("C28", "2")
+    if c28_p1:
+        parts.append(_seg(c28_p1[0], c28_p1[1], c28_p1[0], c28_p1[1] - 1.5,
+                          "B.Cu", W_PWR_LOW, n_3v3))
+        parts.append(_via_net(c28_p1[0], c28_p1[1] - 1.5, n_3v3,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    if c28_p2:
+        parts.append(_seg(c28_p2[0], c28_p2[1], c28_p2[0], c28_p2[1] + 1.5,
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(c28_p2[0], c28_p2[1] + 1.5, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C1 AMS1117 input: pad "1" -> +5V (near VIN), pad "2" -> GND via
