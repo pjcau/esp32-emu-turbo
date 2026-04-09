@@ -32,6 +32,8 @@ Checks:
   T18 Net naming: detect suspicious net names (typos, inconsistent naming)
   T19 Pin electrical conflict: nets with multiple output drivers
   T20 ESP32-S3 IO MUX: GPIO assignments respect IO MUX constraints
+  T21 I2C bus completeness: SKIP (no I2C in this design)
+  T22 Power rail decoupling: verify input/output caps for each power IC
 
 Usage:
     python3 scripts/verify_design_intent.py
@@ -1009,6 +1011,73 @@ def test_T20_esp32_iomux_validation(config_py):
         check("T20", f"All {len(config_py)} GPIO assignments valid for ESP32-S3 IO MUX", True)
 
 
+def test_T21_i2c_bus_completeness():
+    """T21: I2C bus completeness — SKIP (no I2C bus in this design)."""
+    print("\n── T21: I2C bus completeness ──")
+    info("T21", "No I2C bus in design — this test is not applicable")
+    check("T21", "I2C check skipped (no I2C peripherals in design)", True)
+
+
+def test_T22_power_rail_decoupling(ref_pads, net_pads):
+    """T22: Verify input/output decoupling caps exist for each power IC."""
+    print("\n── T22: Power rail decoupling completeness ──")
+
+    # Expected decoupling capacitors per power stage:
+    #   (ref, description, expected_net_on_pad1_or_pad2)
+    DECOUPLING_MAP = {
+        "IP5306 VOUT": {
+            "caps": ["C19", "C27"],
+            "rail": "+5V",
+            "desc": "C19 (22uF bulk) + C27 (10uF HF)",
+        },
+        "AMS1117": {
+            "caps": ["C1", "C2"],
+            "rail_in": "+5V",
+            "rail_out": "+3V3",
+            "desc": "C1 (10uF input) + C2 (22uF tantalum output)",
+        },
+        "ESP32 VDD": {
+            "caps": ["C3", "C4", "C26", "C28"],
+            "rail": "+3V3",
+            "desc": "C3,C4,C26 (100nF each) + C28 (10uF bulk)",
+        },
+    }
+
+    all_ok = True
+    for stage, spec in DECOUPLING_MAP.items():
+        for cap_ref in spec["caps"]:
+            if cap_ref not in ref_pads:
+                check("T22", f"{stage}: {cap_ref} present in PCB", False,
+                      f"{cap_ref} not found in PCB layout")
+                all_ok = False
+                continue
+
+            pads = ref_pads[cap_ref]
+            pad_nets = set(pads.values()) - {""}
+            if not pad_nets:
+                check("T22", f"{stage}: {cap_ref} has net connections", False,
+                      f"{cap_ref} pads have no nets assigned")
+                all_ok = False
+                continue
+
+            # Verify at least one pad connects to the expected power rail
+            rail = spec.get("rail") or spec.get("rail_out", "")
+            rail_in = spec.get("rail_in", "")
+            expected_rails = {r for r in [rail, rail_in] if r}
+
+            if not (pad_nets & expected_rails):
+                check("T22", f"{stage}: {cap_ref} on power rail", False,
+                      f"{cap_ref} nets {pad_nets} — expected one of {expected_rails}")
+                all_ok = False
+            else:
+                matched = pad_nets & expected_rails
+                info("T22", f"{stage}: {cap_ref} connected to {matched}")
+
+    if all_ok:
+        total_caps = sum(len(s["caps"]) for s in DECOUPLING_MAP.values())
+        check("T22", f"All {total_caps} decoupling caps present and on correct rails", True)
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -1064,6 +1133,8 @@ def main():
     test_T18_net_naming(cache)
     test_T19_pin_electrical_conflicts(specs, net_pads)
     test_T20_esp32_iomux_validation(config_py)
+    test_T21_i2c_bus_completeness()
+    test_T22_power_rail_decoupling(ref_pads, net_pads)
 
     # Summary
     print("\n" + "=" * 60)

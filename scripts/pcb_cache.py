@@ -55,7 +55,15 @@ def parse_pcb_full(path=None):
     """
     if path is None:
         path = _DEFAULT_PCB
-    text = Path(path).read_text(encoding="utf-8")
+    for _enc in ("utf-8", "latin-1", "cp1252"):
+        try:
+            text = Path(path).read_text(encoding=_enc)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        raise UnicodeDecodeError("utf-8", b"", 0, 1,
+                                 f"Cannot decode {path} with utf-8/latin-1/cp1252")
 
     nets = []
     pads = []
@@ -259,6 +267,18 @@ def parse_pcb_full(path=None):
     # ── filled_polygon count ──────────────────────────────────────
     filled_polygons = len(re.findall(r'\(filled_polygon\b', text))
 
+    # ── Net type classification ───────────────────────────────────
+    _POWER_PREFIXES = ("+", "VCC", "VBUS", "BAT+", "LX")
+    net_types: dict[str, str] = {}
+    for n in nets:
+        name = n["name"]
+        if name == "GND" or name.startswith("GND"):
+            net_types[name] = "gnd"
+        elif any(name.startswith(p) for p in _POWER_PREFIXES):
+            net_types[name] = "power"
+        else:
+            net_types[name] = "signal"
+
     return {
         "version": _CACHE_VERSION,
         "pcb_hash": "",  # filled by build_cache
@@ -269,6 +289,7 @@ def parse_pcb_full(path=None):
             "filled_polygons": filled_polygons,
         },
         "nets": nets,
+        "net_types": net_types,
         "pads": pads,
         "vias": vias,
         "segments": segments,
