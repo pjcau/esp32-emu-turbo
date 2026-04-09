@@ -166,6 +166,25 @@ Simulates IP5306 boost → AMS1117 LDO → ESP32 load:
 - Decoupling cap effectiveness (C17, C27, C1, C19)
 - ESP32 WiFi burst response (200mA → 350mA in 10µs)
 
+### 1j. Run electrical review scripts
+
+```bash
+# Strapping pin verification (12 tests)
+python3 scripts/verify_strapping_pins.py
+
+# Decoupling capacitor adequacy (25 tests)
+python3 scripts/verify_decoupling_adequacy.py
+
+# Power sequencing verification (26 tests)
+python3 scripts/verify_power_sequence.py
+```
+
+| Script | Tests | What it catches |
+|--------|-------|-----------------|
+| `verify_strapping_pins.py` | 12 | Wrong boot state, GPIO45 VDD_SPI conflict, EN RC timing, pull-up skip |
+| `verify_decoupling_adequacy.py` | 25 | Insufficient capacitance per IC datasheet, missing HF bypass |
+| `verify_power_sequence.py` | 26 | Power chain topology, upstream/downstream ordering, GND continuity |
+
 ### 2. Manual review against checklist
 
 Read `review-checklist.md` and verify each domain:
