@@ -99,13 +99,11 @@ def test_en_reset_chain(net_refs, name_to_id, id_to_name):
     """1. EN reset chain: SW_RST -> EN net -> ESP32 pin 3 (EN)."""
     print("\n── EN Reset Chain ──")
 
-    # KNOWN LIMITATION: SW_RST via (98,60) is NOT routed to U1 pin 3 (EN).
-    # Any F.Cu path crosses 16+ existing traces. ESP32-S3-WROOM-1 has
-    # internal 10k pull-up + 0.1uF on EN → chip boots without external
-    # connection. Reset requires power cycle. Will fix in next revision.
-    # Check SW_RST side only (EN via exists, route to U1 incomplete).
-    verify_chain("EN reset (SW_RST side)", "EN", ["SW_RST"], net_refs, name_to_id, id_to_name)
-    print("  WARN  EN route to U1 pin 3 incomplete — reset requires power cycle")
+    # Full chain check: EN net must connect BOTH SW_RST and U1.
+    # Currently FAILS because SW_RST→U1 route is incomplete (no trace from
+    # via at 98,60 to U1 pin 3 at 88.75,24.78 — F.Cu path crosses 16+ traces).
+    # ESP32 boots via internal pull-up, but reset button does not work.
+    verify_chain("EN reset", "EN", ["SW_RST", "U1"], net_refs, name_to_id, id_to_name)
 
 
 def test_audio_chain(net_refs, name_to_id, id_to_name):
