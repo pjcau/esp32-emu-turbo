@@ -38,7 +38,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | File                        | Description                              |
 | --------------------------- | ---------------------------------------- |
 | `bom.csv`                   | Bill of Materials (JLCPCB format)        |
-| `cpl.csv`                   | Component Placement List (75 components) |
+| `cpl.csv`                   | Component Placement List (80 components) |
 | `bom-summary.md`            | Human-readable BOM with cost estimate    |
 | `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference)             |
 
@@ -67,7 +67,25 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v2.3 — 2026-04-07 (current)
+### v3.2 — 2026-04-09 (current)
+
+**Full electrical review, firmware audit fixes, 3D component models, verification suite expansion:**
+
+- **GPIO45 strapping fix** -- R14 pull-up DNP, firmware uses internal pull-up after boot (VDD_SPI safe)
+- **C28 bulk capacitor** added for ESP32 3V3 rail decoupling adequacy
+- **13 DRC shorts fixed** -- pad-net assignments, F.Cu bridge removal, trace clearance
+- **9 hardware audit bugs resolved** (2 critical) -- firmware + schematic sync
+- **Electrical review scripts** -- strapping pins, decoupling adequacy, power sequence, component connectivity
+- **Adversarial verification** -- signal chain completeness, datasheet net verification
+- **73 3D component models** injected for PCBA raytraced rendering
+- **11 PCBA renders** updated at 1920x1080 (top, bottom, isometric, detail views)
+- **SPICE**: 5V ripple 13.5mV, 3V3 ripple 0mV -- both within spec
+- **Verification**: DFM 115/115, DFA 9/9, JLCPCB 25/25, polarity 46/47 (C28 coverage gap), datasheet 224/224, signal chain 54/54, strapping 12/12, decoupling 25/25, power sequence 26/26, connectivity 2/2, BOM/CPL/PCB 10/10, SPICE PASS
+- **Total test count**: 1200+ across 12 verification scripts
+- **Known limitations**: EN route incomplete (reset requires power cycle), R3 unrouted
+- **Component count**: 26 unique parts, 80 placements | **Vias**: 303 | **Traces**: 527
+
+### v2.3 — 2026-04-07
 
 **J3 battery connector final fix — rotation 180° + position correction:**
 
@@ -255,12 +273,17 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | --------------------------- | --------------------------------------------------- |
 | DFM v2 Tests                | PASS (115/115 -- includes 22 JLCDFM factory rules)  |
 | DFA Tests                   | PASS (9/9 -- BOM/CPL, aperture ratio, tombstoning)  |
-| Polarity Tests              | PASS (47/47 -- 135 strict + 106 zone-ok = 241 pins) |
-| Datasheet Tests             | PASS (29/29 -- pin count, pitch, drill, NPTH)       |
+| Polarity Tests              | 46/47 (known C28 coverage gap)                      |
+| Datasheet Net Tests         | PASS (224/224 -- 34 components, 259 checks)          |
+| Signal Chain Tests          | PASS (54/54 -- all signal paths complete)            |
+| Strapping Pin Tests         | PASS (12/12 -- GPIO0, GPIO3, GPIO45, GPIO46)         |
+| Decoupling Adequacy         | PASS (25/25 -- HF + bulk for all power pins)         |
+| Power Sequence Tests        | PASS (26/26 -- topology + GND continuity)            |
+| Component Connectivity      | PASS (2/2 -- 80/80 BOM components connected)         |
+| BOM/CPL/PCB Cross-Check     | PASS (10/10 -- consistency verified)                 |
 | SPICE Power Simulation      | PASS (5V ripple 13.5mV, 3V3 ripple 0mV)            |
-| JLCPCB Validation           | PASS (25/26 -- silkscreen height 0.8mm cosmetic)    |
-| PCB Review Score            | 99/100 (8 domains scored)                           |
-| Via annular ring            | PASS (284 vias, all >= 0.075mm)                     |
+| JLCPCB Validation           | PASS (25/25 -- 1 warning: GND trace width)           |
+| Via annular ring            | PASS (303 vias, all >= 0.075mm)                     |
 | Via hole-to-hole            | PASS (min gap >= 0.25mm)                            |
 | Trace spacing               | PASS (0 violations)                                 |
 | Gerber file count           | PASS (14 files in zip)                              |
