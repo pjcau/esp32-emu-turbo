@@ -27,7 +27,9 @@ ZONE_ONLY_REFS: Set[str] = set()
 # Note: MH1-MH6 not in this design; SPK1 has direct net assignments
 
 # Components not in BOM but present in PCB (fiducials, test points)
-NON_BOM_REFS: Set[str] = {"FID1", "FID2", "FID3", "SPK1"}
+NON_BOM_REFS: Set[str] = {"FID1", "FID2", "FID3", "SPK1", "R14"}
+# R14: GPIO45 (BTN_L) pull-up — DNP to avoid VDD_SPI=1.8V strapping conflict.
+# Footprint kept on PCB for optional populate. Firmware uses internal pull-up.
 
 # Proximity threshold for segment-to-pad match (mm)
 PROXIMITY_MM = 0.2
