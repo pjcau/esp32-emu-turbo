@@ -866,8 +866,10 @@ def _power_traces():
     # Pad 9 to pad 11: no explicit stub needed — CC2 B.Cu vertical at x=78.25
     # runs between these pads at y=68.83, blocking any horizontal stub.
     # Both pads have VBUS net assigned; zone fill on In2.Cu connects them.
-    # Shield pads 13, 14, 13b, 14b → GND net assignment.
+    # Shield pads 13, 14, 13b, 14b → GND net assignment (direct to GND).
     # THT pads have plated barrels connecting to In1.Cu GND zone automatically.
+    # NOTE: USB shield tied directly to signal GND (no RC filter). Acceptable for
+    # prototype; for v2 consider 1M||4.7nF between shield and GND to reduce EMI.
     _PAD_NETS[("J1", "13")] = n_gnd
     _PAD_NETS[("J1", "14")] = n_gnd
     _PAD_NETS[("J1", "13b")] = n_gnd
@@ -1168,7 +1170,9 @@ def _power_traces():
 
     # ── AMS1117 thermal vias: 2x2 grid under tab pad (pin 4) ──────
     # Tab pad center at am_tab = (125.0, 52.35), size 3.6x1.8mm.
-    # Tab = VOUT (+3V3). Thermal vias connect tab to In2.Cu +3V3 zone.
+    # Tab = VOUT (+3V3). Thermal vias connect tab to In2.Cu +3V3 zone for
+    # heat spreading. At 500mA: P_diss = 1.7V * 0.5A = 0.85W. SOT-223 with
+    # 4 thermal vias reduces thermal resistance from ~90 to ~50 C/W.
     # 2x2 grid with ~1.0mm spacing, centered on tab pad.
     # Via size 0.50mm, drill 0.20mm (annular ring 0.15mm, JLCPCB OK).
     # Positions: 2x2 grid, ±0.50mm Y spacing for copper gap ≥0.40mm.
@@ -1708,6 +1712,9 @@ def _display_traces():
     # LCD_RD tied HIGH (read strobe disabled — display is write-only).
     # LCD_BL (LED-A) tied to +3V3 (always-on backlight, per ILI9488 datasheet:
     #   pin 33 LED-A = backlight anode 2.9-3.3V, pins 34-36 LED-K = cathodes to GND).
+    # NOTE: No series current-limiting resistor. Most ILI9488 bare panels have
+    # internal LED current limiting (typ. 20mA/string). Verify with specific panel
+    # datasheet. If panel draws >120mA on backlight, add 1-10ohm series resistor.
     # Route LEFT from FPC pads to vias that connect to In2.Cu +3V3 zone.
     # VIA_X_PWR (133.6) conflicts with LCD_WR/GND approach traces.
     # LCD data approach verticals: LCD_D7@131.70, LCD_D6@131.00, LCD_D5@134.50.

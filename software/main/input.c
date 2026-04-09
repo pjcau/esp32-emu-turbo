@@ -39,10 +39,14 @@ esp_err_t input_init(void)
     ESP_LOGI(TAG, "Initializing %d buttons", (int)NUM_BUTTONS);
 
     for (int i = 0; i < NUM_BUTTONS; i++) {
+        /* BTN_L (GPIO45) has no external pull-up (R14 DNP to avoid VDD_SPI
+         * strapping conflict). Use internal pull-up (~45kΩ) instead.
+         * All other buttons use external 10kΩ pull-up on PCB. */
+        bool needs_internal_pullup = (s_buttons[i].gpio == BTN_L);
         gpio_config_t cfg = {
             .pin_bit_mask = 1ULL << s_buttons[i].gpio,
             .mode         = GPIO_MODE_INPUT,
-            .pull_up_en   = GPIO_PULLUP_DISABLE,   /* external 10k on PCB */
+            .pull_up_en   = needs_internal_pullup ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE,
             .pull_down_en = GPIO_PULLDOWN_DISABLE,
             .intr_type    = GPIO_INTR_DISABLE,
         };

@@ -1,6 +1,14 @@
 /*
  * ESP32 Emu Turbo — Audio Driver
- * I2S standard mode → PAM8403 Class-D amplifier → 28mm speaker
+ * I2S PDM TX mode → PAM8403 Class-D amplifier → 28mm speaker
+ *
+ * Architecture: ESP32-S3 PDM output on I2S_DOUT (GPIO17) produces a 1-bit
+ * sigma-delta stream. The existing RC network (0.47uF coupling cap + 20k bias
+ * resistors + PAM8403 input impedance) acts as a low-pass filter to extract
+ * the analog audio signal. No external DAC needed.
+ *
+ * PDM TX only uses the DOUT pin (BCLK/LRCK are not externally connected,
+ * which matches the PCB design where only GPIO17 is routed to PAM8403).
  */
 
 #include "audio.h"
@@ -8,7 +16,7 @@
 
 #include "esp_log.h"
 #include "esp_check.h"
-#include "driver/i2s_std.h"
+#include "driver/i2s_pdm.h"
 #include "freertos/FreeRTOS.h"
 
 #include <math.h>
@@ -20,7 +28,7 @@ static i2s_chan_handle_t s_tx_chan = NULL;
 
 esp_err_t audio_init(void)
 {
-    ESP_LOGI(TAG, "Initializing I2S audio (%d Hz, %d-bit)",
+    ESP_LOGI(TAG, "Initializing I2S PDM audio (%d Hz, %d-bit)",
              AUDIO_SAMPLE_RATE, AUDIO_BITS);
 
     /* Allocate a new TX channel */
@@ -33,27 +41,24 @@ esp_err_t audio_init(void)
         TAG, "I2S channel alloc failed"
     );
 
-    /* Standard (Philips) mode config */
-    i2s_std_config_t std_cfg = {
-        .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(AUDIO_SAMPLE_RATE),
-        .slot_cfg = I2S_STD_PHILIPS_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
+    /* PDM TX mode: 1-bit sigma-delta output on DOUT pin.
+     * The oversampling ratio and internal clock are managed by the driver.
+     * Only the DOUT pin is needed — no BCLK/WS external connections. */
+    i2s_pdm_tx_config_t pdm_cfg = {
+        .clk_cfg = I2S_PDM_TX_CLK_DEFAULT_CONFIG(AUDIO_SAMPLE_RATE),
+        .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),
         .gpio_cfg = {
-            .mclk = I2S_GPIO_UNUSED,
-            .bclk = I2S_BCLK,
-            .ws   = I2S_LRCK,
+            .clk = I2S_GPIO_UNUSED,
             .dout = I2S_DOUT,
-            .din  = I2S_GPIO_UNUSED,
             .invert_flags = {
-                .mclk_inv = false,
-                .bclk_inv = false,
-                .ws_inv   = false,
+                .clk_inv = false,
             },
         },
     };
 
     ESP_RETURN_ON_ERROR(
-        i2s_channel_init_std_mode(s_tx_chan, &std_cfg),
-        TAG, "I2S std mode init failed"
+        i2s_channel_init_pdm_tx_mode(s_tx_chan, &pdm_cfg),
+        TAG, "I2S PDM TX mode init failed"
     );
 
     ESP_RETURN_ON_ERROR(
@@ -61,7 +66,7 @@ esp_err_t audio_init(void)
         TAG, "I2S channel enable failed"
     );
 
-    ESP_LOGI(TAG, "Audio initialized: I2S %d Hz mono", AUDIO_SAMPLE_RATE);
+    ESP_LOGI(TAG, "Audio initialized: I2S PDM TX %d Hz mono", AUDIO_SAMPLE_RATE);
     return ESP_OK;
 }
 

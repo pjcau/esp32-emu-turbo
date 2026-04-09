@@ -9,13 +9,13 @@ FPC 40-pin pinout (from ILI9488 panel datasheet):
   9:     CS → GPIO12
   10:    DC/RS → GPIO14
   11:    WR → GPIO46
-  12:    RD → GPIO3
+  12:    RD → tied +3V3 (write-only, no GPIO)
   13-14: SPI SDI/SDO — NC
   15:    RESET → GPIO13
   16:    GND
   17-24: DB0-DB7 → GPIO4-11
   25-32: DB8-DB15 — NC (8-bit mode)
-  33:    LED-A → GPIO45 (backlight anode)
+  33:    LED-A → tied +3V3 (always-on backlight, no GPIO)
   34-36: LED-K → GND (backlight cathode)
   37:    GND
   38:    IM0 → +3V3 (HIGH for 8080 8-bit)
@@ -60,8 +60,8 @@ class DisplaySheet(SchematicSheet):
             ("LCD_RST", -7.62, "GPIO13 (FPC15)"),
             ("LCD_DC", -5.08, "GPIO14 (FPC10)"),
             ("LCD_WR", -2.54, "GPIO46 (FPC11)"),
-            ("LCD_RD", 0, "GPIO3 (FPC12)"),
-            ("LCD_BL", 5.08, "GPIO45 (FPC33)"),
+            ("LCD_RD", 0, "+3V3 tied (FPC12, write-only)"),
+            ("LCD_BL", 5.08, "+3V3 tied (FPC33, always-on)"),
         ]
         self.text("Control signals:", dx - 60, dy - 14, 2, True)
         for net, yoff, gpio in ctrl_pins:
@@ -133,7 +133,7 @@ class DisplaySheet(SchematicSheet):
         )
         self.text(
             "- WR strobes data on rising edge,"
-            " RD directly from GPIO3", 30, ny + 34,
+            " RD tied HIGH (+3V3, write-only mode)", 30, ny + 34,
         )
         self.text(
             "- No level shifter: ESP32-S3 GPIO = 3.3V"

@@ -10,6 +10,7 @@
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
 #include "driver/spi_common.h"
+#include "driver/gpio.h"
 
 #include <dirent.h>
 #include <string.h>
@@ -31,6 +32,15 @@ esp_err_t sdcard_init(void)
         .quadhd_io_num = -1,
         .max_transfer_sz = 4096,
     };
+
+    /* Enable internal pull-ups on SPI lines before bus init.
+     * The TF-01A is a bare SD card slot with no onboard pull-ups.
+     * SD spec requires pull-ups on CMD(MOSI), DAT0(MISO), CLK, DAT3(CS)
+     * for reliable initialization with all card brands. */
+    gpio_set_pull_mode(SD_MOSI, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(SD_MISO, GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(SD_CLK,  GPIO_PULLUP_ONLY);
+    gpio_set_pull_mode(SD_CS,   GPIO_PULLUP_ONLY);
 
     esp_err_t ret = spi_bus_initialize(SD_SPI_HOST, &bus_cfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {

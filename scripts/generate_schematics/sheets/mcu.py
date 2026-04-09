@@ -159,7 +159,7 @@ class MCUSheet(SchematicSheet):
         ty += 5
         self.text("GPIO12=CS  GPIO13=RST  GPIO14=DC", tx, ty)
         ty += 5
-        self.text("GPIO46=WR  GPIO3=RD  GPIO45=BL", tx, ty)
+        self.text("GPIO46=WR  (RD/BL tied +3V3 on FPC)", tx, ty)
         ty += 8
         self.text("Audio (I2S):", tx, ty, 2, True)
         ty += 5
@@ -167,7 +167,7 @@ class MCUSheet(SchematicSheet):
         ty += 8
         self.text("SD Card (SPI):", tx, ty, 2, True)
         ty += 5
-        self.text("GPIO36=MOSI  GPIO37=MISO  GPIO38=CLK  GPIO39=CS", tx, ty)
+        self.text("GPIO44=MOSI  GPIO43=MISO  GPIO38=CLK  GPIO39=CS", tx, ty)
         ty += 8
         self.text("Controls (active low, 10k pull-up):", tx, ty, 2, True)
         ty += 5
@@ -175,7 +175,7 @@ class MCUSheet(SchematicSheet):
         ty += 5
         self.text("Face:  GPIO2=A 48=B 47=X 21=Y", tx, ty)
         ty += 5
-        self.text("Sys:   GPIO18=START 0=SELECT 35=L 43=R", tx, ty)
+        self.text("Sys:   GPIO18=START 0=SELECT 45=L 3=R", tx, ty)
         ty += 8
         self.text("USB (native, firmware flash + debug):", tx, ty, 2, True)
         ty += 5
