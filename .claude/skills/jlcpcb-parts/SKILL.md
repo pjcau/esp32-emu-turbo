@@ -3,7 +3,7 @@ name: jlcpcb-parts
 description: Search JLCPCB/LCSC parts catalog and check BOM component availability
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, WebFetch, WebSearch
-argument-hint: [check | search <query> | <LCSC_PART>]
+argument-hint: [check | search <query> | footprint <LCSC_PART> | <LCSC_PART>]
 ---
 
 # JLCPCB Parts Search and BOM Check
@@ -37,7 +37,26 @@ Searches the JLCPCB parts catalog for components matching the query.
 2. Parse search results for part numbers, specs, prices
 3. Present top 5 matches with comparison table
 
-## Mode 3: `<LCSC_PART>` -- Part Lookup
+## Mode 3: `footprint <LCSC_PART>` -- Footprint Lookup (via EasyEDA API)
+
+**Argument:** `/jlcpcb-parts footprint C25804`
+
+Fetches footprint details for an LCSC part using the EasyEDA/JLCPCB component API (same method as JLC2KiCad_lib).
+
+### Steps
+
+1. Run `python3 scripts/jlcpcb_parts.py footprint <LCSC_PART>`
+2. The script queries `https://easyeda.com/api/products/<LCSC_PART>/components?version=6.5.40`
+3. Extracts: footprint name, pad count, body dimensions, 3D model availability, datasheet URL
+4. Reports results in a table format
+
+### Use Cases
+
+- Verify a BOM component's footprint matches the PCB design
+- Check if a 3D model exists for PCBA rendering
+- Compare footprint dimensions against datasheet
+
+## Mode 4: `<LCSC_PART>` -- Part Lookup
 
 **Argument:** `/jlcpcb-parts C25804`
 
