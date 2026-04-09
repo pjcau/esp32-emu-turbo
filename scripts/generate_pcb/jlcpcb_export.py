@@ -262,8 +262,11 @@ def _build_placements():
 
     # ── Button pull-up resistors (y=46, x=43..103, 5mm spacing) ──
     # Shifted left to avoid IP5306 at x=110
+    # R14 is DNP (GPIO45/BTN_L strapping pin — internal pull-up used instead)
     pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
     for i, ref in enumerate(pull_up_refs):
+        if ref == "R14":
+            continue  # DNP: GPIO45 VDD_SPI strapping, no external pull-up
         p.append((ref, "10k", "R_0805",
                   43 + i * 5, 46, 0, "bottom"))
 

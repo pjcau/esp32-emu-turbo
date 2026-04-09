@@ -42,7 +42,7 @@
 #define SD_CLK              GPIO_NUM_38
 #define SD_CS               GPIO_NUM_39
 #define SD_SPI_HOST         SPI2_HOST
-#define SD_SPI_FREQ_KHZ     40000     /* 40 MHz */
+#define SD_SPI_FREQ_KHZ     20000     /* 20 MHz (traces ~150mm + 6 vias, 40MHz unreliable) */
 #define SD_MOUNT_POINT      "/sdcard"
 
 /* ── Audio: I2S → PAM8403 ────────────────────────────────────────── */

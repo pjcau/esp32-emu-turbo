@@ -32,3 +32,10 @@ CONFIG_FREERTOS_HZ=1000
 
 # Log level — Info (for development)
 CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# USB-CDC console — route ESP_LOGx output through USB-C port
+# (no UART TX/RX GPIOs are routed on PCB)
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# Task watchdog — 10s timeout for emulation frames
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=10

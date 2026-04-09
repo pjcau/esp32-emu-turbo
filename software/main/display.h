@@ -1,6 +1,6 @@
 /*
  * ESP32 Emu Turbo — Display Driver
- * ST7796S 320x480, 8-bit 8080 parallel interface via esp_lcd
+ * ILI9488 320x480, 8-bit 8080 parallel interface via esp_lcd
  */
 
 #pragma once

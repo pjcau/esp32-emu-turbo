@@ -1,6 +1,10 @@
 /*
  * ESP32 Emu Turbo — Display Driver
- * ST7796S 320x480, 8-bit 8080 parallel interface via esp_lcd
+ * ILI9488 320x480, 8-bit 8080 parallel interface via esp_lcd
+ *
+ * NOTE: ILI9488 in 8-bit parallel mode only supports RGB666 (18-bit color,
+ * 3 bytes/pixel). The esp_lcd_ili9488 component handles the RGB565→RGB666
+ * conversion internally when bits_per_pixel=16 is specified.
  */
 
 #include "display.h"
@@ -11,7 +15,7 @@
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_vendor.h"
-#include "esp_lcd_st7796.h"
+#include "esp_lcd_ili9488.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -31,7 +35,7 @@ void display_set_backlight(uint8_t brightness)
 
 esp_err_t display_init(void)
 {
-    ESP_LOGI(TAG, "Initializing ST7796S 8-bit i80 parallel display");
+    ESP_LOGI(TAG, "Initializing ILI9488 8-bit i80 parallel display");
 
     /* Backlight PWM — start OFF before display init */
     /* Backlight: no init needed (hardwired to 3V3 on PCB) */
@@ -47,7 +51,7 @@ esp_err_t display_init(void)
             LCD_D4, LCD_D5, LCD_D6, LCD_D7,
         },
         .bus_width           = LCD_BIT_WIDTH,
-        .max_transfer_bytes  = LCD_H_RES * LCD_V_RES * sizeof(uint16_t),
+        .max_transfer_bytes  = LCD_H_RES * 40 * sizeof(uint16_t),  /* 40 rows = 25KB DMA (was 300KB) */
         .psram_trans_align   = 64,
         .sram_trans_align    = 4,
     };
@@ -70,13 +74,13 @@ esp_err_t display_init(void)
     };
     ESP_RETURN_ON_ERROR(esp_lcd_new_panel_io_i80(i80_bus, &io_cfg, &io_handle), TAG, "panel IO init failed");
 
-    /* ST7796S panel driver */
+    /* ILI9488 panel driver — RGB666 native, accepts RGB565 input */
     esp_lcd_panel_dev_config_t panel_cfg = {
         .reset_gpio_num = LCD_RST,
         .rgb_ele_order  = LCD_RGB_ELEMENT_ORDER_BGR,
-        .bits_per_pixel = 16,
+        .bits_per_pixel = 16,  /* driver converts RGB565→RGB666 internally */
     };
-    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_st7796(io_handle, &panel_cfg, &s_panel), TAG, "ST7796S panel init failed");
+    ESP_RETURN_ON_ERROR(esp_lcd_new_panel_ili9488(io_handle, &panel_cfg, &s_panel), TAG, "ILI9488 panel init failed");
 
     /* Reset and init sequence */
     esp_lcd_panel_reset(s_panel);
