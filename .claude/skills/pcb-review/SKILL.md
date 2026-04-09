@@ -103,7 +103,7 @@ Compares PCB footprint dimensions against datasheet mechanical drawings.
 python3 scripts/verify_design_intent.py
 ```
 
-**Design intent verification** (`verify_design_intent.py`, 300+ checks):
+**Design intent verification** (`verify_design_intent.py`, 362 checks):
 Cross-checks GPIO assignments, net connections, and signal paths across ALL sources:
 firmware (`board_config.h`), schematic config (`config.py`), datasheet specs, and actual PCB layout.
 
@@ -116,6 +116,10 @@ firmware (`board_config.h`), schematic config (`config.py`), datasheet specs, an
 | T9-T11 | Reserved/invalid GPIO usage, strapping pin conflicts |
 | T12-T16 | Signal chain breaks: display, audio, SD, USB paths |
 | T17-T18 | Missing pull-ups, net naming issues |
+| T19 | Pin electrical type conflicts (multi-output on same net) |
+| T20 | ESP32-S3 IO MUX validation (GPIO range, PSRAM/flash reserved) |
+| T21 | I2C bus completeness (pull-ups, address conflicts) |
+| T22 | Power rail decoupling completeness (8 caps on correct rails) |
 
 ### 1g. Run DRC Audit (electrical connectivity)
 
@@ -199,6 +203,50 @@ python3 scripts/verify_signal_chain_complete.py
 |--------|-------|-----------------|
 | `verify_component_connectivity.py` | 2 | BOM components with zero electrical connections (phantom parts) |
 | `verify_signal_chain_complete.py` | 53 | Nets that only connect to one endpoint (broken signal chains) |
+
+### 1l. Run net classification and board config validation
+
+```bash
+# Net function classifier — validates GPIO-to-net name consistency
+python3 scripts/net_classifier.py --validate
+
+# Board config drift detection — config.py vs board_config.h
+python3 scripts/generate_board_config.py --check
+```
+
+| Script | What it catches |
+|--------|-----------------|
+| `net_classifier.py --validate` | Net named "I2S_BCLK" on non-I2S GPIO, USB pins misused |
+| `generate_board_config.py --check` | Firmware board_config.h drifted from config.py master |
+
+### 1m. Run schematic-to-PCB netlist diff
+
+```bash
+python3 scripts/verify_netlist_diff.py
+```
+
+**Netlist cross-check** (`verify_netlist_diff.py`, 4 checks):
+Exports schematic XML netlist via `kicad-cli`, compares against PCB cache:
+- Missing routes (schematic net not in PCB)
+- Orphan PCB nets (PCB net not in schematic)
+- Missing footprints (component in schematic but not PCB)
+- Pin-to-net mismatches between schematic and PCB
+
+### 1n. Generate hardware test firmware (Phase 3 prototype)
+
+```bash
+python3 scripts/generate_hw_tests.py
+```
+
+**Hardware test generator** (20 tests in `software/test/test_hardware.c`):
+Auto-generates ESP-IDF Unity test firmware from `board_config.h`:
+- 12 button idle-HIGH tests (BTN_L internal pull-up)
+- LCD D0-D7 walking-1 short detection
+- SD SPI bus init + CMD0 probe
+- I2S PDM TX silence test
+- USB JTAG verification
+- 3.3V power rail ADC check
+- PSRAM 1MB pattern verify
 
 ### 2. Manual review against checklist
 
@@ -353,6 +401,11 @@ python3 scripts/validate_jlcpcb.py
 - `scripts/verify_test_points.py` — Debug probe accessibility (18 checks)
 - `scripts/erc_check.py` — ERC automation (KiCad native, artifact filtering)
 - `scripts/spice_power_check.py` — ngspice power supply simulation (+5V/+3V3 ripple, load transient)
+- `scripts/verify_design_intent.py` — Cross-source adversary (362 checks, T1-T22)
+- `scripts/verify_netlist_diff.py` — Schematic-to-PCB netlist cross-check (4 checks)
+- `scripts/net_classifier.py` — Net function classifier with GPIO validation
+- `scripts/generate_board_config.py` — Board config drift detection (config.py vs board_config.h)
+- `scripts/generate_hw_tests.py` — ESP-IDF Unity test generator (20 tests)
 - `scripts/generate_pcb/routing.py` — Trace routing
 - `scripts/generate_pcb/board.py` — Component placement
 - `scripts/generate_pcb/jlcpcb_export.py` — CPL/BOM export
