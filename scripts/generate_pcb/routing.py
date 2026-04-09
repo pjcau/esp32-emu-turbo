@@ -370,7 +370,7 @@ R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
 C1_POS = (120.0, 57.0)   # AMS1117 input cap — 3.2mm from VIN, left of SOT-223 body
 C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
-C3_POS = (69.5, 42.0)    # ESP32 decoupling 1 — DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm danger). At 69.5: gap=2.60mm clear
+C3_POS = (69.55, 42.0)   # ESP32 decoupling 1 — 0.05mm right of 69.5 (C3[2] gap to BTN_UP: 0.095→0.145mm)
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
 C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
 C28_POS = (86.0, 26.0)   # ESP32 +3V3 bulk cap (10uF) — 3.7mm from U1 pin 2, clear of F.Cu LCD traces
@@ -2918,9 +2918,9 @@ def _button_traces():
         _pcx = 43 + _i * 5
         _pu_pad_centers.append(_pcx - 0.95)  # pad "2" center
         _pu_pad_centers.append(_pcx + 0.95)  # pad "1" center
-    # Also add ESP32 decoupling cap pads that sit in approach column paths
-    _pu_pad_centers.append(C3_POS[0] - 0.95)  # C3 pad "2" at 68.55
-    _pu_pad_centers.append(C3_POS[0] + 0.95)  # C3 pad "1" at 70.45
+    # C3 decoupling cap near ESP32
+    _pu_pad_centers.append(C3_POS[0] - 0.95)  # C3 pad "2"
+    _pu_pad_centers.append(C3_POS[0] + 0.95)  # C3 pad "1"
     # NOTE: R3 pads at (64.05, 65.95) overlap BTN_DOWN approach column at x=65.55.
     # Adding to forbidden zones pushes BTN_L into BTN_DOWN. Pre-existing issue.
     _PU_PAD_FORBIDDEN_R = 0.80   # pad_hw(0.50) + trace_hw(0.125) + gap(0.175)

@@ -462,9 +462,7 @@ class PolarityVerificationTest(unittest.TestCase):
             actual = self.pad_net_map.get(key)
             if actual is None:
                 failures.append(f"  {ref} pin {pin}: pad not found in PCB")
-            elif actual != "" and actual != expected_net and not (
-                ref == "R3" and pin == "1" and actual == "BTN_DOWN"
-            ):  # R3:1 intentionally assigned BTN_DOWN (approach column overlap)
+            elif actual != "" and actual != expected_net:
                 failures.append(
                     f"  {ref} pin {pin}: expected '{expected_net}' or '' (zone), "
                     f"got '{actual}'"

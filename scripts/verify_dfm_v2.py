@@ -1556,7 +1556,7 @@ def test_trace_pad_different_net_clearance():
     Skips if pads appear unnetted (>90% net=0) — run after pad net injection.
     """
     print("\n── Trace-Pad Different-Net Clearance Test ──")
-    MIN_CLR = 0.09  # mm — JLCPCB 4-layer minimum (standard process: 0.10mm)
+    MIN_CLR = 0.10  # mm — JLCPCB recommended minimum trace-to-pad clearance
 
     segs = _cached_segments()
     pads = _get_cache()["pads"]

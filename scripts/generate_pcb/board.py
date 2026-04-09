@@ -501,7 +501,7 @@ def _component_placeholders():
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
     placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
-    placements.append(("C3", "C_0805", 69.5, 42, 0, "B.Cu"))  # DFM: was 68 (R3[1]@65.95 to C3[2]@67.05 gap=0.10mm=danger). At 69.5: C3[2]=68.55, R3[1]=65.95, gap=2.60mm clear
+    placements.append(("C3", "C_0805", 69.55, 42, 0, "B.Cu"))  # DFM: 0.05mm right (BTN_UP gap 0.095→0.145mm)
     placements.append(("C4", "C_0805", 92, 42, 0, "B.Cu"))  # DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715)
     placements.append(("C26", "C_0805", *routing.C26_POS, 90, "B.Cu"))  # ESP32 VDD bypass (3.6mm from pin 2)
 
