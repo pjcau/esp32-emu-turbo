@@ -10,8 +10,8 @@
 #include "esp_lcd_panel_ops.h"
 
 /**
- * Initialize the display: i80 bus, ST7796S panel, and backlight PWM.
- * After init the screen is cleared to black with backlight on.
+ * Initialize the display: i80 bus, ILI9488 panel (RGB666).
+ * After init the screen is cleared to black. Backlight is hardwired ON.
  */
 esp_err_t display_init(void);
 

@@ -39,3 +39,6 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 
 # Task watchdog — 10s timeout for emulation frames
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
+
+# Main task stack — display+SD+audio init need ~6KB (default 3584 too small)
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

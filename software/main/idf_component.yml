@@ -1,2 +1,2 @@
 dependencies:
-  espressif/esp_lcd_st7796: "^1.4.0"
+  espressif/esp_lcd_ili9488: "^1"

@@ -3,7 +3,7 @@
  *
  * Initializes all peripherals and runs through a test sequence:
  *   1. Power management (IP5306 battery status)
- *   2. Display (ST7796S color bars)
+ *   2. Display (ILI9488 color bars)
  *   3. Input (12-button live readout)
  *   4. SD card (mount + ROM listing)
  *   5. Audio (440 Hz test tone)
