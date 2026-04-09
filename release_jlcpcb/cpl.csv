@@ -32,7 +32,6 @@ R2,5.1k,R_0805,78.00mm,67.00mm,0,Bottom
 U4,USBLC6-2SC6,SOT-23-6,90.95mm,60.00mm,90,Bottom
 R22,22,R_0402,90.25mm,40.00mm,90,Bottom
 R23,22,R_0402,91.65mm,38.50mm,90,Bottom
-R3,10k,R_0805,65.00mm,42.00mm,0,Bottom
 C3,100nF,C_0805,69.50mm,42.00mm,0,Bottom
 C4,100nF,C_0805,92.00mm,42.00mm,0,Bottom
 C26,100nF,C_0805,91.50mm,21.00mm,90,Bottom
@@ -48,7 +47,6 @@ R10,10k,R_0805,73.00mm,46.00mm,0,Bottom
 R11,10k,R_0805,78.00mm,46.00mm,0,Bottom
 R12,10k,R_0805,83.00mm,46.00mm,0,Bottom
 R13,10k,R_0805,88.00mm,46.00mm,0,Bottom
-R14,10k,R_0805,93.00mm,46.00mm,0,Bottom
 R15,10k,R_0805,98.00mm,46.00mm,0,Bottom
 R19,10k,R_0805,103.00mm,46.00mm,0,Bottom
 R16,100k,R_0805,115.00mm,52.50mm,0,Bottom
