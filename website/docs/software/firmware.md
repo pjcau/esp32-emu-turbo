@@ -17,7 +17,7 @@ Standalone ESP-IDF v5.x project in `software/` that validates all hardware befor
 | Step | Task | Details | Status |
 |:---|:---|:---|:---|
 | 1.1 | ESP-IDF v5.x project setup | sdkconfig for N16R8 (240MHz, 16MB flash, 8MB PSRAM) | ✅ Done |
-| 1.2 | ST7796S display driver (i80 8-bit parallel) | `esp_lcd_panel_io_i80` + `esp_lcd_st7796` component, 20MHz | ✅ Done |
+| 1.2 | ILI9488 display driver (i80 8-bit parallel) | `esp_lcd_panel_io_i80` + `esp_lcd_ili9488` component, 20MHz | ✅ Done |
 | 1.3 | Display test pattern | Color bars, fill screen, status indicators | ✅ Done |
 | 1.4 | SD card (SPI mode) | `esp_vfs_fat_sdspi_mount`, FAT32, ROM directory scanner | ✅ Done |
 | 1.5 | 12-button input | GPIO polling @ 1ms, bitmask API, HW RC debounce | ✅ Done |
@@ -32,12 +32,12 @@ software/
 ├── sdkconfig.defaults          ESP32-S3 N16R8 hardware config
 ├── partitions.csv              4MB app + 12MB storage
 └── main/
-    ├── idf_component.yml       esp_lcd_st7796 ^1.4.0
+    ├── idf_component.yml       esp_lcd_ili9488 ^1.4.0
     ├── board_config.h          All GPIO pin definitions (source of truth)
     ├── main.c                  Test harness → interactive button display
-    ├── display.c/h             ST7796S 320×480 i80 parallel + LEDC backlight
+    ├── display.c/h             ILI9488 320×480 i80 parallel + LEDC backlight
     ├── input.c/h               12 buttons, active-low, bitmask polling
-    ├── sdcard.c/h              SPI @ 40MHz, FAT32, ROM listing
+    ├── sdcard.c/h              SPI @ 20MHz, FAT32, ROM listing
     ├── audio.c/h               I2S mono → PAM8403 amplifier
     └── power.c/h               IP5306 I2C battery level + charge status
 ```
@@ -158,7 +158,7 @@ Fork and adapt Retro-Go for our hardware. Retro-Go is included as a git submodul
 | 2.1 | Add `ducalex/retro-go` as submodule | `retro-go/` directory, upstream repo | ✅ Done |
 | 2.2 | Create target `targets/esp32-emu-turbo/` | `config.h` + `env.py` + `sdkconfig` | ✅ Done |
 | 2.3 | Docker build pipeline | `docker-compose.retro-go.yml` + Makefile targets | ✅ Done |
-| 2.4 | Custom display driver `st7796s_i80.h` | 8-bit i80 parallel via `esp_lcd_panel_io_i80`, async DMA, 5-buffer pool | ✅ Done |
+| 2.4 | Custom display driver `ili9488_i80.h` | 8-bit i80 parallel via `esp_lcd_panel_io_i80`, async DMA, 5-buffer pool | ✅ Done |
 | 2.5 | Frame scaling | Automatic via Retro-Go core (320x480 portrait, integer scale + letterbox) | ✅ Done |
 | 2.6 | Input mapping | 12 GPIO direct buttons + MENU=SELECT (GPIO 0) | ✅ Done |
 | 2.7 | Audio routing | I2S ext DAC (BCLK=15, WS=16, DATA=17) → PAM8403 | ✅ Done |
@@ -234,9 +234,9 @@ All 33 GPIO pins have been cross-verified between three sources with **zero disc
 - GPIO 43 is SD_MISO (was TX0 UART debug, replaced by USB native)
 - GPIO 26–32 are reserved for Octal PSRAM (cannot be used)
 
-### Display driver: `st7796s_i80.h`
+### Display driver: `ili9488_i80.h`
 
-Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 parallel interface. Located at `retro-go/components/retro-go/drivers/display/st7796s_i80.h`.
+Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 parallel interface. Located at `retro-go/components/retro-go/drivers/display/ili9488_i80.h`.
 
 | Feature | Value |
 |:---|:---|

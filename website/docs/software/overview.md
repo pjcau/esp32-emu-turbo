@@ -60,12 +60,12 @@ All systems run at full speed on ESP32-S3 N16R8 @ 240MHz. QEMU benchmark confirm
 
 ## Display Driver
 
-### ST7796S 8-bit Parallel (i80 Bus)
+### ILI9488 8-bit Parallel (i80 Bus)
 
-Retro-Go ships with an SPI-only ILI9341 driver. Our hardware uses 8-bit 8080 parallel which requires a custom driver. The firmware uses the [`esp_lcd_st7796`](https://components.espressif.com/components/espressif/esp_lcd_st7796) component with the `esp_lcd_panel_io_i80` bus API.
+Retro-Go ships with an SPI-only ILI9341 driver. Our hardware uses 8-bit 8080 parallel which requires a custom driver. The firmware uses the [`esp_lcd_ili9488`](https://components.espressif.com/components/espressif/esp_lcd_ili9488) component with the `esp_lcd_panel_io_i80` bus API.
 
 ```
-ESP32-S3                      ST7796S (4.0" 320x480)
+ESP32-S3                      ILI9488 (4.0" 320x480)
 ─────────                     ──────────────────────────
 GPIO 4-11  (D0-D7) ────────► DB0-DB7 (8-bit data bus)
 GPIO 12    (CS)     ────────► CS  (chip select)
@@ -97,7 +97,7 @@ The 8080 parallel bus has **4x the bandwidth** of SPI, leaving headroom for scal
 | Genesis | 320x224 | 320x448 (2x V) | Integer 2x vertical |
 | Master System | 256x192 | 256x384 (2x V) | Integer 2x vertical |
 
-The ST7796S at 320x480 is well-suited: most systems are ≤320px wide and can be doubled vertically for a crisp image with black bars.
+The ILI9488 at 320x480 is well-suited: most systems are ≤320px wide and can be doubled vertically for a crisp image with black bars.
 
 ---
 

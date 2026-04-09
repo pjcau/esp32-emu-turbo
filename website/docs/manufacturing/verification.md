@@ -123,7 +123,7 @@ LiPo 3.7V 5000mAh
 |:---|:---|:---|:---|
 | Button debounce (RC) | > 1 ms | 1.0 ms (10k x 100nF) | OK |
 | Display 8080 bus | 18.4 MB/s (60fps) | 20.0 MB/s (8-bit @ 20MHz) | 7.8% |
-| SPI SD card | — | 5.0 MB/s @ 40MHz | 1.3s load |
+| SPI SD card | — | 2.5 MB/s @ 20MHz | ~2.4s load |
 | I2S audio | — | BCLK 1.024 MHz / 8 MHz max | OK |
 | ESP32 EN reset | > 0.05 ms | 1.39 ms (10k x 100nF) | OK |
 
@@ -133,11 +133,11 @@ LiPo 3.7V 5000mAh
 |:---|:---|:---|:---|
 | R1, R2 | 5.1k | USB-C CC pull-down | USB spec: 4.7k–5.6k |
 | R3 | 10k | ESP32 EN pull-up | RC = 1ms with C3 |
-| R4–R15, R19 | 10k | Button pull-ups | Logic HIGH = 3.3V > 2.475V (Vih) |
+| R4–R13, R15, R19 | 10k | Button pull-ups | Logic HIGH = 3.3V > 2.475V (Vih) |
 | R16 | 100k | IP5306 KEY pull-down | Keeps KEY low when idle |
 | R17, R18 | 1k | LED current limiting | 1.3mA red, 1.1mA green |
 | C1 | 10uF | AMS1117 input | Datasheet requirement |
-| C2 | 22uF | AMS1117 output | Datasheet: >= 22uF |
+| C2 | 22uF tantalum (C7171) | AMS1117 output | Datasheet: >= 22uF |
 | C3, C4 | 100nF | ESP32 decoupling | Standard practice |
 | C5–C16, C20 | 100nF | Button debounce | RC = 1ms with 10k pull-ups |
 | C17, C18 | 10uF | IP5306 decoupling | Datasheet requirement |
@@ -155,8 +155,8 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 | Source | Components |
 |:---|:---|
 | Schematic (7 sub-sheets) | 68 unique refs |
-| PCB footprints | 89 refs |
-| JLCPCB CPL (assembly) | 79 refs |
+| PCB footprints | 90 refs |
+| JLCPCB CPL (assembly) | 78 refs |
 
 ### Off-board components (correct exclusions)
 
@@ -316,7 +316,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 12 component holes + 6 mounting holes + 302 vias = **320 drill operations**
+**Total holes:** 12 component holes + 6 mounting holes + 303 vias = **321 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -360,7 +360,7 @@ NPTH positioning holes are always sized from the component datasheet — never g
 
 | Type | Count | Drill Range | Annular Ring | Status |
 |------|-------|-------------|--------------|--------|
-| Signal vias | 302 | 0.20 mm | ≥ 0.075 mm | **PASS** |
+| Signal vias | 303 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 6 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
 | Component THT (J3 C173752) | 0.85 mm | ø1.6 mm | 0.375 mm | **PASS** |
