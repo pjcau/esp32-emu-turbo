@@ -350,7 +350,6 @@ def _silkscreen_labels():
         ("R1", "5.1k", 74.0, 67.0, 0, -2.0),
         ("R2", "5.1k", 78.0, 67.0, 5.0, -1.0),
         # ESP32 decoupling
-        ("R3", "10k", 65.0, 42.0, 0, -2.0),
         ("C3", "100nF", 69.5, 42.0, 0, -2.0),
         ("C4", "100nF", 92.0, 42.0, 0, -2.0),
         # LED resistors
@@ -500,7 +499,7 @@ def _component_placeholders():
     placements.append(("R23", "R_0402", *routing.R23_POS, 90, "B.Cu"))
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
-    placements.append(("R3", "R_0805", 65, 42, 0, "B.Cu"))
+    # R3 REMOVED: unrouted 10k resistor, no electrical function
     placements.append(("C3", "C_0805", 69.55, 42, 0, "B.Cu"))  # DFM: 0.05mm right (BTN_UP gap 0.095→0.145mm)
     placements.append(("C4", "C_0805", 92, 42, 0, "B.Cu"))  # DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715)
     placements.append(("C26", "C_0805", *routing.C26_POS, 90, "B.Cu"))  # ESP32 VDD bypass (3.6mm from pin 2)

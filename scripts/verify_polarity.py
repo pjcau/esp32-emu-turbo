@@ -343,8 +343,9 @@ for i, ref in enumerate(_PULL_UP_REFS):
     if i < len(_BTN_NETS_ORDERED):
         _zone(ref, [("1", _BTN_NETS_ORDERED[i])])
 
-# R3: ESP32 decoupling -- not routed with unique net
-_zone("R3", [("1", ""), ("2", "")])
+# C28: ESP32 +3V3 bulk cap (10uF 0805, rotated 90° at 86,26)
+# Both pads connect via zone fill (+3V3 and GND planes)
+_zone("C28", [("1", "+3V3"), ("2", "GND")])
 
 # ============================================================
 # C1-C4, C17-C19: Decoupling capacitors

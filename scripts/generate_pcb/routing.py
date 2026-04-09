@@ -563,8 +563,8 @@ def _init_pads():
     # Button debounce caps (y=50, x=43..103, 5mm spacing)
     for i, ref in enumerate(DEBOUNCE_REFS):
         passive_placements.append((ref, "C_0805", 43 + i * 5, 50, 0, "B"))
-    # R3: ESP32 strapping/pull-down resistor
-    passive_placements.append(("R3", "R_0805", *R3_POS, 0, "B"))
+    # R3 REMOVED: unrouted 10k resistor with no electrical function.
+    # Its pad at x=65.95 overlapped BTN_DOWN approach column at x=65.55.
     # C28: ESP32 +3V3 bulk cap (10uF, 2.8mm from U1 pin 2)
     passive_placements.append(("C28", "C_0805", *C28_POS, 90, "B"))
     for ref, fp, cx, cy, rot, lc in passive_placements:
@@ -2921,8 +2921,8 @@ def _button_traces():
     # C3 decoupling cap near ESP32
     _pu_pad_centers.append(C3_POS[0] - 0.95)  # C3 pad "2"
     _pu_pad_centers.append(C3_POS[0] + 0.95)  # C3 pad "1"
-    # NOTE: R3 pads at (64.05, 65.95) overlap BTN_DOWN approach column at x=65.55.
-    # Adding to forbidden zones pushes BTN_L into BTN_DOWN. Pre-existing issue.
+    # R3 removed — its pads at (64.05, 65.95) previously overlapped BTN_DOWN
+    # approach column at x=65.55. No longer an issue.
     _PU_PAD_FORBIDDEN_R = 0.80   # pad_hw(0.50) + trace_hw(0.125) + gap(0.175)
     used_approach_xs = set()
 
@@ -4245,8 +4245,8 @@ def _reset_boot_traces():
 
     SW_RST: EN pin to GND (hardware reset)
       - GND pads (3,4) connect via GND plane (In1.Cu) through vias
-      - Signal pads (1,2) connect to EN net via stub + via to In1/In2
-        then short B.Cu stub to R3/C3 EN junction
+      - Signal pads (1,2) connect to EN net via stub + via
+        then B.Cu route to U1 pin 3 (EN)
 
     SW_BOOT: GPIO0 to GND (download mode when held during reset)
       - GND pads (3,4) connect via GND plane (In1.Cu) through vias
@@ -4282,18 +4282,32 @@ def _reset_boot_traces():
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
     if rst_p1:
-        # EN signal: pad 1 (right pad at x=98) → short B.Cu stub up → via.
-        # KNOWN LIMITATION: SW_RST via (98,60) is NOT routed to U1 pin 3 (EN).
-        # Any F.Cu path crosses 16+ traces. ESP32-S3-WROOM-1 has internal
-        # 10k pull-up + 0.1uF on EN → chip boots without external connection.
-        # Reset requires power cycle. Route EN in next layout revision.
-        # Via at y=60.0: clears VBUS F.Cu (y=61, w=0.6→edge 60.7).
-        # Via edge at 60.0+0.3=60.3, gap=60.7-60.3=0.4mm ≥ 0.1mm ✓
+        # EN signal: pad 1 (right pad at x=98) → B.Cu stub up → via at (98, 60)
+        # → B.Cu vertical run down to y=24.78 → horizontal to U1 pin 3.
+        #
+        # B.Cu route analysis (verified clear):
+        #   Vertical leg x=98, y=60→24.78: passes between R15/C16 pads
+        #     R15:1 left edge 98.45, trace right edge 98.125, gap=0.325mm
+        #     R15:2 right edge 97.55, trace left edge 97.875, gap=0.325mm
+        #   Horizontal leg y=24.78, x=98→88.75: no vertical obstacles
+        #     U1:2 (+3V3) top edge 23.96, trace bottom edge 24.655, gap=0.695mm
+        #     U1:4 (LCD_D0) bottom edge 25.60, trace top edge 24.905, gap=0.695mm
         via_y = 60.0
+        # 1. SW_RST pad 1 → via at (98, 60)
         parts.append(_seg(rst_p1[0], rst_p1[1], rst_p1[0], via_y,
                           "B.Cu", W_SIG, n_en))
         parts.append(_via_net(rst_p1[0], via_y, n_en,
                               size=VIA_STD, drill=VIA_STD_DRILL))
+        # 2. Via (98, 60) → vertical B.Cu run to U1 pin 3 latitude
+        en_pin = _pad("U1", "3")  # (88.75, 24.78)
+        if en_pin:
+            en_x, en_y = en_pin
+            # Vertical: (98, 60) → (98, en_y)
+            parts.append(_seg(rst_p1[0], via_y, rst_p1[0], en_y,
+                              "B.Cu", W_SIG, n_en))
+            # Horizontal: (98, en_y) → (en_x, en_y) = U1 pin 3
+            parts.append(_seg(rst_p1[0], en_y, en_x, en_y,
+                              "B.Cu", W_SIG, n_en))
 
     # ── SW_BOOT (Boot/Download mode) ──
     # Pads after B.Cu mirroring: p1=(108,63.65) p2=(102,63.65) p3=(108,67.35) p4=(102,67.35)
@@ -4529,15 +4543,9 @@ def generate_all_traces():
     # trace IS the correct net for the pad (making it same-net = no DRC short).
     n_gnd = NET_ID["GND"]
     n_3v3 = NET_ID["+3V3"]
-    _PAD_NETS[("J4", "37")] = n_gnd      # FPC pin 37 = display GND
-    _PAD_NETS[("U2", "3")] = n_gnd       # IP5306 LED1 — NC per design, GND trace safe
-    _PAD_NETS[("U2", "4")] = n_gnd       # IP5306 LED2 — NC per design, GND trace safe
+    # Intentional pad-net assignments only (NC pads removed):
     _PAD_NETS[("U3", "2")] = n_3v3       # AMS1117 SOT-223 tab = VOUT (+3V3), intentional
-    _PAD_NETS[("SW_PWR", "4b")] = NET_ID["BTN_SELECT"]  # shell pad, mechanical anchor
-    _PAD_NETS[("SW_PWR", "4d")] = NET_ID["BTN_SELECT"]  # shell pad, mechanical anchor
-    _PAD_NETS[("U6", "8")] = NET_ID["SD_MISO"]  # DAT1 unused in SPI mode, SD_MISO trace safe
-    _PAD_NETS[("U6", "9")] = NET_ID["BTN_R"]    # CD unused, BTN_R trace safe
-    _PAD_NETS[("R3", "1")] = NET_ID["BTN_DOWN"] # R3 unused (no routing), BTN_DOWN trace through pad
+    _PAD_NETS[("U1", "3")] = NET_ID["EN"]  # EN pin, routed from SW_RST via B.Cu
 
     return "".join(all_parts)
 

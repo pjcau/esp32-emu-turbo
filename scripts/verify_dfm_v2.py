@@ -2130,6 +2130,8 @@ def test_trace_through_ic_pad():
         ("U5", "8"),
         # FPC J4: pin 42 is mounting pad (no internal connection)
         ("J4", "42"),
+        # FPC J4: pin 37 is NC per display datasheet (GND plane connects via zone)
+        ("J4", "37"),
         # ESP32-S3 (U1): pin 1 = 3V3 power (config.py), net not assigned in PCB
         ("U1", "1"),
         # IP5306 (U2): pins 3, 4 are true NC per datasheet

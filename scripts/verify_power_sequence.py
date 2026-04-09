@@ -127,43 +127,36 @@ def test_power_chain_topology():
 
 
 def test_en_rc_timing():
-    """Test 6-8: EN pin RC delay provides proper boot timing.
+    """Test 6-8: EN pin routing and boot timing.
 
-    The RC delay on EN ensures:
-    - 3V3 rail is stable before ESP32 starts
-    - Strapping pins are in correct state when sampled
-    - Brownout during ramp-up is avoided
+    ESP32-S3-WROOM-1 module has internal 10k pull-up + 0.1uF on EN.
+    External R3 was removed (unrouted, no electrical function).
+    EN is now directly routed from SW_RST via B.Cu to U1 pin 3.
+    C3 (100nF decoupling) remains near ESP32 for power stability.
     """
-    print("\n-- EN Pin RC Timing --")
+    print("\n-- EN Pin Routing --")
     cache = load_cache(PCB_FILE)
 
-    # Check R3 (10k) exists on EN net
+    # Check EN net exists
     en_net_id = None
     for n in cache["nets"]:
         if n["name"] == "EN":
             en_net_id = n["id"]
             break
 
-    r3_pad = _get_pad(cache, "R3", "1")
+    # EN pin (U1:3) should have EN net assigned (routed from SW_RST)
+    en_pin = _get_pad(cache, "U1", "3")
+    check("U1 pin 3 (EN) exists in PCB", en_pin is not None,
+          "U1 pad 3 not found")
+    if en_pin and en_net_id is not None:
+        check("U1 pin 3 has EN net assigned",
+              en_pin.get("net") == en_net_id,
+              f"net={en_pin.get('net')}, expected={en_net_id}")
+
+    # C3 (100nF decoupling) should still exist near ESP32
     c3_pad = _get_pad(cache, "C3", "1")
-
-    # R3 should connect EN to +3V3
-    check("R3 (10k pull-up) exists in PCB", r3_pad is not None,
-          "R3 pad 1 not found")
-
-    # C3 should be on EN net for RC delay
     check("C3 (100nF) exists in PCB", c3_pad is not None,
           "C3 pad 1 not found")
-
-    # R3/C3 form the EN RC circuit. They connect via traces to EN pin (pin 3).
-    # Physical distance can be up to 30mm since the RC function doesn't
-    # require proximity -- only the trace connection matters.
-    en_pin = _get_pad(cache, "U1", "3")
-    if en_pin and r3_pad:
-        d = _dist(en_pin["x"], en_pin["y"], r3_pad["x"], r3_pad["y"])
-        check(f"R3 within 30mm of ESP32 EN pin (pin 3)",
-              d < 30.0,
-              f"distance={d:.1f}mm")
 
     if en_pin and c3_pad:
         d = _dist(en_pin["x"], en_pin["y"], c3_pad["x"], c3_pad["y"])

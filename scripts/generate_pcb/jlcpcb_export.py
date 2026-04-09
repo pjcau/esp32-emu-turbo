@@ -227,7 +227,7 @@ def _build_placements():
     # Layout rows (Y increases downward in KiCad):
     #   y=35   IP5306 support caps (C17)
     #   y=37.5 IP5306 support caps (C18)
-    #   y=42   ESP32 decoupling (R3, C3, C4)
+    #   y=42   ESP32 decoupling (C3, C4)
     #   y=46   Pull-up resistors (R4-R15, R19) x=43..103
     #   y=50   Debounce caps (C5-C16, C20) x=43..103
 
@@ -248,7 +248,7 @@ def _build_placements():
               R23_POS[0], R23_POS[1], 90, "bottom"))
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
-    p.append(("R3", "10k", "R_0805", 65, 42, 0, "bottom"))
+    # R3 REMOVED: unrouted 10k, no electrical function
     p.append(("C3", "100nF", "C_0805", 69.5, 42, 0, "bottom"))  # DFM: synced with board.py
     p.append(("C4", "100nF", "C_0805", 92, 42, 0, "bottom"))  # DFM: synced with board.py
     from scripts.generate_pcb.routing import C26_POS
