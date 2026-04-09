@@ -71,3 +71,27 @@ R2-LOW-3: display_init() leaks bus/IO on partial failure
 R2-LOW-4: power_is_charging() true when no charger connected
 R2-LOW-5: J3 LCSC mismatch in datasheet_specs.py (C265003 vs C295747)
 R2-LOW-6: R16 described as "pull-down" in 3 files, actually pull-up
+
+## Round 3 Findings
+
+### CRITICAL (1) — FIXED
+**R3-CRIT-1**: idf_component.yml declared esp_lcd_st7796 but code uses esp_lcd_ili9488 → build fail. **Fixed**: changed to esp_lcd_ili9488.
+
+### FIXED (firmware)
+- Stack size 3584→8192 (CONFIG_ESP_MAIN_TASK_STACK_SIZE)
+- Removed unused esp_driver_ledc from CMakeLists.txt
+- Stale ST7796S comments in display.h, main.c
+
+### v2 HARDWARE IMPROVEMENTS (require PCB respin)
+| Bug | Severity | Issue | v2 Fix |
+|-----|----------|-------|--------|
+| R3-HIGH-1 | HIGH | 6 MH on PCB vs 4 in enclosure | Remove center 2 (needs routing rework) |
+| R3-HIGH-2 | HIGH | C28 under ESP32 module body | Move to x=68 (needs via reroute) |
+| R3-HIGH-3 | HIGH | PAM8403 OUTL floating, INL driven | Disconnect INL from I2S_DOUT |
+| R3-HIGH-4 | HIGH | No VBUS PTC fuse | Add MF-PSMF050X on VBUS |
+| R3-MED-1 | MEDIUM | No battery reverse polarity protection | Add P-MOSFET on BAT+ |
+| R3-MED-2 | MEDIUM | PDM no LP reconstruction filter | Add 1k+10nF RC before PAM8403 |
+| R3-MED-3 | MEDIUM | JST PH missing anchor pads | Add 2 mechanical pads |
+| R3-MED-4 | MEDIUM | IP5306 thermal vias outside EP pad | Move inside pad boundary |
+| R3-MED-5 | MEDIUM | USB-C 0.15mm pads mask_margin=0 | Set margin to 0.05mm |
+| R3-MED-6 | MEDIUM | FPC anchor pads floating | Tie to GND |

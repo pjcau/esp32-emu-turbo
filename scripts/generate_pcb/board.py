@@ -61,6 +61,8 @@ def enc_to_pcb(ex, ey):
 
 
 # ── Mounting hole positions (from enclosure.scad screw_positions) ──
+# NOTE: Enclosure only uses 4 corner bosses (center 2 removed for battery).
+# PCB keeps all 6 holes for mechanical flexibility and GND zone stitching.
 MOUNT_HOLES_ENC = [
     (-70, 30.5), (70, 30.5),
     (-70, -30.5), (70, -30.5),
