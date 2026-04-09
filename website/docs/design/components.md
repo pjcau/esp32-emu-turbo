@@ -8,6 +8,8 @@ sidebar_position: 1
 
 All components selected for the prototype, with direct purchase links.
 
+> **Interactive BOM viewer**: [Open Interactive BOM](/ibom/ibom.html) — click any component to highlight it on the PCB layout (dark mode, pin-1 markers).
+
 ---
 
 ## MCU — ESP32-S3

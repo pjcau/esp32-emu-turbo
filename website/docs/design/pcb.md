@@ -8,6 +8,8 @@ sidebar_position: 3
 
 Custom 4-layer PCB designed for fabrication and assembly by [JLCPCB](https://jlcpcb.com/). Maximum components assembled on-board to minimize manual soldering.
 
+> [**Interactive BOM Viewer**](/ibom/ibom.html) — click components to highlight on PCB layout
+
 ## PCB Renders
 
 ### 3D Raytraced Renders
