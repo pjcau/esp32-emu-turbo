@@ -51,9 +51,9 @@ POWER_ICS = {
 
 # Mounting hole positions (from board.py, approx PCB coords)
 MOUNT_HOLES = [
-    (10.0, 10.0), (150.0, 10.0),
-    (10.0, 37.5), (150.0, 37.5),
-    (10.0, 65.0), (150.0, 65.0),
+    (10.0, 7.0), (150.0, 7.0),     # top corners (enc ±70, 30.5)
+    (10.0, 68.0), (150.0, 68.0),   # bottom corners (enc ±70, -30.5)
+    (55.0, 37.5), (105.0, 37.5),   # center (enc ±25, 0)
 ]
 
 

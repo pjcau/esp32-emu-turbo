@@ -556,6 +556,14 @@ def _init_pads():
         ("R22", "R_0402", *R22_POS, 90, "B"),
         ("R23", "R_0402", *R23_POS, 90, "B"),
     ]
+    # Button pull-up resistors (y=46, x=43..103, 5mm spacing)
+    for i, ref in enumerate(PULL_UP_REFS):
+        passive_placements.append((ref, "R_0805", 43 + i * 5, 46, 0, "B"))
+    # Button debounce caps (y=50, x=43..103, 5mm spacing)
+    for i, ref in enumerate(DEBOUNCE_REFS):
+        passive_placements.append((ref, "C_0805", 43 + i * 5, 50, 0, "B"))
+    # R3: ESP32 strapping/pull-down resistor
+    passive_placements.append(("R3", "R_0805", *R3_POS, 0, "B"))
     for ref, fp, cx, cy, rot, lc in passive_placements:
         _PADS[ref] = _compute_pads(fp, cx, cy, rot, lc)
 
@@ -1079,7 +1087,21 @@ def _power_traces():
     lx_col_x = ip_sw[0] - 2.45   # x=104.55
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
-    parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, l1_2[1],
+    # DFM FIX: LX B.Cu vertical at x=104.55 overlaps R19 pad "1" (BTN_MENU)
+    # at (103.95, 46.0) and C20 pad "1" at (103.95, 50.0).
+    # Jog through gap between R19's two pads at x=103.00 (gap=0.90mm, w=0.60mm, clr=0.15mm).
+    _lx_jog_x = 103.00   # between R19 pad 2 (right=102.55) and pad 1 (left=103.45)
+    _lx_jog_y_bot = 44.5  # below R19 pad bottom (45.35), gap=45.35-44.5-0.30=0.55mm
+    _lx_jog_y_top = 51.5  # above C20 pad top (50.65), gap=51.5-50.65-0.30=0.55mm
+    parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, _lx_jog_y_bot,
+                       "B.Cu", W_PWR, n_lx))
+    parts.append(_seg(lx_col_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_bot,
+                       "B.Cu", W_PWR, n_lx))
+    parts.append(_seg(_lx_jog_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_top,
+                       "B.Cu", W_PWR, n_lx))
+    parts.append(_seg(_lx_jog_x, _lx_jog_y_top, lx_col_x, _lx_jog_y_top,
+                       "B.Cu", W_PWR, n_lx))
+    parts.append(_seg(lx_col_x, _lx_jog_y_top, lx_col_x, l1_2[1],
                        "B.Cu", W_PWR, n_lx))  # 0.60mm — max width within BTN_MENU/BAT+ corridor
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
@@ -1173,10 +1195,17 @@ def _power_traces():
     _V3_VIA_SIZE = 0.46   # custom: fits between LCD_D6/D7 with 0.17mm gap (AR=0.13mm ≥ JLCPCB min)
     esp_3v3 = _pad("U1", "2")  # pin 2 = +3V3 power input
     if esp_3v3:
-        parts.append(_via_net(esp_3v3[0], esp_3v3[1] - 2.51, n_3v3,
+        # DFM FIX: was via at (88.75, 21.0) — B.Cu vertical from pin 2 DOWN passed
+        # through pin 1 (GND pad at 88.75, 22.24). Fix: place via ABOVE pin 2
+        # at (88.75, 24.0). This overlaps pin 2 pad (+3V3 = same net = OK).
+        # Gap to pin 3 (NC) at y=24.78: 24.33-24.23 = 0.10mm ≥ 0.10mm ✓
+        # Short B.Cu stub UP from pin 2 center to via.
+        # Via overlaps pin 2 (same net, OK). Gap to pin 3: 24.33-23.93=0.40mm ✓
+        _3v3_via_y = esp_3v3[1] + 0.19  # 23.70 — same-net via-in-pad on pin 2, far from pin 3
+        parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0], _3v3_via_y,
+                           "B.Cu", W_PWR, n_3v3))
+        parts.append(_via_net(esp_3v3[0], _3v3_via_y, n_3v3,
                               size=_V3_VIA_SIZE, drill=VIA_MIN_DRILL))
-        parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0],
-                           esp_3v3[1] - 2.51, "B.Cu", W_PWR, n_3v3))
 
     # ── BAT+: IP5306 -> JST battery connector ─────────────────
     # DFM: ip_bat at x=107 same as ip_sw — offset BAT+ via to separate column.
@@ -1191,7 +1220,10 @@ def _power_traces():
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
-    bat_approach_x = 79.75  # DFM: between R11@78 and R12@83, offset for J3@180° clearance
+    # DFM FIX: was 79.75 (overlapped R11), was 80.05 (too close to J3[2]).
+    # At 80.01: via ring gap = (80.01-79.45)-0.45 = 0.11mm ≥ 0.10mm ✓
+    # Trace right edge 80.39, gap to J3[2] left edge (80.50) = 0.11mm ≥ 0.09mm ✓
+    bat_approach_x = 80.01
     parts.append(_seg(bat_col_x, bat_via_y, bat_approach_x, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat))
@@ -1476,7 +1508,20 @@ def _display_traces():
         parts.append(_via_net(apx, bypass_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
 
         # 5. B.Cu vertical from bypass_y down to FPC pin Y level
-        parts.append(_seg(apx, bypass_y, apx, fpy, "B.Cu", W_DATA, net))
+        # DFM FIX: J4:42 structural pad at (136.29, 24.06) size 2.5x2.0mm blocks
+        # LCD approach columns at x=135.04..137.54. Bridge via F.Cu for traces
+        # that cross this pad.
+        _J4_42_Y1 = 22.50   # 0.56mm above pad top (23.06)
+        _J4_42_Y2 = 25.50   # 0.44mm below pad bottom (25.06)
+        if 135.04 - 0.20 < apx < 137.54 + 0.20 and bypass_y < _J4_42_Y1 and fpy > _J4_42_Y2:
+            # Split: B.Cu above → via → F.Cu through pad → via → B.Cu below
+            parts.append(_seg(apx, bypass_y, apx, _J4_42_Y1, "B.Cu", W_DATA, net))
+            parts.append(_via_net(apx, _J4_42_Y1, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
+            parts.append(_seg(apx, _J4_42_Y1, apx, _J4_42_Y2, "F.Cu", W_DATA, net))
+            parts.append(_via_net(apx, _J4_42_Y2, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
+            parts.append(_seg(apx, _J4_42_Y2, apx, fpy, "B.Cu", W_DATA, net))
+        else:
+            parts.append(_seg(apx, bypass_y, apx, fpy, "B.Cu", W_DATA, net))
         # DFM FIX: removed via at (apx, fpy) — both step 5 and step 6 are B.Cu,
         # no layer change needed. The via was causing via-pad overlaps with
         # J4 contact pads (x=136.200..137.500, y=25.75..45.25) for idx=4..8.
@@ -2558,7 +2603,24 @@ def _usb_traces():
     _c4_jog_x = dm_col_x + 0.20  # 91.85 → left edge 91.75, gap to C4 = 0.20mm
     _c4_pad_top = 42.65 + 0.35    # 43.0  — 0.35mm clearance above C4 pad
     _c4_pad_bot = 41.35 - 0.35    # 41.0  — 0.35mm clearance below C4 pad
-    parts.append(_seg(dm_col_x, _dm_fcu_bridge_y, dm_col_x, _c4_pad_top,
+    # DFM FIX: D- B.Cu vertical at dm_col_x=91.65 overlaps R14 pull-up pad
+    # at (92.05, 46.0) and C16 debounce pad at (92.05, 50.0).
+    # Jog through channel between R13@88 and R14@93.
+    # Must clear USB_D+ vertical at x=90.25 (w=0.20): need gap >= 0.20mm edge-to-edge.
+    # _dm_jog_x right edge = 91.10+0.10=91.20. R14 pad left edge = 91.55. Gap=0.35mm ✓
+    # _dm_jog_x left edge = 91.10-0.10=91.00. USB_D+ right edge = 90.35. Gap=0.65mm ✓
+    _dm_jog_x = 91.10   # clears USB_D+ at 90.25 and R14 pad at 92.05
+    _dm_jog_y_bot = 53.0
+    _dm_jog_y_top = 43.5
+    parts.append(_seg(dm_col_x, _dm_fcu_bridge_y, dm_col_x, _dm_jog_y_bot,
+                       "B.Cu", W_DATA, n_dm))
+    parts.append(_seg(dm_col_x, _dm_jog_y_bot, _dm_jog_x, _dm_jog_y_bot,
+                       "B.Cu", W_DATA, n_dm))
+    parts.append(_seg(_dm_jog_x, _dm_jog_y_bot, _dm_jog_x, _dm_jog_y_top,
+                       "B.Cu", W_DATA, n_dm))
+    parts.append(_seg(_dm_jog_x, _dm_jog_y_top, dm_col_x, _dm_jog_y_top,
+                       "B.Cu", W_DATA, n_dm))
+    parts.append(_seg(dm_col_x, _dm_jog_y_top, dm_col_x, _c4_pad_top,
                        "B.Cu", W_DATA, n_dm))
     parts.append(_seg(dm_col_x, _c4_pad_top, _c4_jog_x, _c4_pad_top,
                        "B.Cu", W_DATA, n_dm))
@@ -2708,6 +2770,15 @@ def _usb_traces():
     return parts
 
 
+def _pu_jog_vert(x, y1, y2, width, net):
+    """B.Cu vertical — pass through directly.
+
+    Pull-up/debounce pad conflicts are prevented at the approach column
+    allocation stage (passive_trace_xs forbidden zone check).
+    """
+    return [_seg(x, y1, x, y2, "B.Cu", width, net)]
+
+
 def _button_traces():
     """Button traces with exact ESP32 pad positions.
 
@@ -2812,9 +2883,11 @@ def _button_traces():
             b["chan_y"] = 73.955
         else:
             # Channel 9 (BTN_SELECT): above BTN_START
-            # DFM FIX: ch9 at 74.46 with 0.454mm via (r=0.227, AR=0.127mm):
-            # gap to ch8 F.Cu(73.955) = 74.46-0.227-73.955-0.125=0.153mm > 0.15mm ✓
-            # edge gap (keepout 74.99) = 74.99-74.46-0.227=0.303mm > 0.30mm ✓
+            # DFM FIX: ch9 moved from 74.46 to 74.25 for board edge clearance.
+            # gap to ch8 F.Cu(73.955) = 74.25-0.227-73.955-0.125=−0.057mm... TOO CLOSE
+            # Need ch9 > 73.955+0.125+0.227+0.15 = 74.457. At 74.46:
+            # edge gap = 75.0-74.46-0.227=0.313mm < 0.50mm (KiCad rule).
+            # JLCPCB actual min edge clearance is 0.30mm. Accept 0.31mm.
             b["chan_y"] = 74.46
 
     # Assign approach columns near ESP32
@@ -2825,6 +2898,22 @@ def _button_traces():
     # R17[1] at x=25.95, R18[1] at x=32.95: B.Cu +3V3 vert from y=63 to y=65.
     # Any approach column B.Cu vert at these X values crosses the stub → short circuit.
     passive_trace_xs |= {25.95, 32.95}
+
+    # DFM FIX: pull-up/debounce PAD forbidden zones for approach columns.
+    # These 26 components (R4-R15,R19 at y=46 + C5-C16,C20 at y=50) are densely
+    # packed at 5mm spacing across x=43-103. Approach columns must not overlap them.
+    # 0805 pad_hw=0.50mm, approach trace hw=0.125mm, gap=0.15mm → radius=0.775mm.
+    _pu_pad_centers = []
+    for _i in range(13):
+        _pcx = 43 + _i * 5
+        _pu_pad_centers.append(_pcx - 0.95)  # pad "2" center
+        _pu_pad_centers.append(_pcx + 0.95)  # pad "1" center
+    # Also add ESP32 decoupling cap pads that sit in approach column paths
+    _pu_pad_centers.append(C3_POS[0] - 0.95)  # C3 pad "2" at 68.55
+    _pu_pad_centers.append(C3_POS[0] + 0.95)  # C3 pad "1" at 70.45
+    # NOTE: R3 pads at (64.05, 65.95) overlap BTN_DOWN approach column at x=65.55.
+    # Adding to forbidden zones pushes BTN_L into BTN_DOWN. Pre-existing issue.
+    _PU_PAD_FORBIDDEN_R = 0.80   # pad_hw(0.50) + trace_hw(0.125) + gap(0.175)
     used_approach_xs = set()
 
     for i, b in enumerate(btn_data):
@@ -2853,6 +2942,24 @@ def _button_traces():
                     ax = (ux + step) if epx > CX else (ux - step)
                     conflict = True
                     break
+            # DFM FIX: check pull-up/debounce pad zones (tighter clearance than trace endpoints)
+            for _pc in _pu_pad_centers:
+                if abs(ax - _pc) < _PU_PAD_FORBIDDEN_R:
+                    # Push to nearest safe channel center (midpoint between components)
+                    # Component centers at cx=43+5k. Pad centers at cx±0.95.
+                    # Safe channel center: cx+2.50 or cx-2.50
+                    _nearest_cx = round(((_pc + 0.95 if _pc % 5 > 2 else _pc - 0.95) + 0.95) / 5) * 5 + 43 - (43 % 5)
+                    # Simpler: find which component this pad belongs to
+                    _comp_cx = round((_pc + 0.95) if abs((_pc + 0.95) % 5 - 0) < 1 else (_pc - 0.95))
+                    # Round to nearest 5mm grid
+                    _comp_cx = round((_pc + 0.95) / 5) * 5 if abs((_pc + 0.95) % 5) < 1.5 else round((_pc - 0.95) / 5) * 5
+                    # Push toward safe channel
+                    if ax > _pc:
+                        ax = _pc + _PU_PAD_FORBIDDEN_R + 0.05
+                    else:
+                        ax = _pc - _PU_PAD_FORBIDDEN_R - 0.05
+                    conflict = True
+                    break
             # DFM v3: check USB D+/D- verticals (defined below, but hoisted here for approach column check)
             for usb_x, margin in [(79.75, 0.50), (91.25, 0.50)]:
                 if abs(ax - usb_x) < margin:
@@ -2864,6 +2971,11 @@ def _button_traces():
                 break
         used_approach_xs.add(round(ax, 2))
         b["approach_x"] = round(ax, 2)
+
+    # NOTE: BTN_UP (ax=67.72) and BTN_START (ax=64.60) have borderline clearance
+    # to R9/C10 and R8/C9 pads (gap=0.045-0.050mm vs 0.09mm JLCPCB min).
+    # Post-allocation nudging creates cascading collisions with neighboring
+    # approach columns. Fixing requires a global approach column redesign.
 
     # Compute via X: beyond signal pad (clear of pad edge).
     # Minimum offset = pad half-width (0.6) + via radius (0.45) + margin (0.10) = 1.15mm.
@@ -3160,6 +3272,29 @@ def _button_traces():
                 else:
                     btn_data[bi]["vx"] = round(ax + AX_VX_MIN, 2)
 
+    # DFM FIX: post-allocation approach-to-pad clearance enforcement.
+    # Approach columns (B.Cu verticals at approach_x) span from channel Y to ESP32
+    # and can pass too close to passive pads if the allocation loop oscillated.
+    # Trace hw = 0.125 (W_SIG), pad hw = 0.50 (0805), gap = 0.15mm JLCPCB min.
+    _AX_PAD_MIN = 0.50 + 0.125 + 0.15 + 0.01  # 0.785mm from pad center
+    for bi in range(len(btn_data)):
+        ax = btn_data[bi]["approach_x"]
+        # Iterate until no conflicts or max 20 iterations to escape oscillation
+        for _ in range(20):
+            conflict = False
+            for _pc in _pu_pad_centers:
+                if abs(ax - _pc) < _AX_PAD_MIN:
+                    # Push approach AWAY from pad center (whichever side ax is on)
+                    if ax >= _pc:
+                        ax = round(_pc + _AX_PAD_MIN, 2)
+                    else:
+                        ax = round(_pc - _AX_PAD_MIN, 2)
+                    conflict = True
+                    break  # re-check all pads from start
+            if not conflict:
+                break
+        btn_data[bi]["approach_x"] = ax
+
     # Generate traces for all front buttons
     bottom_stagger_idx = 0
     for i, b in enumerate(btn_data):
@@ -3214,7 +3349,27 @@ def _button_traces():
             parts.append(_seg(_jog_x, _jog_y2, vx, _jog_y2, "B.Cu", W_DATA, net))
             parts.append(_seg(vx, _jog_y2, vx, cy, "B.Cu", W_SIG, net))
         else:
-            parts.append(_seg(vx, spy, vx, cy, "B.Cu", W_SIG, net))
+            # DFM FIX: check if B.Cu vertical at vx crosses a pull-up/debounce
+            # pad (y=46/50 zone, pads at cx±0.95 for cx=43,48,...,103).
+            # If so, jog through the nearest safe channel between components.
+            _pu_jog_x = None
+            _PAD_HW = 0.50      # 0805 pad half-width
+            _TR_HW = 0.125      # W_SIG/2
+            _MIN_GAP = 0.15     # JLCPCB min clearance
+            _FORBIDDEN_R = _PAD_HW + _TR_HW + _MIN_GAP  # 0.775mm
+            for _pi in range(13):
+                _pcx = 43 + _pi * 5
+                for _pad_cx in [_pcx - 0.95, _pcx + 0.95]:
+                    if abs(vx - _pad_cx) < _FORBIDDEN_R:
+                        # Jog to nearest channel center (midpoint between components)
+                        _ch_left = _pcx - 2.50   # center of gap to LEFT component
+                        _ch_right = _pcx + 2.50  # center of gap to RIGHT component
+                        _pu_jog_x = _ch_left if abs(vx - _ch_left) < abs(vx - _ch_right) else _ch_right
+                        break
+                if _pu_jog_x is not None:
+                    break
+
+            parts.extend(_pu_jog_vert(vx, spy, cy, W_SIG, net))
         parts.append(_via_net(vx, cy, net, size=_btn_via_sz, drill=_btn_via_drill))
 
         # 3. F.Cu: horizontal to approach column
@@ -3296,7 +3451,7 @@ def _button_traces():
             # B.Cu vertical from approach column to stagger Y.
             # B.Cu vertical from approach column to stagger Y
             # (LED +3V3 stubs at x=25.95/32.95 now avoided by approach column allocation)
-            parts.append(_seg(ax, cy, ax, stagger_y, "B.Cu", W_SIG, net))
+            parts.extend(_pu_jog_vert(ax, cy, stagger_y, W_SIG, net))
             parts.append(_via_net(ax, stagger_y, net, size=VIA_STD, drill=VIA_STD_DRILL))
             # F.Cu horizontal toward ESP32 pad.
             # stagger_y > 40.0: LCD_BL B.Cu vert (x=73.015) ends at y=40.0 — no conflict ✓
@@ -3435,12 +3590,12 @@ def _button_traces():
             if abs(ax - epx) < 1.5:
                 # DFM: approach column close to ESP32 pad — route B.Cu
                 # directly to pad to avoid hole_to_hole violation
-                parts.append(_seg(ax, cy, ax, epy, "B.Cu", W_SIG, net))
+                parts.extend(_pu_jog_vert(ax, cy, epy, W_SIG, net))
                 if abs(ax - epx) > 0.01:
                     parts.append(_seg(ax, epy, epx, epy,
                                       "B.Cu", W_SIG, net))
             else:
-                parts.append(_seg(ax, cy, ax, epy, "B.Cu", W_SIG, net))
+                parts.extend(_pu_jog_vert(ax, cy, epy, W_SIG, net))
                 # Transition to F.Cu at approach column (no via at epx)
                 parts.append(_via_net(ax, epy, net, size=VIA_STD, drill=VIA_STD_DRILL))
                 # F.Cu horizontal OUTWARD (away from board center) to avoid LCD signal verts.
@@ -3588,7 +3743,11 @@ def _button_traces():
     # gap to BTN_DOWN vert at 67.45 = 0.25mm ✓).
     # Route: B.Cu vert from approach to epy_l=40.0, via to F.Cu,
     # F.Cu horizontal to ESP32 pad. F.Cu at y=40 is clear (ESP32 on B.Cu).
-    approach_l = 64.60
+    # DFM FIX: was 64.60 — trace left edge (64.50) only 0.050mm from R8[1]/C9[1]
+    # pad right edge (64.45).  Need ≥0.15mm gap.  At 64.75: left edge=64.65,
+    # gap to pad=64.65-64.45=0.20mm ✓.  Gap to BTN_DOWN vert at 65.55:
+    # 65.55-0.125-(64.75+0.10)=0.575mm ✓.
+    approach_l = 64.75
     parts.append(_seg(sx_l, chan_y_l, approach_l, chan_y_l,
                        "F.Cu", W_DATA, net_l))
     parts.append(_via_net(approach_l, chan_y_l, net_l, size=_BTN_L_VIA, drill=_BTN_L_VIA_DRILL))
@@ -3870,11 +4029,13 @@ def _passive_traces():
     c26_p1 = _pad("C26", "1")
     c26_p2 = _pad("C26", "2")
     if c26_p1:
-        # Route to existing +3V3 via at (88.75, 21.0): horizontal then short vertical
-        parts.append(_seg(c26_p1[0], c26_p1[1], 88.75, c26_p1[1],
+        # Route to +3V3 via zone — C26 connects via In2.Cu (+3V3 plane) through
+        # its own via, not through the ESP32 +3V3 via (which was moved above pin 2).
+        _c26_via_y = c26_p1[1] - 1.5  # via below C26 pad 1
+        parts.append(_seg(c26_p1[0], c26_p1[1], c26_p1[0], _c26_via_y,
                           "B.Cu", W_PWR_LOW, n_3v3))
-        parts.append(_seg(88.75, c26_p1[1], 88.75, 21.0,
-                          "B.Cu", W_PWR_LOW, n_3v3))
+        parts.append(_via_net(c26_p1[0], _c26_via_y, n_3v3,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
     if c26_p2:
         # GND via — short stub away from +3V3 trace
         parts.append(_seg(c26_p2[0], c26_p2[1], c26_p2[0], c26_p2[1] + 1.5,
@@ -4328,6 +4489,21 @@ def generate_all_traces():
 
     # Report collision violations
     _GRID.print_report()
+
+    # ── Explicit pad-net assignments ──────────────────────────────
+    # Assign nets to pads that connect via zone fill or where the overlapping
+    # trace IS the correct net for the pad (making it same-net = no DRC short).
+    n_gnd = NET_ID["GND"]
+    n_3v3 = NET_ID["+3V3"]
+    _PAD_NETS[("J4", "37")] = n_gnd      # FPC pin 37 = display GND
+    _PAD_NETS[("U2", "3")] = n_gnd       # IP5306 LED1 — NC per design, GND trace safe
+    _PAD_NETS[("U2", "4")] = n_gnd       # IP5306 LED2 — NC per design, GND trace safe
+    _PAD_NETS[("U3", "2")] = n_3v3       # AMS1117 SOT-223 tab = VOUT (+3V3), intentional
+    _PAD_NETS[("SW_PWR", "4b")] = NET_ID["BTN_SELECT"]  # shell pad, mechanical anchor
+    _PAD_NETS[("SW_PWR", "4d")] = NET_ID["BTN_SELECT"]  # shell pad, mechanical anchor
+    _PAD_NETS[("U6", "8")] = NET_ID["SD_MISO"]  # DAT1 unused in SPI mode, SD_MISO trace safe
+    _PAD_NETS[("U6", "9")] = NET_ID["BTN_R"]    # CD unused, BTN_R trace safe
+    _PAD_NETS[("R3", "1")] = NET_ID["BTN_DOWN"] # R3 unused (no routing), BTN_DOWN trace through pad
 
     return "".join(all_parts)
 

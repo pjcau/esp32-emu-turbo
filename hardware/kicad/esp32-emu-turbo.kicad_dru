@@ -95,6 +95,10 @@
 	(constraint edge_clearance (min 0.3mm))
 	(condition "A.Type == 'track'"))
 
+(rule "Via to Outline"
+	(constraint edge_clearance (min 0.3mm))
+	(condition "A.Type == 'via'"))
+
 # ----------------------------------- Assembly (DFA) -------------------------------------
 
 (rule "Assembly Courtyard Clearance"

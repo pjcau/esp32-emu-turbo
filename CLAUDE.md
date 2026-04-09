@@ -59,7 +59,7 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ```
 team-lead (sonnet) ──── orchestrator, 0 skills
-  ├── pcb-engineer (opus) ───── 22 skills
+  ├── pcb-engineer (opus) ───── 27 skills
   ├── software-dev (opus) ───── 4 skills
   └── cad-engineer (haiku) ──── 3 skills
 
@@ -75,14 +75,14 @@ PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
 SW  ↔ CAD: website/docs/  (renders + documentation)
 ```
 
-### Skills Map (33 total)
+### Skills Map (39 total)
 
-#### PCB-Engineer — 24 skills
+#### PCB-Engineer — 27 skills
 
 | Category | Skills |
 |----------|--------|
 | **Pipeline (7)** | `/generate` (full PCB gen) · `/release` (JLCPCB package) · `/release-prep` (quick pipeline, no git) · `/full-release` (all verifications + renders + JLCPCB package) · `/render` (SVG + animation) · `/pcba-render` (3D raytraced PCBA) · `/check` (DRC + 3D + gerbers) |
-| **Verification (10)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/pcb-optimize` (layout analysis) · `/pcb-review` (8-domain scored) · `/datasheet-verify` (pinout + physical vs datasheets) · `/design-intent` (18-test cross-source adversary) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) · `/jlcpcb-validate` (JLCPCB manufacturing rules) |
+| **Verification (11)** | `/verify` (21 DFM tests) · `/dfm-test` (regression guards) · `/drc-native` (KiCad DRC + baseline) · `/drc-audit` (full electrical: shorts, unconnected, dangling vias) · `/pcb-optimize` (layout analysis) · `/pcb-review` (8-domain scored) · `/datasheet-verify` (pinout + physical vs datasheets) · `/design-intent` (18-test cross-source adversary) · `/pad-analysis` (pad spacing check) · `/jlcpcb-alignment` (batch pin alignment) · `/jlcpcb-validate` (JLCPCB manufacturing rules) |
 | **Fix & Debug (4)** | `/dfm-fix` (fix DFM issues) · `/fix-rotation` (CPL rotation) · `/jlcpcb-check` (3D alignment) · `/jlcpcb-parts` (BOM + LCSC search) |
 | **MCP Design (5)** | `/pcb-schematic` (schematic ops) · `/pcb-components` (placement) · `/pcb-routing` (traces + vias) · `/pcb-library` (footprints) · `/pcb-board` (board setup) |
 
@@ -116,7 +116,7 @@ SW  ↔ CAD: website/docs/  (renders + documentation)
 ```mermaid
 graph TB
     TL["TEAM-LEAD<br/><i>sonnet • orchestrator</i>"]
-    PCB["PCB-ENGINEER<br/><i>opus • 22 skills</i>"]
+    PCB["PCB-ENGINEER<br/><i>opus • 27 skills</i>"]
     SW["SOFTWARE-DEV<br/><i>opus • 4 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>haiku • 3 skills</i>"]
 

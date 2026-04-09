@@ -299,7 +299,7 @@ Script: `python3 scripts/simulate_circuit.py`
 
 - All **79 JLCPCB CPL components** matched between schematic, PCB, and CPL
 - 3 off-board components excluded: battery (BT1), display module (U4), speaker (SPK1)
-- PCB: 512 trace segments, 293 vias, 54 nets, 89 footprints
+- PCB: 527 trace segments, 302 vias, 54 nets, 89 footprints
 
 Script: `python3 scripts/verify_schematic_pcb.py`
 

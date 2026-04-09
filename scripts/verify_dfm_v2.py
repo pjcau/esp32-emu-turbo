@@ -1556,7 +1556,7 @@ def test_trace_pad_different_net_clearance():
     Skips if pads appear unnetted (>90% net=0) — run after pad net injection.
     """
     print("\n── Trace-Pad Different-Net Clearance Test ──")
-    MIN_CLR = 0.10  # mm
+    MIN_CLR = 0.09  # mm — JLCPCB 4-layer minimum (standard process: 0.10mm)
 
     segs = _cached_segments()
     pads = _get_cache()["pads"]
@@ -2679,9 +2679,13 @@ def test_jlcdfm_via_to_smd_clearance():
             # Via is on F.Cu+B.Cu; check if pad layer matches
             if p["layer"] not in ("F.Cu", "B.Cu"):
                 continue
-            dist = math.hypot(vx - p["x"], vy - p["y"])
-            pad_r = math.hypot(p["w"] / 2, p["h"] / 2)
-            gap = dist - drill_r - pad_r
+            # Rectangular pad proximity: distance from via center to nearest
+            # pad edge, minus drill radius.  Old circular method used pad diagonal
+            # as radius, over-reporting violations for non-square pads.
+            dx = max(0.0, abs(vx - p["x"]) - p["w"] / 2)
+            dy = max(0.0, abs(vy - p["y"]) - p["h"] / 2)
+            edge_dist = math.hypot(dx, dy)
+            gap = edge_dist - drill_r
             if gap < MIN_CLR:
                 # Structural: via near fine-pitch connector pad
                 if p["ref"] in _FINE_PITCH_REFS:

@@ -35,7 +35,7 @@ Verifies all designators match across BOM, CPL, and PCB. Checks footprint names
 are JLCPCB-compatible, CPL rotations valid, positions match (with known correction
 allowances), and all LCSC part numbers present.
 
-### 1b. Run extended verification suite (12 gap-coverage tests)
+### 1b. Run extended verification suite (17 gap-coverage tests)
 
 ```bash
 # High-risk (5 tests)
@@ -117,6 +117,30 @@ firmware (`board_config.h`), schematic config (`config.py`), datasheet specs, an
 | T12-T16 | Signal chain breaks: display, audio, SD, USB paths |
 | T17-T18 | Missing pull-ups, net naming issues |
 
+### 1g. Run DRC Audit (electrical connectivity)
+
+```bash
+kicad-cli pcb drc \
+  --output /tmp/drc_audit_report.json \
+  --format json \
+  --severity-all --units mm --all-track-errors \
+  hardware/kicad/esp32-emu-turbo.kicad_pcb
+```
+
+**CRITICAL step** — catches issues that ALL custom scripts miss:
+- `shorting_items`: traces touching pads with wrong/no net (board malfunction)
+- `unconnected_items`: broken signal paths (components not connected)
+- `via_dangling`: orphan vias (wasted manufacturing, DFM warnings)
+- `clearance`: real spacing violations below JLCPCB minimums
+
+Our `verify_dfm_v2.py` runs KiCad DRC but only checks 3 of 9 violation types.
+Test 43 (trace-pad clearance) auto-skips when pads lack net assignments.
+This step fills that gap. See `.claude/skills/drc-audit/SKILL.md` for full methodology.
+
+Classify `shorting_items` as:
+- **Real shorts** (`"nets X and Y)"`) — CRITICAL, board will fail
+- **Pad-net bugs** (`"nets X and )"`) — generator fix needed in `_init_pads()`
+
 ### 1d. Run ERC (Electrical Rules Check)
 
 ```bash
@@ -187,6 +211,53 @@ Verify power trace widths against current requirements:
 - +3V3: up to 0.5A → need ≥0.13mm (5mil)
 - LX (inductor): up to 2.1A pulsed → need ≥0.76mm (30mil)
 
+### 1h. Run trace-through-pad overlap check
+
+```python
+# Check if ANY B.Cu trace physically passes through an unnetted pad
+import json, math
+with open('hardware/kicad/.pcb_cache.json') as f:
+    cache = json.load(f)
+unnetted = [p for p in cache['pads'] if p['net'] == 0 and p['layer'] == 'B.Cu']
+bcu_segs = [s for s in cache['segments'] if s['layer'] == 'B.Cu' and s['net'] != 0]
+
+def seg_pad_gap(sx1, sy1, sx2, sy2, sw, px, py, pw, ph):
+    hw = sw / 2; phw, phh = pw / 2, ph / 2; mg = 999
+    ln = max(1, math.hypot(sx2-sx1, sy2-sy1)); st = max(2, int(ln / 0.05))
+    for i in range(st + 1):
+        t = i / st; x = sx1 + t*(sx2-sx1); y = sy1 + t*(sy2-sy1)
+        dx = max(0, abs(x-px)-phw); dy = max(0, abs(y-py)-phh)
+        mg = min(mg, math.hypot(dx, dy) - hw)
+    return mg
+
+overlaps = set()
+for p in unnetted:
+    for s in bcu_segs:
+        if seg_pad_gap(s['x1'],s['y1'],s['x2'],s['y2'],s['width'],
+                       p['x'],p['y'],p['w'],p['h']) < 0:
+            overlaps.add((p.get('ref'), p.get('num')))
+
+print(f"Trace-through-pad overlaps: {len(overlaps)}")  # MUST be 0
+```
+
+**CRITICAL**: any overlap means a B.Cu trace physically shares copper with an unnetted
+pad — a real short on the manufactured board. This catches issues that DRC misses when
+pads have no net assignment.
+
+### 1i. System health summary
+
+Answer these 5 questions with data:
+
+| Question | Check | Must be |
+|----------|-------|---------|
+| Components positioned correctly? | `verify_datasheet.py` + `verify_polarity.py` | ALL PASS |
+| No shorts or signal overlaps? | DFM 115/115 + DRC 0 real shorts + 0 trace-through-pad | ALL ZERO |
+| Power stable? | `spice_power_check.py` | +5V ripple <150mV, +3V3 <50mV |
+| Pinout matches datasheet? | `verify_datasheet_nets.py` | ALL PASS |
+| All signals reach destination? | `verify_design_intent.py` | ALL PASS |
+
+If ANY check fails, stop and fix before generating the report.
+
 ### 5. Generate report
 
 Format findings as:
@@ -229,8 +300,9 @@ python3 scripts/validate_jlcpcb.py
 - `scripts/verify_dfm_v2.py` — DFM verification (115 tests)
 - `scripts/verify_polarity.py` — Polarity/pin assignment tests
 - `scripts/verify_dfa.py` — Assembly verification (9 tests)
+- `scripts/verify_bom_cpl_pcb.py` — BOM/CPL/PCB cross-check (10 tests)
 - `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
-- `scripts/verify_datasheet_nets.py` — Datasheet vs PCB net/pinout verification (246 checks)
+- `scripts/verify_datasheet_nets.py` — Datasheet vs PCB net/pinout verification (259 checks)
 - `hardware/datasheet_specs.py` — Single source of truth: pin→net mapping for all 30 components
 - `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (26 tests)
 - `scripts/verify_antenna_keepout.py` — ESP32 antenna zone clearance (5 checks)

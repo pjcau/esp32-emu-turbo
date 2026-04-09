@@ -93,6 +93,7 @@ def setup_4layer() -> str:
         '      (copper_finish "ENIG")\n'
         '    )\n'
         '    (pad_to_mask_clearance 0)\n'
+    '    (allow_soldermask_bridges_in_footprints yes)\n'
         '    (pcbplotparams\n'
         '      (layerselection 0x00000000_00000000_55555555_5755f5ff)\n'
         '      (plot_on_all_layers_selection'
