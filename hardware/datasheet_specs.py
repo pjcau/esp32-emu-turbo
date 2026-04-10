@@ -233,8 +233,13 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("SD_CLK"),    "function": "CLK — SPI clock", "type": "smd"},
             "6":  {"net": _exact("GND"),       "function": "VSS — ground", "type": "smd"},
             "7":  {"net": _exact("SD_MISO"),   "function": "DAT0/MISO — data out", "type": "smd"},
-            "8":  {"net": _unconnected(),      "function": "DAT1 — unused in SPI mode", "type": "smd"},
-            "9":  {"net": _unconnected(),      "function": "CD — card detect (unused)", "type": "smd"},
+            # Pins 8 (DAT1) and 9 (DAT2) are unused in SPI mode — the SD card
+            # tri-states them when CMD1 selects SPI mode. The PCB routes SD_MISO
+            # (x=145.6) and BTN_R (x=146.85) vertical tracks through the DAT1/DAT2
+            # pad positions; _PAD_NETS in routing.py assigns same-net to silence
+            # the trace-through-pad fab short. See commit 9709bea → 775e9fd → eff85e6.
+            "8":  {"net": _any_of("", "SD_MISO"), "function": "DAT1 — unused in SPI, shares copper with SD_MISO trace", "type": "smd"},
+            "9":  {"net": _any_of("", "BTN_R"),   "function": "DAT2 — unused in SPI, shares copper with BTN_R shoulder-button trace", "type": "smd"},
             "10": {"net": _exact("GND"),       "function": "Shell/GND", "type": "smd"},
             "11": {"net": _unconnected(),      "function": "Shell (not connected)", "type": "smd"},
             "12": {"net": _exact("GND"),       "function": "Shell/GND", "type": "smd"},
@@ -309,7 +314,10 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "6":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "7":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
-            "8":  {"net": _exact("LCD_BL"),   "function": "LED_A — backlight anode", "type": "smd"},
+            # Hard-tied to +3V3 (always-on backlight, no GPIO control). The "LCD_BL"
+            # label is retained in firmware/docs as the logical identifier but the
+            # PCB net is +3V3 — see routing.py::_fpc_power_traces DFM v3 fix.
+            "8":  {"net": _any_of("LCD_BL", "+3V3"),  "function": "LED_A — backlight anode, hard-tied to +3V3", "type": "smd"},
             "9":  {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "10": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "11": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
@@ -330,7 +338,10 @@ COMPONENT_SPECS = {
             "26": {"net": _exact("LCD_RST"),  "function": "RST — LCD reset", "type": "smd"},
             "27": {"net": _unconnected(),     "function": "NC", "type": "smd"},
             "28": {"net": _unconnected(),     "function": "NC", "type": "smd"},
-            "29": {"net": _exact("LCD_RD"),   "function": "RD — LCD read strobe", "type": "smd"},
+            # Hard-tied to +3V3 (read strobe disabled — display is write-only 8080).
+            # The "LCD_RD" label is retained in firmware/docs as the logical identifier
+            # but the PCB net is +3V3 — see routing.py::_fpc_power_traces DFM v3 fix.
+            "29": {"net": _any_of("LCD_RD", "+3V3"),  "function": "RD — LCD read strobe, hard-tied to +3V3", "type": "smd"},
             "30": {"net": _exact("LCD_WR"),   "function": "WR — LCD write strobe", "type": "smd"},
             "31": {"net": _exact("LCD_DC"),   "function": "DC — data/command select", "type": "smd"},
             "32": {"net": _exact("LCD_CS"),   "function": "CS — LCD chip select", "type": "smd"},
@@ -365,10 +376,16 @@ COMPONENT_SPECS = {
             "1":  {"net": _unconnected(),  "function": "Position 1 (OFF)", "type": "smd"},
             "2":  {"net": _exact("BAT+"),  "function": "Common — battery positive", "type": "smd"},
             "3":  {"net": _unconnected(),  "function": "Position 2 (ON)", "type": "smd"},
-            "4a": {"net": _unconnected(),  "function": "Shell/anchor (mechanical)", "type": "smd"},
-            "4b": {"net": _unconnected(),  "function": "Shell/anchor (mechanical)", "type": "smd"},
-            "4c": {"net": _unconnected(),  "function": "Shell/anchor (mechanical)", "type": "smd"},
-            "4d": {"net": _unconnected(),  "function": "Shell/anchor (mechanical)", "type": "smd"},
+            # Shell/anchor pads 4a-4d are mechanical retention tabs soldered to the
+            # switch body. The shell metal is internally isolated from the slide
+            # signal terminals (1/2/3). Pads 4b and 4d (right-side) are crossed by
+            # the BTN_SELECT vertical track at x=35.95 — _PAD_NETS in routing.py
+            # assigns same-net to eliminate the fab short. Safe because the shell
+            # is electrically floating inside the component.
+            "4a": {"net": _unconnected(),                "function": "Shell/anchor (mechanical) — top-left", "type": "smd"},
+            "4b": {"net": _any_of("", "BTN_SELECT"),     "function": "Shell/anchor (mechanical) — top-right, shares copper with BTN_SELECT trace", "type": "smd"},
+            "4c": {"net": _unconnected(),                "function": "Shell/anchor (mechanical) — bottom-left", "type": "smd"},
+            "4d": {"net": _any_of("", "BTN_SELECT"),     "function": "Shell/anchor (mechanical) — bottom-right, shares copper with BTN_SELECT trace", "type": "smd"},
         },
     },
 

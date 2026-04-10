@@ -213,8 +213,10 @@ _strict("J4", [
     ("26", "LCD_RST"), ("30", "LCD_WR"), ("31", "LCD_DC"), ("32", "LCD_CS"),
 ])
 _zone("J4", [
-    ("9", "LCD_CS"), ("10", "LCD_DC"), ("11", "LCD_WR"), ("12", "LCD_RD"),
-    ("15", "LCD_RST"), ("33", "LCD_BL"),
+    ("9", "LCD_CS"), ("10", "LCD_DC"), ("11", "LCD_WR"),
+    ("12", "+3V3"),  # LCD_RD: hard-tied to +3V3 (write-only)
+    ("15", "LCD_RST"),
+    ("33", "+3V3"),  # LCD_BL/LED-A: hard-tied to +3V3 (always-on backlight)
 ])
 # Power/GND pins (verified from actual PCB)
 _zone("J4", [
@@ -816,17 +818,21 @@ class PolarityVerificationTest(unittest.TestCase):
         """Display LED-A (pin 33, pad 8) must be connected to +3V3.
 
         ILI9488 datasheet: LED-A = backlight anode (2.9-3.3V).
-        Pad has dedicated LCD_BL net routed to +3V3 via zone fill on In2.Cu.
+        DFM v3 (2026-04-10): pad is directly on the +3V3 net (was LCD_BL net
+        with a dangling via that never connected to +3V3). See
+        routing.py::_fpc_power_traces and datasheet_specs.py::J4.
         """
-        self._check_strict("J4", "8", "LCD_BL")
+        self._check_strict("J4", "8", "+3V3")
 
     def test_display_rd_tied_high(self):
         """Display RD (pin 12, pad 29) must be tied HIGH (+3V3).
 
         ILI9488 8080 write-only mode: RD must not float.
-        Pad has dedicated LCD_RD net routed to +3V3 via zone fill on In2.Cu.
+        DFM v3 (2026-04-10): pad is directly on the +3V3 net (was LCD_RD net
+        with a dangling via that never connected to +3V3). See
+        routing.py::_fpc_power_traces and datasheet_specs.py::J4.
         """
-        self._check_strict("J4", "29", "LCD_RD")
+        self._check_strict("J4", "29", "+3V3")
 
     def test_pam8403_shdn_not_floating(self):
         """PAM8403 /SHDN (pin 12) must be tied HIGH (+5V).

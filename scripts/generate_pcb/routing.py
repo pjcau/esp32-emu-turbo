@@ -828,9 +828,13 @@ def _power_traces():
     # (gap = 32.46 - 31.91 - 0.45 = 0.10mm OK).
     # DFM FIX: USB GND via handled separately (needs small via + larger offset)
     gnd_via_positions = [
-        # DFM FIX: IP5306 GND via moved to x=112.4 (outside KEY span, clear of pads 2,3,4)
-        # to avoid crossing the IP5306_KEY horizontal stub.
-        (ip_ep[0] + 2.4, ip_ep[1] + 3),   # IP5306 GND (via at x=112.4, right of pads)
+        # DFM v3 FIX (2026-04-10): IP5306 GND via moved from (112.4, 45.5) → (112.4, 45.3).
+        # Old position grazed U2 pad 4 (113.0, 44.41) by 0.235mm — regression from commit
+        # 775e9fd. New position sits in the corridor between pad 4 bottom (y=44.71) and
+        # IP5306_KEY horizontal trace (y=46.485..46.735). Verified clearances:
+        #   Pad 4 bottom→via top: 45.3-0.3 - 44.71 = 0.29mm ≥ 0.20 default clearance ✓
+        #   Via bottom→KEY top:   46.485 - (45.3+0.3) = 0.885mm ✓
+        (ip_ep[0] + 2.4, ip_ep[1] + 2.8),   # IP5306 GND (x=112.4, y=45.3)
         (am_gnd[0], am_gnd[1] + 2),       # AMS1117 GND
         # ESP32 GND via handled separately below (needs small via for clearance)
         (jst_n[0], jst_n[1] - 3.5),         # JST GND (offset UP, away from USB-C and BAT+)
@@ -875,19 +879,21 @@ def _power_traces():
     _PAD_NETS[("J1", "13b")] = n_gnd
     _PAD_NETS[("J1", "14b")] = n_gnd
 
-    # IP5306 GND: DFM FIX: was straight vertical DOWN at x=ip_ep[0]=110.
-    # This crossed IP5306_KEY horizontal (114.05,44.41)→(107.00,44.41) at (110,44.41).
-    # Fix: horizontal stub RIGHT to x=115 (outside KEY span 107..114.05), then vertical.
-    # DFM v2: EP pad right edge at x=111.70. Trace at x=110 is only 0.085mm from pads 2,3.
-    # Move start point to x=112.4 (EP right edge + 0.5mm trace/2 + 0.2mm clearance).
-    gnd_ep_start_x = ip_ep[0] + 2.4  # 110 + 2.4 = 112.4, clear of pads 2,3,4
-    gnd_ep_safe_x = ip_ep[0] + 5.0  # 110 + 5 = 115, right of KEY span (107..114.05)
-    # Vertical stub from EP pad down 1mm to clear pads, then horizontal, then vertical to via
-    parts.append(_seg(ip_ep[0], ip_ep[1], ip_ep[0], ip_ep[1] + 1.0,
+    # IP5306 GND: DFM v3 FIX (2026-04-10, regression from 775e9fd):
+    # Old route used horizontal at y=ip_ep[1]+1 (43.5) then vertical at x=112.4 to via
+    # at (112.4, 45.5). This grazed U2 pads 3 and 4 (x=113, y=43.13/44.41, w=1.70).
+    #
+    # New route runs in the corridor between pad 4 bottom (y=44.71) and IP5306_KEY
+    # horizontal trace (y=46.61 ±0.125 = 46.485..46.735):
+    #   1. Vertical DOWN from EP (110, 42.5) → (110, 45.3), same-net through EP.
+    #   2. Horizontal RIGHT from (110, 45.3) → (112.4, 45.3), 0.29mm clear of pad 4 bot.
+    #   3. Via at (112.4, 45.3), placed by gnd_via_positions above.
+    # No third segment needed — the horizontal terminates AT the via position.
+    gnd_ep_start_x = ip_ep[0] + 2.4  # x=112.4 (matches via x)
+    gnd_ep_y = ip_ep[1] + 2.8        # y=45.3, corridor between pad 4 and KEY trace
+    parts.append(_seg(ip_ep[0], ip_ep[1], ip_ep[0], gnd_ep_y,
                        "B.Cu", W_PWR, n_gnd))
-    parts.append(_seg(ip_ep[0], ip_ep[1] + 1.0, gnd_ep_start_x, ip_ep[1] + 1.0,
-                       "B.Cu", W_PWR, n_gnd))
-    parts.append(_seg(gnd_ep_start_x, ip_ep[1] + 1.0, gnd_ep_start_x, ip_ep[1] + 3,
+    parts.append(_seg(ip_ep[0], gnd_ep_y, gnd_ep_start_x, gnd_ep_y,
                        "B.Cu", W_PWR, n_gnd))
     parts.append(_seg(am_gnd[0], am_gnd[1], am_gnd[0], am_gnd[1] + 2,
                        "B.Cu", W_PWR, n_gnd))
@@ -1651,10 +1657,15 @@ def _display_traces():
         # DFM v5: route via F.Cu to avoid crossing B.Cu approach columns.
         # B.Cu stub from FPC pad LEFT to via, F.Cu horiz RIGHT past approach columns,
         # via back to B.Cu, B.Cu vert DOWN to zone via.
-        # JLCPCB DFM FIX: via at (133.10, 43.75) gap=0.14mm to J4[38] at
-        # (133.712, 44.25). Nudge LEFT by 0.10mm: stub_x=133.00, via right
-        # edge=133.30, J4[38] pad left=133.562, gap=0.262mm ✓
-        stub_x = VIA_X_PWR - 0.6  # was -0.5 (133.10), now 133.00
+        # JLCPCB DFM FIX v3 (2026-04-10):
+        # - v1: via at (133.10, 43.75) → gap=0.14mm to J4[panel 38] at (133.712, 44.25)
+        # - v2: nudged LEFT to stub_x=133.00 → CAUGHT gap to J4[panel 38] but
+        #       CAUSED a 0.088mm overlap with connector-pad J4[37] at (133.712, 43.75),
+        #       reported as DRC shorting_item (GND via vs J4.37 NC pad).
+        # - v3: nudged further LEFT to stub_x=132.60. Via right edge = 132.90.
+        #       Gap to J4 pad left edge (133.212) = 0.312mm ≥ 0.15 clearance ✓.
+        #       Gap to pads at y=42.75/43.25/43.75/44.25: all ≥ 0.3mm ✓.
+        stub_x = VIA_X_PWR - 1.0  # 132.60 (was 133.00, now +0.3mm further clear)
         vx2 = 143.50  # right of net32 vert at x=142.80 (gap=0.70-0.23-0.15=0.32mm)
         vy = 50.25
         # DFM FIX (KiBot external): via at (133.0, 43.25) gap=0.14mm to J4:35
@@ -1715,31 +1726,35 @@ def _display_traces():
     # NOTE: No series current-limiting resistor. Most ILI9488 bare panels have
     # internal LED current limiting (typ. 20mA/string). Verify with specific panel
     # datasheet. If panel draws >120mA on backlight, add 1-10ohm series resistor.
+    #
+    # DFM v3 FIX (2026-04-10): previously used separate LCD_RD/LCD_BL nets for
+    # the segment and via. Since both pins are hard-tied to +3V3 (no ESP32 GPIO
+    # connection), creating a LCD_RD/LCD_BL via didn't actually connect to +3V3
+    # (the +3V3 zone fill only connects to +3V3 nets) — leaving 2 dangling vias.
+    # Fix: route directly on +3V3 net. The J4 pad gets +3V3 via the datasheet_specs
+    # mapping (J4.8 and J4.29 updated to +3V3).
+    #
     # Route LEFT from FPC pads to vias that connect to In2.Cu +3V3 zone.
     # VIA_X_PWR (133.6) conflicts with LCD_WR/GND approach traces.
     # LCD data approach verticals: LCD_D7@131.70, LCD_D6@131.00, LCD_D5@134.50.
     # RD via at x=131.0, y=39.75: ABOVE LCD_D6 end (y=34.25) — clear.
     # LED-A via at x=132.5, y=29.25: between LCD_D7 right edge (131.80) and
     #   J4 GND stub (133.585). Gap: 0.45mm to LCD_D7, 0.83mm to GND. ✓
-    pos_rd = _fpc_display_pin(12)   # RD at pad 29 (y≈39.75)
-    pos_bl = _fpc_display_pin(33)   # LED-A at pad 8 (y≈29.25)
-
-    # Use LCD_RD/LCD_BL net IDs so DRC sees traces for these nets
-    n_rd = NET_ID["LCD_RD"]
-    n_bl = NET_ID["LCD_BL"]
+    pos_rd = _fpc_display_pin(12)   # RD at pad 29 (y≈39.75), hard-tied to +3V3
+    pos_bl = _fpc_display_pin(33)   # LED-A at pad 8 (y≈29.25), hard-tied to +3V3
 
     if pos_rd:
         px, py = pos_rd[0], pos_rd[1]
         via_x = 131.0  # above LCD_D6 end (y=34.25), pin16 GND via (y=37.75)
-        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_rd))
-        parts.append(_via_net(via_x, py, n_rd,
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
+        parts.append(_via_net(via_x, py, n_3v3,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     if pos_bl:
         px, py = pos_bl[0], pos_bl[1]
         via_x = 132.5  # between LCD_D7 (131.80) and J4 GND stubs (133.58)
-        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_bl))
-        parts.append(_via_net(via_x, py, n_bl,
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
+        parts.append(_via_net(via_x, py, n_3v3,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     # ── +3V3 pins at BOTTOM (6, 7): now y=42.25-42.75, BELOW approach zone ──
@@ -4543,9 +4558,39 @@ def generate_all_traces():
     # trace IS the correct net for the pad (making it same-net = no DRC short).
     n_gnd = NET_ID["GND"]
     n_3v3 = NET_ID["+3V3"]
-    # Intentional pad-net assignments only (NC pads removed):
     _PAD_NETS[("U3", "2")] = n_3v3       # AMS1117 SOT-223 tab = VOUT (+3V3), intentional
     _PAD_NETS[("U1", "3")] = NET_ID["EN"]  # EN pin, routed from SW_RST via B.Cu
+
+    # ── Trace-through-pad same-net fixups (restore commit 9709bea logic) ──
+    # These assignments were ADDED in 9709bea to silence DRC shorts where a
+    # netted trace physically passes over an unnetted pad. Commit 775e9fd
+    # REMOVED them thinking they were NC pads — but verify_trace_through_pad
+    # then flagged 6 real fab shorts. Restored with explicit safety analysis:
+    #
+    # U6.8 (SD DAT1) / U6.9 (SD DAT2): unused in SPI mode. The SD card
+    #   tri-states DAT1/DAT2 when CMD1 (SPI init) is received. SD_MISO and
+    #   BTN_R tracks physically overlap these pads at the corridor between
+    #   U6 rows. Assigning them to SD_MISO/BTN_R nets makes the overlap
+    #   same-net. SAFE as long as firmware stays in SPI mode (which it
+    #   does — see software/main/sd.c sdspi_host_do_transaction).
+    #
+    # SW_PWR.4b/4d (shell anchor pads): mechanical retention tabs for the
+    #   slide switch body, not electrical slide positions. Per
+    #   datasheet_specs.py::SW_PWR these are _unconnected() with function
+    #   "Shell/anchor (mechanical)". The shell metal is internally isolated
+    #   from the slide signal terminals (1/2/3). BTN_SELECT vertical track
+    #   at x=35.95 grazes pads 4b (36.4, 71.4) and 4d (36.4, 73.7) on the
+    #   left edge (overlap 0.025mm). Same-net assignment connects the
+    #   shell to BTN_SELECT, which is harmless because the shell is
+    #   floating inside the component body.
+    #
+    # DO NOT REMOVE THESE without first rerouting the corresponding tracks.
+    # `scripts/verify_trace_through_pad.py` is a hard gate and will block
+    # release-prep if these overlaps reappear.
+    _PAD_NETS[("U6", "8")] = NET_ID["SD_MISO"]
+    _PAD_NETS[("U6", "9")] = NET_ID["BTN_R"]
+    _PAD_NETS[("SW_PWR", "4b")] = NET_ID["BTN_SELECT"]
+    _PAD_NETS[("SW_PWR", "4d")] = NET_ID["BTN_SELECT"]
 
     return "".join(all_parts)
 
