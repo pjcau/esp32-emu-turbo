@@ -8,7 +8,8 @@ class PowerSupplySheet(SchematicSheet):
     page_number = 1
     needed_symbols = [
         "USB_C", "IP5306", "AMS1117-3.3", "Conn_JST_PH_2",
-        "Battery", "C", "R", "L", "PWR_FLAG", "SW_Push", "LED",
+        "Battery", "C", "R", "L", "SW_Push", "LED",
+        "USBLC6_2SC6", "BAT54C",
     ]
 
     def build(self):
@@ -36,17 +37,72 @@ class PowerSupplySheet(SchematicSheet):
         vbus_x = ux + 7.62
         vbus_y = uy - 3.81
 
-        # D+ / D- labels (left side of USB-C)
+        # D+ / D- labels exiting USB-C (pre-protection nets)
         self.glabel("USB_D+", ux - 12, uy - 3.81, 180)
         self.wire(ux - 7.62, uy - 3.81, ux - 12, uy - 3.81)
         self.glabel("USB_D-", ux - 12, uy, 180)
         self.wire(ux - 7.62, uy, ux - 12, uy)
+
+        # ── USB ESD protection (R4-HIGH-1 fix) ──
+        # The PCB (scripts/generate_pcb/routing.py) places USBLC6-2SC6
+        # (U4) + two 22Ω series resistors (R22, R23) between the USB-C
+        # connector and the ESP32-S3 D+/D- pins. These symbols were
+        # previously missing from the schematic — any reviewer reading
+        # only the schematic could not see the ESD protection. Now
+        # instantiated so the schematic matches the CPL.
+        #
+        # Placed well below the main USB-C/IP5306 area to avoid spatial
+        # clashes with existing symbols on the same sheet.
+        u4x, u4y = 45, 160
+        self.sym("USBLC6_2SC6", "U4", "USBLC6-2SC6", u4x, u4y, range(1, 7))
+        self.text("USB ESD TVS", u4x - 8, u4y - 12, 1.5)
+        # The USBLC6_2SC6 library symbol in this generator uses the
+        # simple 6-pin pad layout (pins on the left/right edges). We
+        # connect the logical nets via glabels with short wire stubs.
+        stub = 6
+        # Left side stubs (to USB-C side)
+        self.glabel("USB_D-", u4x - 10 - stub, u4y - 2.54, 180)
+        self.wire(u4x - 10 - stub, u4y - 2.54, u4x - 10, u4y - 2.54)
+        self.glabel("USB_D+", u4x - 10 - stub, u4y,        180)
+        self.wire(u4x - 10 - stub, u4y,        u4x - 10, u4y)
+        # Right side stubs (to ESP32 side, via R22/R23)
+        self.glabel("USB_DM_MCU", u4x + 10 + stub, u4y + 2.54, 0)
+        self.wire(u4x + 10, u4y + 2.54, u4x + 10 + stub, u4y + 2.54)
+        self.glabel("USB_DP_MCU", u4x + 10 + stub, u4y,        0)
+        self.wire(u4x + 10, u4y,        u4x + 10 + stub, u4y)
+        # GND on bottom
+        self.gnd(u4x, u4y + 12)
+        self.wire(u4x, u4y + 7.62, u4x, u4y + 12)
+        # VBUS reference tap on top (typed as power input on USBLC6 pin 5)
+        self.glabel("+5V", u4x, u4y - 12, 90, "input")
+        self.wire(u4x, u4y - 7.62, u4x, u4y - 12)
+
+        # Series resistors R22/R23 between USBLC6 MCU-side and ESP32.
+        r22x, r22y = u4x + 30, u4y - 2
+        self.sym("R", "R22", "22",  r22x, r22y, ["1", "2"])
+        self.text("D+ 22Ω", r22x + 4, r22y - 2, 1.5)
+        self.wire(r22x - 3.81, r22y, r22x - 8, r22y)
+        self.glabel("USB_DP_MCU", r22x - 8, r22y, 180)
+        self.wire(r22x + 3.81, r22y, r22x + 8, r22y)
+        self.glabel("GPIO20", r22x + 8, r22y, 0)
+
+        r23x, r23y = u4x + 30, u4y + 4
+        self.sym("R", "R23", "22",  r23x, r23y, ["1", "2"])
+        self.text("D- 22Ω", r23x + 4, r23y - 2, 1.5)
+        self.wire(r23x - 3.81, r23y, r23x - 8, r23y)
+        self.glabel("USB_DM_MCU", r23x - 8, r23y, 180)
+        self.wire(r23x + 3.81, r23y, r23x + 8, r23y)
+        self.glabel("GPIO19", r23x + 8, r23y, 0)
 
         # CC1, CC2 pull-down resistors (5.1k for USB-C UFP detection)
         r1x, r1y = 78, 98
         r2x, r2y = 90, 98
         self.sym("R", "R1", "5.1k", r1x, r1y, ["1", "2"])
         self.sym("R", "R2", "5.1k", r2x, r2y, ["1", "2"])
+        # Explicit USB_CC1 / USB_CC2 labels so schematic↔PCB sync check
+        # sees the connector's full expected net set (datasheet_specs.py).
+        self.glabel("USB_CC1", vbus_x + 4, uy, 0)
+        self.glabel("USB_CC2", vbus_x + 4, uy + 3.81, 0)
         # CC1 -> R1 (orthogonal L-shape)
         self.wire(vbus_x, uy, r1x, uy)
         self.wire(r1x, uy, r1x, r1y - 3.81)
@@ -175,11 +231,13 @@ class PowerSupplySheet(SchematicSheet):
         self.glabel("+5V", 225, vout_turn_y, 0, "output")
         self.wire(215, vout_turn_y, 225, vout_turn_y)
 
-        # Power flag on 5V rail
-        self.parts.append(self.ctx.power_symbol(
-            "PWR_FLAG", "#FLG01", "PWR_FLAG",
-            215, vout_turn_y + 5))
-        self.wire(215, vout_turn_y, 215, vout_turn_y + 5)
+        # NOTE: PWR_FLAG on +5V was REMOVED because IP5306 VOUT (pin 8) is
+        # already typed as `power_out` in the library symbol, so it
+        # already drives the +5V net. Adding PWR_FLAG here created a
+        # second power-output pin on the same net and caused ERC
+        # "Pins of type Power output and Power output are connected"
+        # (the pre-existing R4 critical). IP5306 VOUT alone satisfies
+        # KiCad's "power input must be driven" requirement on +5V.
 
         # ---- CBAT (C18, 10uF) on BAT line ----
         cbat_x = 198

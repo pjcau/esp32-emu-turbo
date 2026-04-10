@@ -61,16 +61,24 @@ class AudioSheet(SchematicSheet):
         # --- PAM8403 passive components (per datasheet application circuit) ---
         self.text("PAM8403 Passives:", 30, 135, 2.54, True)
 
-        # VREF bypass capacitor (C21, 100nF) — pin VREF to GND
+        # VREF bypass capacitor (C21, 100nF) — PAM8403 pin 8 (VREF) to GND.
+        # VREF is the internal half-supply bias rail. R20/R21 (below) tie
+        # the AC-coupled inputs to this node, NOT to GND — see R4-HIGH-3.
+        # A VREF glabel is emitted so the bias resistor wiring can
+        # reference it without running a long visible net through the
+        # schematic page.
         c21x, c21y = ax + 30, ay + 25
         self.sym("C", "C21", "100nF", c21x, c21y, ["1", "2"])
         self.wire(c21x, c21y - 3.81, c21x, c21y - 10)
         self.wire(c21x, c21y - 10, ax + 10.16, c21y - 10)
         self.gnd(c21x, c21y + 8)
         self.wire(c21x, c21y + 3.81, c21x, c21y + 8)
-        self.text("VREF bypass", c21x + 3, c21y)
+        # Emit the VREF label at the top terminal of C21 so R20/R21 bias
+        # stubs can reference it by name.
+        self.glabel("VREF", c21x, c21y - 10, 90, "output")
+        self.text("VREF bypass (pin 8)", c21x + 3, c21y)
 
-        # DC-blocking capacitor (C22, 0.47uF) — input coupling
+        # DC-blocking capacitor (C22, 0.47uF) — input coupling.
         c22x, c22y = ax - 45, ay + 3.81
         self.sym("C", "C22", "0.47uF", c22x, c22y, ["1", "2"])
         self.wire(c22x + 3.81, c22y, c22x + 15, c22y)
@@ -78,21 +86,27 @@ class AudioSheet(SchematicSheet):
         self.glabel("I2S_DOUT", c22x - 8, c22y, 0, "input")
         self.text("DC-block", c22x - 3, c22y - 5)
 
-        # INL bias resistor (R20, 20k) — input bias to VREF
+        # INL bias resistor (R20, 20k) — biases INL node to VREF (pin 8),
+        # NOT to GND. R4-HIGH-3: PAM8403 single-ended app circuit per
+        # datasheet Fig. 3 requires the bias network to reference VREF so
+        # the input DC operating point sits at mid-supply. Tying to GND
+        # fights the internal bias and produces asymmetric clipping.
         r20x, r20y = ax - 35, ay + 18
         self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
         self.wire(r20x, r20y - 3.81, r20x, c22y)
-        self.gnd(r20x, r20y + 8)
-        self.wire(r20x, r20y + 3.81, r20x, r20y + 8)
-        self.text("INL bias", r20x + 3, r20y)
+        # Bottom terminal goes to VREF via a named label stub.
+        self.wire(r20x, r20y + 3.81, r20x, r20y + 6)
+        self.glabel("VREF", r20x, r20y + 6, 270, "input")
+        self.text("INL bias to VREF", r20x + 3, r20y)
 
-        # INR bias resistor (R21, 20k) — input bias to VREF
+        # INR bias resistor (R21, 20k) — biases INR node to VREF (pin 8).
+        # Same rationale as R20 — see R4-HIGH-3.
         r21x, r21y = ax - 25, ay + 18
         self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"])
         self.wire(r21x, r21y - 3.81, r21x, c22y)
-        self.gnd(r21x, r21y + 8)
-        self.wire(r21x, r21y + 3.81, r21x, r21y + 8)
-        self.text("INR bias", r21x + 3, r21y)
+        self.wire(r21x, r21y + 3.81, r21x, r21y + 6)
+        self.glabel("VREF", r21x, r21y + 6, 270, "input")
+        self.text("INR bias to VREF", r21x + 3, r21y)
 
         # VDD decoupling (C23, 1uF) — VDD pin to GND
         c23x, c23y = ax - 20, ay - 20

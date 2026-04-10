@@ -31,16 +31,20 @@ class MCUSheet(SchematicSheet):
         self.wire(px_l, pwr2_y, px_l - 15, pwr2_y)
         self.wire(px_l - 15, pwr2_y, px_l - 15, pwr_y)
 
-        # --- EN pull-up resistor (10k) ---
+        # --- EN pull-up ---
+        # R3 REMOVED from BOM/CPL: the ESP32-S3-WROOM-1 module integrates
+        # a 10k EN pull-up on-module (per Espressif reference design), so
+        # an external pull-up is redundant. A direct wire from EN to +3V3
+        # via the RC reset network below is sufficient. Keeping R3 in
+        # the schematic would desync from the CPL.
         en_y = MCU_Y - 33.02  # EN pin level
         r_en_x = px_l - 25
-        r_en_y = MCU_Y - 45  # resistor center above EN line
-        self.sym("R", "R3", "10k", r_en_x, r_en_y, ["1", "2"])
-        self.wire(px_l, en_y, r_en_x, en_y)
-        self.wire(r_en_x, en_y, r_en_x, r_en_y + 3.81)
+        r_en_y = MCU_Y - 45  # (legacy position kept for layout spacing)
         self.v33(r_en_x, r_en_y - 8)
-        self.wire(r_en_x, r_en_y - 8, r_en_x, r_en_y - 3.81)
-        self.text("EN pull-up", r_en_x - 12, r_en_y, 1.5)
+        self.wire(r_en_x, r_en_y - 8, r_en_x, en_y)
+        self.wire(px_l, en_y, r_en_x, en_y)
+        self.text("EN pull-up: internal to WROOM-1 (R3 DNP)",
+                  r_en_x - 12, r_en_y, 1.5)
 
         # --- EN reset capacitor (100nF to GND) ---
         # Cap below EN line: pin 1 (top) connects to EN, pin 2 (bottom) to GND

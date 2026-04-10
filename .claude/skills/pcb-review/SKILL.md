@@ -232,6 +232,28 @@ Exports schematic XML netlist via `kicad-cli`, compares against PCB cache:
 - Missing footprints (component in schematic but not PCB)
 - Pin-to-net mismatches between schematic and PCB
 
+### 1m2. Run schematic↔PCB/datasheet_specs sync guard (R4 class)
+
+```bash
+python3 scripts/verify_schematic_pcb_sync.py
+```
+
+**Schematic/PCB/datasheet_specs.py sync** (`verify_schematic_pcb_sync.py`):
+Guards against the R4 class of bugs — schematic generator and PCB
+generator are two independent Python code paths and can drift silently.
+Three checks, all fail-loud (no soft-passes, no auto-skip):
+
+| Check | Catches | R4 bug |
+|-------|---------|--------|
+| A — ref coverage | BOM refs with no schematic symbol; schematic refs with no BOM entry | R4-HIGH-1 (USBLC6/R22/R23 in PCB but missing from schematic) |
+| B — designator collision | Same ref used for two different component families across schematic and BOM (token-overlap heuristic) | R4-HIGH-2 (U4 was both ILI9488 module and USBLC6 TVS) |
+| C — connector net coverage | Each connector in `datasheet_specs.py` must have its full expected net set appear in the sheet that wires it | R4-CRIT-1 (display.py docstring described a completely different FPC pinout than the PCB used) |
+
+**CRITICAL** — this script must exit 0 before any PCB release. It is
+the only guard that catches schematic↔PCB drift on the Python
+generators. Never add suppressions; never edit the allowlist in the
+script to make a real bug disappear. Fix the design side instead.
+
 ### 1n. Generate hardware test firmware (Phase 3 prototype)
 
 ```bash
@@ -295,36 +317,23 @@ Verify power trace widths against current requirements:
 
 ### 1h. Run trace-through-pad overlap check
 
-```python
-# Check if ANY B.Cu trace physically passes through an unnetted pad
-import json, math
-with open('hardware/kicad/.pcb_cache.json') as f:
-    cache = json.load(f)
-unnetted = [p for p in cache['pads'] if p['net'] == 0 and p['layer'] == 'B.Cu']
-bcu_segs = [s for s in cache['segments'] if s['layer'] == 'B.Cu' and s['net'] != 0]
-
-def seg_pad_gap(sx1, sy1, sx2, sy2, sw, px, py, pw, ph):
-    hw = sw / 2; phw, phh = pw / 2, ph / 2; mg = 999
-    ln = max(1, math.hypot(sx2-sx1, sy2-sy1)); st = max(2, int(ln / 0.05))
-    for i in range(st + 1):
-        t = i / st; x = sx1 + t*(sx2-sx1); y = sy1 + t*(sy2-sy1)
-        dx = max(0, abs(x-px)-phw); dy = max(0, abs(y-py)-phh)
-        mg = min(mg, math.hypot(dx, dy) - hw)
-    return mg
-
-overlaps = set()
-for p in unnetted:
-    for s in bcu_segs:
-        if seg_pad_gap(s['x1'],s['y1'],s['x2'],s['y2'],s['width'],
-                       p['x'],p['y'],p['w'],p['h']) < 0:
-            overlaps.add((p.get('ref'), p.get('num')))
-
-print(f"Trace-through-pad overlaps: {len(overlaps)}")  # MUST be 0
+```bash
+python3 scripts/verify_trace_through_pad.py
 ```
 
-**CRITICAL**: any overlap means a B.Cu trace physically shares copper with an unnetted
-pad — a real short on the manufactured board. This catches issues that DRC misses when
-pads have no net assignment.
+**CRITICAL HARD GATE**: any overlap means a copper trace physically shares
+copper with an unnetted (or differently-netted) pad — a real short on the
+manufactured board. Checks F.Cu **and** B.Cu. Catches issues that DRC
+misses when pads have no net assignment (the v3.3 regression from commit
+`775e9fd`, where `_PAD_NETS` entries for U2.3/4, U6.8/9, SW_PWR.4b/4d
+were removed and left BTN_SELECT/GND/SD_MISO/BTN_R traces crossing
+unnetted pads). Integrated into:
+- `make release-prep` (blocking dependency of release)
+- `make verify-all` (parallel verification suite)
+- `make verify-trace-through-pad` (standalone)
+- `/release`, `/release-prep`, `/full-release` skills (hard gate)
+- `Stop` hook `.claude/hooks/stop-verify-dfm.sh` (auto-runs after any
+  PCB edit and blocks Claude's response with exit 2 on failure)
 
 ### 1i. System health summary
 
@@ -337,6 +346,7 @@ Answer these 5 questions with data:
 | Power stable? | `spice_power_check.py` | +5V ripple <150mV, +3V3 <50mV |
 | Pinout matches datasheet? | `verify_datasheet_nets.py` | ALL PASS |
 | All signals reach destination? | `verify_design_intent.py` | ALL PASS |
+| Schematic ↔ PCB ↔ datasheet_specs agree? | `verify_schematic_pcb_sync.py` | PASS (R4 guard) |
 
 If ANY check fails, stop and fix before generating the report.
 
@@ -403,6 +413,7 @@ python3 scripts/validate_jlcpcb.py
 - `scripts/spice_power_check.py` — ngspice power supply simulation (+5V/+3V3 ripple, load transient)
 - `scripts/verify_design_intent.py` — Cross-source adversary (362 checks, T1-T22)
 - `scripts/verify_netlist_diff.py` — Schematic-to-PCB netlist cross-check (4 checks)
+- `scripts/verify_schematic_pcb_sync.py` — R4 sync guard: ref coverage, designator collisions, connector net coverage (schematic vs datasheet_specs.py vs CPL)
 - `scripts/net_classifier.py` — Net function classifier with GPIO validation
 - `scripts/generate_board_config.py` — Board config drift detection (config.py vs board_config.h)
 - `scripts/generate_hw_tests.py` — ESP-IDF Unity test generator (20 tests)

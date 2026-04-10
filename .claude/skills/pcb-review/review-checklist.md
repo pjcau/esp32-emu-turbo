@@ -199,3 +199,60 @@
 | Critical | <40 | Must fix before ordering |
 
 **Total: 100 points across 8 domains**
+
+---
+
+## Lessons learned from past audits
+
+Each entry is a class of bug that was found the hard way. Every lesson
+has an automated guard script — never rely on manual review alone.
+
+### R4 (2026-04-10): Schematic ↔ PCB/datasheet_specs divergence
+
+- The schematic generator (`scripts/generate_schematics/sheets/*.py`)
+  and the PCB generator (`scripts/generate_pcb/routing.py` +
+  `hardware/datasheet_specs.py`) are two independent code paths. They
+  will drift silently. Audits that read only one side will miss a full
+  class of bugs.
+
+- **R4-CRIT-1** — `display.py` once documented a "touch + display"
+  ILI9488 FPC pinout while `datasheet_specs.py` used a "display-only"
+  variant. Result: data bus reversed (D0↔D7), control pins on different
+  FPC pads, IM straps absent on PCB. Device display would not work.
+- **R4-HIGH-1** — USBLC6 (U4), R22, R23 added to PCB routing
+  (`routing.py`) were never instantiated in any schematic sheet, so the
+  ESD circuit was invisible to anyone reviewing only the schematic.
+- **R4-HIGH-2** — Designator `U4` simultaneously named the ILI9488
+  module symbol in `display.py` and the USBLC6 TVS in the BOM/CPL.
+  Cross-probe would be wrong.
+- **R4-HIGH-3** — `audio.py` tied PAM8403 input bias resistors (R20,
+  R21) to GND instead of VREF (pin 8). Non-standard app circuit.
+- **R4-MED-1** — SD card U6 VCC had no local decoupling cap in
+  `sd_card.py` (deferred to v2 respin — schematic notes it).
+- **R4 false positive** — the earlier R2-HIGH-2 "AMS1117 output cap
+  ESR" was wrong: C2 is already tantalum (C7171) and C19 is on the
+  IP5306 5V rail, not the AMS1117 output. Always trace capacitor refs
+  through the full schematic before flagging ESR issues.
+
+**Guards**:
+
+- `scripts/verify_schematic_pcb_sync.py` catches all three R4 structural
+  classes (ref coverage, designator collision, connector net coverage).
+  It must PASS before any release.
+- `hardware/datasheet_specs.py` is the single source of truth for
+  connector pinouts. Schematic docstrings must MIRROR it, not define
+  their own. When possible, import the pin mapping programmatically.
+- For FPC/panel pinouts ordered from AliExpress with no manufacturer
+  datasheet PDF: paste the URL and pin list into
+  `hardware/datasheets/` before updating `datasheet_specs.py`. No
+  guessing from "common pinouts".
+
+### Domain 9 — Schematic ↔ PCB Sync (appendix, deduct from Docs score)
+
+| Check | Deduct | Criteria |
+|-------|--------|----------|
+| BOM refs missing from schematic | -3 per ref | Every CPL ref must have a symbol instantiated in a sheet, unless on the script's schematic-only allowlist |
+| Schematic refs missing from BOM | -2 per ref | Every schematic symbol must correspond to a CPL entry or be explicitly DNP |
+| Designator collision | -5 per ref | Same ref may not name two different part families (e.g. U4 ≠ display module and TVS) |
+| Connector net coverage | -5 per connector | Sheet wiring a connector must reference every expected net from `datasheet_specs.py` |
+| Connector pinout vs physical panel | MANDATORY | For any panel/connector sourced with no datasheet PDF in `hardware/datasheets/`, the user must provide the datasheet page before the design is considered valid |

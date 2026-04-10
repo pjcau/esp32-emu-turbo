@@ -49,6 +49,17 @@ class SDCardSheet(SchematicSheet):
         self.wire(sx - 30, sy + 3.81, sx - 10.16, sy + 3.81)
         self.text("GPIO39", sx - 58, sy + 5, 1.5)
 
+        # R4-MED-1 (PENDING v2 respin): local VCC bypass cap is NOT yet
+        # present on the PCB near the TF-01A slot. Current decoupling is
+        # shared from the ESP32 rail through C26 (100 nF, ~25 mm trace
+        # length) which is marginal for SD inrush transients. Adding a
+        # dedicated 100 nF within 5 mm of U6 VCC requires a new pad and
+        # routing slot (tracked as v2 improvement in hardware-audit-bugs.md).
+        self.text(
+            "v2 TODO: add local 100nF bypass near U6 VCC (R4-MED-1)",
+            sx - 58, sy + 10, 1.5,
+        )
+
         # Notes
         ny = 160
         self.text("Design Notes:", 30, ny, 2.54, True)

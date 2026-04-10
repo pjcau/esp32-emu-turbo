@@ -261,12 +261,40 @@ COMPONENT_SPECS = {
     # J4 — FPC 40-Pin 0.5mm Connector (C2856812)
     # For ILI9488 3.95" 320x480 8-bit 8080 parallel display
     # Datasheet: J4_FPC-40pin-0.5mm_C2856812.pdf
-    # Pin mapping follows ILI9488 standard 40-pin FPC:
-    #   1=GND, 2-3=VCC(3.3V), 4-7=GND, 8=LED_A(backlight),
-    #   9-16=NC(touch/unused), 17-24=DB7..DB0,
-    #   25=GND, 26=RST, 27-28=NC, 29=RD, 30=WR, 31=DC, 32=CS,
-    #   33=NC, 34-35=VCC, 36=GND, 37-40=NC
-    # Pins 41-42 are shell/anchor pads on the FPC connector
+    #
+    # ⚠  IMPORTANT — this table uses the CONNECTOR-PAD numbering, NOT the
+    #    panel-side pin numbering. Because the display sits above the PCB
+    #    in landscape orientation and the FPC ribbon passes straight
+    #    through a slot to J4 on the back side (no twist), the mapping is:
+    #
+    #        connector_pad = 41 - panel_pin
+    #
+    #    So what the panel datasheet calls "pin 9" (CS) lands on J4 pad 32
+    #    here. For the panel-side pinout, see:
+    #      - website/docs/design/components.md (authoritative table)
+    #      - scripts/generate_schematics/sheets/display.py (docstring)
+    #      - website/docs/design/schematics.md §"FPC slot & pin reversal"
+    #
+    #    R4-CRIT-1 was falsely raised against this discrepancy — do NOT
+    #    "fix" this file to match the panel-side numbering; both are
+    #    correct views of the same electrical design. The sync verifier
+    #    (scripts/verify_schematic_pcb_sync.py) only checks the NET SET
+    #    on each connector, which is identical under the reversal.
+    #
+    # CONNECTOR-side pad mapping (= panel-side pinout reversed via 41-N):
+    #   1=GND (panel 40=IM2),   2=VCC+3V3 (panel 39=IM1),
+    #   3=VCC+3V3 (panel 38=IM0),   4-7=GND (panel 34-37),
+    #   8=LED_A/LCD_BL (panel 33),   9-16=NC (panel 25-32 DB8-DB15),
+    #   17-24=DB7..DB0 (panel 24-17, LCD_D7..LCD_D0 reversed),
+    #   25=GND (panel 16),   26=LCD_RST (panel 15),
+    #   27-28=NC (panel 13-14 SDI/SDO),
+    #   29=LCD_RD (panel 12, tied +3V3),
+    #   30=LCD_WR (panel 11),   31=LCD_DC (panel 10),
+    #   32=LCD_CS (panel 9),   33=NC (panel 8 TE),
+    #   34=+3V3 (panel 7 VDDA),   35=+3V3 (panel 6 VDDI),
+    #   36=GND (panel 5),   37-40=NC (panel 1-4 touch XL/YU/XR/YD)
+    #
+    # Pins 41-42 are shell/anchor pads on the FPC connector body.
     # ======================================================================
     "J4": {
         "component": "FPC 40-Pin 0.5mm Connector",

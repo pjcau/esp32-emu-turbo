@@ -75,6 +75,7 @@
   (global_label "SD_CS" (shape input) (at 118 113.81 0) (effects (font (size 1.27 1.27))) (uuid "00000014-cafe-4000-8000-000000000014") (property "Intersheetrefs" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide)))
   (wire (pts (xy 118 113.81) (xy 137.84 113.81)) (stroke (width 0) (type default)) (uuid "00000015-cafe-4000-8000-000000000015"))
   (text "GPIO39" (at 90 115 0) (effects (font (size 1.5 1.5)) (justify left)))
+  (text "v2 TODO: add local 100nF bypass near U6 VCC (R4-MED-1)" (at 90 120 0) (effects (font (size 1.5 1.5)) (justify left)))
   (text "Design Notes:" (at 30 160 0) (effects (font (size 2.54 2.54) bold) (justify left)))
   (text "- SPI bus @ up to 40MHz (ESP32-S3 max for SD)" (at 30 168 0) (effects (font (size 2.54 2.54)) (justify left)))
   (text "- SNES ROMs: 256KB to 6MB typical (HiROM/LoROM)" (at 30 174 0) (effects (font (size 2.54 2.54)) (justify left)))

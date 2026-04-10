@@ -118,7 +118,7 @@ class ControlsSheet(SchematicSheet):
         self.gnd(cx, cy + 8)
         self.wire(cx, cy + 3.81, cx, cy + 8)
 
-        # SW13 menu switch
+        # SW13 menu switch — closes MENU_K to GND.
         sw_y = my + 24
         self.sym("SW_Push", "SW13", "MENU", mx, sw_y, ["1", "2"])
         self.wire(jx, junc_y, jx, sw_y)
@@ -126,9 +126,31 @@ class ControlsSheet(SchematicSheet):
         self.gnd(mx + 5.08, sw_y + 8)
         self.wire(mx + 5.08, sw_y, mx + 5.08, sw_y + 8)
 
-        # GPIO label
-        self.glabel("BTN_MENU", mx + 28, junc_y, 0)
+        # MENU_K node label (same node as R19/C20/SW13).
+        self.glabel("MENU_K", mx + 28, junc_y, 0)
         self.wire(cx, junc_y, mx + 28, junc_y)
+
+        # ── BAT54C dual Schottky diode D1 (R4-HIGH-1 class fix) ──
+        # D1 implements the MENU combo: when SW13 pulls MENU_K to GND,
+        # D1's common cathode (pin 3) also goes low and the two anodes
+        # forward-bias to pull BTN_START and BTN_SELECT LOW through the
+        # existing button pull-ups. Firmware has no dedicated BTN_MENU
+        # GPIO — it detects the START+SELECT combo (see
+        # ``software/main/board_config.h`` ``BTN_MENU_COMBO``).
+        #
+        # BAT54C SOT-23 pinout:
+        #   1 = Anode 1 → BTN_START
+        #   2 = Anode 2 → BTN_SELECT
+        #   3 = Common cathode → MENU_K
+        dx, dy = mx + 40, my + 18
+        self.sym("BAT54C", "D1", "BAT54C", dx, dy, ["1", "2", "3"])
+        self.text("MENU combo", dx + 3, dy - 8, 1.5)
+        self.text("(START + SELECT)", dx + 3, dy - 5, 1.5)
+        # Pin 3 (common cathode) → MENU_K
+        self.glabel("MENU_K", dx - 12, dy, 180)
+        # Pins 1, 2 (anodes) → BTN_START, BTN_SELECT
+        self.glabel("BTN_START",  dx + 12, dy - 3.81, 0)
+        self.glabel("BTN_SELECT", dx + 12, dy + 3.81, 0)
 
         # Schematic note at bottom
         ny = 295
