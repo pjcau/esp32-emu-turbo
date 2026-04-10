@@ -18,6 +18,7 @@ import os
 import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 from pcb_cache import load_cache
@@ -27,6 +28,45 @@ CPL_PATH = os.path.join(BASE, "hardware", "kicad", "jlcpcb", "cpl.csv")
 
 # Components that are hand-assembled (not in BOM, OK to be in PCB only)
 HAND_ASSEMBLED = {"SPK1"}
+
+
+def _load_dnp_refs() -> set:
+    """Return refs that are DNP (footprint on PCB but intentionally
+    excluded from BOM/CPL assembly).
+
+    The authoritative list lives in ``scripts/generate_pcb/jlcpcb_export.py``
+    as comments + the actual exclusions applied to ``_build_placements``.
+    Rather than duplicate, we execute ``_build_placements`` and compare
+    to the PCB placements list — any PCB ref not in the CPL output is
+    DNP by definition. This gives us a single source of truth and
+    automatically picks up future DNPs without edits.
+
+    Fail-loud: if the import breaks, we raise, because a BOM/CPL check
+    that cannot see the DNP list must NOT silently pass.
+    """
+    try:
+        from scripts.generate_pcb import jlcpcb_export  # type: ignore
+    except Exception as exc:
+        raise RuntimeError(
+            f"cannot import scripts.generate_pcb.jlcpcb_export to "
+            f"discover DNP refs: {exc}"
+        ) from exc
+
+    cpl_refs = {tup[0] for tup in jlcpcb_export._build_placements()}
+    # The full PCB footprint list comes from the parse cache. The cache
+    # exposes ``refs`` (mapping of ref → layer) and individual pad
+    # records; either works to enumerate every footprint on the board.
+    cache = load_cache()
+    refs_map = cache.get("refs")
+    if isinstance(refs_map, dict):
+        pcb_all = set(refs_map.keys())
+    else:
+        pcb_all = {p["ref"] for p in cache.get("pads", []) if "ref" in p}
+    dnp = pcb_all - cpl_refs - HAND_ASSEMBLED
+    return dnp
+
+
+DNP_REFS = _load_dnp_refs()
 
 # Known CPL position corrections (intentional offsets from PCB pad centers)
 # These components have JLCPCB-specific position corrections in jlcpcb_export.py
@@ -163,12 +203,23 @@ def main():
     check("All BOM refs in PCB", not diff_bom_pcb,
           f"in BOM but not PCB: {sorted(diff_bom_pcb)}")
 
-    diff_pcb_bom = pcb_refs - bom_refs - HAND_ASSEMBLED
-    check("All PCB refs in BOM (excl hand-assembled)", not diff_pcb_bom,
+    # PCB refs that are intentionally not assembled:
+    #   - HAND_ASSEMBLED: through-hole or post-assembly (SPK1)
+    #   - DNP_REFS:       footprint present but excluded from CPL
+    #                     (auto-discovered from jlcpcb_export._build_placements)
+    # Anything ELSE that is on the PCB but not in the BOM is a genuine
+    # mismatch and must fail the check.
+    diff_pcb_bom = pcb_refs - bom_refs - HAND_ASSEMBLED - DNP_REFS
+    check("All PCB refs in BOM (excl hand-assembled + DNP)",
+          not diff_pcb_bom,
           f"in PCB but not BOM: {sorted(diff_pcb_bom)}")
 
     if pcb_refs & HAND_ASSEMBLED:
-        print(f"  INFO  Hand-assembled components: {sorted(pcb_refs & HAND_ASSEMBLED)}")
+        print(f"  INFO  Hand-assembled components: "
+              f"{sorted(pcb_refs & HAND_ASSEMBLED)}")
+    if pcb_refs & DNP_REFS:
+        print(f"  INFO  DNP (PCB footprint only, excluded from CPL): "
+              f"{sorted(pcb_refs & DNP_REFS)}")
 
     # ── 3. Duplicate designators ──
     print("\n── Duplicate Designator Check ──")

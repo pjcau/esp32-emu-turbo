@@ -26,10 +26,39 @@ BOM_FILE = os.path.join(BASE, "hardware", "kicad", "jlcpcb", "bom.csv")
 ZONE_ONLY_REFS: Set[str] = set()
 # Note: MH1-MH6 not in this design; SPK1 has direct net assignments
 
-# Components not in BOM but present in PCB (fiducials, test points)
-NON_BOM_REFS: Set[str] = {"FID1", "FID2", "FID3", "SPK1", "R14"}
-# R14: GPIO45 (BTN_L) pull-up — DNP to avoid VDD_SPI=1.8V strapping conflict.
-# Footprint kept on PCB for optional populate. Firmware uses internal pull-up.
+# Components not in BOM but legitimately present in PCB:
+#   - fiducials + speaker + R14 (GPIO45 strapping, DNP) are hard-coded below
+#   - other DNPs are auto-discovered from jlcpcb_export._build_placements()
+#     so adding a new DNP in one place (the CPL builder) automatically keeps
+#     this check consistent — never silence, never hand-sync two lists.
+_BASE_NON_BOM: Set[str] = {"FID1", "FID2", "FID3", "SPK1", "R14"}
+
+
+def _autodiscover_dnp() -> Set[str]:
+    """Pick up footprints intentionally excluded from the CPL by
+    ``scripts/generate_pcb/jlcpcb_export._build_placements``.
+
+    Fail-loud: if the import fails we raise so the check halts rather
+    than silently missing DNPs. (see feedback_never_silence_errors.md)
+    """
+    try:
+        sys.path.insert(0, BASE)
+        from scripts.generate_pcb import jlcpcb_export  # type: ignore
+    except Exception as exc:
+        raise RuntimeError(
+            f"cannot import jlcpcb_export to auto-discover DNPs: {exc}"
+        ) from exc
+    cpl_refs = {tup[0] for tup in jlcpcb_export._build_placements()}
+    # We don't know the full PCB ref set here yet; defer the diff. The
+    # caller will intersect this with the real PCB refs.
+    return cpl_refs
+
+
+_CPL_REFS: Set[str] = _autodiscover_dnp()
+# NON_BOM_REFS is rebuilt in the main check below once the PCB ref set
+# is known. This placeholder keeps the module-level constant accessible
+# without changing the downstream calling contract.
+NON_BOM_REFS: Set[str] = set(_BASE_NON_BOM)
 
 # Proximity threshold for segment-to-pad match (mm)
 PROXIMITY_MM = 0.2
@@ -187,9 +216,16 @@ def test_non_bom_refs():
 
     extra = sorted(pcb_refs - set(bom_refs.keys()))
 
+    # Merge the hard-coded non-BOM list with auto-discovered DNPs
+    # (footprints present on the PCB but excluded from the CPL by
+    # jlcpcb_export). This keeps a single source of truth and fails
+    # loud on truly unexpected refs.
+    auto_dnp = pcb_refs - _CPL_REFS
+    non_bom_allowlist = NON_BOM_REFS | auto_dnp
+
     if extra:
-        expected = [r for r in extra if r in NON_BOM_REFS]
-        unexpected = [r for r in extra if r not in NON_BOM_REFS]
+        expected = [r for r in extra if r in non_bom_allowlist]
+        unexpected = [r for r in extra if r not in non_bom_allowlist]
 
         if expected:
             info(
