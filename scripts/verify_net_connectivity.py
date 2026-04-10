@@ -112,16 +112,15 @@ ACCEPTED_FRAGMENTATIONS = {
     # BTN_SELECT/START/L/R have additional components from D1 menu diode
     # and SW_BOOT that ARE fixed in R6 — their acceptance count stays at 2
     # after those fixes (only the R/C junction remains isolated).
-    "BTN_A":      (2, "R8/C9 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_B":      (2, "R9/C10 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_X":      (2, "R10/C11 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_Y":      (2, "R11/C12 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_UP":     (2, "R4/C5 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_DOWN":   (2, "R5/C6 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_LEFT":   (2, "R6/C7 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_RIGHT":  (2, "R7/C8 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_L":      (2, "R14 DNP per strapping + C15 debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
-    "BTN_R":      (2, "R15/C16 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (v2 respin)"),
+    # BTN_B, BTN_X, BTN_Y, BTN_R: R7 FIXED by _button_pullup_bridges() in
+    # routing.py (commit 259868d). Pull-up/debounce junctions now properly
+    # connected to main signal paths — removed from allowlist.
+    "BTN_A":      (2, "R8/C9 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 23mm route through LCD area)"),
+    "BTN_UP":     (2, "R4/C5 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 27mm route, D-pad area)"),
+    "BTN_DOWN":   (2, "R5/C6 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 23mm route, D-pad area)"),
+    "BTN_LEFT":   (2, "R6/C7 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 20mm route, D-pad area)"),
+    "BTN_RIGHT":  (2, "R7/C8 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 20mm route, D-pad area)"),
+    "BTN_L":      (2, "R14 DNP per strapping + C15 debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 22mm route)"),
 
     # BTN_START has 3 components:
     #   1. Main signal (SW9 → ESP32 GPIO)
