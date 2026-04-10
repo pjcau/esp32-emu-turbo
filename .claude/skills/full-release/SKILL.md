@@ -18,6 +18,11 @@ Complete end-to-end pipeline: generate PCB, run ALL verifications, render all vi
 - NEVER skip `release_jlcpcb/` sync
 - If any step fails, STOP and report — do not continue with broken output
 - Always run `verify_dfm_v2.py` AFTER gerber export (final gate)
+- HARD GATE: `verify_trace_through_pad.py` MUST report 0 failures.
+  This catches the v3.3 regression class where `_PAD_NETS` entries were
+  removed, leaving netted traces physically crossing unnetted pads —
+  real shorts on the fabricated board that the standard DFM/DRC flow
+  does not catch together.
 
 ## Pipeline Steps
 
@@ -33,8 +38,11 @@ python3 -m scripts.generate_pcb hardware/kicad
 Run all 5 verification scripts. ALL must pass (warnings OK, errors = STOP).
 
 ```bash
-# 2a. DFM verification (114 tests)
+# 2a. DFM verification (115 tests)
 python3 scripts/verify_dfm_v2.py
+
+# 2a-bis. Trace-through-pad overlap — HARD GATE (blocks release)
+python3 scripts/verify_trace_through_pad.py
 
 # 2b. DFA verification (9 tests)
 python3 scripts/verify_dfa.py

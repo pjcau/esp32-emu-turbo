@@ -37,6 +37,13 @@ docker compose run --rm kicad-pcb pcb export drill --output /gerbers/ --format e
 ### 3. Run full verification suite (~1200 tests)
 
 ```bash
+# ── BLOCKING: fab-short gate ─────────────────────────────────────
+# Catches netted traces physically crossing unnetted pads.
+# Missing this check caused the v3.3 regression (commit 775e9fd)
+# where _PAD_NETS assignments for U2/U6/SW_PWR were removed,
+# leaving 6 real shorts in the fabricated board.
+python3 scripts/verify_trace_through_pad.py  # MUST be 0 failures
+
 # Manufacturing (must all pass)
 python3 scripts/verify_dfm_v2.py
 python3 scripts/verify_dfa.py
@@ -63,6 +70,12 @@ python3 scripts/spice_power_check.py
 ```
 
 **ALL tests must pass before proceeding.** If any fail, fix the issues first.
+
+**Hard gate**: if `verify_trace_through_pad.py` reports any failure, STOP
+and fix the underlying `_PAD_NETS` assignment in
+`scripts/generate_pcb/routing.py`. Never copy gerbers to `release_jlcpcb/`
+with trace-through-pad overlaps — they are real shorts on the fabricated
+board regardless of DFM/DFA passing.
 
 ### 4. Copy to release_jlcpcb/
 

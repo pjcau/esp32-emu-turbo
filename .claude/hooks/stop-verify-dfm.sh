@@ -32,31 +32,57 @@ if [ ! -f "$DFM_SCRIPT" ]; then
     exit 0
 fi
 
-DFM_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$DFM_SCRIPT" 2>&1) || true
-DFM_EXIT=$?
+DFM_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$DFM_SCRIPT" 2>&1 || true)
 
-# Count failures
-FAIL_COUNT=$(echo "$DFM_OUTPUT" | grep -c "FAIL\|DANGER" 2>/dev/null || echo "0")
+# Count failures (grep -c returns 1 when no matches; strip with tr)
+FAIL_COUNT=$(printf "%s\n" "$DFM_OUTPUT" | grep -cE "FAIL|DANGER" || true)
+FAIL_COUNT=$(printf "%s" "$FAIL_COUNT" | tr -d '[:space:]')
+: "${FAIL_COUNT:=0}"
 
-if [ "$FAIL_COUNT" -gt 0 ]; then
+# ── Trace-through-pad overlap check ───────────────────────────────
+# Blocking guard against the v3.3 regression (commit 775e9fd) where
+# _PAD_NETS assignments were removed, leaving netted traces physically
+# crossing unnetted pads — real shorts on the fabricated board.
+TTP_SCRIPT="$PROJECT_DIR/scripts/verify_trace_through_pad.py"
+TTP_FAIL_COUNT=0
+TTP_OUTPUT=""
+if [ -f "$TTP_SCRIPT" ]; then
+    TTP_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$TTP_SCRIPT" 2>&1 || true)
+    TTP_FAIL_COUNT=$(printf "%s\n" "$TTP_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
+    TTP_FAIL_COUNT=$(printf "%s" "$TTP_FAIL_COUNT" | tr -d '[:space:]')
+    : "${TTP_FAIL_COUNT:=0}"
+fi
+
+TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT))
+
+if [ "$TOTAL_FAIL" -gt 0 ]; then
     echo "" >&2
-    echo "## DFM Verification Found Issues" >&2
+    echo "## PCB Verification Found Issues" >&2
     echo "" >&2
-    echo "PCB files were modified. DFM check found $FAIL_COUNT issue(s):" >&2
+    echo "PCB files were modified. Verification found $TOTAL_FAIL issue(s):" >&2
     echo "" >&2
-    # Show only failure lines, limit to 20 to avoid flooding
-    echo "$DFM_OUTPUT" | grep -E "FAIL|DANGER" | head -20 >&2
-    echo "" >&2
-    echo "Run 'python3 scripts/verify_dfm_v2.py' for full details." >&2
+    if [ "$FAIL_COUNT" -gt 0 ]; then
+        echo "── DFM (verify_dfm_v2.py): $FAIL_COUNT failure(s) ──" >&2
+        echo "$DFM_OUTPUT" | grep -E "FAIL|DANGER" | head -15 >&2
+        echo "" >&2
+    fi
+    if [ "$TTP_FAIL_COUNT" -gt 0 ]; then
+        echo "── Trace-through-pad (verify_trace_through_pad.py): $TTP_FAIL_COUNT failure(s) ──" >&2
+        echo "$TTP_OUTPUT" | grep -E "^\s*(FAIL|U[0-9]+\.|SW_|J[0-9]+\.)" | head -15 >&2
+        echo "" >&2
+    fi
+    echo "Run for full details:" >&2
+    [ "$FAIL_COUNT" -gt 0 ]     && echo "  python3 scripts/verify_dfm_v2.py" >&2
+    [ "$TTP_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_trace_through_pad.py" >&2
     echo "Fix issues before committing." >&2
     exit 2
 fi
 
-# If DFM passed, report success briefly
+# If all passed, report success briefly
 PASS_COUNT=$(echo "$DFM_OUTPUT" | grep -c "PASS\|OK" 2>/dev/null || echo "0")
 if [ "$PASS_COUNT" -gt 0 ]; then
     echo "" >&2
-    echo "DFM verification passed ($PASS_COUNT tests OK)." >&2
+    echo "PCB verification passed: DFM $PASS_COUNT tests OK, trace-through-pad clean." >&2
 fi
 
 exit 0
