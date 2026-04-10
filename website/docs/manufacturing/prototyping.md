@@ -77,8 +77,8 @@ FPC pin numbers from the ILI9488 panel datasheet:
 | 15 | RESET | jumper | GPIO13 |
 | 10 | DC/RS | jumper | GPIO14 |
 | 11 | WR | jumper | GPIO46 |
-| 12 | RD | jumper | GPIO3 |
-| 33 | LED-A (BL) | jumper | GPIO45 (or 3.3V for always-on) |
+| 12 | RD | 3.3V rail | — (tied HIGH, no read-back) |
+| 33 | LED-A (BL) | 3.3V rail via resistor | — (always-on backlight) |
 | 34-36 | LED-K | GND rail | — |
 | 38 | IM0 | 3.3V rail | — (HIGH for 8-bit 8080) |
 | 39 | IM1 | 3.3V rail | — (HIGH for 8-bit 8080) |
@@ -96,8 +96,8 @@ Connect the SD card SPI module:
 |---|---|---|
 | VCC | 3.3V rail | — |
 | GND | GND rail | — |
-| MOSI | jumper | GPIO36 |
-| MISO | jumper | GPIO37 |
+| MOSI | jumper | GPIO44 |
+| MISO | jumper | GPIO43 |
 | CLK | jumper | GPIO38 |
 | CS | jumper | GPIO39 |
 
@@ -142,8 +142,8 @@ For each button, wire a 6x6mm tact switch with a 10kΩ pull-up resistor:
 | Y | GPIO21 | Green |
 | START | GPIO18 | Orange |
 | SELECT | GPIO0 | Orange |
-| L | GPIO35 | Purple |
-| R | GPIO43 | Purple |
+| L | GPIO45 | Purple (internal pull-up only — no external R) |
+| R | GPIO3 | Purple |
 
 ### Step 7: USB Data (Native USB)
 

@@ -47,7 +47,7 @@ The **ILI9488 3.95" with 8-bit 8080 parallel interface** (bare panel + 40-pin FP
 
 Complete pin mapping for the ESP32-S3 N16R8 DevKitC-1:
 
-### Display (8080 Parallel) — 14 GPIOs
+### Display (8080 Parallel) — 12 GPIOs
 
 | GPIO | Function | FPC Pin | Notes |
 |---|---|---|---|
@@ -63,8 +63,10 @@ Complete pin mapping for the ESP32-S3 N16R8 DevKitC-1:
 | GPIO13 | LCD_RST | 15 | Reset |
 | GPIO14 | LCD_DC | 10 | Data/Command select |
 | GPIO46 | LCD_WR | 11 | Write strobe |
-| GPIO3 | LCD_RD | 12 | Read strobe |
-| GPIO45 | LCD_BL | 33 | Backlight anode (LED-A) |
+
+**Hardwired on PCB (no GPIO):**
+- **LCD_RD** (FPC pin 12) → tied HIGH to +3V3 (no read-back from ILI9488 needed)
+- **LCD_BL** (FPC pin 33) → tied to +3V3 via resistor (always-on backlight, no PWM)
 
 FPC power pins: 6=VDDI(+3V3), 7=VDDA(+3V3), 5/16/34-36/37=GND, 38=IM0(+3V3), 39=IM1(+3V3), 40=IM2(GND).
 Interface mode: IM2=0, IM1=1, IM0=1 → 8080 8-bit parallel.
@@ -77,8 +79,8 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 
 | GPIO | Function | Notes |
 |---|---|---|
-| GPIO36 | SD_MOSI | Master Out Slave In |
-| GPIO37 | SD_MISO | Master In Slave Out |
+| GPIO44 | SD_MOSI | Master Out Slave In |
+| GPIO43 | SD_MISO | Master In Slave Out |
 | GPIO38 | SD_CLK | SPI clock |
 | GPIO39 | SD_CS | Chip select |
 
@@ -104,8 +106,8 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 | GPIO21 | Y | 10k pull-up + 100nF debounce |
 | GPIO0 | SELECT | Boot button (dual-use) |
 | GPIO18 | START | 10k pull-up + 100nF debounce |
-| GPIO35 | L shoulder | 10k pull-up + 100nF debounce |
-| GPIO43 | R shoulder | 10k pull-up + 100nF debounce |
+| GPIO45 | L shoulder | Internal pull-up only (GPIO45 is VDD_SPI strapping, R14 DNP) |
+| GPIO3 | R shoulder | 10k pull-up + 100nF debounce |
 
 ### USB (native) — 2 GPIOs
 
@@ -118,21 +120,21 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 
 | GPIOs | Reason |
 |---|---|
-| GPIO26–GPIO32 | Used by Octal PSRAM (N16R8 module) |
-| GPIO44 (RX0) | Available, unused |
+| GPIO26–GPIO32 | Used by Quad Flash (WROOM-1 module internal) |
+| GPIO33–GPIO37 | Used by Octal PSRAM (N16R8 variant internal) |
 
 ### Summary
 
 | Category | GPIOs Used |
 |---|---|
-| Display (8080 parallel) | 14 |
+| Display (8080 parallel) | 12 |
 | SD Card (SPI) | 4 |
 | Audio (I2S) | 3 |
 | Buttons | 12 |
 | USB (native) | 2 |
-| **Total** | **35** |
+| **Total** | **33** |
 | ESP32-S3 available | 45 |
-| **Remaining** | **10** |
+| **Remaining** | **12** |
 
 ## Audio Architecture
 
