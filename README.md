@@ -222,3 +222,43 @@ All project documentation lives in `website/docs/` and is published via Docusaur
 - [Prototyping Guide](website/docs/prototyping.md)
 - [Enclosure Design](website/docs/enclosure.md)
 - [PCB Design](website/docs/pcb.md)
+
+## 🤖 Claude Code Integration
+
+This repository is also a **production-grade Claude Code skill suite** for KiCad + JLCPCB PCB design. All 43 skills used to design this PCB are available in `.claude/skills/`, and the 27 PCB-specific ones are packaged as the reusable `kicad-jlcpcb-skills` plugin.
+
+### Install the plugin in your own project
+
+```bash
+# Inside Claude Code:
+/plugin marketplace add pjcau/esp32-emu-turbo
+/plugin install kicad-jlcpcb-skills
+```
+
+### What you get
+
+- **27 PCB skills** — Design (5), Generate (7), Verify (11), Fix (4)
+- **6 lifecycle slash commands** — `/design-pcb`, `/generate-pcb`, `/verify-pcb`, `/fix-pcb`, `/release-pcb`, `/bootstrap-new-pcb`
+- **115 DFM tests + 9 DFA tests + 26 JLCPCB rules** (150 total manufacturing checks)
+- **Pythonic KiCad generator** pipeline (no manual `.kicad_pcb` editing)
+- **Deterministic, CI-friendly** workflow — full pipeline runs in ~5 seconds
+
+### 5-phase design lifecycle
+
+```
+┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐
+│  Design  │ → │ Generate │ → │  Verify  │ → │   Fix    │ → │ Release  │
+└──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘
+  5 skills       7 skills      11 skills      4 skills      shares Generate
+```
+
+### Documentation
+
+- [`.claude/README.md`](.claude/README.md) — index of all 43 skills, 6 commands, 6 agents, 9 hooks
+- [`docs/getting-started.md`](docs/getting-started.md) — install + first-run + first PCB walkthrough
+- [`docs/lifecycle.md`](docs/lifecycle.md) — the 5-phase design lifecycle with exit criteria
+- [`docs/skill-anatomy.md`](docs/skill-anatomy.md) — how to author your own skills on top of the base suite
+
+### Credits
+
+Plugin packaging (`.claude-plugin/`, lifecycle slash commands, flat `skills/` layout) is modeled on [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) — the first production-grade general-purpose Claude Code skill suite. If you want a non-hardware equivalent focused on SDLC workflows, go check it out. Our hardware-focused adaptation is fully complementary.
