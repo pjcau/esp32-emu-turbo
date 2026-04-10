@@ -6,7 +6,7 @@ sidebar_position: 3
 
 # KiCad + JLCPCB Ecosystem Analysis
 
-Comparative analysis of open-source tools, MCP servers, Claude Code skills, and CI/CD pipelines for PCB design with KiCad and JLCPCB manufacturing. Conducted April 2026.
+Comparative analysis of open-source tools, MCP servers, Claude Code skills, and CI/CD pipelines for PCB design with KiCad and JLCPCB manufacturing. Originally conducted 2026-04-09, updated 2026-04-10.
 
 ---
 
@@ -16,10 +16,14 @@ ESP32 Emu Turbo has the **most advanced Claude Code + KiCad integration** found 
 
 | Metric | Our Project | Best Alternative |
 |--------|------------|-----------------|
-| Claude Code PCB skills | **43** | 10 (atopile-agent-skill) |
+| Claude Code skills total | **43** (27 PCB + 4 firmware + 3 CAD + 9 others) | 10 (atopile-agent-skill) |
 | DFM verification tests | **115** | 0 (no comparable suite) |
-| KiCad MCP tools | **64** | 28 (Seeed-Studio) |
+| MCP server | None — studied [mixelpixx/KiCAD-MCP-Server](https://github.com/mixelpixx/KiCAD-MCP-Server) (64 tools) and mapped them to our skills | 28 (Seeed-Studio) |
 | Automated checks per commit | **1150+** (DFM+DFA+electrical+adversarial+design intent) | ~10 (KiBot DRC) |
+
+:::info
+We do **not** currently run an MCP server. Our pipeline is based on Python scripts, S-expression parsing, and Claude Code skills. The 64-tool inventory in `memory/kicad-mcp-tools.md` is a **reference mapping** of mixelpixx's MCP tools onto our equivalent skills — not an indication we expose 64 MCP tools ourselves. See the ["MCP server consolidation"](#long-term-v2-planning) long-term plan.
+:::
 
 ---
 
@@ -49,7 +53,7 @@ ESP32 Emu Turbo has the **most advanced Claude Code + KiCad integration** found 
 
 | Tool | Stars | What It Does | Value for Us |
 |------|-------|-------------|--------------|
-| [kicad-mcp-server (Seeed)](https://github.com/Seeed-Studio/kicad-mcp-server) | 28 | MCP server for KiCad using pcbnew API. Has `CLAUDE.md` | Compare 28 tools vs our 64 |
+| [kicad-mcp-server (Seeed)](https://github.com/Seeed-Studio/kicad-mcp-server) | 28 | MCP server for KiCad using pcbnew API. Has `CLAUDE.md` | Reference for future MCP wrapping of our skills |
 | [kicad-mcp-server (Huaqiu)](https://github.com/Huaqiu-Electronics/kicad-mcp-server) | 3 | MCP server from NextPCB manufacturer | Manufacturer-specific rules |
 | [jlcmcp](https://github.com/hyl64/jlcmcp) | 19 | JLCPCB EDA MCP Server — 39 tools for EasyEDA | Study tool decomposition |
 | [atopile-agent-skill](https://github.com/mawildoer/atopile-agent-skill) | 5 | **Only** hardware Claude Code skills package | Study `.claude-plugin/` format |
@@ -68,19 +72,19 @@ ESP32 Emu Turbo has the **most advanced Claude Code + KiCad integration** found 
 
 ## Deep Dive: Key Repos
 
-### Seeed-Studio/kicad-mcp-server vs Our MCP Tools
+### Seeed-Studio/kicad-mcp-server vs Our Pipeline
 
 | Aspect | Seeed-Studio | Our Project |
 |--------|-------------|-------------|
-| API approach | pcbnew Python API (live KiCad) | S-expression parsing (standalone) |
-| Tool count | 28 | 64 |
+| Approach | MCP server over pcbnew Python API (live KiCad) | Claude Code skills + S-expression parsing (standalone) |
+| Tool count | 28 MCP tools | 43 Claude Code skills (no MCP server) |
 | Requires running KiCad | Yes | No |
 | Schematic access | Yes (eeschema) | Yes (custom parser) |
-| PCB edit capability | Yes (live edit) | Yes (generator-based) |
+| PCB edit capability | Yes (live edit) | Yes (generator-based, deterministic) |
 | DFM verification | Basic DRC | 115 custom tests + JLCPCB rules |
-| Claude integration | CLAUDE.md only | 39 skills + 5 agents + hooks |
+| Claude integration | CLAUDE.md only | 43 skills + 5 agents + hooks |
 
-**Takeaway**: Their pcbnew API approach gives real-time editing but requires a running KiCad instance. Our S-expression parser is standalone and CI-friendly. Consider adding pcbnew API as a secondary path for interactive design sessions.
+**Takeaway**: Their pcbnew API approach gives real-time editing but requires a running KiCad instance. Our generator-based pipeline is standalone, CI-friendly, and fully deterministic. Wrapping our skills as an MCP server (tracked in [long-term plan](#long-term-v2-planning)) would complement — not replace — the generator pipeline.
 
 ### atopile-agent-skill — Claude Skills for Hardware
 
@@ -121,26 +125,30 @@ KiBot (704 stars) is the most mature KiCad automation tool. Comparison:
 
 ## Recommendations
 
-### Short-term (integrate now)
+### Done — Short-term items completed 2026-04-09
 
-1. **InteractiveHtmlBom** — Add to website for visual BOM inspection during prototyping
-2. **agausmann/jlcpcb-kicad-drc** — Cross-reference their DRC rules against our 115 tests to find gaps
-3. **JLC2KiCad_lib** — Add LCSC→footprint lookup to `/jlcpcb-parts` skill
+All three short-term items were integrated within hours of this analysis being published:
 
-### Medium-term (next release cycle)
+| Item | Status | Commit |
+|------|--------|--------|
+| **InteractiveHtmlBom** on website for visual BOM inspection | ✅ Integrated | `b1660ba` — `feat(website): add InteractiveHtmlBom for visual assembly inspection` (+4717 lines); `7bb75b5` adds links from components/PCB docs |
+| **agausmann/jlcpcb-kicad-drc** cross-reference against our 115 tests | ✅ Analyzed | `dbfd653` — `docs: add JLCPCB DRC gap analysis (6 threshold gaps found)` |
+| **JLC2KiCad_lib** LCSC→footprint lookup in `/jlcpcb-parts` | ✅ Integrated (via EasyEDA API) | `0c69f32` — `feat(jlcpcb-parts): add LCSC footprint lookup via EasyEDA API` (+149 lines) |
 
-4. **KiBot + GitHub Actions** — Automate gerber generation and DRC on every push
-5. **kicad-diff-visualizer** — Add visual PCB diffs to PR reviews
-6. **Seeed-Studio MCP server** — Study pcbnew API for live editing mode
+### Next up — Medium-term (next release cycle)
+
+1. **KiBot + GitHub Actions** — The KiBot config already exists at `hardware/kicad/external-dfm.kibot.yaml` and a Docker image at `docker/kibot/Dockerfile`. The missing piece is a `.github/workflows/` file to trigger DRC + gerber export on every push. This is the highest-leverage remaining gap.
+2. **kicad-diff-visualizer** — Add visual PCB diffs to PR reviews.
+3. **Seeed-Studio MCP server study** — Evaluate pcbnew API for an optional interactive editing mode alongside the generator pipeline.
 
 ### Long-term (v2 planning)
 
-7. **Package skills as `.claude-plugin/`** — Following atopile-agent-skill format for distribution
-8. **Contribute to KiBot** — Add our JLCPCB DFM rules as a KiBot plugin
-9. **MCP server consolidation** — Merge our 64 tools with the emerging MCP standard
+4. **Package skills as `.claude-plugin/`** — Following [atopile-agent-skill](https://github.com/mawildoer/atopile-agent-skill) format to distribute our 43 skills as a reusable plugin for other KiCad projects.
+5. **Contribute to KiBot** — Upstream our JLCPCB DFM rules as a KiBot plugin.
+6. **MCP server consolidation** — Wrap our skills as an MCP server so non–Claude-Code agents can consume them, complementing (not replacing) the generator pipeline.
 
 ---
 
 ## Conclusion
 
-The ESP32 Emu Turbo project has built the most comprehensive AI-assisted PCB design pipeline in the open-source ecosystem. With 43 Claude Code skills, 115 DFM tests, 1150+ automated checks, and 64 MCP tools, it significantly exceeds any other project found on GitHub. The main gap is CI/CD automation (KiBot) and plugin distribution (`.claude-plugin/` format).
+The ESP32 Emu Turbo project has built the most comprehensive AI-assisted PCB design pipeline in the open-source ecosystem. With **43 Claude Code skills**, **115 DFM tests**, and **1150+ automated checks per commit**, it significantly exceeds any other project found on GitHub. We do not currently ship an MCP server — our integration is skill-based — but the reference mapping in `memory/kicad-mcp-tools.md` shows our skill coverage matches or exceeds the 64-tool mixelpixx reference. The remaining gaps are **CI/CD automation** (KiBot + GitHub Actions) and **plugin distribution** (`.claude-plugin/` packaging).
