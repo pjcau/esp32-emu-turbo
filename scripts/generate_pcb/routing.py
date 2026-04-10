@@ -4644,6 +4644,24 @@ def _button_pullup_bridges():
     parts.append(_seg(98.95, 47.00, 98.95, 48.00, "F.Cu", W_SIG, n_btn_r))
     parts.append(_seg(98.95, 48.00, 87.985, 48.00, "F.Cu", W_SIG, n_btn_r))
 
+    # ── MEDIUM: BTN_START ──
+    # R12.1@(83.95, 46) → existing F.Cu endpoint/via at (90.75, 34.94)
+    # Direct F.Cu route would cross multiple +3V3 pull-up vias and BTN_SELECT
+    # existing F.Cu at y=45.1. Use a dogleg: B.Cu stub north to y=43.0 (clear
+    # of +3V3 row at 44.5 and BTN_SELECT F.Cu at 45.1), via, F.Cu diagonal
+    # to target. The diagonal clears the +3V3 via at R12's own position
+    # because it starts 1.5mm north of the via row.
+    n_btn_start = NET_ID["BTN_START"]
+    parts.append(_seg(83.95, 46.00, 83.95, 43.00, "B.Cu", W_SIG, n_btn_start))
+    parts.append(_via_net(83.95, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(83.95, 43.00, 90.75, 34.94, "F.Cu", W_SIG, n_btn_start))
+
+    # BTN_SELECT bridge: deferred — R13.1@(88.95, 46) to (73.03, 45.10) is
+    # 16mm through the y=43-45 density band which is crowded with other
+    # buttons' +3V3 vias, BTN_X F.Cu at y=42.70, BTN_Y F.Cu at y=43.90,
+    # and my own new bridge vias. Every route attempt has conflicts. v2
+    # PCB respin is the clean solution (relocate R13/C14 closer to U1.27).
+
     return parts
 
 
