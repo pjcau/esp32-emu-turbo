@@ -44,6 +44,15 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 # regression class). Checks F.Cu and B.Cu.
 python3 scripts/verify_trace_through_pad.py        # MUST be "1 passed, 0 failed"
 
+# ── Per-net copper connectivity (R5-CRIT class) ─────────────────
+# Walks the per-net copper graph and asserts every net forms a
+# single connected component. Catches R5-CRIT-1..9 bugs where
+# pad-net labels are correct but copper is fragmented (BAT+ L1.1
+# isolated, VBUS decoupling floating, button pull-ups disconnected,
+# SW_BOOT non-functional, etc). Missing this gate caused R5 bugs
+# to ship undetected in v3.3.
+python3 scripts/verify_net_connectivity.py         # MUST be "0 failed"
+
 # ── DFM / DFA / JLCPCB manufacturing ─────────────────────────────
 python3 scripts/verify_dfm_v2.py                   # 115 tests
 python3 scripts/verify_dfa.py                      #   9 tests

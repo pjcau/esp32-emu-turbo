@@ -1002,7 +1002,13 @@ def _power_traces():
     _ip5306_therm_vias = [
         (ip_ep[0] - 1.5, ip_ep[1] + 2.5),  # (108.5, 45.0) — gap to KEY=1.075mm ✓
         (ip_ep[0],        ip_ep[1] + 2.5),  # (110.0, 45.0) — center
-        (ip_ep[0] - 0.7,  ip_ep[1] + 3.5),  # (109.3, 46.0) — below, gap to VBUS>1mm ✓
+        # R6 FIX (2026-04-10): was (109.3, 46.0) with stub down to y=44.0.
+        # The via at y=46.0 size 0.6 blocked the new BAT+ corridor horizontal
+        # at y=46.135 (different net → DRC short). Moved to y=44.5, still
+        # south of the EP pad (EP bottom at 43.9) for GND stitching function.
+        # Via distance to sibling thermal vias (108.5, 45) and (110, 45):
+        #   dx=0.8, dy=0.5 → 0.94mm center distance, gap=0.34mm ✓
+        (ip_ep[0] - 0.7,  ip_ep[1] + 2.0),  # (109.3, 44.5) — R6 moved north
     ]
     # Connect each thermal via to EP pad via a single vertical B.Cu stub.
     # Each stub goes straight down into the EP pad area (all inside pad bounds).
@@ -1117,21 +1123,70 @@ def _power_traces():
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
 
-    # ── BAT+ side of L1: L1 pin 1 to BAT+ zone ─────────────
-    # DFM: offset 3.0mm (was 2.0). L1[1]@(111.7,52.5) pad size 1.4x3.4mm -> half_h=1.7.
-    # Pad top = 52.5-1.7=50.8. Via at 2mm: y=50.5 is INSIDE pad (top 50.8).
-    # At 3mm: y=49.5, via bottom=49.95, gap to pad top=0.85mm OK.
-    # DFM clearance fix: via at (111.7,49.5) was 0.0mm from VBUS F.Cu vertical at x=111.0
-    # (via left ring=111.25, VBUS trace right edge=111.25 → gap=0.0mm, shorting violation).
-    # Fix: offset via 0.7mm RIGHT → bat_via_x=112.4: gap=112.4-0.45-111.25=0.70mm ✓.
-    # Add B.Cu horizontal stub from L1[1] x=111.7 to via x=112.4 at bat_via_y.
-    bat_via_x = l1_1[0] + 0.7   # 112.4 — right of VBUS trace at x=111.0
-    bat_via_y = l1_1[1] - 3     # 49.5 — above L1[1] pad top (50.8mm) by 0.85mm
-    parts.append(_via_net(bat_via_x, bat_via_y, n_bat))
-    parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], bat_via_y,
-                       "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(l1_1[0], bat_via_y, bat_via_x, bat_via_y,
-                       "B.Cu", W_PWR_HIGH, n_bat))
+    # ── BAT+ side of L1: L1 pin 1 to BAT+ network ─────────────
+    # R6 FIX (2026-04-10): the previous version created a B.Cu stub
+    # (111.7,52.5)→(111.7,49.5)→(112.4,49.5)→dangling via hoping to be
+    # picked up by a "BAT+ zone fill". But _power_zones() never created
+    # a BAT+ pour — L1.1 was electrically isolated from the rest of the
+    # BAT+ network since v3.1, leaving the boost converter unable to
+    # draw current from the battery. Board only booted on USB-C.
+    # (see hardware-audit-bugs.md R5-CRIT-1)
+    #
+    # Fix: route L1.1 → dogleg east around the IP5306_KEY vertical at
+    # x=114.05 → B.Cu horizontal at y=46.135 threading the narrow
+    # corridor between the Fix1a GND trace (y=45.3, hw 0.3, bottom
+    # edge 45.6) and the IP5306_KEY trace (y=46.61, hw 0.125, top
+    # edge 46.485). Usable y band 45.6..46.485 = 0.885mm.
+    # New BAT+ hz at y=46.135, w=0.3mm (hw 0.15):
+    #   top edge 45.985, gap to GND bottom 0.385mm ✓
+    #   bottom edge 46.285, gap to KEY top 0.2mm ✓
+    W_BAT_CORRIDOR = 0.3  # must be ≤ 0.4mm to fit the 0.885mm corridor
+    CORRIDOR_Y = 46.10    # y=46.10 gives ≥0.1mm annular ring gap to KEY hz at 46.61
+    #
+    # Route plan:
+    #   L1.1 (111.7,52.5) → (111.7,48.0) B.Cu vertical
+    #   (111.7,48.0) → (113.45,48.0) B.Cu — clear of KEY vert (gap ≥ 0.225mm)
+    #   F.Cu bridge (113.45,48.0) → (114.65,48.0) over KEY vertical at x=114.05
+    #   (114.65,48.0) → (114.65,46.135) B.Cu — back on main corridor layer
+    #
+    #   Main corridor: the BAT+ B.Cu horizontal at y=46.135 cannot run from
+    #   x=105.5 directly because it would cross the left KEY vertical at x=107
+    #   (KEY left vert: (107, 46.61) → (107, 44.41) blocks y=46.135 on B.Cu).
+    #   Solution: extend the existing F.Cu BAT+ horizontal from (105.5, 46.135)
+    #   east to (107.8, 46.135), then via to B.Cu clear of the KEY vertical.
+    #
+    #   (107.8, 46.135) F.Cu→B.Cu via → B.Cu (107.8,46.135) → (116.95,46.135)
+    #     Clearances: KEY hz top 46.485, BAT+ bottom 46.285 (gap 0.2 ✓);
+    #                 GND Fix1a hz top 45.6, BAT+ top 45.985 (gap 0.385 ✓);
+    #                 GND thermal via (109.3, 44.5) — below BAT+, gap ~0.635 ✓.
+    #
+    #   C18.1 picks up via its own stub (extended to 46.135 in _passive_traces).
+    #
+    # L1.1 branch (B.Cu + F.Cu bridge):
+    parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], 48.0,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # L1.1 → (111.7, 48.0)
+    parts.append(_seg(l1_1[0], 48.0, 113.45, 48.0,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))
+    parts.append(_via_net(113.45, 48.0, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(113.45, 48.0, 114.65, 48.0,
+                       "F.Cu", W_BAT_CORRIDOR, n_bat))  # F.Cu bridge over KEY vert
+    parts.append(_via_net(114.65, 48.0, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(114.65, 48.0, 114.65, CORRIDOR_Y,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))
+
+    # Main corridor: F.Cu bridge east from (105.5, 46.135) past KEY left vertical
+    # (x=107) to (107.8, CORRIDOR_Y=46.10), then via to B.Cu for the eastward run.
+    # Bridge F.Cu from existing (105.5, 46.135) via to new y=46.10. Short 0.035mm
+    # vertical stub makes the F.Cu horizontal land correctly on the new corridor.
+    parts.append(_seg(105.5, 46.135, 105.5, CORRIDOR_Y,
+                       "F.Cu", W_BAT_CORRIDOR, n_bat))
+    parts.append(_seg(105.5, CORRIDOR_Y, 107.8, CORRIDOR_Y,
+                       "F.Cu", W_BAT_CORRIDOR, n_bat))  # F.Cu bridge over KEY left vert
+    parts.append(_via_net(107.8, CORRIDOR_Y, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(107.8, CORRIDOR_Y, 114.65, CORRIDOR_Y,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # main corridor part 1
+    parts.append(_seg(114.65, CORRIDOR_Y, 116.95, CORRIDOR_Y,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # main corridor part 2 (meets L1 dogleg)
 
     # ── KEY: IP5306 pin 5 -> R16 pull-up to +5V ─────────────
     # B.Cu route from KEY pin down to R16 area
@@ -3790,6 +3845,14 @@ def _button_traces():
                        "F.Cu", W_DATA, net_l))
     parts.append(_seg(epx_l, btn_l_fcu_y, epx_l, epy_l,
                        "F.Cu", W_DATA, net_l))
+    # R6 FIX (2026-04-10): missing via-in-pad at U1:26 (GPIO45, B.Cu).
+    # Without this via, the F.Cu trace ends at (epx_l, epy_l) on the wrong
+    # layer and never touches the ESP32 pad on B.Cu. The L shoulder button
+    # has been electrically non-functional since v3.1. Detected by
+    # verify_net_connectivity.py: BTN_L showed U1.26 as an isolated
+    # component. via-in-pad on a 0.9x1.5mm SMD pad is acceptable for an
+    # ESP32-S3 module (solder-mask-defined pad, standard assembly practice).
+    parts.append(_via_net(epx_l, epy_l, net_l, size=VIA_STD, drill=VIA_STD_DRILL))
     # GND via on opposite shoulder pad
     # DFM: was 1mm offset — via ring at 14.15-0.45=13.70, pad right=13.15+0.45=13.60, gap=0.10mm danger.
     # Use 1.5mm: via at 14.65, ring left=14.20, pad right=13.60, gap=0.60mm clear.
@@ -4132,27 +4195,56 @@ def _passive_traces():
     c17_p1 = _pad("C17", "1")
     c17_p2 = _pad("C17", "2")
     if c17_p1:
-        c17_vbus_via_y = c17_p1[1] - 1.35  # y=33.65 — between LCD_RST(33.04) and LCD_RD(34.30)
-        # DFM: LCD_D4 B.Cu vert at x=111.50 (w=0.20). Gap at W_PWR_HIGH(0.76)=0.07mm.
-        # Use 0.55mm: gap = 0.55-0.275-0.10 = 0.175mm ≥ target ✓
-        parts.append(_seg(c17_p1[0], c17_p1[1], c17_p1[0], c17_vbus_via_y,
+        # R6 FIX (2026-04-10): previously the C17 VBUS stub went NORTH to a
+        # dangling via at (110.95, 33.65) hoping for VBUS zone fill that did
+        # not exist. C17 was electrically isolated from the VBUS network —
+        # IP5306 VIN had no input decoupling (see hardware-audit-bugs.md
+        # R5-CRIT-3).
+        #
+        # Fix: route C17.1 SOUTH instead to reach the existing VBUS F.Cu/B.Cu
+        # transition via at (111.00, 40.095). Route:
+        #   B.Cu (110.95, 35.00) → (110.95, 40.095) vertical 5.1mm
+        #   B.Cu (110.95, 40.095) → (111.00, 40.095) short 0.05mm stub
+        # The stub endpoint touches the existing VBUS via which provides
+        # the F.Cu↔B.Cu layer transition. No new vias needed.
+        #
+        # Clearances along the vertical at x=110.95, y=[35, 40.095]:
+        #   - LCD_D4 B.Cu vert at x=111.50 (w=0.20): dx=0.55, gap = 0.55-0.275-0.10 = 0.175mm ✓
+        #   - U2.1 VBUS pad at (113, 40.59): same net, no clearance issue
+        #   - EP (110, 42.5 y_max=43.9): 3.8mm south of our endpoint → clear
+        #   - No other B.Cu traces on x≈111 between y=35 and y=40
+        parts.append(_seg(c17_p1[0], c17_p1[1], c17_p1[0], 40.095,
                           "B.Cu", 0.55, NET_ID["VBUS"]))
-        parts.append(_via_net(c17_p1[0], c17_vbus_via_y, NET_ID["VBUS"], size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(c17_p1[0], 40.095, 111.00, 40.095,
+                          "B.Cu", 0.55, NET_ID["VBUS"]))
     if c17_p2:
         parts.append(_seg(c17_p2[0], c17_p2[1], c17_p2[0], c17_p2[1] + 2.7,
                           "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(c17_p2[0], c17_p2[1] + 2.7, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # C18 near IP5306: BAT decoupling at (116, 49), 10.7mm from pin 6 (was 15.4mm).
+    # C18 near IP5306: BAT decoupling at (116.95, 49.0), 10.7mm from pin 6.
+    # R6 FIX (2026-04-10): the previous version routed C18.1 to a dangling
+    # via at (116.95, 47.5) expecting a non-existent BAT+ zone fill to
+    # connect it (see hardware-audit-bugs.md R5-CRIT-2). C18 was never
+    # electrically part of the BAT+ rail — the cap was physically placed
+    # and listed in the BOM but floating.
+    #
+    # Fix: extend C18.1 stub further north to y=46.135 where it meets the
+    # new BAT+ corridor horizontal added in _power_traces(). No via needed —
+    # both segments are B.Cu and T-junction at (116.95, 46.135).
     # Placed right of KEY vertical at x=114.05, between KEY route and R16.
-    # Pad 1 (left) -> BAT+ via UP 1.5mm: (115.5, 47.5) clears KEY horiz@y≈46.7
-    # Pad 2 (right) -> GND via DOWN 2.0mm: (116.5, 51.0) clears R16 pad@y=51.85
     c18_p1 = _pad("C18", "1")
     c18_p2 = _pad("C18", "2")
     if c18_p1:
-        parts.append(_seg(c18_p1[0], c18_p1[1], c18_p1[0], c18_p1[1] - 1.5,
+        # R6 FIX: route C18.1 all the way north to y=46.10 where the new
+        # BAT+ corridor horizontal (from _power_traces) runs. Same-net
+        # T-junction at (116.95, 46.10) — no via needed.
+        # Length = 49.0 - 46.10 = 2.9mm. Passes over:
+        #   - KEY horizontal at y=46.61: x=116.95 > 114.05 (KEY right end) → clear
+        #   - KEY vertical at x=114.05: 2.9mm left of our x → clear
+        #   - R16 pads at (114.05/115.95, 52.5): far south of our y range → clear
+        parts.append(_seg(c18_p1[0], c18_p1[1], c18_p1[0], 46.10,
                           "B.Cu", W_PWR_HIGH, NET_ID["BAT+"]))
-        parts.append(_via_net(c18_p1[0], c18_p1[1] - 1.5, NET_ID["BAT+"], size=VIA_STD, drill=VIA_STD_DRILL))
     if c18_p2:
         parts.append(_seg(c18_p2[0], c18_p2[1], c18_p2[0], c18_p2[1] + 2.0,
                           "B.Cu", W_PWR_LOW, n_gnd))

@@ -23,6 +23,7 @@ python3 -m scripts.generate_pcb hardware/kicad
 ```bash
 python3 scripts/verify_dfm_v2.py
 python3 scripts/verify_trace_through_pad.py
+python3 scripts/verify_net_connectivity.py
 ```
 
 If any test FAILS, stop and report. Do NOT continue to gerber export with failing tests.

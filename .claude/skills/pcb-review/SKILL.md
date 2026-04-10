@@ -321,6 +321,23 @@ Verify power trace widths against current requirements:
 python3 scripts/verify_trace_through_pad.py
 ```
 
+### 1h2. Run per-net copper connectivity check (R5-CRIT gate)
+
+```bash
+python3 scripts/verify_net_connectivity.py
+```
+
+**CRITICAL HARD GATE** (R6): walks the union-find over pads ∪ vias ∪
+segments for every net and asserts single connected component. Catches
+the R5-CRIT class of bugs where pad-net labels are correct but copper
+is fragmented — L1.1 BAT+ inductor isolated (board can't boot on
+battery), C17/C18 decoupling caps floating, button pull-ups never
+connected, SW_BOOT non-functional, D1 menu diode anodes dangling,
+BTN_L missing F.Cu→B.Cu via-in-pad at U1.26 (L shoulder button never
+worked on v3.3). Run with `--strict` to bail on technical-debt
+accepted fragmentations.
+
+
 **CRITICAL HARD GATE**: any overlap means a copper trace physically shares
 copper with an unnetted (or differently-netted) pad — a real short on the
 manufactured board. Checks F.Cu **and** B.Cu. Catches issues that DRC

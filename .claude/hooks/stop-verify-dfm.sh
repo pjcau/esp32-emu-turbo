@@ -53,7 +53,21 @@ if [ -f "$TTP_SCRIPT" ]; then
     : "${TTP_FAIL_COUNT:=0}"
 fi
 
-TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT))
+# ── Net connectivity check ────────────────────────────────────────
+# Blocking guard against the R5 class of electrical bugs where every
+# pad-net assignment is "correct" per datasheet_specs but the copper
+# is fragmented into isolated islands (see hardware-audit-bugs.md R5).
+NC_SCRIPT="$PROJECT_DIR/scripts/verify_net_connectivity.py"
+NC_FAIL_COUNT=0
+NC_OUTPUT=""
+if [ -f "$NC_SCRIPT" ]; then
+    NC_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$NC_SCRIPT" 2>&1 || true)
+    NC_FAIL_COUNT=$(printf "%s\n" "$NC_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
+    NC_FAIL_COUNT=$(printf "%s" "$NC_FAIL_COUNT" | tr -d '[:space:]')
+    : "${NC_FAIL_COUNT:=0}"
+fi
+
+TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT))
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     echo "" >&2
@@ -71,9 +85,15 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
         echo "$TTP_OUTPUT" | grep -E "^\s*(FAIL|U[0-9]+\.|SW_|J[0-9]+\.)" | head -15 >&2
         echo "" >&2
     fi
+    if [ "$NC_FAIL_COUNT" -gt 0 ]; then
+        echo "── Net connectivity (verify_net_connectivity.py): $NC_FAIL_COUNT fragmented net(s) ──" >&2
+        echo "$NC_OUTPUT" | grep -E "^\s*(FAIL|──)" | head -15 >&2
+        echo "" >&2
+    fi
     echo "Run for full details:" >&2
     [ "$FAIL_COUNT" -gt 0 ]     && echo "  python3 scripts/verify_dfm_v2.py" >&2
     [ "$TTP_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_trace_through_pad.py" >&2
+    [ "$NC_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_net_connectivity.py" >&2
     echo "Fix issues before committing." >&2
     exit 2
 fi

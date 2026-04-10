@@ -44,6 +44,9 @@ python3 scripts/verify_dfm_v2.py
 # 2a-bis. Trace-through-pad overlap — HARD GATE (blocks release)
 python3 scripts/verify_trace_through_pad.py
 
+# 2a-ter. Per-net copper connectivity — HARD GATE (R5-CRIT class)
+python3 scripts/verify_net_connectivity.py
+
 # 2b. DFA verification (9 tests)
 python3 scripts/verify_dfa.py
 

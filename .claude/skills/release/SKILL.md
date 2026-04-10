@@ -44,6 +44,14 @@ docker compose run --rm kicad-pcb pcb export drill --output /gerbers/ --format e
 # leaving 6 real shorts in the fabricated board.
 python3 scripts/verify_trace_through_pad.py  # MUST be 0 failures
 
+# ── BLOCKING: net connectivity gate ─────────────────────────────
+# Walks the union-find over pads ∪ vias ∪ segments per net and
+# asserts every net forms a single connected component. Missing
+# this check left R5-CRIT-1..6 bugs shipped in v3.3 — BAT+ inductor
+# isolated (no battery boot), VBUS decoupling floating, buttons
+# with disconnected pull-ups, SW_BOOT non-functional, etc.
+python3 scripts/verify_net_connectivity.py  # MUST be 0 failures
+
 # Manufacturing (must all pass)
 python3 scripts/verify_dfm_v2.py
 python3 scripts/verify_dfa.py
