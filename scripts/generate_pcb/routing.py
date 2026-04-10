@@ -4572,6 +4572,81 @@ def _menu_diode_traces():
     return parts
 
 
+def _button_pullup_bridges():
+    """R6 FIX (2026-04-10): bridge the isolated R.1/C.1 pull-up+debounce
+    junctions to the main button signal lines.
+
+    Pre-existing bug (R5-CRIT-4 in hardware-audit-bugs.md): the 12 button
+    pull-up resistors (R4..R15) and debounce caps (C5..C16) are placed in
+    a 5mm-pitch strip at y=46/50, with same-net verticals between R.1
+    and C.1, but no connection to the main button signal path. The
+    pull-ups pulled nothing; debounce caps saw no signal. Firmware
+    internal pull-ups kept the buttons functional, but the external
+    R/C network was BOM cost without electrical effect.
+
+    Fix: for each button, route a bridge from the R.1 pad (at y=46 on
+    the strip) to the nearest existing signal point on the main button
+    net. The geometry of each button is different, so the bridges are
+    hand-coded per button rather than scripted.
+    """
+    parts = []
+
+    # ── EASY: BTN_B, BTN_X, BTN_Y ──
+    # These buttons have their F.Cu main horizontal at y ∈ [41.50, 43.90]
+    # running near the R strip (y=46). A short B.Cu vertical of 2-5mm
+    # from R.1 to the main F.Cu / B.Cu at x≈R.1.x connects them.
+
+    # BTN_B: R9.1@(68.95, 46) → main F.Cu (45.55, 41.50)-(73.25, 41.50)
+    # DFM: C3.2 (GND) at (68.60, 42.00) — pad x range [68.10, 69.10] blocks
+    # a straight vertical at x=68.95. Shift bridge 0.45mm east to x=69.40
+    # (still inside R9.1 pad right edge ~69.45 — same net, no issue) to
+    # clear C3.2 by 0.175mm.
+    n_btn_b = NET_ID["BTN_B"]
+    parts.append(_seg(68.95, 46.00, 69.40, 46.00, "B.Cu", W_SIG, n_btn_b))  # horiz within R9.1 pad
+    parts.append(_seg(69.40, 46.00, 69.40, 41.50, "B.Cu", W_SIG, n_btn_b))  # vertical clear of C3.2
+    parts.append(_via_net(69.40, 41.50, n_btn_b, size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # BTN_X: R10.1@(73.95, 46) → existing BTN_X F.Cu↔B.Cu via at (73.555, 42.70)
+    # Use the existing via (west end of the (73.56, 42.70)-(75.56, 42.70) segment)
+    # instead of a mid-segment tap. Routing east of x=73.56 would cross the
+    # BTN_Y B.Cu horizontal at y=43.90 from (74.83, 43.90)-(76.83, 43.90).
+    # Route: small westward hop within R10.1 pad, then vertical to the via.
+    n_btn_x = NET_ID["BTN_X"]
+    parts.append(_seg(73.95, 46.00, 73.555, 46.00, "B.Cu", W_SIG, n_btn_x))
+    parts.append(_seg(73.555, 46.00, 73.555, 42.70, "B.Cu", W_SIG, n_btn_x))
+
+    # BTN_Y: R11.1@(78.95, 46) → existing BTN_Y F.Cu/B.Cu via at (74.83, 43.90)
+    # Blockers:
+    #   - B.Cu: R11.2/C12.2 +3V3/GND pads at x=77.05
+    #   - B.Cu: R11 own +3V3 pull-up via at (76.95, 44.5) size 0.6
+    #   - F.Cu: BAT+ horizontal at y=46.135 (main BAT+ network)
+    # Bridge strategy: B.Cu stub from R11.1 going NORTH to y=43.0 (well
+    # past the +3V3 via row at y=44.5), via to F.Cu, then F.Cu diagonal
+    # to the existing BTN_Y F.Cu via at (74.83, 43.90).
+    # Diagonal clearance to R11 +3V3 via: perpendicular distance 1.05mm
+    # gives gap = 1.05 - 0.3 - 0.125 = 0.625mm ✓.
+    n_btn_y = NET_ID["BTN_Y"]
+    parts.append(_seg(78.95, 46.00, 78.95, 43.00, "B.Cu", W_SIG, n_btn_y))  # stub north past +3V3 via row
+    parts.append(_via_net(78.95, 43.00, n_btn_y, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    # Use exact via x=74.825 (cache rounds to 74.83 in text display) so the
+    # dead-end detector's rounding keys match at the existing BTN_Y via.
+    parts.append(_seg(78.95, 43.00, 74.825, 43.90, "F.Cu", W_SIG, n_btn_y))  # diagonal to existing F.Cu endpoint
+
+    # ── MEDIUM: BTN_R ──
+    # R15.1@(98.95, 46) → existing BTN_R F.Cu horizontal (76.20, 48)-(87.985, 48)
+    # B.Cu area y=[46, 52] is crowded with USB_D+/-, GND verticals. Use F.Cu.
+    # Place a via at (98.95, 47.0) — sits on the existing R15.1→C16.1
+    # junction B.Cu vertical at x=98.95 (y=46..50), same net → electrically
+    # connected without an explicit stub. y=47 is clear of BAT+ F.Cu at
+    # y=46.135 (via top=46.77, BAT+ bot=46.515 → gap 0.255mm ✓).
+    n_btn_r = NET_ID["BTN_R"]
+    parts.append(_via_net(98.95, 47.00, n_btn_r, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(98.95, 47.00, 98.95, 48.00, "F.Cu", W_SIG, n_btn_r))
+    parts.append(_seg(98.95, 48.00, 87.985, 48.00, "F.Cu", W_SIG, n_btn_r))
+
+    return parts
+
+
 def _power_zones():
     """Copper pour zones for power distribution."""
     parts = []
@@ -4640,6 +4715,7 @@ def generate_all_traces():
     all_parts.extend(_led_traces())
     all_parts.extend(_reset_boot_traces())
     all_parts.extend(_menu_diode_traces())
+    all_parts.extend(_button_pullup_bridges())
     all_parts.extend(_power_zones())
 
     # Report collision violations
