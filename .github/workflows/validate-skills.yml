@@ -1,0 +1,55 @@
+name: Validate Skills
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.claude/skills/**'
+      - '.claude/commands/**'
+      - '.claude/agents/**'
+      - '.claude-plugin/**'
+      - 'docs/skill-anatomy.md'
+      - 'docs/lifecycle.md'
+      - 'docs/getting-started.md'
+      - 'scripts/validate_skills.py'
+      - '.github/workflows/validate-skills.yml'
+  pull_request:
+    paths:
+      - '.claude/skills/**'
+      - '.claude/commands/**'
+      - '.claude/agents/**'
+      - '.claude-plugin/**'
+      - 'docs/skill-anatomy.md'
+      - 'docs/lifecycle.md'
+      - 'docs/getting-started.md'
+      - 'scripts/validate_skills.py'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate skills suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run validator
+        run: python3 scripts/validate_skills.py
+
+      - name: Sanity-check plugin JSON
+        run: |
+          python3 -c "import json; json.load(open('.claude-plugin/plugin.json'))"
+          python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
+      - name: Count skills and commands
+        run: |
+          echo "Skills:   $(ls -1 .claude/skills/ | wc -l)"
+          echo "Commands: $(ls -1 .claude/commands/*.md 2>/dev/null | wc -l)"
+          echo "Agents:   $(ls -1 .claude/agents/*.md 2>/dev/null | wc -l)"
