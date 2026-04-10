@@ -1,3 +1,10 @@
+---
+name: datasheet-verify
+description: Verifies that every PCB pad-to-net assignment matches the manufacturer datasheet pin specifications. Use when changing board.py/routing.py/footprints.py, after GPIO remapping, before releases, or when adding new components. Automated guard against wiring errors like unconnected VBUS, wrong pin assignments, or missing GND connections.
+disable-model-invocation: true
+allowed-tools: Bash, Read, Grep, Glob
+---
+
 # Datasheet Net Verification
 
 Verifies that every PCB pad-to-net assignment matches the manufacturer datasheet pin specifications. This is the automated guard against wiring errors like unconnected VBUS, wrong pin assignments, or missing GND connections.
