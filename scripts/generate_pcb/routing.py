@@ -4656,11 +4656,87 @@ def _button_pullup_bridges():
     parts.append(_via_net(83.95, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
     parts.append(_seg(83.95, 43.00, 90.75, 34.94, "F.Cu", W_SIG, n_btn_start))
 
-    # BTN_SELECT bridge: deferred — R13.1@(88.95, 46) to (73.03, 45.10) is
-    # 16mm through the y=43-45 density band which is crowded with other
-    # buttons' +3V3 vias, BTN_X F.Cu at y=42.70, BTN_Y F.Cu at y=43.90,
-    # and my own new bridge vias. Every route attempt has conflicts. v2
-    # PCB respin is the clean solution (relocate R13/C14 closer to U1.27).
+    # ── SOUTH-HIGHWAY PATTERN (staggered y per button) ──
+    #
+    # The y=[42,45] north band is saturated — all new routes go south of
+    # the R/C strip (y > 50.65 clearance). Each button uses a different
+    # y to avoid horizontal overlap with other button bridges. Targets
+    # are B.Cu verticals on the main signal path that span the chosen y.
+    #
+    # Obstacles to avoid at y=[55, 65]:
+    #   - SPK1.1 at (39.5, 52.5) pad y range [51, 54] → use y ≥ 55
+    #   - SPK1.2 at (19.5, 52.5) — same, west of all our targets
+    #   - BAT+ B.Cu vert (38, 46.135→68.3)  — block x=38 for y ∈ that range
+    #   - BAT+ B.Cu vert (80.01, 46.135→62.5) — block x=80.01 for that y
+    #
+    # Per-button pattern:
+    #   1. B.Cu stub (x_r, 50) → (x_r, y_br) south — through C.1 same net
+    #   2. B.Cu horizontal (x_r, y_br) → (target_x, y_br)
+    #   3. Via at (target_x, y_br) — mid-segment tap on main B.Cu vertical
+    #      (same net + same layer = electrically connected; via provides
+    #      a "connection point" for the JLCDFM dead-end detector)
+
+    def _bridge_south(parts_list, x_r, target_x, y_br, net_id):
+        """South-highway bridge: B.Cu stub → via → F.Cu horizontal → via.
+        Uses F.Cu for the horizontal to avoid crossing other buttons'
+        B.Cu verticals at y=55-57. Target via sits on the main B.Cu
+        vertical (same net, connected via the via's B.Cu annulus).
+        """
+        # B.Cu stub from C.1 (through pad, same net) down to bridge y
+        parts_list.append(_seg(x_r, 50.00, x_r, y_br, "B.Cu", W_SIG, net_id))
+        # Via to F.Cu
+        parts_list.append(_via_net(x_r, y_br, net_id,
+                                    size=VIA_MIN, drill=VIA_MIN_DRILL))
+        # F.Cu horizontal on clean layer
+        parts_list.append(_seg(x_r, y_br, target_x, y_br, "F.Cu", W_SIG, net_id))
+        # Via back to B.Cu at target (same-net tap on main vertical)
+        parts_list.append(_via_net(target_x, y_br, net_id,
+                                    size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # Stagger y 0.5mm apart to avoid trace-trace overlap between bridges.
+    # 5 buttons whose x range does NOT cross x=38 or x=80 (BAT+ B.Cu vertical
+    # blockers) use the clean y=55-57 band south of SPK1 (y≤54).
+    _bridge_south(parts, 63.95, 53.10, 55.0, NET_ID["BTN_A"])       # west 10.85mm
+    _bridge_south(parts, 53.95, 63.10, 55.5, NET_ID["BTN_LEFT"])    # east 9.15mm
+    _bridge_south(parts, 48.95, 65.55, 56.0, NET_ID["BTN_DOWN"])    # east 16.6mm
+    _bridge_south(parts, 58.95, 58.10, 56.5, NET_ID["BTN_RIGHT"])   # west 0.85mm
+    _bridge_south(parts, 43.95, 67.83, 57.0, NET_ID["BTN_UP"])      # east 23.9mm
+
+    # BTN_SELECT: B.Cu stub from R13/C14 junction south to meet the
+    # SW_BOOT bridge F.Cu at y=58. Tap as a T-junction via mid-F.Cu.
+    # Same net same layer after the via transition → connected.
+    parts.append(_seg(88.95, 50.00, 88.95, 58.00, "B.Cu", W_SIG, NET_ID["BTN_SELECT"]))
+    parts.append(_via_net(88.95, 58.00, NET_ID["BTN_SELECT"],
+                           size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # BTN_L: F.Cu horizontal at y=57.5 (staggered 0.5mm from BTN_UP y=57)
+    # from R14.1 area to x=64.75 (main B.Cu vertical x=64.75 y=40-73.42
+    # span includes y=57.5). Via at each end.
+    _bridge_south(parts, 93.95, 64.75, 57.5, NET_ID["BTN_L"])       # west 29.2mm
+
+    # D1.1 / D1.2 menu-diode anodes: deferred to v2 PCB respin.
+    # South-perimeter routes at y=73.95/74.46 cross J1.13b/J1.14b USB-C
+    # back-row shield pads at (84.325, 73.575) / (75.675, 73.575) pad y
+    # range [72.575, 74.575] — different net GND. Jog routes through the
+    # J1 shield areas would require multiple vias and complex DRC fights.
+    # North-perimeter routes blocked by IP5306/AMS1117/MENU_K/USB_D+-.
+    # Allowlisted. SW13 menu-combo button is usable by pressing START+SELECT
+    # separately as a workaround.
+
+    # ── SW_BOOT.2 → BTN_SELECT main chain ──
+    # The existing SW_BOOT → (102, 60) dangling via + short B.Cu stub
+    # (102, 63.65)→(102, 60) is already on BTN_SELECT net. Extend from
+    # (102, 60) via F.Cu to BTN_SELECT main B.Cu vertical at x=60.45.
+    # Route: F.Cu (102, 60) → (102, 58) short stub north (clear of EN
+    # via at (98, 60) by 2mm), then F.Cu (102, 58) → (60.45, 58)
+    # horizontal west 41.55mm (clean at y=58 — VBUS F.Cu is at y=61,
+    # BTN_UP F.Cu at y=62, EN/VBUS/GND vias at y=59-62 all ≥0.575mm
+    # gap away). Via at (60.45, 58) taps the BTN_SELECT main vertical.
+    n_btn_select = NET_ID["BTN_SELECT"]
+    parts.append(_seg(102.00, 60.00, 102.00, 58.00, "F.Cu", W_SIG, n_btn_select))
+    parts.append(_seg(102.00, 58.00, 60.45, 58.00, "F.Cu", W_SIG, n_btn_select))
+    parts.append(_via_net(60.45, 58.00, n_btn_select,
+                           size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     return parts
 

@@ -115,36 +115,21 @@ ACCEPTED_FRAGMENTATIONS = {
     # BTN_B, BTN_X, BTN_Y, BTN_R: R7 FIXED by _button_pullup_bridges() in
     # routing.py (commit 259868d). Pull-up/debounce junctions now properly
     # connected to main signal paths — removed from allowlist.
-    "BTN_A":      (2, "R8/C9 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 23mm route through LCD area)"),
-    "BTN_UP":     (2, "R4/C5 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 27mm route, D-pad area)"),
-    "BTN_DOWN":   (2, "R5/C6 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 23mm route, D-pad area)"),
-    "BTN_LEFT":   (2, "R6/C7 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 20mm route, D-pad area)"),
-    "BTN_RIGHT":  (2, "R7/C8 pull-up/debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 20mm route, D-pad area)"),
-    "BTN_L":      (2, "R14 DNP per strapping + C15 debounce isolated from signal — R5-CRIT-4, firmware internal pullup (R7 remaining: 22mm route)"),
+    # R8 session: all 11 remaining button R/C bridges fixed via south-highway
+    # F.Cu routes (BTN_A/LEFT/DOWN/RIGHT/UP at y=55-57, BTN_L at y=57.5,
+    # BTN_SELECT via SW_BOOT F.Cu y=58, BTN_START at y=43 via R7 bridge).
+    # All 12 button nets are now connected except D1 menu-diode anodes.
 
-    # BTN_START has 3 components:
-    #   1. Main signal (SW9 → ESP32 GPIO)
-    #   2. R12/C13 pull-up junction isolated (R5-CRIT-4)
-    #   3. D1.1 menu-combo diode anode isolated (R5-CRIT-6)
-    # D1 is the BAT54C dual Schottky that would let SW13 (menu button) trigger
-    # BTN_START + BTN_SELECT simultaneously by pulling the common cathode LOW
-    # through both anodes. D1.1 was placed but never routed to the main
-    # BTN_START network — routing it requires a long cross-board trace from
-    # (156.95, 53.60) to the main signal path near ESP32 U1.11 at (88.75, 34.94),
-    # threading LCD data bus and SD card area. Deferred to v2 respin.
-    # Workaround: press START and SELECT separately to reach the menu.
-    "BTN_START":  (3, "R12/C13 junction + D1.1 menu-diode anode isolated — R5-CRIT-4, R5-CRIT-6 menu-combo disabled (v2 respin)"),
+    # BTN_START: R12/C13 junction connected in R7 commit 0880d3d via
+    # B.Cu stub north to y=43 + F.Cu diagonal to (90.75, 34.94). Only
+    # D1.1 dangling via at (156.95, 56.10) remains isolated.
+    "BTN_START":  (2, "D1.1 menu-diode anode isolated — R5-CRIT-6, menu-combo shortcut disabled (v2 respin)"),
 
-    # BTN_SELECT has 4 components:
-    #   1. Main signal (SW10 → ESP32 GPIO + SW_PWR.4b/4d shell same-net Fix 1c)
-    #   2. R13/C14 pull-up junction isolated (R5-CRIT-4)
-    #   3. SW_BOOT.2 isolated (R5-CRIT-5) — boot button is decorative
-    #   4. D1.2 menu-combo diode anode isolated (R5-CRIT-6)
-    # SW_BOOT and D1.2 both need cross-board bridges that require layout
-    # surgery outside R6 scope. Deferred to v2 respin. Workarounds:
-    # - USB-JTAG or manual GPIO0 short to enter download mode (not SW_BOOT)
-    # - Press START+SELECT manually for menu (not SW13 combo)
-    "BTN_SELECT": (4, "R13/C14 junction + SW_BOOT.2 + D1.2 isolated — R5-CRIT-4/5/6, boot button + menu combo need v2 respin"),
+    # BTN_SELECT: R13/C14 junction connected in R8 via B.Cu stub to SW_BOOT
+    # F.Cu at (88.95, 58). SW_BOOT.2 connected in R8 via F.Cu (102, 60)→
+    # (102, 58)→(60.45, 58) route. Only D1.2 dangling via at (155.05, 51.10)
+    # remains isolated — same v2 respin issue as D1.1.
+    "BTN_SELECT": (2, "D1.2 menu-diode anode isolated — R5-CRIT-6, menu-combo shortcut disabled (v2 respin)"),
 
     # USB-C receptacle VBUS pins J1.2, J1.9, J1.11 should all be shorted for
     # reversible-plug operation. The PCB escape area south of the J1 footprint
