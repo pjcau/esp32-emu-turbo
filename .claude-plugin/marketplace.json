@@ -1,0 +1,12 @@
+{
+  "name": "kicad-jlcpcb-skills",
+  "description": "KiCad + JLCPCB PCB design skills marketplace — the most comprehensive open-source Claude Code skill suite for hardware design.",
+  "plugins": [
+    {
+      "name": "kicad-jlcpcb-skills",
+      "source": "github:pjcau/esp32-emu-turbo",
+      "description": "27 Claude Code skills for PCB design with KiCad + JLCPCB manufacturing. Lifecycle: design → generate → verify → fix → release. Includes 115-test DFM suite, JLCPCB-specific validation, and 6 lifecycle slash commands.",
+      "version": "1.0.0"
+    }
+  ]
+}

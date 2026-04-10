@@ -1,0 +1,25 @@
+{
+  "name": "kicad-jlcpcb-skills",
+  "description": "Production-grade Claude Code skills for KiCad PCB design and JLCPCB manufacturing. 27 skills covering the full lifecycle: design → generate → verify → fix → release. Includes 115-test DFM suite, 9-test DFA suite, JLCPCB-specific validation, and AI-driven DRC/gerber/BOM automation.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Pierre Jonny Cau",
+    "url": "https://github.com/pjcau"
+  },
+  "homepage": "https://pjcau.github.io/esp32-emu-turbo/",
+  "repository": "https://github.com/pjcau/esp32-emu-turbo",
+  "license": "MIT",
+  "commands": "./.claude/commands",
+  "keywords": [
+    "kicad",
+    "jlcpcb",
+    "pcb",
+    "hardware",
+    "dfm",
+    "dfa",
+    "drc",
+    "gerber",
+    "bom",
+    "claude-code"
+  ]
+}
