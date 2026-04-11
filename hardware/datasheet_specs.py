@@ -183,10 +183,13 @@ COMPONENT_SPECS = {
     #   1=OUTL+, 2=PGND, 3=OUTL-, 4=PVDD, 5=MUTE, 6=VDD,
     #   7=INL, 8=VREF, 9=NC, 10=INR, 11=GND, 12=SHDN,
     #   13=PVDD, 14=OUTR-, 15=PGND, 16=OUTR+
-    # We use mono (left channel only): INL=I2S_DOUT, INR=I2S_DOUT (tied)
-    # OUTL+ → SPK+, OUTL- → SPK- (BTL output to speaker)
-    # OUTR+/- unused but connected for thermal balance
-    # SHDN tied high (+5V) for always-on; MUTE tied high (+5V) for unmuted
+    # We use mono (RIGHT channel wired to speaker): INL=INR=I2S_DOUT
+    # (both tied to the single PDM data line through C22 DC-block).
+    # OUTR+ → SPK+, OUTR- → SPK- (BTL output on the right-channel pair).
+    # OUTL+/OUTL- are left floating — PAM8403 datasheet app note allows
+    # unused BTL outputs to float; both amplifiers are still biased and
+    # consume ~2mA quiescent each (negligible on a handheld battery).
+    # SHDN tied high (+5V) for always-on; MUTE tied high (+5V) for unmuted.
     # ======================================================================
     "U5": {
         "component": "PAM8403 Class-D Audio Amplifier",
@@ -194,9 +197,9 @@ COMPONENT_SPECS = {
         "datasheet": "U5_PAM8403_C5122557.pdf",
         "datasheet_page": 2,
         "pins": {
-            "1":  {"net": _unconnected(),       "function": "OUTL+ — left channel + (unused, R channel used)", "type": "smd"},
+            "1":  {"net": _unconnected(),       "function": "OUTL+ — left channel + (floating, only right channel wired to speaker)", "type": "smd"},
             "2":  {"net": _exact("GND"),        "function": "PGND — power ground", "type": "smd"},
-            "3":  {"net": _unconnected(),       "function": "OUTL- — left channel - (unused)", "type": "smd"},
+            "3":  {"net": _unconnected(),       "function": "OUTL- — left channel - (floating, only right channel wired to speaker)", "type": "smd"},
             "4":  {"net": _exact("+5V"),        "function": "PVDD — power supply", "type": "smd"},
             "5":  {"net": _exact("+5V"),        "function": "MUTE — active low, tied high (unmuted)", "type": "smd"},
             "6":  {"net": _exact("+5V"),        "function": "VDD — analog power supply", "type": "smd"},
@@ -324,8 +327,12 @@ COMPONENT_SPECS = {
             "12": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "13": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "14": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
-            "15": {"net": _unconnected(),     "function": "NC (IM0 mode select)", "type": "smd"},
-            "16": {"net": _unconnected(),     "function": "NC (IM1 mode select)", "type": "smd"},
+            # J4 pads 15/16 map to panel pins 26/25 after 41-N reversal,
+            # i.e. DB9/DB8 — unused upper data bits in 8-bit 8080 mode.
+            # The IM0/IM1 mode-select pins are on panel pins 38/39 which
+            # map to J4 pads 3/2 (both tied to +3V3 — see above).
+            "15": {"net": _unconnected(),     "function": "NC (DB9 — unused in 8-bit 8080 mode)", "type": "smd"},
+            "16": {"net": _unconnected(),     "function": "NC (DB8 — unused in 8-bit 8080 mode)", "type": "smd"},
             "17": {"net": _exact("LCD_D7"),   "function": "DB7 — LCD data bit 7", "type": "smd"},
             "18": {"net": _exact("LCD_D6"),   "function": "DB6 — LCD data bit 6", "type": "smd"},
             "19": {"net": _exact("LCD_D5"),   "function": "DB5 — LCD data bit 5", "type": "smd"},

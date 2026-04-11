@@ -64,7 +64,8 @@ class SDCardSheet(SchematicSheet):
         ny = 160
         self.text("Design Notes:", 30, ny, 2.54, True)
         self.text(
-            "- SPI bus @ up to 40MHz (ESP32-S3 max for SD)", 30, ny + 8,
+            "- SPI bus @ 20MHz (R2-MED-5: trace length ~150mm + 6 vias"
+            " → 40MHz unreliable)", 30, ny + 8,
         )
         self.text(
             "- SNES ROMs: 256KB to 6MB typical"
@@ -79,6 +80,6 @@ class SDCardSheet(SchematicSheet):
             " (module has built-in)", 30, ny + 26,
         )
         self.text(
-            "- GPIO36-39 grouped for clean SPI trace"
-            " routing on PCB", 30, ny + 32,
+            "- SPI pins: GPIO38/39 (CLK/CS) + GPIO43/44"
+            " (MISO/MOSI) — split across WROOM-1 left and right", 30, ny + 32,
         )

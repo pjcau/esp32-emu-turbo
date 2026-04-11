@@ -267,8 +267,9 @@
   (text "Sys:   GPIO18=START 0=SELECT 45=L 3=R" (at 320 104 0) (effects (font (size 2.54 2.54)) (justify left)))
   (text "USB (native, firmware flash + debug):" (at 320 112 0) (effects (font (size 2 2) bold) (justify left)))
   (text "GPIO19=D-  GPIO20=D+" (at 320 117 0) (effects (font (size 2.54 2.54)) (justify left)))
-  (text "Reserved (do not use):" (at 320 125 0) (effects (font (size 2 2) bold) (justify left)))
-  (text "GPIO26-32 = Octal PSRAM (internal)" (at 320 130 0) (effects (font (size 2.54 2.54)) (justify left)))
+  (text "Reserved (do not use, module-internal):" (at 320 125 0) (effects (font (size 2 2) bold) (justify left)))
+  (text "GPIO26-32 = Octal Flash (N16)" (at 320 130 0) (effects (font (size 2.54 2.54)) (justify left)))
+  (text "GPIO33-37 = Octal PSRAM (R8)" (at 320 135 0) (effects (font (size 2.54 2.54)) (justify left)))
 
   (sheet_instances (path "/" (page "2")))
 )

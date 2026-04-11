@@ -33,14 +33,21 @@ class AudioSheet(SchematicSheet):
         self.glabel("I2S_DOUT", ax - 30, ay + 3.81, 0, "input")
         self.wire(ax - 30, ay + 3.81, ax - 10.16, ay + 3.81)
 
-        # I2S bus reference (informational labels)
-        self.text("I2S Bus (directly from ESP32-S3):", 30, 55, 2.54, True)
+        # I2S bus reference (informational labels).
+        # R10-LOW-2: GPIO15/16 are reserved in GPIO_NETS as I2S_BCLK/
+        # I2S_LRCK for historical reasons, but firmware uses PDM TX
+        # mode (see software/main/audio.c). PDM only needs the DOUT
+        # pin — BCLK/LRCK are NOT externally connected on the PCB.
+        # The two glabels below are informational only (dead nets,
+        # 1 pad / 0 segments in the PCB cache). Candidates for reuse
+        # as ADC2 channels (battery voltage) in v2.
+        self.text("I2S Bus (PDM TX mode — DOUT only):", 30, 55, 2.54, True)
         self.glabel("I2S_BCLK", 30, 68, 0, "input")
-        self.text("GPIO15 - Bit Clock (1.411 MHz @ 44.1kHz)", 65, 68)
+        self.text("GPIO15 - Bit Clock (UNUSED — PDM mode, v2 free)", 65, 68)
         self.glabel("I2S_LRCK", 30, 78, 0, "input")
-        self.text("GPIO16 - L/R Word Select (44.1kHz)", 65, 78)
+        self.text("GPIO16 - L/R Word Select (UNUSED — PDM mode, v2 free)", 65, 78)
         self.glabel("I2S_DOUT", 30, 88, 0, "output")
-        self.text("GPIO17 - Serial Data Out -> PAM8403", 65, 88)
+        self.text("GPIO17 - PDM sigma-delta out @ 32kHz -> PAM8403", 65, 88)
 
         # Speaker (moved further right for orthogonal routing)
         spk_x, spk_y = ax + 65, ay

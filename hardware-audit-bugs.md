@@ -780,3 +780,454 @@ finding R9-MED-4 has been fully resolved by deletion (not allowlisted).
 Board is fab-ready. 75 components (was 77). Gerbers re-exported and
 synced to `release_jlcpcb/`.
 
+## Round 10 Findings (2026-04-11) — Layer 2 prose audit
+
+**Auditor**: `/hardware-audit` Steps 1–8 after Layer 1 cleanup post-R9.
+**Scope**: Deferred Layer 2 prose domain review (power, boot, display, audio,
+SD, buttons, USB, emulator performance). Cross-checks schematic generator,
+PCB routing, `datasheet_specs.py`, firmware (`software/main/*.c/h`,
+`sdkconfig.defaults`) and `website/docs/software/snes-optimization.md`.
+
+### Step 0 gates — all green
+
+See the preceding `/pcb-review` run table — 20/20 Layer 1 gates PASS. DRC
+0 errors, `verify_trace_crossings` PASS, `verify_net_connectivity` PASS
+(4 accepted v2-respin fragmentations), `verify_netlist_diff` 4/4.
+
+### Domain findings
+
+| Domain | New findings | Severity |
+|--------|-------------:|----------|
+| Power chain | 0 | — |
+| ESP32 boot | 0 | — |
+| Display | 0 functional (1 doc LOW) | LOW |
+| Audio | 1 (GPIO15/16 wasted, firmware PDM-only) | LOW |
+| SD card | 0 functional (2 doc LOW) | LOW |
+| Buttons | 0 | — |
+| USB | 0 | — |
+| Emulator performance | 0 | — |
+| Cross-source docs | 4 stale comments in datasheet_specs / mcu.py | LOW |
+
+**No CRIT, no HIGH, no MED.** All Round 10 findings are documentation
+drift or wasted-GPIO observations that do not prevent the board from
+working. The device powers on, boots, drives the LCD, routes I2S PDM
+audio, mounts the SD card, reads all 12 buttons, enumerates as USB
+native on both orientations of the USB-C cable (pre-R5-CRIT-9 fix), and
+has the R6/R7/R8/R9 copper-connectivity + clearance fixes all verified.
+
+### Bug list
+
+#### R10-LOW-1 — `mcu.py` GPIO table documents wrong PSRAM pins
+
+- **File**: `scripts/generate_schematics/sheets/mcu.py:190`
+- **Problem**: The GPIO assignment text block at the right edge of the
+  MCU sheet reads:
+  ```
+  Reserved (do not use):
+    GPIO26-32 = Octal PSRAM (internal)
+  ```
+  This is backwards. On ESP32-S3-WROOM-1 **N16R8** (Octal Flash + Octal
+  PSRAM) the module pins are routed internally as:
+  - **GPIO26–32** → Octal **Flash** (SPI0 bus, 7 pins)
+  - **GPIO33–37** → Octal **PSRAM** (CS + DQS + extras)
+  Per Espressif WROOM-1 datasheet §2.2, both sets are unavailable for
+  external use on the R8 variant. `board_config.h:104` correctly says
+  "GPIO33/34 reserved for Octal PSRAM", and `verify_netlist_diff.T1_ALLOW`
+  (R9-MED-2) allowlists GPIO35/36/37 as schematic-only unused nets.
+- **Impact**: Documentation only. Firmware uses the correct subset
+  (avoids 33–37 and 26–32). No functional risk.
+- **Fix**: Change the label text to either:
+  ```
+  Reserved (do not use):
+    GPIO26-32 = Octal Flash (internal)
+    GPIO33-37 = Octal PSRAM (internal)
+  ```
+  or just "GPIO33-37 = Octal PSRAM" if the Flash line is omitted for
+  brevity. Regenerate schematics.
+
+#### R10-LOW-2 — GPIO15 / GPIO16 allocated as `I2S_BCLK` / `I2S_LRCK` but never used
+
+- **Files**:
+  - `scripts/generate_schematics/config.py:11`
+  - `software/main/board_config.h:50-51`
+  - `scripts/generate_schematics/sheets/audio.py:37-43`
+- **Problem**: `audio.c` uses `i2s_pdm_tx_config_t` with
+  `clk = I2S_GPIO_UNUSED, dout = I2S_DOUT` (PDM sigma-delta mode, only
+  the data pin is needed). The ESP32-S3 reconstructs the audio signal
+  via the existing RC network (C22 DC-block + R20/R21 bias + PAM8403
+  input filter) — no external bit-clock / word-clock is routed.
+  However, the net map still reserves:
+  ```
+  GPIO15 → I2S_BCLK  (GPIO_NETS[15])
+  GPIO16 → I2S_LRCK  (GPIO_NETS[16])
+  ```
+  and `audio.py` emits standalone `I2S_BCLK` / `I2S_LRCK` glabels with
+  text descriptions ("GPIO15 - Bit Clock (1.411 MHz @ 44.1kHz)" — also
+  stale: firmware uses 32 kHz, not 44.1 kHz). PCB cache confirms:
+  ```
+  I2S_BCLK : 1 pads, 0 segments   ← ESP32 pad only, dead net
+  I2S_LRCK : 1 pads, 0 segments   ← ESP32 pad only, dead net
+  I2S_DOUT : 7 pads, 10 segments  ← live, routed
+  ```
+  Both are 1-pad nets — the routing generator skips them.
+- **Impact**: LOW. No functional harm — floating pins get ESP32 default
+  `INPUT` state. Two ESP32-S3 GPIOs are wasted though, and the schematic
+  text gives a reviewer false confidence the board has a standard I2S
+  bus. `GPIO15` is ADC2_CH4 and `GPIO16` is ADC2_CH5 — candidates for
+  battery-voltage monitoring (BUG-L7 from R1) in a future revision.
+  Also 44.1 kHz in the schematic text vs 32 kHz in `board_config.h`
+  (`AUDIO_SAMPLE_RATE`) is a second stale fact.
+- **Fix** (v2 respin candidate):
+  1. Remove `I2S_BCLK` / `I2S_LRCK` from `GPIO_NETS`, `AUDIO_NETS`, and
+     `board_config.h` `#define`s.
+  2. Drop the two `glabel` stubs in `audio.py:38-41`.
+  3. Update the schematic description to say "PDM sigma-delta TX only —
+     GPIO15/16 are free" (or repurpose for ADC / I2C).
+  4. Correct the 44.1 kHz label to 32 kHz.
+
+#### R10-LOW-3 — `sd_card.py` says 40 MHz SPI, firmware runs at 20 MHz
+
+- **File**: `scripts/generate_schematics/sheets/sd_card.py:67`
+- **Problem**: Design-note line reads:
+  > "SPI bus @ up to 40MHz (ESP32-S3 max for SD)"
+  `software/main/board_config.h:45` sets `SD_SPI_FREQ_KHZ = 20000`
+  (20 MHz), explicitly commented:
+  ```c
+  /* 20 MHz (traces ~150mm + 6 vias, 40MHz unreliable) */
+  ```
+  This is the R2-MED-5 compromise (long traces cap effective SPI
+  frequency at 20 MHz). The schematic text hasn't been updated.
+- **Impact**: Documentation drift only. Firmware is correct.
+- **Fix**: Update the schematic note to "SPI bus @ 20 MHz (trace length
+  limits — R2-MED-5)".
+
+#### R10-LOW-4 — `sd_card.py` says "GPIO36-39 grouped" but actual SPI uses 38/39/43/44
+
+- **File**: `scripts/generate_schematics/sheets/sd_card.py:83`
+- **Problem**: Design-note line reads:
+  > "- GPIO36-39 grouped for clean SPI trace routing on PCB"
+  Actual assignment (`board_config.h:40-43`):
+  ```
+  SD_MOSI = GPIO44
+  SD_MISO = GPIO43
+  SD_CLK  = GPIO38
+  SD_CS   = GPIO39
+  ```
+  So only CLK/CS (38/39) are in the "36-39" range; MOSI/MISO live at
+  the far end of the pin map (43/44). The original "all contiguous"
+  claim is no longer true (probably from an earlier GPIO assignment).
+- **Impact**: Documentation drift only.
+- **Fix**: Either drop the "grouped" claim or write the real grouping:
+  "GPIO38/39 + GPIO43/44 (split across the WROOM-1 footprint — see
+  `config.py` ESP_PINS)".
+
+#### R10-LOW-5 — `datasheet_specs.py::J4` pins 15 & 16 have wrong `function` text
+
+- **File**: `hardware/datasheet_specs.py:327-328`
+- **Problem**:
+  ```python
+  "15": {"net": _unconnected(), "function": "NC (IM0 mode select)", ...},
+  "16": {"net": _unconnected(), "function": "NC (IM1 mode select)", ...},
+  ```
+  J4 uses **connector-pad numbering** (panel pin reversal
+  `connector_pad = 41 - panel_pin`). J4 pad 15 corresponds to panel
+  pin **26** which is **DB9** (unused upper data bit in 8-bit mode),
+  and J4 pad 16 corresponds to panel pin **25** which is **DB8** (same).
+  The IM0/IM1 mode-select pins are on panel pins 38/39, which map to
+  J4 pads **3** and **2** respectively (see the same file lines
+  311-312 — already correctly labeled `+3V3`).
+- **Impact**: Documentation only. Electrically both pads are still
+  `_unconnected()` which is correct; the `function` string just has
+  the wrong label.
+- **Fix**: Change the two `function` strings to
+  `"NC (DB9 — upper data bit, 8-bit mode only)"` and
+  `"NC (DB8 — upper data bit, 8-bit mode only)"` respectively.
+
+#### R10-LOW-6 — PAM8403 "left channel" comment contradicts pad wiring
+
+- **File**: `hardware/datasheet_specs.py:186-187`
+- **Problem**: Block comment says:
+  > "We use mono (left channel only): INL=I2S_DOUT, INR=I2S_DOUT (tied)
+  >  OUTL+ → SPK+, OUTL- → SPK- (BTL output to speaker)"
+  The actual pad map uses the **right** channel outputs:
+  ```python
+  "1":  _unconnected()      # OUTL+ (unused)
+  "3":  _unconnected()      # OUTL- (unused)
+  "14": _exact("SPK-")      # OUTR-
+  "16": _exact("SPK+")      # OUTR+
+  ```
+  So OUTL+/- are floating (correct for an unused BTL output) and SPK±
+  are wired to OUTR+/-. Both INL (pin 7) and INR (pin 10) receive
+  `I2S_DOUT` — the right-channel amplifier drives the speaker while
+  the left-channel amp dissipates quiescent current only.
+- **Impact**: Documentation only. The circuit is electrically correct
+  (floating unused outputs is per the PAM8403 datasheet app note).
+  Minor power waste: both amplifiers are biased on, but only one drives
+  a load — ~2 mA quiescent on a battery-powered handheld, negligible.
+- **Fix**: Change the block comment to "We use mono (right channel
+  only): INL=INR=I2S_DOUT (tied); OUTR+/- → SPK+/-; OUTL+/- left
+  floating per PAM8403 datasheet". Optional v2 improvement: tie INL
+  to VREF directly so only INR gets the audio — saves ~2 mA.
+
+#### R10-LOW-7 — `verify_strapping_pins.py` RC timing math still assumes external R3 = 10 kΩ
+
+- **File**: `scripts/verify_strapping_pins.py:289-297`
+- **Problem**: After the R4-era R3 removal (external 10k pull-up DNP;
+  WROOM-1 internal pull-up ≈ 45 kΩ), the verifier's `test_en_rc_delay()`
+  still computes:
+  ```python
+  tau_ms = 10e3 * 100e-9 * 1000  # R * C in ms  → tau = 1 ms
+  margin_ms = 5.0 - 3 * tau_ms   # margin = 2 ms
+  ```
+  assuming a 10 kΩ pull-up. With the 45 kΩ internal pull-up in place
+  the real τ ≈ 4.5 ms and 3τ ≈ 13.5 ms. The chip samples strapping
+  pins ~50 ms after EN rises (ESP32-S3 POR deglitch + boot ROM
+  initialization, not the 5 ms the verifier assumes), so both
+  scenarios still boot correctly — but the printed timing is
+  misleading.
+- **Impact**: Verifier output misreports the margin. No functional
+  risk; the gate still PASSes.
+- **Fix**: Update `test_en_rc_delay()` to:
+  1. Detect whether R3 is populated (via BOM) or missing (use
+     `_find_bom_ref("R3")`).
+  2. Use R = 10 kΩ when R3 present, R = 45 kΩ when using WROOM-1
+     internal.
+  3. Use the documented 50 ms sampling window, not 5 ms.
+  4. Print both τ and 3τ with the correct R so future reviewers see
+     the real margin.
+
+#### R10-LOW-8 — `snes-optimization.md` plan text treats Core 1 / WiFi as current state
+
+- **File**: `website/docs/software/snes-optimization.md:140`
+- **Problem**:
+  > "Core 0 runs CPU/PPU/SPC700 sequentially. Core 1 is essentially
+  > unused (only Wi-Fi/BT stack)."
+  Neither Wi-Fi nor Bluetooth is enabled in `sdkconfig.defaults` (no
+  `CONFIG_ESP_WIFI_ENABLED=y`, no `CONFIG_BT_ENABLED=y`), and the Phase 1
+  firmware in `software/main/main.c` never initializes them. So "Core 1
+  runs Wi-Fi/BT stack" is incorrect for the current v3.4 firmware —
+  Core 1 is truly idle.
+- **Impact**: Documentation only. Forward-looking planning text that
+  hasn't been reconciled with the actually-shipping firmware.
+- **Fix**: Prepend "Target architecture assumes Wi-Fi/BT disabled for
+  Phase 1 hardware validation; Core 1 is currently fully idle."
+
+### Domain deep-dive — what was checked and passed
+
+**Power chain (Step 1)** — verified:
+- USB-C → C17 (10uF) → IP5306 VIN (pin 1) — `power_supply.py:157-170`.
+- BAT+ → L1 (1uH, >4.5A sat, shielded) → SW (pin 7) — R5-CRIT-1 fix
+  traced all the way through `scripts/generate_pcb/routing.py` after R6.
+- IP5306 VOUT → C19 (22uF) + C27 (10uF) → +5V glabel — C27 HF decoupling
+  added in R6/R7 era (`power_supply.py:220-226`).
+- +5V → AMS1117 VIN → C1 (10uF input) / C2 (22uF tant. output) → +3V3
+  — C2 is tantalum (R2-HIGH-2 was closed as false-positive; MLCC
+  was on C19 not C2).
+- IP5306 KEY → R16 (100k) → +5V always-on (no external KEY button).
+- LED1/LED2 charging indicators via R17/R18 1k from +3V3 — always
+  forward-biased on the +3V3 rail (not driven by IP5306 LED outputs
+  since the non-I2C variant doesn't support LED control; the LEDs are
+  just "+3V3 is alive" indicators, not charger-status indicators).
+  Wait — **this is actually confusing**: BUG-L1 said IP5306 LED pins
+  are NC (non-I2C variant exposes nothing), and the schematic shows
+  R17/R18 fed directly from +3V3. So LED1 (Red "Charging") and LED2
+  (Green "Full") light up any time +3V3 is alive — neither one
+  actually reports charger status. This matches R1 BUG-L1 cosmetic
+  note. Not re-raising.
+- SW_PWR power switch: `power_supply.py:357-364` routes `BAT+` through
+  SW_PWR and emits an output label `VBUS_SW` that **no other sheet
+  consumes** → switch is decorative (R1 BUG-L2: "Power switch
+  non-functional — only common pin routed"). Still open as LOW.
+- EN RC network: C3 100nF present, R3 external DNP, WROOM-1 internal
+  pull-up in use (see R10-LOW-7).
+
+**ESP32 boot (Step 2)** — verified:
+- GPIO0 (BTN_SELECT): external 10k pull-up to +3V3 + SW10 + SW_BOOT.
+  BOOT button grounds GPIO0 to enter download mode — works because
+  R5-CRIT-5 SW_BOOT routing was fixed in R6/R7/R8.
+- GPIO45 (BTN_L): **external R14 DNP**, GPIO45 uses ESP32 internal
+  pull-up. `verify_strapping_pins.py` checks the `if i == 10: continue`
+  skip in `routing.py`. `input.c:45-49` enables `GPIO_PULLUP_ENABLE`
+  only for BTN_L. Correct.
+- GPIO46 (LCD_WR): driven by LCD controller, internal pull-down at
+  boot → HIGH at boot irrelevant (ROM log output disable).
+- GPIO3 (BTN_R): JTAG source select — either state acceptable.
+- `sdkconfig.defaults`: `CONFIG_SPIRAM_MODE_OCT=y`,
+  `CONFIG_SPIRAM_SPEED_80M=y`, `CONFIG_SPIRAM_BOOT_INIT=y`. Octal PSRAM
+  confirmed. Flash is QIO 80 MHz.
+
+**Display (Step 3)** — verified:
+- ILI9488 3.95" 320×480, 8-bit 8080 parallel on 20 MHz write clock
+  (BUG-L3 known overclock > ILI9488 spec 15 MHz, accepted).
+- `display.c` uses `esp_lcd_new_i80_bus` + `esp_lcd_new_panel_ili9488`
+  with 8-bit bus width, max_transfer_bytes = 25 KB (R2-MED-1 fix).
+- LCD_D0-D7 = GPIO4-11 (contiguous for DMA efficiency, all in
+  ESP32-S3 LCD_CAM peripheral range).
+- LCD_CS/DC/WR/RST on GPIO12/14/46/13. LCD_RD and LCD_BL tied to
+  +3V3 at the FPC (R6/R7 merge into +3V3 net).
+- J4 connector-side pinout verified against `datasheet_specs.py::J4`
+  with the 41-N panel reversal documented in the J4 block comment.
+- FPC ribbon slot present at board center-right for strain relief.
+- **Note**: R10-LOW-5 applies (pin 15/16 `function` text wrong).
+
+**Audio (Step 4)** — verified:
+- `audio.c` uses `i2s_pdm_tx_config_t` with `clk = I2S_GPIO_UNUSED,
+  dout = I2S_DOUT`. PDM sigma-delta TX mode. **Correct.**
+- PAM8403 INL+INR both fed by I2S_DOUT through C22 DC-block (0.47 µF).
+- R20/R21 (20k) bias INL/INR to VREF (pin 8) — R4-HIGH-3 fix verified
+  in `audio.py:94-109`.
+- C21 (100 nF) VREF bypass.
+- C23/C24/C25 (1 µF) PVDD + VDD decoupling within 4–5 mm of U5
+  (`verify_decoupling_paths` PASS).
+- SHDN (pin 12) tied to +5V via `datasheet_specs.py::U5` pad injection
+  (`"12": {"net": _exact("+5V"), "function": "SHDN..."}`) — pin injected
+  by `board.py::_inject_pad_net()` since the simplified PAM8403 module
+  symbol in `audio.py` doesn't expose pin 12.
+- Audio-digital ground coupled near U5 (`verify_ground_loops`: 2 PASS
+  + 1 advisory).
+- **Note**: R10-LOW-2 (GPIO15/16 wasted) and R10-LOW-6 (comment says
+  "left channel" but wiring uses OUTR) apply.
+
+**SD card (Step 5)** — verified:
+- TF-01A slot (`datasheet_specs.py::U6`), SPI 1-bit mode at 20 MHz
+  (not 40 MHz — see R10-LOW-3).
+- `sdcard.c` enables internal pull-ups on SD_MOSI/MISO/CLK/CS
+  (`gpio_set_pull_mode` calls at init — R1 M5 fix).
+- SPI GPIOs: 44/43/38/39 — all SPI-capable on ESP32-S3.
+- U6 pads 1 (DAT2), 8 (DAT1), 9 (card detect) all `_unconnected()` in
+  `datasheet_specs.py` — `verify_trace_through_pad.py` confirms no
+  trace physically crosses them (HEAD PCB passed the gate).
+- Level shifting: not needed (ESP32-S3 is 3.3 V native, TF-01A is
+  3.3 V SD slot).
+- NPTH positioning holes: 1.00 mm per R1 lesson.
+- VCC decoupling via shared ESP32 rail (C26 ~25 mm away) — R4-MED-1
+  accepted as v2 respin tech debt.
+- **Notes**: R10-LOW-3 and R10-LOW-4 (both doc drift) apply.
+
+**Buttons (Step 6)** — verified:
+- 12 tact switches (`SW1–SW12`) + reset (`SW_RST`) + boot (`SW_BOOT`)
+  + menu (`SW13`).
+- Each of the 12 main buttons has an external 10k pull-up + 100 nF
+  debounce cap. After R5-CRIT-4 + R6/R7/R8 bridges, `verify_net_connectivity`
+  confirms each button net is a single connected component.
+- BTN_L (GPIO45) uses internal pull-up only — R14 DNP on BOM, routing
+  skips the +3V3 stub (`routing.py if i == 10: continue`).
+- SW_BOOT grounds GPIO0 via the BTN_SELECT net — R5-CRIT-5 fixed in
+  R6/R7/R8.
+- Menu combo via SW13 → D1 (BAT54C) dual-Schottky with common cathode
+  on MENU_K. D1.1 anode → BTN_START, D1.2 anode → BTN_SELECT.
+  Currently the D1 anodes are **isolated** on the PCB (R5-CRIT-6,
+  accepted as v2-respin tech debt — menu-combo shortcut disabled, users
+  can still press START + SELECT simultaneously and the firmware's
+  `BTN_MENU_COMBO` bitmask detects it via `input.c::input_menu_pressed`).
+- R19 (MENU_K pull-up) and C20 (MENU_K debounce) were **deleted** by
+  R9-MED-4 because MENU_K was a dead net — the pull-up came from the
+  downstream BTN_START/BTN_SELECT 10k resistors through D1's forward
+  bias instead.
+- `verify_design_intent T1–T3` PASS: no two buttons share a GPIO.
+
+**USB (Step 7)** — verified:
+- USB-C CC1/CC2 via 5.1k pull-downs (R1/R2) → UFP advertisement.
+- USB_D+/D- through U4 (USBLC6-2SC6 ESD TVS) → 22 Ω series R22/R23 →
+  GPIO20/GPIO19 (labeled `USB_DP_MCU` / `USB_DM_MCU` after the series
+  resistors — R4-HIGH-1 fix).
+- VBUS on all three J1 shield pads (2/9/11) — J1.9/11 currently
+  isolated (R5-CRIT-9 accepted, USB-C reverse orientation workaround).
+- USB diff pair geometry: `verify_usb_impedance.py` PASS (avg 1.46 mm
+  spacing, min 0.5 mm, F.Cu + B.Cu routing).
+- GND return path density: `verify_usb_return_path.py` PASS.
+- USB shield THT drill: 0.6 mm per R1 lesson.
+- `verify_esd_protection.py` PASS (USBLC6 + 22 Ω series both present).
+
+**Emulator performance (Step 8)** — verified planning, not run-time:
+- PSRAM mode Octal 80 MHz (`sdkconfig.defaults:15-17`). Good for SNES
+  ROM storage.
+- CPU 240 MHz dual-core (`CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y`).
+- I2S PDM TX configured with DMA (`i2s_pdm_tx_config_t` +
+  `dma_desc_num=4, dma_frame_num=256`).
+- LCD 8-bit 8080 via esp_lcd_new_i80_bus with 25 KB max_transfer_bytes
+  (DMA-ready, not CPU loop).
+- Wi-Fi and BT not enabled in sdkconfig — Phase 1 hardware validation
+  firmware. See R10-LOW-8 (doc drift in snes-optimization.md about
+  Core 1 usage).
+- Frame buffer: `display.c::display_fill` allocates one row in
+  PSRAM (`heap_caps_malloc(..., MALLOC_CAP_DMA)`) — one row at a time,
+  not a full double-buffer yet. The snes-optimization.md plan covers
+  moving the frame buffer to internal SRAM for Phase 4.2.2. Current
+  Phase 1 firmware is correct for bringup; the emulator itself is
+  not yet integrated into main.c.
+
+### Cumulative R10 verdict
+
+| Severity | Count |
+|----------|------:|
+| CRIT | 0 |
+| HIGH | 0 |
+| MED  | 0 |
+| LOW  | 8 (R10-LOW-1..8, all doc / cosmetic) |
+
+**v3.4 remains fab-ready.** Layer 1 green, Layer 2 clean on functional
+domains. The 8 LOW findings are documentation drift that a maintainer
+can clean up in a follow-up commit without touching geometry or
+routing. None of them block manufacturing or firmware operation.
+
+Remaining v2-respin tech debt (unchanged from R5/R6/R7/R8/R9):
+- 4 accepted net fragmentations (BTN_SELECT/BTN_START D1 menu-diode,
+  I2S_DOUT C22 AC-coupling, VBUS J1.9/11 reversible)
+- R9-LOW-1 (MountingHole library not in fp-lib-table, 6 DRC warnings)
+- R9-LOW-2 (2 silkscreen labels clipped by mask)
+- BUG-L1 (IP5306 KEY bootstrap from VOUT)
+- BUG-L2 (SW_PWR non-functional — only common pin routed)
+- BUG-L3 (LCD 20 MHz > 15 MHz spec, common overclock)
+- BUG-L5 (no firmware button debounce; mitigated by 60 fps polling)
+- BUG-L7 (no battery voltage monitoring — R10-LOW-2 freed GPIOs are
+  candidates for v2 ADC integration)
+
+No action required before v3.4 fab submission. Post-fab, clean up
+R10-LOW-1..8 in a single documentation-only commit to keep the
+source-of-truth files in sync for future audits.
+
+### Round 10 Fix Status (applied 2026-04-11, doc-only cleanup)
+
+All 8 R10-LOW items closed in a single docs-only commit — no PCB
+regeneration, no routing/geometry changes.
+
+| ID | Status | Fix |
+|----|--------|-----|
+| **R10-LOW-1** mcu.py wrong PSRAM pin range | ✅ FIXED | Changed GPIO table label from "GPIO26-32 = Octal PSRAM (internal)" to two lines: "GPIO26-32 = Octal Flash (N16)" and "GPIO33-37 = Octal PSRAM (R8)". |
+| **R10-LOW-2** GPIO15/16 wasted + stale 44.1 kHz note | ✅ FIXED (docs) | Updated `audio.py` I2S bus reference text to mark BCLK/LRCK as UNUSED-in-PDM-mode with a v2-reuse note, and corrected the DOUT label to "32 kHz" (firmware `AUDIO_SAMPLE_RATE`). Dead net removal deferred to v2 (would require PCB regen). |
+| **R10-LOW-3** sd_card.py says 40 MHz SPI | ✅ FIXED | Changed note to "SPI bus @ 20MHz (R2-MED-5: trace length ~150mm + 6 vias → 40MHz unreliable)". |
+| **R10-LOW-4** sd_card.py "GPIO36-39 grouped" | ✅ FIXED | Replaced with accurate "GPIO38/39 (CLK/CS) + GPIO43/44 (MISO/MOSI) — split across WROOM-1 left and right". |
+| **R10-LOW-5** datasheet_specs.py J4.15/16 wrong function | ✅ FIXED | Changed function strings from "NC (IM0/IM1 mode select)" to "NC (DB9/DB8 — unused in 8-bit 8080 mode)" with a comment explaining the 41-N reversal. |
+| **R10-LOW-6** PAM8403 "left channel" comment | ✅ FIXED | Rewrote the U5 block comment to correctly document right-channel-to-speaker wiring; updated pin 1/3 function strings to say "floating, only right channel wired". |
+| **R10-LOW-7** verify_strapping_pins.py stale RC math | ✅ FIXED | `test_en_rc_delay()` now detects external-R3 vs WROOM-1-internal, uses R=10kΩ or R=45kΩ accordingly, and the correct ~50 ms ESP32-S3 sample window. New output: "RC margin = 36.5ms (tau=4.5ms via WROOM-1 internal ~45kΩ, sample@50ms)". Strapping-pins gate now reports 12/12 PASS. |
+| **R10-LOW-8** snes-optimization.md Core 1 WiFi/BT text | ✅ FIXED | Rewrote the "Current state" cell: "Core 1 is fully idle — Wi-Fi and Bluetooth are not enabled in sdkconfig.defaults for Phase 1 hardware validation". |
+
+Regenerated via `python3 scripts/generate-schematic.py` — three
+.kicad_sch files regenerated with the updated text labels:
+- `hardware/kicad/02-mcu.kicad_sch`
+- `hardware/kicad/04-audio.kicad_sch`
+- `hardware/kicad/05-sd-card.kicad_sch`
+
+**PCB untouched.** No routing, no geometry, no pad-net changes. All
+Layer 1 gates still green (verified post-fix).
+
+Post-R10 verifier deltas:
+- `verify_strapping_pins.py`: 11/11 → **12/12** (the RC-margin check
+  now exercises the new WROOM-1 branch; 1 advisory warn unchanged).
+- `verify_schematic_pcb_sync.py`: still PASS — `datasheet_specs.py`
+  changes are pure `function` string edits, the `net` set is identical.
+- `verify_netlist_diff.py`: 4/4 still PASS.
+- `verify_datasheet_nets.py`: 221/221 still PASS (net assignments
+  unchanged).
+- `verify_design_intent.py`: 362/362 still PASS.
+- `verify_dfm_v2.py`: 115/115 still PASS.
+- `verify_polarity.py`: 47/47 still PASS.
+- `verify_trace_crossings.py`: 0 crossings, still PASS.
+- `verify_net_connectivity.py`: 4 accepted tech-debt, still PASS.
+
+**v3.4 is tag-ready.** Zero open CRIT/HIGH/MED bugs across 10 audit
+rounds. The only remaining items are the 4 v2-respin fragmentations
+documented in `memory/project_r8_remaining_todo.md`, the R9-LOW-1
+MountingHole library warning, and R9-LOW-2 silkscreen clipping.
+

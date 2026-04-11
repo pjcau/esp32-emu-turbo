@@ -77,11 +77,11 @@
   (text "GPIO39" (at 90 115 0) (effects (font (size 1.5 1.5)) (justify left)))
   (text "v2 TODO: add local 100nF bypass near U6 VCC (R4-MED-1)" (at 90 120 0) (effects (font (size 1.5 1.5)) (justify left)))
   (text "Design Notes:" (at 30 160 0) (effects (font (size 2.54 2.54) bold) (justify left)))
-  (text "- SPI bus @ up to 40MHz (ESP32-S3 max for SD)" (at 30 168 0) (effects (font (size 2.54 2.54)) (justify left)))
+  (text "- SPI bus @ 20MHz (R2-MED-5: trace length ~150mm + 6 vias → 40MHz unreliable)" (at 30 168 0) (effects (font (size 2.54 2.54)) (justify left)))
   (text "- SNES ROMs: 256KB to 6MB typical (HiROM/LoROM)" (at 30 174 0) (effects (font (size 2.54 2.54)) (justify left)))
   (text "- FAT32 filesystem for easy ROM management via PC" (at 30 180 0) (effects (font (size 2.54 2.54)) (justify left)))
   (text "- 3.3V logic: no level shifter needed (module has built-in)" (at 30 186 0) (effects (font (size 2.54 2.54)) (justify left)))
-  (text "- GPIO36-39 grouped for clean SPI trace routing on PCB" (at 30 192 0) (effects (font (size 2.54 2.54)) (justify left)))
+  (text "- SPI pins: GPIO38/39 (CLK/CS) + GPIO43/44 (MISO/MOSI) — split across WROOM-1 left and right" (at 30 192 0) (effects (font (size 2.54 2.54)) (justify left)))
 
   (sheet_instances (path "/" (page "5")))
 )

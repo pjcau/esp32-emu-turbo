@@ -185,6 +185,8 @@ class MCUSheet(SchematicSheet):
         ty += 5
         self.text("GPIO19=D-  GPIO20=D+", tx, ty)
         ty += 8
-        self.text("Reserved (do not use):", tx, ty, 2, True)
+        self.text("Reserved (do not use, module-internal):", tx, ty, 2, True)
         ty += 5
-        self.text("GPIO26-32 = Octal PSRAM (internal)", tx, ty)
+        self.text("GPIO26-32 = Octal Flash (N16)", tx, ty)
+        ty += 5
+        self.text("GPIO33-37 = Octal PSRAM (R8)", tx, ty)

@@ -137,7 +137,7 @@ With 8 taps fully unrolled, each `MULL` is scheduled while the next sample load 
 | | |
 |:---|:---|
 | **Intervention** | Move the entire SPC700 + DSP emulation (now ASM-optimized from Phase 4.1) to a dedicated FreeRTOS task on Core 1. |
-| **Current state** | CPU 65C816, PPU, and SPC700 all run on Core 0 sequentially. Core 1 is essentially unused (only Wi-Fi/BT stack). |
+| **Current state** | CPU 65C816, PPU, and SPC700 all run on Core 0 sequentially. Core 1 is fully idle — Wi-Fi and Bluetooth are not enabled in `sdkconfig.defaults` for Phase 1 hardware validation, so there is no WiFi/BT stack consuming Core 1. Future revisions that enable Wi-Fi will need to reserve Core 1 budget. |
 | **Target architecture** | **Core 0:** CPU 65C816 + PPU + game logic. **Core 1:** SPC700 CPU + DSP (Phase 4.1 assembly) + I2S output via DMA. Communication via 4 lock-free I/O ports (atomic read/write). |
 | **Implementation** | FreeRTOS task pinned to Core 1 with high priority. DMA-capable ring buffer (`MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL`) between DSP and I2S driver. The 4 SPC ↔ CPU ports are atomic variables (no mutex needed). |
 | **Risks** | Temporal synchronization: some games depend on exact timing between CPU and SPC700. **Solution:** timestamp-based sync with ±64 sample tolerance (~2ms). Works for 95%+ of games. |
