@@ -132,14 +132,14 @@ LiPo 3.7V 5000mAh
 | Component | Value | Purpose | Validation |
 |:---|:---|:---|:---|
 | R1, R2 | 5.1k | USB-C CC pull-down | USB spec: 4.7k–5.6k |
-| R3 | 10k | ESP32 EN pull-up | RC = 1ms with C3 |
-| R4–R13, R15, R19 | 10k | Button pull-ups | Logic HIGH = 3.3V > 2.475V (Vih) |
+| R3 | 10k | ESP32 EN pull-up (DNP — WROOM-1 internal) | RC = 4.5ms with C3 via internal ~45kΩ |
+| R4–R13, R15 | 10k | Button pull-ups | Logic HIGH = 3.3V > 2.475V (Vih) |
 | R16 | 100k | IP5306 KEY pull-down | Keeps KEY low when idle |
 | R17, R18 | 1k | LED current limiting | 1.3mA red, 1.1mA green |
 | C1 | 10uF | AMS1117 input | Datasheet requirement |
 | C2 | 22uF tantalum (C7171) | AMS1117 output | Datasheet: >= 22uF |
 | C3, C4 | 100nF | ESP32 decoupling | Standard practice |
-| C5–C16, C20 | 100nF | Button debounce | RC = 1ms with 10k pull-ups |
+| C5–C16 | 100nF | Button debounce | RC = 1ms with 10k pull-ups |
 | C17, C18 | 10uF | IP5306 decoupling | Datasheet requirement |
 | C19 | 22uF | IP5306 output bulk | Datasheet requirement |
 | L1 | 1uH / 4.5A | IP5306 boost inductor | 4.5A >> 387mA load |

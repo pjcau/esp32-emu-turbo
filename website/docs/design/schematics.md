@@ -349,8 +349,8 @@ SPI bus up to 20MHz. The SD module has a built-in level shifter (3.3V safe). On 
 
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
-| R4–R15, R19 | Resistor | 10 kΩ (C17414) | Button pull-ups (12 + MENU) |
-| C5–C16, C20 | Capacitor | 100 nF (C49678) | Button debounce (12 + MENU) |
+| R4–R15 | Resistor | 10 kΩ (C17414) | Button pull-ups (12 buttons) |
+| C5–C16 | Capacitor | 100 nF (C49678) | Button debounce (12 buttons) |
 
 | Group | Buttons | Switches | GPIOs |
 |-------|---------|----------|-------|

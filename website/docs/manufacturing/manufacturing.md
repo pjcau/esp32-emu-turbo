@@ -68,16 +68,15 @@ The bottom side hosts the main circuitry:
 | R4–R13,R15     | 10k (pull-ups)              | C17414        | R_0805    |
 | R16            | 100k                        | C149504       | R_0805    |
 | R17, R18       | 1k                          | C17513        | R_0805    |
-| R19            | 10k (INL pull-down)          | C17414        | R_0805    |
 | R20, R21       | 20k (PAM8403 gain set)       | C4184         | R_0805    |
 | C1, C17, C18, C27, C28 | 10uF                | C15850        | C_0805    |
 | C2             | 22uF tantalum               | C7171         | TAJB      |
 | C19            | 22uF                        | C12891        | C_1206    |
-| C3–C16,C20,C21,C26 | 100nF                  | C49678        | C_0805    |
+| C3–C16,C21,C26 | 100nF                      | C49678        | C_0805    |
 | C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
 | C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
 
-**Total SMT components:** 27 unique part types, 78 individual placements.
+**Total SMT components:** 26 unique part types, 75 individual placements.
 
 ---
 

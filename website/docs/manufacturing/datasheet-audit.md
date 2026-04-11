@@ -179,8 +179,8 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 | Slide Switch (SW_PWR) | C431540 | Pin spacing, NPTH holes, pad layout correct. Minor 0.05mm pin 2-3 spacing deviation. |
 | Red LED (LED1) | C84256 | Standard 0805, correct |
 | Green LED (LED2) | C19171391 | Standard 0805, correct |
-| Resistors 0805 (R1-R19) | C27834/C17414/C149504/C17513 | Standard 0805, correct |
-| Capacitors 0805 (C1-C20) | C49678/C15850/C12891 | Standard 0805/1206, correct |
+| Resistors 0805 (R1-R21) | C27834/C17414/C149504/C17513/C4184 | Standard 0805, correct |
+| Capacitors 0805 (C1-C27) | C49678/C15850/C12891/C13967/C28323 | Standard 0805/1206, correct |
 | PAM8403 footprint | C5122557 | Narrow SOP-16 body 3.9mm correctly used (not wide 7.5mm SOIC-16W) |
 
 ---

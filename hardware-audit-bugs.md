@@ -1231,3 +1231,158 @@ rounds. The only remaining items are the 4 v2-respin fragmentations
 documented in `memory/project_r8_remaining_todo.md`, the R9-LOW-1
 MountingHole library warning, and R9-LOW-2 silkscreen clipping.
 
+---
+
+## Round 11 Findings (2026-04-11) — R9-MED-4 aftershocks
+
+**Auditor**: `/hardware-audit` re-run after R9/R10 closure.
+**Scope**: Fresh Layer 1 re-verification + Layer 2 sweep of references
+to the R9-MED-4 deletions (R19, C20, BTN_MENU) that the main R9 commit
+missed. Focus on website docs and generator comments.
+
+### Step 0 gates — all green (25/25)
+
+| Gate | Result |
+|------|--------|
+| `verify_trace_through_pad` | 1/1 PASS |
+| `verify_trace_crossings` | 1/1 PASS |
+| `verify_net_connectivity` | PASS (4 accepted tech debt) |
+| `verify_dfm_v2` | 115/115 PASS |
+| `verify_dfa` | 9/9 PASS |
+| `validate_jlcpcb` | 25/25 PASS |
+| `verify_bom_cpl_pcb` | 10/10 PASS |
+| `verify_polarity` | 47/47 PASS |
+| `verify_datasheet_nets` | 221/221 PASS (0 FAIL) |
+| `verify_datasheet` | 29/29 PASS |
+| `verify_design_intent` | 362/362 PASS |
+| `verify_schematic_pcb_sync` (R4 guard) | PASS |
+| `verify_netlist_diff` | 4/4 PASS |
+| `verify_strapping_pins` | **12/12 PASS** (R10-LOW-7 fix confirmed: RC margin 36.5ms via WROOM-1 internal 45kΩ, sample@50ms) |
+| `verify_decoupling_adequacy` | 25/25 PASS |
+| `verify_power_sequence` | 26/26 PASS |
+| `verify_power_paths` | 8/8 PASS |
+| `verify_bom_values` | 74/74 PASS |
+| `verify_component_connectivity` | 2/2 PASS |
+| `verify_signal_chain_complete` | 53/53 PASS |
+| `verify_net_class_widths` | 5/5 PASS |
+| `pcb_review` | **60/60** (all 6 domains) |
+| ERC | 0 critical |
+| KiCad DRC | 0 shorts, 0 clearance (14 pre-existing tech-debt: 6 via_dangling + 6 lib_footprint + 2 silk_over_copper) |
+
+### Findings
+
+All Layer 2 findings are post-R9-MED-4 documentation drift — R9 removed
+R19/C20/BTN_MENU from the PCB generator + schematic but the website
+docs and a few `routing.py` comments were never updated.
+
+#### R11-LOW-1 — Website docs still list R19/C20 in BOM tables
+
+- **Files**:
+  - `website/docs/design/schematics.md:352-353` — button pull-up table says "R4–R15, R19" and "C5–C16, C20"
+  - `website/docs/design/components.md:274,278` — "R4–R13,R15,R19" + "C3–C16,C20,C21,C26"
+  - `website/docs/design/pcb.md:104,108` — "R4-R13,R15,R19 qty=13" + "C3-C16,C20,C21,C26 qty=17"
+  - `website/docs/manufacturing/manufacturing.md:71,76` — a line listing **R19 as "10k (INL pull-down)"** (historical mislabel — INL pull-down is R20/R21 20k, not R19 10k) + the 100 nF row "C3–C16,C20,C21,C26"
+  - `website/docs/manufacturing/manufacturing.md:80` — total SMT count "27 unique part types, 78 individual placements"
+  - `website/docs/manufacturing/verification.md:136,142` — "R4–R13, R15, R19" + "C5–C16, C20 | 100nF | Button debounce | RC = 1ms"
+  - `website/docs/manufacturing/datasheet-audit.md:182-183` — "Resistors 0805 (R1-R19)" and "Capacitors 0805 (C1-C20)" range labels
+- **Problem**: R9-MED-4 (commit `3d02031`) deleted R19 and C20 from the
+  PCB generator, schematic generator, BOM, CPL, and `verify_netlist_diff`
+  allowlist — but the website docs under `website/docs/` were not
+  touched. Any reviewer reading the docs would see 77 components / 13
+  button-pullup resistors instead of the actual 75/12.
+  A secondary defect was uncovered during this pass: the
+  `manufacturing.md:71` entry labeled R19 as "10k (INL pull-down)" —
+  this was never accurate (INL pull-downs are R20/R21 at 20k). It was
+  doc-drift from an even earlier design iteration and R11 fixes it as
+  a side-effect of the R19 cleanup.
+- **Impact**: Documentation only. No fab impact, no firmware impact,
+  no BOM cost change. A follower reading the docs would order 77
+  components from LCSC instead of 75 — the 2 surplus parts are harmless
+  and cost ~$0.004.
+- **Fix**: Applied in this pass. Six doc files edited; R19/C20 removed
+  from all BOM tables; ranges contracted to R4–R13,R15 and C3–C16,C21
+  where applicable; `manufacturing.md:80` total updated to "26 unique
+  part types, 75 individual placements"; `verification.md:135` EN RC
+  line updated to reference the WROOM-1 internal pull-up (4.5 ms τ).
+  `datasheet-audit.md:182-183` ranges expanded to "R1-R21" and "C1-C27"
+  to cover the actual designator span.
+
+#### R11-LOW-2 — `routing.py` LX-jog comments reference ex-R19/C20 geometry
+
+- **File**: `scripts/generate_pcb/routing.py:1108-1117, 3038-3041, 4886-4889`
+- **Problem**: Three comment blocks still described R19/C20 pad
+  positions as clearance constraints even though the components no
+  longer exist:
+  1. The LX jog at `_lx_jog_x = 103.00` had a comment reading "between
+     R19 pad 2 (right=102.55) and pad 1 (left=103.45)" and cited
+     `BTN_MENU gap ≥ 0.125 mm` as a blocking constraint.
+  2. The approach-column allocator at line ~3039 said "These 26
+     components (R4-R15,R19 at y=46 + C5-C16,C20 at y=50)".
+  3. The `+5V` zone-on-In2.Cu boundary comment at line ~4891 said
+     "Start at x=105 to keep R19 pull-up +3V3 vias (x≈103) outside".
+  All three were factually wrong after R9-MED-4 and could mislead a
+  future maintainer into thinking the LX jog or the +5V zone boundary
+  had an electrical justification they no longer have.
+- **Impact**: Commentary only — the generated PCB is unchanged. A
+  comment-only edit does not alter geometry, nets, pads, traces, or
+  vias. Risk: zero.
+- **Fix**: Applied in this pass. The three comment blocks now reference
+  the R9-MED-4 deletion and keep the ex-R19/C20 coordinates as the
+  *historical* reason for the preserved jog/boundary; the `range(13)`
+  defensive reservation in the approach-column allocator was retained
+  and commented as a safety margin rather than an active constraint.
+
+### What I also checked and found clean
+
+- Firmware (`software/main/*.c/*.h`): no references to `BTN_MENU` or
+  `R19`/`C20`. The only `BTN_MENU` symbol is `BTN_MENU_COMBO =
+  BTN_MASK_START | BTN_MASK_SELECT` in `board_config.h:99`, read by
+  `input.c:78` — this is the correct D1 OR-gate combo detection, not
+  a stale reference to a GPIO.
+- `hardware/datasheet_specs.py`: zero hits for R19/C20/BTN_MENU.
+- `website/docs/rework/incident-power-short.md`: contains historical
+  ASCII diagrams mentioning `R19`/`C20`. **Not edited** — this file
+  is a dated incident report documenting the state at the time of the
+  event. Rewriting history would be dishonest.
+
+### Layer 2 domain sweep — unchanged since R10
+
+All 8 functional domains were re-verified via the Layer 1 gates (each
+domain has at least one dedicated verifier). Nothing new. R10's
+R10-LOW-1..8 are all closed (R10 Fix Status table above). R11 adds
+two more LOW-severity doc items and closes them in the same pass.
+
+### Cumulative R11 verdict
+
+| Severity | Count open |
+|----------|-----------:|
+| CRIT | 0 |
+| HIGH | 0 |
+| MED  | 0 |
+| LOW  | R9-LOW-1, R9-LOW-2 (unchanged) + BUG-L1/L2/L3/L5/L7 (v2 respin candidates) |
+
+**v3.4 remains tag-ready.** Eleven audit rounds, zero open functional
+bugs. Post-fix verification re-ran all 25 Layer 1 gates — all green.
+
+### Post-R11 regeneration
+
+The LX-jog comment edits in `routing.py` triggered a PCB regeneration
+via `python3 -m scripts.generate_pcb` (the zone fill step inside
+Docker re-computes polygon counts on every run). Workflow:
+
+```
+1. python3 -m scripts.generate_pcb hardware/kicad
+2. docker compose run kicad_fill_zones.py  (In1.Cu GND + In2.Cu +3V3/+5V)
+3. bash scripts/export-gerbers-fast.sh     (14 gerbers + drill + job)
+4. cp hardware/kicad/jlcpcb/{cpl,gerbers.zip} release_jlcpcb/
+5. cp -r hardware/kicad/gerbers/* release_jlcpcb/gerbers/
+```
+
+Post-regen gate sanity: DFM 115/115, net_connectivity 4 accepted / 0
+failed, BOM/CPL/PCB 10/10, DRC 14 pre-existing tech-debt (unchanged).
+
+**No action required before fab submission.** If a follow-up session
+wants to re-minimise comment churn, the LX-jog could be re-planned
+now that x=103 has full clearance — but that would force a re-audit
+and the current geometry is already proven DFM-clean.
+

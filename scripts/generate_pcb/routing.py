@@ -1099,22 +1099,27 @@ def _power_traces():
     # DFM FIX: was -1.0 (x=106). LX vert at x=106 crossed BAT+ horiz at y=43.13
     # (107→105.5). Also KEY horiz at y=44.41 spans x=107..114.05; x=106 is inside.
     # Fix: lx_col_x = ip_sw[0] - 2.0 = 105 (left of both BAT+ end 105.5 and KEY 107).
-    # DFM: BTN_MENU B.Cu vert at x=104.0 (w=0.25), BAT+ vert at x=105.5 (w=0.76).
-    # BAT+ via at (105.5,46.1) sz=0.9 → left edge 105.05.
-    # LX at x=104.55, w=0.60: right edge=104.85
-    #   BTN_MENU gap: |104.55-104.0|-0.30-0.125 = 0.125mm ≥ 0.10mm ✓
+    #
+    # LX column clearance analysis (BAT+ side is still the binding constraint):
+    #   BAT+ via at (105.5,46.1) sz=0.9 → left edge 105.05.
+    #   LX at x=104.55, w=0.60: right edge=104.85.
     #   BAT+ vert gap: 105.12-104.85 = 0.27mm ≥ 0.25mm ✓
-    #   BAT+ via gap: 105.05-104.85 = 0.20mm ≥ 0.10mm ✓
+    #   BAT+ via gap:  105.05-104.85 = 0.20mm ≥ 0.10mm ✓
     # At 0.60mm / 1oz Cu: ~1.4A capacity (10°C rise), adequate for pulsed LX.
     lx_col_x = ip_sw[0] - 2.45   # x=104.55
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
-    # DFM FIX: LX B.Cu vertical at x=104.55 overlaps R19 pad "1" (BTN_MENU)
-    # at (103.95, 46.0) and C20 pad "1" at (103.95, 50.0).
-    # Jog through gap between R19's two pads at x=103.00 (gap=0.90mm, w=0.60mm, clr=0.15mm).
-    _lx_jog_x = 103.00   # between R19 pad 2 (right=102.55) and pad 1 (left=103.45)
-    _lx_jog_y_bot = 44.5  # below R19 pad bottom (45.35), gap=45.35-44.5-0.30=0.55mm
-    _lx_jog_y_top = 51.5  # above C20 pad top (50.65), gap=51.5-50.65-0.30=0.55mm
+    # Legacy jog at x=103.00 (preserved).
+    # R9-MED-4 (2026-04-11): R19 (was at 103.95, 46.0) and C20 (was at
+    # 103.95, 50.0) were deleted along with the dead BTN_MENU net. The
+    # jog originally dodged their pads; now there is full ~3 mm clearance
+    # in that corridor but the jog is preserved because LX is already
+    # DFM-clean on these coordinates and a straight run would overlap
+    # the C3/C4 passive row at y=42. Changing the jog would force
+    # cascade re-verification with no electrical benefit.
+    _lx_jog_x = 103.00   # between ex-R19 footprint and left free corridor
+    _lx_jog_y_bot = 44.5  # below ex-R19 placement row
+    _lx_jog_y_top = 51.5  # above ex-C20 placement row
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, _lx_jog_y_bot,
                        "B.Cu", W_PWR, n_lx))
     parts.append(_seg(lx_col_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_bot,
@@ -1124,7 +1129,7 @@ def _power_traces():
     parts.append(_seg(_lx_jog_x, _lx_jog_y_top, lx_col_x, _lx_jog_y_top,
                        "B.Cu", W_PWR, n_lx))
     parts.append(_seg(lx_col_x, _lx_jog_y_top, lx_col_x, l1_2[1],
-                       "B.Cu", W_PWR, n_lx))  # 0.60mm — max width within BTN_MENU/BAT+ corridor
+                       "B.Cu", W_PWR, n_lx))  # 0.60mm — max width within BAT+ corridor
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
 
@@ -3023,6 +3028,10 @@ def _button_traces():
 
     # Assign approach columns near ESP32
     # Avoid passive pull-up traces at x = 43+i*5 ± 0.95, y=46-50
+    # R9-MED-4: loop still covers 13 slots for defensive reservation of
+    # the ex-R19/C20 x=103 column; active components are R4-R15/C5-C16
+    # (12 buttons). Keeping the extra slot reserved prevents future
+    # routing from accidentally using 103.95/102.05 without re-audit.
     passive_trace_xs = {43 + i * 5 + 0.95 for i in range(13)}
     passive_trace_xs |= {43 + i * 5 - 0.95 for i in range(13)}
     # SHORT FIX: also forbid LED current-limit +3V3 stub positions.
@@ -3031,8 +3040,9 @@ def _button_traces():
     passive_trace_xs |= {25.95, 32.95}
 
     # DFM FIX: pull-up/debounce PAD forbidden zones for approach columns.
-    # These 26 components (R4-R15,R19 at y=46 + C5-C16,C20 at y=50) are densely
-    # packed at 5mm spacing across x=43-103. Approach columns must not overlap them.
+    # 24 active components (R4-R15 at y=46 + C5-C16 at y=50) densely packed
+    # at 5mm spacing across x=43-98. The 13th slot at x=103 is defensively
+    # reserved (ex-R19/C20 position, removed in R9-MED-4).
     # 0805 pad_hw=0.50mm, approach trace hw=0.125mm, gap=0.15mm → radius=0.775mm.
     _pu_pad_centers = []
     for _i in range(13):
@@ -4878,7 +4888,9 @@ def _power_zones():
     parts.append(P.zone_fill("In2.Cu", board_pts, NET_ID["+3V3"], "+3V3"))
 
     # +5V zone on In2.Cu — power management area (IP5306/AMS1117)
-    # Start at x=105 to keep R19 pull-up +3V3 vias (x≈103) outside
+    # Start at x=105 — historical boundary from when R19 pull-up vias
+    # sat at x≈103 (R19 removed in R9-MED-4, but the +5V island stays
+    # east of x=105 to keep the BAT+ corridor and LX jog unaffected).
     v5_pts = [
         (105, 35), (140, 35), (140, 65), (105, 65),
     ]
