@@ -219,8 +219,8 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | U1 | MCU module | ESP32-S3-WROOM-1 N16R8 | 16MB Flash, 8MB PSRAM | [PDF](/datasheets/U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf) |
-| R3 | Resistor | 10 kΩ | EN pull-up (keep-alive) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
-| C3 | Capacitor | 100 nF | EN reset delay (RC = 1ms) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| R3 | Resistor | 10 kΩ | EN pull-up (DNP — ESP32-S3-WROOM-1 integrates ~45 kΩ internal EN pull-up) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
+| C3 | Capacitor | 100 nF | EN reset delay (RC ≈ 4.5 ms via WROOM-1 internal ~45 kΩ pull-up) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C4 | Capacitor | 100 nF | 3V3 decoupling | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | SW_RST | Tact switch | — | EN reset (pulls EN low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | SW_BOOT | Tact switch | — | Boot mode (pulls GPIO0 low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |

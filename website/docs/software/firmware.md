@@ -21,7 +21,7 @@ Standalone ESP-IDF v5.x project in `software/` that validates all hardware befor
 | 1.3 | Display test pattern | Color bars, fill screen, status indicators | ✅ Done |
 | 1.4 | SD card (SPI mode) | `esp_vfs_fat_sdspi_mount`, FAT32, ROM directory scanner | ✅ Done |
 | 1.5 | 12-button input | GPIO polling @ 1ms, bitmask API, HW RC debounce | ✅ Done |
-| 1.6 | I2S audio output | `i2s_std` 32kHz 16-bit mono, 440Hz test tone | ✅ Done |
+| 1.6 | Audio output | `i2s_pdm_tx` PDM sigma-delta 32kHz 16-bit mono, 440Hz test tone. Only DOUT (GPIO17) is routed — BCLK/LRCK unused; the PAM8403 input RC network reconstructs the analog signal. | ✅ Done |
 | 1.7 | Power management | IP5306 I2C (0x75), battery %, charge status | ✅ Done |
 
 ### Firmware project structure
@@ -38,7 +38,7 @@ software/
     ├── display.c/h             ILI9488 320×480 i80 parallel + LEDC backlight
     ├── input.c/h               12 buttons, active-low, bitmask polling
     ├── sdcard.c/h              SPI @ 20MHz, FAT32, ROM listing
-    ├── audio.c/h               I2S mono → PAM8403 amplifier
+    ├── audio.c/h               I2S PDM TX (sigma-delta) → PAM8403 amplifier
     └── power.c/h               IP5306 I2C battery level + charge status
 ```
 

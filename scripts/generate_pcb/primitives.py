@@ -195,7 +195,7 @@ def nets() -> str:
     return "".join(lines)
 
 
-def gr_line(x1, y1, x2, y2, layer="Edge.Cuts", width=0.05):
+def gr_line(x1, y1, x2, y2, layer="Edge.Cuts", width=0.15):
     return (
         f'  (gr_line (start {x1} {y1}) (end {x2} {y2})'
         f' (stroke (width {width}) (type default))'
@@ -204,7 +204,7 @@ def gr_line(x1, y1, x2, y2, layer="Edge.Cuts", width=0.05):
 
 
 def gr_arc(sx, sy, mx, my, ex, ey,
-           layer="Edge.Cuts", width=0.05):
+           layer="Edge.Cuts", width=0.15):
     return (
         f'  (gr_arc (start {sx} {sy})'
         f' (mid {mx} {my}) (end {ex} {ey})'

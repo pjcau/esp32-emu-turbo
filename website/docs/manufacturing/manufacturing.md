@@ -12,11 +12,11 @@ Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) 
 :::tip Release v2.1
 All production files in `release_jlcpcb/` are verified and ready for ordering:
 - **115 DFM tests**, **9 DFA assembly tests**, and **26 JLCPCB validation tests** pass
-- **PCB review score:** 98/100
+- **PCB review score:** 60/60 (v3.4)
 - **19 silkscreen labels** added on F.SilkS/B.SilkS for component identification
 - **W_PWR_LOW = 0.30mm** trace width added for power stubs
 - **LCSC parts fixed:** C22 = C13967 (0.47uF), C23-C25 = C28323 (1uF)
-- **77 components** in BOM/CPL matched against schematic and PCB
+- **75 components** in BOM/CPL matched against schematic and PCB (v3.4, post R9-MED-4)
 - **0 DRC errors**, all pre-production checks passed
 :::
 
