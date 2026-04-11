@@ -46,6 +46,10 @@ COMPONENT_SPECS = {
     #   B1=GND, B4=VBUS, B5=CC2, B6=DP2, B7=DN2, B8=SBU2, B9=VBUS, B12=GND
     # JLCPCB footprint uses 12 signal pads + 4 shield pads (13, 14, 13b, 14b)
     # Our mapping: 1-12 SMD signal, 13/14 front shield THT, 13b/14b rear THT
+    # R16 FIX (2026-04-12): pad SIZES corrected to match JLCPCB/EasyEDA
+    # reference retrieved via easyeda2kicad — wide signal 0.55mm,
+    # narrow signal 0.30mm, rear shield 1.2×1.8, NPTH drill 0.70mm.
+    # Pin names kept as 13b/14b (unique, not duplicates) per user preference.
     # ======================================================================
     "J1": {
         "component": "USB-C 16-Pin Connector",
@@ -251,17 +255,20 @@ COMPONENT_SPECS = {
     },
 
     # ======================================================================
-    # J3 — JST PH 2-Pin Battery Connector (C265003)
-    # Pin 1=BAT+, Pin 2=GND
+    # J3 — JST PH 2-Pin Battery Connector (C295747)
+    # Pin 1=BAT+, Pin 2=GND, Pins 3/4=mechanical reinforcement tabs (no net)
+    # R15-FIX (2026-04-12): added pins 3, 4 for JLCDFM "Pin without pad" fix
     # ======================================================================
     "J3": {
         "component": "JST PH 2-Pin SMD Battery Connector",
-        "lcsc": "C265003",
-        "datasheet": "J3_JST-PH-2P-SMD_C265003.pdf",
+        "lcsc": "C295747",
+        "datasheet": "J3_JST-PH-2P-SMD_C295747.pdf",
         "datasheet_page": 1,
         "pins": {
             "1": {"net": _exact("BAT+"), "function": "Battery positive", "type": "smd"},
             "2": {"net": _exact("GND"),  "function": "Battery ground", "type": "smd"},
+            "3": {"net": _unconnected(), "function": "Mechanical reinforcement tab (left)", "type": "smd"},
+            "4": {"net": _unconnected(), "function": "Mechanical reinforcement tab (right)", "type": "smd"},
         },
     },
 

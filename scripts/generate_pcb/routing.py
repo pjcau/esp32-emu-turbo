@@ -785,21 +785,29 @@ def _power_traces():
     #   F.Cu horiz at y=61: BTN_UP@y=62 gap=|62-61|-0.125-0.25=0.625mm ✓
     #   F.Cu vert at x=108: same as old route (ip_vbus_via_x=108) ✓
     vbus_fcu_y = 61.0   # 1mm above highest button F.Cu channel (BTN_UP@62.0)
-    # DFM FIX (KiBot external): VBUS B.Cu vert at x=82.25 had gap=0.15mm to
-    # J3:1 PTH pad (81.0, 62.5) size 1.6mm (right edge 81.8). W_PWR=0.6 hw=0.3.
-    # At 82.25: left edge 81.95, gap=81.95-81.8=0.15mm < 0.20mm rule.
-    # Fix: offset +0.05 → x=82.45. Left edge 82.07, gap to J3:1=82.07-81.8=0.27mm ✓
-    # Right edge 82.83, gap to J1:1 GND pad left edge (83.025)=0.195mm >= 0.175mm ✓
-    vbus_fcu_start_x = usb_vbus[0] + 0.05
+    # R16 FIX (2026-04-12): after updating J1 pads to the JLCPCB reference
+    # footprint, the wide signal pads (1, 2, 11, 12) grew from 0.35mm to
+    # 0.55mm wide, moving J1.1 GND pad left edge from x=83.025 to x=82.925.
+    # The old VBUS B.Cu vertical at x=82.45 with W_PWR_HIGH (0.76mm, half
+    # 0.38) had right edge at 82.83 → new gap to GND 0.095mm (DANGER).
+    # Fix: tuck the B.Cu vertical to x=82.40 (centered on pad 2) and
+    # narrow to W_PWR (0.60mm, half 0.30). New constraints:
+    #   Left edge  82.10 → gap to pad 3 (unnetted, 0.30 wide, right 81.90) = 0.20mm ✓
+    #   Left edge  82.10 → gap to J3.1 (PTH 1.6 wide, right 81.80) = 0.30mm ✓
+    #   Right edge 82.70 → gap to J1.1 (GND 0.55 wide, left 82.925)   = 0.225mm ✓
+    # W_PWR=0.60 handles up to 2.3A at 1oz 1-layer ext. 10°C rise — above
+    # the 2.1A VBUS peak charging current per IP5306 datasheet.
+    vbus_fcu_start_x = usb_vbus[0]  # x=82.40, centered on pad 2
     ip_vbus_via_x = ip_vbus[0] - 2  # 108.0
     ip_vbus_via_y = ip_vbus[1] - 0.5  # DFM: 0.5mm above pad to clear U2[EP]
 
     # 1. B.Cu stub from USB VBUS pad LEFT to x=82.0
+    #    NOTE: no x-offset needed — trace goes straight down from pad center.
     parts.append(_seg(usb_vbus[0], usb_vbus[1], vbus_fcu_start_x, usb_vbus[1],
-                       "B.Cu", W_PWR_HIGH, n_vbus))
+                       "B.Cu", W_PWR, n_vbus))
     # 2. B.Cu vertical UP from y=68.255 to y=61.0 (above all button F.Cu channels)
     parts.append(_seg(vbus_fcu_start_x, usb_vbus[1], vbus_fcu_start_x, vbus_fcu_y,
-                       "B.Cu", W_PWR_HIGH, n_vbus))
+                       "B.Cu", W_PWR, n_vbus))
     # 3. via to F.Cu at (82.0, 61.0)
     parts.append(_via_net(vbus_fcu_start_x, vbus_fcu_y, n_vbus))
     # 4. F.Cu horizontal to IP5306 approach column

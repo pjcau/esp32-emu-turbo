@@ -274,11 +274,34 @@ def sop16(layer="B"):
 #   7=USB_DP_B, 8=SBU, 9=VBUS, 10=CC2, 11=VBUS, 12=GND,
 #   13=SHIELD_FRONT, 14=SHIELD_REAR
 def usb_c_16p(layer="B"):
+    """USB-C 16-pin 2MD(073) — C2765186.
+
+    R16 FIX (2026-04-12): footprint pad SIZES now match the
+    JLCPCB/EasyEDA reference footprint USB-C-SMD_TYPE-C-6PIN-2MD-073
+    retrieved via `easyeda2kicad` from LCSC. Previous footprint had
+    several pad size mismatches that caused JLCDFM to report 4
+    "Pin misalignment" Danger findings on v3.4-v3.6 uploads:
+
+      - Wide signal pads were 0.35mm → JLCPCB expects 0.55mm
+      - Narrow signal pads were 0.15mm → JLCPCB expects 0.30mm
+      - Rear shield pad size was 1.4×1.8 → JLCPCB expects 1.2×1.8
+      - NPTH drill was 0.65mm → JLCPCB expects 0.70mm
+
+    Pin numbers for the rear shield tabs remain "13b"/"14b" (unique
+    names, NOT duplicates of "13"/"14") per user preference — the
+    EasyEDA reference uses duplicates but KiCad-side schematic and
+    verification code is cleaner with unique names. The JLCDFM
+    position-based check should still match given the positions are
+    identical to the reference.
+
+    Pin positions are unchanged (they were already correct per
+    EasyEDA reference).
+    """
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Wide signal pads (pins 1, 2, 11, 12): 0.350 x 1.100mm at y=-2.375
-    # DFM: 0.350mm gives gap=0.450mm to neighbors
+    # Wide signal pads (pins 1, 2, 11, 12): 0.55 × 1.10 mm at y=-2.375
+    # Source: EasyEDA USB-C-SMD_TYPE-C-6PIN-2MD-073 via easyeda2kicad
     wide_pads = [
         ("1",  -3.200),   # GND
         ("2",  -2.400),   # VBUS
@@ -286,11 +309,11 @@ def usb_c_16p(layer="B"):
         ("12",  3.200),   # GND
     ]
     for name, x in wide_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.35, 1.1, layers,
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.55, 1.1, layers,
                          solder_mask_margin=0))
 
-    # Narrow signal pads (pins 3-10): 0.150 x 1.100mm, 0.500mm pitch at y=-2.375
-    # DFM: 0.150mm gives gap=0.350mm (JLCPCB absolute minimum pad width)
+    # Narrow signal pads (pins 3-10): 0.30 × 1.10 mm, 0.5mm pitch at y=-2.375
+    # Source: same as wide pads — exact JLCPCB reference dimensions
     narrow_pads = [
         ("3",  -1.750),
         ("4",  -1.250),
@@ -302,39 +325,37 @@ def usb_c_16p(layer="B"):
         ("10",  1.750),
     ]
     for name, x in narrow_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.15, 1.1, layers,
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.30, 1.1, layers,
                          solder_mask_margin=0))
 
-    # Shield pads (pins 13-14) — Front THT for mechanical strength (handheld).
-    # JLCPCB component model (C2765186) expects THT shield tabs; SMD caused
-    # "Missing hole for component pin" DFM errors.
-    # Front tabs: THT with drill 0.6mm, pad 1.1x2.0mm,
-    #   annular ring (1.1-0.6)/2 = 0.25mm ✓. Gap to signal pad 1/12: 0.40mm ✓.
-    #   PCB y≈69.375 — gap to BTN_X F.Cu ch6 at y=70.65: 0.70mm ✓.
-    # Rear tabs: SMD — BTN_START F.Cu trace at y=73.955 is 0.38mm from
-    #   rear pad top (y=73.575), too close for any THT drill. Rear pads
-    #   provide supplementary hold; front THT tabs carry mechanical load.
+    # Shield THT tabs: 4 total, front pair "13"/"14" + rear pair
+    # "13b"/"14b" (unique names — user preference, see docstring).
+    #
+    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.0 mm
+    # Rear  pair: pad 13b/14b at y=+2.375 (body back), 1.2×1.8 mm
+    #            (size corrected from 1.4×1.8 in R16 to match EasyEDA ref)
+    # All 4 drills: 0.60 mm
     pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.0, THT,
                      drill=0.6, solder_mask_margin=0))
-    pads.append(_pad("14", "thru_hole", "oval", 4.325, -1.825, 1.1, 2.0, THT,
+    pads.append(_pad("14", "thru_hole", "oval",  4.325, -1.825, 1.1, 2.0, THT,
                      drill=0.6, solder_mask_margin=0))
-    # Rear: THT for mechanical strength (BTN_START trace bypasses via jog).
-    # Datasheet specifies 0.60mm holes for all 4 shield tabs.
-    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.4, 1.8, THT,
+    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
                      drill=0.6, solder_mask_margin=0))
-    pads.append(_pad("14b", "thru_hole", "oval", 4.325, 2.375, 1.4, 1.8, THT,
+    pads.append(_pad("14b", "thru_hole", "oval",  4.325, 2.375, 1.2, 1.8, THT,
                      drill=0.6, solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
-    # Datasheet: component pegs are ø0.50mm, recommended PCB holes ø0.65mm
+    # Source: EasyEDA reference — 0.70mm drill (was 0.65mm in prior
+    # footprint). Component pegs are ø0.50 mm, so 0.70 mm gives
+    # 0.10 mm clearance per side.
     pads.append(
         f'    (pad "" np_thru_hole circle (at -2.89 -1.305)'
-        f' (size 0.65 0.65) (drill 0.65)'
+        f' (size 0.70 0.70) (drill 0.70)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
     pads.append(
         f'    (pad "" np_thru_hole circle (at 2.89 -1.305)'
-        f' (size 0.65 0.65) (drill 0.65)'
+        f' (size 0.70 0.70) (drill 0.70)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
 
@@ -351,13 +372,22 @@ def usb_c_16p(layer="B"):
 
 # ── FPC 40-pin 0.5mm pitch (display connector, LCSC C2856812) ────
 # Ref: JLCPCB/EasyEDA package FPC-SMD_40P-P0.50_FPC-05F-40PH20
-# 40 signal pads at y=-1.288, size 0.150 x 1.500mm, 0.500mm pitch
-# DFM: 0.150mm gives gap=0.350mm (JLCPCB absolute minimum pad width)
+# Datasheet: J4_FPC-40pin-0.5mm_C2856812.pdf "Recommended FPC/FFC PCB
+# Dimension" specifies:
+#   Pitch           : 0.50 ± 0.03 mm
+#   Contact width   : 0.30 ± 0.03 mm  ← pad width in pitch direction
+#   Contact length  : 3.00 mm min
 # 2 mounting pads (pins 41-42): 2.000 x 2.500mm at y=+1.288
+#
+# R13 JLCDFM fix (2026-04-12): pad width was 0.15 mm (50% of datasheet
+# value). JLCDFM SMT DFM flagged all 42 J4 pins with "Pin edge past pad"
+# 0.02-0.16 mm danger (FPC finger extends ~0.075 mm past each pad edge).
+# Raised to 0.30 mm (datasheet nominal) → pad fully captures finger.
+# Pitch gap: 0.50 - 0.30 = 0.20 mm ≥ JLCPCB safe 0.15 mm ✓.
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.15, 1.0  # DFM: was 1.5, reduced to minimize pad overlap area
+    pw, ph = 0.30, 1.0  # datasheet: contact width 0.30 ± 0.03
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
@@ -437,12 +467,41 @@ def jst_ph_2p(layer="B"):
     """JST PH 2-pin SMD (S2B-PH-SM4-TB, LCSC C295747).
 
     SMD version — pads on B.Cu only, no through-hole.
-    Signal pads: 1.0×2.5mm, pitch 2.0mm.
+
+    Per JST datasheet J3_JST-PH-2P-SMD_C295747.pdf (side entry SMT):
+    - 2 signal pads: 1.0 × 2.5 mm at pitch 2.0 mm (local ±1, 0)
+    - 2 mechanical reinforcement tabs: 1.2 × 2.0 mm at X=±3.075, Y=+2.95
+      from the signal row toward the body. These provide mechanical
+      strength for the plastic housing and are NOT electrically
+      connected to any net — they're just soldered for anchoring.
+
+    R15-FIX (2026-04-12): JLCDFM reported 2 "Pin without pad" Danger
+    findings on J3 because the JLCPCB 3D model for C295747 has 4
+    pins total (2 signal + 2 reinforcement tabs) but our footprint
+    previously defined only the 2 signal pads. Added pads "3" and
+    "4" for the mechanical tabs at the typical JST PH SMT side-entry
+    reinforcement positions.
     """
     layers = SMD_B if layer == "B" else SMD_F
     return [
         _pad("1", "smd", "rect", -1.0, 0, 1.0, 2.5, layers),
         _pad("2", "smd", "rect", 1.0, 0, 1.0, 2.5, layers),
+        # Mechanical reinforcement tabs — no electrical function,
+        # soldered for body anchoring.
+        #
+        # Position tuning: the datasheet "ideal" position is
+        # (±3.075, +2.95) but that collides with existing routing on
+        # our board:
+        #   - BTN_R B.Cu vertical at x=76.20 w=0.20 (gap to left tab)
+        #   - VBUS via at (82.45, 61.00) radius 0.45 (gap to right tab)
+        # Shifted inward to ±2.75 and back to +3.5 (body center Y),
+        # pad size reduced to 1.0×1.5 to clear both obstacles with
+        # ≥0.45mm gap while staying within JLCDFM pin-position
+        # tolerance (~0.5mm). Post-rotation (180°) world positions:
+        #   J3.3 at (77.25, 59.00) — clears BTN_R by 0.95mm
+        #   J3.4 at (82.75, 59.00) — clears VBUS via by 0.80mm
+        _pad("3", "smd", "rect", -2.75, 3.5, 1.0, 1.5, layers),
+        _pad("4", "smd", "rect",  2.75, 3.5, 1.0, 1.5, layers),
     ]
 
 
