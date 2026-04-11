@@ -4879,13 +4879,32 @@ def _button_pullup_bridges():
     #   - Mounting hole keepout at (105, 37.5) r=2.25 (x=100.15 → dx=4.85 ✓)
     #   - LCD_D4 B.Cu vert at x=99.50 (dx=0.65 → edge gap 0.425 mm ✓)
     #   - LCD_DC B.Cu horiz at y=34.60 (y end 34.94 → dy=0.34 > 0.225 ✓)
+    # R13-CRIT-1 FIX (2026-04-11): the R9 reroute above terminated at
+    # (100.15, 43) and then ran B.Cu vertical from (100.15, 43) to
+    # (100.15, 34.94) before jogging east to (100.45, 34.94) — where
+    # it met the existing stagger column B.Cu vert at x=100.45 running
+    # from y=34.94 up to y=73.955. Result: two parallel B.Cu verticals
+    # at x=100.15 and x=100.45 with center-to-center 0.30 mm, edge
+    # gap = 0.30 − 0.125 − 0.125 = 0.050 mm. Same net (BTN_START) so
+    # verify_copper_clearance.py was not catching it — but JLCDFM's
+    # dry-film rule doesn't care about net and flagged it as
+    # "Trace spacing Danger 0.05mm" twice (v3.4 and v3.5 uploads).
+    #
+    # Fix: land the R9 bridge directly on the existing stagger column
+    # at x=100.45 by running the F.Cu bridge further east and dropping
+    # the via at (100.45, 43). The existing stagger column already
+    # covers y=34.94..73.955 at x=100.45, so the via at y=43 lands
+    # mid-segment and provides the electrical junction. No new B.Cu
+    # vertical at x=100.15 is needed — the 0.050 mm parallel cluster
+    # disappears entirely.
     n_btn_start = NET_ID["BTN_START"]
     parts.append(_seg(83.95, 46.00, 83.95, 43.00, "B.Cu", W_SIG, n_btn_start))
     parts.append(_via_net(83.95, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(83.95, 43.00, 100.15, 43.00, "F.Cu", W_SIG, n_btn_start))
-    parts.append(_via_net(100.15, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(100.15, 43.00, 100.15, 34.94, "B.Cu", W_SIG, n_btn_start))
-    parts.append(_seg(100.15, 34.94, 100.45, 34.94, "B.Cu", W_SIG, n_btn_start))
+    # F.Cu bridge from (83.95, 43) east to (100.45, 43) — the existing
+    # stagger B.Cu column at x=100.45 runs through y=43, so we land
+    # the via on top of it.
+    parts.append(_seg(83.95, 43.00, 100.45, 43.00, "F.Cu", W_SIG, n_btn_start))
+    parts.append(_via_net(100.45, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     # ── SOUTH-HIGHWAY PATTERN (staggered y per button) ──
     #

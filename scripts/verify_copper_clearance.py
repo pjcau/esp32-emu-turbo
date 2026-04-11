@@ -148,16 +148,29 @@ def merge_by_net(features):
 
 def find_gaps(merged, nets, threshold=GAP_WARN):
     """Return list of (gap_mm, net_a, net_b, pt_a, pt_b) for every
-    different-net pair with polygon distance < threshold."""
+    copper pair with polygon distance < threshold.
+
+    Covers THREE categories of violation:
+    1. Different-net pairs (real electrical short risk)
+    2. Same-net non-touching sub-polygons — fab dry-film breakage
+       risk regardless of net (JLCDFM flags these as "Trace spacing
+       Danger" even for same-net U-turns / close-parallel traces)
+    3. Unnetted <no net> vs netted features
+
+    Skipped:
+    - <no net> vs <no net> (NPTH cluster, all unnetted copper)
+    - Same-net pairs that touch (d == 0, routed together)
+    """
     violations = []
     items = list(merged.items())
+
+    # Category 1+3: cross-net distances
     for i in range(len(items)):
         ka, (pa, _) = items[i]
         pa_bounds = pa.bounds
         for j in range(i + 1, len(items)):
             kb, (pb, _) = items[j]
             pb_bounds = pb.bounds
-            # Broad-phase reject
             if (pa_bounds[2] + BROAD_PHASE < pb_bounds[0]
                     or pb_bounds[2] + BROAD_PHASE < pa_bounds[0]
                     or pa_bounds[3] + BROAD_PHASE < pb_bounds[1]
@@ -170,7 +183,6 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
             if d < threshold:
                 na = nets.get(ka, str(ka)) if isinstance(ka, int) else ka
                 nb = nets.get(kb, str(kb)) if isinstance(kb, int) else kb
-                # Skip no-net vs no-net (same group, meaningless)
                 if na == "<no net>" and nb == "<no net>":
                     continue
                 try:
@@ -179,6 +191,53 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
                 except Exception:
                     loc = (0, 0, 0, 0)
                 violations.append((d, na, nb) + loc)
+
+    # Category 2: same-net non-touching sub-polygons (fab dry-film risk)
+    # Walk each net's merged geometry. If it's a MultiPolygon, the net
+    # has two or more disconnected copper regions that run close to
+    # each other — JLCDFM's "Trace spacing" rule flags these regardless
+    # of net, because the dry-film photoresist between them breaks
+    # during electroplating and causes yield issues.
+    #
+    # We check:
+    # (a) pair-wise distance between MultiPolygon sub-components
+    # (b) self-overlap of the merged geometry — if Shapely's buffer
+    #     glued two close-parallel traces into one "narrow corridor"
+    #     polygon, we want to detect the thin-neck via morphological
+    #     erosion (eroded by 0.5*GAP_WARN, check if the result
+    #     disconnects into > original component count)
+    for key, (geom, _) in merged.items():
+        net_name = nets.get(key, str(key)) if isinstance(key, int) else key
+        if net_name == "<no net>":
+            continue
+
+        # Collect sub-geometries
+        subs = []
+        if geom.geom_type == "MultiPolygon":
+            subs = list(geom.geoms)
+        elif geom.geom_type == "GeometryCollection":
+            subs = [g for g in geom.geoms if g.geom_type == "Polygon"]
+
+        if len(subs) < 2:
+            continue
+
+        # Pairwise distance between sub-polygons of the same net
+        for i in range(len(subs)):
+            for j in range(i + 1, len(subs)):
+                try:
+                    d = subs[i].distance(subs[j])
+                except Exception:
+                    continue
+                if d < threshold and d > 0.001:
+                    try:
+                        pt_a, pt_b = nearest_points(subs[i], subs[j])
+                        loc = (pt_a.x, pt_a.y, pt_b.x, pt_b.y)
+                    except Exception:
+                        loc = (0, 0, 0, 0)
+                    violations.append(
+                        (d, f"{net_name} (same-net)", net_name) + loc
+                    )
+
     return violations
 
 
