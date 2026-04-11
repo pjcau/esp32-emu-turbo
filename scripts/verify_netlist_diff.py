@@ -73,15 +73,17 @@ _PCB_INTERNAL_PREFIXES = ("unconnected-", "Net-(", "")
 #   R4-HIGH-1 USBLC6 fix: USB_DP_MCU / USB_DM_MCU).
 # - SW_PWR: power switch with multiple pad groupings. SW_PWR.2 carries
 #   the BAT+ rail on PCB but schematic labels it VBUS_SW (internal net).
-# - R19, R20, R21: PAM8403 input bias / menu pull-up — R4-HIGH-3 bias
-#   fix left schematic-PCB pin-1/pin-2 swaps. `verify_decoupling_*`
-#   validates the electrical connectivity.
-# - C20, C21: PAM8403 VREF and menu combo cap — same class as above.
+# - R20, R21: PAM8403 input bias — R4-HIGH-3 bias fix left schematic-PCB
+#   pin-1/pin-2 swaps. `verify_decoupling_*` validates the electrical
+#   connectivity.
+# - C21: PAM8403 VREF cap — same class as above.
+# R9-MED-4 (2026-04-11): R19 and C20 removed from the design — they were
+# on a dead BTN_MENU net. Allowlist entries removed with them.
 T4_SKIP_REFS = {
     "J1", "J4", "U1", "U5", "U6",
     "SW_PWR",
-    "R19", "R20", "R21",
-    "C20", "C21",
+    "R20", "R21",
+    "C21",
 }
 
 
@@ -106,8 +108,6 @@ T1_ALLOW = {
 
 # T2: PCB nets that legitimately have no schematic-side counterpart.
 #
-# - BTN_MENU: old label for what the schematic now calls MENU_K (R4 fix
-#   added D1 to schematic, schematic label standardized on MENU_K).
 # - EN, IP5306_KEY, LX: power-topology internal nets. The schematic
 #   generator uses different power-flag labels; `verify_power_paths.py`
 #   validates the electrical topology.
@@ -120,8 +120,10 @@ T1_ALLOW = {
 # - USB_DM_MCU: MCU-side of the 22Ω series resistor R23. Schematic has
 #   `USB_D-` as the bus-side label; the R4-HIGH-1 fix added the series
 #   resistor and its MCU-side pad carries a local label.
+#
+# R9-MED-4 (2026-04-11): BTN_MENU removed from allowlist because the
+# dead net was deleted from the PCB generator entirely.
 T2_ALLOW = {
-    "BTN_MENU",
     "EN",
     "IP5306_KEY",
     "LED1_RA", "LED2_RA",
@@ -160,7 +162,8 @@ T3_ALLOW = {"DS1"}
 #   on variant). Cosmetic.
 # - C24 pin 1: AMS1117 symbol-side decoupling cap. Schematic labels it
 #   `+5V`; PCB merges it into `GND` via the ground pour at that location.
-_BUTTON_PULLUP_REFS = {f"R{i}" for i in range(4, 16)} | {"R19"}
+# R9-MED-4: R19 removed (was on dead BTN_MENU net).
+_BUTTON_PULLUP_REFS = {f"R{i}" for i in range(4, 16)}
 _BUTTON_DEBOUNCE_CAP_REFS = {
     f"C{i}" for i in range(4, 15)
 } | {"C27", "C28", "C29", "C30"}

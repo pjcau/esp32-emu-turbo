@@ -224,8 +224,10 @@ def test_button_chain(net_refs, name_to_id, id_to_name):
     for net_name, (sw_ref, required) in buttons.items():
         verify_chain("Button", net_name, required, net_refs, name_to_id, id_to_name)
 
-    # Menu button combo (BTN_MENU net should connect R19 pull-up)
-    verify_chain("Menu combo", "BTN_MENU", ["R19"], net_refs, name_to_id, id_to_name)
+    # Menu button combo — SW13 + D1 BAT54C OR-gate → BTN_START/BTN_SELECT
+    # R9-MED-4 (2026-04-11): BTN_MENU net + R19/C20 deleted. MENU_K holds
+    # only SW13 and D1.3; BTN_START/BTN_SELECT are pulled up by their own
+    # individual R/C pairs and detected as a combo mask in firmware.
     verify_chain("Menu combo", "MENU_K", ["D1", "SW13"], net_refs, name_to_id, id_to_name)
 
 

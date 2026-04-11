@@ -612,3 +612,171 @@ v3.4 is shippable. Layer 1 is green. Artifacts regenerated in `release_jlcpcb/`:
 - `bom.csv`, `cpl.csv`, `esp32-emu-turbo.kicad_pcb`, `gerbers/*` (14 files)
 
 Recommended: run the Layer 2 prose audit before tagging v3.4, then tag and submit to JLCPCB.
+
+---
+
+## Round 9 — Layer 2 prose pass (2026-04-11)
+
+**Auditor**: `/hardware-audit` Layer 2 follow-up after previous-worker Layer 1 closure
+**Trigger**: User re-invoked `/hardware-audit` after the Layer 1 worker fixed R9-CRIT-1..2 / R9-HIGH-1..6 / R9-MED-1..3.
+**Scope**: Re-run all Layer 1 gates (confirm still clean), then execute Steps 1–8 prose review.
+
+### Step 0 gate re-run — all PASS
+
+| Gate | Expected | Actual |
+|------|----------|--------|
+| `verify_trace_through_pad` | 0 overlaps | **0** ✅ |
+| `verify_trace_crossings` | 0 crossings | **0** ✅ (new gate added in L1 pass — catches R9-CRIT-1 class) |
+| `verify_net_connectivity` | 0 failed | **0** (4 accepted) ✅ |
+| `verify_dfm_v2` | 115/115 | **115/115** ✅ |
+| `verify_dfa` | 9/9 | **9/9** ✅ |
+| `validate_jlcpcb` | 25/25 | **25/25** (+1 advisory) ✅ |
+| `verify_bom_cpl_pcb` | 10/10 | **10/10** ✅ |
+| `verify_polarity` | 47/47 | **47/47** ✅ |
+| `verify_datasheet_nets` | 221 PASS | **221/221** ✅ |
+| `verify_datasheet` | 29/29 | **29/29** ✅ |
+| `verify_design_intent` | 362/362 | **362/362** ✅ |
+| `verify_schematic_pcb_sync` | PASS | **PASS** ✅ |
+| `verify_netlist_diff` | 4/4 | **4/4** ✅ (was 0/4 in L1 pass) |
+| `generate_board_config --check` | OK | **OK** ✅ |
+| `verify_strapping_pins` | 11/11 | **11/11** ✅ (was 10/12 in L1 pass) |
+| `verify_decoupling_adequacy` | 25/25 | **25/25** ✅ |
+| `verify_power_sequence` | 26/26 | **26/26** ✅ |
+| `verify_power_paths` | 8/8 | **8/8** ✅ |
+| `verify_net_class_widths` | 5/5 | **5/5** ✅ (BAT+ corridor allowlisted with proof) |
+| ERC | 0 critical | **0** ✅ |
+| KiCad DRC | 0 real shorts | **0** shorts/clearance ✅ (6 via_dangling + 11 unconnected_items + 6 lib_footprint + 2 silk_over_copper — all R5/R8 accepted tech debt or R9-LOW cosmetic) |
+
+Layer 1 is clean. Proceeding to Layer 2.
+
+### Domain findings
+
+- **Power chain (Step 1)**: LX 0.60–0.76 mm, VBUS 0.55–0.76 mm (both ≥0.50 mm target). BAT+ has 8 documented thin segments at 0.30 mm — allowlisted with corridor math (see `verify_net_class_widths.py::POWER_HIGH_ALLOWLIST`). No new findings.
+- **ESP32 boot (Step 2)**: `sdkconfig` has `CONFIG_SPIRAM_MODE_OCT=y`, `CONFIG_SPIRAM_SPEED_80M=y`, `DEFAULT_PSRAM_CLK_IO=30`, `DEFAULT_PSRAM_CS_IO=26` (WROOM-1 N16R8 standard). `board_config.h:58-62` documents R14 DNP + GPIO45 internal pull-up. Firmware `input.c:78` reads `BTN_MENU_COMBO` via START|SELECT mask. All correct.
+- **Display (Step 3)**: LCD_RD and LCD_BL hardwired to +3V3 at J4 (`routing.py::_fpc_power_traces`), `verify_signal_chain_complete.py` updated to accept the merged net. No new findings.
+- **Audio (Step 4)**: `audio.c` uses `i2s_pdm_tx_config_t` and `i2s_channel_init_pdm_tx_mode`. Correct PDM mode. No new findings.
+- **SD card (Step 5)**: All SPI signals routed, CD → BTN_R shared (by design), internal pull-ups used per `board_config.h`. No new findings.
+- **Buttons (Step 6)**: **1 new finding — R9-MED-4 below** (BTN_MENU dead hardware).
+- **USB (Step 7)**: `verify_usb_impedance.py` PASS, USBLC6 TVS (U4) + 22Ω series (R22/R23), CC1/CC2 pull-downs (R1/R2), shield THT 0.6 mm. No new findings.
+- **Emulator performance (Step 8)**: PSRAM Octal + DMA capable per sdkconfig. Out of scope without runtime profiling.
+
+### R9-MED-4 — R19 / C20 attached to dead net `BTN_MENU`, disconnected from `MENU_K`
+
+- **Files**:
+  - `scripts/generate_pcb/primitives.py:158` — `(39, "BTN_MENU")` still in NET_LIST
+  - `scripts/generate_pcb/routing.py:4135-4147` — button pull-up bridge loop assigns R19.1/C20.1 to `NET_ID["BTN_MENU"]` (position i=12)
+  - `scripts/generate_schematics/sheets/controls.py:100-131` — schematic places R19/C20/SW13/D1.3 **all on MENU_K** (one junction)
+  - `scripts/verify_netlist_diff.py:80-85` — `T4_SKIP_REFS` includes `"R19"`, `"C20"`; `T2_ALLOW` includes `"BTN_MENU"` — both with stale "old label" justifications
+- **Evidence**:
+  ```
+  # PCB cache
+  R19.1 → BTN_MENU (net 39)   R19.2 → +3V3
+  C20.1 → BTN_MENU (net 39)   C20.2 → GND
+  SW13.1/2 → MENU_K (net 56)  SW13.3/4 → GND
+  D1.3 → MENU_K (net 56)      D1.1 → BTN_START, D1.2 → BTN_SELECT
+  BTN_MENU segments: 1 (R19↔C20 bridge only)
+  MENU_K segments: 2 (D1.3↔SW13 only)
+  ```
+  Schematic XML (`/tmp/esp32_emu_turbo_netlist.xml`):
+  ```
+  MENU_K: ['C20.1', 'R19.2', 'SW13.1']   ← schematic expects all on MENU_K
+  D1: zero nodes in any net               ← D1 symbol pins not exported
+  ```
+- **Problem**: Two electrically separated nets on the PCB that the schematic generator intended to be a single junction:
+  1. `BTN_MENU` holds R19 (10 kΩ pull-up to +3V3) and C20 (100 nF debounce to GND) — but has no switch, no GPIO, and no connection to the SW13/D1 menu circuit. It is a dead RC network that costs BOM + PCB area.
+  2. `MENU_K` holds SW13 and D1.3 — but has **no intentional pull-up and no debounce cap**. When SW13 is open, MENU_K is weakly pulled up via the forward-biased D1.1/D1.2 Schottky diodes (through the BTN_START/BTN_SELECT pull-ups), ceiling at ~3.0 V (3.3 V – Vf).
+- **Functional impact**: Menu combo still works — pressing SW13 drives MENU_K to GND → forward-biases D1.1/D1.2 → pulls BTN_START and BTN_SELECT to ~0.3 V → firmware detects the `BTN_MENU_COMBO = START|SELECT` condition in `input.c:78`. Debounce is provided by the individual BTN_START/BTN_SELECT R/C networks downstream, not by C20. So the button works despite the topology error.
+- **Real cost**:
+  - Two wasted components (R19 + C20) on BOM/CPL
+  - PCB real estate occupied by R19/C20 at (103.95, 46) and (103.95, 50) for no function
+  - The `verify_netlist_diff.py` allowlist (T4_SKIP_REFS + T2_ALLOW) *hides* the drift — anyone removing the allowlist would immediately surface the bug
+  - D1 symbol pins are absent from the KiCad schematic XML netlist (`D1 nodes in schematic: []`) — `verify_schematic_pcb_sync.py` / `verify_netlist_diff.py` T4 cannot validate D1 pinout
+- **Severity**: **MED** — not blocking fab, not preventing function, but a real design defect and a latent verifier blind spot.
+- **Fix options** (ordered from cleanest to most conservative):
+  1. **Recommended** — delete R19 and C20 entirely. Move the D1 pinout check into `verify_datasheet_nets.py`. Remove `(39, "BTN_MENU")` from `primitives.py::NET_LIST`. Remove `BTN_MENU` from `T2_ALLOW` and `R19`/`C20` from `T4_SKIP_REFS`. Regenerate PCB and re-verify.
+  2. **Alternative** — re-assign R19.1 and C20.1 to `MENU_K` (fix the pin-net mapping in `_PAD_NETS` and update the bridge segment net in `routing.py:4147`). R19/C20 then legitimately pull up and debounce MENU_K, matching the schematic intent.
+  3. **Do nothing** — accept as v2 respin item. Board ships and works; cost is 2× 0.1¢ parts.
+- **Root cause (archaeological)**: Early design had a dedicated `BTN_MENU` GPIO reading the menu button directly. R4 switched to the D1 BAT54C OR gate and renamed the junction to `MENU_K` in the schematic, but left the PCB generator's `BTN_MENU` net intact — so R19/C20 stayed on the old net name while SW13/D1 moved to the new one. The `T2_ALLOW`/`T4_SKIP_REFS` entries were added to paper over the drift without actually reconciling the two sides.
+- **Fix recommended for v2 respin batch** (low priority, stable board).
+
+### R9-MED-4 resolution (2026-04-11)
+
+**Status**: **FIXED** — Option 1 (deletion) applied. R19, C20, and the
+`BTN_MENU` net are removed entirely from the generator.
+
+**Commits / edits**:
+- `scripts/generate_pcb/primitives.py` — removed `(39, "BTN_MENU")` from `NET_LIST`
+- `scripts/generate_pcb/routing.py` — removed `R19` from `PULL_UP_REFS`, `C20` from `DEBOUNCE_REFS`, `BTN_MENU` from the `btn_nets` list in the button pull-up bridge loop
+- `scripts/generate_pcb/board.py` — updated fab annotations `R4-R15,R19` → `R4-R15`, `C5-C16,C20` → `C5-C16`, and removed R19/C20 from `pull_up_refs`/`debounce_refs` placement lists
+- `scripts/generate_pcb/jlcpcb_export.py` — removed R19/C20 from `pull_up_refs`/`debounce_refs` (dropped from CPL + BOM)
+- `scripts/generate_schematics/sheets/controls.py` — removed R19/C20 symbols from the schematic; SW13 now goes directly to the MENU_K label which lands on D1.3
+- `scripts/verify_netlist_diff.py` — removed stale allowlist entries (`BTN_MENU` from `T2_ALLOW`, `R19`/`C20` from `T4_SKIP_REFS`, `R19` from `_BUTTON_PULLUP_REFS`)
+- `scripts/verify_polarity.py` — dropped `R19`, `C20`, `BTN_MENU` from pull-up/debounce expected lists
+- `scripts/verify_signal_chain_complete.py` — removed the `BTN_MENU` net check from the Menu combo chain
+- `hardware/kicad/jlcpcb/bom.csv` + `release_jlcpcb/bom.csv` + `release_jlcpcb/jlcpcb/bom.csv` — dropped R19 from 10k group (11 total), dropped C20 from 100nF group (16 total)
+- `hardware/kicad/jlcpcb/bom-summary.md` + 2 release copies — same refs updated
+- Regenerated: `.kicad_pcb`, `.kicad_sch`, CPL, gerbers.zip, gerbers/
+
+**Post-fix verification — all gates PASS**:
+
+| Gate | Result |
+|------|--------|
+| `verify_trace_through_pad` | 1/1 PASS (0 overlaps) |
+| `verify_trace_crossings` | 1/1 PASS (0 crossings) |
+| `verify_net_connectivity` | PASS (4 accepted tech debt) |
+| `verify_dfm_v2` | 115/115 PASS |
+| `verify_dfa` | 9/9 PASS |
+| `verify_polarity` | 47/47 PASS (252 pin-to-net) |
+| `validate_jlcpcb` | 25/25 PASS (+1 advisory) |
+| `verify_bom_cpl_pcb` | 10/10 PASS |
+| `verify_datasheet_nets` | 221 PASS / 259 checks |
+| `verify_datasheet` | 29/29 PASS |
+| `verify_design_intent` | 362/362 PASS |
+| `verify_schematic_pcb_sync` | PASS (R4 guard) |
+| `verify_netlist_diff` | 4/4 PASS (no allowlist for R19/C20/BTN_MENU) |
+| `verify_bom_values` | 74/74 PASS |
+| `verify_component_connectivity` | 2/2 PASS |
+| `verify_signal_chain_complete` | 53/53 PASS |
+| `verify_strapping_pins` | 11/11 PASS |
+| `verify_net_class_widths` | 5/5 PASS |
+| `verify_decoupling_adequacy` | 25/25 PASS |
+| `verify_power_sequence` | 26/26 PASS |
+| `verify_power_paths` | 8/8 PASS |
+| `pcb_review` | **60/60** (all 6 domains max) |
+| ERC | 0 critical |
+| KiCad DRC | 0 shorts / 0 clearance (14 pre-existing items: 6 via_dangling + 6 lib_footprint + 2 silk_over_copper = R8/R9-LOW tech debt) |
+
+**PCB cache confirmation**:
+```
+BTN_MENU nets in PCB: []           ← net removed
+R19 in pads: False                 ← component removed
+C20 in pads: False                 ← component removed
+MENU_K nets: [{'id': 56}]          ← still present
+MENU_K pads: [('SW13','1'), ('SW13','2'), ('D1','3')]  ← correct topology
+```
+
+**Net menu functional path** (unchanged, works exactly as before):
+1. SW13 closed → `MENU_K` → GND via SW13.3/4
+2. D1.3 (BAT54C common cathode) → 0 V
+3. D1.1 (anode 1) and D1.2 (anode 2) forward-bias through the Schottky
+   junction → `BTN_START` and `BTN_SELECT` drop to ~Vf = 0.3 V (below
+   ESP32 VIL of ~1 V → registers as LOW)
+4. Firmware `input.c:78` detects `BTN_MENU_COMBO = BTN_MASK_START | BTN_MASK_SELECT`
+5. Debounce is provided by the individual BTN_START/BTN_SELECT R/C
+   networks (10 kΩ × 100 nF = 1 ms τ) downstream — no separate debounce
+   on MENU_K required.
+
+**Cost savings**: 2 components removed from BOM/CPL (R19 10 kΩ 0805 + C20 100 nF 0805 = ~$0.004 per board), plus ~10 mm² PCB area freed around (103.95, 46–50) for future re-use.
+
+### Still open after R9 Layer 2
+
+- **R9-LOW-1 / R9-LOW-2** — cosmetic library + silk warnings (unchanged)
+- **R5/R6/R7/R8 accepted tech debt** — 4 net fragmentations + BAT+ corridor bottleneck → `memory/project_r8_remaining_todo.md`
+
+### Verdict
+
+**v3.4 is shippable and cleaner than before.** Layer 1 is clean, Layer 2
+finding R9-MED-4 has been fully resolved by deletion (not allowlisted).
+Board is fab-ready. 75 components (was 77). Gerbers re-exported and
+synced to `release_jlcpcb/`.
+

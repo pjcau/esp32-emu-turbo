@@ -228,8 +228,10 @@ def _build_placements():
     #   y=35   IP5306 support caps (C17)
     #   y=37.5 IP5306 support caps (C18)
     #   y=42   ESP32 decoupling (C3, C4)
-    #   y=46   Pull-up resistors (R4-R15, R19) x=43..103
-    #   y=50   Debounce caps (C5-C16, C20) x=43..103
+    #   y=46   Pull-up resistors (R4-R15) x=43..98
+    #   y=50   Debounce caps (C5-C16) x=43..98
+    # R9-MED-4 (2026-04-11): R19 and C20 removed — they were on the dead
+    # BTN_MENU net never wired to MENU_K. Menu button works via D1 OR-gate.
 
     # USB-C CC resistors — use actual routing.py positions
     from scripts.generate_pcb.routing import R1_POS, R2_POS
@@ -260,10 +262,11 @@ def _build_placements():
     p.append(("R17", "1k", "R_0805", 25, 65, 0, "bottom"))
     p.append(("R18", "1k", "R_0805", 32, 65, 0, "bottom"))
 
-    # ── Button pull-up resistors (y=46, x=43..103, 5mm spacing) ──
+    # ── Button pull-up resistors (y=46, x=43..98, 5mm spacing) ──
     # Shifted left to avoid IP5306 at x=110
     # R14 is DNP (GPIO45/BTN_L strapping pin — internal pull-up used instead)
-    pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
+    # R9-MED-4: R19 deleted (was on dead BTN_MENU net).
+    pull_up_refs = [f"R{i}" for i in range(4, 16)]
     for i, ref in enumerate(pull_up_refs):
         if ref == "R14":
             continue  # DNP: GPIO45 VDD_SPI strapping, no external pull-up
@@ -274,8 +277,9 @@ def _build_placements():
     p.append(("R16", "100k", "R_0805",
               ix + 5, iy + 10, 0, "bottom"))
 
-    # ── Button debounce caps (y=50, x=43..103, 5mm spacing) ──
-    debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
+    # ── Button debounce caps (y=50, x=43..98, 5mm spacing) ──
+    # R9-MED-4: C20 deleted (was on dead BTN_MENU net).
+    debounce_refs = [f"C{i}" for i in range(5, 17)]
     for i, ref in enumerate(debounce_refs):
         p.append((ref, "100nF", "C_0805",
                   43 + i * 5, 50, 0, "bottom"))

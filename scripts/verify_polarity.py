@@ -327,18 +327,18 @@ _strict("R17", [("1", "LED1_RA")])
 _strict("R18", [("1", "LED2_RA")])
 
 # ============================================================
-# R4-R15, R19: Button pull-up resistors
+# R4-R15: Button pull-up resistors
 # ============================================================
 # These are NOT in _init_pads() pad lookup, so all pads have net 0.
 # The traces DO reach their positions (verified by DFM), but the
 # pad-net injection doesn't work because _PAD_POS_LOOKUP doesn't
 # include them. We use zone_ok to accept either the expected net or "".
-_PULL_UP_REFS = [f"R{i}" for i in range(4, 16)] + ["R19"]
+# R9-MED-4 (2026-04-11): R19 and BTN_MENU removed — they were on a dead net.
+_PULL_UP_REFS = [f"R{i}" for i in range(4, 16)]
 _BTN_NETS_ORDERED = [
     "BTN_UP", "BTN_DOWN", "BTN_LEFT", "BTN_RIGHT",
     "BTN_A", "BTN_B", "BTN_X", "BTN_Y",
     "BTN_START", "BTN_SELECT", "BTN_L", "BTN_R",
-    "BTN_MENU",
 ]
 for i, ref in enumerate(_PULL_UP_REFS):
     _zone(ref, [("2", "+3V3")])
@@ -379,10 +379,11 @@ _strict("R20", [("1", "GND"), ("2", "I2S_DOUT")])
 _strict("R21", [("1", "GND"), ("2", "I2S_DOUT")])
 
 # ============================================================
-# C5-C16, C20: Debounce capacitors
+# C5-C16: Debounce capacitors
 # ============================================================
 # NOT in _init_pads(), all pads net 0 -- use zone_ok
-_DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)] + ["C20"]
+# R9-MED-4 (2026-04-11): C20 removed (was on dead BTN_MENU net).
+_DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)]
 for i, ref in enumerate(_DEBOUNCE_REFS):
     _zone(ref, [("2", "GND")])
     if i < len(_BTN_NETS_ORDERED):
@@ -700,14 +701,14 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_zone_ok("SW_BOOT", "4", "GND")
 
     def test_pullup_resistors(self):
-        """R4-R15, R19: pull-up pads (zone-connected, may be net 0)."""
+        """R4-R15: pull-up pads (zone-connected, may be net 0)."""
         for i, ref in enumerate(_PULL_UP_REFS):
             self._check_zone_ok(ref, "2", "+3V3")
             if i < len(_BTN_NETS_ORDERED):
                 self._check_zone_ok(ref, "1", _BTN_NETS_ORDERED[i])
 
     def test_debounce_caps(self):
-        """C5-C16, C20: debounce cap pads (zone-connected, may be net 0)."""
+        """C5-C16: debounce cap pads (zone-connected, may be net 0)."""
         for i, ref in enumerate(_DEBOUNCE_REFS):
             self._check_zone_ok(ref, "2", "GND")
             if i < len(_BTN_NETS_ORDERED):

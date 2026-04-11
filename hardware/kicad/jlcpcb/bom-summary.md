@@ -14,11 +14,11 @@
 | J3 | JST PH 2-pin (battery) | SMD | C295747 | Basic | 1 | ~$0.04 |
 | L1 | 1uH inductor (boost) | 4x4x2mm | C280579 | Extended | 1 | ~$0.25 |
 | R1-R2 | 5.1k (CC pull-down) | 0805 | C27834 | Basic | 2 | ~$0.002 |
-| R3-R15,R19 | 10k (pull-ups) | 0805 | C17414 | Basic | 14 | ~$0.002 |
+| R4-R15 | 10k (pull-ups) | 0805 | C17414 | Basic | 11 | ~$0.002 |
 | R16 | 100k (KEY pull-up) | 0805 | C149504 | Basic | 1 | ~$0.002 |
 | R17-R18 | 1k (LED limiting) | 0805 | C17513 | Basic | 2 | ~$0.002 |
 | R20-R21 | 20k (PAM8403 INL/INR bias) | 0805 | C4184 | Basic | 2 | ~$0.002 |
-| C3-C16,C20-C21 | 100nF (decoupling) | 0805 | C49678 | Basic | 16 | ~$0.002 |
+| C3-C16,C21 | 100nF (decoupling) | 0805 | C49678 | Basic | 16 | ~$0.002 |
 | C22 | 0.47uF (PAM8403 DC-block) | 0805 | C13967 | Basic | 1 | ~$0.005 |
 | C23-C25 | 1uF (PAM8403 VDD/PVDD) | 0805 | C28323 | Basic | 3 | ~$0.005 |
 | C1,C17,C18 | 10uF | 0805 | C15850 | Basic | 3 | ~$0.01 |

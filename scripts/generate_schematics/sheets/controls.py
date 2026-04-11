@@ -97,38 +97,28 @@ class ControlsSheet(SchematicSheet):
         # ═══════════════════════════════════════════════
         # MENU BUTTON (separate from the 12-button grid)
         # ═══════════════════════════════════════════════
+        # R9-MED-4 (2026-04-11): R19 pull-up and C20 debounce removed.
+        # They were placed on a dead BTN_MENU net in the PCB (never wired
+        # to MENU_K). Menu combo works via D1 BAT54C OR-gate: when SW13
+        # closes, MENU_K pulls the D1 anodes (BTN_START + BTN_SELECT) low
+        # through forward-biased Schottky diodes. Pull-up and debounce are
+        # provided by BTN_START's and BTN_SELECT's individual R/C pairs
+        # downstream — no separate pull-up/debounce on MENU_K needed.
         mx, my = 335, 250
         self.text("MENU BUTTON", mx - 15, my - 15, 2.54, True)
 
-        # R19 pull-up
-        self.sym("R", "R19", "10k", mx, my + 5, ["1", "2"])
-        self.v33(mx, my - 5)
-        self.wire(mx, my - 5, mx, my + 5 - 3.81)
-
-        # Junction
-        jx, jy = mx, my + 5 + 3.81
-        junc_y = jy + 3
-
-        # C20 debounce
-        cx, cy = mx + 18, my + 16
-        self.sym("C", "C20", "100nF", cx, cy, ["1", "2"])
-        self.wire(jx, jy, jx, junc_y)
-        self.wire(jx, junc_y, cx, junc_y)
-        self.wire(cx, junc_y, cx, cy - 3.81)
-        self.gnd(cx, cy + 8)
-        self.wire(cx, cy + 3.81, cx, cy + 8)
-
         # SW13 menu switch — closes MENU_K to GND.
         sw_y = my + 24
+        junc_y = my + 8
         self.sym("SW_Push", "SW13", "MENU", mx, sw_y, ["1", "2"])
-        self.wire(jx, junc_y, jx, sw_y)
-        self.wire(jx, sw_y, mx - 5.08, sw_y)
+        self.wire(mx, junc_y, mx, sw_y)
+        self.wire(mx, sw_y, mx - 5.08, sw_y)
         self.gnd(mx + 5.08, sw_y + 8)
         self.wire(mx + 5.08, sw_y, mx + 5.08, sw_y + 8)
 
-        # MENU_K node label (same node as R19/C20/SW13).
+        # MENU_K node label (SW13 pad 1 → D1.3 common cathode)
         self.glabel("MENU_K", mx + 28, junc_y, 0)
-        self.wire(cx, junc_y, mx + 28, junc_y)
+        self.wire(mx, junc_y, mx + 28, junc_y)
 
         # ── BAT54C dual Schottky diode D1 (R4-HIGH-1 class fix) ──
         # D1 implements the MENU combo: when SW13 pulls MENU_K to GND,

@@ -155,7 +155,13 @@ NET_LIST = [
     (31, "BTN_A"), (32, "BTN_B"), (33, "BTN_X"), (34, "BTN_Y"),
     (35, "BTN_START"), (36, "BTN_SELECT"),
     (37, "BTN_L"), (38, "BTN_R"),
-    (39, "BTN_MENU"),
+    # R9-MED-4 (2026-04-11): BTN_MENU net removed. R19/C20 were placed on
+    # this dead net in the button pull-up/debounce block but never connected
+    # to MENU_K (which holds SW13 + D1.3). The menu button is detected via
+    # the START+SELECT combo through D1 BAT54C — no separate pull-up or
+    # debounce is required, because BTN_START/BTN_SELECT already have their
+    # own R/C pairs. R19 and C20 deleted from BOM/CPL in the same commit.
+    # Old slot: (39, "BTN_MENU") — leave gap, KiCad tolerates non-contiguous IDs.
     # USB
     (40, "USB_D+"), (41, "USB_D-"),
     # Audio output

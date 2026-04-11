@@ -334,14 +334,15 @@ def _silkscreen_labels():
     ))
 
     # ── Passive component labels (B.Fab) ────────────────────────
-    # Group labels for the pull-up and debounce rows (13 components each)
-    # Pull-ups: R4-R15,R19 at y=46, x=43..103 (5mm spacing)
+    # Group labels for the pull-up and debounce rows (12 components each)
+    # Pull-ups: R4-R15 at y=46, x=43..98 (5mm spacing)
+    # R9-MED-4 (2026-04-11): R19 and C20 removed (dead BTN_MENU net).
     parts.append(P.gr_text(
-        "R4-R15,R19  10k", 73, 43.5, "B.Fab", 0.6,
+        "R4-R15  10k", 70, 43.5, "B.Fab", 0.6,
     ))
-    # Debounce caps: C5-C16,C20 at y=50, x=43..103
+    # Debounce caps: C5-C16 at y=50, x=43..98
     parts.append(P.gr_text(
-        "C5-C16,C20  100nF", 73, 52.5, "B.Fab", 0.6,
+        "C5-C16  100nF", 70, 52.5, "B.Fab", 0.6,
     ))
 
     # Individual power passives — label offset to clear 0805 body (~2x1.2mm)
@@ -510,8 +511,9 @@ def _component_placeholders():
     placements.append(("R17", "R_0805", 25, 65, 0, "B.Cu"))
     placements.append(("R18", "R_0805", 32, 65, 0, "B.Cu"))
 
-    # Pull-up resistors (y=46, x=43..103, 5mm spacing)
-    pull_up_refs = [f"R{i}" for i in range(4, 16)] + ["R19"]
+    # Pull-up resistors (y=46, x=43..98, 5mm spacing)
+    # R9-MED-4: R19 deleted (was on dead BTN_MENU net).
+    pull_up_refs = [f"R{i}" for i in range(4, 16)]
     for i, ref in enumerate(pull_up_refs):
         placements.append((ref, "R_0805", 43 + i * 5, 46, 0, "B.Cu"))
 
@@ -519,8 +521,9 @@ def _component_placeholders():
     ix, iy = enc_to_pcb(*IP5306_ENC)
     placements.append(("R16", "R_0805", ix + 5, iy + 10, 0, "B.Cu"))
 
-    # Debounce caps (y=50, x=43..103, 5mm spacing)
-    debounce_refs = [f"C{i}" for i in range(5, 17)] + ["C20"]
+    # Debounce caps (y=50, x=43..98, 5mm spacing)
+    # R9-MED-4: C20 deleted (was on dead BTN_MENU net).
+    debounce_refs = [f"C{i}" for i in range(5, 17)]
     for i, ref in enumerate(debounce_refs):
         placements.append((ref, "C_0805", 43 + i * 5, 50, 0, "B.Cu"))
 

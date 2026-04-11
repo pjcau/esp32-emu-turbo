@@ -357,8 +357,10 @@ LED2 = enc(-48, -30)   # (32.0, 67.5) Green - full
 
 # Passive positions (B.Cu) — synced with board.py placements
 # Pull-ups at y=46, debounce at y=50, x = 43 + i*5
-PULL_UP_REFS = [f"R{i}" for i in range(4, 16)] + ["R19"]
-DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)] + ["C20"]
+# R9-MED-4 (2026-04-11): R19/C20 removed — they were on a dead BTN_MENU
+# net never wired to MENU_K. 12 button pull-ups + 12 debounce caps only.
+PULL_UP_REFS = [f"R{i}" for i in range(4, 16)]
+DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)]
 
 # Power passives (synced with board.py placements)
 R1_POS = (74.0, 67.0)    # USB CC1 pull-down (ux-6, uy-5)
@@ -4132,6 +4134,7 @@ def _passive_traces():
         parts.append(_via_net(via_x_db, cy + 2, n_gnd, size=_db_via_sz, drill=_db_via_dr))
 
     # Connect pull-up outputs to debounce cap inputs (R->C junction)
+    # R9-MED-4: BTN_MENU removed — 12 buttons only (menu via D1 OR-gate).
     btn_nets = [
         NET_ID["BTN_UP"], NET_ID["BTN_DOWN"],
         NET_ID["BTN_LEFT"], NET_ID["BTN_RIGHT"],
@@ -4139,7 +4142,6 @@ def _passive_traces():
         NET_ID["BTN_X"], NET_ID["BTN_Y"],
         NET_ID["BTN_START"], NET_ID["BTN_SELECT"],
         NET_ID["BTN_L"], NET_ID["BTN_R"],
-        NET_ID["BTN_MENU"],
     ]
     for i in range(len(PULL_UP_REFS)):
         x = 43 + i * 5
