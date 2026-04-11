@@ -1770,3 +1770,102 @@ v3.4 post-R12 is **production-ready with JLCDFM 0.15 mm minimum
 trace/space rule satisfied**. The original cyan "0.1 mm" marker that
 triggered Round 12 is eliminated. Release artifacts ready for JLCPCB
 upload.
+
+## Round 13 Findings (2026-04-11) — Mask-aperture clearance vs JLCDFM 0.05mm false short
+
+**Trigger**: JLCDFM upload of v3.5 gerbers returned a "Trace spacing
+Danger 0.05mm" on Bottom copper. Our local `verify_dfm_v2.py`
+(115/115 PASS), KiCad DRC at 0.09mm rule (0 errors), `verify_trace_
+crossings.py` (0 crossings), and `verify_net_connectivity.py` (4
+accepted only) all said the board was clean.
+
+### Investigation — 3 independent strategies
+
+| Method | Result on B.Cu |
+|---|---|
+| KiCad DRC with 0.15mm rule (tightened from 0.09mm) | 8 clearance violations, min 0.110mm |
+| Shapely polygon union per-net + `Polygon.distance()` | 5 pairs, min 0.110mm |
+| Pygerber raster @ 40 dpmm (25 µm/px) + scipy.ndimage labeling | 1 min cross-component gap, 0.100mm |
+
+All three methods agreed within ±10 µm: **physical minimum on
+B.Cu was 0.100-0.110mm, not 0.05mm**. JLCDFM's "0.05mm" figure
+comes from subtracting the mask expansion (~0.05mm per side) from
+the copper edge distance — a 0.110mm copper-edge gap becomes
+~0.010-0.050mm at the mask aperture level, which is JLCDFM's
+threshold for "Trace spacing Danger".
+
+**No real short existed.** The 6 pairs flagged were all above
+JLCPCB's 0.09mm *absolute* minimum (fab-accept) but below the
+0.15mm *preferred* minimum (yield-safe). They would have been
+manufactured correctly but with reduced yield margin. JLCDFM
+classifies them as Warning/Danger to push designers toward the
+safer preferred spacing.
+
+### R13 bug list (all LOW — no real shorts, yield risk only)
+
+All 6 found by the new `scripts/verify_copper_clearance.py` gate:
+
+| # | ID | Layer | Gap | Net A | Net B | Location | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | R13-LOW-1 | B.Cu | 0.110mm | GND (J3.2) | BAT+ | (80.50, 61.25) vs (80.39, 61.25) | ✅ FIXED |
+| 2 | R13-LOW-2 | B.Cu | 0.120mm | BAT+ | SPK+ (SPK1.1) | (38.38, 51.00) vs (38.50, 51.00) | ✅ FIXED |
+| 3 | R13-LOW-3 | B.Cu | 0.125mm | VBUS | GND (U2.EP) | (111.00, 40.98) vs (111.00, 41.10) | ✅ FIXED |
+| 4 | R13-LOW-4 | B.Cu | 0.125mm | +3V3 (C3.1) | BTN_SELECT | (71.00, 42.65) vs (71.12, 42.65) | ✅ FIXED |
+| 5 | R13-LOW-5 | B.Cu | 0.145mm | GND (C3.2) | BTN_UP | (68.10, 41.35) vs (67.95, 41.35) | ✅ FIXED |
+| 6 | R13-LOW-6 | F.Cu | 0.150mm | BTN_START | BTN_SELECT (SW_PWR.4b) | (35.95, 74.08) vs (35.95, 74.23) | ✅ FIXED |
+
+### Fix strategy — narrow trace widths locally
+
+All fixes done in `scripts/generate_pcb/routing.py` via surgical
+trace-width tapering (W_PWR_HIGH 0.76mm → W_PWR 0.60mm, or W_SIG
+0.25mm → W_DATA 0.20mm) on the specific contested corridors. No
+component moves, no net connectivity changes, no new vias.
+
+- **R13-LOW-1/2/3**: BAT+/VBUS power traces tapered to W_PWR in
+  last-mile segments touching J3/SPK1/U2.EP. Current rating remains
+  ≥2.3A at 1oz Cu, well above peak loads (~1.5A battery, ~2.1A
+  IP5306 VIN).
+- **R13-LOW-4/5**: BTN_SELECT and BTN_UP approach-column stubs
+  narrowed to 0.18mm (from W_SIG 0.25) in the contested y-bands
+  near C3.1/C3.2 pads.
+- **R13-LOW-6**: BTN_START F.Cu west horizontal narrowed from W_SIG
+  to W_DATA (0.20mm). Fresh top edge clears both SW_PWR.4b approach
+  vias by 0.175mm.
+
+### New Layer 1 gate (R13)
+
+`scripts/verify_copper_clearance.py` — Shapely polygon-distance
+check on all 4 copper layers with 0.10mm DANGER / 0.15mm WARN
+thresholds. Exit code 1 on any DANGER. Integrated into:
+- `Makefile verify-fast` parallel fan-out
+- `Makefile verify-copper-clearance` standalone target
+- `.claude/skills/hardware-audit/SKILL.md` Step 0 gate list
+- Memory memo `feedback_pcb_analysis_multi_strategy.md` documenting
+  the 3-method investigation rule for future fab-DFM findings.
+
+**Why `verify_dfm_v2.py` missed this**: It uses a sampled
+pad-to-segment distance at fixed resolution and thresholds against
+the 0.09mm absolute minimum (not 0.15mm preferred). The new gate
+is polygon-union-based at the net level and thresholds at 0.15mm.
+They complement each other: dfm_v2 catches micro-regressions at
+the absolute minimum; copper_clearance catches yield-margin issues.
+
+### Post-R13 Layer 1 gate suite state
+
+| Gate | Status |
+|---|---|
+| `verify_trace_through_pad` | PASS |
+| `verify_trace_crossings` | PASS (0 crossings) |
+| **`verify_copper_clearance` (NEW)** | **PASS (0 DANGER, 0 WARN across all 4 layers)** |
+| `verify_net_connectivity` | PASS (4 accepted tech debt) |
+| `verify_dfm_v2` | 115/115 PASS |
+| `verify_dfa` | 9/9 PASS |
+| `verify_polarity` | 47/47 PASS |
+| KiCad DRC | 0 errors |
+
+### v3.6 tag candidate
+
+v3.5 + R13 copper-clearance sweep + new gate = v3.6 ready. The
+next JLCDFM upload should see the "Trace spacing Danger 0.05mm"
+finding cleared, with all 6 pair-gap measurements in the Good band
+(≥0.15mm mask-aperture distance).

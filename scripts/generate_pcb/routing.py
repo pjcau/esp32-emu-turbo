@@ -811,10 +811,16 @@ def _power_traces():
     # 6. via to B.Cu at IP5306 approach
     parts.append(_via_net(ip_vbus_via_x, ip_vbus_via_y, n_vbus))
     # 7. B.Cu stub: via -> IP5306 VBUS pad (horizontal then vertical)
+    # R13-CU-CLR FIX (2026-04-11): narrow last-mile to U2.1 to W_PWR (0.60)
+    # to pass U2.EP GND (top edge y=41.10) with ≥0.15mm clearance.
+    # At W_PWR_HIGH (0.76) the seg top edge at 40.975 left only 0.125mm
+    # gap to EP top (violation #4 in verify_copper_clearance).
+    # W_PWR (0.60) → top edge 40.895, gap = 0.205mm ✓.
+    # Path length ≤2.5mm, IP5306 VIN peaks ~2.1A; W_PWR rating ~2.3A/1oz ✓.
     parts.append(_seg(ip_vbus_via_x, ip_vbus_via_y, ip_vbus_via_x, ip_vbus[1],
-                       "B.Cu", W_PWR_HIGH, n_vbus))
+                       "B.Cu", W_PWR, n_vbus))
     parts.append(_seg(ip_vbus_via_x, ip_vbus[1], ip_vbus[0], ip_vbus[1],
-                       "B.Cu", W_PWR_HIGH, n_vbus))
+                       "B.Cu", W_PWR, n_vbus))
 
     # ── GND: vias to In1.Cu GND zone ──────────────────────────
     # GND vias near key components
@@ -1328,10 +1334,21 @@ def _power_traces():
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
     # B.Cu: vertical from approach to pad Y, then horizontal to pad X
-    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, jst_p[1],
+    # R13-CU-CLR FIX (2026-04-11): JLCDFM preferred clearance ≥0.15mm.
+    # W_PWR_HIGH (0.76) right edge at x=80.39 vs J3.2 pad left edge x=80.50
+    # → gap 0.11mm (violation #2 in verify_copper_clearance).
+    # Fix: taper the final approach to J3.2 pad down to W_PWR (0.60).
+    # New right edge: 80.01+0.30=80.31 → gap to J3.2 = 0.19mm ✓
+    # Left edge: 80.01-0.30=79.71 → gap to R11.1 (79.45) = 0.26mm ✓
+    # Rating at 0.60mm/1oz Cu ≈ 2.3A > peak battery discharge (~1.5A).
+    # Taper point y=58.0 is above J3[2] pad top (61.25) with 3.25mm margin.
+    _bat_taper_y = 58.0
+    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_taper_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(bat_approach_x, _bat_taper_y, bat_approach_x, jst_p[1],
+                       "B.Cu", W_PWR, n_bat))
     parts.append(_seg(bat_approach_x, jst_p[1], jst_p[0], jst_p[1],
-                       "B.Cu", W_PWR_HIGH, n_bat))
+                       "B.Cu", W_PWR, n_bat))
 
     # ── Power switch -> BAT+ junction ──────────────────────────
     # DFM FIX v1: was F.Cu long vertical at x=39.25, y=46.13..70.05.
@@ -1350,7 +1367,20 @@ def _power_traces():
     # B.Cu horizontal from sw_com X to separate column, then long vertical down
     parts.append(_seg(sw_com[0], sw_via_y, BAT_COL_X, sw_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(BAT_COL_X, sw_via_y, BAT_COL_X, bat_via_y,
+    # R13-CU-CLR FIX (2026-04-11): split vert into 3 pieces — taper to W_PWR
+    # where it passes SPK1.1 pad (x=39.50, y=52.50, 2.0x3.0 → pad AABB
+    # x=38.50..40.50, y=51..54). At W_PWR_HIGH (0.76) the right edge 38.38 had
+    # only 0.12mm gap to pad left edge 38.50 (violation #3 in verify_copper_clearance).
+    # W_PWR (0.60) → right edge 38.30, gap 0.20mm ✓. Keep W_PWR_HIGH elsewhere
+    # for full battery-current rating on long run. Taper band y=50..55 is
+    # purely the SPK1 pad zone. Note sw_via_y ≈68.3 (top), bat_via_y ≈44.9 (bottom).
+    _spk_taper_top = 55.0  # y decreases going down toward bat_via_y
+    _spk_taper_bot = 50.0
+    parts.append(_seg(BAT_COL_X, sw_via_y, BAT_COL_X, _spk_taper_top,
+                       "B.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(BAT_COL_X, _spk_taper_top, BAT_COL_X, _spk_taper_bot,
+                       "B.Cu", W_PWR, n_bat))
+    parts.append(_seg(BAT_COL_X, _spk_taper_bot, BAT_COL_X, bat_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
     # F.Cu horizontal from BAT_COL_X to approach via (at bat_via_y level)
     parts.append(_via_net(BAT_COL_X, bat_via_y, n_bat))
@@ -3572,7 +3602,15 @@ def _button_traces():
             # Segment order: vx → pad14b_jog_start → bypass14b → pad14b_jog_end →
             #                pad13b_jog_start → bypass13b → pad13b_jog_end → ax
             # All segments at cy=73.955 except bypasses at _bypass_y=72.38
-            parts.append(_seg(vx, cy, _p14b_jog_start, cy, "F.Cu", W_SIG, net))
+            # R13-CU-CLR FIX (2026-04-12): BTN_START F.Cu at y=73.955
+            # (top edge 74.08 at W_SIG) meets the BTN_SELECT approach vias
+            # at (35.95, 74.46) and (60.45, 74.46) bottom edge 74.23 with
+            # exactly 0.150mm gap — at the verify_copper_clearance threshold
+            # (violation #1). Use W_DATA (0.20) on the long W-E span that
+            # runs just above y=73.83 to y=74.08 to give 0.175mm gap:
+            #   top edge at W_DATA = 73.955+0.10 = 74.055 → gap 0.175 ✓.
+            # BTN_START is a low-speed digital input, W_DATA is sufficient.
+            parts.append(_seg(vx, cy, _p14b_jog_start, cy, "F.Cu", W_DATA, net))
             parts.append(_seg(_p14b_jog_start, cy, _p14b_jog_start, _bypass_y,
                                "F.Cu", W_SIG, net))
             parts.append(_seg(_p14b_jog_start, _bypass_y, _p14b_jog_end, _bypass_y,
@@ -3771,10 +3809,27 @@ def _button_traces():
                               "F.Cu", W_SIG, net))
             parts.append(_via_net(near_epx, stagger_y, net, size=_ne_via_size, drill=_ne_via_drill))
             # B.Cu: horizontal to pad X, then vertical to pad Y (no extra via)
+            # R13-CU-CLR FIX (2026-04-12): BTN_SELECT (SW10) B.Cu horizontal
+            # at y=stagger_y=45.10 passes R10.2 +3V3 pad bottom (y=45.35)
+            # with only 0.125mm gap at W_SIG (W_SIG hw=0.125 → top 45.225).
+            # Narrow the full horizontal stub to 0.18 → top edge 45.190
+            # → gap 0.160mm ✓. Same for the vertical stub that goes through
+            # C3.1 (violation #5 in verify_copper_clearance).
+            _SEL_W = 0.18 if b["ref"] == "SW10" else W_SIG
             parts.append(_seg(near_epx, stagger_y, epx, stagger_y,
-                              "B.Cu", W_SIG, net))
-            parts.append(_seg(epx, stagger_y, epx, epy,
-                              "B.Cu", W_SIG, net))
+                              "B.Cu", _SEL_W, net))
+            if b["ref"] == "SW10":  # BTN_SELECT
+                # Entire BTN_SELECT vertical stub tapered to 0.18 to clear
+                # both C3.1 (violation #5 at y=42.65) and R10.2 (new
+                # violation at y=45.35). Also handles the stagger horizontal
+                # above. Stub length ~6.35mm; 0.18mm trace for a button
+                # signal is well within W_DATA (0.20) budget.
+                _TAPER_W = 0.18
+                parts.append(_seg(epx, stagger_y, epx, epy,
+                                  "B.Cu", _TAPER_W, net))
+            else:
+                parts.append(_seg(epx, stagger_y, epx, epy,
+                                  "B.Cu", W_SIG, net))
         else:
             # B.Cu vertical to ESP32 Y level
             if abs(ax - epx) < 1.5:
@@ -3785,7 +3840,30 @@ def _button_traces():
                     parts.append(_seg(ax, epy, epx, epy,
                                       "B.Cu", W_SIG, net))
             else:
-                parts.extend(_pu_jog_vert(ax, cy, epy, W_SIG, net))
+                # R13-CU-CLR FIX (2026-04-12): BTN_UP (SW1) approach column
+                # vert at x=ax=67.83 squeezes between R9.2/C10.2 pads (right
+                # edge 67.55, left gap 0.155mm) and C3.2 GND pad (left edge
+                # 68.10, right gap 0.145mm = violation #6).
+                # Taper the y-band across C3 from W_SIG (0.25) to 0.18 (hw=0.09):
+                #   Right edge 67.92 → gap to C3.2 = 0.18mm ✓
+                #   Left edge  67.74 → gap to R9.2 = 0.19mm ✓
+                # C3 pad y-range: 41.35..42.65. Taper band y=[40.8, 43.2].
+                if b["ref"] == "SW1":  # BTN_UP
+                    _c3_y_top = 40.8
+                    _c3_y_bot = 43.2
+                    _TAPER_W = 0.18
+                    y_lo, y_hi = min(cy, epy), max(cy, epy)
+                    if y_lo < _c3_y_top < y_hi:
+                        parts.append(_seg(ax, y_lo, ax, _c3_y_top,
+                                          "B.Cu", W_SIG, net))
+                        parts.append(_seg(ax, _c3_y_top, ax, _c3_y_bot,
+                                          "B.Cu", _TAPER_W, net))
+                        parts.append(_seg(ax, _c3_y_bot, ax, y_hi,
+                                          "B.Cu", W_SIG, net))
+                    else:
+                        parts.extend(_pu_jog_vert(ax, cy, epy, W_SIG, net))
+                else:
+                    parts.extend(_pu_jog_vert(ax, cy, epy, W_SIG, net))
                 # Transition to F.Cu at approach column (no via at epx)
                 parts.append(_via_net(ax, epy, net, size=VIA_STD, drill=VIA_STD_DRILL))
                 # F.Cu horizontal OUTWARD (away from board center) to avoid LCD signal verts.

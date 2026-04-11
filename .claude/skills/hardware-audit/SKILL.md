@@ -52,6 +52,19 @@ python3 scripts/verify_trace_through_pad.py        # MUST be "1 passed, 0 failed
 # to cross LCD_CS/DC/WR without anyone noticing.
 python3 scripts/verify_trace_crossings.py          # MUST be "1 passed, 0 failed"
 
+# ── Copper-clearance gate (R13 class) ───────────────────────────
+# Shapely polygon-based check: for each copper layer, merges all
+# features per net and measures min polygon distance between every
+# different-net pair. Reports any gap < 0.10mm as DANGER and
+# 0.10-0.15mm as WARN (JLCPCB preferred minimum, what JLCDFM uses
+# as Warning threshold). Catches the 0.110-0.145mm track-to-pad
+# gaps that KiCad DRC misses because .kicad_dru is tuned to the
+# 0.09mm absolute minimum. JLCDFM measures mask-aperture-to-mask-
+# aperture, subtracting ~0.05mm mask expansion per side, so a
+# 0.110mm copper-edge gap becomes ~0.010mm on JLCDFM's view and
+# gets flagged as Danger.
+python3 scripts/verify_copper_clearance.py         # MUST be "0 DANGER"
+
 # ── Per-net copper connectivity (R5-CRIT class) ─────────────────
 # Walks the per-net copper graph and asserts every net forms a
 # single connected component. Catches R5-CRIT-1..9 bugs where
@@ -100,6 +113,7 @@ Gate summary to report back to the user:
 |------|----------|--------|--------|
 | Fab shorts (`verify_trace_through_pad`) | 0 overlaps | ? | PASS/FAIL |
 | Trace crossings (`verify_trace_crossings`) | 0 crossings | ? | PASS/FAIL |
+| Copper clearance (`verify_copper_clearance`) | 0 DANGER | ? | PASS/FAIL |
 | DFM (`verify_dfm_v2`) | 115/115 | ? | PASS/FAIL |
 | DFA (`verify_dfa`) | 9/9 | ? | PASS/FAIL |
 | Polarity (`verify_polarity`) | 47/47 | ? | PASS/FAIL |

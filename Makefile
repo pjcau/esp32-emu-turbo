@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -60,6 +60,7 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/verify_design_intent.py & \
 		python3 scripts/verify_trace_through_pad.py & \
 		python3 scripts/verify_trace_crossings.py & \
+		python3 scripts/verify_copper_clearance.py & \
 		python3 scripts/verify_net_connectivity.py & \
 		wait'
 
@@ -68,6 +69,9 @@ verify-trace-through-pad: ## Trace-through-pad overlap check (catches fab-shorts
 
 verify-trace-crossings: ## Trace-crossings check (catches R9-CRIT-1 class: different-net traces intersecting on same layer)
 	@$(T) verify-trace-crossings python3 scripts/verify_trace_crossings.py
+
+verify-copper-clearance: ## Copper-to-copper clearance gate (JLCDFM preferred 0.15mm)
+	@$(T) verify-copper-clearance python3 scripts/verify_copper_clearance.py
 
 verify-net-connectivity: ## Per-net copper connectivity — every net must be a single component
 	@$(T) verify-net-connectivity python3 scripts/verify_net_connectivity.py
