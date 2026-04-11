@@ -58,12 +58,38 @@ MOUNT_HOLES = [
 
 
 def parse_pcb(filepath):
-    """Parse KiCad PCB file (via cache)."""
+    """Parse KiCad PCB file (via cache) + silkscreen text (raw parse)."""
     from pcb_cache import load_cache
     cache = load_cache(Path(filepath))
 
     # Filter nets: id > 0
     nets = [n for n in cache["nets"] if n["id"] > 0]
+
+    # Raw silkscreen text extraction — the cache doesn't store text
+    # elements so we parse the gr_text lines directly. Format:
+    #   (gr_text "label" (at x y [rot]) (layer "F.SilkS")
+    #    (effects (font (size w h) (thickness t))))
+    silk_text = []
+    text_pat = re.compile(
+        r'\(gr_text\s+"([^"]*)"\s+\(at\s+([\-\d.]+)\s+([\-\d.]+)'
+        r'(?:\s+[\-\d.]+)?\)\s+\(layer\s+"([^"]+)"\).*?'
+        r'\(size\s+([\d.]+)\s+([\d.]+)\)',
+        re.DOTALL,
+    )
+    try:
+        raw = Path(filepath).read_text(errors="ignore")
+        for m in text_pat.finditer(raw):
+            label, x, y, layer, sw, sh = m.groups()
+            if layer.endswith("SilkS"):
+                silk_text.append({
+                    "label": label,
+                    "x": float(x),
+                    "y": float(y),
+                    "layer": layer,
+                    "size": (float(sw), float(sh)),
+                })
+    except Exception:
+        pass
 
     return {
         "segments": cache["segments"],
@@ -71,6 +97,7 @@ def parse_pcb(filepath):
         "nets": nets,
         "zones": cache["zones"],
         "pads": cache["pads"],
+        "silk_text": silk_text,
     }
 
 
@@ -652,6 +679,197 @@ def review_manufacturability(data):
     else:
         findings.append(
             "JLCDFM via-in-pad: 0 same-net via-in-pad (no mask dam risk) -- OK"
+        )
+
+    # Check 8: Intra-footprint pad-to-pad spacing (JLCPCB fine-pitch rule)
+    # -------------------------------------------------------------------
+    # Pads WITHIN the same component footprint must keep ≥ 0.10mm edge
+    # gap (JLCPCB 4-layer minimum). This catches fine-pitch footprints
+    # that pack pads too tightly for the fab to reliably etch. Common
+    # culprits on our board: FPC J4 (0.5mm pitch), USB-C J1, SOP-16 U5.
+    INTRA_PAD_MIN = 0.10
+    intra_violations = []
+    for ref, ps in smd_pads_by_ref.items():
+        if len(ps) < 2:
+            continue
+        for i in range(len(ps)):
+            for j in range(i + 1, len(ps)):
+                a, b = ps[i], ps[j]
+                # Same-net pads in same footprint are fine (dedicated
+                # connections, e.g. GND pads on an IC)
+                if a.get("net") == b.get("net") and a.get("net") != 0:
+                    continue
+                gap = _pad_edge_gap(a, b)
+                if gap < INTRA_PAD_MIN:
+                    intra_violations.append((ref, a, b, gap))
+    if intra_violations:
+        findings.append(
+            f"JLCDFM intra-footprint pad spacing (< {INTRA_PAD_MIN}mm): "
+            f"{len(intra_violations)} pair(s) -- WARN, fine-pitch fab risk"
+        )
+        # Group by ref to compress output
+        by_ref = defaultdict(int)
+        for ref, a, b, gap in intra_violations:
+            by_ref[ref] += 1
+        for ref, n in sorted(by_ref.items(), key=lambda x: -x[1])[:5]:
+            findings.append(f"  -> {ref}: {n} tight pad pair(s)")
+        # Advisory (fab works at 0.075mm but not margin for tolerance)
+    else:
+        findings.append(
+            f"JLCDFM intra-footprint spacing: all pad pairs within same "
+            f"footprint >= {INTRA_PAD_MIN}mm -- OK"
+        )
+
+    # Check 9: Silkscreen character height (JLCPCB legibility rule)
+    # -------------------------------------------------------------------
+    # Minimum silkscreen character height for legibility after printing:
+    # JLCPCB recommends 0.8mm; anything below may get blurred/illegible.
+    SILK_MIN_HEIGHT = 0.80
+    silk = data.get("silk_text", [])
+    small_silk = [t for t in silk if t["size"][1] < SILK_MIN_HEIGHT]
+    if small_silk:
+        score -= min(1, len(small_silk) * 0.1)
+        findings.append(
+            f"JLCDFM silk character height: {len(small_silk)}/{len(silk)} "
+            f"text element(s) < {SILK_MIN_HEIGHT}mm"
+        )
+        for t in small_silk[:3]:
+            findings.append(
+                f"  -> '{t['label'][:30]}' size={t['size'][1]:.2f}mm "
+                f"at ({t['x']:.1f},{t['y']:.1f})"
+            )
+    else:
+        findings.append(
+            f"JLCDFM silk character height: all {len(silk)} text elements "
+            f">= {SILK_MIN_HEIGHT}mm -- OK"
+        )
+
+    # Check 10: Silkscreen-to-board-edge clearance
+    # -------------------------------------------------------------------
+    # Silkscreen too close to the board edge gets cut off during
+    # V-cut or depanelization. JLCPCB recommends ≥ 0.20mm margin
+    # between any silk glyph bbox and the board outline.
+    SILK_EDGE_MIN = 0.20
+    silk_edge_violations = []
+    for t in silk:
+        # Conservative glyph bbox: (char_count * char_width, char_height)
+        # Silkscreen is rendered center-aligned in KiCad by default
+        char_w = t["size"][0]
+        char_h = t["size"][1]
+        half_w = len(t["label"]) * char_w * 0.55 / 2  # kerning factor
+        half_h = char_h / 2
+        xmin = t["x"] - half_w
+        xmax = t["x"] + half_w
+        ymin = t["y"] - half_h
+        ymax = t["y"] + half_h
+        gap = min(xmin, BOARD_W - xmax, ymin, BOARD_H - ymax)
+        if gap < SILK_EDGE_MIN:
+            silk_edge_violations.append((t, gap))
+    if silk_edge_violations:
+        score -= min(1, len(silk_edge_violations) * 0.25)
+        findings.append(
+            f"JLCDFM silk-to-edge (< {SILK_EDGE_MIN}mm): "
+            f"{len(silk_edge_violations)} text element(s) may be cut off"
+        )
+        for t, gap in silk_edge_violations[:3]:
+            findings.append(
+                f"  -> '{t['label'][:30]}' at ({t['x']:.1f},{t['y']:.1f}) "
+                f"gap={gap:.2f}mm"
+            )
+    else:
+        findings.append(
+            f"JLCDFM silk-to-edge: all text >= {SILK_EDGE_MIN}mm "
+            f"from board edge -- OK"
+        )
+
+    # Check 11: Soldermask opening-to-edge clearance
+    # -------------------------------------------------------------------
+    # Any exposed pad (mask opening) must stay ≥ 0.20mm from the board
+    # edge to prevent mask bleed/peel during V-cut. We approximate the
+    # mask opening by the pad bbox (actual opening is pad + mask_margin
+    # which is typically 0.05mm — this gives a small margin of error).
+    MASK_EDGE_MIN = 0.20
+    mask_edge_violations = []
+    for p in pads:
+        if p.get("type") != "smd":
+            continue
+        xmin = p["x"] - p["w"] / 2
+        xmax = p["x"] + p["w"] / 2
+        ymin = p["y"] - p["h"] / 2
+        ymax = p["y"] + p["h"] / 2
+        gap = min(xmin, BOARD_W - xmax, ymin, BOARD_H - ymax)
+        if gap < MASK_EDGE_MIN:
+            mask_edge_violations.append((p, gap))
+    if mask_edge_violations:
+        score -= min(1, len(mask_edge_violations) * 0.25)
+        findings.append(
+            f"JLCDFM mask opening-to-edge (< {MASK_EDGE_MIN}mm): "
+            f"{len(mask_edge_violations)} pad(s) too close to edge"
+        )
+        # Group by ref
+        by_ref = defaultdict(list)
+        for p, gap in mask_edge_violations:
+            by_ref[p.get("ref", "?")].append(gap)
+        for ref, gaps in sorted(by_ref.items(), key=lambda x: -len(x[1]))[:4]:
+            findings.append(
+                f"  -> {ref}: {len(gaps)} pad(s) at "
+                f"min gap={min(gaps):.2f}mm"
+            )
+    else:
+        findings.append(
+            f"JLCDFM mask opening-to-edge: all SMD pads >= "
+            f"{MASK_EDGE_MIN}mm from edge -- OK"
+        )
+
+    # Check 12: Pin 1 silkscreen marker for ICs ≥ 8 pins
+    # -------------------------------------------------------------------
+    # JLCPCB wants a visible pin 1 marker on silkscreen for every IC
+    # with 8+ pins so operators can verify orientation during assembly.
+    # We approximate by counting silk glyphs within 3mm of the pin-1
+    # pad location. If there's no silk nearby, flag it.
+    PIN1_SEARCH_RADIUS = 3.0
+    multi_pin_refs = {
+        ref: ps for ref, ps in smd_pads_by_ref.items()
+        if len(ps) >= 8 and ref.startswith("U")
+    }
+    # Also include multi-pin connectors
+    for ref, ps in smd_pads_by_ref.items():
+        if len(ps) >= 8 and ref.startswith("J"):
+            multi_pin_refs[ref] = ps
+    missing_pin1 = []
+    for ref, ps in multi_pin_refs.items():
+        # Find pin 1 (or smallest pin number)
+        pin1 = None
+        for p in ps:
+            num = str(p.get("num", ""))
+            if num == "1":
+                pin1 = p
+                break
+        if pin1 is None:
+            continue  # no pin "1" (e.g. BGA grids use alphanumeric)
+        # Check for any silk element within radius
+        nearby = [
+            t for t in silk
+            if math.hypot(t["x"] - pin1["x"], t["y"] - pin1["y"])
+            < PIN1_SEARCH_RADIUS
+        ]
+        if not nearby:
+            missing_pin1.append((ref, pin1))
+    if missing_pin1:
+        score -= min(1, len(missing_pin1) * 0.5)
+        findings.append(
+            f"JLCDFM pin-1 silk marker: {len(missing_pin1)}/{len(multi_pin_refs)} "
+            f"multi-pin component(s) missing a visible marker near pin 1"
+        )
+        for ref, p in missing_pin1[:5]:
+            findings.append(
+                f"  -> {ref}.1 at ({p['x']:.1f},{p['y']:.1f}) — "
+                f"no silk within {PIN1_SEARCH_RADIUS}mm"
+            )
+    else:
+        findings.append(
+            f"JLCDFM pin-1 silk marker: all {len(multi_pin_refs)} "
+            f"multi-pin ICs/connectors marked -- OK"
         )
 
     return max(0, score), findings
