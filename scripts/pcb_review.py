@@ -58,7 +58,7 @@ MOUNT_HOLES = [
 
 
 def parse_pcb(filepath):
-    """Parse KiCad PCB file (via cache) + silkscreen text (raw parse)."""
+    """Parse KiCad PCB file (via cache) + silkscreen text + per-ref silk markers."""
     from pcb_cache import load_cache
     cache = load_cache(Path(filepath))
 
@@ -76,6 +76,17 @@ def parse_pcb(filepath):
         r'\(size\s+([\d.]+)\s+([\d.]+)\)',
         re.DOTALL,
     )
+    # Per-ref silkscreen marker detection — set of refs whose footprint
+    # block contains at least one fp_circle/fp_text on a SilkS layer.
+    # Used by the pin-1 marker check. Walks footprint blocks and checks
+    # if any silk element is present inside each block. This correctly
+    # detects footprint-local markers emitted via _pin1_marker() in
+    # scripts/generate_pcb/footprints.py.
+    ref_has_silk_marker = set()
+    fp_block_pat = re.compile(
+        r'\(footprint\s+"[^"]*".*?\(property\s+"Reference"\s+"([^"]+)"',
+        re.DOTALL,
+    )
     try:
         raw = Path(filepath).read_text(errors="ignore")
         for m in text_pat.finditer(raw):
@@ -88,6 +99,58 @@ def parse_pcb(filepath):
                     "layer": layer,
                     "size": (float(sw), float(sh)),
                 })
+
+        # Walk footprint blocks and inspect each for SilkS elements.
+        # Depth-tracked parenthesis scan (regex can't handle nested parens).
+        idx = 0
+        n = len(raw)
+        while True:
+            start = raw.find("(footprint ", idx)
+            if start == -1:
+                break
+            # Find matching close paren
+            depth = 0
+            j = start
+            while j < n:
+                ch = raw[j]
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        break
+                j += 1
+            block = raw[start:j + 1]
+            idx = j + 1
+
+            ref_match = re.search(
+                r'\(property\s+"Reference"\s+"([^"]+)"', block
+            )
+            if not ref_match:
+                continue
+            ref = ref_match.group(1)
+
+            # Any fp_circle, fp_line, fp_poly, or fp_text on a SilkS
+            # layer inside this block → ref has a silk marker.
+            has_silk = bool(re.search(
+                r'\(fp_(?:circle|line|text|poly)\b[^)]*?'
+                r'\(layer\s+"[FB]\.SilkS"',
+                block,
+            )) or bool(re.search(
+                r'layer\s+"[FB]\.SilkS"[^)]*\)[^)]*\(fp_',
+                block,
+            ))
+            # Simpler: search for 'layer "F.SilkS"' or 'layer "B.SilkS"'
+            # inside any fp_* shape block — do a linear scan since the
+            # fp shapes are one per line in our generator output.
+            for line in block.splitlines():
+                if ("(fp_circle" in line or "(fp_line" in line
+                        or "(fp_text" in line or "(fp_poly" in line):
+                    if 'layer "F.SilkS"' in line or 'layer "B.SilkS"' in line:
+                        has_silk = True
+                        break
+            if has_silk:
+                ref_has_silk_marker.add(ref)
     except Exception:
         pass
 
@@ -98,6 +161,7 @@ def parse_pcb(filepath):
         "zones": cache["zones"],
         "pads": cache["pads"],
         "silk_text": silk_text,
+        "ref_has_silk_marker": ref_has_silk_marker,
     }
 
 
@@ -825,51 +889,42 @@ def review_manufacturability(data):
     # -------------------------------------------------------------------
     # JLCPCB wants a visible pin 1 marker on silkscreen for every IC
     # with 8+ pins so operators can verify orientation during assembly.
-    # We approximate by counting silk glyphs within 3mm of the pin-1
-    # pad location. If there's no silk nearby, flag it.
-    PIN1_SEARCH_RADIUS = 3.0
+    # We check each multi-pin reference's footprint block for any
+    # SilkS-layer fp_* element (circle, line, text, poly). If the
+    # footprint has no silk marker at all, flag it.
+    #
+    # This is the enforcement side of the "pin-1 marker generic rule":
+    # footprints.py::_pin1_marker() is the single helper that emits
+    # both silk + fab markers; this check fails loud if any new
+    # footprint is added without calling it.
     multi_pin_refs = {
         ref: ps for ref, ps in smd_pads_by_ref.items()
-        if len(ps) >= 8 and ref.startswith("U")
+        if len(ps) >= 8 and (ref.startswith("U") or ref.startswith("J"))
     }
-    # Also include multi-pin connectors
-    for ref, ps in smd_pads_by_ref.items():
-        if len(ps) >= 8 and ref.startswith("J"):
-            multi_pin_refs[ref] = ps
+    ref_silk = data.get("ref_has_silk_marker", set())
     missing_pin1 = []
     for ref, ps in multi_pin_refs.items():
-        # Find pin 1 (or smallest pin number)
-        pin1 = None
-        for p in ps:
-            num = str(p.get("num", ""))
-            if num == "1":
-                pin1 = p
-                break
+        if ref in ref_silk:
+            continue
+        pin1 = next((p for p in ps if str(p.get("num", "")) == "1"), None)
         if pin1 is None:
-            continue  # no pin "1" (e.g. BGA grids use alphanumeric)
-        # Check for any silk element within radius
-        nearby = [
-            t for t in silk
-            if math.hypot(t["x"] - pin1["x"], t["y"] - pin1["y"])
-            < PIN1_SEARCH_RADIUS
-        ]
-        if not nearby:
-            missing_pin1.append((ref, pin1))
+            continue
+        missing_pin1.append((ref, pin1))
     if missing_pin1:
-        score -= min(1, len(missing_pin1) * 0.5)
+        score -= min(2, len(missing_pin1) * 0.5)
         findings.append(
             f"JLCDFM pin-1 silk marker: {len(missing_pin1)}/{len(multi_pin_refs)} "
-            f"multi-pin component(s) missing a visible marker near pin 1"
+            f"multi-pin component(s) missing silk orientation marker"
         )
         for ref, p in missing_pin1[:5]:
             findings.append(
-                f"  -> {ref}.1 at ({p['x']:.1f},{p['y']:.1f}) — "
-                f"no silk within {PIN1_SEARCH_RADIUS}mm"
+                f"  -> {ref}.1 at ({p['x']:.1f},{p['y']:.1f}) "
+                f"— call _pin1_marker() in footprints.py"
             )
     else:
         findings.append(
             f"JLCDFM pin-1 silk marker: all {len(multi_pin_refs)} "
-            f"multi-pin ICs/connectors marked -- OK"
+            f"multi-pin ICs/connectors have silk marker -- OK"
         )
 
     return max(0, score), findings

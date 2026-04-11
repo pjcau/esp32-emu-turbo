@@ -55,6 +55,49 @@ def _fp_circle(cx, cy, r, layer="B.SilkS", width=0.2):
     )
 
 
+# ── GENERIC RULE — Pin-1 Marker Helper ────────────────────────────
+#
+# Every footprint with ≥ 4 distinguishable pins (pinout matters for
+# orientation) MUST call this helper to emit a visible pin-1 marker
+# on both the silkscreen AND the fab layer. JLCPCB's SMT assembly
+# operator uses the silkscreen marker to verify component orientation
+# at pick-and-place time; the fab marker is for 3D-render / review.
+#
+# Convention: a 0.3mm-radius filled circle placed near pin 1, slightly
+# offset outside the body so it remains visible when the component is
+# soldered on. The offset direction is footprint-specific (caller
+# supplies the marker x,y in footprint-local coordinates).
+#
+# Generic rule enforcement: scripts/pcb_review.py Check 12
+# (JLCDFM pin-1 silk marker) scans every multi-pin reference on the
+# finished PCB and fails if no silk element is within 3mm of pin 1.
+# This catches any future footprint that forgets to call _pin1_marker().
+#
+# Historical context: JLCDFM upload on 2026-04-11 flagged 6 multi-pin
+# components (U1, U2, U5, U6, J1, J4) for "missing component
+# orientation marker". R12 added this helper + back-filled all six
+# footprints to close the finding for good.
+def _pin1_marker(cx, cy, layer="B"):
+    """Emit a pin-1 orientation marker on BOTH silk + fab.
+
+    Args:
+        cx, cy: footprint-local coordinates of the marker. Should be
+            slightly offset from pin 1 toward the "outside" of the
+            body (upper-left for most ICs with pin 1 at top-left) so
+            the mark is still legible after placement.
+        layer: "B" for bottom-side footprints, "F" for top-side.
+
+    Returns: list of 2 strings (silk circle + fab circle) ready to
+    append to a footprint's pads/shapes list.
+    """
+    silk = "B.SilkS" if layer == "B" else "F.SilkS"
+    fab = "B.Fab" if layer == "B" else "F.Fab"
+    return [
+        _fp_circle(cx, cy, 0.3, silk, width=0.25),
+        _fp_circle(cx, cy, 0.3, fab, width=0.2),
+    ]
+
+
 def _smd(num, x, y, w, h, layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     return _pad(num, "smd", "rect", x, y, w, h, layers)
@@ -101,6 +144,14 @@ def esp32_s3_wroom1(layer="B"):
         "41", "smd", "rect", -1.5, 2.46, 3.9, 3.9, layers,
     ))
 
+    # Pin-1 marker (R12 JLCDFM fix)
+    # Pin 1 at (-8.75, -5.26), pad bbox (-9.5..-8.0, -5.71..-4.81).
+    # Place marker ABOVE the pad (cy ≤ -6.16 for 0.45mm silk-to-copper
+    # clearance). Marker at (-8.75, -6.5) — directly above pin 1,
+    # 0.54mm clear of the pad top. This stays within the module body
+    # envelope (module top around y=-7) and away from the RF antenna.
+    pads.extend(_pin1_marker(-8.75, -6.5, layer))
+
     return pads
 
 
@@ -146,9 +197,12 @@ def esop8(layer="B"):
     # EP edges at y=±1.4mm; corner pin edges at y=±1.605mm; gap=0.205mm > 0.10mm
     pads.append(_pad("EP", "smd", "rect", 0, 0, 3.4, 2.8, layers))
 
-    # Pin-1 marker on Fab layer (matches SOP-16 convention)
-    fab = "B.Fab" if layer == "B" else "F.Fab"
-    pads.append(_fp_circle(-2.5, -2.2, 0.3, fab))
+    # Pin-1 marker on both silkscreen + fab (R12 JLCDFM fix)
+    # Pin 1 at (-3.0, -1.905), pad bbox (-3.85..-2.15, -2.205..-1.605).
+    # Place marker ABOVE the pad (cy ≤ -2.655 for 0.45mm clearance).
+    # Marker at (-3.0, -2.8) — 0.60mm clear of pad top, above the
+    # body edge (eSOP-8 body y_min ≈ -2.5).
+    pads.extend(_pin1_marker(-3.0, -2.8, layer))
 
     return pads
 
@@ -199,8 +253,14 @@ def sop16(layer="B"):
     pads.append(_fp_line(bx, by, -bx, by, fab))      # bottom
     pads.append(_fp_line(-bx, by, -bx, -by, fab))    # left
 
-    # Pin 1 marker (dot inside body near pin 1)
-    pads.append(_fp_circle(-1.0, -4.0, 0.3, fab))
+    # Pin 1 marker — silk + fab (R12 JLCDFM fix)
+    # Pin 1 at (-2.7, -4.445), pad bbox (-3.475..-1.925, -4.745..-4.145).
+    # Place marker ABOVE the pad (cy ≤ -5.195). Marker at (-2.7, -5.5)
+    # — 0.755mm clear of pad top, inside body (body y_min = -5.0) →
+    # slightly outside body at y=-5.5 (0.5mm past body edge).
+    # Fallback: inside body between pads would collide with adjacent
+    # pins 2-8. Going outside body top is the cleanest option.
+    pads.extend(_pin1_marker(-2.7, -5.5, layer))
 
     return pads
 
@@ -278,6 +338,14 @@ def usb_c_16p(layer="B"):
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
 
+    # Pin-1 marker (R12 JLCDFM fix)
+    # Pin 1 (GND) at (-3.2, -2.375), pad bbox (-3.375..-3.025, -2.925..-1.825).
+    # Place marker ABOVE the pad (cy ≤ -3.375). Marker at (-3.2, -3.5)
+    # — 0.575mm clear of pad top, above the signal pad row. USB-C
+    # body extends to roughly y=-4.4 (shield front), so this is
+    # still inside the connector housing where it remains legible.
+    pads.extend(_pin1_marker(-3.2, -3.5, layer))
+
     return pads
 
 
@@ -302,6 +370,14 @@ def fpc_40p(layer="B"):
     # 2 mounting pads (pins 41-42): 2.000 x 2.500mm
     pads.append(_pad("41", "smd", "rect", 11.44, 1.288, 2.0, 2.5, layers))
     pads.append(_pad("42", "smd", "rect", -11.44, 1.288, 2.0, 2.5, layers))
+
+    # Pin-1 marker (R12 JLCDFM fix)
+    # Pin 1 at (-9.75, -1.288), pad bbox (-9.825..-9.675, -1.788..-0.788).
+    # Mount pad 42 at (-11.44, 1.288) with 2.0x2.5, bbox (-12.44..-10.44, 0.038..2.538).
+    # Place marker ABOVE pad 1 (cy ≤ -2.238). Marker at (-9.75, -2.5).
+    # Clear of pad 1 top by 0.262mm + stroke margin, and mount pad is
+    # 2.5mm below so no conflict there.
+    pads.extend(_pin1_marker(-9.75, -2.5, layer))
 
     return pads
 
@@ -343,6 +419,12 @@ def tf01a(layer="B"):
         f' (size 1.0 1.0) (drill 1.0)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
+
+    # Pin-1 marker (R12 JLCDFM fix)
+    # Pin 1 (DAT2) at (2.24, -5.276), pad bbox (1.99..2.49, -5.926..-4.626).
+    # Place marker ABOVE the pad (cy ≤ -6.376). Marker at (2.24, -6.6)
+    # — 0.674mm clear of pad top, above the slot opening.
+    pads.extend(_pin1_marker(2.24, -6.6, layer))
 
     return pads
 
