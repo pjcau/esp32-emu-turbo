@@ -1369,9 +1369,13 @@ def _power_traces():
     # Note x=38.0 is clear of D-pad buttons (leftmost at x=9.0 area) and LED pads.
     BAT_COL_X = 38.0  # DFM: separate column for long B.Cu vertical (avoids SPK+ at x=39.5)
     sw_via_y = sw_com[1] - 2  # short B.Cu stub down from switch pad
+    # R17 (2026-04-12): the vestigial _via_net at (sw_com[0], sw_via_y) was
+    # left over from "DFM FIX v1" (when this leg ran on F.Cu). The current
+    # routing is pure B.Cu — sw_com → (sw_com.x, sw_via_y) → (BAT_COL_X,
+    # sw_via_y) → ... — so the via served no layer transition and KiCad DRC
+    # flagged it as via_dangling. Removed.
     parts.append(_seg(sw_com[0], sw_com[1], sw_com[0], sw_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_via_net(sw_com[0], sw_via_y, n_bat))
     # B.Cu horizontal from sw_com X to separate column, then long vertical down
     parts.append(_seg(sw_com[0], sw_via_y, BAT_COL_X, sw_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
@@ -2935,15 +2939,13 @@ def _usb_traces():
         parts.append(_via_net(r2_p2[0], gnd_via_y2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── USB return path GND stitching vias ──────────────────────────
-    # USB D+ serpentine on F.Cu at y≈65.9-66.4, x=82-89.
-    # Nearest GND via was (92.0, 69.3) at ~5-7mm — too far for good return path.
-    # Add 2 stitching vias at y=69.0 (between BTN_B@y=68.0 and BTN_X@y=70.7),
-    # placing them ~2.8mm from USB D+ center. This brings all USB segments
-    # within 5mm of a GND via for solid return path integrity.
-    _usb_stitch_y = 69.0
-    for _stitch_x in [86.0, 88.0]:
-        parts.append(_via_net(_stitch_x, _usb_stitch_y, n_gnd,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
+    # R17 (2026-04-12): the 2 stitching vias previously placed at
+    # (86.0, 69.0) and (88.0, 69.0) had no F.Cu/B.Cu copper anchor —
+    # they connected only to the inner-plane GND fill, which gives
+    # zero benefit for the F.Cu USB D+/D- return path. KiCad DRC
+    # correctly flagged them as via_dangling. Removed. To improve USB
+    # return path integrity in v2, route a small F.Cu GND patch under
+    # the USB D+ serpentine and connect a stitching via to that patch.
 
     return parts
 
@@ -4586,28 +4588,27 @@ def _reset_boot_traces():
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
     if rst_p1:
-        # EN signal: pad 1 (right pad at x=98) → B.Cu stub up → via at (98, 60)
-        # → B.Cu vertical run down to y=24.78 → horizontal to U1 pin 3.
+        # EN signal: pad 1 (right pad at x=98) → B.Cu vertical run down to
+        # y=24.78 → horizontal to U1 pin 3. Pure B.Cu, no via needed.
         #
         # B.Cu route analysis (verified clear):
-        #   Vertical leg x=98, y=60→24.78: passes between R15/C16 pads
+        #   Vertical leg x=98, y=63.65→24.78: passes between R15/C16 pads
         #     R15:1 left edge 98.45, trace right edge 98.125, gap=0.325mm
         #     R15:2 right edge 97.55, trace left edge 97.875, gap=0.325mm
         #   Horizontal leg y=24.78, x=98→88.75: no vertical obstacles
         #     U1:2 (+3V3) top edge 23.96, trace bottom edge 24.655, gap=0.695mm
         #     U1:4 (LCD_D0) bottom edge 25.60, trace top edge 24.905, gap=0.695mm
-        via_y = 60.0
-        # 1. SW_RST pad 1 → via at (98, 60)
-        parts.append(_seg(rst_p1[0], rst_p1[1], rst_p1[0], via_y,
-                          "B.Cu", W_SIG, n_en))
-        parts.append(_via_net(rst_p1[0], via_y, n_en,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
-        # 2. Via (98, 60) → vertical B.Cu run to U1 pin 3 latitude
+        #
+        # R17 (2026-04-12): removed vestigial via at (98, 60). The original
+        # routing intended a F.Cu↔B.Cu transition there, but the current
+        # implementation only ever uses B.Cu, so the via was orphan
+        # (DRC: via_dangling). The straight-line B.Cu run from (98, 63.65)
+        # to (88.75, 24.78) is unchanged.
         en_pin = _pad("U1", "3")  # (88.75, 24.78)
         if en_pin:
             en_x, en_y = en_pin
-            # Vertical: (98, 60) → (98, en_y)
-            parts.append(_seg(rst_p1[0], via_y, rst_p1[0], en_y,
+            # Vertical: rst_p1 → (rst_p1.x, en_y)
+            parts.append(_seg(rst_p1[0], rst_p1[1], rst_p1[0], en_y,
                               "B.Cu", W_SIG, n_en))
             # Horizontal: (98, en_y) → (en_x, en_y) = U1 pin 3
             parts.append(_seg(rst_p1[0], en_y, en_x, en_y,
@@ -4696,21 +4697,30 @@ def _menu_diode_traces():
     sw13_p3 = _pad("SW13", "3")
     sw13_p4 = _pad("SW13", "4")
 
-    # ── 1. D1 cathode → SW13 pad 2 (MENU_K net) ──
+    # ── 1. D1 cathode → SW13 pads 1+2 (MENU_K net) ──
     # D1 pin 3 (cathode) on B.Cu at (~156, 51.4).
-    # SW13 pad 2 is on F.Cu at (145.0, 59.85).
+    # SW13 pads 1 and 2 are on F.Cu at (139.0, 59.85) and (145.0, 59.85)
+    # — the two terminals of the same internal switch contact (both on
+    # MENU_K net per _PAD_NETS).
     # CONSTRAINTS: SD_CLK@152.5, SD_CS@153.5 B.Cu verts, BTN_R@146.85 B.Cu vert.
     # Cannot route B.Cu horizontal LEFT through SD traces.
     # Strategy: via RIGHT NEXT TO D1 pin 3, then F.Cu all the way to SW13.
     # Via at D1 pin 3 position — on B.Cu pad, switch to F.Cu immediately.
-    if d1_p3 and sw13_p2:
+    #
+    # R17 (2026-04-12): the F.Cu horizontal previously stopped at SW13 pad 2
+    # (x=145.0), leaving SW13 pad 1 (x=139.0) as a same-net island —
+    # KiCad doesn't auto-bridge tact-switch pads with the same net
+    # number, and DRC flagged it as unconnected. The trace now extends
+    # all the way to pad 1 (x=139.0) so it lays copper across both
+    # pads in one shot.
+    if d1_p3 and sw13_p1 and sw13_p2:
         # Via right at cathode pad — no B.Cu routing needed
         parts.append(_via_net(d1_p3[0], d1_p3[1], n_menu_k,
                               size=VIA_STD, drill=VIA_STD_DRILL))
-        # F.Cu L-shape: via → down to SW13 pad 2 Y, then left to pad
+        # F.Cu L-shape: via → down to SW13 pad row, then left to pad 1
         parts.append(_seg(d1_p3[0], d1_p3[1], d1_p3[0], sw13_p2[1],
                           "F.Cu", W_SIG, n_menu_k))
-        parts.append(_seg(d1_p3[0], sw13_p2[1], sw13_p2[0], sw13_p2[1],
+        parts.append(_seg(d1_p3[0], sw13_p2[1], sw13_p1[0], sw13_p2[1],
                           "F.Cu", W_SIG, n_menu_k))
 
     # ── 2. SW13 GND pads → vias ──
@@ -4746,25 +4756,22 @@ def _menu_diode_traces():
         parts.append(_via_net(gnd_jog_x, gnd_via_y, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # ── 3. D1 anode 1 (BTN_START) → via ──
-    # D1 pin 1 on B.Cu at (~156.95, 53.6) — right of all SD traces.
-    # Route DOWN to via at y+2.5.
-    if d1_p1:
-        via_y = d1_p1[1] + 2.5  # ~56.1 — below D1, clear area
-        parts.append(_seg(d1_p1[0], d1_p1[1], d1_p1[0], via_y,
-                          "B.Cu", W_SIG, n_start))
-        parts.append(_via_net(d1_p1[0], via_y, n_start,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
-
-    # ── 4. D1 anode 2 (BTN_SELECT) → via ──
-    # D1 pin 2 on B.Cu at (~155.05, 53.6) — right of all SD traces.
-    # Route UP to via at y-2.5, separated from anode 1 direction.
-    if d1_p2:
-        via_y = d1_p2[1] - 2.5  # ~51.1 — above D1
-        parts.append(_seg(d1_p2[0], d1_p2[1], d1_p2[0], via_y,
-                          "B.Cu", W_SIG, n_sel))
-        parts.append(_via_net(d1_p2[0], via_y, n_sel,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
+    # ── 3 & 4. D1 anodes (BTN_START / BTN_SELECT) ──
+    # R5-CRIT-6 (2026-04-10): the BAT54C menu-combo connection from D1
+    # anodes to the BTN_START / BTN_SELECT pull-up junctions on the
+    # button strip cannot be routed on v3.x without crossing SD traces.
+    # The menu-combo shortcut is documented as accepted technical debt
+    # ("v2 respin" in memory feedback_r4_schematic_pcb_sync.md and
+    # net_connectivity --accepted) — the buttons SW9/SW10 still work
+    # individually, only the simultaneous-press shortcut is disabled.
+    #
+    # R17 (2026-04-12): removed the vestigial B.Cu stubs + vias on
+    # D1 pins 1 and 2 (previously at (156.95, 56.10) and (155.05, 51.10))
+    # because they connected to nothing downstream. KiCad DRC reported
+    # them as via_dangling. The pad net assignments above
+    # (D1.1=BTN_START, D1.2=BTN_SELECT) remain so verify_datasheet_nets
+    # still sees the intended schematic connectivity; net_connectivity
+    # already accepts these two nets as fragmented tech debt.
 
     return parts
 

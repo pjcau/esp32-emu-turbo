@@ -126,15 +126,16 @@ DATASHEET_SPECS = {
         "tht_drill_mm": 0.6,     # front shield tab drill
     },
     "J3": {
-        "name": "JST PH 2-pin THT",
+        "name": "JST PH 2-pin SMD",
         "datasheet": "J3_JST-PH-2P-SMD_C295747.pdf",
-        "footprint": "JST-PH-2P",
+        "footprint": "JST-PH-2P-SMD",
         "signal_pins": 2,
-        "smd": True,            # SMD version (C295747)
+        "total_pads": 4,         # 2 signal + 2 mechanical reinforcement tabs
+        "smd": True,             # SMD version (C295747)
         "pitch_mm": 2.0,         # JST PH standard pitch
         "body_w_mm": 6.0,
         "body_h_mm": 4.5,
-        "tht_drill_mm": 0.85,
+        "tht_drill_mm": None,    # SMD — no THT drill
     },
     "J4": {
         "name": "FPC 40-pin 0.5mm",
@@ -345,12 +346,18 @@ class TestDatasheetCompliance(unittest.TestCase):
                          f"total pads, got {len(pads)}")
 
     def test_pin_count_J3_JST(self):
-        """J3 JST PH: 2 pads"""
+        """J3 JST PH SMD: 4 pads (2 signal + 2 mechanical reinforcement tabs)
+
+        R15 (2026-04-12): added 2 mechanical reinforcement pads "3" and "4"
+        per JLCPCB EasyEDA reference footprint (verified via easyeda2kicad).
+        Without the tabs, JLCDFM flagged 2 'Pin without pad' Danger findings.
+        """
         spec = DATASHEET_SPECS["J3"]
         pads = _unique_pads(_signal_pads(self.pad_groups.get("J3", [])))
-        self.assertEqual(len(pads), spec["signal_pins"],
-                         f"J3 ({spec['name']}): expected {spec['signal_pins']} "
-                         f"pads, got {len(pads)}")
+        expected = spec.get("total_pads", spec["signal_pins"])
+        self.assertEqual(len(pads), expected,
+                         f"J3 ({spec['name']}): expected {expected} "
+                         f"total pads (2 signal + 2 mech), got {len(pads)}")
 
     def test_pin_count_J4_FPC(self):
         """J4 FPC: 42 total pads (40 signal + 2 mounting)"""

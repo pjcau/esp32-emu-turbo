@@ -1869,3 +1869,132 @@ v3.5 + R13 copper-clearance sweep + new gate = v3.6 ready. The
 next JLCDFM upload should see the "Trace spacing Danger 0.05mm"
 finding cleared, with all 6 pair-gap measurements in the Good band
 (≥0.15mm mask-aperture distance).
+
+---
+
+## Round 17 Findings (2026-04-12)
+
+R17 was triggered by `/hardware-audit` Step 0 surfacing two real
+gate failures that R16 had introduced or that pre-existed but were
+masked by stale zone-fill state in the local DRC report.
+
+### Step 0 gates — pre-fix
+
+| Gate | Result |
+|------|--------|
+| `verify_trace_through_pad` | PASS |
+| `verify_trace_crossings` | PASS |
+| `verify_copper_clearance` | PASS (0 DANGER, 1 WARN GND same-net 120 µm) |
+| `verify_net_connectivity` | PASS (4 tech debt) |
+| `verify_dfm_v2` | 115/115 PASS |
+| `verify_dfa` | 9/9 PASS |
+| `validate_jlcpcb` | 25/25 PASS (1 warn) |
+| `verify_bom_cpl_pcb` | 10/10 PASS |
+| `verify_polarity` | 47/47 PASS |
+| **`verify_datasheet`** | **FAIL (1/29 — J3 pin count)** |
+| `verify_datasheet_nets` | 261/261 PASS |
+| `verify_design_intent` | 362/362 PASS |
+| `verify_schematic_pcb_sync` | PASS |
+| `verify_netlist_diff` | 4/4 PASS |
+| `verify_strapping_pins` | 12/12 PASS |
+| `verify_decoupling_adequacy` | 25/25 PASS |
+| `verify_power_sequence` | 26/26 PASS |
+| `verify_power_paths` | 8 PASS, 11 zone-info |
+| `erc_check` | 0 critical |
+| **KiCad DRC** | **FAIL (16 viol + 11 unconnected)** |
+
+### Bug list
+
+#### R17-HIGH-1 — J1 USB-C NPTH copper clearance regression from R16
+- **Files**: `scripts/generate_pcb/footprints.py::usb_c_16p`
+- **Symptom**: KiCad DRC `hole_clearance` violations on J1 pads 1 and 12 (B.Cu GND), actual 0.171 mm vs rule 0.200 mm.
+- **Root cause**: R16 widened the wide signal pads (1, 2, 11, 12) from 0.35 → 0.55 mm to match the JLCPCB EasyEDA reference footprint. The new pad rectangles extend further toward the NPTH positioning holes; the bottom-outer corner of pads 1 and 12 ends up 0.171 mm from the NPTH edge, below the 0.20 mm rule.
+- **Fix**: shrink wide-pad height from 1.10 → 1.04 mm. Pad bottom edge moves from y=−1.825 to y=−1.855 (footprint-local), giving a corner-to-NPTH distance of 0.20 mm exactly. The 0.06 mm Y deviation from the JLCPCB reference is well below JLCDFM's per-pin alignment tolerance and applies symmetrically to all 4 wide pads.
+
+#### R17-HIGH-2 — 6 dangling vias (orphans from various rounds)
+- **Files**: `scripts/generate_pcb/routing.py`
+- **Symptom**: KiCad DRC `via_dangling` × 6.
+- **Root cause**: each via was a vestigial F.Cu↔B.Cu transition that no longer transitions because the surrounding routing was rewritten in earlier rounds.
+- **Vias removed**:
+
+| Via | Net | Pos | Source |
+|-----|-----|-----|--------|
+| BAT+ | BAT+ | (39.25, 68.30) | `_power_traces` line ~1374 — leftover from "DFM FIX v1" when this leg ran on F.Cu. Current chain is pure B.Cu. |
+| GND | GND | (86.0, 69.0) | `_usb_traces` USB-D+ stitching loop — vias had no F.Cu copper anchor, so they only touched the inner GND plane (zero return-path benefit). |
+| GND | GND | (88.0, 69.0) | same loop |
+| EN | EN | (98.0, 60.0) | `_switch_traces` — original code had a F.Cu↔B.Cu transition; current code routes the entire EN signal on B.Cu. |
+| BTN_START | BTN_START | (156.95, 56.10) | `_menu_diode_traces` — D1 anode 1 stub that never connected downstream (R5-CRIT-6 v2-respin tech debt). |
+| BTN_SELECT | BTN_SELECT | (155.05, 51.10) | `_menu_diode_traces` — D1 anode 2 stub, same root cause. |
+
+- **Fix**: removed the `_via_net(...)` calls and (where applicable) the orphan stub segments. The chains continue to function via the surviving B.Cu segments. `verify_net_connectivity` still accepts BTN_START/BTN_SELECT as fragmented tech-debt nets per the existing allowlist.
+
+#### R17-MED-1 — MENU_K F.Cu trace did not reach SW13 pad 1
+- **Files**: `scripts/generate_pcb/routing.py::_menu_diode_traces`
+- **Symptom**: KiCad DRC `unconnected_items` between SW13 pad 1 (139, 59.85) and the MENU_K F.Cu trace ending at pad 2 (145, 59.85).
+- **Root cause**: SW13 is a 4-pad tact switch — pads 1+2 form one terminal pair, pads 3+4 form the other. KiCad does not internally bridge same-net pads inside a footprint; the MENU_K trace was routed only as far as pad 2, leaving pad 1 as a same-net island.
+- **Fix**: extended the F.Cu horizontal endpoint from `sw13_p2[0]` to `sw13_p1[0]` so the trace lays copper across both pads in one segment.
+
+#### R17-LOW-1 — Stale `verify_datasheet.py::test_pin_count_J3_JST` (test, not PCB)
+- **Files**: `scripts/verify_datasheet.py`
+- **Symptom**: `AssertionError: 4 != 2 : J3 (JST PH 2-pin THT): expected 2 pads, got 4`.
+- **Root cause**: R15 added the 2 mechanical reinforcement tabs (pads "3" and "4") to J3 per the JLCPCB reference footprint. The test still expected the pre-R15 spec of 2 signal pins.
+- **Fix**: updated `DATASHEET_SPECS["J3"]` to set `total_pads: 4` (with `signal_pins: 2`) and pivoted the test to use `total_pads`. Renamed `name` to "JST PH 2-pin SMD" and cleared `tht_drill_mm` since C295747 is the SMD variant.
+
+### Accepted false positives in DRC
+
+After R17 fixes the DRC reports 0 hole_clearance, 0 via_dangling, 0 trace_clearance, and 10 unconnected_items. All 10 are documented and unavoidable on v3.x:
+
+| # | Item | Type |
+|---|---|---|
+| 1 | J1 PTH pad 13 GND ↔ J1 pad 1 B.Cu GND | zone fill (In1.Cu GND plane) |
+| 2 | +5V B.Cu stub (107.05, 39) ↔ +5V B.Cu stub (38, 25.8) | zone fill (In2.Cu +5V plane) |
+| 3 | +3V3 B.Cu stub (125.5, 51.85) ↔ +3V3 via (132, 50.25) | zone fill (In2.Cu +3V3 plane) |
+| 4 | +3V3 B.Cu stubs at x=133.71 (FPC column) | zone fill (In2.Cu +3V3 plane) |
+| 5 | +3V3 B.Cu stubs at x=133.71 (FPC column) | zone fill (In2.Cu +3V3 plane) |
+| 6 | J1 pad 11 VBUS ↔ J1 pad 9 VBUS | tech debt — R5-CRIT-9 single-orientation USB-C |
+| 7 | J1 pad 9 VBUS ↔ VBUS B.Cu trace | tech debt — same R5-CRIT-9 group |
+| 8 | C22 I2S_DOUT pads (1 ↔ 2) | tech debt — DC blocking cap by design |
+| 9 | D1 pad 1 BTN_START ↔ BTN_START main F.Cu trace | tech debt — R5-CRIT-6 menu combo (v2 respin) |
+| 10 | D1 pad 2 BTN_SELECT ↔ BTN_SELECT main F.Cu trace | tech debt — R5-CRIT-6 menu combo (v2 respin) |
+
+`kicad-cli pcb drc` does not consider zone-fill polygons when computing the ratsnest, so any net whose copper continuity depends on an inner-plane fill will surface as unconnected even when the manufactured board is electrically correct. `verify_net_connectivity.py` already skips the four pour-zone nets (GND, +5V, +3V3, …) and we trust the `kicad_fill_zones.py` Docker pipeline for fab-time fill correctness.
+
+### Step 0 gates — post-fix
+
+| Gate | Result |
+|------|--------|
+| `verify_trace_through_pad` | PASS |
+| `verify_trace_crossings` | PASS |
+| `verify_copper_clearance` | PASS (0 DANGER, 1 WARN GND same-net 120 µm — pre-existing) |
+| `verify_net_connectivity` | PASS (4 tech debt) |
+| `verify_dfm_v2` | 115/115 PASS |
+| `verify_dfa` | 9/9 PASS |
+| `validate_jlcpcb` | 25/25 PASS (1 warn) |
+| `verify_bom_cpl_pcb` | 10/10 PASS |
+| `verify_polarity` | 47/47 PASS |
+| **`verify_datasheet`** | **29/29 PASS** |
+| `verify_datasheet_nets` | 261/261 PASS |
+| `verify_design_intent` | 362/362 PASS |
+| `verify_schematic_pcb_sync` | PASS |
+| `verify_netlist_diff` | 4/4 PASS |
+| `verify_strapping_pins` | 12/12 PASS |
+| `verify_decoupling_adequacy` | 25/25 PASS |
+| `verify_power_sequence` | 26/26 PASS |
+| `verify_power_paths` | 8 PASS, 11 zone-info |
+| `erc_check` | 0 critical |
+| **KiCad DRC** | **0 real (10 documented false positives — 5 zone-fill + 5 tech debt)** |
+
+### Domain findings (Layer 2 review)
+
+- **Power chain**: clean. R17 BAT+ and EN orphan via removals do not change copper topology — only purely vestigial transitions removed. AMS1117 → +3.3 V → ESP32 EN RC delay (R3+C3) intact.
+- **ESP32 boot**: nothing changed since R16. Strapping pins gate still passes; R14 (BTN_L pull-up skip) still active.
+- **Display**: nothing changed since R16. J4 reversal documented in `datasheet_specs.py` is still respected.
+- **Audio**: nothing changed. C22 I2S_DOUT AC coupling still flagged as tech debt by DRC (intentional, design AC coupling between PDM TX and PAM8403 INL).
+- **SD card**: nothing changed since R16.
+- **Buttons**: MENU_K trace now lays copper across both SW13 pads 1 and 2 (R17-MED-1 fix). Other 12 buttons unchanged.
+- **USB**: J1 pads 1 and 12 wide-pad height shrunk 1.10 → 1.04 mm to clear NPTH. The 5 R16 dimensional fixes (wide pad width 0.55, narrow pad width 0.30, rear shield 1.2×1.8, NPTH ø0.70, signal-pad heights now 1.04) are all within JLCDFM tolerance. USB return path GND stitching vias removed — `verify_usb_return_path` still passes via the inner GND plane.
+- **Emulator performance**: nothing changed since R16.
+
+### v3.7 tag candidate
+
+R16 J1+J3 footprint fixes + R17 dangling-via cleanup + J1 NPTH clearance fix + MENU_K SW13 bridge + J3 datasheet test repair = v3.7. Next JLCDFM upload should clear all R16 misalignment / pin-without-pad findings AND have 0 KiCad DRC violations.

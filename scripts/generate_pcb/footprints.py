@@ -300,8 +300,17 @@ def usb_c_16p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
 
-    # Wide signal pads (pins 1, 2, 11, 12): 0.55 × 1.10 mm at y=-2.375
-    # Source: EasyEDA USB-C-SMD_TYPE-C-6PIN-2MD-073 via easyeda2kicad
+    # Wide signal pads (pins 1, 2, 11, 12): 0.55 × 1.04 mm at y=-2.375
+    # Source: EasyEDA USB-C-SMD_TYPE-C-6PIN-2MD-073 via easyeda2kicad.
+    #
+    # R17 FIX (2026-04-12): height shrunk from 1.10 → 1.04 mm to clear
+    # the 0.20 mm "NPTH with copper around" rule. With 1.10 mm height the
+    # bottom-corner of pads 1 and 12 sits 0.171 mm from the NPTH edge
+    # (DRC: hole_clearance violation). At 1.04 mm height the corner-to-
+    # NPTH gap is 0.20 mm exactly — within rule. The 0.06 mm Y deviation
+    # from the JLCPCB reference is well below JLCDFM's per-pin alignment
+    # tolerance and applies symmetrically to all 4 wide pads (no
+    # geometric asymmetry).
     wide_pads = [
         ("1",  -3.200),   # GND
         ("2",  -2.400),   # VBUS
@@ -309,7 +318,7 @@ def usb_c_16p(layer="B"):
         ("12",  3.200),   # GND
     ]
     for name, x in wide_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.55, 1.1, layers,
+        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.55, 1.04, layers,
                          solder_mask_margin=0))
 
     # Narrow signal pads (pins 3-10): 0.30 × 1.10 mm, 0.5mm pitch at y=-2.375
