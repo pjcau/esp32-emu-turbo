@@ -1198,7 +1198,12 @@ def _power_traces():
                        "F.Cu", W_BAT_CORRIDOR, n_bat))
     parts.append(_seg(105.5, CORRIDOR_Y, 107.8, CORRIDOR_Y,
                        "F.Cu", W_BAT_CORRIDOR, n_bat))  # F.Cu bridge over KEY left vert
-    parts.append(_via_net(107.8, CORRIDOR_Y, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    # R12 JLCDFM fix: shrink BAT+ corridor via from 0.50mm → 0.46mm.
+    # IP5306_KEY horizontal at y=46.61 (w=0.25, top edge 46.485) sits
+    # 0.51mm above this via center. With VIA_MIN (r=0.25) the edge gap
+    # was only 0.135 mm (JLCDFM flagged). With 0.46mm via (r=0.23) the
+    # gap becomes 0.155 mm — safely above 0.15 mm JLCPCB minimum.
+    parts.append(_via_net(107.8, CORRIDOR_Y, n_bat, size=0.46, drill=0.20))
     parts.append(_seg(107.8, CORRIDOR_Y, 114.65, CORRIDOR_Y,
                        "B.Cu", W_BAT_CORRIDOR, n_bat))  # main corridor part 1
     parts.append(_seg(114.65, CORRIDOR_Y, 116.95, CORRIDOR_Y,
@@ -1763,7 +1768,13 @@ def _display_traces():
         # GND stub: horizontal narrowed to 0.30mm near +3V3 pin6/7 crossing.
         parts.append(_seg(px, py, stub_x, py, "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_seg(stub_x, py, stub_x, via_y, "B.Cu", 0.4, n_gnd))
-        parts.append(_via_net(stub_x, via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        # R12 JLCDFM fix (2026-04-11): shrink via from VIA_STD (0.60mm) to
+        # 0.46mm. With VIA_STD the left edge was at 132.30, only 0.150 mm
+        # from the +3V3 B.Cu vertical right edge at x=132.15 (trace w=0.3,
+        # hw=0.15). 0.46mm via left edge moves to 132.37 → gap = 0.220mm
+        # (safely above 0.15mm JLCPCB min). Right edge 132.83 preserves
+        # the v3 clearance to J4 connector pads (still 0.38mm away).
+        parts.append(_via_net(stub_x, via_y, n_gnd, size=0.46, drill=0.20))
         # R9-HIGH-4 SIDE-FIX (2026-04-11): the F.Cu horizontal from (stub_x,
         # via_y) to (vx2, via_y) at y=43.75 ran 0.05 mm from SW7.3 (no-net)
         # pad at (139, 44.35). Rather than fighting the clearance, jog the
@@ -3734,8 +3745,19 @@ def _button_traces():
                     # Switch to VIA_MIN and shift X left
                     _ne_via_size = VIA_MIN
                     _ne_via_drill = VIA_MIN_DRILL
-                    _ne_r_min = VIA_MIN / 2  # 0.23
-                    _ne = R10_PAD_AABB[0] - _ne_r_min - 0.17  # 73.05
+                    _ne_r_min = VIA_MIN / 2  # 0.25 (VIA_MIN is 0.50mm)
+                    _ne = R10_PAD_AABB[0] - _ne_r_min - 0.17  # 73.03
+                    # R12 JLCDFM fix (2026-04-11): original code assumed
+                    # VIA_MIN was 0.46 (comment at line 3725 is wrong — it
+                    # is actually 0.50). At 0.50mm OD the via at (73.03,
+                    # 45.10) had only 0.150mm gap to the BTN_X B.Cu
+                    # vertical at x=73.56. Shrink to a true 0.46mm via
+                    # here: 0.53 - 0.23 - 0.125 = 0.175mm ✓. Only applies
+                    # to BTN_SELECT (stagger_y=45.10) — other bottom
+                    # buttons' stagger vias live at y=41.5/42.7/43.9
+                    # where _r10_gap is ≥2mm so this branch is not taken.
+                    _ne_via_size = 0.46
+                    _ne_via_drill = 0.20
                 near_epx = _ne
             else:
                 # DFM v3: BTN_R approach via@(91.0,37.48) vs near_epx via@(90.0,37.48): gap=0.1mm.
@@ -4812,17 +4834,28 @@ def _button_pullup_bridges():
         Uses F.Cu for the horizontal to avoid crossing other buttons'
         B.Cu verticals at y=55-57. Target via sits on the main B.Cu
         vertical (same net, connected via the via's B.Cu annulus).
+
+        R12 JLCDFM fix (2026-04-11): the button bridge F.Cu rows are
+        stacked at 0.5 mm pitch (y=55.0..58.0). With W_SIG=0.25 and
+        VIA_MIN=0.50, the via-to-adjacent-trace gap was only 0.125 mm
+        (= 0.5 - 0.25 - 0.125) which JLCDFM flagged at 0.1 mm cyan.
+        Fix: narrow the F.Cu horizontal to W_DATA (0.20) and shrink the
+        bridge vias to 0.46 mm — new gap = 0.5 - 0.23 - 0.10 = 0.170 mm
+        (safely above 0.15 mm JLCPCB minimum). 0.46 mm via with 0.20 mm
+        drill gives AR = 0.13 mm ≥ JLCPCB 0.127 mm min.
         """
+        _V_BRIDGE = 0.46   # via OD: 0.5 - 0.23 - 0.10 = 0.170mm gap
+        _V_DRILL = 0.20
         # B.Cu stub from C.1 (through pad, same net) down to bridge y
         parts_list.append(_seg(x_r, 50.00, x_r, y_br, "B.Cu", W_SIG, net_id))
-        # Via to F.Cu
+        # Via to F.Cu (0.46 mm bridge via)
         parts_list.append(_via_net(x_r, y_br, net_id,
-                                    size=VIA_MIN, drill=VIA_MIN_DRILL))
-        # F.Cu horizontal on clean layer
-        parts_list.append(_seg(x_r, y_br, target_x, y_br, "F.Cu", W_SIG, net_id))
+                                    size=_V_BRIDGE, drill=_V_DRILL))
+        # F.Cu horizontal on clean layer — narrowed to W_DATA for row-pitch clearance
+        parts_list.append(_seg(x_r, y_br, target_x, y_br, "F.Cu", W_DATA, net_id))
         # Via back to B.Cu at target (same-net tap on main vertical)
         parts_list.append(_via_net(target_x, y_br, net_id,
-                                    size=VIA_MIN, drill=VIA_MIN_DRILL))
+                                    size=_V_BRIDGE, drill=_V_DRILL))
 
     # Stagger y 0.5mm apart to avoid trace-trace overlap between bridges.
     # 5 buttons whose x range does NOT cross x=38 or x=80 (BAT+ B.Cu vertical
@@ -4836,9 +4869,11 @@ def _button_pullup_bridges():
     # BTN_SELECT: B.Cu stub from R13/C14 junction south to meet the
     # SW_BOOT bridge F.Cu at y=58. Tap as a T-junction via mid-F.Cu.
     # Same net same layer after the via transition → connected.
+    # R12 JLCDFM fix: via shrunk to 0.46 mm for 0.17 mm clearance to
+    # BTN_L F.Cu at y=57.50 (row pitch 0.5 mm − via r 0.23 − trace hw 0.10).
     parts.append(_seg(88.95, 50.00, 88.95, 58.00, "B.Cu", W_SIG, NET_ID["BTN_SELECT"]))
     parts.append(_via_net(88.95, 58.00, NET_ID["BTN_SELECT"],
-                           size=VIA_MIN, drill=VIA_MIN_DRILL))
+                           size=0.46, drill=0.20))
 
     # BTN_L: F.Cu horizontal at y=57.5 (staggered 0.5mm from BTN_UP y=57)
     # from R14.1 area to x=64.75 (main B.Cu vertical x=64.75 y=40-73.42
@@ -4864,10 +4899,12 @@ def _button_pullup_bridges():
     # BTN_UP F.Cu at y=62, EN/VBUS/GND vias at y=59-62 all ≥0.575mm
     # gap away). Via at (60.45, 58) taps the BTN_SELECT main vertical.
     n_btn_select = NET_ID["BTN_SELECT"]
-    parts.append(_seg(102.00, 60.00, 102.00, 58.00, "F.Cu", W_SIG, n_btn_select))
-    parts.append(_seg(102.00, 58.00, 60.45, 58.00, "F.Cu", W_SIG, n_btn_select))
+    # R12 JLCDFM fix: F.Cu horizontal narrowed to W_DATA and tap via
+    # shrunk to 0.46 mm — see _bridge_south docstring for math.
+    parts.append(_seg(102.00, 60.00, 102.00, 58.00, "F.Cu", W_DATA, n_btn_select))
+    parts.append(_seg(102.00, 58.00, 60.45, 58.00, "F.Cu", W_DATA, n_btn_select))
     parts.append(_via_net(60.45, 58.00, n_btn_select,
-                           size=VIA_MIN, drill=VIA_MIN_DRILL))
+                           size=0.46, drill=0.20))
 
     return parts
 
