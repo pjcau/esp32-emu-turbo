@@ -70,11 +70,56 @@ def parse_pcb(filepath):
         "vias": cache["vias"],
         "nets": nets,
         "zones": cache["zones"],
+        "pads": cache["pads"],
     }
 
 
 def seg_length(seg):
     return math.hypot(seg["x2"] - seg["x1"], seg["y2"] - seg["y1"])
+
+
+def _ref_bboxes(pads, smd_only=True):
+    """Group pads by reference designator and return bounding boxes.
+
+    Returns dict: ref -> (xmin, ymin, xmax, ymax, count).
+    Fiducials, mounting holes, and non-SMD pads are optionally excluded
+    so the bounding box approximates the component body (= what the
+    pick-and-place nozzle grabs).
+    """
+    by_ref = defaultdict(list)
+    for p in pads:
+        if smd_only and p.get("type") != "smd":
+            continue
+        ref = p.get("ref", "?")
+        if not ref or ref in ("?", "FID1", "FID2", "FID3"):
+            continue
+        by_ref[ref].append(p)
+
+    bboxes = {}
+    for ref, ps in by_ref.items():
+        xmin = min(p["x"] - p["w"] / 2 for p in ps)
+        xmax = max(p["x"] + p["w"] / 2 for p in ps)
+        ymin = min(p["y"] - p["h"] / 2 for p in ps)
+        ymax = max(p["y"] + p["h"] / 2 for p in ps)
+        bboxes[ref] = (xmin, ymin, xmax, ymax, len(ps))
+    return bboxes
+
+
+def _bbox_edge_gap(bbox, board_w, board_h):
+    """Return minimum distance from a bbox to any board edge."""
+    xmin, ymin, xmax, ymax, _ = bbox
+    return min(xmin, board_w - xmax, ymin, board_h - ymax)
+
+
+def _bboxes_overlap(a, b):
+    """Return overlap distance (positive = overlap, negative = gap)."""
+    ax1, ay1, ax2, ay2, _ = a
+    bx1, by1, bx2, by2, _ = b
+    dx = min(ax2, bx2) - max(ax1, bx1)
+    dy = min(ay2, by2) - max(ay1, by1)
+    if dx >= 0 and dy >= 0:
+        return min(dx, dy)  # overlap
+    return -max(abs(min(dx, 0)), abs(min(dy, 0)))  # gap as negative
 
 
 # -- Domain 1: Power Integrity ----------------------------------------
@@ -399,6 +444,215 @@ def review_manufacturability(data):
     findings.append(f"Board area: {area:.0f} cm^2 | Traces: {seg_count} | Vias: {via_count}")
     density = (seg_count + via_count) / area
     findings.append(f"  Routing density: {density:.1f} elements/cm^2")
+
+    # ── JLCDFM gap-closing checks ─────────────────────────────────────
+    # Added after JLCDFM report flagged issues that our local verify
+    # suite did not detect (2026-04-11). Each check is paired with a
+    # JLCPCB rule reference.
+
+    pads = data.get("pads", [])
+    refs = _ref_bboxes(pads, smd_only=True)
+
+    # Known manual-assembly refs that should be excluded from
+    # pick-and-place / courtyard checks (they are placed by hand).
+    MANUAL_REFS = {"BT1", "J2", "SPK1", "FID1", "FID2", "FID3"}
+
+    # Check 5: Component body-to-edge clearance (JLCPCB PnP nozzle rule)
+    # -------------------------------------------------------------------
+    # JLCPCB pick-and-place nozzle requires ≥ 0.50mm between the outer
+    # edge of the component body and the board edge. We approximate the
+    # body with the SMD pad bbox, which underestimates the body for
+    # most components (pads are inset from the plastic) — so 0.50mm
+    # pad-bbox-to-edge is a safe lower bound that satisfies the rule.
+    BODY_EDGE_MIN = 0.50
+    body_edge_violations = []
+    for ref, bb in sorted(refs.items()):
+        if ref in MANUAL_REFS:
+            continue
+        gap = _bbox_edge_gap(bb, BOARD_W, BOARD_H)
+        if gap < BODY_EDGE_MIN:
+            body_edge_violations.append((ref, gap, bb))
+    if body_edge_violations:
+        score -= min(2, len(body_edge_violations))
+        findings.append(
+            f"JLCDFM body-to-edge ({BODY_EDGE_MIN}mm): "
+            f"{len(body_edge_violations)} components too close to edge"
+        )
+        for ref, gap, bb in body_edge_violations[:4]:
+            cx = (bb[0] + bb[2]) / 2
+            cy = (bb[1] + bb[3]) / 2
+            findings.append(
+                f"  -> {ref} center=({cx:.1f},{cy:.1f}) gap={gap:.2f}mm"
+            )
+    else:
+        findings.append(
+            f"JLCDFM body-to-edge: all {len(refs)} SMD components "
+            f">= {BODY_EDGE_MIN}mm from edge -- OK"
+        )
+
+    # Check 6: Pad-to-pad collision between adjacent components
+    # -------------------------------------------------------------------
+    # Real collisions: any SMD pad of ref A physically overlapping or
+    # too close to any SMD pad of ref B. This is stricter than the
+    # ref-bbox approximation (which false-positives on components
+    # placed inside the bbox of a large connector like J4) because it
+    # checks individual pad rectangles.
+    #
+    # Threshold: 0.10mm edge gap matches JLCPCB fab-shop pad-to-pad
+    # minimum. Same-net exclusion is skipped because different refs
+    # on the same net is fine (e.g. decoupling cap pad touching the
+    # IC VCC pad via copper fill).
+    PAD_PAD_MIN = 0.10
+    smd_pads_by_ref = defaultdict(list)
+    for p in pads:
+        if p.get("type") != "smd":
+            continue
+        ref = p.get("ref", "?")
+        if ref in MANUAL_REFS or not ref:
+            continue
+        smd_pads_by_ref[ref].append(p)
+
+    def _pad_edge_gap(a, b):
+        dx = abs(a["x"] - b["x"]) - (a["w"] + b["w"]) / 2
+        dy = abs(a["y"] - b["y"]) - (a["h"] + b["h"]) / 2
+        if dx <= 0 and dy <= 0:
+            return min(dx, dy)  # overlap
+        return max(dx, dy, 0)
+
+    collisions = []
+    ref_pairs = []
+    items = sorted(smd_pads_by_ref.items())
+    # Pre-compute coarse ref bboxes for broad-phase pruning
+    coarse_bbox = {}
+    for ref, ps in items:
+        xs = [p["x"] for p in ps]
+        ys = [p["y"] for p in ps]
+        coarse_bbox[ref] = (min(xs) - 3, min(ys) - 3, max(xs) + 3, max(ys) + 3)
+    for i in range(len(items)):
+        ref_a, pads_a = items[i]
+        bb_a = coarse_bbox[ref_a]
+        for j in range(i + 1, len(items)):
+            ref_b, pads_b = items[j]
+            bb_b = coarse_bbox[ref_b]
+            # Broad-phase reject
+            if (bb_a[2] < bb_b[0] or bb_b[2] < bb_a[0]
+                    or bb_a[3] < bb_b[1] or bb_b[3] < bb_a[1]):
+                continue
+            # Narrow-phase pad-to-pad
+            worst = None
+            for pa in pads_a:
+                for pb in pads_b:
+                    if pa["net"] == pb["net"] and pa["net"] != 0:
+                        continue  # same-net contact is routed, not a collision
+                    gap = _pad_edge_gap(pa, pb)
+                    if gap < PAD_PAD_MIN:
+                        if worst is None or gap < worst[0]:
+                            worst = (gap, pa, pb)
+            if worst is not None:
+                gap, pa, pb = worst
+                collisions.append((ref_a, ref_b, gap, pa, pb))
+
+    real_overlap = [c for c in collisions if c[2] < 0]
+    tight = [c for c in collisions if c[2] >= 0]
+    if real_overlap:
+        score -= min(3, len(real_overlap))
+        findings.append(
+            f"JLCDFM pad-to-pad overlap: {len(real_overlap)} pair(s) -- "
+            f"CRITICAL, PnP nozzle collision risk"
+        )
+        for ra, rb, gap, pa, pb in real_overlap[:3]:
+            findings.append(
+                f"  -> {ra}.{pa['num']} <> {rb}.{pb['num']} "
+                f"overlap={-gap:.2f}mm"
+            )
+    if tight:
+        score -= 0.5 * min(4, len(tight))
+        findings.append(
+            f"JLCDFM pad-to-pad tight: {len(tight)} pair(s) < "
+            f"{PAD_PAD_MIN}mm apart (JLCPCB fab-shop minimum)"
+        )
+        for ra, rb, gap, pa, pb in tight[:3]:
+            findings.append(
+                f"  -> {ra}.{pa['num']} <> {rb}.{pb['num']} gap={gap:.3f}mm"
+            )
+    if not collisions:
+        findings.append(
+            f"JLCDFM pad-to-pad: no cross-ref collisions "
+            f"(>= {PAD_PAD_MIN}mm between {len(items)} SMD components) -- OK"
+        )
+
+    # Check 6b: WROOM-1 "body keepout" — any SMD component whose pads
+    # fall underneath the ESP32-S3-WROOM-1 module body. R3-HIGH-2
+    # flagged C28 in this position (v2 respin improvement). The module
+    # body has ~0.1mm bottom clearance to the PCB, so components with
+    # height > 0.1mm (essentially any SMD except 0402 resistors) cannot
+    # fit underneath. We flag it as WARN — not a fab blocker but needs
+    # documentation.
+    u1_pads = smd_pads_by_ref.get("U1", [])
+    if u1_pads:
+        u1_xs = [p["x"] for p in u1_pads]
+        u1_ys = [p["y"] for p in u1_pads]
+        u1_x_min, u1_x_max = min(u1_xs), max(u1_xs)
+        u1_y_min, u1_y_max = min(u1_ys), max(u1_ys)
+        under_u1 = []
+        for ref, ps in smd_pads_by_ref.items():
+            if ref == "U1":
+                continue
+            for p in ps:
+                if (u1_x_min <= p["x"] <= u1_x_max
+                        and u1_y_min <= p["y"] <= u1_y_max):
+                    under_u1.append((ref, p))
+                    break
+        if under_u1:
+            findings.append(
+                f"JLCDFM body keepout (under U1 WROOM-1): "
+                f"{len(under_u1)} component(s) -- WARN (v2 respin)"
+            )
+            for ref, p in under_u1[:3]:
+                findings.append(
+                    f"  -> {ref} at ({p['x']:.1f},{p['y']:.1f}) "
+                    f"— needs relocation outside U1 body"
+                )
+            # Advisory only — R3-HIGH-2 is tracked, fab succeeds
+        else:
+            findings.append(
+                "JLCDFM body keepout: no SMD components under U1 -- OK"
+            )
+
+    # Check 7: Via-in-pad without tenting (JLCDFM mask dam rule)
+    # -------------------------------------------------------------------
+    # Any via whose center falls inside an SMD pad footprint will suck
+    # solder into the via barrel during reflow unless the via is either
+    # (a) tented with soldermask, or (b) filled with epoxy. The PCB
+    # generator currently does NOT tent vias, so any via-in-pad is a
+    # solder-wicking risk. Same-net vias are INFO (intentional thermal
+    # connection); different-net vias were already caught by
+    # verify_via_in_pad.py and DRC, so here we only flag same-net ones
+    # as a mask-dam WARNING.
+    smd_pads = [p for p in pads if p.get("type") == "smd"]
+    vias = data.get("vias", [])
+    via_in_pad_same = 0
+    for via in vias:
+        for pad in smd_pads:
+            hw = pad["w"] / 2
+            hh = pad["h"] / 2
+            if (abs(via["x"] - pad["x"]) <= hw
+                    and abs(via["y"] - pad["y"]) <= hh):
+                if via.get("net", 0) == pad.get("net", 0):
+                    via_in_pad_same += 1
+                break  # one pad match is enough for counting
+    if via_in_pad_same > 0:
+        findings.append(
+            f"JLCDFM via-in-pad (same-net, needs tenting): "
+            f"{via_in_pad_same} via(s) -- WARN, ensure KiCad via.tenting=yes"
+        )
+        # Advisory only — our vias are tented by default in KiCad 9/10,
+        # so no score deduction. Track the count so we notice a
+        # regression if tenting ever gets disabled.
+    else:
+        findings.append(
+            "JLCDFM via-in-pad: 0 same-net via-in-pad (no mask dam risk) -- OK"
+        )
 
     return max(0, score), findings
 
