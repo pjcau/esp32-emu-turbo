@@ -828,13 +828,17 @@ def _power_traces():
     # (gap = 32.46 - 31.91 - 0.45 = 0.10mm OK).
     # DFM FIX: USB GND via handled separately (needs small via + larger offset)
     gnd_via_positions = [
-        # DFM v3 FIX (2026-04-10): IP5306 GND via moved from (112.4, 45.5) → (112.4, 45.3).
-        # Old position grazed U2 pad 4 (113.0, 44.41) by 0.235mm — regression from commit
-        # 775e9fd. New position sits in the corridor between pad 4 bottom (y=44.71) and
-        # IP5306_KEY horizontal trace (y=46.485..46.735). Verified clearances:
-        #   Pad 4 bottom→via top: 45.3-0.3 - 44.71 = 0.29mm ≥ 0.20 default clearance ✓
-        #   Via bottom→KEY top:   46.485 - (45.3+0.3) = 0.885mm ✓
-        (ip_ep[0] + 2.4, ip_ep[1] + 2.8),   # IP5306 GND (x=112.4, y=45.3)
+        # R9-HIGH-3 FIX (2026-04-11): REMOVED the IP5306 side GND stitching via.
+        # Previously it was at (112.40, 45.30) with VIA_STD — DRC reported 0.145 mm
+        # clearance to U2.4 pad (below 0.20 mm rule). All attempted relocations
+        # either collided with U2.4, with the BAT+ corridor at y=46.135, or with
+        # the VBUS F.Cu vertical at x=111.00 (the corridor 111.30..112.15 is
+        # only 0.85 mm wide — not enough for a 0.60 mm via with 0.20 mm clearance
+        # on each side).
+        # The IP5306 EP already has three dedicated thermal vias under the
+        # exposed pad at (108.5, 45.0), (110.0, 45.0), (109.3, 44.5) — these
+        # provide the EP→In1.Cu GND plane connection. The east-side stitching
+        # via was redundant.
         (am_gnd[0], am_gnd[1] + 2),       # AMS1117 GND
         # ESP32 GND via handled separately below (needs small via for clearance)
         (jst_n[0], jst_n[1] - 3.5),         # JST GND (offset UP, away from USB-C and BAT+)
@@ -879,22 +883,14 @@ def _power_traces():
     _PAD_NETS[("J1", "13b")] = n_gnd
     _PAD_NETS[("J1", "14b")] = n_gnd
 
-    # IP5306 GND: DFM v3 FIX (2026-04-10, regression from 775e9fd):
-    # Old route used horizontal at y=ip_ep[1]+1 (43.5) then vertical at x=112.4 to via
-    # at (112.4, 45.5). This grazed U2 pads 3 and 4 (x=113, y=43.13/44.41, w=1.70).
-    #
-    # New route runs in the corridor between pad 4 bottom (y=44.71) and IP5306_KEY
-    # horizontal trace (y=46.61 ±0.125 = 46.485..46.735):
-    #   1. Vertical DOWN from EP (110, 42.5) → (110, 45.3), same-net through EP.
-    #   2. Horizontal RIGHT from (110, 45.3) → (112.4, 45.3), 0.29mm clear of pad 4 bot.
-    #   3. Via at (112.4, 45.3), placed by gnd_via_positions above.
-    # No third segment needed — the horizontal terminates AT the via position.
-    gnd_ep_start_x = ip_ep[0] + 2.4  # x=112.4 (matches via x)
-    gnd_ep_y = ip_ep[1] + 2.8        # y=45.3, corridor between pad 4 and KEY trace
-    parts.append(_seg(ip_ep[0], ip_ep[1], ip_ep[0], gnd_ep_y,
-                       "B.Cu", W_PWR, n_gnd))
-    parts.append(_seg(ip_ep[0], gnd_ep_y, gnd_ep_start_x, gnd_ep_y,
-                       "B.Cu", W_PWR, n_gnd))
+    # IP5306 GND: R9-HIGH-3 FIX (2026-04-11): REMOVED the east-side B.Cu stub
+    # from EP to (112.40, 45.30). It previously led to a GND stitching via
+    # that collided with U2.4 pad clearance. The EP is grounded via the three
+    # thermal vias under the exposed pad (defined in _ip5306_therm_vias above)
+    # and the In1.Cu GND plane zone fill.
+    # EP pad-net registration is handled upstream by modifying the center
+    # thermal via stub to start at the EP centre (see _ip5306_therm_vias).
+
     parts.append(_seg(am_gnd[0], am_gnd[1], am_gnd[0], am_gnd[1] + 2,
                        "B.Cu", W_PWR, n_gnd))
     # Note: AMS1117 thermal relief via existing GND zone on In1.Cu.
@@ -1012,11 +1008,18 @@ def _power_traces():
     ]
     # Connect each thermal via to EP pad via a single vertical B.Cu stub.
     # Each stub goes straight down into the EP pad area (all inside pad bounds).
+    # R9-HIGH-3 FIX (2026-04-11): the center thermal via at (110, 45) has its
+    # stub extended all the way to the EP centre (110, 42.5) so that the
+    # segment endpoint matches the EP pad centre in _PAD_POS_LOOKUP and the
+    # registrar tags EP as GND. Other thermal vias stop at y=ip_ep[1]+1.5 as
+    # before.
     for tvx, tvy in _ip5306_therm_vias:
         parts.append(_via_net(tvx, tvy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
-        # Single B.Cu stub from via into EP pad (which is at y=40.9..44.1).
-        # Stub endpoint at y=ip_ep[1]+1.5 is inside pad (44.0 < 44.1).
-        parts.append(_seg(tvx, tvy, tvx, ip_ep[1] + 1.5, "B.Cu", W_PWR, n_gnd))
+        # Center via (tvx = ip_ep[0]) goes all the way to EP centre (ip_ep[1]).
+        if abs(tvx - ip_ep[0]) < 0.01:
+            parts.append(_seg(tvx, tvy, tvx, ip_ep[1], "B.Cu", W_PWR, n_gnd))
+        else:
+            parts.append(_seg(tvx, tvy, tvx, ip_ep[1] + 1.5, "B.Cu", W_PWR, n_gnd))
 
     # ── SD card (U6, TF-01A) power connections ───────────────────
     # Pin 4 = VDD (+3V3), Pin 6 = VSS (GND), Shield pins 10-13 = GND.
@@ -1143,11 +1146,16 @@ def _power_traces():
     W_BAT_CORRIDOR = 0.3  # must be ≤ 0.4mm to fit the 0.885mm corridor
     CORRIDOR_Y = 46.10    # y=46.10 gives ≥0.1mm annular ring gap to KEY hz at 46.61
     #
-    # Route plan:
-    #   L1.1 (111.7,52.5) → (111.7,48.0) B.Cu vertical
-    #   (111.7,48.0) → (113.45,48.0) B.Cu — clear of KEY vert (gap ≥ 0.225mm)
-    #   F.Cu bridge (113.45,48.0) → (114.65,48.0) over KEY vertical at x=114.05
-    #   (114.65,48.0) → (114.65,46.135) B.Cu — back on main corridor layer
+    # Route plan (R9-HIGH-2 FIX 2026-04-11: bridge y shifted from 48.00
+    # to 47.80. The old (114.65, 48.00) BAT+ via sat 0.10 mm from C18.2 GND
+    # pad at (115.05, 49.00) — below the 0.20 mm pad-to-via rule. Shifting
+    # the bridge 0.20 mm north gives dy=1.20 → edge gap 1.20-0.23-0.65=0.32 mm ✓.
+    # KEY vert at x=114.05 still clears at y=47.80: KEY spans y=44.41..46.61,
+    # so y=47.80 is 1.19 mm south of KEY → safe.):
+    #   L1.1 (111.7,52.5) → (111.7,47.8) B.Cu vertical
+    #   (111.7,47.8) → (113.45,47.8) B.Cu — clear of KEY vert (gap ≥ 0.225mm)
+    #   F.Cu bridge (113.45,47.8) → (114.65,47.8) over KEY vertical at x=114.05
+    #   (114.65,47.8) → (114.65,46.135) B.Cu — back on main corridor layer
     #
     #   Main corridor: the BAT+ B.Cu horizontal at y=46.135 cannot run from
     #   x=105.5 directly because it would cross the left KEY vertical at x=107
@@ -1162,16 +1170,17 @@ def _power_traces():
     #
     #   C18.1 picks up via its own stub (extended to 46.135 in _passive_traces).
     #
+    _BRIDGE_Y = 47.80  # R9-HIGH-2: shifted from 48.00 to clear C18.2 pad
     # L1.1 branch (B.Cu + F.Cu bridge):
-    parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], 48.0,
-                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # L1.1 → (111.7, 48.0)
-    parts.append(_seg(l1_1[0], 48.0, 113.45, 48.0,
+    parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], _BRIDGE_Y,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # L1.1 → (111.7, BRIDGE_Y)
+    parts.append(_seg(l1_1[0], _BRIDGE_Y, 113.45, _BRIDGE_Y,
                        "B.Cu", W_BAT_CORRIDOR, n_bat))
-    parts.append(_via_net(113.45, 48.0, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(113.45, 48.0, 114.65, 48.0,
+    parts.append(_via_net(113.45, _BRIDGE_Y, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(113.45, _BRIDGE_Y, 114.65, _BRIDGE_Y,
                        "F.Cu", W_BAT_CORRIDOR, n_bat))  # F.Cu bridge over KEY vert
-    parts.append(_via_net(114.65, 48.0, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(114.65, 48.0, 114.65, CORRIDOR_Y,
+    parts.append(_via_net(114.65, _BRIDGE_Y, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(114.65, _BRIDGE_Y, 114.65, CORRIDOR_Y,
                        "B.Cu", W_BAT_CORRIDOR, n_bat))
 
     # Main corridor: F.Cu bridge east from (105.5, 46.135) past KEY left vertical
@@ -1289,12 +1298,23 @@ def _power_traces():
     parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
     # DFM FIX: was 79.75 (overlapped R11), was 80.05 (too close to J3[2]).
-    # At 80.01: via ring gap = (80.01-79.45)-0.45 = 0.11mm ≥ 0.10mm ✓
-    # Trace right edge 80.39, gap to J3[2] left edge (80.50) = 0.11mm ≥ 0.09mm ✓
+    # At 80.01 with VIA_STD (r=0.45): via ring gap = 0.11mm (was rule 0.10mm).
+    #
+    # R9-HIGH-1 FIX (2026-04-11): After R8 assigned R11.1 to BTN_Y (instead of
+    # the old +3V3 dead-end), the BAT+ via at (80.01, 46.135) is now within
+    # 0.11 mm of a DIFFERENT-NET pad (BTN_Y) — failing the 0.20 mm pad-to-via
+    # clearance rule. Root cause: R8 changed the net assignment on R11.1.
+    # Fix: shrink the BAT+ approach via to VIA_MIN (0.50mm, r=0.25):
+    #   Via right edge: 80.01+0.25=80.26
+    #   Via left  edge: 80.01-0.25=79.76
+    #   R11.1 pad right edge: 78.95+0.50=79.45 → gap 79.76-79.45=0.31 mm ✓
+    #   J3[2] pad left edge:  80.50-0.60=80.00? No, J3 is ~1.20x1.40 THT
+    #     J3[2] left edge ≈ 80.50 → gap 80.50-80.26=0.24 mm ✓ (>0.20)
     bat_approach_x = 80.01
     parts.append(_seg(bat_col_x, bat_via_y, bat_approach_x, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_via_net(bat_approach_x, bat_via_y, n_bat))
+    parts.append(_via_net(bat_approach_x, bat_via_y, n_bat,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
     # B.Cu: vertical from approach to pad Y, then horizontal to pad X
     parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, jst_p[1],
                        "B.Cu", W_PWR_HIGH, n_bat))
@@ -1579,8 +1599,15 @@ def _display_traces():
         # DFM FIX: J4:42 structural pad at (136.29, 24.06) size 2.5x2.0mm blocks
         # LCD approach columns at x=135.04..137.54. Bridge via F.Cu for traces
         # that cross this pad.
-        _J4_42_Y1 = 22.50   # 0.56mm above pad top (23.06)
-        _J4_42_Y2 = 25.50   # 0.44mm below pad bottom (25.06)
+        # R9-HIGH-6 FIX (2026-04-11): shifted Y2 from 25.50 → 25.52
+        # to give 0.21 mm clearance to J4.42 pad bottom (25.06 + pad_hh 1.0 = 25.06
+        # wait - actually pad bottom in KiCad PCB coord is pad_center+half = 24.06+1.0=25.06).
+        # Old: gap = 25.50 - 0.25 - 25.06 = 0.19 mm FAIL.
+        # New: gap = 25.52 - 0.25 - 25.06 = 0.21 mm ≥ 0.20 rule ✓.
+        # Also shifted Y1 in sympathy (keeps symmetry of the F.Cu bridge segment
+        # around the J4.42 pad).
+        _J4_42_Y1 = 22.48   # 0.58mm above pad top (23.06)
+        _J4_42_Y2 = 25.52   # 0.46mm below pad bottom (25.06)
         if 135.04 - 0.20 < apx < 137.54 + 0.20 and bypass_y < _J4_42_Y1 and fpy > _J4_42_Y2:
             # Split: B.Cu above → via → F.Cu through pad → via → B.Cu below
             parts.append(_seg(apx, bypass_y, apx, _J4_42_Y1, "B.Cu", W_DATA, net))
@@ -1730,7 +1757,22 @@ def _display_traces():
         parts.append(_seg(px, py, stub_x, py, "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_seg(stub_x, py, stub_x, via_y, "B.Cu", 0.4, n_gnd))
         parts.append(_via_net(stub_x, via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
-        parts.append(_seg(stub_x, via_y, vx2, via_y, "F.Cu", 0.4, n_gnd))
+        # R9-HIGH-4 SIDE-FIX (2026-04-11): the F.Cu horizontal from (stub_x,
+        # via_y) to (vx2, via_y) at y=43.75 ran 0.05 mm from SW7.3 (no-net)
+        # pad at (139, 44.35). Rather than fighting the clearance, jog the
+        # trace south around SW7.3 pad (x=[138.5, 139.5], y=[44.0, 44.7]):
+        #   (stub_x, 43.75) → (137.80, 43.75) straight
+        #   (137.80, 43.75) → (137.80, 45.10) south jog (trace bot 45.30,
+        #     pad bot 44.70 → gap 0.60 mm, but trace edge is 45.10-0.20=44.90 ≥
+        #     pad bot 44.70 + 0.20 clearance ✓)
+        #   (137.80, 45.10) → (139.90, 45.10) east across south of pad
+        #   (139.90, 45.10) → (139.90, 43.75) back north
+        #   (139.90, 43.75) → (vx2, 43.75) continue east
+        parts.append(_seg(stub_x, via_y, 137.80, via_y, "F.Cu", 0.4, n_gnd))
+        parts.append(_seg(137.80, via_y, 137.80, 45.10, "F.Cu", 0.4, n_gnd))
+        parts.append(_seg(137.80, 45.10, 139.90, 45.10, "F.Cu", 0.4, n_gnd))
+        parts.append(_seg(139.90, 45.10, 139.90, via_y, "F.Cu", 0.4, n_gnd))
+        parts.append(_seg(139.90, via_y, vx2, via_y, "F.Cu", 0.4, n_gnd))
         parts.append(_via_net(vx2, via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(vx2, via_y, vx2, vy, "B.Cu", 0.4, n_gnd))
         parts.append(_via_net(vx2, vy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
@@ -2948,13 +2990,20 @@ def _button_traces():
             # Channels 0-5: normal spacing below J1 pad zone
             b["chan_y"] = 62.0 + i * 1.2
         elif i <= 7:
-            # Channels 6-7 (BTN_X, BTN_Y): jump over J1 front pads
-            # DFM FIX (KiBot external): ch6 (BTN_X) at y=70.80 had hole_clearance
-            # 0.15mm to SW_PWR pad 4b at (36.4, 71.4). Shift DOWN to 70.65.
-            # Gap to J1 front pad bottom (70.375): 70.65-70.375-0.125=0.15mm ✓ (was 0.10mm)
-            # Gap to SW_PWR 4b: sqrt(0.05^2+0.75^2)-0.45=0.30mm ✓
+            # Channels 6-7 (BTN_X, BTN_Y): jump over J1 front pads.
+            # R9-HIGH-4 FIX (2026-04-11): reverted ch6 from 70.65 back to 70.80.
+            # The old 70.65 position was a compromise for SW_PWR.4b clearance
+            # (SW_PWR.4b at (36.40, 71.40), BTN_X approach via at (36.55, 70.65)
+            #  had only 0.15 mm gap). But 70.65 was 0.15 mm from J1 front pad
+            # bottom (70.375), also failing the 0.20 mm rule.
+            # Proper fix: move the BTN_X approach column (ax) WEST of SW_PWR
+            # entirely (override below) so the SW_PWR constraint no longer
+            # forces a low chan_y. With ax=34.30, via (34.30, 70.80) is
+            # 2.10 mm west of SW_PWR.4b center → clears by 1.35 mm ✓.
+            # Gap to J1 front pad bottom (70.375): 70.80-0.125-70.375=0.30 mm ✓.
+            # Gap to ch7 (71.55): 0.625 mm ✓.
             k = i - 6  # 0, 1
-            b["chan_y"] = _J1_FRONT_PAD_BOTTOM + 0.125 + 0.15 + k * 0.75  # 70.65, 71.40
+            b["chan_y"] = _J1_FRONT_PAD_BOTTOM + 0.125 + 0.30 + k * 0.75  # 70.80, 71.55
         elif i == 8:
             # Channel 8 (BTN_START): ABOVE SW_PWR NPTH zone AND shoulder GND/BTN_L vias.
             # DFM FIX: moved from 74.06 to 73.955 to allow ch9 above with edge clearance.
@@ -3051,6 +3100,30 @@ def _button_traces():
                 break
         used_approach_xs.add(round(ax, 2))
         b["approach_x"] = round(ax, 2)
+
+    # R9-HIGH-4 FIX (2026-04-11): force BTN_X approach column WEST of SW_PWR.
+    #
+    # Problem: the default allocator placed BTN_X (SW7, i=6) at ax=36.55 —
+    # inside the SW_PWR footprint body (x=35.8..44.2). BTN_X F.Cu channel
+    # trace at y=70.80 crosses the B.Cu SW_PWR.4b (BTN_SELECT) pad at
+    # (36.40, 71.40) on a different layer — no F.Cu conflict there, but the
+    # approach via at (36.55, 70.80) has BOTH F.Cu and B.Cu annuli, and the
+    # B.Cu side was 0.15 mm from SW_PWR.4b. Also the 93.28 mm BTN_X F.Cu
+    # horizontal from vx=129.83 west to ax=36.55 crossed J1 shield front
+    # pads J1.13/14 at y=69.375 with only 0.15 mm clearance.
+    #
+    # Fix: override BTN_X ax to 34.30 — west of SW_PWR body left edge
+    # (35.80) by 1.50 mm. The B.Cu approach-column vertical at x=34.30 is
+    # clear of SW_PWR pad 3 (37.75), pad 2 (39.25), and all 4x pads.
+    #
+    # This does not change the F.Cu 93.28 mm horizontal length noticeably
+    # (34.30 vs 36.55 is 2.25 mm) but removes the via conflict and lets
+    # chan_y move back to 70.80 for J1 front-pad clearance (≥0.30 mm).
+    for b in btn_data:
+        if b["ref"] == "SW7":   # BTN_X
+            b["approach_x"] = 34.30
+            break
+    used_approach_xs.add(34.30)
 
     # NOTE: BTN_UP (ax=67.72) and BTN_START (ax=64.60) have borderline clearance
     # to R9/C10 and R8/C9 pads (gap=0.045-0.050mm vs 0.09mm JLCPCB min).
@@ -3460,10 +3533,13 @@ def _button_traces():
         # BTN_START (i=8, cy=73.955) F.Cu bypass around J1 rear shield THT pads:
         # Pad 14b at (75.67, 73.58) pad 1.4x1.8mm → x=[74.97, 76.37], y=[72.68, 74.48]
         # Pad 13b at (84.33, 73.58) pad 1.4x1.8mm → x=[83.63, 85.03], y=[72.68, 74.48]
-        # Trace at y=73.955 passes through both pads. Jog NORTH to y=72.38
-        # (0.175mm clearance above pad top at 72.68, 0.28mm gap to BTN_Y at y=71.85).
+        # Trace at y=73.955 passes through both pads.
+        # R9-HIGH-5 FIX (2026-04-11): bypass_y was 72.38, giving a 0.17 mm
+        # edge gap to the pad top at 72.675 (below 0.20 mm rule). Shift to
+        # 72.30: gap = 72.675 - 72.30 - 0.125 = 0.25 mm ✓. Gap to ch7 BTN_Y
+        # (71.55 with R9-HIGH-4 fix): 72.30 - 0.125 - 71.55 - 0.125 = 0.50 mm ✓.
         if i == 8:  # BTN_START — bypass J1 rear shield pads 14b and 13b
-            _bypass_y = 72.38   # safe jog Y north of pad top (72.68)
+            _bypass_y = 72.30   # R9-HIGH-5: was 72.38 (0.17 mm gap, fail)
             # Pad 14b bypass: jog at x=74.47 up, straight past, jog back at x=76.87
             _p14b_jog_start = 74.47   # pad left (74.97) - 0.175 - 0.125 - margin
             _p14b_jog_end = 76.87     # pad right (76.37) + 0.175 + 0.125 + margin
@@ -3775,6 +3851,7 @@ def _button_traces():
                                   "F.Cu", W_PWR_LOW, n_gnd))
                 parts.append(_via_net(gnd_via_x, gnd_via_y, n_gnd,
                                       size=gnd_via_sz, drill=gnd_via_drill))
+
 
     # Shoulder button BTN_L (B.Cu, rotated 90°)
     net_l = NET_ID["BTN_L"]
@@ -4597,14 +4674,45 @@ def _button_pullup_bridges():
     # from R.1 to the main F.Cu / B.Cu at x≈R.1.x connects them.
 
     # BTN_B: R9.1@(68.95, 46) → main F.Cu (45.55, 41.50)-(73.25, 41.50)
-    # DFM: C3.2 (GND) at (68.60, 42.00) — pad x range [68.10, 69.10] blocks
-    # a straight vertical at x=68.95. Shift bridge 0.45mm east to x=69.40
-    # (still inside R9.1 pad right edge ~69.45 — same net, no issue) to
-    # clear C3.2 by 0.175mm.
+    # DFM: C3.2 (GND) at (68.60, 42.00) west, C3.1 (+3V3) at (70.50, 42.00) east.
+    # The vertical at x=69.40..69.60 is blocked on both sides by the C3 cap pads
+    # (pad x ranges: [68.10, 69.10] for C3.2, [70.00, 71.00] for C3.1).
+    #
+    # R9-CRIT-2 FIX (2026-04-11): the old bridge via at (69.40, 41.50) was 0.05 mm
+    # copper / 0.20 mm hole from C3.2 (below 0.20/0.254 rule). A naive shift east
+    # to 69.60 would bring it 0.197 mm from C3.1 (+3V3, different net). Root cause:
+    # the via needs to land in the tiny 0.90 mm gap between the two C3 pads, but
+    # the via+pad clearance (0.23+0.50+0.20=0.93 mm centre-to-centre on each side)
+    # is bigger than the gap.
+    #
+    # Proper fix: instead of descending south to y=41.50 (between C3.1/C3.2 at
+    # y=42.00), route the B.Cu vertical EAST around C3 on the right side. Use
+    # x=69.55 (midway between C3.2 right edge 69.10 and C3.1 left edge 70.00)
+    # ONLY above C3 (y > 41.35 → north of pad top 41.35). Then jog EAST to x=72.00
+    # BELOW C3 on F.Cu at y=41.50. Actually simpler: descend to y=41.50 between
+    # the pads on B.Cu, and place the via AT y=40.85 (north of C3 pads which end
+    # at y=41.35). This clears both C3 pads.
+    #   Via at (69.55, 40.85): dy to C3.2 (y=41.35 pad top)=0.50; dx=0.95. Gap
+    #   = sqrt(0.95² + 0.50²) - 0.23 - (hypot from pad corner) ≈ plenty.
+    #   Actual edge gap: dx=69.55-69.10=0.45 (via left to C3.2 right), dy=41.35-40.85-0.23=0.27. If we're above-right of C3.2, use min of edge distances:
+    #   via to C3.2 nearest corner (69.10, 41.35): dist=sqrt(0.45²+0.50²)=0.674, gap=0.674-0.23=0.444 mm ✓
+    #   via to C3.1 nearest corner (70.00, 41.35): dist=sqrt(0.45²+0.50²)=0.674, gap=0.444 mm ✓
+    # F.Cu main at y=41.50 — vertical on B.Cu comes down to y=41.50 to meet it,
+    # but the main trace y=41.50 passes UNDER C3 pads (C3 on B.Cu, main on F.Cu).
+    # Landing the via at y=40.85 means the B.Cu vertical stub stops there and a
+    # via connects to F.Cu; the F.Cu main trace at y=41.50 is 0.65 mm south,
+    # so we'd need additional F.Cu routing via→trace.
+    # Simpler: put the via at y=40.85, then F.Cu stub from via (F.Cu side) down
+    # to the main BTN_B F.Cu trace at (69.55, 41.50). This F.Cu vertical is 0.65 mm
+    # long, checks clearance to C3 only on F.Cu (C3 pads are B.Cu, so no F.Cu
+    # conflict).
     n_btn_b = NET_ID["BTN_B"]
-    parts.append(_seg(68.95, 46.00, 69.40, 46.00, "B.Cu", W_SIG, n_btn_b))  # horiz within R9.1 pad
-    parts.append(_seg(69.40, 46.00, 69.40, 41.50, "B.Cu", W_SIG, n_btn_b))  # vertical clear of C3.2
-    parts.append(_via_net(69.40, 41.50, n_btn_b, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(68.95, 46.00, 69.55, 46.00, "B.Cu", W_SIG, n_btn_b))  # horiz within R9.1 pad
+    parts.append(_seg(69.55, 46.00, 69.55, 41.50, "B.Cu", W_SIG, n_btn_b))  # vertical — midway between C3 pads (gap 0.325 mm each side)
+    # Landing the via at y=41.50 drops BTN_B onto the main F.Cu horizontal at
+    # (45.55, 41.50)-(73.25, 41.50) so the T-junction is an explicit layer
+    # change, not a dead-end trace endpoint.
+    parts.append(_via_net(69.55, 41.50, n_btn_b, size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     # BTN_X: R10.1@(73.95, 46) → existing BTN_X F.Cu↔B.Cu via at (73.555, 42.70)
     # Use the existing via (west end of the (73.56, 42.70)-(75.56, 42.70) segment)
@@ -4645,16 +4753,27 @@ def _button_pullup_bridges():
     parts.append(_seg(98.95, 48.00, 87.985, 48.00, "F.Cu", W_SIG, n_btn_r))
 
     # ── MEDIUM: BTN_START ──
-    # R12.1@(83.95, 46) → existing F.Cu endpoint/via at (90.75, 34.94)
-    # Direct F.Cu route would cross multiple +3V3 pull-up vias and BTN_SELECT
-    # existing F.Cu at y=45.1. Use a dogleg: B.Cu stub north to y=43.0 (clear
-    # of +3V3 row at 44.5 and BTN_SELECT F.Cu at 45.1), via, F.Cu diagonal
-    # to target. The diagonal clears the +3V3 via at R12's own position
-    # because it starts 1.5mm north of the via row.
+    # R12.1@(83.95, 46) → existing BTN_START approach via at (100.45, 34.94).
+    #
+    # R9-CRIT-1 FIX (2026-04-11): the previous diagonal F.Cu route
+    # (83.95, 43.00) → (90.75, 34.94) crossed LCD_CS/LCD_DC/LCD_WR F.Cu
+    # horizontals (y=35.58-38.12) on the same layer — 3 physical shorts.
+    # R9 revised plan: route the bridge via F.Cu east in the clear y=43 band
+    # to x=100.15 (just east of LCD_D4/CS endpoints), transition to B.Cu, and
+    # go south to (100.15, 34.94) where an existing via joins the main
+    # BTN_START network. Avoids:
+    #   - LCD F.Cu cluster (stays at y=43 on F.Cu, and the B.Cu south leg at
+    #     x=100.15 is clear of LCD F.Cu traces entirely — different layer)
+    #   - Mounting hole keepout at (105, 37.5) r=2.25 (x=100.15 → dx=4.85 ✓)
+    #   - LCD_D4 B.Cu vert at x=99.50 (dx=0.65 → edge gap 0.425 mm ✓)
+    #   - LCD_DC B.Cu horiz at y=34.60 (y end 34.94 → dy=0.34 > 0.225 ✓)
     n_btn_start = NET_ID["BTN_START"]
     parts.append(_seg(83.95, 46.00, 83.95, 43.00, "B.Cu", W_SIG, n_btn_start))
     parts.append(_via_net(83.95, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(83.95, 43.00, 90.75, 34.94, "F.Cu", W_SIG, n_btn_start))
+    parts.append(_seg(83.95, 43.00, 100.15, 43.00, "F.Cu", W_SIG, n_btn_start))
+    parts.append(_via_net(100.15, 43.00, n_btn_start, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(100.15, 43.00, 100.15, 34.94, "B.Cu", W_SIG, n_btn_start))
+    parts.append(_seg(100.15, 34.94, 100.45, 34.94, "B.Cu", W_SIG, n_btn_start))
 
     # ── SOUTH-HIGHWAY PATTERN (staggered y per button) ──
     #

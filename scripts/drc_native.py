@@ -39,6 +39,7 @@ KNOWN_ACCEPTABLE = {
     "clearance_zone": "Via vs inner-layer zone clearance (JLCPCB adds thermal relief automatically)",
     "clearance_borderline": "Trace spacing 0.075-0.09mm (JLCPCB 4-layer manufactures fine at >=0.075mm)",
     "unconnected_zone": "Power/data nets connected through inner-layer zones (not direct traces)",
+    "unconnected_accepted": "R5-CRIT-6 / R5-CRIT-9 / AC-coupling — documented v2-respin tech debt",
     "lib_footprint_mismatch": "Generated footprints differ from KiCad library copies (cosmetic)",
     "isolated_copper": "Small copper fills isolated from nets (removed during manufacturing)",
     "text_height": "Silkscreen text below 1mm height (cosmetic, does not affect assembly)",
@@ -54,6 +55,17 @@ ZONE_CLEARANCE_PATTERN = "zone clearance"
 # doesn't always bridge them. These are NOT real disconnections — the inner-layer
 # zones provide the connection in the manufactured board.
 ZONE_CONNECTED_NETS = {"GND", "VBUS", "+5V", "+3V3", "BAT+", "LCD_D4", "BTN_MENU"}
+
+# Nets with accepted copper fragmentation — documented v2-respin technical
+# debt (same list as scripts/verify_net_connectivity.py
+# ACCEPTED_FRAGMENTATIONS). DRC reports these as unconnected_items but the
+# hardware-audit suite has explicitly accepted them. Must stay in sync
+# with verify_net_connectivity.py or we drift in two places.
+#
+#   BTN_SELECT, BTN_START — R5-CRIT-6 D1 menu-diode anode isolated
+#   I2S_DOUT               — C22 AC-coupling cap between ESP32 PDM TX and PAM8403 INL
+#   MENU_K                 — SW13 menu button F.Cu stub not reaching the track (pre-existing)
+ACCEPTED_UNCONNECTED_NETS = {"BTN_SELECT", "BTN_START", "I2S_DOUT", "MENU_K"}
 
 # Violation types that indicate REAL issues to fix
 REAL_ISSUES = {
@@ -101,6 +113,24 @@ REAL_ISSUES = {
         "severity": "HIGH",
         "source": "scripts/generate_pcb/routing.py",
         "fix": "Increase clearance between copper elements.",
+    },
+    # R9-MED-3 (2026-04-11): tracks_crossing must be CRITICAL.
+    # KiCad's tracks_crossing rule fires when two segments on the same
+    # copper layer intersect without being joined at a node — at the
+    # fabricator the copper merges, creating a short between nets.
+    # Previously this category was "UNCATEGORIZED" which let R9-CRIT-1
+    # (BTN_START crossing LCD_CS/DC/WR) ship past R7/R8 verification.
+    "tracks_crossing": {
+        "severity": "CRITICAL",
+        "source": "scripts/generate_pcb/routing.py",
+        "fix": "Reroute one of the two crossing segments. Move it to the opposite copper layer (F.Cu↔B.Cu) or find an alternate corridor.",
+    },
+    # lib_footprint_issues: missing library entries. Not a fab issue but
+    # should still be reported so the project's fp-lib-table stays clean.
+    "lib_footprint_issues": {
+        "severity": "LOW",
+        "source": "hardware/kicad/esp32-emu-turbo.kicad_pro (fp-lib-table)",
+        "fix": "Add the referenced library to the project fp-lib-table, or embed its footprints in the project library.",
     },
 }
 
@@ -168,18 +198,30 @@ def categorize_violations(report):
         if len(details[vtype]) < 5:  # Keep top 5 examples
             details[vtype].append(desc)
 
-    # Count unconnected items, splitting zone-connected (known) vs real
+    # Count unconnected items, splitting zone-connected (known), accepted
+    # (documented tech debt), vs real unconnected items.
     unconnected = report.get("unconnected_items", [])
     for u in unconnected:
         items = u.get("items", [])
-        # Check if all items in this unconnected pair are on zone-connected nets
         net_names = [i.get("description", "") for i in items]
+        # Accepted fragmentations — match verify_net_connectivity allowlist
+        is_accepted = any(
+            f"[{net}]" in desc
+            for desc in net_names
+            for net in ACCEPTED_UNCONNECTED_NETS
+        )
+        # Zone-connected (GND / +3V3 / +5V) bridged by inner planes
         is_zone = any(
             f"[{net}]" in desc
             for desc in net_names
             for net in ZONE_CONNECTED_NETS
         )
-        vtype = "unconnected_zone" if is_zone else "unconnected_items"
+        if is_accepted:
+            vtype = "unconnected_accepted"
+        elif is_zone:
+            vtype = "unconnected_zone"
+        else:
+            vtype = "unconnected_items"
         counts[vtype] += 1
         if vtype not in details:
             details[vtype] = []

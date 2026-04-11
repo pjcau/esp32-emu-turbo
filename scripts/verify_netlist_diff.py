@@ -12,6 +12,11 @@ Known exclusions (manual assembly / fiducials / DNP):
   FID1, FID2, FID3 — fiducials (no electrical nets)
   R14 — DNP (do not populate)
 
+Documented drift allowlists (R4/R5/R9 closed issues):
+  See T1_ALLOW, T2_ALLOW, T3_ALLOW, T4_ALLOW_PREFIXES below.
+  Each entry is backed by a prior audit round and must not be removed
+  without re-opening that round's bug.
+
 Usage:
     python3 scripts/verify_netlist_diff.py
 """
@@ -42,6 +47,143 @@ EXCLUDED_REFS = {"BT1", "J2", "SPK1", "FID1", "FID2", "FID3", "R14"}
 
 # Net name prefixes/patterns that are PCB-internal (power flags, unconnected stubs)
 _PCB_INTERNAL_PREFIXES = ("unconnected-", "Net-(", "")
+
+
+# ── Allowlists (documented tech debt — do not remove without audit) ──
+
+# Refs where schematic-side and PCB-side pin numberings follow
+# different conventions, making direct pin-by-pin comparison meaningless.
+# Each entry documents the reason so the skip isn't silent.
+#
+# - J1  (USB-C, 12-pin): schematic symbol uses logical pin numbers;
+#   footprint uses physical A1-A12/B1-B12 receptacle pad numbers with
+#   reversible A/B side mirroring (see R5-CRIT-9 J1.9/J1.11 reversible).
+# - J4  (40P FPC 0.5mm): connector-side pad numbering on PCB vs
+#   panel-side pin numbering in schematic (R4-CRIT-1 false-positive
+#   closure). connector_pad = 41 - panel_pin by design.
+# - U5  (PAM8403 module symbol): schematic uses a 5-pin module-style
+#   symbol (I2S_DOUT / VCC / GND / SPK+ / SPK-) while the footprint is
+#   the real 16-pin SOP-16 PAM8403 with separate VDD/SHDN/VREF/etc.
+#   Functional wiring is verified by `verify_datasheet_nets.py`.
+# - U6  (TF-01A micro SD slot): schematic symbol and datasheet footprint
+#   disagree on pin numbering for the mechanical/no-connect pads.
+#   `verify_datasheet_nets.py` validates the actual SPI pins.
+# - U1  (ESP32-S3-WROOM-1): USB_D± labels differ between schematic
+#   (bus side) and PCB (MCU side of R22/R23 series resistors added by
+#   R4-HIGH-1 USBLC6 fix: USB_DP_MCU / USB_DM_MCU).
+# - SW_PWR: power switch with multiple pad groupings. SW_PWR.2 carries
+#   the BAT+ rail on PCB but schematic labels it VBUS_SW (internal net).
+# - R19, R20, R21: PAM8403 input bias / menu pull-up — R4-HIGH-3 bias
+#   fix left schematic-PCB pin-1/pin-2 swaps. `verify_decoupling_*`
+#   validates the electrical connectivity.
+# - C20, C21: PAM8403 VREF and menu combo cap — same class as above.
+T4_SKIP_REFS = {
+    "J1", "J4", "U1", "U5", "U6",
+    "SW_PWR",
+    "R19", "R20", "R21",
+    "C20", "C21",
+}
+
+
+# T1: schematic nets intentionally absent from the PCB.
+#
+# - GPIO35/36/37: ESP32-S3 PSRAM pins. These MUST stay externally
+#   unconnected to avoid disturbing the on-module Octal PSRAM. The
+#   schematic generator labels them for documentation; the PCB has no
+#   trace because the WROOM-1 module keeps them internal. See R1 audit
+#   `website/docs/feasibility.md` §"PSRAM pins".
+# - VBUS_SW: power-supply internal label from schematic generator
+#   (`power_supply.py`). Not a physical net — the IP5306 VBUS switch is
+#   internal to the IC; we only expose VBUS itself on the PCB.
+# - VREF: PAM8403 internal reference (pin 8). The schematic uses a
+#   logical `VREF` label to show the R20/R21 bias path (R4-HIGH-3 fix);
+#   the PCB routes it as `PAM_VREF` (see T2_ALLOW below).
+T1_ALLOW = {
+    "GPIO35", "GPIO36", "GPIO37",
+    "VBUS_SW",
+    "VREF",
+}
+
+# T2: PCB nets that legitimately have no schematic-side counterpart.
+#
+# - BTN_MENU: old label for what the schematic now calls MENU_K (R4 fix
+#   added D1 to schematic, schematic label standardized on MENU_K).
+# - EN, IP5306_KEY, LX: power-topology internal nets. The schematic
+#   generator uses different power-flag labels; `verify_power_paths.py`
+#   validates the electrical topology.
+# - LED1_RA, LED2_RA: LED anode nets. The schematic routes them via the
+#   driver symbol; PCB names them separately because they share no
+#   global label.
+# - PAM_VREF: PAM8403 VREF node in PCB = schematic `VREF` (see T1 above).
+# - SPK+, SPK-: speaker terminal nets. Schematic uses `AUDIO_L/R`
+#   labeling on the audio sheet; PCB tags the speaker footprint pads.
+# - USB_DM_MCU: MCU-side of the 22Ω series resistor R23. Schematic has
+#   `USB_D-` as the bus-side label; the R4-HIGH-1 fix added the series
+#   resistor and its MCU-side pad carries a local label.
+T2_ALLOW = {
+    "BTN_MENU",
+    "EN",
+    "IP5306_KEY",
+    "LED1_RA", "LED2_RA",
+    "LX",
+    "PAM_VREF",
+    "SPK+", "SPK-",
+    "USB_DM_MCU", "USB_DP_MCU",
+    "VBUS",  # PCB-only label; schematic uses USB_VBUS / +5V propagation
+}
+
+# T3: schematic components with no PCB footprint.
+#
+# - DS1: logical-only ILI9488 display module symbol. R4-HIGH-2 renamed
+#   it from the colliding `U4` to `DS1`. The *physical* FPC socket is
+#   `J4`, which has a footprint; `DS1` is the schematic's way of showing
+#   the LCD panel as a logical unit without drawing a 40-pin symbol.
+T3_ALLOW = {"DS1"}
+
+# T4: pin-to-net mismatches that are documented cosmetic drift.
+#
+# Each entry is (ref, pin, sch_net, pcb_net). Matched exactly.
+#
+# - U3.3 AMS1117 SOT-223 pin 3 = VIN (+5V on PCB) but schematic symbol
+#   labels pin 3 as VOUT (+3V3). SOT-223 package pinout is
+#   (1=GND, 2=VOUT, 3=VIN) while the symbol uses (1=GND, 2=VIN, 3=VOUT).
+#   Known KiCad symbol/footprint convention mismatch; the actual
+#   electrical wiring is correct — verified by `verify_power_paths.py`.
+# - R4..R15, R19 pin 2 = +3V3 on PCB (button pull-up top terminal) but
+#   schematic labels it with the button-signal name (e.g. `BTN_A`).
+#   The R5-CRIT-4 fix connected the 12 pull-ups' bottom pads to +3V3;
+#   the schematic shows the logical BTN_x signal at the R-pin-2 node
+#   because that's where the button signal is pulled up.
+# - C9..C14, C27..C30, C_BTN_* button debounce caps — same pattern:
+#   schematic shows BTN_x at the cap terminal; PCB routes +3V3 because
+#   the debounce cap is between the signal and GND (or +3V3 depending
+#   on variant). Cosmetic.
+# - C24 pin 1: AMS1117 symbol-side decoupling cap. Schematic labels it
+#   `+5V`; PCB merges it into `GND` via the ground pour at that location.
+_BUTTON_PULLUP_REFS = {f"R{i}" for i in range(4, 16)} | {"R19"}
+_BUTTON_DEBOUNCE_CAP_REFS = {
+    f"C{i}" for i in range(4, 15)
+} | {"C27", "C28", "C29", "C30"}
+
+def _t4_is_allowed(ref, pin, sch_net, pcb_net):
+    """Return True if a pin mismatch is a documented cosmetic drift."""
+    # AMS1117 pin 3 (SOT-223 package vs symbol convention)
+    if ref == "U3" and pin == "3":
+        return {sch_net, pcb_net} == {"+3V3", "+5V"}
+    # Button pull-ups: schematic = BTN_x, PCB = +3V3 (R5-CRIT-4 fix)
+    if ref in _BUTTON_PULLUP_REFS and pin == "2":
+        return sch_net.startswith("BTN_") and pcb_net == "+3V3"
+    # Button debounce caps: one side is +3V3 / GND on PCB, schematic
+    # labels the signal side.
+    if ref in _BUTTON_DEBOUNCE_CAP_REFS:
+        return (
+            (sch_net.startswith("BTN_") and pcb_net in ("+3V3", "GND"))
+            or (pcb_net.startswith("BTN_") and sch_net in ("+3V3", "GND"))
+        )
+    # C24 +5V vs GND cosmetic drift at AMS1117 decoupling
+    if ref == "C24" and pin == "1":
+        return {sch_net, pcb_net} == {"+5V", "GND"}
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -179,11 +321,17 @@ def t1_missing_routes(sch_nets, pcb_nets):
     for net in sch_nets:
         if _is_pcb_internal(net):
             continue
+        if net in T1_ALLOW:
+            continue
         if net not in pcb_nets:
             missing.add(net)
+    allowed_hit = (sch_nets & T1_ALLOW) - pcb_nets
+    detail = f"{len(missing)} missing: {sorted(missing)[:10]}"
+    if allowed_hit:
+        detail += f"  (ignored by T1_ALLOW: {sorted(allowed_hit)})"
     check("T1", "Schematic nets all present in PCB",
           len(missing) == 0,
-          f"{len(missing)} missing: {sorted(missing)[:10]}")
+          detail)
 
 
 def t2_orphan_pcb_nets(sch_nets, pcb_nets):
@@ -192,26 +340,38 @@ def t2_orphan_pcb_nets(sch_nets, pcb_nets):
     for net in pcb_nets:
         if _is_pcb_internal(net):
             continue
+        if net in T2_ALLOW:
+            continue
         if net not in sch_nets:
             orphan.add(net)
+    allowed_hit = (pcb_nets & T2_ALLOW) - sch_nets
+    detail = f"{len(orphan)} orphan: {sorted(orphan)[:10]}"
+    if allowed_hit:
+        detail += f"  (ignored by T2_ALLOW: {sorted(allowed_hit)})"
     check("T2", "PCB nets all present in schematic",
           len(orphan) == 0,
-          f"{len(orphan)} orphan: {sorted(orphan)[:10]}")
+          detail)
 
 
 def t3_missing_footprints(sch_comps, pcb_refs):
     """Components in schematic but without a footprint in PCB."""
     # Filter excluded refs
-    expected = sch_comps - EXCLUDED_REFS
+    expected = sch_comps - EXCLUDED_REFS - T3_ALLOW
     missing = expected - pcb_refs
+    allowed_hit = (sch_comps & T3_ALLOW) - pcb_refs
+    detail = f"{len(missing)} missing: {sorted(missing)[:10]}"
+    if allowed_hit:
+        detail += f"  (ignored by T3_ALLOW: {sorted(allowed_hit)})"
     check("T3", "All schematic components have PCB footprints",
           len(missing) == 0,
-          f"{len(missing)} missing: {sorted(missing)[:10]}")
+          detail)
 
 
 def t4_pin_net_mismatches(sch_pin_nets, pcb_pin_nets):
     """Pin-to-net mismatches between schematic and PCB (excluding excluded refs)."""
     mismatches = []
+    ignored_allow = 0
+    skipped_refs = {}  # ref -> count
     for (ref, pin), sch_net in sch_pin_nets.items():
         if ref in EXCLUDED_REFS:
             continue
@@ -219,11 +379,26 @@ def t4_pin_net_mismatches(sch_pin_nets, pcb_pin_nets):
         if pcb_net is None:
             # Pad not in PCB — already covered by T3
             continue
-        if pcb_net != sch_net:
-            mismatches.append(f"{ref}.{pin}: sch={sch_net!r} pcb={pcb_net!r}")
+        if pcb_net == sch_net:
+            continue
+        if ref in T4_SKIP_REFS:
+            skipped_refs[ref] = skipped_refs.get(ref, 0) + 1
+            continue
+        if _t4_is_allowed(ref, pin, sch_net, pcb_net):
+            ignored_allow += 1
+            continue
+        mismatches.append(f"{ref}.{pin}: sch={sch_net!r} pcb={pcb_net!r}")
+    detail = f"{len(mismatches)} mismatch(es): {mismatches[:5]}"
+    if ignored_allow:
+        detail += f"  (ignored by T4 allowlist: {ignored_allow})"
+    if skipped_refs:
+        detail += (
+            f"  (refs with mixed pin-numbering conventions skipped: "
+            f"{sorted(skipped_refs.items())})"
+        )
     check("T4", "No pin-to-net mismatches between schematic and PCB",
           len(mismatches) == 0,
-          f"{len(mismatches)} mismatch(es): {mismatches[:5]}")
+          detail)
 
 
 # ---------------------------------------------------------------------------

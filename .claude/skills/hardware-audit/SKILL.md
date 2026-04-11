@@ -44,6 +44,14 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 # regression class). Checks F.Cu and B.Cu.
 python3 scripts/verify_trace_through_pad.py        # MUST be "1 passed, 0 failed"
 
+# ── Trace-crossings gate (R9-CRIT-1 class) ──────────────────────
+# Catches two traces on the SAME copper layer belonging to DIFFERENT
+# nets whose capsules overlap — the physical-short class that
+# verify_trace_through_pad.py does not see because it only checks
+# trace-vs-pad. Missing this gate caused the R7/R8 BTN_START bridge
+# to cross LCD_CS/DC/WR without anyone noticing.
+python3 scripts/verify_trace_crossings.py          # MUST be "1 passed, 0 failed"
+
 # ── Per-net copper connectivity (R5-CRIT class) ─────────────────
 # Walks the per-net copper graph and asserts every net forms a
 # single connected component. Catches R5-CRIT-1..9 bugs where
@@ -91,6 +99,7 @@ Gate summary to report back to the user:
 | Gate | Expected | Actual | Status |
 |------|----------|--------|--------|
 | Fab shorts (`verify_trace_through_pad`) | 0 overlaps | ? | PASS/FAIL |
+| Trace crossings (`verify_trace_crossings`) | 0 crossings | ? | PASS/FAIL |
 | DFM (`verify_dfm_v2`) | 115/115 | ? | PASS/FAIL |
 | DFA (`verify_dfa`) | 9/9 | ? | PASS/FAIL |
 | Polarity (`verify_polarity`) | 47/47 | ? | PASS/FAIL |

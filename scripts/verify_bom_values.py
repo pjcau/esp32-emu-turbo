@@ -242,6 +242,12 @@ def values_match(sch_value: str, bom_comment: str) -> bool:
     if sv_clean == bv:
         return True
 
+    # After stripping "tant." schematic marker, allow BOM to still carry
+    # package/type info (e.g. sch "22uF tant." vs BOM "22uF 1206 Tantalum").
+    # Reuse the IC-style startswith prefix match on the cleaned value.
+    if sv_clean and (bv.startswith(sv_clean) or sv_clean.startswith(bv)):
+        return True
+
     # IC values: schematic may have shorter name
     # e.g. "IP5306" == "IP5306", "AMS1117-3.3" == "AMS1117-3.3"
     if sv.startswith(bv) or bv.startswith(sv):

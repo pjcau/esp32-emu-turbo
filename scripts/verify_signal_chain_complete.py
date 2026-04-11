@@ -153,17 +153,31 @@ def test_display_chain(net_refs, name_to_id, id_to_name):
     for net_name in lcd_data + lcd_ctrl:
         verify_chain("Display", net_name, ["U1", "J4"], net_refs, name_to_id, id_to_name)
 
-    # LCD_RD and LCD_BL are hardwired (not from ESP32)
-    # They should at least be on J4
+    # LCD_RD and LCD_BL are hardwired to +3V3 at J4 (see routing.py DFM v3
+    # fix at _fpc_power_traces). The "LCD_RD"/"LCD_BL" logical nets are
+    # intentionally fully merged into +3V3 — the panel pads J4.29 (RD) and
+    # J4.16/33 (BL) sit directly on the +3V3 copper.
+    #
+    # Accept either:
+    #   (a) the logical net reaches J4, OR
+    #   (b) the logical net is fully merged (0 refs) AND J4 has pads on +3V3.
+    v3v3_id = name_to_id.get("+3V3")
+    v3v3_refs = net_refs.get(v3v3_id, set()) if v3v3_id else set()
     for net_name in ["LCD_RD", "LCD_BL"]:
         net_id = name_to_id.get(net_name)
-        if net_id:
-            refs = net_refs.get(net_id, set())
-            check(
-                f"Display: {net_name} reaches J4 (hardwired)",
-                "J4" in refs,
-                f"found on: {sorted(refs)}" if "J4" not in refs else "",
-            )
+        refs = net_refs.get(net_id, set()) if net_id else set()
+        merged_into_3v3 = (len(refs) == 0) and ("J4" in v3v3_refs)
+        ok = ("J4" in refs) or merged_into_3v3
+        detail = ""
+        if not ok:
+            detail = f"found on: {sorted(refs)}; +3V3 on J4={'J4' in v3v3_refs}"
+        elif merged_into_3v3:
+            detail = "(merged into +3V3 at J4 by design)"
+        check(
+            f"Display: {net_name} reaches J4 (hardwired)",
+            ok,
+            detail,
+        )
 
 
 def test_sd_chain(net_refs, name_to_id, id_to_name):

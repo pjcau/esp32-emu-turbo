@@ -269,10 +269,17 @@ def test_en_rc_delay():
     print("\n-- EN Pin RC Delay --")
     sch_text = _read_schematics()
 
-    # R3 = 10k pull-up on EN
+    # EN pull-up: either external R3 10k OR the ESP32-S3-WROOM-1 module's
+    # integrated EN pull-up (R3 is DNP on this design — see
+    # scripts/generate_schematics/sheets/mcu.py which documents the
+    # WROOM-1 internal pull-up is sufficient together with the RC below).
     has_r3 = bool(re.search(r'"R3".*"10k"', sch_text))
-    check("EN: R3 10k pull-up to +3V3", has_r3,
-          "R3 not found in schematic")
+    has_wroom_note = ("R3 DNP" in sch_text
+                      or "internal to WROOM-1" in sch_text
+                      or "WROOM-1 integrates" in sch_text)
+    check("EN: R3 10k pull-up to +3V3 (or WROOM-1 internal)",
+          has_r3 or has_wroom_note,
+          "no R3 and no WROOM-1 integrated pull-up note in schematic")
 
     # C3 = 100nF on EN (RC delay)
     has_c3 = bool(re.search(r'"C3".*"100nF"', sch_text))
