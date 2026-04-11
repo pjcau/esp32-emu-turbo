@@ -1386,3 +1386,138 @@ wants to re-minimise comment churn, the LX-jog could be re-planned
 now that x=103 has full clearance — but that would force a re-audit
 and the current geometry is already proven DFM-clean.
 
+
+## Round 11 Findings (2026-04-11) — Post-R12 JLCDFM gap closure + pin-1 markers
+
+**Auditor**: `/hardware-audit` Layer 1 re-run after R12 (JLCDFM gap-closing
+pcb_review checks + pin-1 silk markers on all 6 multi-pin components).
+
+### Step 0 gates — all green
+
+| Gate | Expected | Actual | Status |
+|------|----------|--------|--------|
+| `verify_trace_through_pad` | 0 overlaps | 0 | PASS |
+| `verify_trace_crossings` | 0 crossings | 0 | PASS |
+| `verify_net_connectivity` | 0 failed | 4 accepted / 0 fail | PASS |
+| `verify_dfm_v2` | 115/115 | 115/115 | PASS |
+| `verify_dfa` | 9/9 | 9/9 | PASS |
+| `validate_jlcpcb` | 25/25 | 25/25 (1 warn) | PASS |
+| `verify_bom_cpl_pcb` | 10/10 | 10/10 | PASS |
+| `verify_polarity` | 47/47 | 47/47 | PASS |
+| `verify_datasheet_nets` | 259/259 | 259/259 | PASS |
+| `verify_datasheet` | 29/29 | 29/29 | PASS |
+| `verify_design_intent` | 362/362 | 362/362 (3 warn) | PASS |
+| `verify_schematic_pcb_sync` | PASS | PASS | PASS |
+| `verify_netlist_diff` | 4/4 | 4/4 | PASS |
+| `verify_strapping_pins` | 12/12 | **12/12** | **PASS** (R10-LOW-7 fix now scored) |
+| `verify_decoupling_adequacy` | 25/25 | 25/25 | PASS |
+| `verify_power_sequence` | 26/26 | 26/26 | PASS |
+| `verify_power_paths` | 8/8 | 8/8 (11 info) | PASS |
+| `generate_board_config --check` | OK | OK | PASS |
+| `erc_check --run` | 0 critical | 0 / 22 warn | PASS |
+| KiCad DRC (`drc_native`) | baseline (25) | 25 / +0 delta | PASS |
+
+Smart analysis: 17 known-acceptable + 8 real issues (6 lib_footprint +
+2 silk_over_copper — both pre-existing cosmetic, R9-LOW-1/LOW-2).
+**0 uncategorized**. The pin-1 silk markers added in R12 did NOT
+introduce any new DRC violations after zone fill.
+
+### Layer 2 — no new findings
+
+R11 Round 10 already ran a full prose pass across all 8 domains
+(power, boot, display, audio, SD, buttons, USB, emulator). R12 only
+added:
+1. 12 new silk/fab circles (fp_circle elements, radius 0.3mm)
+   positioned ≥ 0.45mm from any copper per the keepout rule.
+2. 10 new DFM checks in `pcb_review.py` review_manufacturability()
+   covering body-to-edge, pad-to-pad collision, U1 keepout,
+   via-in-pad tenting, intra-footprint spacing, silk char height,
+   silk-to-edge, mask-opening-to-edge, and pin-1 marker presence.
+
+Neither change touches routing, schematic nets, firmware GPIO config,
+or datasheet pin mappings. The Layer 2 conclusions from Round 10
+remain valid:
+
+| Domain | Functional findings | Status |
+|--------|---|---|
+| Power chain | None | CLEAN |
+| ESP32 boot | None | CLEAN |
+| Display | None functional (R10-LOW-5 doc only) | CLEAN |
+| Audio | None functional (R10-LOW-2 doc, wasted GPIO) | CLEAN |
+| SD card | None functional | CLEAN |
+| Buttons | None functional | CLEAN |
+| USB | None | CLEAN |
+| Emulator performance | None | CLEAN |
+
+### pcb_review scoring post-R12
+
+| Domain | Score |
+|--------|------:|
+| 1. POWER INTEGRITY | 10/10 |
+| 2. SIGNAL INTEGRITY | 10/10 |
+| 3. THERMAL MANAGEMENT | 10/10 |
+| 4. MANUFACTURABILITY (JLCPCB) | **10/10** ← was 9/10 in R11 |
+| 5. EMI/EMC | 10/10 |
+| 6. MECHANICAL | 10/10 |
+| **OVERALL** | **60/60** |
+
+All 10 new JLCDFM checks report PASS on the post-R12 board:
+- body-to-edge: 78 components ≥ 0.50mm
+- pad-to-pad: 0 cross-ref collisions
+- U1 body keepout: 1 WARN (C28 known v2 debt) — advisory
+- via-in-pad tenting: 17 same-net via-in-pad (tenting default) — advisory
+- intra-footprint spacing: all pad pairs ≥ 0.10mm
+- silk character height: all 19 elements ≥ 0.80mm
+- silk-to-edge: all ≥ 0.20mm
+- mask opening-to-edge: all ≥ 0.20mm
+- **pin-1 silk marker: all 6 multi-pin ICs/connectors marked**
+
+### Round 11 bug list
+
+**CRIT**: 0
+**HIGH**: 0
+**MED**: 0
+**LOW**: 0 new (all R10-LOW-1..8 closed in R11, all R11/R12-era
+findings closed in the same sessions)
+
+### Cumulative ledger
+
+| Round | CRIT | HIGH | MED | LOW | Status |
+|-------|---:|---:|---:|---:|---|
+| R1 | — | — | — | 8 | accepted |
+| R2 | 1 | 2 | 7 | 6 | closed |
+| R3 | 1 | 4 | 6 | — | closed |
+| R4 | 1 (FP) | 3 | 2 | — | closed |
+| R5 | 9 | — | — | — | closed R6-R8 |
+| R6-R8 | — | — | — | — | routing fixes |
+| R9 | 2 | 6 | 3 | 2 | closed |
+| R10 | 0 | 0 | 0 | 8 | closed R11 docs |
+| R11 (prior) | 0 | 0 | 0 | 8 closed | — |
+| R12 (this pass) | 0 | 0 | 0 | **0 new** | — |
+
+**10 audit rounds. 0 open CRIT / HIGH / MED bugs on v3.4.**
+
+### Verdict
+
+v3.4 post-R12 is **production-ready** and **JLCDFM-improved**:
+- All Layer 1 automated gates green
+- All Layer 2 functional domains clean
+- 10/10 DFM review score (was 9/10 before pin-1 markers)
+- 6 "Danger orientation marker" JLCDFM findings now addressed
+  at the source (silk markers on U1/U2/U5/U6/J1/J4)
+- Release artifacts synced in `release_jlcpcb/`
+- 13 PCBA renders regenerated
+
+**Tag candidate: v3.5.** Recommended next action: tag v3.5 and run the
+next JLCDFM upload to confirm the 6 orientation-marker Dangers are
+now closed on the JLCPCB side too.
+
+### Open v2-respin tech debt (unchanged since R9)
+
+- 4 accepted net fragmentations: BTN_SELECT/BTN_START D1 menu diode,
+  I2S_DOUT C22 AC-coupling, VBUS J1.9/11 USB-C reversible
+- R9-LOW-1: MountingHole library missing from fp-lib-table (6 DRC warn)
+- R9-LOW-2: 2 silkscreen labels clipped by solder mask
+- BUG-L1..L8 (R1): battery monitoring, SW_PWR cosmetic, LCD 20MHz
+  overclock, SD 40MHz cap, button RC debounce, GPIO0 download mode,
+  no battery ADC, no SD card detect — all accepted for v1
