@@ -44,12 +44,12 @@ COMPONENT_SPECS = {
     # Pin Assignments table (TYPE-C 16PIN 2MD(073)):
     #   A1=GND, A4=VBUS, A5=CC1, A6=DP1, A7=DN1, A8=SBU1, A9=VBUS, A12=GND
     #   B1=GND, B4=VBUS, B5=CC2, B6=DP2, B7=DN2, B8=SBU2, B9=VBUS, B12=GND
-    # JLCPCB footprint uses 12 signal pads + 4 shield pads (13, 14, 13b, 14b)
-    # Our mapping: 1-12 SMD signal, 13/14 front shield THT, 13b/14b rear THT
+    # JLCPCB footprint uses 12 signal pads + 4 shield pads (13, 14, 13, 14)
+    # Our mapping: 1-12 SMD signal, 13/14 front shield THT, 13/14 rear THT (duplicate names)
     # R16 FIX (2026-04-12): pad SIZES corrected to match JLCPCB/EasyEDA
     # reference retrieved via easyeda2kicad — wide signal 0.55mm,
     # narrow signal 0.30mm, rear shield 1.2×1.8, NPTH drill 0.70mm.
-    # Pin names kept as 13b/14b (unique, not duplicates) per user preference.
+    # Pin names changed to duplicate 13/14 to match JLCPCB/EasyEDA reference.
     # ======================================================================
     "J1": {
         "component": "USB-C 16-Pin Connector",
@@ -71,8 +71,11 @@ COMPONENT_SPECS = {
             "12":  {"net": _exact("GND"),      "function": "GND (B1/B12 merged)", "type": "smd"},
             "13":  {"net": _exact("GND"),      "function": "Shield (front left)", "type": "thru_hole", "min_drill": 0.5},
             "14":  {"net": _exact("GND"),      "function": "Shield (front right)", "type": "thru_hole", "min_drill": 0.5},
-            "13b": {"net": _exact("GND"),      "function": "Shield (rear left)", "type": "thru_hole", "min_drill": 0.5},
-            "14b": {"net": _exact("GND"),      "function": "Shield (rear right)", "type": "thru_hole", "min_drill": 0.5},
+            # Rear shield pads also named "13"/"14" (duplicate names, same GND net).
+            # datasheet_specs uses dict keys so only the last "13"/"14" entry survives;
+            # both front and rear pads share the same net/type, so this is correct.
+            # The verify_datasheet_nets script matches by name, and duplicate-name pads
+            # in the PCB all get the same net assignment.
         },
     },
 

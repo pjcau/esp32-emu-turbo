@@ -393,9 +393,13 @@ def check_trace_pad_proximity(segments, vias, pads):
     for pad in pads:
         # Skip shield/mounting pads
         # Skip shield/mounting/NPTH pads (no signal traces expected)
-        # S/SH = old shield names, 13b/14b = USB-C rear shield, 4a-4d = switch shell
+        # S/SH = old shield names, 4a-4d = switch shell
+        # J1 shield THT pads "13"/"14" (front+rear, duplicate names) connect
+        # via GND zone fill through plated barrels, not explicit traces.
         if pad["num"] in ("S", "SH", "MP1", "MP2",
-                          "13b", "14b", "4a", "4b", "4c", "4d", ""):
+                          "4a", "4b", "4c", "4d", ""):
+            continue
+        if pad["ref"] == "J1" and pad["num"] in ("13", "14"):
             continue
 
         connected = False

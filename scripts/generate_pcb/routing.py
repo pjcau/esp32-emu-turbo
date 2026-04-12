@@ -407,9 +407,9 @@ R23_POS = (91.65, 38.5)   # D- 22Ω series (between TVS and ESP32 GPIO19, clear 
 # Pin 1=Gate, Pin 2=Source (BAT_IN from J3), Pin 3=Drain (BAT+ to IP5306)
 # At 0deg on B.Cu: pin3 at (qx, qy-1.10), pin2 at (qx-0.95, qy+1.10), pin1 at (qx+0.95, qy+1.10)
 # After B.Cu X-mirror: pin1 at (qx-0.95, qy+1.10), pin2 at (qx+0.95, qy+1.10)
-Q1_POS = (80.0, 56.0)
+Q1_POS = (80.0, 52.5)    # DFA FIX: moved up from 56.0 to clear J3 mech tabs (~6.5mm gap)
 # R24 (100K 0805): gate pull-down resistor, pin 1=RPP_GATE, pin 2=GND
-R24_POS = (83.5, 57.1)
+R24_POS = (83.5, 53.5)   # DFA FIX: moved up from 57.1 to follow Q1 relocation
 
 
 # ── Exact pad position computation ───────────────────────────────
@@ -903,14 +903,15 @@ def _power_traces():
     # Pad 9 to pad 11: no explicit stub needed — CC2 B.Cu vertical at x=78.25
     # runs between these pads at y=68.83, blocking any horizontal stub.
     # Both pads have VBUS net assigned; zone fill on In2.Cu connects them.
-    # Shield pads 13, 14, 13b, 14b → GND net assignment (direct to GND).
+    # Shield pads 13, 14 (front + rear, duplicate names) → GND net assignment.
     # THT pads have plated barrels connecting to In1.Cu GND zone automatically.
     # NOTE: USB shield tied directly to signal GND (no RC filter). Acceptable for
     # prototype; for v2 consider 1M||4.7nF between shield and GND to reduce EMI.
+    # DFA FIX: renamed 13b/14b → 13/14 (duplicate names). _PAD_NETS keyed by
+    # (ref, pad_name) so a single entry covers both front and rear pads with
+    # the same name — net assignment applies to all pads sharing that name.
     _PAD_NETS[("J1", "13")] = n_gnd
     _PAD_NETS[("J1", "14")] = n_gnd
-    _PAD_NETS[("J1", "13b")] = n_gnd
-    _PAD_NETS[("J1", "14b")] = n_gnd
 
     # IP5306 GND: R9-HIGH-3 FIX (2026-04-11): REMOVED the east-side B.Cu stub
     # from EP to (112.40, 45.30). It previously led to a GND stitching via
@@ -1362,13 +1363,13 @@ def _power_traces():
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
     # ── v4.0: BAT+ approach now terminates at Q1 drain (P-MOSFET RPP) ──
-    # Q1 (SI2301CDS SOT-23-3) at (80.0, 56.0) on B.Cu:
-    #   Pin 3 (Drain/BAT+) at (80.0, 54.90)
-    #   Pin 2 (Source/BAT_IN) at (79.05, 57.10)
-    #   Pin 1 (Gate/RPP_GATE) at (80.95, 57.10)
-    q1_drain = _pad("Q1", "3")    # (80.0, 54.90) — BAT+ net
-    q1_source = _pad("Q1", "2")   # (79.05, 57.10) — BAT_IN net
-    q1_gate = _pad("Q1", "1")     # (80.95, 57.10) — RPP_GATE net
+    # Q1 (SI2301CDS SOT-23-3) at (80.0, 52.5) on B.Cu:
+    #   Pin 3 (Drain/BAT+) at (80.0, 51.40)
+    #   Pin 2 (Source/BAT_IN) at (79.05, 53.60)
+    #   Pin 1 (Gate/RPP_GATE) at (80.95, 53.60)
+    q1_drain = _pad("Q1", "3")    # (80.0, 51.40) — BAT+ net
+    q1_source = _pad("Q1", "2")   # (79.05, 53.60) — BAT_IN net
+    q1_gate = _pad("Q1", "1")     # (80.95, 53.60) — RPP_GATE net
     n_bat_in = NET_ID["BAT_IN"]
     n_rpp_gate = NET_ID["RPP_GATE"]
 
@@ -1389,7 +1390,7 @@ def _power_traces():
                        "B.Cu", W_PWR, n_bat))
 
     # BAT_IN: Q1 source to J3 pin 1
-    # Q1 source at (79.05, 57.10), J3.1 at (79.0, 62.5)
+    # Q1 source at (79.05, 53.60), J3.1 at (79.0, 62.5)
     # Short B.Cu vertical + tiny horizontal
     parts.append(_seg(q1_source[0], q1_source[1], q1_source[0], jst_p[1],
                        "B.Cu", W_PWR, n_bat_in))
@@ -1397,17 +1398,23 @@ def _power_traces():
                        "B.Cu", W_PWR, n_bat_in))
 
     # RPP_GATE: Q1 gate to R24 pad 1
-    # Q1 gate at (80.95, 57.10), R24 pad 1 at (84.45, 57.1)
+    # Q1 gate at (80.95, 53.60), R24 pad 1 at (82.55, 53.5)
     r24_1 = _pad("R24", "1")   # RPP_GATE side
     r24_2 = _pad("R24", "2")   # GND side
     parts.append(_seg(q1_gate[0], q1_gate[1], r24_1[0], r24_1[1],
                        "B.Cu", W_SIG, n_rpp_gate))
 
-    # R24 pad 2 → GND via (short stub down + via)
+    # R24 pad 2 → GND via (stub right + down to clear J3.4 mech tab)
+    # J3.4 tab at board (83.35, 56.65) size 1.5×3.4 → right edge 84.10.
+    # Old via at (84.45, 55.0) had only 50µm gap to tab edge → DANGER.
+    # Fix: jog via east to x=85.50, giving 85.50-0.30-84.10 = 1.10mm gap.
+    _r24_gnd_via_x = 85.50
     _r24_gnd_via_y = r24_2[1] + 1.5  # below R24
-    parts.append(_seg(r24_2[0], r24_2[1], r24_2[0], _r24_gnd_via_y,
+    parts.append(_seg(r24_2[0], r24_2[1], _r24_gnd_via_x, r24_2[1],
                        "B.Cu", W_SIG, n_gnd))
-    parts.append(_via_net(r24_2[0], _r24_gnd_via_y, n_gnd,
+    parts.append(_seg(_r24_gnd_via_x, r24_2[1], _r24_gnd_via_x, _r24_gnd_via_y,
+                       "B.Cu", W_SIG, n_gnd))
+    parts.append(_via_net(_r24_gnd_via_x, _r24_gnd_via_y, n_gnd,
                           size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── Power switch -> BAT+ junction ──────────────────────────
@@ -4206,7 +4213,21 @@ def _button_traces():
         # BTN_X F.Cu at y=42.70: need to go below it.
         # Use y=48.0 — clear of both.
         btn_r_jog_y = 48.0
-        parts.append(_seg(approach_r, chan_y_r, approach_r, btn_r_jog_y,
+        # J3.3 mech tab at board (76.65, 56.65) size 1.5×3.4mm after
+        # EasyEDA reference fix. Tab AABB: x=[75.90,77.40], y=[54.95,58.35].
+        # BTN_R B.Cu vert at x=76.20 passes through it → must jog west.
+        _j3_tab_top = 58.35 + 0.50   # 0.50mm clearance above tab
+        _j3_tab_bot = 54.95 - 0.50   # 0.50mm clearance below tab
+        _j3_jog_x = 75.20            # west of tab left edge 75.90 by 0.70mm
+        parts.append(_seg(approach_r, chan_y_r, approach_r, _j3_tab_top,
+                           "B.Cu", W_DATA, net_r))
+        parts.append(_seg(approach_r, _j3_tab_top, _j3_jog_x, _j3_tab_top,
+                           "B.Cu", W_DATA, net_r))
+        parts.append(_seg(_j3_jog_x, _j3_tab_top, _j3_jog_x, _j3_tab_bot,
+                           "B.Cu", W_DATA, net_r))
+        parts.append(_seg(_j3_jog_x, _j3_tab_bot, approach_r, _j3_tab_bot,
+                           "B.Cu", W_DATA, net_r))
+        parts.append(_seg(approach_r, _j3_tab_bot, approach_r, btn_r_jog_y,
                            "B.Cu", W_DATA, net_r))
         parts.append(_via_net(approach_r, btn_r_jog_y, net_r, size=VIA_STD, drill=VIA_STD_DRILL))
         # F.Cu horizontal RIGHT past ESP32 bottom pins to epx_r+1 column
@@ -4306,11 +4327,15 @@ def _passive_traces():
             via_x_db = cx - 0.80  # 92.20 — clears USB_D- vert at x=91.65
         parts.append(_seg(cx - 0.95, cy, via_x_db, cy,
                           "B.Cu", W_DATA, n_gnd))  # W_DATA: 0.175mm gap to btn verts
-        parts.append(_seg(via_x_db, cy, via_x_db, cy + 2,
+        # DFA FIX: i=8 (BTN_START cap) GND via shortened to cy+1.5 to clear
+        # R24 pad 1 at (82.55, 53.5) after Q1/R24 relocation. Via at (82.20,51.5)
+        # → via edge 51.95, R24 pad top 52.85, gap=0.90mm ✓
+        _db_via_dy = 1.5 if i == 8 else 2.0
+        parts.append(_seg(via_x_db, cy, via_x_db, cy + _db_via_dy,
                           "B.Cu", W_DATA, n_gnd))  # W_DATA: 0.175mm gap to btn verts
         _db_via_sz = VIA_MIN if i == 10 else VIA_STD
         _db_via_dr = VIA_MIN_DRILL if i == 10 else VIA_STD_DRILL
-        parts.append(_via_net(via_x_db, cy + 2, n_gnd, size=_db_via_sz, drill=_db_via_dr))
+        parts.append(_via_net(via_x_db, cy + _db_via_dy, n_gnd, size=_db_via_sz, drill=_db_via_dr))
 
     # Connect pull-up outputs to debounce cap inputs (R->C junction)
     # R9-MED-4: BTN_MENU removed — 12 buttons only (menu via D1 OR-gate).

@@ -213,10 +213,8 @@ class CollisionGrid:
                 # Pre-assigned nets for known THT pads (needed because
                 # net=0 pads are skipped in collision queries)
                 _KNOWN_PAD_NETS = {
-                    ("J1", "13"): 1,   # GND (shield)
-                    ("J1", "14"): 1,   # GND (shield)
-                    ("J1", "13b"): 1,  # GND (shield rear)
-                    ("J1", "14b"): 1,  # GND (shield rear)
+                    ("J1", "13"): 1,   # GND (shield front + rear, duplicate names)
+                    ("J1", "14"): 1,   # GND (shield front + rear, duplicate names)
                     ("J3", "1"): 5,    # BAT+ (JST pin 1)
                     ("J3", "2"): 1,    # GND (JST pin 2)
                 }
@@ -579,7 +577,7 @@ def _is_tht_pad(ref: str, num: str) -> bool:
     Only THT-specific pads are registered on both layers, not all pads
     of a component that happens to contain some THT pads.
     """
-    # J1 (USB-C 16P): pads 13/14/13b/14b are SMD on B.Cu only in the footprint
+    # J1 (USB-C 16P): pads 13/14 (front+rear, duplicate names) are SMD on B.Cu only
     # (layers "B.Cu" "B.Paste" "B.Mask"), no F.Cu copper.  Removed from THT set
     # to avoid false F.Cu collisions with button channels at y=73-74.
     # J3 (JST PH 2P): both pins (1, 2) are SMD (C295747)

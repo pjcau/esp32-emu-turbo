@@ -315,8 +315,8 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*SD_ENC)
     parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*JST_BAT_ENC)
-    # v4.0: moved label up (py-10) to clear Q1 P-MOSFET pads at y≈57.1
-    parts.append(P.gr_text("BATT", px, py - 10, "B.SilkS", 1.0))
+    # v4.0: moved label up to clear Q1 P-MOSFET + debounce caps (DFA: Q1 at y=52.5)
+    parts.append(P.gr_text("BATT", px, py - 15, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*FPC_ENC)
     parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)

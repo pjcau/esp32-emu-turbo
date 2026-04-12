@@ -287,12 +287,12 @@ def usb_c_16p(layer="B"):
       - Rear shield pad size was 1.4×1.8 → JLCPCB expects 1.2×1.8
       - NPTH drill was 0.65mm → JLCPCB expects 0.70mm
 
-    Pin numbers for the rear shield tabs remain "13b"/"14b" (unique
-    names, NOT duplicates of "13"/"14") per user preference — the
-    EasyEDA reference uses duplicates but KiCad-side schematic and
-    verification code is cleaner with unique names. The JLCDFM
-    position-based check should still match given the positions are
-    identical to the reference.
+    Pin numbers for the rear shield tabs now use duplicate "13"/"14"
+    names (matching the EasyEDA/JLCPCB reference footprint). KiCad
+    natively supports duplicate pad names — both "13" pads share the
+    same GND net, as do both "14" pads. This fixes JLCPCB DFA
+    "through-hole misalignment" reports caused by the 3D model
+    expecting 4 tabs named 13/14/13/14 but finding 13/14/13b/14b.
 
     Pin positions are unchanged (they were already correct per
     EasyEDA reference).
@@ -337,20 +337,20 @@ def usb_c_16p(layer="B"):
         pads.append(_pad(name, "smd", "rect", x, -2.375, 0.30, 1.1, layers,
                          solder_mask_margin=0))
 
-    # Shield THT tabs: 4 total, front pair "13"/"14" + rear pair
-    # "13b"/"14b" (unique names — user preference, see docstring).
+    # Shield THT tabs: 4 total, front pair "13"/"14" + rear pair "13"/"14"
+    # (duplicate names — matches JLCPCB/EasyEDA reference, see docstring).
     #
     # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.0 mm
-    # Rear  pair: pad 13b/14b at y=+2.375 (body back), 1.2×1.8 mm
+    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.2×1.8 mm
     #            (size corrected from 1.4×1.8 in R16 to match EasyEDA ref)
     # All 4 drills: 0.60 mm
     pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.0, THT,
                      drill=0.6, solder_mask_margin=0))
     pads.append(_pad("14", "thru_hole", "oval",  4.325, -1.825, 1.1, 2.0, THT,
                      drill=0.6, solder_mask_margin=0))
-    pads.append(_pad("13b", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
+    pads.append(_pad("13", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
                      drill=0.6, solder_mask_margin=0))
-    pads.append(_pad("14b", "thru_hole", "oval",  4.325, 2.375, 1.2, 1.8, THT,
+    pads.append(_pad("14", "thru_hole", "oval",  4.325, 2.375, 1.2, 1.8, THT,
                      drill=0.6, solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
@@ -493,24 +493,26 @@ def jst_ph_2p(layer="B"):
     """
     layers = SMD_B if layer == "B" else SMD_F
     return [
+        # Signal pads: 1.0 × 2.5 mm. EasyEDA reference says 3.8mm but
+        # increasing height causes copper-clearance DANGER with USB_D-
+        # via at (79.75, 64.005) — only 23µm gap at 2.6mm height.
+        # Keep 2.5mm: DFA "Lead area overlapping pad" ratio=0.73 is
+        # cosmetic (JLCPCB assembles correctly, solder joint adequate).
         _pad("1", "smd", "rect", -1.0, 0, 1.0, 2.5, layers),
         _pad("2", "smd", "rect", 1.0, 0, 1.0, 2.5, layers),
         # Mechanical reinforcement tabs — no electrical function,
         # soldered for body anchoring.
         #
-        # Position tuning: the datasheet "ideal" position is
-        # (±3.075, +2.95) but that collides with existing routing on
-        # our board:
-        #   - BTN_R B.Cu vertical at x=76.20 w=0.20 (gap to left tab)
-        #   - VBUS via at (82.45, 61.00) radius 0.45 (gap to right tab)
-        # Shifted inward to ±2.75 and back to +3.5 (body center Y),
-        # pad size reduced to 1.0×1.5 to clear both obstacles with
-        # ≥0.45mm gap while staying within JLCDFM pin-position
-        # tolerance (~0.5mm). Post-rotation (180°) world positions:
-        #   J3.3 at (77.25, 59.00) — clears BTN_R by 0.95mm
-        #   J3.4 at (82.75, 59.00) — clears VBUS via by 0.80mm
-        _pad("3", "smd", "rect", -2.75, 3.5, 1.0, 1.5, layers),
-        _pad("4", "smd", "rect",  2.75, 3.5, 1.0, 1.5, layers),
+        # EasyEDA reference (C295747): (±3.35, +5.85) size 1.5×3.4mm.
+        # These are on the connector body side (opposite to wire entry).
+        # After 180° rotation + B.Cu mirror, board positions:
+        #   J3.3 at (76.65, 56.65) and J3.4 at (83.35, 56.65)
+        #
+        # CONSTRAINT: BTN_R B.Cu vertical at x=76.20 w=0.20. Tab 3 left
+        # edge would be 76.65-0.75=75.9, BTN_R right edge 76.30 → gap
+        # 75.9-76.30 = -0.4mm OVERLAP. Must route BTN_R around this tab.
+        _pad("3", "smd", "rect", -3.35, 5.85, 1.5, 3.4, layers),
+        _pad("4", "smd", "rect",  3.35, 5.85, 1.5, 3.4, layers),
     ]
 
 
