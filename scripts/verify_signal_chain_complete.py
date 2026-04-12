@@ -127,8 +127,11 @@ def test_power_chain(net_refs, name_to_id, id_to_name):
     """3. Power chain: BAT+ -> SW_PWR -> IP5306 -> AMS1117 -> 3V3."""
     print("\n── Power Chain ──")
 
-    # Battery to switch to IP5306
-    verify_chain("Battery", "BAT+", ["J3", "SW_PWR", "U2"], net_refs, name_to_id, id_to_name)
+    # Battery to Q1 MOSFET (reverse polarity protection) via BAT_IN
+    # v4.0: J3.1 is on BAT_IN net, Q1 bridges BAT_IN → BAT+
+    verify_chain("Battery input", "BAT_IN", ["J3", "Q1"], net_refs, name_to_id, id_to_name)
+    # Q1 drain to switch to IP5306 via BAT+
+    verify_chain("Battery power", "BAT+", ["Q1", "SW_PWR", "U2"], net_refs, name_to_id, id_to_name)
 
     # IP5306 inductor
     verify_chain("Boost", "LX", ["L1", "U2"], net_refs, name_to_id, id_to_name)
