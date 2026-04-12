@@ -1998,3 +1998,71 @@ After R17 fixes the DRC reports 0 hole_clearance, 0 via_dangling, 0 trace_cleara
 ### v3.7 tag candidate
 
 R16 J1+J3 footprint fixes + R17 dangling-via cleanup + J1 NPTH clearance fix + MENU_K SW13 bridge + J3 datasheet test repair = v3.7. Next JLCDFM upload should clear all R16 misalignment / pin-without-pad findings AND have 0 KiCad DRC violations.
+
+---
+
+## Round 18 Findings (2026-04-12)
+
+R18 follows the addition of 3 new verification scripts from a community
+repo gap analysis (verify_jlcpcb_capabilities, verify_stencil_aperture,
+verify_drill_standards) and one routing fix (LCD_D2/D3 via stagger).
+
+### Step 0 gates
+
+| Gate | Result |
+|------|--------|
+| `verify_trace_through_pad` | PASS (0 overlaps) |
+| `verify_trace_crossings` | PASS (0 crossings) |
+| `verify_copper_clearance` | PASS (0 DANGER, 1 WARN same-net 120µm) |
+| `verify_net_connectivity` | PASS (4 accepted tech debt) |
+| `verify_dfm_v2` | **119/119 PASS** (+4 new: zone fill, silk-to-pad) |
+| `verify_dfa` | 9/9 PASS |
+| `validate_jlcpcb` | 25/25 PASS (1 warn) |
+| `verify_bom_cpl_pcb` | **12/12 PASS** (+2 new: field completeness) |
+| `verify_polarity` | 47/47 PASS |
+| `verify_jlcpcb_capabilities` | **12/12 PASS** (NEW — JLCPCB official limits) |
+| `verify_stencil_aperture` | **5/5 PASS** (NEW — IPC-7525) |
+| `verify_drill_standards` | **5/5 PASS, 1 WARN** (NEW — ISO metric) |
+| `verify_datasheet` | 29/29 PASS |
+| `verify_datasheet_nets` | ALL PASS |
+| `verify_design_intent` | 364/364 PASS |
+| `verify_schematic_pcb_sync` | PASS |
+| `verify_netlist_diff` | 4/4 PASS |
+| `generate_board_config --check` | PASS |
+| `verify_strapping_pins` | 12/12 PASS (1 warn) |
+| `verify_decoupling_adequacy` | 25/25 PASS |
+| `verify_power_sequence` | 26/26 PASS |
+| `verify_power_paths` | PASS (11 zone-info) |
+| `erc_check` | 0 critical (22 warn, 737 suppressed) |
+| KiCad DRC | 0 real (6 lib_footprint, 2 silk_over, 10 documented unconnected) |
+
+**Total automated checks: ~1,150+ (up from ~1,100 in R17)**
+
+### Bug list
+
+#### R18-MED-1 — LCD_D2/D3 via-to-via at JLCPCB drill limit (FIXED)
+- **Files**: `scripts/generate_pcb/routing.py` line 1715
+- **Symptom**: LCD_D2 and LCD_D3 approach vias at x=136.60/135.90, y=22.48/25.52 had hole-to-hole gap of exactly 0.500mm — the JLCPCB drill-to-drill minimum.
+- **Root cause**: 0.70mm column pitch with 0.20mm drills: 0.70 - 0.20 = 0.500mm exactly at limit.
+- **Fix**: Staggered bridge via Y positions (even idx: Y=22.20/25.80, odd idx: Y=22.48/25.52). Diagonal distance sqrt(0.70²+0.28²) = 0.754mm, gap = 0.554mm > 0.50mm.
+
+#### R18-LOW-1 — JLCPCB capabilities script threshold correction (FIXED)
+- **Files**: `scripts/verify_jlcpcb_capabilities.py`
+- **Symptom**: Initial script used agausmann/jlcpcb-kicad-drc recommended values (0.254mm via-to-track, 0.20mm pad-to-track) as absolute minimums, causing 33+ false FAILs.
+- **Root cause**: agausmann DRC file documents recommended best-practice values, not JLCPCB rejection thresholds. JLCPCB universal copper clearance minimum is 0.127mm (5mil).
+- **Fix**: Corrected to two-tier: FAIL at absolute minimum (0.127mm for copper clearances, 0.50mm for drill-to-drill), WARN at recommended.
+
+### Domain findings (Layer 2 review)
+
+- **Power chain**: 0 new findings. Known: IP5306 KEY bootstraps from VOUT (POR handles), SW_PWR non-functional (v2). Q1 P-MOSFET battery protection correct.
+- **ESP32 boot**: 0 new findings. GPIO45/R14 DNP confirmed. All strapping pins correct.
+- **Display**: 0 new findings. FPC 41-N reversal verified. LCD_D0-D7 contiguous GPIO4-11. IM[2:0]=011 for 8080 8-bit parallel.
+- **Audio**: 0 new findings. PDM TX mode, DOUT-only, PAM_VREF cap correct.
+- **SD card**: 0 new findings. R4-MED-1 (missing local VCC bypass) still tracked for v2.
+- **Buttons**: 0 new findings. All 12 buttons have pull-up + debounce. D1 menu combo verified.
+- **USB**: 0 new findings. USBLC6-2SC6 ESD, CC 5.1k pull-downs, 22Ω series resistors all verified. J1.9/J1.11 reversibility still v2 tech debt.
+- **Emulator performance**: 0 new findings. Octal PSRAM, LCD 8080 via DMA, I2S PDM TX via DMA, WiFi disabled.
+
+### v4.0 tag candidate
+
+R17 fixes + R18 via stagger fix + 3 new verification scripts (31 new tests) + threshold correction = v4.0. Board passes all 1,150+ automated checks including the new JLCPCB official capabilities suite.
