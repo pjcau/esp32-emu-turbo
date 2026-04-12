@@ -124,11 +124,13 @@ T1_ALLOW = {
 # R9-MED-4 (2026-04-11): BTN_MENU removed from allowlist because the
 # dead net was deleted from the PCB generator entirely.
 T2_ALLOW = {
+    "BAT_IN",      # v4.0: Q1 P-MOSFET source side (J3 → Q1, PCB routing only)
     "EN",
     "IP5306_KEY",
     "LED1_RA", "LED2_RA",
     "LX",
     "PAM_VREF",
+    "RPP_GATE",    # v4.0: Q1 gate junction (Q1.1 → R24 → GND, PCB routing only)
     "SPK+", "SPK-",
     "USB_DM_MCU", "USB_DP_MCU",
     "VBUS",  # PCB-only label; schematic uses USB_VBUS / +5V propagation
