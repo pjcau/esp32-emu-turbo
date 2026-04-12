@@ -662,6 +662,170 @@ npm run verify
 
 ---
 
+## DFM/DFA Test Suite — JLCPCB Compliance
+
+Complete automated test suite that validates every dimensional constraint required by JLCPCB 4-layer SMT assembly. Run with `make verify-all` or individually before every release.
+
+### Test Summary (v3.7)
+
+| Script | Tests | Pass | Description |
+|---|---:|---:|---|
+| `verify_dfm_v2.py` | 115 | 115 | JLCPCB DFM manufacturing rules |
+| `verify_dfa.py` | 9 | 9 | SMT assembly (paste, tombstoning, polarity) |
+| `validate_jlcpcb.py` | 25 | 25 | JLCPCB-specific (drill, copper island, gerbers) |
+| `verify_copper_clearance.py` | all nets | 0 DANGER | Shapely polygon copper gap analysis |
+| `verify_polarity.py` | 47 | 47 | Pin-to-net assignment (256 pin checks) |
+| `verify_datasheet_nets.py` | 261 | 221 PASS | Pad net vs datasheet specs (34 components) |
+| `verify_datasheet.py` | 29 | 29 | Physical footprint vs datasheet |
+| `verify_design_intent.py` | 362 | 362 | Cross-source GPIO/net consistency (T1-T22) |
+| `verify_trace_through_pad.py` | 1 | 1 | Fab-short gate (trace over unnetted pad) |
+| `verify_trace_crossings.py` | 1 | 1 | Same-layer different-net trace intersection |
+| `verify_net_connectivity.py` | all nets | PASS | Union-find copper graph per net |
+| `verify_bom_cpl_pcb.py` | 10 | 10 | BOM/CPL/PCB cross-reference |
+| `verify_bom_values.py` | 74 | 74 | Schematic vs BOM value match |
+| `verify_signal_chain_complete.py` | 53 | 53 | Signal chain endpoints (power, display, audio, SD, USB, buttons) |
+| `verify_component_connectivity.py` | 2 | 2 | Phantom component detection |
+| `verify_net_class_widths.py` | 5 | 5 | Trace width per net class enforcement |
+| `verify_netlist_diff.py` | 4 | 4 | Schematic-to-PCB netlist cross-check |
+| `verify_schematic_pcb_sync.py` | 3 | PASS | R4 sync guard (ref coverage, collision, net coverage) |
+| `verify_strapping_pins.py` | 12 | 12 | ESP32-S3 boot pin validation |
+| `verify_decoupling_adequacy.py` | 25 | 25 | Per-IC capacitance check vs datasheet |
+| `verify_power_sequence.py` | 26 | 26 | Power chain topology and ordering |
+| `verify_power_paths.py` | 8 | 8 | Copper path from source to IC VDD |
+| `verify_antenna_keepout.py` | 5 | 5 | ESP32 WiFi/BLE antenna zone clearance |
+| `verify_stackup.py` | 5 | 5 | 4-layer stackup net assignment |
+| `verify_usb_impedance.py` | 4 | 4 | USB D+/D- differential pair geometry |
+| `verify_via_in_pad.py` | 3 | 3 | Via-in-pad detection (different net) |
+| `verify_thermal_relief.py` | 4 | 4 | Zone thermal relief settings |
+| `verify_ground_loops.py` | 2 | 2 | Audio-digital ground coupling |
+| `verify_test_points.py` | 17 | 15+2 | Debug probe accessibility |
+| `verify_esd_protection.py` | 6 | 6 | USB TVS + series resistors |
+| `verify_usb_return_path.py` | 3 | 3 | GND via density near USB traces |
+| `verify_sd_interface.py` | 7 | 7 | SD card SPI completeness |
+| `verify_power_resonance.py` | 4 | 4 | Power plane LC resonance |
+| **TOTAL** | **~1200+** | | |
+
+### JLCPCB Dimensional Rules — Reference Card
+
+#### Trace Width
+
+| Net Class | JLCPCB Absolute Min | Our Enforced Min | Typical Routing Width |
+|---|---:|---:|---:|
+| Signal (USB, LCD, buttons) | 0.09 mm | 0.15 mm | 0.20–0.25 mm |
+| Power (+5V, +3V3) | 0.09 mm | 0.20 mm | 0.60 mm |
+| Power High (VBUS, BAT+, LX) | 0.09 mm | 0.50 mm | 0.76 mm |
+| GND | 0.09 mm | 0.20 mm | 0.20–0.60 mm |
+
+#### Trace/Copper Spacing
+
+| Rule | JLCPCB Abs Min | Our DANGER | Our WARN |
+|---|---:|---:|---:|
+| Trace-to-trace (different net) | 0.09 mm | 0.10 mm | 0.15 mm |
+| Copper-to-copper (polygon check) | 0.09 mm | 0.10 mm | 0.15 mm |
+| Pad-to-pad (different net) | 0.127 mm | — | 0.15 mm |
+| Via-to-SMD pad | 0.127 mm | — | 0.15 mm |
+| PTH-to-trace | — | — | 0.33 mm |
+
+#### Via Specifications
+
+| Parameter | JLCPCB Abs Min | Our Value |
+|---|---:|---:|
+| Drill diameter (4-layer) | 0.20 mm | 0.20 mm |
+| Outer diameter (4-layer) | 0.45 mm | 0.46–0.60 mm |
+| Annular ring (absolute) | 0.075 mm | 0.075 mm |
+| Annular ring (JLCDFM standard) | 0.13 mm | 0.13 mm |
+| Via-to-via hole gap (different net) | 0.25 mm | 0.25 mm |
+| Via-in-pad (different net) | forbidden | FAIL |
+| Aspect ratio (drill:thickness) | 10:1 max | ~8:1 |
+
+#### Drill / PTH / NPTH
+
+| Parameter | JLCPCB Min | Our Value |
+|---|---:|---:|
+| PTH drill min | 0.15 mm | 0.20 mm |
+| PTH drill max | 6.3 mm | 6.3 mm |
+| NPTH drill min | 0.50 mm | 0.50 mm |
+| PTH annular ring | 0.15 mm | 0.15 mm |
+| Drill bit increment | 0.05 mm | 0.05 mm |
+| Drill-to-board-edge | 0.40 mm | 0.40 mm |
+| PTH-to-PTH edge gap | 0.15 mm | 0.15 mm |
+
+#### Board Edge Clearances
+
+| Parameter | JLCPCB Min | Our Value |
+|---|---:|---:|
+| Copper/via-to-edge | 0.30 mm | 0.28 mm (arc tolerance) |
+| SMD pad-to-edge | 0.30 mm | 0.30 mm |
+| Trace-to-edge | 0.20 mm | 0.20 mm |
+
+#### Soldermask
+
+| Parameter | JLCPCB Min | Our Value |
+|---|---:|---:|
+| Mask bridge (dam width) | 0.075 mm (auto-remove) | 0.10 mm |
+| Mask expansion (SMD pads) | 0.05 mm/side | 0.05 mm (0 on fine-pitch) |
+| Negative mask expansion | forbidden | FAIL |
+
+#### Silkscreen
+
+| Parameter | JLCPCB Min | Our Value |
+|---|---:|---:|
+| Stroke/line width | 0.15 mm | 0.15 mm |
+| Text height | 1.00 mm | 1.00 mm |
+| Silk-to-pad clearance | 0.15 mm | 0.15 mm |
+| Silk-to-hole clearance | 0.50 mm | 0.50 mm |
+
+#### Assembly (PCBA)
+
+| Parameter | JLCPCB Min | Our Value |
+|---|---:|---:|
+| SMD-to-SMD component spacing | 0.30 mm | 0.30 mm |
+| Solder paste aperture ratio | ≥ 0.66 | ≥ 0.66 (stencil 0.12 mm) |
+| Fiducial pad diameter | 1.00 mm | 1.00 mm |
+| Edge.Cuts line width | 0.15 mm (recommended) | 0.15 mm |
+| Gerber layers required | 7 minimum | 13 files |
+
+#### Threshold Hierarchy
+
+```
+               JLCPCB       KiCad DRU     Enforced      Routing
+Parameter      Abs Min      (fab-accept)  Min           Default
+─────────────────────────────────────────────────────────────
+Trace width    0.09 mm      0.09 mm       0.15 mm       0.20–0.76 mm
+Trace space    0.09 mm      0.09 mm       0.10 FAIL     —
+                                          0.15 WARN
+Via drill      0.20 mm      0.20 mm       0.20 mm       0.20 mm
+Via OD         0.45 mm      0.45 mm       0.46 min      0.60 std
+Via AR         0.075 mm     —             0.075 abs     0.20 std
+PTH AR         0.15 mm      0.25 (DRU)    0.15 mm       ≥ 0.30 mm
+Pad-to-edge    0.30 mm      0.30 mm       0.30 mm       ≥ 0.30 mm
+Mask bridge    0.075 mm     —             0.10 mm       0.10 mm+
+Silk stroke    0.15 mm      0.15 mm       0.15 mm       0.15 mm
+Silk height    1.00 mm      1.00 mm       1.00 mm       1.00 mm
+```
+
+### Running the Full Suite
+
+```bash
+# Quick DFM check (~1.4s)
+make verify-fast
+
+# Full verification suite (~5s)
+make verify-all
+
+# Individual checks
+python3 scripts/verify_dfm_v2.py          # 115 DFM tests
+python3 scripts/verify_dfa.py             #   9 DFA assembly tests
+python3 scripts/validate_jlcpcb.py        #  25 JLCPCB-specific tests
+python3 scripts/verify_copper_clearance.py #  Shapely polygon gap check
+python3 scripts/verify_polarity.py        #  47 pin-to-net tests
+
+# Release pipeline (all checks + gerbers + renders)
+make release-prep
+```
+
+---
+
 ## Performance Notes
 
 The verification pipeline uses a **hybrid local + Docker** approach for speed:
