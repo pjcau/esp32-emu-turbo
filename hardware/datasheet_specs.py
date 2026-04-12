@@ -265,10 +265,10 @@ COMPONENT_SPECS = {
         "datasheet": "J3_JST-PH-2P-SMD_C295747.pdf",
         "datasheet_page": 1,
         "pins": {
-            "1": {"net": _exact("BAT+"), "function": "Battery positive", "type": "smd"},
-            "2": {"net": _exact("GND"),  "function": "Battery ground", "type": "smd"},
-            "3": {"net": _unconnected(), "function": "Mechanical reinforcement tab (left)", "type": "smd"},
-            "4": {"net": _unconnected(), "function": "Mechanical reinforcement tab (right)", "type": "smd"},
+            "1": {"net": _exact("BAT_IN"), "function": "Battery positive (via Q1 P-MOSFET RPP to BAT+)", "type": "smd"},
+            "2": {"net": _exact("GND"),    "function": "Battery ground", "type": "smd"},
+            "3": {"net": _unconnected(),   "function": "Mechanical reinforcement tab (left)", "type": "smd"},
+            "4": {"net": _unconnected(),   "function": "Mechanical reinforcement tab (right)", "type": "smd"},
         },
     },
 
@@ -634,6 +634,36 @@ COMPONENT_SPECS["LED2"] = {
     },
 }
 
+
+# ======================================================================
+# Q1 — SI2301CDS P-Channel MOSFET (C10487) — Reverse Polarity Protection
+# SOT-23-3: Pin 1=Gate, Pin 2=Source (battery in), Pin 3=Drain (to IP5306)
+# Gate pulled low via R24 (100K to GND) — MOSFET always ON when battery
+# connected with correct polarity. Reverse polarity: body diode blocks.
+# ======================================================================
+COMPONENT_SPECS["Q1"] = {
+    "component": "SI2301CDS P-Channel MOSFET",
+    "lcsc": "C10487",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("RPP_GATE"), "function": "Gate — pulled to GND via R24 (always ON)", "type": "smd"},
+        "2": {"net": _exact("BAT_IN"),   "function": "Source — battery connector side (J3 pin 1)", "type": "smd"},
+        "3": {"net": _exact("BAT+"),     "function": "Drain — IP5306 BAT pin side", "type": "smd"},
+    },
+}
+
+# R24: Q1 gate pull-down resistor (100K to GND)
+COMPONENT_SPECS["R24"] = {
+    "component": "100K Gate Pull-Down Resistor",
+    "lcsc": "C149504",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("RPP_GATE"), "function": "Q1 gate connection", "type": "smd"},
+        "2": {"net": _exact("GND"),      "function": "Ground (gate pull-down)", "type": "smd"},
+    },
+}
 
 # ---------------------------------------------------------------------------
 # Summary

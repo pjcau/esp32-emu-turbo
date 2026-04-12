@@ -196,7 +196,7 @@ _zone("J1", [
 # J3: JST PH 2P (battery connector)
 # ============================================================
 _strict("J3", [
-    ("1", "BAT+"),
+    ("1", "BAT_IN"),   # v4.0: via Q1 P-MOSFET RPP (was BAT+)
     ("2", "GND"),
 ])
 
@@ -405,6 +405,19 @@ _strict("LED2", [("2", "LED2_RA")])
 # Pin 3 (Common Cathode) → MENU_K (to SW13)
 _strict("D1", [("1", "BTN_START"), ("2", "BTN_SELECT"), ("3", "MENU_K")])
 
+# ============================================================
+# Q1: SI2301CDS P-MOSFET reverse polarity protection (v4.0)
+# ============================================================
+# Pin 1 (Gate) → RPP_GATE (pulled to GND via R24)
+# Pin 2 (Source) → BAT_IN (battery connector side)
+# Pin 3 (Drain) → BAT+ (IP5306 side)
+_strict("Q1", [("1", "RPP_GATE"), ("2", "BAT_IN"), ("3", "BAT+")])
+
+# ============================================================
+# R24: Q1 gate pull-down resistor (100K)
+# ============================================================
+_strict("R24", [("1", "RPP_GATE"), ("2", "GND")])
+
 
 # ---- Test class ----
 
@@ -592,8 +605,8 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("J1", "10", "USB_CC2")
 
     def test_battery_connector(self):
-        """J3 (JST PH): BAT+ and GND polarity correct."""
-        self._check_strict("J3", "1", "BAT+")
+        """J3 (JST PH): BAT_IN (via Q1 RPP) and GND polarity correct."""
+        self._check_strict("J3", "1", "BAT_IN")
         self._check_strict("J3", "2", "GND")
 
     def test_fpc_display_data(self):

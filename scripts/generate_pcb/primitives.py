@@ -182,6 +182,10 @@ NET_LIST = [
     (55, "USB_DM_MCU"),
     # Menu button: BAT54C cathode junction (D1 pin 3 → SW13 pad 2)
     (56, "MENU_K"),
+    # Reverse polarity protection: battery-side of Q1 P-MOSFET
+    (57, "BAT_IN"),
+    # Q1 gate net: pulled to GND via R24 (static, but distinct for schematic clarity)
+    (58, "RPP_GATE"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

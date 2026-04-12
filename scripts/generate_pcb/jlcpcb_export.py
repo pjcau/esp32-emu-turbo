@@ -222,6 +222,13 @@ def _build_placements():
     p.append(("D1", "BAT54C",
               "SOT-23", D1_POS[0], D1_POS[1], 0, "bottom"))
 
+    # P-MOSFET reverse polarity protection (v4.0)
+    from scripts.generate_pcb.routing import Q1_POS, R24_POS
+    p.append(("Q1", "SI2301CDS",
+              "SOT-23", Q1_POS[0], Q1_POS[1], 0, "bottom"))
+    p.append(("R24", "100k", "R_0805",
+              R24_POS[0], R24_POS[1], 180, "bottom"))
+
     # ── Passive components (back side) ────────────────────────────
     # All passives have >= 3mm center-to-center spacing.
     # Layout rows (Y increases downward in KiCad):

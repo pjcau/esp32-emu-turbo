@@ -261,7 +261,7 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(r16_x, r16_y + 3.81, r16_x, key_y)
         self.wire(r16_x, key_y, key_x, key_y)
 
-        # ---- Battery: JST PH connector + Battery symbol ----
+        # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
         # JST PH 2-pin connector
         jst_x, jst_y = 228, 92
         self.sym(
@@ -274,11 +274,40 @@ class PowerSupplySheet(SchematicSheet):
         jst_plus_y = jst_y - 1.27
         jst_minus_y = jst_y + 1.27
 
-        # Wire BAT line to JST pin1
-        # BAT wire already goes to l1_x and cbat_x
-        # Extend to JST: horizontal from cbat_x to jst_plus_x
-        self.wire(cbat_x, bat_y, jst_plus_x, bat_y)
-        self.wire(jst_plus_x, bat_y, jst_plus_x, jst_plus_y)
+        # ── Q1 P-MOSFET reverse polarity protection (v4.0) ──
+        # Q1 sits in series on the BAT+ rail between J3 and IP5306.
+        # BAT+ (IP5306 side) → Q1 Drain (pin 3) → Q1 Source (pin 2) → BAT_IN → J3.1
+        # Gate pulled low via R24 100K → MOSFET always ON for correct polarity.
+        # Reverse polarity: body diode blocks, protecting IP5306.
+        q1x, q1y = 210, 92
+        self.sym("BAT54C", "Q1", "SI2301CDS", q1x, q1y, ["1", "2", "3"])
+        # NOTE: reusing BAT54C symbol footprint (SOT-23-3) for Q1 P-MOSFET
+        # Pin mapping: 1=Gate(bottom-left), 2=Source(bottom-right), 3=Drain(top)
+        self.text("P-MOSFET RPP", q1x - 5, q1y - 10, 1.5)
+        self.text("SI2301CDS", q1x - 5, q1y - 8, 1.5)
+
+        # Q1 pin 3 (Drain) at (q1x, q1y - 3.81-ish) — connects to BAT+ (IP5306 side)
+        # Wire BAT+ line from cbat_x to Q1 drain
+        self.wire(cbat_x, bat_y, q1x, bat_y)
+        self.wire(q1x, bat_y, q1x, q1y - 5)
+        self.label("BAT+", q1x + 2, bat_y - 2)
+
+        # Q1 pin 2 (Source) — connects to BAT_IN → J3.1
+        # Source exits to the right toward JST connector
+        self.wire(q1x + 5, q1y + 1.27, jst_plus_x, q1y + 1.27)
+        self.wire(jst_plus_x, q1y + 1.27, jst_plus_x, jst_plus_y)
+        self.label("BAT_IN", q1x + 6, q1y - 0.5)
+
+        # Q1 pin 1 (Gate) — pulled to GND via R24 (100K)
+        r24x, r24y = q1x - 8, q1y + 10
+        self.sym("R", "R24", "100k", r24x, r24y, ["1", "2"])
+        self.text("Gate pull-down", r24x + 3, r24y - 3, 1.5)
+        # Wire Q1 gate to R24 pin 1
+        self.wire(q1x - 5, q1y + 1.27, r24x, q1y + 1.27)
+        self.wire(r24x, q1y + 1.27, r24x, r24y - 3.81)
+        # R24 pin 2 to GND
+        self.gnd(r24x, r24y + 8)
+        self.wire(r24x, r24y + 3.81, r24x, r24y + 8)
 
         # JST pin2 (-) to GND
         self.gnd(jst_plus_x, jst_y + 6)
@@ -295,9 +324,9 @@ class PowerSupplySheet(SchematicSheet):
         # BT1 pin "+" at (bt_x, bt_y - 3.81)
         # BT1 pin "-" at (bt_x, bt_y + 3.81)
         # Wire from JST area to battery (same net via label)
-        self.glabel("BAT+", jst_x + 5, jst_plus_y, 0)
+        self.glabel("BAT_IN", jst_x + 5, jst_plus_y, 0)
         self.wire(jst_x + 3.81, jst_plus_y, jst_x + 5, jst_plus_y)
-        self.glabel("BAT+", bt_x - 5, bt_y - 3.81, 180)
+        self.glabel("BAT_IN", bt_x - 5, bt_y - 3.81, 180)
         self.wire(bt_x - 5, bt_y - 3.81, bt_x, bt_y - 3.81)
         # Battery GND
         self.gnd(bt_x, bt_y + 8)

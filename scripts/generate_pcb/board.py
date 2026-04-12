@@ -315,7 +315,8 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*SD_ENC)
     parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*JST_BAT_ENC)
-    parts.append(P.gr_text("BATT", px, py - 5, "B.SilkS", 1.0))
+    # v4.0: moved label up (py-10) to clear Q1 P-MOSFET pads at y≈57.1
+    parts.append(P.gr_text("BATT", px, py - 10, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*FPC_ENC)
     parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
@@ -488,6 +489,10 @@ def _component_placeholders():
 
     # BAT54C dual Schottky diode — menu combo (START+SELECT)
     placements.append(("D1", "SOT-23-3", *routing.D1_POS, 0, "B.Cu"))
+
+    # P-MOSFET reverse polarity protection (v4.0)
+    placements.append(("Q1", "SOT-23-3", *routing.Q1_POS, 0, "B.Cu"))
+    placements.append(("R24", "R_0805", *routing.R24_POS, 180, "B.Cu"))
 
     # ── Passive components (B.Cu) ──
     # Positions must match jlcpcb_export.py for CPL/Gerber alignment.

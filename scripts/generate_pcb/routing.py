@@ -402,6 +402,15 @@ U4_POS = (90.95, 60.0)
 R22_POS = (90.25, 40.0)   # D+ 22Ω series (between TVS and ESP32 GPIO20)
 R23_POS = (91.65, 38.5)   # D- 22Ω series (between TVS and ESP32 GPIO19, clear of C4 GND via@40.0)
 
+# P-MOSFET reverse polarity protection (v4.0)
+# Q1 (SI2301CDS SOT-23-3): between J3 and BAT+ approach column
+# Pin 1=Gate, Pin 2=Source (BAT_IN from J3), Pin 3=Drain (BAT+ to IP5306)
+# At 0deg on B.Cu: pin3 at (qx, qy-1.10), pin2 at (qx-0.95, qy+1.10), pin1 at (qx+0.95, qy+1.10)
+# After B.Cu X-mirror: pin1 at (qx-0.95, qy+1.10), pin2 at (qx+0.95, qy+1.10)
+Q1_POS = (80.0, 56.0)
+# R24 (100K 0805): gate pull-down resistor, pin 1=RPP_GATE, pin 2=GND
+R24_POS = (83.5, 57.1)
+
 
 # ── Exact pad position computation ───────────────────────────────
 # Computes absolute board-level coordinates for every IC/connector pad,
@@ -526,6 +535,10 @@ def _init_pads():
     # BAT54C dual Schottky diode (B.Cu, near SW13 menu button)
     ref_d1, pos_d1 = D1_DIODE
     _PADS[ref_d1] = _compute_pads("SOT-23-3", pos_d1[0], pos_d1[1], 0, "B")
+
+    # P-MOSFET reverse polarity protection (v4.0)
+    _PADS["Q1"] = _compute_pads("SOT-23-3", Q1_POS[0], Q1_POS[1], 0, "B")
+    _PADS["R24"] = _compute_pads("R_0805", R24_POS[0], R24_POS[1], 180, "B")
 
     # Key passives with explicit routing
     passive_placements = [
@@ -1264,25 +1277,32 @@ def _power_traces():
                        "B.Cu", W_PWR, n_3v3))
     parts.append(_via_net(v3_via_x, v3_via_y, n_3v3))
 
-    # ── AMS1117 thermal vias: 2x2 grid under tab pad (pin 4) ──────
+    # ── AMS1117 thermal vias: 4x2 grid under tab pad (pin 4) ──────
     # Tab pad center at am_tab = (125.0, 52.35), size 3.6x1.8mm.
+    # Pad bounds: x=[123.2, 126.8], y=[51.45, 53.25].
     # Tab = VOUT (+3V3). Thermal vias connect tab to In2.Cu +3V3 zone for
     # heat spreading. At 500mA: P_diss = 1.7V * 0.5A = 0.85W. SOT-223 with
-    # 4 thermal vias reduces thermal resistance from ~90 to ~50 C/W.
-    # 2x2 grid with ~1.0mm spacing, centered on tab pad.
-    # Via size 0.50mm, drill 0.20mm (annular ring 0.15mm, JLCPCB OK).
-    # Positions: 2x2 grid, ±0.50mm Y spacing for copper gap ≥0.40mm.
-    # All within tab pad bounds (x=123.2..126.8, y=51.45..53.25).
+    # 8 thermal vias (was 4) reduces thermal resistance from ~50 to ~35 C/W.
+    # 4x2 grid: 4 columns (X offsets -1.2, -0.4, +0.4, +1.2) x 2 rows (Y ±0.50).
+    # Via size 0.60mm, drill 0.20mm (annular ring 0.20mm, JLCPCB OK).
+    # Hole-to-hole X: 0.80-0.20=0.60mm ≥ 0.25mm ✓
+    # Hole-to-hole Y: 1.00-0.20=0.80mm ≥ 0.25mm ✓
+    # Edge clearance: min 0.30mm from via OD edge to pad edge (same-net, OK) ✓
     _therm_via_positions = [
-        (am_tab[0] - 0.5, am_tab[1] - 0.50),  # (124.5, 51.85)
-        (am_tab[0] + 0.5, am_tab[1] - 0.50),  # (125.5, 51.85)
-        (am_tab[0] - 0.5, am_tab[1] + 0.50),  # (124.5, 52.85)
-        (am_tab[0] + 0.5, am_tab[1] + 0.50),  # (125.5, 52.85)
+        (am_tab[0] - 1.2, am_tab[1] - 0.50),  # (123.8, 51.85)
+        (am_tab[0] - 0.4, am_tab[1] - 0.50),  # (124.6, 51.85)
+        (am_tab[0] + 0.4, am_tab[1] - 0.50),  # (125.4, 51.85)
+        (am_tab[0] + 1.2, am_tab[1] - 0.50),  # (126.2, 51.85)
+        (am_tab[0] - 1.2, am_tab[1] + 0.50),  # (123.8, 52.85)
+        (am_tab[0] - 0.4, am_tab[1] + 0.50),  # (124.6, 52.85)
+        (am_tab[0] + 0.4, am_tab[1] + 0.50),  # (125.4, 52.85)
+        (am_tab[0] + 1.2, am_tab[1] + 0.50),  # (126.2, 52.85)
     ]
     for tvx, tvy in _therm_via_positions:
         parts.append(_via_net(tvx, tvy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
-        # Short B.Cu stub from via to tab pad center (ensures DFM connectivity check)
-        parts.append(_seg(tvx, tvy, am_tab[0], tvy, "B.Cu", W_PWR, n_3v3))
+        # Short B.Cu stub from via to tab pad center Y (ensures DFM connectivity).
+        # Vertical stubs avoid acute angles that horizontal stubs to shared X create.
+        parts.append(_seg(tvx, tvy, tvx, am_tab[1], "B.Cu", W_PWR, n_3v3))
 
     # DFM FIX: removed F.Cu horizontal from x=125 to x=100.5 at y=49.35 — this trace
     # crossed the VBUS F.Cu vertical at x=111, gap=0mm (DANGER violation).
@@ -1341,22 +1361,54 @@ def _power_traces():
                        "F.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
-    # B.Cu: vertical from approach to pad Y, then horizontal to pad X
-    # R13-CU-CLR FIX (2026-04-11): JLCDFM preferred clearance ≥0.15mm.
-    # W_PWR_HIGH (0.76) right edge at x=80.39 vs J3.2 pad left edge x=80.50
-    # → gap 0.11mm (violation #2 in verify_copper_clearance).
-    # Fix: taper the final approach to J3.2 pad down to W_PWR (0.60).
-    # New right edge: 80.01+0.30=80.31 → gap to J3.2 = 0.19mm ✓
-    # Left edge: 80.01-0.30=79.71 → gap to R11.1 (79.45) = 0.26mm ✓
-    # Rating at 0.60mm/1oz Cu ≈ 2.3A > peak battery discharge (~1.5A).
-    # Taper point y=58.0 is above J3[2] pad top (61.25) with 3.25mm margin.
-    _bat_taper_y = 58.0
-    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_taper_y,
+    # ── v4.0: BAT+ approach now terminates at Q1 drain (P-MOSFET RPP) ──
+    # Q1 (SI2301CDS SOT-23-3) at (80.0, 56.0) on B.Cu:
+    #   Pin 3 (Drain/BAT+) at (80.0, 54.90)
+    #   Pin 2 (Source/BAT_IN) at (79.05, 57.10)
+    #   Pin 1 (Gate/RPP_GATE) at (80.95, 57.10)
+    q1_drain = _pad("Q1", "3")    # (80.0, 54.90) — BAT+ net
+    q1_source = _pad("Q1", "2")   # (79.05, 57.10) — BAT_IN net
+    q1_gate = _pad("Q1", "1")     # (80.95, 57.10) — RPP_GATE net
+    n_bat_in = NET_ID["BAT_IN"]
+    n_rpp_gate = NET_ID["RPP_GATE"]
+
+    # Pad net assignments for Q1 and R24
+    _PAD_NETS[("Q1", "1")] = n_rpp_gate
+    _PAD_NETS[("Q1", "2")] = n_bat_in
+    _PAD_NETS[("Q1", "3")] = n_bat
+    _PAD_NETS[("R24", "1")] = n_rpp_gate
+    _PAD_NETS[("R24", "2")] = n_gnd
+    # J3 pin 1 is now BAT_IN (was BAT+)
+    _PAD_NETS[("J3", "1")] = n_bat_in
+
+    # BAT+ approach vertical: via to Q1 drain
+    # bat_approach_x=80.01, Q1 drain at (80.0, 54.90)
+    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, q1_drain[1],
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(bat_approach_x, _bat_taper_y, bat_approach_x, jst_p[1],
+    parts.append(_seg(bat_approach_x, q1_drain[1], q1_drain[0], q1_drain[1],
                        "B.Cu", W_PWR, n_bat))
-    parts.append(_seg(bat_approach_x, jst_p[1], jst_p[0], jst_p[1],
-                       "B.Cu", W_PWR, n_bat))
+
+    # BAT_IN: Q1 source to J3 pin 1
+    # Q1 source at (79.05, 57.10), J3.1 at (79.0, 62.5)
+    # Short B.Cu vertical + tiny horizontal
+    parts.append(_seg(q1_source[0], q1_source[1], q1_source[0], jst_p[1],
+                       "B.Cu", W_PWR, n_bat_in))
+    parts.append(_seg(q1_source[0], jst_p[1], jst_p[0], jst_p[1],
+                       "B.Cu", W_PWR, n_bat_in))
+
+    # RPP_GATE: Q1 gate to R24 pad 1
+    # Q1 gate at (80.95, 57.10), R24 pad 1 at (84.45, 57.1)
+    r24_1 = _pad("R24", "1")   # RPP_GATE side
+    r24_2 = _pad("R24", "2")   # GND side
+    parts.append(_seg(q1_gate[0], q1_gate[1], r24_1[0], r24_1[1],
+                       "B.Cu", W_SIG, n_rpp_gate))
+
+    # R24 pad 2 → GND via (short stub down + via)
+    _r24_gnd_via_y = r24_2[1] + 1.5  # below R24
+    parts.append(_seg(r24_2[0], r24_2[1], r24_2[0], _r24_gnd_via_y,
+                       "B.Cu", W_SIG, n_gnd))
+    parts.append(_via_net(r24_2[0], _r24_gnd_via_y, n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── Power switch -> BAT+ junction ──────────────────────────
     # DFM FIX v1: was F.Cu long vertical at x=39.25, y=46.13..70.05.
@@ -2757,13 +2809,12 @@ def _usb_traces():
     parts.append(_seg(usb_dm[0], usb_dm[1], usb_dm[0], dm_via_y,
                        "B.Cu", W_DATA, n_dm))
     parts.append(_via_net(usb_dm[0], dm_via_y, n_dm, size=VIA_STD, drill=VIA_STD_DRILL))
-    # SHORT FIX: dm_col_x moved from +2.5 to +3.0 to clear C4 GND via at (91.05,40.0).
-    # Old: dm_col_x=91.25, GND via at 91.05 → edge gap |91.25-91.05|-0.10-0.125=-0.025mm.
-    # v2: dm_col_x=91.75 → edge gap to via (91.05+0.45)=91.50 → 91.75-91.50-0.10=0.15mm ✓
-    # v3: dm_col_x=91.75 too close to R14 +3V3 stub at x=92.05 (gap=0.075mm < 0.10mm).
-    #   Shift to +2.95 (x=91.70). C4 GND via reduced to 0.80mm (edge=91.45).
-    #   Left gap:  91.70-0.10-(91.05+0.40) = 91.60-91.45 = 0.15mm ✓
-    #   Right gap: (92.05-0.125)-(91.70+0.10) = 91.925-91.80 = 0.125mm ✓
+    # v4.0 NOTE: dm_col_x cannot move closer to dp_col_x (90.25) due to:
+    # 1. VBUS via at (90.95, 59.3) OD=0.60 blocks x=90.65..91.25
+    # 2. R14 pad at (92.05, 46.0) left edge=91.55 blocks x=91.30..91.55
+    # 3. U4 TVS pins 1/6 at x=91.9 require D- approach near x=91.65
+    # These three constraints pin dm_col_x to ~91.65. Zdiff ≈ 130Ω is acceptable
+    # for USB 2.0 Full-Speed (12 Mbps, tolerance ~25mm mismatch at 12 MHz).
     dm_col_x = dm_x + 2.90   # 91.65 — clears C4 GND via and R14 +3V3 stub
     # USB D+/D- LENGTH MATCHING: D- is already ~4.6mm longer than D+.
     # The meander was incorrectly added to D- (making the delta worse).

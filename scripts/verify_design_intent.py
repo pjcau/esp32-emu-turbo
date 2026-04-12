@@ -479,12 +479,19 @@ def test_T6_power_chain(net_pads, ref_pads):
     check("T6", "VBUS reaches IP5306 (U2)", "U2" in vbus_comps,
           f"VBUS components: {sorted(vbus_comps)}")
 
-    # BAT+ must reach: J3 (battery), L1 (inductor), SW_PWR
+    # BAT+ must reach: Q1 (P-MOSFET drain), L1 (inductor), SW_PWR
+    # v4.0: J3.1 is on BAT_IN net (via Q1 RPP), BAT+ reaches Q1 drain
     batp_comps = set(r for r, _ in net_pads.get("BAT+", []))
-    check("T6", "BAT+ reaches battery connector (J3)", "J3" in batp_comps,
+    check("T6", "BAT+ reaches P-MOSFET (Q1)", "Q1" in batp_comps,
           f"BAT+ components: {sorted(batp_comps)}")
     check("T6", "BAT+ reaches inductor (L1)", "L1" in batp_comps,
           f"BAT+ components: {sorted(batp_comps)}")
+    # BAT_IN must reach: J3 (battery), Q1 (P-MOSFET source)
+    batin_comps = set(r for r, _ in net_pads.get("BAT_IN", []))
+    check("T6", "BAT_IN reaches battery connector (J3)", "J3" in batin_comps,
+          f"BAT_IN components: {sorted(batin_comps)}")
+    check("T6", "BAT_IN reaches P-MOSFET source (Q1)", "Q1" in batin_comps,
+          f"BAT_IN components: {sorted(batin_comps)}")
 
     # +5V must reach: U2 (VOUT), U3 (VIN), U5 (PAM8403 VDD)
     v5_comps = set(r for r, _ in net_pads.get("+5V", []))
