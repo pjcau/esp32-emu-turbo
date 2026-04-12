@@ -2225,7 +2225,7 @@ def _i2s_traces():
     Speaker: BTL right channel: SPK+ = +OUT_R (pin 16), SPK- = -OUT_R (pin 14).
     Power: PVDD (4,13) + VDD (6) → +5V; PGND (2,15) + GND (11) → GND.
     Control: MUTE (5) + SHDN (12) → +5V (always on/unmuted).
-    VREF (8): internal reference, left unconnected (no spare cap in BOM).
+    VREF (8): internal reference, bypassed to GND via C21 (100nF) per PAM8403 datasheet.
     """
     parts = []
     _init_pads()
