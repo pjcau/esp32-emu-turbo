@@ -280,6 +280,21 @@ def main():
     check("All BOM entries have LCSC part number", not missing_lcsc,
           f"missing LCSC: {sorted(missing_lcsc)}")
 
+    # ── 8. Schematic field completeness (KiBot-inspired) ──
+    print("\n── Schematic Field Completeness ──")
+    missing_value = []
+    missing_fp = []
+    for ref, info in sorted(bom.items()):
+        if not info["comment"] or info["comment"].strip() == "":
+            missing_value.append(ref)
+        if not info["footprint"] or info["footprint"].strip() == "":
+            missing_fp.append(ref)
+
+    check("All BOM entries have value/comment field", not missing_value,
+          f"missing value: {sorted(missing_value)}")
+    check("All BOM entries have footprint field", not missing_fp,
+          f"missing footprint: {sorted(missing_fp)}")
+
     # ── Summary ──
     print("\n" + "=" * 60)
     total = PASS + FAIL

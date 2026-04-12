@@ -75,11 +75,16 @@ python3 scripts/verify_copper_clearance.py         # MUST be "0 DANGER"
 python3 scripts/verify_net_connectivity.py         # MUST be "0 failed"
 
 # ── DFM / DFA / JLCPCB manufacturing ─────────────────────────────
-python3 scripts/verify_dfm_v2.py                   # 115 tests
+python3 scripts/verify_dfm_v2.py                   # 119 tests (incl zone fill + silk-to-pad)
 python3 scripts/verify_dfa.py                      #   9 tests
 python3 scripts/validate_jlcpcb.py                 #  26 tests
-python3 scripts/verify_bom_cpl_pcb.py              #  10 tests
+python3 scripts/verify_bom_cpl_pcb.py              #  13 tests (incl field completeness)
 python3 scripts/verify_polarity.py                 #  47 tests
+
+# ── JLCPCB official capabilities + stencil + drill ──────────────
+python3 scripts/verify_jlcpcb_capabilities.py      #  12 tests (JLCPCB published limits)
+python3 scripts/verify_stencil_aperture.py         #   6 tests (IPC-7525 stencil analysis)
+python3 scripts/verify_drill_standards.py          #   6 tests (ISO metric + drill-to-pad ratio)
 
 # ── Datasheet pinout + physical verification ─────────────────────
 python3 scripts/verify_datasheet_nets.py           # 259 pin→net checks

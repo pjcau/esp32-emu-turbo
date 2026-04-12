@@ -3607,6 +3607,127 @@ def test_jlcdfm_slot_width():
           f"{len(violations)} violations")
 
 
+def test_zone_fill_freshness():
+    """Zone fill freshness -- detect stale or unfilled copper zones.
+
+    Inspired by KiBot check_zone_fills preflight: zones that are defined
+    but have no filled polygon data will produce incorrect gerbers.
+    """
+    print("\n── Zone Fill Freshness ──")
+
+    with open(PCB_FILE) as f:
+        content = f.read()
+
+    zone_starts = re.findall(r'^\s+\(zone\s+', content, re.M)
+    filled_polys = re.findall(r'\(filled_polygon\s', content)
+    zone_count = len(zone_starts)
+    fill_count = len(filled_polys)
+
+    check(f"Zones defined ({zone_count} zones)",
+          zone_count > 0,
+          "No copper zones found!")
+
+    check(f"Zone fills present ({fill_count} filled polygons)",
+          fill_count > 0 or zone_count == 0,
+          f"{zone_count} zones but 0 filled_polygon entries -- run zone fill!")
+
+    if zone_count > 0 and fill_count > 0:
+        ratio = fill_count / zone_count
+        check(f"Zone fill coverage (ratio={ratio:.1f})",
+              ratio >= 0.5,
+              f"only {fill_count} fills for {zone_count} zones")
+
+
+def test_silk_to_pad_distance():
+    """Silk-to-pad precise distance using stroke geometry (KiPadCheck-inspired).
+
+    Min distance: 0.15mm (JLCPCB recommendation for silk legibility).
+    """
+    print("\n── Silk-to-Pad Stroke Distance ──")
+    MIN_SILK_PAD_DIST = 0.15
+
+    sys.path.insert(0, os.path.join(BASE, "scripts"))
+    from pcb_cache import load_cache
+    cache = load_cache()
+
+    smd_pads = [p for p in cache["pads"]
+                if p.get("drill", 0) == 0 and p.get("w", 0) > 0 and p.get("h", 0) > 0]
+
+    with open(PCB_FILE) as f:
+        content = f.read()
+
+    silk_lines = []
+    for m in re.finditer(
+        r'\(fp_line\s+\(start\s+([-\d.]+)\s+([-\d.]+)\)\s*'
+        r'\(end\s+([-\d.]+)\s+([-\d.]+)\)\s*'
+        r'(?:\(stroke\s+\(width\s+([\d.]+)\).*?\)\s*)?'
+        r'\(layer\s+"([FB]\.SilkS)"\)',
+        content, re.DOTALL
+    ):
+        silk_lines.append({
+            "x1": float(m.group(1)), "y1": float(m.group(2)),
+            "x2": float(m.group(3)), "y2": float(m.group(4)),
+            "width": float(m.group(5)) if m.group(5) else 0.12,
+            "layer": m.group(6),
+        })
+    for m in re.finditer(
+        r'\(gr_line\s+\(start\s+([-\d.]+)\s+([-\d.]+)\)\s*'
+        r'\(end\s+([-\d.]+)\s+([-\d.]+)\)\s*'
+        r'(?:\(stroke\s+\(width\s+([\d.]+)\).*?\)\s*)?'
+        r'\(layer\s+"([FB]\.SilkS)"\)',
+        content, re.DOTALL
+    ):
+        silk_lines.append({
+            "x1": float(m.group(1)), "y1": float(m.group(2)),
+            "x2": float(m.group(3)), "y2": float(m.group(4)),
+            "width": float(m.group(5)) if m.group(5) else 0.12,
+            "layer": m.group(6),
+        })
+
+    if not silk_lines:
+        print("    INFO: No silkscreen lines found (all silk on Fab layers)")
+        check("Silk-to-pad distance (no silk lines to check)", True)
+        return
+
+    violations = []
+    for sl in silk_lines:
+        silk_r = sl["width"] / 2
+        copper_layer = "F.Cu" if sl["layer"] == "F.SilkS" else "B.Cu"
+        for p in smd_pads:
+            if p.get("layer") != copper_layer:
+                continue
+            px, py = p["x"], p["y"]
+            pw, ph = p["w"], p["h"]
+            if (max(sl["x1"], sl["x2"]) + silk_r < px - pw / 2 - 1.0 or
+                min(sl["x1"], sl["x2"]) - silk_r > px + pw / 2 + 1.0 or
+                max(sl["y1"], sl["y2"]) + silk_r < py - ph / 2 - 1.0 or
+                min(sl["y1"], sl["y2"]) - silk_r > py + ph / 2 + 1.0):
+                continue
+            dx, dy = sl["x2"] - sl["x1"], sl["y2"] - sl["y1"]
+            length_sq = dx * dx + dy * dy
+            if length_sq == 0:
+                dist_center = ((px - sl["x1"]) ** 2 + (py - sl["y1"]) ** 2) ** 0.5
+            else:
+                t = max(0, min(1, ((px - sl["x1"]) * dx + (py - sl["y1"]) * dy) / length_sq))
+                nx = sl["x1"] + t * dx
+                ny = sl["y1"] + t * dy
+                dist_center = ((px - nx) ** 2 + (py - ny) ** 2) ** 0.5
+            pad_r = min(pw, ph) / 2
+            clearance = dist_center - pad_r - silk_r
+            if clearance < MIN_SILK_PAD_DIST and clearance >= -0.5:
+                violations.append(
+                    f"{p['ref']}[{p['num']}] silk gap={clearance:.3f}mm")
+
+    check(f"Silk-to-pad distance >= {MIN_SILK_PAD_DIST}mm "
+          f"({len(silk_lines)} silk lines, {len(smd_pads)} pads)",
+          len(violations) == 0,
+          f"{len(violations)} violations" + (f": {violations[0]}" if violations else ""))
+
+    if violations:
+        for v in violations[:10]:
+            print(f"      {v}")
+
+
 if __name__ == "__main__":
     print("=" * 60)
     print("DFM v2 Verification Tests")
@@ -3683,6 +3804,13 @@ if __name__ == "__main__":
     test_jlcdfm_unconnected_via()
     test_jlcdfm_pth_spacing()
     test_jlcdfm_slot_width()
+
+    # ── KiBot/KiPadCheck-Inspired Checks ──
+    print("\n" + "=" * 60)
+    print("KiBot/KiPadCheck-Inspired Checks")
+    print("=" * 60)
+    test_zone_fill_freshness()
+    test_silk_to_pad_distance()
 
     print(f"\n{'=' * 60}")
     print(f"Results: {PASS} passed, {FAIL} failed")

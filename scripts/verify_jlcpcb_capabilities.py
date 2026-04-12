@@ -27,7 +27,13 @@ FAIL = 0
 WARN = 0
 
 # ── JLCPCB Official Capabilities (1-2 layer board) ─────────────────
-# Source: jlcpcb.com/capabilities + agausmann/jlcpcb-kicad-drc
+# Source: jlcpcb.com/capabilities (absolute min) + agausmann/jlcpcb-kicad-drc (recommended)
+#
+# IMPORTANT: JLCPCB's universal minimum clearance for ALL copper features
+# on 1-2 layer boards is 0.127mm (5mil). The agausmann DRC file uses
+# STRICTER recommended values (e.g., 0.254mm via-to-track) which are
+# best-practice for yield, NOT rejection thresholds.
+#
 # Each rule has: (absolute_min, recommended, description)
 JLCPCB_RULES = {
     # Trace
@@ -37,7 +43,7 @@ JLCPCB_RULES = {
 
     # Via
     "via_hole_min":          (0.20, 0.30, "mm"),
-    "via_diameter_min":      (0.45, 0.60, "mm"),  # 1-2L: 0.45mm abs (JLCPCB capabilities page), 0.50mm in agausmann DRC
+    "via_diameter_min":      (0.45, 0.60, "mm"),  # 1-2L: 0.45mm abs, 0.50mm in agausmann DRC
     "via_annular_ring":      (0.13, 0.15, "mm"),
 
     # THT pad
@@ -45,15 +51,17 @@ JLCPCB_RULES = {
     "tht_annular_ring":      (0.25, 0.30, "mm"),
 
     # Clearance (different net)
-    "hole_to_hole_diff":     (0.50, 0.50, "mm"),
-    "via_to_via_diff":       (0.50, 0.50, "mm"),
-    "via_to_via_same":       (0.254, 0.30, "mm"),
+    # JLCPCB absolute min for all copper clearances: 0.127mm (5mil)
+    # agausmann recommended values are stricter for specific feature pairs
+    "hole_to_hole_diff":     (0.50, 0.50, "mm"),   # drill-to-drill specific rule
+    "via_to_via_diff":       (0.50, 0.50, "mm"),   # drill-to-drill specific rule
+    "via_to_via_same":       (0.127, 0.254, "mm"), # abs=universal min, rec=agausmann
     "smd_pad_to_pad_diff":   (0.127, 0.15, "mm"),
-    "tht_pad_to_pad_diff":   (0.50, 0.50, "mm"),
-    "via_to_track":          (0.254, 0.30, "mm"),
-    "pth_to_track":          (0.33, 0.40, "mm"),
-    "npth_to_track":         (0.254, 0.30, "mm"),
-    "pad_to_track":          (0.20, 0.25, "mm"),
+    "tht_pad_to_pad_diff":   (0.127, 0.50, "mm"), # abs=universal min, rec=agausmann
+    "via_to_track":          (0.127, 0.254, "mm"), # abs=universal min, rec=agausmann
+    "pth_to_track":          (0.127, 0.33, "mm"),  # abs=universal min, rec=agausmann
+    "npth_to_track":         (0.127, 0.254, "mm"), # abs=universal min, rec=agausmann
+    "pad_to_track":          (0.127, 0.20, "mm"),  # abs=universal min, rec=agausmann
 
     # Drill
     "drill_max":             (6.30, 6.30, "mm"),

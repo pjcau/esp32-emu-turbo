@@ -1712,8 +1712,16 @@ def _display_traces():
         # New: gap = 25.52 - 0.25 - 25.06 = 0.21 mm ≥ 0.20 rule ✓.
         # Also shifted Y1 in sympathy (keeps symmetry of the F.Cu bridge segment
         # around the J4.42 pad).
-        _J4_42_Y1 = 22.48   # 0.58mm above pad top (23.06)
-        _J4_42_Y2 = 25.52   # 0.46mm below pad bottom (25.06)
+        # JLCPCB FIX: stagger bridge via Y positions for adjacent columns
+        # so via-to-via hole gap >= 0.50mm (JLCPCB diff-net minimum).
+        # Even idx: Y1=22.20, Y2=25.80; odd idx: Y1=22.48, Y2=25.52.
+        # Diagonal distance: sqrt(0.70² + 0.28²) = 0.754mm → gap=0.554mm ✓
+        if idx % 2 == 0:
+            _J4_42_Y1 = 22.20   # 0.86mm above pad top (23.06)
+            _J4_42_Y2 = 25.80   # 0.74mm below pad bottom (25.06)
+        else:
+            _J4_42_Y1 = 22.48   # 0.58mm above pad top (23.06)
+            _J4_42_Y2 = 25.52   # 0.46mm below pad bottom (25.06)
         if 135.04 - 0.20 < apx < 137.54 + 0.20 and bypass_y < _J4_42_Y1 and fpy > _J4_42_Y2:
             # Split: B.Cu above → via → F.Cu through pad → via → B.Cu below
             parts.append(_seg(apx, bypass_y, apx, _J4_42_Y1, "B.Cu", W_DATA, net))

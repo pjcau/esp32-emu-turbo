@@ -28,12 +28,27 @@ python3 scripts/verify_polarity.py
 python3 scripts/verify_dfa.py
 python3 scripts/validate_jlcpcb.py
 python3 scripts/verify_bom_cpl_pcb.py
+python3 scripts/verify_jlcpcb_capabilities.py
+python3 scripts/verify_stencil_aperture.py
+python3 scripts/verify_drill_standards.py
 ```
 
-**BOM/CPL/PCB cross-check** (`verify_bom_cpl_pcb.py`, 10 checks):
+**BOM/CPL/PCB cross-check** (`verify_bom_cpl_pcb.py`, 13 checks):
 Verifies all designators match across BOM, CPL, and PCB. Checks footprint names
 are JLCPCB-compatible, CPL rotations valid, positions match (with known correction
-allowances), and all LCSC part numbers present.
+allowances), all LCSC part numbers present, and schematic field completeness.
+
+**JLCPCB capabilities** (`verify_jlcpcb_capabilities.py`, 12 checks):
+Two-tier cross-check against JLCPCB published manufacturing limits. FAIL = board
+rejected, WARN = below recommended. Covers trace, via, THT, clearance rules.
+
+**Stencil aperture** (`verify_stencil_aperture.py`, 6 checks):
+IPC-7525 area ratio + aspect ratio for multiple stencil thicknesses (3-5mil),
+paste powder type recommendation, fine-pitch component detail report.
+
+**Drill standards** (`verify_drill_standards.py`, 6 checks):
+ISO metric + JLCPCB common drill mapping, drill inventory count, IPC-2222
+drill-to-pad ratio, via vs PTH appropriateness.
 
 ### 1b. Run extended verification suite (17 gap-coverage tests)
 
