@@ -8,6 +8,10 @@ sidebar_position: 3
 
 Automated test battery that validates the entire design before PCB manufacturing. These checks run automatically on every commit via a git pre-commit hook.
 
+:::tip Workflow Guide
+For a visual overview of **when** to run each verification skill and how they fit into the design → verify → fix → release pipeline, see the [Agent & Skill Workflow Guide](/docs/development/workflow-guide).
+:::
+
 ```bash
 python3 scripts/drc_check.py
 python3 scripts/simulate_circuit.py

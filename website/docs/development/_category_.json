@@ -1,0 +1,8 @@
+{
+  "label": "Development",
+  "position": 7,
+  "link": {
+    "type": "generated-index",
+    "description": "Agent, skill, and workflow guides for PCB development with Claude Code."
+  }
+}

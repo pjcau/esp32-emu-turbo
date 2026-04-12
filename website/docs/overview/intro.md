@@ -32,3 +32,13 @@ Build a portable battery-powered device with USB-C charging and an ILI9488 3.95"
 | **Charging** | USB-C (IP5306, charge-and-play) |
 | **Emulation** | SNES (primary), NES (secondary) |
 | **Budget** | ~$42-55 for the prototype |
+
+## Documentation
+
+| Section | Content |
+|---|---|
+| [Design](/docs/design/schematics) | Schematics, components, PCB layout, GPIO mapping |
+| [Manufacturing](/docs/manufacturing/manufacturing) | JLCPCB ordering, BOM, CPL, DFM verification |
+| [Software](/docs/software/software) | ESP-IDF firmware, SNES optimization, audio profiles |
+| [Development](/docs/development/workflow-guide) | **Agent & Skill Workflow Guide** — how to use 43 skills and 6 agents |
+| [Tooling](/docs/tooling/docker) | Docker, rendering, build infrastructure |
