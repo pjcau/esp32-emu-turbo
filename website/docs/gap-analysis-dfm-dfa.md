@@ -52,7 +52,7 @@ description: Community repo analysis and new verification checks added to the pi
 - **Aspect ratio:** `min(L,W) / T` — minimum 1.2 for laser-cut stencils (JLCPCB standard)
 - **Multi-thickness analysis:** 3mil, 4mil, 5mil, JLCPCB standard (0.12mm)
 - **Paste powder type recommendation:** Type 2-5 based on smallest aperture
-- **Fine-pitch detail report:** Per-pad breakdown for pads <= 0.35mm
+- **Fine-pitch detail report:** Per-pad breakdown for pads ≤ 0.35mm
 
 ### G3: Standard Drill Size Audit (from KiPadCheck)
 
