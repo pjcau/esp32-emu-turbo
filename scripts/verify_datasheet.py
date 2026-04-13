@@ -123,7 +123,7 @@ DATASHEET_SPECS = {
         "body_h_mm": 7.3,
         "npth_count": 2,
         "npth_drill_mm": 0.65,   # positioning pegs ø0.50mm, holes ø0.65mm
-        "tht_drill_mm": 0.6,     # front shield tab drill
+        "tht_drill_mm": 0.65,    # front shield tab slot width (R20: 0.60→0.65 for JLCPCB min 0.61)
     },
     "J3": {
         "name": "JST PH 2-pin SMD",

@@ -150,8 +150,16 @@ def parse_pcb_full(path=None):
             pw = float(size_m.group(1))
             ph = float(size_m.group(2))
 
-            drill_m = re.search(r'\(drill\s+([\d.]+)\)', pad_block)
-            drill = float(drill_m.group(1)) if drill_m else 0.0
+            # Support both circular "(drill 0.6)" and oval "(drill oval 0.65 1.6)"
+            drill_oval_m = re.search(
+                r'\(drill\s+oval\s+([\d.]+)\s+([\d.]+)\)', pad_block)
+            drill_circ_m = re.search(r'\(drill\s+([\d.]+)\)', pad_block)
+            if drill_oval_m:
+                drill = float(drill_oval_m.group(1))  # slot width (narrowest)
+            elif drill_circ_m:
+                drill = float(drill_circ_m.group(1))
+            else:
+                drill = 0.0
 
             layers_m = re.search(r'\(layers\s+([^)]+)\)', pad_block)
             layers_str = layers_m.group(1) if layers_m else ""

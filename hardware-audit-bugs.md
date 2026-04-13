@@ -2066,3 +2066,69 @@ verify_drill_standards) and one routing fix (LCD_D2/D3 via stagger).
 ### v4.0 tag candidate
 
 R17 fixes + R18 via stagger fix + 3 new verification scripts (31 new tests) + threshold correction = v4.0. Board passes all 1,150+ automated checks including the new JLCPCB official capabilities suite.
+
+## Round 20 Findings (2026-04-13)
+
+### Step 0 gates
+
+| Gate | Expected | Actual | Status |
+|------|----------|--------|--------|
+| Fab shorts (`verify_trace_through_pad`) | 0 overlaps | 0 | PASS |
+| Trace crossings (`verify_trace_crossings`) | 0 crossings | 0 | PASS |
+| Copper clearance (`verify_copper_clearance`) | 0 DANGER | 0 | PASS |
+| Net connectivity (`verify_net_connectivity`) | 0 failed | 0 (4 accepted) | PASS |
+| DFM (`verify_dfm_v2`) | 119/119 | 119/119 | PASS |
+| DFA (`verify_dfa`) | 9/9 | 9/9 | PASS |
+| Polarity (`verify_polarity`) | 47/47 | 47/47 | PASS |
+| Datasheet nets (`verify_datasheet_nets`) | 264/264 | 264/264 | PASS |
+| Datasheet physical (`verify_datasheet`) | 29/29 | 29/29 | PASS |
+| Design intent (`verify_design_intent`) | 364/364 | 364/364 | PASS |
+| R4 sync guard (`verify_schematic_pcb_sync`) | PASS | PASS | PASS |
+| Netlist diff (`verify_netlist_diff`) | 4/4 | 4/4 | PASS |
+| Strapping pins (`verify_strapping_pins`) | 12/12 | 12/12 | PASS |
+| Decoupling adequacy (`verify_decoupling_adequacy`) | 25/25 | 25/25 | PASS |
+| Power sequence (`verify_power_sequence`) | 26/26 | 26/26 | PASS |
+| Power paths (`verify_power_paths`) | 19/19 | 19/19 | PASS |
+| ERC (`erc_check`) | 0 critical | 0 critical | PASS |
+| KiCad DRC | 0 shorts | 0 shorts, 0 dangling | PASS |
+| JLCPCB capabilities | 12/12 | 12/12 | PASS |
+| Stencil aperture | 5/5 | 5/5 | PASS |
+| Drill standards | 5/5 | 5/5 | PASS |
+| BOM/CPL/PCB sync | 12/12 | 12/12 | PASS |
+| JLCPCB validation | 25/25 | 25/25 | PASS |
+
+**All 23 gates PASS.** Total automated checks: ~1,700.
+
+### Domain findings (Layer 2 prose)
+- **Power chain**: 0 new findings. IP5306→+5V→AMS1117→+3V3 verified.
+- **ESP32 boot**: 0 new findings. GPIO45 R14 correctly skipped, strapping OK.
+- **Display**: 0 new findings. J4 FPC 41-N reversal documented, LCD bus routed.
+- **Audio**: 0 new findings. PDM TX + C22 AC coupling + PAM8403 correct.
+- **SD card**: 0 new findings. SPI mode on correct GPIO, NPTH 1.0mm.
+- **Buttons**: 0 new findings. 12 buttons + D1 menu combo documented tech debt.
+- **USB**: 0 new findings. CC pull-downs, ESD TVS, 22Ω series resistors.
+- **Emulator performance**: 0 new findings.
+
+### Bug list
+
+#### R20-FIX-1 — J1 USB-C slot width below JLCPCB manufacturing minimum (FIXED)
+- **Files**: `scripts/generate_pcb/footprints.py`
+- **Problem**: Shield tab slot drills were 0.60mm wide; JLCPCB minimum is 0.61mm. DFM flagged 4 Danger "Slot width check".
+- **Root cause**: Datasheet specifies 0.60mm but JLCPCB can't manufacture below 0.61mm.
+- **Fix**: Slot width increased to 0.65mm (R20, commit caf2b2c).
+
+#### R20-FIX-2 — J1 shield tab dimensions from EasyEDA instead of datasheet (FIXED)
+- **Files**: `scripts/generate_pcb/footprints.py`
+- **Problem**: EasyEDA community footprint had wrong drill slot heights (front 1.50→1.60, rear 1.20→1.50) and front pad height (2.00→2.10). JLCPCB DFM used manufacturer datasheet dimensions, causing pin misalignment.
+- **Root cause**: easyeda2kicad fetched a community footprint with errors vs the Shouhan datasheet.
+- **Fix**: All dimensions corrected to match manufacturer datasheet (R19, commit 17b4ed9).
+
+#### R20-FIX-3 — pcb_cache.py didn't parse oval slot drills (FIXED)
+- **Files**: `scripts/pcb_cache.py`, `scripts/verify_datasheet.py`
+- **Problem**: Cache regex only matched `(drill 0.6)`, not `(drill oval 0.65 1.6)`. J1 THT pads had drill=0.0 in cache, causing verify_datasheet.py false failure.
+- **Root cause**: Oval drill support was added to footprints.py but not to the cache parser.
+- **Fix**: pcb_cache.py now parses both circular and oval drill syntax. verify_datasheet.py updated to expect 0.65mm.
+
+### v4.1 candidate
+
+R18+R19+R20 fixes (USB-C slot drills, datasheet dimensions, JLCPCB slot width) + pcb_cache oval drill parser = v4.1. Board passes all 1,700+ automated checks. Zero new bugs found in prose audit.
