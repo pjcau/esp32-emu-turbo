@@ -286,22 +286,22 @@ def sop16(layer="B"):
 def usb_c_16p(layer="B"):
     """USB-C 16-pin 2MD(073) — C2765186.
 
-    R18 FIX (2026-04-13): two critical fixes for JLCPCB SMT assembly
-    rejection "package cannot match pads on PCB":
+    R19 FIX (2026-04-13): shield tab dimensions corrected to match
+    MANUFACTURER DATASHEET instead of EasyEDA community footprint.
+    JLCPCB DFM still reported 4 "Danger" pin misalignment after R18
+    because their 3D model follows the datasheet, not EasyEDA.
 
-      1. Shield THT tab drills changed from CIRCULAR 0.60 mm to OVAL
-         SLOT drills matching EasyEDA reference exactly:
-         - Front tabs (13/14): oval 0.60 × 1.50 mm
-         - Rear tabs (13/14): oval 0.60 × 1.20 mm
+    Datasheet (Shouhan TYPE-C 16PIN 2MD(073)):
+      Front shield: pad 1.1x2.10mm, slot 0.60x1.60mm
+      Rear shield:  pad 1.2x1.80mm, slot 0.60x1.50mm
 
-      2. Wide signal pad height restored from 1.04 → 1.10 mm (exact
-         EasyEDA reference value). R17's 1.04 mm was a local DRC
-         workaround that deviated from the JLCPCB reference.
+    EasyEDA reference had WRONG values:
+      Front pad 2.0mm (should be 2.10), front slot 1.50 (should be 1.60)
+      Rear slot 1.20 (should be 1.50)
 
     Prior fixes still in effect:
-      - R16: pad sizes aligned to EasyEDA reference
-      - R16: duplicate "13"/"14" pad names for shield tabs
-      - R16: NPTH drill 0.70 mm
+      - R18: oval slot drills, wide signal pad 1.10mm
+      - R16: duplicate "13"/"14" pad names, NPTH drill 0.70mm
     """
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
@@ -344,21 +344,28 @@ def usb_c_16p(layer="B"):
     # Shield THT tabs: 4 total, front pair "13"/"14" + rear pair "13"/"14"
     # (duplicate names — matches JLCPCB/EasyEDA reference, see docstring).
     #
-    # R18 FIX (2026-04-13): drills changed from circular 0.60 mm to OVAL
-    # SLOT drills matching the EasyEDA reference exactly.  This was the
-    # root cause of JLCPCB's "package cannot match pads" rejection —
-    # the 3D model expects slot holes for the shield tabs.
+    # R19 FIX (2026-04-13): dimensions corrected to match MANUFACTURER
+    # DATASHEET (Shouhan TYPE-C 16PIN 2MD(073)), NOT the EasyEDA
+    # community footprint which had wrong slot drill heights.
     #
-    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.0 mm, drill oval 0.6×1.5
-    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.2×1.8 mm, drill oval 0.6×1.2
-    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.0, THT,
-                     drill=(0.6, 1.5), solder_mask_margin=0))
-    pads.append(_pad("14", "thru_hole", "oval",  4.325, -1.825, 1.1, 2.0, THT,
-                     drill=(0.6, 1.5), solder_mask_margin=0))
+    # Datasheet "RECOMMENDED PCB LAYOUT" specifies:
+    #   Front shield: pad 1.1×2.10mm, slot drill 0.60×1.60mm
+    #   Rear shield:  pad 1.2×1.80mm, slot drill 0.60×1.50mm
+    #
+    # EasyEDA had: front drill 0.6×1.5 (wrong), rear drill 0.6×1.2 (wrong),
+    # front pad height 2.0 (wrong). JLCPCB 3D model follows the datasheet,
+    # causing DFM "pin misalignment" on all 4 shield tabs.
+    #
+    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.10 mm, drill oval 0.6×1.6
+    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.2×1.80 mm, drill oval 0.6×1.5
+    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.1, THT,
+                     drill=(0.6, 1.6), solder_mask_margin=0))
+    pads.append(_pad("14", "thru_hole", "oval",  4.325, -1.825, 1.1, 2.1, THT,
+                     drill=(0.6, 1.6), solder_mask_margin=0))
     pads.append(_pad("13", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
-                     drill=(0.6, 1.2), solder_mask_margin=0))
+                     drill=(0.6, 1.5), solder_mask_margin=0))
     pads.append(_pad("14", "thru_hole", "oval",  4.325, 2.375, 1.2, 1.8, THT,
-                     drill=(0.6, 1.2), solder_mask_margin=0))
+                     drill=(0.6, 1.5), solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
     # Source: EasyEDA reference — 0.70mm drill (was 0.65mm in prior
