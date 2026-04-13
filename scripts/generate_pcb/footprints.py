@@ -356,16 +356,22 @@ def usb_c_16p(layer="B"):
     # front pad height 2.0 (wrong). JLCPCB 3D model follows the datasheet,
     # causing DFM "pin misalignment" on all 4 shield tabs.
     #
-    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.10 mm, drill oval 0.6×1.6
-    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.2×1.80 mm, drill oval 0.6×1.5
+    # R20 FIX (2026-04-13): slot WIDTH increased from 0.60 → 0.65 mm.
+    # JLCPCB minimum slot width is 0.61mm; our 0.60mm triggered 4 DFM
+    # Danger "slot width check" findings.  Datasheet specifies 0.60mm
+    # but JLCPCB can't manufacture below 0.61mm.  0.65mm gives safe
+    # margin (component pins ~0.50mm → 0.075mm clearance per side).
+    #
+    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.10 mm, drill oval 0.65×1.6
+    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.2×1.80 mm, drill oval 0.65×1.5
     pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.1, THT,
-                     drill=(0.6, 1.6), solder_mask_margin=0))
+                     drill=(0.65, 1.6), solder_mask_margin=0))
     pads.append(_pad("14", "thru_hole", "oval",  4.325, -1.825, 1.1, 2.1, THT,
-                     drill=(0.6, 1.6), solder_mask_margin=0))
+                     drill=(0.65, 1.6), solder_mask_margin=0))
     pads.append(_pad("13", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
-                     drill=(0.6, 1.5), solder_mask_margin=0))
+                     drill=(0.65, 1.5), solder_mask_margin=0))
     pads.append(_pad("14", "thru_hole", "oval",  4.325, 2.375, 1.2, 1.8, THT,
-                     drill=(0.6, 1.5), solder_mask_margin=0))
+                     drill=(0.65, 1.5), solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
     # Source: EasyEDA reference — 0.70mm drill (was 0.65mm in prior
