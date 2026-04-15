@@ -67,6 +67,11 @@ _JLCPCB_ROT_OVERRIDES = {
     "U5": 180,   # PAM8403 (C5122557) — formula (90°→180°); 90° was wrong per JLCPCB DFM
     "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
     "D1": 270,   # BAT54C (C37704) — 90°+180° per JLCPCB 3D alignment
+    "C2": 180,   # Tantalum 22uF (C1953590 Vishay TMCMA1C226MTRF) — JLCPCB 3D model stripe/+ oriented opposite to our pad 1
+    "LED2": 180, # Green LED 0805 (C19171391) — EasyEDA footprint has pad 1 on cathode-silk-OPPOSITE
+                 # side (pad 1 x=+1.05, cathode silk notch at x=-0.34..-2.22), inverted vs LED1
+                 # C84256 (pad 1 x=-1.10 co-located with cathode silk). Datasheet page 1 confirms
+                 # pin 1 = cathode. 180° rotation aligns physical cathode onto our GND pad 1.
 }
 
 

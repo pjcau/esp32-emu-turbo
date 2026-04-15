@@ -141,7 +141,7 @@ LiPo 3.7V 5000mAh
 | R16 | 100k | IP5306 KEY pull-down | Keeps KEY low when idle |
 | R17, R18 | 1k | LED current limiting | 1.3mA red, 1.1mA green |
 | C1 | 10uF | AMS1117 input | Datasheet requirement |
-| C2 | 22uF tantalum (C7171) | AMS1117 output | Datasheet: >= 22uF |
+| C2 | 22uF tantalum (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω @ 100kHz) | AMS1117 output | Datasheet: >= 22uF, ESR 0.3-22Ω |
 | C3, C4 | 100nF | ESP32 decoupling | Standard practice |
 | C5–C16 | 100nF | Button debounce | RC = 1ms with 10k pull-ups |
 | C17, C18 | 10uF | IP5306 decoupling | Datasheet requirement |
@@ -679,6 +679,7 @@ Complete automated test suite that validates every dimensional constraint requir
 | `validate_jlcpcb.py` | 25 | 25 | JLCPCB-specific (drill, copper island, gerbers) |
 | `verify_copper_clearance.py` | all nets | 0 DANGER | Shapely polygon copper gap analysis |
 | `verify_polarity.py` | 47 | 47 | Pin-to-net assignment (256 pin checks) |
+| `verify_easyeda_footprint.py` | all BOM | FAIL on delta | Cross-check every BOM footprint vs EasyEDA reference fetched via `easyeda2kicad` (catches pad-1 rotation/polarity bugs BEFORE JLCPCB assembly). Caches under `scripts/.easyeda_cache/` per LCSC ID. See category table below. |
 | `verify_datasheet_nets.py` | 261 | 221 PASS | Pad net vs datasheet specs (34 components) |
 | `verify_datasheet.py` | 29 | 29 | Physical footprint vs datasheet |
 | `verify_design_intent.py` | 362 | 362 | Cross-source GPIO/net consistency (T1-T22) |
@@ -708,6 +709,29 @@ Complete automated test suite that validates every dimensional constraint requir
 | `verify_sd_interface.py` | 7 | 7 | SD card SPI completeness |
 | `verify_power_resonance.py` | 4 | 4 | Power plane LC resonance |
 | **TOTAL** | **~1200+** | | |
+
+#### `verify_easyeda_footprint.py` — Status Categories
+
+Every BOM reference is classified into exactly one status. Only `FAIL`
+produces a non-zero exit code; everything else is exit-0.
+
+| Status | Exit contribution | Meaning | Where defined |
+|---|---|---|---|
+| `OK` | 0 | Footprint matches EasyEDA reference (δ_row = 0°), or an existing `_JLCPCB_ROT_OVERRIDES` entry empirically compensates the delta. | — |
+| `ALLOW` | 0 | Non-zero δ_row mismatch explicitly signed off with empirical evidence (prototype batch + observed behaviour). If δ_row drifts, entry auto-invalidates and the ref re-FAILs. | `_GEOMETRIC_MISMATCH_ALLOWLIST` in `verify_easyeda_footprint.py` |
+| `PENDING` | 0 | Suspected polarity/rotation bug awaiting empirical validation on a specific named production batch. Entry locks in the expected δ_row and carries the test procedure inline. If δ_row drifts, FAIL "PENDING entry stale, re-verify". Printed in yellow. | `_PENDING_VALIDATION` in `verify_easyeda_footprint.py` |
+| `REVIEW` | 0 | Footprint layout matches EasyEDA but an override is still set — typically a 3D-model polarity stripe that points the wrong way in the EasyEDA 3D model (C2 tantalum class). Keep override, document reason. | `_JLCPCB_ROT_OVERRIDES` |
+| `WARN` | 0 | LCSC part not available on EasyEDA, or ref missing from PCB. Manual review required. | — |
+| `INFO` | 0 | Non-polarized part (resistor, cap) with δ_row mismatch — no manufacturing impact. | — |
+| `FAIL` | 1 | Polarized part with δ_row mismatch AND no override AND no allowlist/pending entry — would ship a reversed component. | — |
+
+Separation of concerns — three independent dicts:
+
+1. `_JLCPCB_ROT_OVERRIDES` in `scripts/generate_pcb/jlcpcb_export.py` — compensation rotations applied to CPL file at export time.
+2. `_GEOMETRIC_MISMATCH_ALLOWLIST` in `scripts/verify_easyeda_footprint.py` — empirically validated native-frame mismatches (evidence collected).
+3. `_PENDING_VALIDATION` in `scripts/verify_easyeda_footprint.py` — suspected bugs awaiting empirical result from a named batch. Must shrink over time; growing = red flag.
+
+Resolution flow for PENDING: once the referenced batch returns, promote the entry either to `_JLCPCB_ROT_OVERRIDES` (if the suspicion was confirmed and the CPL needs compensation) or to `_GEOMETRIC_MISMATCH_ALLOWLIST` (if the footprint turned out to be correct). Never leave entries in PENDING indefinitely.
 
 ### JLCPCB Dimensional Rules — Reference Card
 

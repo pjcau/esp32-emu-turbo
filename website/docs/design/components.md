@@ -277,7 +277,7 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | R20,R21 | 20kΩ bias (PAM8403 INL/INR) | 0805 | C4184 | Basic | — |
 | C3–C16,C21,C26 | 100nF 0805 | 0805 | C49678 | Basic | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C1,C17,C18,C27,C28 | 10µF 0805 | 0805 | C15850 | Basic | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
-| C2 | 22µF tantalum | 1206 | C7171 | Basic | — |
+| C2 | 22µF tantalum 16V (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | 1206 | C1953590 | Extended | [PDF](/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf) |
 | C19 | 22µF 1206 | 1206 | C12891 | Basic | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 | C22 | 0.47µF DC-blocking (PAM8403 input) | 0805 | C13967 | Basic | — |
 | C23,C24,C25 | 1µF decoupling (PAM8403 VDD/PVDD) | 0805 | C28323 | Basic | — |

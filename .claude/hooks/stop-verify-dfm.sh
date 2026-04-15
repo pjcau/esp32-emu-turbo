@@ -67,7 +67,44 @@ if [ -f "$NC_SCRIPT" ]; then
     : "${NC_FAIL_COUNT:=0}"
 fi
 
-TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT))
+# ── EasyEDA reference footprint check ─────────────────────────────
+# Blocking guard against the C2 tantalum class of bugs (footprint pad-1
+# on opposite side vs EasyEDA/JLCPCB reference → reversed polarity at
+# assembly). Only runs when BOM/jlcpcb_export/footprints files change.
+EE_FAIL_COUNT=0
+EE_OUTPUT=""
+EE_SCRIPT="$PROJECT_DIR/scripts/verify_easyeda_footprint.py"
+EE_CHANGED=false
+if git -C "$PROJECT_DIR" diff --name-only HEAD 2>/dev/null | grep -qE '(bom\.csv|jlcpcb_export|footprints\.py|generate_pcb/board\.py)'; then
+    EE_CHANGED=true
+fi
+if git -C "$PROJECT_DIR" diff --cached --name-only 2>/dev/null | grep -qE '(bom\.csv|jlcpcb_export|footprints\.py|generate_pcb/board\.py)'; then
+    EE_CHANGED=true
+fi
+if [ "$EE_CHANGED" = true ] && [ -f "$EE_SCRIPT" ]; then
+    # Capture both output and exit code. The script exits 0 for OK /
+    # ALLOW / PENDING / REVIEW / WARN and non-zero only on real FAIL.
+    # PENDING entries (suspected polarity bugs awaiting empirical
+    # validation on a named batch) MUST NOT trigger Stop-hook noise,
+    # so we defer to the script's exit code rather than grep-counting
+    # [FAIL lines. If the script says "exit 0", no warning fires.
+    EE_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$EE_SCRIPT" 2>&1) && EE_EXIT=0 || EE_EXIT=$?
+    if [ "$EE_EXIT" -ne 0 ]; then
+        EE_FAIL_COUNT=$(printf "%s\n" "$EE_OUTPUT" | grep -cE "^[[:space:]]*\[FAIL" || true)
+        EE_FAIL_COUNT=$(printf "%s" "$EE_FAIL_COUNT" | tr -d '[:space:]')
+        : "${EE_FAIL_COUNT:=0}"
+        # Safety net: if the exit code is non-zero but grep found no
+        # [FAIL lines (shouldn't happen), still signal at least one
+        # failure so the hook fires.
+        if [ "$EE_FAIL_COUNT" -eq 0 ]; then
+            EE_FAIL_COUNT=1
+        fi
+    else
+        EE_FAIL_COUNT=0
+    fi
+fi
+
+TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + EE_FAIL_COUNT))
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     echo "" >&2
@@ -90,10 +127,16 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
         echo "$NC_OUTPUT" | grep -E "^\s*(FAIL|──)" | head -15 >&2
         echo "" >&2
     fi
+    if [ "$EE_FAIL_COUNT" -gt 0 ]; then
+        echo "── EasyEDA footprint (verify_easyeda_footprint.py): $EE_FAIL_COUNT mismatch(es) ──" >&2
+        echo "$EE_OUTPUT" | grep -E "^\s*\[FAIL" | head -15 >&2
+        echo "" >&2
+    fi
     echo "Run for full details:" >&2
     [ "$FAIL_COUNT" -gt 0 ]     && echo "  python3 scripts/verify_dfm_v2.py" >&2
     [ "$TTP_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_trace_through_pad.py" >&2
     [ "$NC_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_net_connectivity.py" >&2
+    [ "$EE_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_easyeda_footprint.py" >&2
     echo "Fix issues before committing." >&2
     exit 2
 fi

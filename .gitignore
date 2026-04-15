@@ -57,6 +57,9 @@ hardware/kicad/~*.lck
 
 # External DFM analysis output (KiBot + Tracespace)
 hardware/kicad/external-dfm-output/
+
+# EasyEDA reference footprint cache (verify_easyeda_footprint.py, LCSC-keyed)
+scripts/.easyeda_cache/
 test-roms/*.sfc
 test-roms/*.smc
 test-roms/*.nes

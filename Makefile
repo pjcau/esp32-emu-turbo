@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -62,7 +62,11 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/verify_trace_crossings.py & \
 		python3 scripts/verify_copper_clearance.py & \
 		python3 scripts/verify_net_connectivity.py & \
+		python3 scripts/verify_easyeda_footprint.py & \
 		wait'
+
+verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
+	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
 
 verify-trace-through-pad: ## Trace-through-pad overlap check (catches fab-shorts from missing _PAD_NETS)
 	@$(T) verify-trace-through-pad python3 scripts/verify_trace_through_pad.py
@@ -106,7 +110,7 @@ fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
 external-dfm: ## External DFM analysis via KiBot + Tracespace (Docker)
 	@$(T) external-dfm bash scripts/external-dfm.sh
 
-release-prep: generate-pcb export-gerbers-fast verify-trace-through-pad verify-net-connectivity verify-all verify-dfa render-pcb ## Full release pipeline (fast gerber export)
+release-prep: generate-pcb export-gerbers-fast verify-trace-through-pad verify-net-connectivity verify-easyeda verify-all verify-dfa render-pcb ## Full release pipeline (fast gerber export)
 	@echo "Release prep complete: PCB generated, verified, rendered"
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export, parallel renders)
