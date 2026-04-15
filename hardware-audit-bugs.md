@@ -2132,3 +2132,150 @@ R17 fixes + R18 via stagger fix + 3 new verification scripts (31 new tests) + th
 ### v4.1 candidate
 
 R18+R19+R20 fixes (USB-C slot drills, datasheet dimensions, JLCPCB slot width) + pcb_cache oval drill parser = v4.1. Board passes all 1,700+ automated checks. Zero new bugs found in prose audit.
+
+## Round 21 Findings (2026-04-15) — Post-R20 Layer 1 regression after LED2 polarity fix
+
+HEAD: `dabf830 fix(pcba): correct C2/LED2 polarity for JLCPCB SMT026041362110`.
+Layer 1 gates rerun after polarity fix surfaced regressions in multiple gates.
+**Prose/Layer 2 NOT performed** — skill rule requires Layer 1 clean first.
+
+### Step 0 gates
+
+| Gate | Expected | Actual | Status |
+|------|----------|--------|--------|
+| Fab shorts (`verify_trace_through_pad`) | 0 overlaps | 0 | PASS |
+| Trace crossings (`verify_trace_crossings`) | 0 crossings | 0 | PASS |
+| Copper clearance (`verify_copper_clearance`) | 0 DANGER | 0 DANGER, 1 WARN (GND same-net 120µm) | PASS |
+| Net connectivity (`verify_net_connectivity`) | 0 failed | 0 (4 accepted) | PASS |
+| DFM (`verify_dfm_v2`) | 119/119 | 119/119 | PASS |
+| DFA (`verify_dfa`) | 9/9 | 9/9 | PASS |
+| **Polarity (`verify_polarity`)** | **47/47** | **8/9 in polarity block (1 FAIL: LED2 vs LED1)** | **FAIL** |
+| Datasheet nets (`verify_datasheet_nets`) | 264/264 | 264/264 | PASS |
+| Datasheet physical (`verify_datasheet`) | 29/29 | 29/29 | PASS |
+| Design intent (`verify_design_intent`) | 364/364 | 364/364 (3 WARN) | PASS |
+| R4 sync guard (`verify_schematic_pcb_sync`) | PASS | PASS | PASS |
+| Netlist diff (`verify_netlist_diff`) | 4/4 | 4/4 | PASS |
+| BOM/CPL/PCB sync (`verify_bom_cpl_pcb`) | 12/12 | 12/12 | PASS |
+| **JLCPCB validation (`validate_jlcpcb`)** | 25/25 | 8/9 polarity FAIL | **FAIL** |
+| **JLCPCB capabilities** | 12/12 | 11/12 (THT annular FAIL) | **FAIL** |
+| Stencil aperture | 5/5 | 5/5 | PASS |
+| Drill standards | 5/5 | 5/5 (1 WARN drill/pad ratio) | PASS |
+| Strapping pins | 12/12 | 12/12 | PASS |
+| Decoupling adequacy | 25/25 | 25/25 | PASS |
+| Power sequence | 26/26 | 26/26 | PASS |
+| **Power paths (`verify_power_paths`)** | 19/19 | 18/19 (BAT+ J3→U2.6 FAIL) | **FAIL** |
+| ERC | 0 critical | 0 critical, 22 warnings | PASS |
+| **KiCad DRC** | 0 errors, ≤4 unconnected (accepted) | **6 errors, 10 unconnected** | **FAIL** |
+
+**Layer 1 NOT clean.** 5 gates fail → STOP per skill rule. Do not proceed to Layer 2.
+
+### Bug list
+
+#### R21-HIGH-1 — J1 USB-C shield tab PTH annular ring 0.225mm < JLCPCB 0.25mm min
+- **Files**: `scripts/generate_pcb/footprints.py` (J1 PTH pads 13, 14)
+- **Problem**: Shield tab PTH pads 13/14 have pad=1.10mm / drill=0.65mm → annular ring 0.225mm. JLCPCB minimum is 0.25mm.  Also surfaces as KiCad DRC `annular_width` errors on both pads plus 2 more at 0.1449mm (likely inner-layer thermal relief or different pad size on inner copper).
+- **Root cause**: R20 widened slot drill 0.60→0.65mm to meet JLCPCB 0.61mm slot-width minimum (commit `caf2b2c`), but did NOT widen the pad dimensions proportionally. 1.10−0.65 = 0.45mm ÷ 2 = 0.225mm ring.
+- **Fix options**:
+  - Increase pad height from 1.10mm → 1.20mm (ring becomes 0.275mm). Need to recheck mask/paste margins + datasheet PAD_H tolerance.
+  - OR shrink drill back to 0.62mm (still above 0.61mm JLCPCB min) so ring = 0.24mm — still below 0.25mm, not enough.
+  - OR reduce drill to 0.60mm and accept JLCPCB "special process" surcharge (not recommended for volume).
+- **Verify**: `python3 scripts/verify_jlcpcb_capabilities.py` must report `THT annular ring` PASS and `kicad-cli pcb drc` must show 0 annular_width errors.
+
+#### R21-HIGH-2 — J1 USB-C shield GND pads NPTH hole-clearance 0.171mm < rule 0.200mm
+- **Files**: `scripts/generate_pcb/footprints.py` (J1 pads 1 and 12, GND on B.Cu), KiCad DRC rule "NPTH with copper around"
+- **Problem**: KiCad DRC: `Hole clearance violation (rule 'NPTH with copper around' clearance 0.2000 mm; actual 0.1712 mm)` on J1 pads 1 and 12 — GND copper ring too close to NPTH drill edge.
+- **Root cause**: Shield positioning-hole NPTH has tight clearance to adjacent B.Cu GND annular copper. Probably introduced or re-surfaced by the R19/R20 pad/slot revisions.
+- **Fix**: Either shrink the NPTH hole, enlarge the copper-free keep-out around it, or relocate the GND ring so min clearance ≥0.20mm. Respect datasheet NPTH ø0.70mm (component peg ø0.50mm) — do not shrink the hole below 0.70mm.
+- **Verify**: `kicad-cli pcb drc` must show 0 hole_clearance errors.
+
+#### R21-HIGH-3 — DRC reports extra unconnected items beyond accepted tech debt (PARTIAL FIX 2026-04-16)
+- **Files**: `scripts/generate_pcb/routing.py`
+- **Problem (pre-fix)**: KiCad DRC reported 10 unconnected_items. 4 accepted tech debt + 6 additional orphans.
+
+- **Deep-dive findings (2026-04-16)**:
+  - **#4 C27.2 [+5V]**: critical design bug — the `_power_zones()` function
+    created TWO separate `+5V` zones on In2.Cu (IP5306 at 105-140,35-65 and
+    PAM8403 at 20-42,24-42) with NO copper bridge between them. Previous
+    commit "DFM FIX: removed F.Cu bridge" (routing.py:2427) deleted the
+    original +5V F.Cu bridge because it crossed 8+ LCD data bus traces,
+    but never replaced it. **PAM8403 VDD was floating** — audio would
+    not have worked properly on prototypes.
+  - **#5 Zone +3V3 ↔ Zone +3V3**: the In2.Cu +3V3 fill fragments into 5
+    islands (main + 4 tiny pockets at x=123-132, y=39-53) because LCD
+    data approach traces create narrow passages the fill cannot bridge.
+  - **#6/#7 +3V3 stubs**: the `_fpc_display_pin(6/7)` via landed at
+    (132.0, 50.25) inside a tiny orphan island (131.71-132.29,49.95-50.55).
+    Similarly `_fpc_display_pin(12)` via at (131.0, 39.75) landed inside
+    another orphan (130.74-131.25, 39.51-39.99).
+  - **#1 shield GND** + **#2/#3 VBUS J1.9/J1.11**: USB-C reversibility
+    issues — pre-existing R5-CRIT-9 tech debt (densely packed escape area,
+    no room for B.Cu stubs between 0.5mm-pitch pads; via-in-pad infeasible
+    because SMD pads are 0.3mm < 0.46mm JLCPCB min via).
+
+- **Fixes applied (2026-04-16)**:
+  1. **+5V PAM8403 bridge (option A)**: `_power_zones()` extends the PAM
+     `+5V` zone south from y=42 to y=53. `_power_traces()` adds an F.Cu
+     horizontal at y=48.85 (between BTN_R F.Cu @y=48 and C5..C16 pads
+     @y=49.35) from (41, 48.85) to (105.5, 48.85), with through-vias at
+     both endpoints dropping into the respective `+5V` In2.Cu zones.
+     Width W_PWR_HIGH=0.76mm → ~2A @1oz Cu (3× margin on PAM8403's 0.6A).
+     PAM8403 VDD pins are now electrically connected to IP5306 VOUT.
+  2. **J4 display pad 34/35 (+3V3)**: moved the routing via from
+     (132.0, 50.25) → (132.0, 52.0) to escape the orphan zone pocket and
+     land on main +3V3 zone.
+  3. **J4 display pad 29 (+3V3)**: relocation attempted but reverted —
+     any x<130.4 forces the B.Cu stub to cross an LCD signal on same
+     layer. Documented as redundancy loss (display has 5 other +3V3 pads
+     on main zone, functionally unaffected).
+
+- **Remaining (accepted tech debt, unchanged)**:
+  - USB-C reversibility (#1, #2, #3) — R5-CRIT-9, v2 PCB respin
+  - I2S_DOUT AC-coupling (C22) — by design
+  - D1 menu-diode anodes (BTN_SELECT/START) — R5-CRIT-6, v2 respin
+  - Pad 29 +3V3 redundancy loss — display still works via pads 2/3/8/34
+
+- **Verify (post-fix, 2026-04-16)**:
+  `kicad-cli pcb drc` → **23 violations** (was 25, -2) · 9 unconnecteds
+  (all in acceptable lists) · 0 via_dangling (was 6). `verify_dfm_v2.py`
+  119/119 PASS · `verify_dfa.py` 9/9 PASS · `verify_polarity.py` 47/47
+  PASS · `validate_jlcpcb.py` 25/25 PASS · `verify_copper_clearance.py`
+  0 DANGER / 1 WARN (pre-existing same-net GND).
+
+#### R21-MED-1 — `verify_power_paths.py` FAIL on BAT+ J3→U2 pin 6
+- **Files**: `scripts/generate_pcb/routing.py::_power_traces`, `scripts/verify_power_paths.py`
+- **Problem**: `verify_power_paths.py` reports `NO copper path from J3 to U2 pin 6` for BAT+ net. `verify_net_connectivity.py` passes (BAT+ not in fragmentation allowlist, no fragments reported).
+- **Possible cause A (test bug)**: power_paths script does not account for zone-fill on BAT+ plane; net_connectivity correctly sees the copper graph.
+- **Possible cause B (real bug)**: BAT+ has a trace missing between J3.1 and U2.6. Need to inspect footprints + routing.
+- **Fix**: Investigate which script is right. If power_paths has a known zone-fill blind spot, document in its docstring. If routing is actually missing, add the trace.
+
+#### R21-LOW-1 — `verify_dfa.py` polarity subtest false positive: LED2=180° vs LED1=0° (FIXED 2026-04-15)
+- **Files**: `scripts/verify_dfa.py::test_polarity_verification()`
+- **Problem**: Gate reported `LED orientation mismatch: LED2=180.0deg/Top, LED1=0.0deg/Top`. However `POLARITY_AUDIT.md` (line 19, 53-71) explicitly documents `_JLCPCB_ROT_OVERRIDES["LED2"] = 180` as **CORRECT w/ override** — LED2 C19171391 (green) has EasyEDA pad numbering reversed vs LED1 (red). 180° rotation is the datasheet-correct fix, committed in `dabf830`.
+- **Root cause**: The DFA polarity subtest compared raw CPL rotations blindly and did not consult `_JLCPCB_ROT_OVERRIDES`. (`verify_polarity.py` was already correct — it compares pin-1 nets.)
+- **Fix**: `verify_dfa.py` now imports `_JLCPCB_ROT_OVERRIDES` and compares effective rotation = `(cpl_rot - override) mod 360`. Both LEDs land at effective 0° → PASS. Same logic applied to the IC pin-1 alignment check (handles U5 PAM8403 override=180° vs U1/U2/U3 at 0°). Per user rule "never silence errors", this is NOT an allowlist — a genuine regression (LED2 flipped in KiCad without override, or override removed without footprint fix) still FAILs because effective rotations would diverge.
+- **Verified**: `verify_dfa.py` → 9/9 polarity PASS · `verify_polarity.py` → 47/47 · `verify_easyeda_footprint.py` → 72 OK + 3 ALLOW + 2 REVIEW, 0 FAIL · `validate_jlcpcb.py` → 25/25.
+
+### Severity summary
+- CRIT: 0
+- HIGH: 2 (R21-HIGH-1, R21-HIGH-2 still open; R21-HIGH-3 PARTIAL FIX — +5V bridge done, USB-C R5-CRIT-9 remains accepted tech debt)
+- MED : 1 (R21-MED-1 still open — BAT+ path)
+- LOW : 0 (R21-LOW-1 FIXED 2026-04-15 — DFA polarity test override-aware)
+
+### What changed since R20
+R20 declared all 1,700+ checks green. Between R20 (2026-04-13) and R21 (2026-04-15):
+- `caf2b2c` — J1 slot drill 0.60→0.65mm (introduced R21-HIGH-1 annular ring regression)
+- `4bf68b0` — pcb_cache oval drill parser + R20 report
+- `dabf830` — C2/LED2 polarity corrected via 180° rotation override (surfaced R21-LOW-1 test false positive)
+
+R21-HIGH-2 (hole_clearance) and R21-HIGH-3 (DRC unconnecteds) may pre-date R20 but be newly visible after verify script updates mentioned in memory (`Parallel session expanding audit tests` — 2026-04-12).
+
+### Next action
+1. Resolve R21-HIGH-1 (widen J1 pads 13/14 to ≥1.20mm height) → regen → re-verify.
+2. Resolve R21-HIGH-2 (expand NPTH copper keep-out on J1.1/J1.12) → regen → re-verify.
+3. ✅ R21-HIGH-3 PARTIAL FIX (2026-04-16) — +5V PAM8403 bridge routed on F.Cu
+   @y=48.85; +3V3 orphan pad 34/35 via relocated. Remaining items are pre-existing
+   R5-CRIT-9 (USB-C reversibility) and R5-CRIT-6 (D1 menu diode) tech debt.
+4. ✅ R21-LOW-1 FIXED (2026-04-15) — `verify_dfa.py` polarity subtest override-aware.
+5. Investigate R21-MED-1 (verify_power_paths BAT+ false negative or real gap).
+6. Re-run full Layer 1 → if clean, proceed to Layer 2 prose review as Round 22.
+

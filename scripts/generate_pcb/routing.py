@@ -1477,6 +1477,44 @@ def _power_traces():
 
     # USB CC pull-down resistor GND traces are in _usb_traces()
 
+    # ── R21 FIX: +5V bridge from IP5306 zone to PAM8403 zone ──────────
+    # Before this fix the two +5V In2.Cu zones were electrically isolated:
+    #   Zone #1 (105-140, 35-65) — IP5306 VOUT / AMS1117 VIN
+    #   Zone #2 (20-42, 24-53)   — PAM8403 VDD  (south edge extended
+    #                              from 42→53 in _power_zones for this bridge)
+    # Previous commit "DFM FIX: removed F.Cu bridge trace" (routing.py:2427)
+    # deleted the original bridge because it crossed the LCD data bus at
+    # y=26..35 F.Cu. The bridge was NEVER replaced — PAM8403 VDD was
+    # floating (no copper path to the IP5306 +5V rail), which is why DRC
+    # reports "C27.2 [+5V] ↔ Track [+5V] 2.75mm unconnected".
+    #
+    # New route: F.Cu horizontal at y=48.7 from x=41.0 (inside PAM zone #2,
+    # extended to y=53) to x=105.5 (just inside IP5306 zone #1 east of
+    # the 105 boundary).
+    # y=48.7 chosen because it sits in the narrow gap between BTN_R@48
+    # (F.Cu horiz x=76.20..98.95) and C5..C16 debounce caps (F.Cu pads
+    # at y=49.35..50.65). Earlier attempt at y=51 hit GND via @(82.2, 51.5)
+    # and cap-pad overlap; y=53 hit BAT+ B.Cu@y=52.5.
+    # Verified clearances along x=[41, 105.5]:
+    #   BTN_R@48 (top edge 48.10):   gap 48.85-0.38-48.10 = 0.37mm ≥ 0.10mm (different net) ✓
+    #   BTN_R vias @(76.20/88.00, 48.00) sz=0.6 outer y=48.30:
+    #                                gap trace-top 48.47 → via-edge 48.30 = 0.17mm ≥ 0.10mm ✓
+    #   C5..C16 pads (bottom 49.35): gap 49.35-(48.85+0.38) = 0.12mm ≥ 0.10mm ✓
+    #   Pull-up vias@y=52 (outer 51.70): gap=51.70-49.23=2.47mm ✓
+    #   BAT+ F.Cu@46.13 (edge 46.51): gap 48.85-0.38-46.51 = 1.96mm ✓
+    #   GND via @(82.2, 51.5) sz=0.6: dist=sqrt(0²+2.65²)-0.3-0.38=1.97mm ✓
+    # Via endpoints:
+    #   (105.5, 48.85): BAT+ via @(105.5, 46.13) dist=2.72mm - 2×0.30 = 2.12mm ≥ 0.25mm ✓
+    #                   Inside zone #1 (105-140, 35-65) ✓
+    #   (41.0, 48.85):  C5 pad @(42.05, 49.35) dist=sqrt(1.05²+0.50²)=1.16mm - 0.30 = 0.86mm ✓
+    #                   Inside zone #2 extended (20-42, 24-53) ✓
+    # Width W_PWR_HIGH=0.76mm, ~2A @1oz, PAM8403 peak 0.6A → 3× margin.
+    _bridge_y = 48.85
+    parts.append(_via_net(105.5, _bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(105.5, _bridge_y, 41.0, _bridge_y,
+                        "F.Cu", W_PWR_HIGH, n_5v))
+    parts.append(_via_net(41.0, _bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
+
     return parts
 
 
@@ -1986,7 +2024,15 @@ def _display_traces():
 
     if pos_rd:
         px, py = pos_rd[0], pos_rd[1]
-        via_x = 131.0  # above LCD_D6 end (y=34.25), pin16 GND via (y=37.75)
+        # NOTE: via_x=131.0 lands on a tiny orphan +3V3 fill island
+        # (x=130.74..131.25, y=39.51..39.99) created by LCD data approach
+        # traces fragmenting the In2.Cu +3V3 fill. Cannot relocate via
+        # further LEFT without crossing LCD net vert at x=130.4 (different
+        # net, same-layer crossing on B.Cu). Bridging via F.Cu would add
+        # 2 vias + routing for marginal gain: display has 5 other +3V3
+        # pads (2, 3, 7, 8, 34) that reach the main zone — loss of pad 29
+        # is redundancy only, not functional. Documented tech debt for v2.
+        via_x = 131.0  # orphan island (see note)
         parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
         parts.append(_via_net(via_x, py, n_3v3,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
@@ -2009,7 +2055,13 @@ def _display_traces():
         px6, py6 = pos6[0], pos6[1]
         px7, py7 = pos7[0], pos7[1]
         # Route DOWN to zone via below connector
-        vx, vy = 132.0, 50.25  # separate x from GND at 134.5
+        # R21 FIX: was vy=50.25 — that position landed on tiny orphan
+        # +3V3 fill island (x=131.71..132.29, y=49.95..50.55). Moved to
+        # y=52.0 (below the orphan) to reach main +3V3 zone.
+        # Clearance: main component row at y=52 has button pull-up vias
+        # at x=46.80..96.80 (far from x=132). Q1 pads at (84-86, 52-54)
+        # on B.Cu — 46mm away, no conflict.
+        vx, vy = 132.0, 52.0  # main +3V3 zone (was 50.25 — orphan island)
         parts.append(_via_net(vx, vy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         # DFM FIX: pin 6 (42.75) stubs to pin 7 (42.25), then routes LEFT.
         # This avoids a collinear overlap (pin6→safe_y duplicated by pin7→pin6 stub).
@@ -5147,12 +5199,19 @@ def _power_zones():
     parts.append(P.zone_fill("In2.Cu", v5_pts, NET_ID["+5V"], "+5V",
                              priority=1))
 
-    # +5V zone island for PAM8403 audio amp (x=20..42, y=24..42)
+    # +5V zone island for PAM8403 audio amp (x=20..42, y=24..53)
     # DFM FIX: replaces the F.Cu bridge trace that crossed 8+ LCD data bus
     # horizontal traces at y=26..35 F.Cu (caused 0mm pad spacing violations).
     # PAM8403 VDD6 via connects to this In2.Cu island.
+    # R21 FIX (+5V PAM supply): was (20-42, 24-42). Extended south to y=53
+    # so a new F.Cu bridge at y=53 (from x=41 to x=105) can drop a via
+    # into this island, carrying +5V from IP5306 VOUT zone (105-140, 35-65).
+    # Previously the PAM +5V zone was floating — PAM8403 VDD pins had no
+    # path back to the IP5306 +5V rail. The extended south area is clear
+    # of +3V3 vias/pads (button pull-up strip starts at x=46.80, outside
+    # x=20-42). SPK1 speaker at (30, 52.5) is unaffected (different layer).
     v5_pam_pts = [
-        (20, 24), (42, 24), (42, 42), (20, 42),
+        (20, 24), (42, 24), (42, 53), (20, 53),
     ]
     parts.append(P.zone_fill("In2.Cu", v5_pam_pts, NET_ID["+5V"], "+5V",
                              priority=2))

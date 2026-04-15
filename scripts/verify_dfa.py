@@ -466,65 +466,92 @@ def test_polarity_verification():
     """Test 7: Polarity and orientation verification.
 
     Verifies:
-    - LED orientation consistency (all LEDs same rotation = same polarity)
-    - IC pin-1 alignment (ICs at same rotation within package type)
+    - LED orientation consistency (all LEDs same EFFECTIVE polarity —
+      cpl_rot minus any `_JLCPCB_ROT_OVERRIDES` compensation)
+    - IC pin-1 alignment (ICs at same effective rotation within package type)
     - BOM polarity-sensitive parts have expected footprints
+
+    Override-aware: `_JLCPCB_ROT_OVERRIDES` entries exist to compensate for
+    EasyEDA footprint anomalies (e.g. LED2 C19171391 has pad 1 on the anode
+    side vs LED1 C84256 on cathode side; a 180° override rotates the physical
+    part so the datasheet cathode lands on our GND pad 1). The test compares
+    post-compensation ("effective") orientations. See POLARITY_AUDIT.md.
     """
     print("\n── Polarity & Orientation Verification ──")
+
+    # Load per-component rotation overrides (source of truth: jlcpcb_export.py)
+    try:
+        sys.path.insert(0, os.path.join(BASE, "scripts"))
+        from generate_pcb.jlcpcb_export import _JLCPCB_ROT_OVERRIDES
+    except ImportError:
+        _JLCPCB_ROT_OVERRIDES = {}
+
+    def effective_rot(ref: str, cpl_rot: float) -> float:
+        """CPL rotation minus the override for `ref` (mod 360)."""
+        override = _JLCPCB_ROT_OVERRIDES.get(ref, 0)
+        return (cpl_rot - override) % 360
 
     cpl = read_cpl()
     bom = read_bom()
     issues: List[str] = []
 
-    # Check LED orientation consistency
+    # Check LED orientation consistency (on effective rotation)
     led_rotations = {}
     for des in POLARITY_LEDS:
         if des in cpl:
-            rot = float(cpl[des]["Rotation"])
+            raw = float(cpl[des]["Rotation"])
             layer = cpl[des]["Layer"]
-            led_rotations[des] = (rot, layer)
+            eff = effective_rot(des, raw)
+            led_rotations[des] = (eff, layer, raw)
 
     if len(led_rotations) >= 2:
-        rots = list(led_rotations.values())
-        if not all(r == rots[0] for r in rots):
+        effs = [(eff, layer) for eff, layer, _ in led_rotations.values()]
+        if not all(e == effs[0] for e in effs):
             issues.append(
-                f"LED orientation mismatch: "
-                + ", ".join(f"{d}={r[0]}deg/{r[1]}" for d, r in led_rotations.items())
+                f"LED polarity mismatch (effective rotation after "
+                f"_JLCPCB_ROT_OVERRIDES compensation): "
+                + ", ".join(
+                    f"{d}=eff{eff}°(raw{raw}°,ovr{_JLCPCB_ROT_OVERRIDES.get(d, 0)}°)/{layer}"
+                    for d, (eff, layer, raw) in led_rotations.items()
+                )
             )
 
     check(
-        f"LED polarity consistent ({len(led_rotations)} LEDs)",
+        f"LED polarity consistent ({len(led_rotations)} LEDs, override-aware)",
         not any("LED" in i for i in issues),
         next((i for i in issues if "LED" in i), ""),
     )
 
-    # Check IC orientation within same package type
-    ic_by_package: Dict[str, List[Tuple[str, float, str]]] = {}
+    # Check IC orientation within same package type (on effective rotation)
+    ic_by_package: Dict[str, List[Tuple[str, float, str, float]]] = {}
     for des in POLARITY_ICS:
         if des in cpl and des in bom:
             package = cpl[des].get("Package", "")
-            rot = float(cpl[des]["Rotation"])
+            raw = float(cpl[des]["Rotation"])
             layer = cpl[des]["Layer"]
+            eff = effective_rot(des, raw)
             if package not in ic_by_package:
                 ic_by_package[package] = []
-            ic_by_package[package].append((des, rot, layer))
+            ic_by_package[package].append((des, eff, layer, raw))
 
     for package, ics in ic_by_package.items():
-        # ICs of the same package on the same layer should have same rotation
-        by_layer: Dict[str, List[Tuple[str, float]]] = {}
-        for des, rot, layer in ics:
+        by_layer: Dict[str, List[Tuple[str, float, float]]] = {}
+        for des, eff, layer, raw in ics:
             if layer not in by_layer:
                 by_layer[layer] = []
-            by_layer[layer].append((des, rot))
+            by_layer[layer].append((des, eff, raw))
 
         for layer, components in by_layer.items():
             if len(components) < 2:
                 continue
-            rots = [r for _, r in components]
-            if len(set(rots)) > 1:
+            effs = [e for _, e, _ in components]
+            if len(set(effs)) > 1:
                 issues.append(
-                    f"IC rotation mismatch ({package}/{layer}): "
-                    + ", ".join(f"{d}={r}deg" for d, r in components)
+                    f"IC polarity mismatch ({package}/{layer}, effective rot): "
+                    + ", ".join(
+                        f"{d}=eff{e}°(raw{raw}°,ovr{_JLCPCB_ROT_OVERRIDES.get(d, 0)}°)"
+                        for d, e, raw in components
+                    )
                 )
 
     ic_issues = [i for i in issues if "IC" in i]
