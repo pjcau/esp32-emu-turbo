@@ -2362,3 +2362,73 @@ landed cleanly and the override-aware DFA test correctly accepts the
 3. Investigate R21-MED-1: instrument `verify_power_paths.py` to differentiate "no trace AND no zone fill" from "no trace but reachable via In2.Cu zone" — likely a script blind spot since `verify_net_connectivity.py` (Shapely-based copper graph) already reports BAT+ as a single connected component.
 4. Re-run Layer 1 → if clean, proceed to Layer 2 prose audit as Round 23.
 
+## Round 23 Findings (2026-04-16) — Post-v4.3-release Layer 1 re-verification
+
+HEAD: `d6d4295 chore(renders): refresh PCBA raytracer renders`. Tag `v4.3` published.
+Re-ran the full Layer 1 suite to confirm what's still open. **No PCB design changes
+since R22** (only PNG render refresh + audit doc commits). Re-audit driven by user
+request after publishing the v4.3 GitHub release.
+
+### Step 0 gates
+
+| Gate | Expected | Actual | Status | Δ vs R22 |
+|------|----------|--------|--------|----------|
+| Fab shorts (`verify_trace_through_pad`) | 0 | 0 | PASS | = |
+| Trace crossings (`verify_trace_crossings`) | 0 | 0 | PASS | = |
+| Copper clearance (`verify_copper_clearance`) | 0 DANGER | 0 DANGER, 1 WARN (GND same-net 120µm) | PASS | = |
+| Net connectivity (`verify_net_connectivity`) | 0 failed | 0 (4 accepted) | PASS | = |
+| DFM v2 | 119/119 | 119/119 | PASS | = |
+| DFA | 9/9 | 9/9 | PASS | = |
+| Polarity | 47/47 | 47/47 | PASS | = |
+| JLCPCB validation (`validate_jlcpcb`) | 25/25 | 25/25 (1 warn) | PASS | = |
+| BOM/CPL/PCB sync | 12/12 | 12/12 | PASS | = |
+| **JLCPCB capabilities** | 12/12 | 11/12 (R21-HIGH-1 J1 annular still 0.225mm) | **FAIL** | = |
+| Stencil aperture | 5/5 | 5/5 | PASS | = |
+| Drill standards | 5/5 | 5/5 (1 warn ratio) | PASS | = |
+| Datasheet nets | 264/264 | 264/264 | PASS | = |
+| Datasheet physical | 29/29 | 29/29 | PASS | = |
+| Design intent | 364/364 | 364/364 (3 warn) | PASS | = |
+| R4 sync guard | PASS | PASS | PASS | = |
+| Netlist diff | 4/4 | 4/4 | PASS | = |
+| Strapping pins | 12/12 | 12/12 (1 warn GPIO45 R14 DNP intentional) | PASS | = |
+| Decoupling adequacy | 25/25 | 25/25 | PASS | = |
+| Power sequence | 26/26 | 26/26 | PASS | = |
+| **Power paths (`verify_power_paths`)** | 9/9 | **9/9 + 11 INFO (zone-dependent)** | **PASS** | ↑ FIXED (was stale cache in R22) |
+| Firmware sync | OK | OK | PASS | = |
+| ERC | 0 critical | 0 critical, 22 warn | PASS | = |
+| **KiCad DRC** | 0 errors / accepted unconnecteds | 14 violations + 9 unconnecteds | **FAIL** | = |
+
+DRC violation breakdown (unchanged from R22):
+`annular_width: 4 · hole_clearance: 2 · lib_footprint_issues: 6 · silk_over_copper: 2`.
+
+**Layer 1 NOT clean.** 2 gates still fail (R21-HIGH-1 + R21-HIGH-2 → both at the J1 USB-C connector).
+
+### Bug list
+
+#### R23 — Status of inherited bugs
+
+| Bug | Status | Notes |
+|-----|--------|-------|
+| R21-HIGH-1 (J1 PTH annular 0.225mm) | **STILL OPEN** | 4 KiCad DRC `annular_width` errors on J1 pads 13/14. Root cause: `caf2b2c` widened slot drill 0.60→0.65mm without adjusting pad height. |
+| R21-HIGH-2 (J1 NPTH hole_clearance 0.171mm) | **STILL OPEN** | 2 KiCad DRC `hole_clearance` errors on J1 pads 1/12 (B.Cu GND ring vs NPTH peg). |
+| R21-MED-1 (BAT+ power_paths FAIL) | **CLOSED** | Local edit to `scripts/verify_power_paths.py` (uncommitted at start of R23, included in the R23 commit) splits BAT_IN (pre-RPP, J3.1→Q1.2) from BAT+ (post-RPP, Q1.3→U2.6). Previous version assumed J3.1 carried BAT+ directly — incorrect after `ae465d9 feat(v4.0): AMS1117 thermal vias + Q1 P-MOSFET battery protection` introduced the RPP MOSFET. Now: `BAT_IN J3.1→Q1.2 PASS via 2 segments` + `BAT+ Q1.3→U2.6 PASS via 21 segments + 6 vias`. |
+
+#### R23 polarity context (unchanged from R22)
+
+All polarity-class gates remain GREEN: DFA 9/9 (override-aware) · polarity 47/47 · EasyEDA 0 FAIL · JLCPCB 25/25 · sync PASS. The v4.3 release captures this state.
+
+### Severity summary
+- CRIT: 0
+- HIGH: 2 inherited (R21-HIGH-1 J1 annular, R21-HIGH-2 J1 NPTH clearance) — both at J1 USB-C
+- MED : 0 (R21-MED-1 closed as stale-cache artifact)
+- LOW : 0
+
+### What changed since R22
+- `40e88f4` — R22 audit doc (no PCB change)
+- `d6d4295` — PCBA render refresh (no PCB change)
+- Tag `v4.3` published with gerbers/BOM/CPL assets
+
+### Next action
+1. **Bundle fix**: J1 USB-C pads 13/14 height 1.10→1.20mm (closes R21-HIGH-1) AND expand B.Cu GND keep-out around J1.1/J1.12 NPTH (closes R21-HIGH-2) — both at J1, do them in one commit.
+2. Re-run Layer 1 → if clean, proceed to Layer 2 prose audit as Round 24.
+

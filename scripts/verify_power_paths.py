@@ -38,8 +38,12 @@ SNAP_TOL = 0.05
 # ── Power network definitions ────────────────────────────────────────
 
 # Power sources: net_name -> (ref, pad_num, description)
+# BAT_IN vs BAT+: the battery connects via J3.1 to BAT_IN, then through
+# Q1 (P-MOSFET reverse-polarity protection) to BAT+. Two separate nets,
+# two separate verifications.
 POWER_SOURCES = {
-    "BAT+": ("J3", "1", "Battery connector BAT+"),
+    "BAT_IN": ("J3", "1", "Battery connector positive (pre-RPP)"),
+    "BAT+": ("Q1", "3", "Reverse-polarity MOSFET drain (post-RPP)"),
     "VBUS": ("J1", "2", "USB-C VBUS"),      # pad 2 is VBUS on USB-C 16P
     "+5V":  ("U2", "8", "IP5306 VOUT"),
     "+3V3": ("U3", "4", "AMS1117 VOUT"),     # SOT-223 pad 4 = tab/VOUT
@@ -62,6 +66,9 @@ POWER_SINKS = {
     ],
     "VBUS": [
         ("U2", "1", "IP5306 VIN"),
+    ],
+    "BAT_IN": [
+        ("Q1", "2", "Reverse-polarity MOSFET source"),
     ],
     "BAT+": [
         ("U2", "6", "IP5306 BAT"),
@@ -351,7 +358,7 @@ def main():
     print(f"    Pads: {cache['stats']['pads']}")
 
     # Verify each power net
-    for net_name in ["+3V3", "+5V", "VBUS", "BAT+", "GND"]:
+    for net_name in ["+3V3", "+5V", "VBUS", "BAT_IN", "BAT+", "GND"]:
         if net_name not in net_map:
             print(f"\n  FAIL  Net '{net_name}' not found in PCB")
             continue
