@@ -2279,3 +2279,86 @@ R21-HIGH-2 (hole_clearance) and R21-HIGH-3 (DRC unconnecteds) may pre-date R20 b
 5. Investigate R21-MED-1 (verify_power_paths BAT+ false negative or real gap).
 6. Re-run full Layer 1 → if clean, proceed to Layer 2 prose review as Round 22.
 
+## Round 22 Findings (2026-04-16) — Post-R21-fix Layer 1 re-verification
+
+HEAD: `2ec8db3 fix(pcba): +5V PAM8403 bridge + DFA polarity override-aware + +3V3 orphan pad 34 relocation`.
+Re-ran Layer 1 after the recent polarity + +5V/+3V3 commits to confirm what's
+closed and what's still open. **Layer 2 NOT performed** — three R21 gates
+remain open per skill rule.
+
+### Step 0 gates
+
+| Gate | Expected | Actual | Status | Δ vs R21 |
+|------|----------|--------|--------|----------|
+| Fab shorts (`verify_trace_through_pad`) | 0 overlaps | 0 (572 segs, 349 pads) | PASS | = |
+| Trace crossings (`verify_trace_crossings`) | 0 crossings | 0 (572 segs, 4 layers) | PASS | = |
+| Copper clearance (`verify_copper_clearance`) | 0 DANGER | 0 DANGER, 1 WARN (GND same-net 120µm) | PASS | = |
+| Net connectivity (`verify_net_connectivity`) | 0 failed | 0 (4 accepted: BTN_START, BTN_SELECT, I2S_DOUT, VBUS) | PASS | = |
+| DFM v2 (`verify_dfm_v2`) | 119/119 | 119/119 | PASS | = |
+| DFA (`verify_dfa`) | 9/9 | 9/9 (override-aware after R21-LOW-1 fix) | PASS | = |
+| **Polarity (`verify_polarity`)** | **47/47** | **47/47** (153 strict + 104 zone-ok pin→net) | **PASS** | ↑ FIXED |
+| Datasheet nets (`verify_datasheet_nets`) | 264/264 | 264/264 | PASS | = |
+| Datasheet physical (`verify_datasheet`) | 29/29 | 29/29 | PASS | = |
+| Design intent (`verify_design_intent`) | 364/364 | 364/364 (3 WARN) | PASS | = |
+| R4 sync guard (`verify_schematic_pcb_sync`) | PASS | PASS (46 sch / 77 CPL / 36 specs) | PASS | = |
+| Netlist diff (`verify_netlist_diff`) | 4/4 | 4/4 | PASS | = |
+| BOM/CPL/PCB sync (`verify_bom_cpl_pcb`) | 13/13 | 13/13 | PASS | = |
+| **JLCPCB validation (`validate_jlcpcb`)** | 25/25 | 25/25 | **PASS** | ↑ FIXED |
+| **JLCPCB capabilities** | 12/12 | 11/12 (THT annular FAIL — R21-HIGH-1) | **FAIL** | = |
+| Stencil aperture | 5/5 | 5/5 | PASS | = |
+| Drill standards | 5/5 | 5/5 (1 WARN ratio) | PASS | = |
+| Strapping pins | 12/12 | 12/12 (1 WARN GPIO45 R14 DNP — intentional) | PASS | = |
+| Decoupling adequacy | 25/25 | 25/25 (1 informational warn) | PASS | = |
+| Power sequence | 26/26 | 26/26 | PASS | = |
+| **Power paths (`verify_power_paths`)** | 19/19 | 18/19 (BAT+ J3→U2.6 — R21-MED-1) | **FAIL** | = |
+| Firmware sync (`generate_board_config --check`) | OK | OK | PASS | = |
+| ERC (`erc_check`) | 0 critical | 0 critical, 22 warnings | PASS | = |
+| **KiCad DRC** | 0 errors, ≤ baseline unconnecteds | **6 errors + 8 cosmetic + 9 unconnected** | **FAIL** | ↓ from 25 violations |
+
+**Layer 1 NOT clean.** 3 gates still fail (R21-HIGH-1, R21-HIGH-2, R21-MED-1
+unchanged). Trajectory improving (DRC 25 → 14 violations, polarity-class
+fully closed).
+
+### Bug list
+
+#### R22 — Status of inherited R21 bugs
+
+| Bug | Status | Notes |
+|-----|--------|-------|
+| R21-HIGH-1 (J1 PTH annular 0.225mm < 0.25mm) | **STILL OPEN** | 4 KiCad DRC `annular_width` errors on J1 pads 13/14. No commit between R21 and HEAD touched J1 PTH pad sizes. |
+| R21-HIGH-2 (J1 NPTH hole_clearance 0.171mm < 0.20mm) | **STILL OPEN** | 2 KiCad DRC `hole_clearance` errors on J1 pads 1/12 (GND on B.Cu vs NPTH peg). |
+| R21-HIGH-3 (DRC unconnected items >accepted) | **CLOSED (partial fix held)** | Commit `2ec8db3` routed +5V PAM8403 bridge on F.Cu @y=48.85 and relocated +3V3 J4 pad 34/35 via. Remaining 9 unconnecteds = 4 USB-C reversibility (R5-CRIT-9) + 2 D1 menu-diode (R5-CRIT-6) + 2 I2S_DOUT (AC-coupling by design) + 1 +3V3 pad 29 redundancy loss (display works via 5 other pads). All in accepted tech-debt list. |
+| R21-MED-1 (verify_power_paths BAT+ FAIL) | **STILL OPEN** | Same single FAIL: `NO copper path from J3 to U2 pin 6` for BAT+. Not yet investigated whether script blind spot or real routing gap. |
+| R21-LOW-1 (DFA polarity false positive on LED2 180°) | **CLOSED (verified)** | `verify_dfa.py` now override-aware: effective rotation = `(cpl_rot - override) mod 360`. LED1 and LED2 both collapse to 0°; same logic for IC pin-1 (handles U5 PAM8403). 9/9 PASS. |
+
+#### R22 polarity context (user's specific concern)
+
+The recent commits `e24e62c`, `dabf830`, `2ec8db3` all touch polarity and
+the polarity layer is now fully GREEN:
+- `verify_dfa.py`: 9/9 incl. LED polarity (override-aware), IC pin-1, polarized caps.
+- `verify_polarity.py`: 47/47 (153 strict + 104 zone-ok pin→net).
+- `verify_easyeda_footprint.py`: 72 OK + 3 ALLOW + 2 REVIEW + **0 FAIL** (D1 SOT-23 override 270° empirically verified).
+- `validate_jlcpcb.py`: 25/25.
+- `verify_schematic_pcb_sync.py`: PASS.
+
+No polarity regression detected from the latest commits. The C2/LED2 fix
+landed cleanly and the override-aware DFA test correctly accepts the
+180° LED2 rotation as datasheet-correct (per `POLARITY_AUDIT.md`).
+
+### Severity summary
+- CRIT: 0
+- HIGH: 2 inherited (R21-HIGH-1 J1 annular, R21-HIGH-2 J1 NPTH clearance)
+- MED : 1 inherited (R21-MED-1 BAT+ power_paths)
+- LOW : 0
+
+### What changed since R21
+- `2ec8db3` — +5V PAM8403 bridge routed (R21-HIGH-3 partial fix landed) · DFA override-aware (R21-LOW-1 closed) · +3V3 J4 pad 34/35 via relocated.
+- `e24e62c` — added missing C2 tantalum datasheet PDF (docs only).
+- `dabf830` — C2/LED2 polarity corrected via 180° rotation override (root cause of R21 polarity FAILs, now closed).
+
+### Next action
+1. Resolve R21-HIGH-1: widen J1 pads 13/14 height 1.10mm → 1.20mm (ring becomes 0.275mm) — only edit `scripts/generate_pcb/footprints.py` then regen + verify.
+2. Resolve R21-HIGH-2: expand B.Cu GND copper keep-out around J1.1/J1.12 NPTH pegs to ≥0.20mm (do NOT shrink the NPTH below datasheet ø0.70mm).
+3. Investigate R21-MED-1: instrument `verify_power_paths.py` to differentiate "no trace AND no zone fill" from "no trace but reachable via In2.Cu zone" — likely a script blind spot since `verify_net_connectivity.py` (Shapely-based copper graph) already reports BAT+ as a single connected component.
+4. Re-run Layer 1 → if clean, proceed to Layer 2 prose audit as Round 23.
+
