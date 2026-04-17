@@ -1,5 +1,6 @@
 ---
 name: hardware-audit
+model: claude-opus-4-7
 description: Deep electrical/functional audit of the ESP32 Emu Turbo hardware design. Finds bugs that prevent power-on, component operation, or emulator functionality. Cross-checks schematics, PCB, datasheets, and firmware via automated gates + manual domain-by-domain review.
 disable-model-invocation: false
 allowed-tools: Bash, Read, Edit, Grep, Glob, Agent, Write

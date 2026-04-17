@@ -1,5 +1,6 @@
 ---
 name: pcb-library
+model: claude-opus-4-7
 description: Footprint library management — search, list, inspect footprint details (KiCAD MCP tools 32-35)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, WebSearch, WebFetch

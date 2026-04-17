@@ -1,5 +1,6 @@
 ---
 name: pcb-schematic
+model: claude-opus-4-7
 description: Schematic design operations — create, edit, wire, net labels, export (KiCAD MCP tools 50-58)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

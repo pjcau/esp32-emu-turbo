@@ -1,5 +1,6 @@
 ---
 name: pcb-to-firmware
+model: claude-opus-4-7
 description: Auto-propagate PCB/routing changes to firmware (board_config.h), docs, and config files. Run after any GPIO remapping, component change, or routing modification. Detects diffs, applies fixes, verifies consistency.
 disable-model-invocation: false
 allowed-tools: Bash, Read, Edit, Grep, Glob, Agent

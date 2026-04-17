@@ -1,6 +1,6 @@
 ---
 name: cad-engineer
-model: haiku
+model: claude-haiku-4-5-20251001
 description: CAD engineer — OpenSCAD parametric enclosure design, 3D rendering, STL export for 3D printing
 skills:
   - enclosure-design

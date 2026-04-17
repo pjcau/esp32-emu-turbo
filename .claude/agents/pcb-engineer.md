@@ -1,6 +1,6 @@
 ---
 name: pcb-engineer
-model: opus
+model: claude-opus-4-7
 description: PCB design engineer — generates PCB layout, runs DFM verification, manages JLCPCB manufacturing files, fixes component rotations
 skills:
   - generate

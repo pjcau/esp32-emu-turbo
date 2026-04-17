@@ -1,5 +1,6 @@
 ---
 name: verify
+model: claude-opus-4-7
 description: Run the complete DFM and design verification suite for the PCB
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

@@ -1,5 +1,6 @@
 ---
 name: doc
+model: claude-opus-4-7
 description: Scan all documentation against source-of-truth files (config.py, board_config.h, routing.py, BOM, PCB) and report/fix outdated values. Use after PCB changes, GPIO remapping, BOM updates, or before releases.
 disable-model-invocation: true
 allowed-tools: Bash, Read, Edit, Grep, Glob, Agent

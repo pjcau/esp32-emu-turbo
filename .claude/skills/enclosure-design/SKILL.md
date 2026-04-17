@@ -1,5 +1,6 @@
 ---
 name: enclosure-design
+model: claude-haiku-4-5-20251001
 description: Design and modify the OpenSCAD parametric enclosure for the handheld console
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/prompt-skill-suggest.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/prompt-skill-suggest.sh",
             "timeout": 5
           }
         ]
@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-safety-guard.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-safety-guard.sh",
             "timeout": 5
           }
         ]
@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/check-claudeignore.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-claudeignore.sh",
             "timeout": 5
           }
         ]
@@ -37,17 +37,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-safety-guard.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-safety-guard.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-pcb-edit-guard.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-pcb-edit-guard.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/check-claudeignore.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-claudeignore.sh",
             "timeout": 5
           }
         ]
@@ -57,17 +57,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-safety-guard.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-safety-guard.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-pcb-edit-guard.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-pcb-edit-guard.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/check-claudeignore.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-claudeignore.sh",
             "timeout": 5
           }
         ]
@@ -77,12 +77,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-safety-guard.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-safety-guard.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/check-claudeignore.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-claudeignore.sh",
             "timeout": 5
           }
         ]
@@ -94,12 +94,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/post-generate-dfm.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-generate-dfm.sh",
             "timeout": 10
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/enforce-script-failure-report.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/enforce-script-failure-report.sh",
             "timeout": 10
           }
         ]
@@ -109,7 +109,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/context-bundle-builder.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/context-bundle-builder.py",
             "timeout": 5
           }
         ]
@@ -119,7 +119,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/post-edit-pcb-remind.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-pcb-remind.sh",
             "timeout": 10
           },
           {
@@ -129,7 +129,7 @@
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/context-bundle-builder.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/context-bundle-builder.py",
             "timeout": 5
           }
         ]
@@ -144,7 +144,7 @@
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/context-bundle-builder.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/context-bundle-builder.py",
             "timeout": 5
           }
         ]
@@ -155,7 +155,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/pre-compact-backup.py",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-compact-backup.py",
             "timeout": 10
           }
         ]
@@ -166,12 +166,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/stop-verify-dfm.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-verify-dfm.sh",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/stop-regen-ibom.sh",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/stop-regen-ibom.sh",
             "timeout": 10
           }
         ]

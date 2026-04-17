@@ -1,6 +1,6 @@
 ---
 name: software-dev
-model: opus
+model: claude-opus-4-7
 description: Software developer — ESP-IDF firmware development, Docusaurus website, build infrastructure, GPIO sync
 skills:
   - firmware-build

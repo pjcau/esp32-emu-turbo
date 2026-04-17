@@ -1,5 +1,6 @@
 ---
 name: create-skill
+model: claude-opus-4-7
 description: Create a new Claude Code skill for this project. Use when you need to add a new skill, improve an existing skill, or convert a workflow into a reusable skill.
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, WebSearch
 ---

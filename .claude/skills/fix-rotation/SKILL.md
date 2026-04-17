@@ -1,5 +1,6 @@
 ---
 name: fix-rotation
+model: claude-opus-4-7
 description: Investigate and fix JLCPCB CPL rotation for a component using mathematical pin alignment analysis
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Write, Edit

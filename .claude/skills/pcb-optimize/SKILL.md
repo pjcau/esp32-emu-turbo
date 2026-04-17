@@ -1,5 +1,6 @@
 ---
 name: pcb-optimize
+model: claude-opus-4-7
 description: Analyze PCB layout and suggest optimizations (traces, copper balance, thermal, vias)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write

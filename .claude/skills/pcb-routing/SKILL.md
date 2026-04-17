@@ -1,5 +1,6 @@
 ---
 name: pcb-routing
+model: claude-opus-4-7
 description: Trace routing operations — route, via, differential pair, copper pour, net classes (KiCAD MCP tools 24-31)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

@@ -1,5 +1,6 @@
 ---
 name: release
+model: claude-opus-4-7
 description: Prepare a complete JLCPCB release package with version notes
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

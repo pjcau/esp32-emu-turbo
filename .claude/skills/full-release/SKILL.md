@@ -1,5 +1,6 @@
 ---
 name: full-release
+model: claude-opus-4-7
 description: Complete release pipeline — all verifications, 3D PCBA renders, SVG renders, gerber export, BOM/CPL, and release_jlcpcb/ sync. Use after PCB changes to prepare a production-ready JLCPCB package with documentation renders.
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

@@ -1,5 +1,6 @@
 ---
 name: jlcpcb-check
+model: claude-opus-4-7
 description: Investigate JLCPCB 3D model alignment for a component (rotation, position, pin mapping)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, WebFetch, WebSearch

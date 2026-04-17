@@ -1,5 +1,6 @@
 ---
 name: render
+model: claude-opus-4-7
 description: Run the Docker rendering pipeline (schematics, PCB, enclosure)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob

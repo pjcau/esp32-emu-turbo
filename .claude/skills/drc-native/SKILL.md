@@ -1,5 +1,6 @@
 ---
 name: drc-native
+model: claude-opus-4-7
 description: Run native KiCad DRC with smart violation filtering, delta tracking, and fix suggestions
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write

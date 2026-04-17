@@ -1,5 +1,6 @@
 ---
 name: pcb-components
+model: claude-opus-4-7
 description: Component placement operations — place, move, rotate, align, array (KiCAD MCP tools 14-23)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

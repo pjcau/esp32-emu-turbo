@@ -1,5 +1,6 @@
 ---
 name: jlcpcb-validate
+model: claude-opus-4-7
 description: Run comprehensive JLCPCB DFM validation — drill rules, edge clearances, copper checks, NPTH, silkscreen, gerber completeness, and best practices. Use after PCB changes, before JLCPCB upload, or when investigating manufacturing rejections.
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

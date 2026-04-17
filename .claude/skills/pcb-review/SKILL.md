@@ -1,5 +1,6 @@
 ---
 name: pcb-review
+model: claude-opus-4-7
 description: Comprehensive PCB design review — 8 domains, 100-point scoring, JLCPCB DFM rules, datasheet pin verification
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Agent

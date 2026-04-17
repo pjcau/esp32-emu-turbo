@@ -1,6 +1,6 @@
 ---
 name: team-lead
-model: sonnet
+model: claude-sonnet-4-6
 description: Team leader that coordinates PCB engineer, software developer, and CAD engineer agents for the ESP32 Emu Turbo project
 ---
 

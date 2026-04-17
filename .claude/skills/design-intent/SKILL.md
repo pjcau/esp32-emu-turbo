@@ -1,5 +1,6 @@
 ---
 name: design-intent
+model: claude-opus-4-7
 description: Design intent adversary — cross-checks GPIO, nets, power chains, signal paths across firmware/schematic/PCB/datasheet sources to find lost connections and inconsistencies
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Agent

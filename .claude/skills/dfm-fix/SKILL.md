@@ -1,5 +1,6 @@
 ---
 name: dfm-fix
+model: claude-opus-4-7
 description: Analyze a DFM report and fix all issues in the PCB generation scripts
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, WebFetch, WebSearch

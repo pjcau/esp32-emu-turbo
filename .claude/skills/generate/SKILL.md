@@ -1,5 +1,6 @@
 ---
 name: generate
+model: claude-opus-4-7
 description: Run the full PCB generation pipeline (generate + zone fill + gerbers + release package)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

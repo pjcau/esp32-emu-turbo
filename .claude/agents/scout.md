@@ -1,6 +1,6 @@
 ---
 name: scout
-model: opus
+model: claude-opus-4-7
 description: GitHub scout — searches for new Claude Code skills, agents, patterns and integrates them
 skills:
   - scout

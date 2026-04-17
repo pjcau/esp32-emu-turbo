@@ -1,5 +1,6 @@
 ---
 name: external-dfm
+model: claude-opus-4-7
 description: Run external DFM analysis using KiBot (DRC/ERC/design report) and Tracespace (gerber validation) via Docker. Use after internal verify passes to get a second opinion from third-party tools.
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

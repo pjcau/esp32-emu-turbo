@@ -1,5 +1,6 @@
 ---
 name: hardware-test-gen
+model: claude-opus-4-7
 description: Generate ESP-IDF Unity test firmware for prototype board validation. Run after PCB assembly to verify all GPIOs, buses, and peripherals work correctly.
 disable-model-invocation: false
 allowed-tools: Bash, Read, Grep, Glob

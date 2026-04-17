@@ -1,5 +1,6 @@
 ---
 name: check
+model: claude-opus-4-7
 description: Full PCB verification loop using local kicad-cli (DRC + 3D render + gerbers)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write

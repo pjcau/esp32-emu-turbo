@@ -1,5 +1,6 @@
 ---
 name: jlcpcb-alignment
+model: claude-opus-4-7
 description: Verify JLCPCB pick-and-place alignment for all bottom-side ICs and connectors. Checks CPL rotation, position corrections, and pin-to-net assignments. Use before any JLCPCB PCBA order or after changing CPL/rotation/position parameters.
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

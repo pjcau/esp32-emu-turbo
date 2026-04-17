@@ -1,5 +1,6 @@
 ---
 name: user-feedback
+model: claude-opus-4-7
 description: Record user feedback, preferences, and rules — automatically distribute to the right agents, skills, and memory files
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Grep, Glob

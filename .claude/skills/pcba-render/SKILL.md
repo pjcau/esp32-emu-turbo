@@ -1,5 +1,6 @@
 ---
 name: pcba-render
+model: claude-opus-4-7
 description: Generate photorealistic 3D PCBA renders using KiCad raytracer. Produces top, bottom, isometric, and detail views at 1920x1080 with floor reflections and studio lighting. Use after PCB changes, for documentation, or manufacturing review.
 allowed-tools: Bash, Read, Glob
 ---
