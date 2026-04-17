@@ -168,6 +168,11 @@
             "type": "command",
             "command": "./.claude/hooks/stop-verify-dfm.sh",
             "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "./.claude/hooks/stop-regen-ibom.sh",
+            "timeout": 10
           }
         ]
       }
