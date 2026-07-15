@@ -677,20 +677,44 @@ disconnected** until the very end; power only from a **current-limited bench sup
 - [ ] Solder a jumper **VBUS (pin 1 pad) → +5V (pin 8 pad)** across the top of the U2 footprint.
 - [ ] **Verify:** `VBUS ↔ +5V = 0 Ω` (intended), `+5V ↔ GND = open`.
 
-### C. Check the 3.3 V side (damage from past over-voltage)
+### C. Check the 3.3 V side (find any downstream load)
 - [ ] **C2 tantalum** (+3V3 ↔ GND): open/climbing = ok; pinned 0 Ω = shorted → replace C2
       (band = +).
 - [ ] Inspect ESP32 (U1) for prior damage (visual + later thermal check).
 
-### D. Fit a fresh regulator
-- [ ] Solder a **new AMS1117-3.3** (U3) — the old one is almost certainly dead.
+### D. Fit the regulator — prefer a buck over a fresh AMS1117
+
+The AMS1117 is a **linear** reg: it burns `(5 − 3.3)·I` as heat and self-destructs under
+overload. A **buck** (switching) reg is ~90 % efficient (vs 66 %), runs **~5× cooler**, and has
+current-limit + thermal-shutdown + **hiccup** — so it **stops the "keep killing regulators"
+cycle** and doubles as a fault detector: delivers 3.3 V clean = OK; drops into hiccup/foldback =
+a real downstream load still to find.
+
+| At 500 mA | AMS1117 linear | Buck |
+|---|---|---|
+| Efficiency | 66 % | ~90 % |
+| Dissipated as heat | ~0.85 W 🔥 | ~0.18 W ❄️ |
+
+- [ ] **Recommended (proto #1):** wire a small **buck module** (e.g. MP1584 mini, ~€0.5) to the
+      U3 pads — `+5V → IN`, `GND → GND`, `OUT → +3V3 pad`. ⚠️ **Set its output to 3.3 V *before*
+      connecting it** — adjustable modules ship at a random voltage; 5 V on +3V3 kills the ESP32.
+- [ ] **Or (simplest):** solder a **new AMS1117-3.3** drop-in — works, but stays thermally
+      marginal for the ESP32-S3 + 3.95″ display load.
+- [ ] **v2 PCB:** design in a dedicated **buck IC** (MP2315 / TPS563 / MP1584) with inductor +
+      in/out caps + feedback divider. 3 W @ 3.3 V ≈ 900 mA — ample for ESP32-S3 + display + SD +
+      audio. Keep good output caps / an LC filter on the audio DAC (switching ripple).
 
 ### E. Controlled power-on
-- [ ] Bench supply **5 V, 100 mA limit**, **no battery**.
-- [ ] Idle current **< 50 mA**; if it pegs the limit → stop, downstream short.
-- [ ] Measure: **+5V = 5.0 V** (steady, not higher), **+3V3 = 3.3 V**.
-- [ ] Touch **AMS1117** and **ESP32** — must stay **cool**. AMS1117 hot → +3V3 overloaded
-      (C2 or U1); ESP32 hot with no firmware → U1 damaged, replace it.
+
+Heat = power = V·I, so if the reg ever got hot, real power flowed — measure it, don't guess.
+
+- [ ] Bench supply **5 V, 200 mA limit**, **no battery**, **ammeter in series on +5V**.
+- [ ] Read the **actual current**: idle **< 50 mA** = OK. Limit pegged / buck in **hiccup** →
+      real +3V3 load (C2 or U1) — find it before trusting the rail.
+- [ ] Measure: **+5V = 5.0 V** (steady, **not higher** — a high Vin also cooks a linear), and
+      **+3V3 = 3.3 V**.
+- [ ] Touch the regulator + **ESP32** — must stay **cool**. ESP32 hot with no firmware → U1
+      damaged, replace it.
 
 ### F. Functional bring-up (once voltages are good)
 - [ ] Connect USB-C, open serial monitor (115200) → ESP32 boot messages.
