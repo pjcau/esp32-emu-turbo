@@ -81,9 +81,12 @@ Aim at the wide tab for +3V3 — easiest target.
 :::
 
 :::note IP5306 — exact pins (this is the ambiguity you asked about)
-The IP5306 is an eSOP-8. **+5V is pin 8**, the **top-LEFT** pin in the render.
-**VBUS is pin 1**, the **top-RIGHT** pin. The large center pad under the chip is **GND**.
-So "+5V on the IP5306" means specifically **pin 8 (top-left)**, *not* just "the chip".
+The IP5306 is an eSOP-8. The **pin-1 dot is top-LEFT** in the render, so the left
+column is pins 1–4 (top→bottom) and the right column is pins 8–5 (top→bottom).
+**VBUS is pin 1**, the **top-LEFT** pin. **+5V is pin 8**, the **top-RIGHT** pin
+(same height as pin 1). **LX is pin 7**, **BAT+ is pin 6** (below pin 8 on the right).
+The large center pad under the chip is **GND**.
+So "+5V on the IP5306" means specifically **pin 8 (top-right)**, *not* just "the chip".
 See card **T7** / **T14** below for the exact spot.
 :::
 
@@ -384,51 +387,52 @@ Find your failing test(s) in the left column → the likely root cause and where
 
 ## 5b. Current board findings — proto #1 (2026-07-14)
 
-:::danger Two findings — and the AMS1117 burn is probably NOT caused by U2
+:::danger U2 is likely fine — the AMS1117 burn is the real, separate fault
 **Symptom:** connecting only USB-C (5 V), the **AMS1117 (U3)** overheats and burns —
-repeatedly, across several replacement regulators.
+repeatedly, across several replacement regulators. **This is the real, confirmed problem.**
 
-**Confirmed:** **U2 (IP5306) has an internal LX↔VOUT short** (pin 7 ↔ pin 8 = 0 V both
-directions, no visible bridge). This breaks the battery/boost — a real defect.
+**Re-evaluated (was "confirmed U2 short"):** the T9 0 Ω was read between the **two middle-right
+pads of U2 — pin 7 (LX) and pin 6 (BAT+)**. Those two pins are the **terminals of the boost
+inductor L1** (verified in the PCB: `L1 pad 1 = BAT+, pad 2 = LX`). An inductor is a coil of
+wire → a DC short (~50–150 mΩ), so **0 Ω in both directions there is normal, not a defect.**
+The "internal LX↔VOUT short" is **not confirmed** — see the corrected T9 test below.
 
-**But does U2 explain the burning? Probably not** (earlier "over-voltage" claim retracted).
-A linear regulator that dies *repeatedly* almost always has a **short/overload on its OUTPUT
-(+3V3)**, not its input. With LX↔VOUT shorted, the +5V rail on USB is ~5 V (passed from VIN)
-or pulled *low* by the broken boost — **not** over-voltage — so the AMS1117 **input** is
-likely fine. The repeated burning points to a **+3V3-side load**: **C2 tantalum** failing
-under voltage, or a **damaged ESP32-S3**. ⚠️ **T1 (+3V3↔GND) clean at DC does NOT rule this
-out** — a tantalum leak or chip over-current shows up only *under voltage*.
+**Why the AMS1117 dies (nothing to do with U2):** it is a **linear** regulator dropping
+5 V→3.3 V, so it burns `P = (5 − 3.3)·I₃ᵥ₃ = 1.7 V · I` as heat inside a tiny SOT-223. A linear
+reg that dies *repeatedly* almost always has a **short/overload on its OUTPUT (+3V3)** —
+replacing it without removing the load simply cooks the next one. ⚠️ **T1 (+3V3↔GND) clean at
+DC does NOT rule this out** — a tantalum leak or chip over-current appears only *under voltage*.
 
-**Fix = two independent jobs:**
-- **Remove U2 + USB-only bypass** → restores a clean +5V (loses battery/charging).
-- **Find & fix the +3V3 load** ([3.3 V-side verification](#33-v-side-verification-esp32--c2))
-  — the real cause of the burning. Do it **before** trusting a fresh AMS1117.
+**Do this, in order:**
+1. **Retest U2 properly** — measure **pin 7 (LX) ↔ pin 8 (+5V)** (the *upper* pair, the one L1
+   does **not** bridge). Directional/open → U2 is healthy; drop the "remove U2" plan.
+2. **Find the +3V3 load** ([3.3 V-side verification](#33-v-side-verification-esp32--c2)) — remove
+   U3, measure +3V3↔GND: hundreds of Ω–kΩ = OK; **tens of Ω = the fault that burns your
+   regulators.** Fix it **before** fitting a fresh AMS1117.
 :::
 
-:::danger T9 = REAL short confirmed (LX↔VOUT), but no visible top-side bridge
-Diode test pin 7 (LX) ↔ pin 8 (VOUT) = **~0 V in both directions** → a genuine short, **not**
-the directional body-diode path. Yet the close-up (IMG_5647) shows **no visible solder bridge
-on top**. So the short is **hidden or internal**:
+:::danger T9 revisited — the 0 Ω is inductor L1, not a short
+The reading was between **pin 7 (LX) and pin 6 (BAT+)** — the two middle-right pads. **L1 sits
+directly across those two pins** (`BAT+ ─ L1 ─ LX`), so **0 Ω in both directions is exactly
+what a healthy board reads**: you measured the inductor's DC resistance, not a fault. That is
+*why* the "short" was so perfectly localized — L1 is the only external part tying two U2 pins
+together at near-zero Ω; every other adjacent pin pair reads open.
 
-1. **IP5306 internally shorted** — boost sync-FET failed. The board **was** powered (that's
-   how the AMS1117s burned), so internal damage is plausible — **now the leading cause**.
-2. **Hidden bridge** — on the inner/toe side of the pins or under the chip.
+**To actually test the suspected LX↔VOUT internal short**, probe the pair L1 does **not**
+bridge — **pin 7 (LX) ↔ pin 8 (+5V)**:
 
-**Fix, least-invasive first:**
-1. Inspect pins 7-8 **from the side / inner edge** — the bridge often hides behind the visible fillet.
-2. **Reflow with flux** (drag tip or hot air), even with no visible bridge → re-measure pin 7↔8:
-   directional = fixed; still 0 V both ways → step 3.
-3. **Remove U2**, measure the **bare pads** LX↔VOUT: open → under-chip bridge, clean & fit a new
-   IP5306; still shorted → PCB copper defect.
-
-Keep the battery disconnected. Do NOT power on until pin 7↔8 reads directional.
+- **directional (~0.3–0.5 V one way, open the other) or fully open** → **U2 is fine.** The whole
+  T9 alarm was L1. Move on to the +3V3 side (the real AMS1117 cause).
+- **0 Ω both ways** → *only then* is it a genuine LX↔VOUT short (internal sync-FET or a hidden
+  pin 7–8 bridge): reflow pins 7–8 with flux; still 0 Ω both ways → remove U2 and re-measure the
+  bare pads.
 :::
 
 | Test | Nets | Result | Localized to | Verdict |
 |------|------|--------|--------------|---------|
 | +3V3 ↔ GND (T1) | +3V3 / GND | no beep | — | ✅ clean |
 | +5V ↔ GND (T2) | +5V / GND | no beep | — | ✅ clean |
-| **T9** | **BAT+ ↔ +5V** | 0 V both dirs | **IP5306 U2 pin 7 (LX) ↔ pin 8 (+5V)** — internal short (no visible bridge) | 🔴 **REAL — remove U2** |
+| **T9** | **BAT+ ↔ +5V** (pin 6 ↔ pin 8) | 0 Ω recorded — but probes hit **pin 6–7** | mislabeled image → wrong pads; **pin 6–7 = inductor L1**, 0 Ω by design | ✅ **NOT a defect** — re-run in diode mode (directional = healthy chip) |
 | **T17** | USB D+ ↔ GND | U4 pin 3 ↔ pin 4 = 0 Ω; **pin 2 (GND) verified isolated** | pin 3 & 4 are **both USB_D+** (same net) | ✅ **NOT a defect** (false alarm) |
 | T3/T4/T5, T6, T8, T10, T12 | rails & rail-pairs | verified | — | ✅ all clean |
 | E2 — SD (U6) | SPI + power | verified | — | ✅ clean |
@@ -437,21 +441,31 @@ Keep the battery disconnected. Do NOT power on until pin 7↔8 reads directional
 | E5 — I2S bus (U1 pins 8-10) | BCLK/LRCK/DOUT | verified | — | ✅ clean |
 | USB-C (J1) | photo inspection + T17 | solder OK, CC pull-down (5101) present | — | ✅ clean (T17 already verified) |
 
-**Bottom line:** the whole board is clean **except U2's internal short** (IP5306 pin 7–8).
-Separately, the repeated AMS1117 burning is most likely a **+3V3-side load** (see root cause).
+**Bottom line:** no confirmed short on U2 — the T9 0 Ω is the inductor L1. The **one real fault
+is the repeated AMS1117 burning**, and it points to a **+3V3-side overload** (see root cause).
 
-### Confirmed defect — IP5306 internal LX↔VOUT short (NOT a solder bridge)
+### T9 re-evaluated — the 0 Ω is inductor L1, not an IP5306 short {#t9-inductor-l1}
 
-BAT+ reaches +5V only through `L1 → SW(LX) → sync-rectifier`. A both-direction 0 Ω means
-that diode is bypassed. Probing localized it to **IP5306 (U2) pin 7 (LX) ↔ pin 8 (+5V)**,
-but the close-up shows **no visible solder bridge** → the short is **internal to the chip**
-(boost sync-FET failed short). The fix is the same either way: **remove U2**.
+The 0 Ω was read between **pin 7 (LX) and pin 6 (BAT+)** — the two middle-right pads. In the
+boost, **BAT+ connects to LX through inductor L1** (verified: `L1 pad 1 = BAT+, pad 2 = LX`). An
+inductor is a piece of wire → a DC short (~50–150 mΩ), so a multimeter reads **~0 Ω in both
+directions there on a perfectly healthy board.** This is exactly *why* the "short" looked so
+localized: L1 is the only external part tying two U2 pins together at near-zero Ω; every other
+adjacent pin pair reads open.
 
-![T9 suspect — IP5306](/img/debug/short-t9-ip5306.png)
+Two things compounded into the false "confirmed short":
 
-**Consequence:** +5V is welded to the battery net. On USB power the boost is broken; **with
-a battery attached, 5 V would be forced onto a 3.7 V cell → overcharge/fire risk.** Keep the
-battery disconnected until fixed.
+1. The **mislabeled T9 image** (now fixed) shifted the pin circles down one pad, so the probes
+   actually landed on **pin 6–7** while being read as "pin 7–8 (LX↔+5V)".
+2. Even so, **pin 6↔7 = across L1 = 0 Ω expected** — it proves nothing about the chip.
+
+**Correct test:** measure **pin 7 (LX) ↔ pin 8 (+5V)** (the pair L1 does *not* bridge).
+Directional/open → **U2 is healthy**; the real problem is the AMS1117 / +3V3 side above.
+
+![T9 — IP5306 pins (pin 6–7 are the inductor L1 terminals)](/img/debug/short-t9-ip5306.png)
+
+**Only if** pin 7↔8 truly reads 0 Ω both ways does the internal-short story apply (then +5V would
+be welded to the battery net — keep the battery disconnected until that pair reads directional).
 
 ### T17 — false alarm (resolved)
 
@@ -561,8 +575,38 @@ the jumper, VBUS ↔ +5V = 0 Ω (intended) and +5V ↔ GND still open. Then powe
 
 ### 3.3 V-side verification (ESP32 + C2) {#33-v-side-verification-esp32--c2}
 
-A past +5V over-voltage event may have damaged what the AMS1117 feeds. Check this **before**
-trusting a fresh regulator, otherwise the new AMS1117 may burn again from a downstream load.
+#### Why the AMS1117 burns — root cause
+
+The repeated AMS1117 death is the **one real, confirmed fault** on proto #1 — and it is
+**not** related to U2/L1 (that was a false alarm; see [T9 re-evaluated](#t9-inductor-l1)).
+
+The AMS1117 is a **linear** regulator: it drops 5 V→3.3 V by dissipating the difference as
+**heat** inside a tiny SOT-223.
+
+```
+P = (Vin − Vout) × I₃ᵥ₃ = 1.7 V × I₃ᵥ₃
+```
+
+- ~500 mA (ESP32-S3 WiFi TX + display): **P ≈ 0.85 W** → with modest copper the junction runs
+  ~100 °C. Hot, but it survives.
+- Pushed into **current-limit / a partial short** (~1 A): **P ≈ 1.7 W** → junction well past
+  150 °C → death.
+- A **hard short on +3V3**: full current at ≥1.7 V across the part → it cooks **instantly**.
+
+**The decisive clue is that it died *repeatedly*, across several regulators.** A linear reg
+that dies again and again almost always has a **persistent short/overload on its OUTPUT
+(+3V3)** — swapping the regulator without removing the load just cooks the next one. So the
+genuine short you were hunting is on the **+3.3 V rail**, not on U2. Likely culprits, in order:
+
+1. **Solder bridge / short** on the dense ESP32-S3 3V3 pins or its decoupling caps.
+2. **Damaged ESP32-S3 (U1)** drawing excessive current (e.g. from a bypass-jumper slip that put
+   5 V onto 3V3).
+3. **`LCD_BL` backlight** mis-wired / over-drawing on +3V3.
+4. **C2 tantalum** failed short (polarity is audited-correct, but inrush can still short a
+   tantalum — verify by ohm-check).
+
+⚠️ **A clean T1 (+3V3↔GND) at DC does NOT clear this** — a leaky tantalum or an over-current IC
+only shows up *under voltage*. Do the checks below **before** trusting a fresh regulator.
 
 **Step 1 — C2 tantalum (22 µF on +3V3).** Tantalums fail **short**; C2 is already flagged as
 a suspect in this project.
@@ -587,8 +631,9 @@ a suspect in this project.
 
 ![Step 3 — ESP32 3.3V side](/img/debug/v33-esp32-test.png)
 
-**Order of repair:** fix U2 (remove + bypass) → replace AMS1117 → check C2 → power-on
-current-limited → if still hot, suspect U1.
+**Order of repair:** retest U2 pin 7↔8 (diode — probably fine, skip removal) → **find & clear
+the +3V3 load** (C2, then U1) → fit a fresh AMS1117 → power-on current-limited → if still hot,
+the +3V3 load is not gone.
 
 ---
 
@@ -611,7 +656,7 @@ Fill this in per board. `✅` = no beep / expected. `🔴` = short found.
 
 | Date | Board | T1 3V3-GND | T2 5V-GND | T9 BAT-5V | T17 D+-GND | T6 5V-3V3 | T8 VBUS-3V3 | Power-on mA | Notes |
 |------|-------|-----------|-----------|-----------|------------|-----------|-------------|-------------|-------|
-| 2026-07-14 | proto #1 | ✅ | ✅ | 🔴 SHORT | ✅ (false alarm) | ✅ | ✅ | ⛔ not yet | **Full board swept clean** (power rails, SD, audio, J4 display, I2S, USB-C). Only real defect: **IP5306 pin 7–8** (LX↔VOUT) → BAT+=+5V. Rework U2 → then controlled power-on |
+| 2026-07-14 | proto #1 | ✅ | ✅ | ⚠️ L1 (false alarm) | ✅ (false alarm) | ✅ | ✅ | ⛔ not yet | **Full board swept clean.** T9 "short" was **inductor L1** across pin 6–7 (mislabeled image) — **no confirmed U2 short**. **Real fault: AMS1117 (U3) burns repeatedly → +3V3-side overload.** Retest U2 pin 7↔8 (diode), then hunt the +3V3 load before fitting a new AMS1117 |
 
 ---
 
@@ -621,11 +666,12 @@ Everything needed to get proto #1 running, start to finish. **Keep the battery
 disconnected** until the very end; power only from a **current-limited bench supply
 (5 V, 100 mA)** or a USB source you can monitor.
 
-### A. Remove the fault (IP5306)
-- [ ] **Remove U2 (IP5306)** — hot air ~350 °C, or Chip-Quik / solder-blob method with an iron.
-- [ ] Clean the pads (wick + flux).
-- [ ] **Verify short is gone:** empty-footprint **pin 7 pad ↔ pin 8 pad = open** (confirms the
-      short was inside the chip).
+### A. First: confirm U2 is actually faulty (probably it isn't)
+- [ ] **Diode mode, pin 7 (LX) ↔ pin 8 (+5V)** — the pair L1 does *not* bridge.
+      **Directional or open → U2 is healthy, SKIP the removal**, go straight to C.
+      *(Do not judge pin 6↔7: that's just inductor L1 = 0 Ω by design — the T9 false alarm.)*
+- [ ] **Only if pin 7↔8 = 0 Ω both ways:** remove U2 (hot air ~350 °C / Chip-Quik), clean the
+      pads (wick + flux), and confirm empty-footprint **pin 7 pad ↔ pin 8 pad = open**.
 
 ### B. USB-only bypass (gives up battery + charging)
 - [ ] Solder a jumper **VBUS (pin 1 pad) → +5V (pin 8 pad)** across the top of the U2 footprint.
