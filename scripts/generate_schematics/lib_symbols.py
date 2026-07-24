@@ -287,6 +287,40 @@ _SYMBOL_LED = """    (symbol "LED" (pin_names (offset 1.016) hide) (in_bom yes) 
         (pin passive line (at -3.81 0 0) (length 2.54) (name "A" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
         (pin passive line (at 3.81 0 180) (length 2.54) (name "K" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))\n"""
 
+_SYMBOL_BAT54C = """    (symbol "BAT54C" (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
+      (property "Reference" "D" (at 0 5.08 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "BAT54C" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "BAT54C_0_1"
+        (rectangle (start -2.54 2.54) (end 2.54 -2.54) (stroke (width 0.254) (type default)) (fill (type background)))
+        (polyline (pts (xy -1.6 -1.5) (xy -0.6 -0.5) (xy -1.6 0.5) (xy -1.6 -1.5)) (stroke (width 0.254) (type default)) (fill (type outline)))
+        (polyline (pts (xy -0.6 -1.5) (xy -0.6 0.5)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy 1.6 -1.5) (xy 0.6 -0.5) (xy 1.6 0.5) (xy 1.6 -1.5)) (stroke (width 0.254) (type default)) (fill (type outline)))
+        (polyline (pts (xy 0.6 -1.5) (xy 0.6 0.5)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -0.6 -0.5) (xy 0.6 -0.5)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy 0 -0.5) (xy 0 2.54)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -2.54 -1.27) (xy -1.6 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy 2.54 -1.27) (xy 1.6 -1.27)) (stroke (width 0.254) (type default)) (fill (type none))))
+      (symbol "BAT54C_1_1"
+        (pin passive line (at -5 -1.27 0) (length 2.46) (name "1" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 5 -1.27 180) (length 2.46) (name "2" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 0 5 270) (length 2.46) (name "3" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
+
+_SYMBOL_USBLC6_2SC6 = """    (symbol "USBLC6_2SC6" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+      (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "USBLC6-2SC6" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "USBLC6_2SC6_0_1" (rectangle (start -7.62 5.08) (end 7.62 -5.08) (stroke (width 0.254) (type default)) (fill (type background))))
+      (symbol "USBLC6_2SC6_1_1"
+        (pin bidirectional line (at -10 2.54 0) (length 2.38) (name "I/O1_A" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at -10 0 0) (length 2.38) (name "I/O2_A" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at 10 0 180) (length 2.38) (name "I/O2_B" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
+        (pin power_in line (at 0 7.62 270) (length 2.54) (name "VBUS" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at 10 -2.54 180) (length 2.38) (name "I/O1_B" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))))\n"""
+
 _SYMBOL_FPC_16P = """    (symbol "FPC_16P" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "J" (at 0 21.59 0) (effects (font (size 1.27 1.27))))
       (property "Value" "FPC-16P-0.5mm" (at 0 -21.59 0) (effects (font (size 1.27 1.27))))
@@ -329,6 +363,8 @@ SYMBOLS: dict[str, str] = {
     "Speaker": _SYMBOL_SPEAKER,
     "PSP_Joystick": _SYMBOL_JOYSTICK,
     "LED": _SYMBOL_LED,
+    "BAT54C": _SYMBOL_BAT54C,
+    "USBLC6_2SC6": _SYMBOL_USBLC6_2SC6,
     "FPC_16P": _SYMBOL_FPC_16P,
     "PWR_FLAG": _SYMBOL_PWR_FLAG,
     "GND": _SYMBOL_GND,

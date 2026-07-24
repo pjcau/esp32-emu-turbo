@@ -7,7 +7,7 @@ class ControlsSheet(SchematicSheet):
     title = "Controls - 12 Buttons (SNES Layout)"
     page_number = 6
     paper = "A3"
-    needed_symbols = ["SW_Push", "R", "C"]
+    needed_symbols = ["SW_Push", "R", "C", "BAT54C"]
 
     def build(self):
         # Title
@@ -132,19 +132,36 @@ class ControlsSheet(SchematicSheet):
         # GPIO — it detects the START+SELECT combo (see
         # ``software/main/board_config.h`` ``BTN_MENU_COMBO``).
         #
-        # BAT54C SOT-23 pinout:
+        # BAT54C library symbol layout (lib_symbols._SYMBOL_BAT54C) —
+        # a SOT-23-3 body reused for both Q1 (P-MOSFET) on the Power
+        # Supply sheet and D1 (dual Schottky) here. Symbol-local pin
+        # positions (world_y = symbol_y - local_y):
+        #   pin 1: (-5, -1.27)  bottom-left  → wired to BTN_START
+        #   pin 2: (+5, -1.27)  bottom-right → wired to BTN_SELECT
+        #   pin 3: (0, +5)      top          → wired to MENU_K
+        #
+        # BAT54C SOT-23 pinout (electrical role for D1):
         #   1 = Anode 1 → BTN_START
         #   2 = Anode 2 → BTN_SELECT
         #   3 = Common cathode → MENU_K
         dx, dy = mx + 40, my + 18
         self.sym("BAT54C", "D1", "BAT54C", dx, dy, ["1", "2", "3"])
-        self.text("MENU combo", dx + 3, dy - 8, 1.5)
-        self.text("(START + SELECT)", dx + 3, dy - 5, 1.5)
-        # Pin 3 (common cathode) → MENU_K
-        self.glabel("MENU_K", dx - 12, dy, 180)
-        # Pins 1, 2 (anodes) → BTN_START, BTN_SELECT
-        self.glabel("BTN_START",  dx + 12, dy - 3.81, 0)
-        self.glabel("BTN_SELECT", dx + 12, dy + 3.81, 0)
+        # Annotation moved to the right of the symbol so it does not
+        # cover pin 3's stub / MENU_K glabel above D1.
+        self.text("MENU combo", dx + 12, dy - 4, 1.5)
+        self.text("(START + SELECT)", dx + 12, dy - 1, 1.5)
+        # Pin 3 (common cathode, world (dx, dy - 5)) → MENU_K glabel
+        # placed above D1. Same pattern as U4's +5V tap on sheet 1.
+        self.glabel("MENU_K", dx, dy - 10, 90)
+        self.wire(dx, dy - 5, dx, dy - 10)
+        # Pin 1 (anode 1, world (dx - 5, dy + 1.27)) → BTN_START to the
+        # left. Short horizontal stub, glabel points left (angle 180).
+        self.glabel("BTN_START", dx - 11, dy + 1.27, 180)
+        self.wire(dx - 5, dy + 1.27, dx - 11, dy + 1.27)
+        # Pin 2 (anode 2, world (dx + 5, dy + 1.27)) → BTN_SELECT to the
+        # right. Short horizontal stub, glabel points right (angle 0).
+        self.glabel("BTN_SELECT", dx + 11, dy + 1.27, 0)
+        self.wire(dx + 5, dy + 1.27, dx + 11, dy + 1.27)
 
         # Schematic note at bottom
         ny = 295
