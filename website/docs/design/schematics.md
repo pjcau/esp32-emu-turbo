@@ -4,9 +4,11 @@ title: Electrical Schematics
 sidebar_position: 2
 ---
 
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
 # Electrical Schematics
 
-Complete electrical design for the ESP32 Emu Turbo, split into 7 detailed schematic sheets with cross-sheet global labels.
+Complete electrical design for the ESP32 Emu Turbo, split into 6 detailed schematic sheets with cross-sheet global labels.
 
 <div className="sheet-grid">
   <a href="#sheet-1--power-supply" className="sheet-card">
@@ -33,13 +35,13 @@ Complete electrical design for the ESP32 Emu Turbo, split into 7 detailed schema
     <h4>6. Controls</h4>
     <p>12 buttons + debounce</p>
   </a>
-  <a href="#sheet-7--usb-data" className="sheet-card">
-    <h4>7. USB Data</h4>
-    <p>Native USB (flash + debug)</p>
+  <a href="#usb-data-flash--debug" className="sheet-card">
+    <h4>USB Data</h4>
+    <p>Native USB — on Sheets 1–2</p>
   </a>
 </div>
 
-<a className="pdf-download" href="/img/schematics/esp32-emu-turbo-schematics.pdf" target="_blank">Download all sheets (PDF, 7 pages)</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/esp32-emu-turbo-schematics.pdf')} target="_blank">Download all sheets (PDF, 6 pages)</a>
 
 :::info Source files
 KiCad 10 project: [`hardware/kicad/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/hardware/kicad)
@@ -93,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 voltage regulator.
+USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 voltage regulator, Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
 
 <div className="schematic-container">
 
@@ -101,7 +103,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 
 </div>
 
-<a className="pdf-download" href="/img/schematics/01-power-supply.pdf" target="_blank">PDF</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/01-power-supply.pdf')} target="_blank">PDF</a>
 
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
@@ -114,14 +116,19 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
 | BT1 | Battery | LiPo 3.7V 5000mAh | 105080 cell | — |
 | U3 | LDO regulator | AMS1117-3.3 | 5V to 3.3V, 800mA max | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
+| U4 | USB ESD TVS | USBLC6-2SC6 SOT-23-6 (C7519) | USB D+/D− ESD protection | — |
+| R22, R23 | Resistor | 22 Ω 0402 (C25092) | USB D+/D− series resistors | — |
+| Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
+| R24 | Resistor | 100 kΩ | Q1 gate pull-down (MOSFET ON for correct polarity) | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Charging indicator (IP5306) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Green LED | 0805 | Fully charged indicator (IP5306) | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
-| SW_PWR | Slide switch | SS-12D00G3 | Power on/off | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
+| SW_PWR | Slide switch | MSK12C02 | Power on/off — **⚠ v1 as-built: not in series, see warning below** | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
 | C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C2 | Capacitor | 22 µF tantalum 16V (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω) | LDO output stability | [PDF](/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf) |
 | C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C19 | Capacitor | 22 µF | Bulk capacitor | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
+| C27 | Capacitor | 10 µF | IP5306 VOUT HF decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 
 ### Power Budget
 
@@ -139,23 +146,39 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 ### Power Path Architecture
 
 ```
-                    ┌─────────────┐
-  USB-C ──VBUS──────┤ pin 1 (VIN) │
-  (5V)              │             │
-                    │   IP5306    │──pin 8 (VOUT)──► +5V ──► AMS1117 ──► +3V3
-                    │             │                           (U3)        (ESP32, LCD, SD)
-  Battery ──SW_PWR──┤ pin 6 (BAT) │
-  (3.7V)    (pin 2) │             │──pin 7 (LX)──── L1 ────► BAT+
-                    │   pin EP    │
-                    └──────┬──────┘
-                          GND
+                          ┌─────────────┐
+  USB-C ──VBUS────────────┤ pin 1 (VIN) │
+  (5V)                    │             │
+                          │   IP5306    │──pin 8 (VOUT)──► +5V ──► AMS1117 ──► +3V3
+                          │             │                          (U3)       (ESP32, LCD, SD)
+  Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │
+  (3.7V)   (J3)   (RPP)   │             │──pin 7 (LX)──── L1 ────► BAT+
+                   BAT+   │   pin EP    │
+                          └──────┬──────┘
+                                GND
+
+  SW_PWR (slide switch): common pin tapped on BAT+ — throws unrouted on v1 (see warning)
 ```
 
 **Key design points:**
-- **SW_PWR** sits between battery and IP5306 pin 6 (BAT). It does NOT control USB VBUS.
+- **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail: for a correctly-inserted battery the gate (pulled low by R24) keeps it ON; a reversed battery is blocked by the body diode.
+- **SW_PWR** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional on the v1 board** (see warning below). It does NOT control USB VBUS.
 - **VBUS** goes directly to IP5306 pin 1 (VIN) — always available when USB is plugged in.
 - **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
 - **No backfeed diode needed:** IP5306 charger is internally regulated (CC/CV), boost is unidirectional.
+
+:::caution SW_PWR does not switch anything on the v1 board as built
+PCB routing connects only the switch **common pin (2)** to BAT+ as a stub; throw pins 1/3
+are unrouted (`hardware/datasheet_specs.py` declares them unconnected). The battery path
+**J3 → Q1 → BAT+ → IP5306 pin 6** is continuous copper that never passes through the
+switch, so sliding it changes nothing. Consequences on v1:
+
+- Power-state rows with *SW_PWR = OFF* describe **design intent**, not actual v1 behavior.
+- To truly isolate the battery (e.g. for flashing), **unplug the J3 battery connector**.
+- System on/off relies on the IP5306 KEY logic (SW13/MENU via R16) and its automatic
+  light-load standby.
+- **v2 respin fix:** route the battery through switch pins 1–2 in series (BAT_IN side).
+:::
 
 ### Power States & Debug
 
@@ -178,7 +201,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 
 **Flash firmware (recommended: switch OFF):**
 1. Connect USB-C cable
-2. Set SW_PWR to OFF (isolates battery)
+2. Set SW_PWR to OFF (⚠ v1 as-built: ineffective — unplug J3 for true battery isolation)
 3. Hold **SW_BOOT**, press+release **SW_RST**, release **SW_BOOT**
 4. Run `idf.py flash` — ESP32 enters download mode
 5. Press **SW_RST** to reboot into normal mode
@@ -201,6 +224,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | BAT+ → VBUS | Boost unidirectional | IP5306 boost only drives BAT→VOUT |
 | USB + switch OFF | Physical isolation | SW_PWR disconnects battery from IP5306 pin 6 |
 | USB + switch ON | Charge-and-play | IP5306 manages both paths internally |
+| Reversed battery | Q1 P-MOSFET RPP | Body diode blocks; gate pull-down R24 keeps Q1 ON only with correct polarity |
 
 ---
 
@@ -214,7 +238,7 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 
 </div>
 
-<a className="pdf-download" href="/img/schematics/02-mcu.pdf" target="_blank">PDF</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/02-mcu.pdf')} target="_blank">PDF</a>
 
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
@@ -222,6 +246,7 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 | R3 | Resistor | 10 kΩ | EN pull-up (DNP — ESP32-S3-WROOM-1 integrates ~45 kΩ internal EN pull-up) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
 | C3 | Capacitor | 100 nF | EN reset delay (RC ≈ 4.5 ms via WROOM-1 internal ~45 kΩ pull-up) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C4 | Capacitor | 100 nF | 3V3 decoupling | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C26 | Capacitor | 100 nF | 3V3 VDD bypass (within 3.6 mm of module pin 2) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | SW_RST | Tact switch | — | EN reset (pulls EN low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | SW_BOOT | Tact switch | — | Boot mode (pulls GPIO0 low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 
@@ -260,7 +285,7 @@ ILI9488 4.0" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface 
 
 </div>
 
-<a className="pdf-download" href="/img/schematics/03-display.pdf" target="_blank">PDF</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/03-display.pdf')} target="_blank">PDF</a>
 
 The 8080 parallel mode writes a full pixel (16-bit RGB565) in 2 bus cycles. SPI would need 16 clock cycles per pixel, making it too slow for 60fps full-screen SNES rendering. GPIO4–11 form a contiguous 8-bit data bus for efficient register-level DMA.
 
@@ -276,7 +301,7 @@ I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker
 
 </div>
 
-<a className="pdf-download" href="/img/schematics/04-audio.pdf" target="_blank">PDF</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/04-audio.pdf')} target="_blank">PDF</a>
 
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
@@ -303,7 +328,7 @@ Micro SD card module via SPI bus for ROM storage (SNES ROMs up to 6MB, FAT32).
 
 </div>
 
-<a className="pdf-download" href="/img/schematics/05-sd-card.pdf" target="_blank">PDF</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/05-sd-card.pdf')} target="_blank">PDF</a>
 
 | Ref | Component | Datasheet |
 |-----|-----------|-----------|
@@ -330,7 +355,7 @@ SPI bus up to 20MHz. The SD module has a built-in level shifter (3.3V safe). On 
 
 </div>
 
-<a className="pdf-download" href="/img/schematics/06-controls.pdf" target="_blank">PDF</a>
+<a className="pdf-download" href={useBaseUrl('/img/schematics/06-controls.pdf')} target="_blank">PDF</a>
 
 ### Button Circuit (repeated 13×)
 
@@ -361,9 +386,12 @@ SPI bus up to 20MHz. The SD module has a built-in level shifter (3.3V safe). On 
 
 ---
 
-## Sheet 7 — USB Data
+## USB Data (flash & debug)
 
 Native USB data lines for firmware flashing and debug console (replaces UART debug).
+There is no dedicated sheet: the USB data path is drawn on **Sheet 1** (J1 → U4 USBLC6
+ESD protection → R22/R23 22 Ω series resistors) and lands on **Sheet 2** at ESP32
+GPIO19/20 via the `USB_D-`/`USB_D+` global labels.
 
 | Signal | GPIO | Function |
 |--------|------|----------|
@@ -378,7 +406,7 @@ The optional PSP joystick (previously GPIO20/GPIO44) has been removed. The D-pad
 
 ---
 
-## v2 — Sheet 8: Audio Coprocessor (ESP32-S3-MINI-1)
+## v2 — additional sheet: Audio Coprocessor (ESP32-S3-MINI-1)
 
 :::info v2 addition
 This sheet is only present on the **v2 PCB**. The v1 PCB uses direct I2S from the main ESP32-S3 to the PAM8403 (Sheet 4). In v2, the main ESP32-S3 communicates with the coprocessor via SPI, and the coprocessor drives I2S to the PAM8403.
@@ -389,8 +417,8 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
 | U7 | ESP32-S3-MINI-1-N8 | Module | Audio coprocessor (SPC700 + I2S) |
-| C26 | Capacitor | 100 nF | 3V3 decoupling |
-| C27 | Capacitor | 100 nF | EN decoupling |
+| C28 | Capacitor | 100 nF | 3V3 decoupling (refs C26/C27 are already used on the main board) |
+| C29 | Capacitor | 100 nF | EN decoupling |
 
 ### SPI Bus (Main ESP32-S3 → Coprocessor)
 

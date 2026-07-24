@@ -4,6 +4,8 @@ title: Pre-Production Verification
 sidebar_position: 3
 ---
 
+import useBaseUrl from '@docusaurus/useBaseUrl';
+
 # Pre-Production Verification
 
 Automated test battery that validates the entire design before PCB manufacturing. These checks run automatically on every commit via a git pre-commit hook.
@@ -379,7 +381,7 @@ JLCPCB's online DFM engine runs additional checks beyond our local DRC/DFM pipel
 
 ### Report: 2026-04-03
 
-<a className="pdf-download" href="/img/dfm/jlcpcb-dfm-report-2026-04-03.pdf" target="_blank">Download full JLCPCB DFM report (PDF)</a>
+<a className="pdf-download" href={useBaseUrl('/img/dfm/jlcpcb-dfm-report-2026-04-03.pdf')} target="_blank">Download full JLCPCB DFM report (PDF)</a>
 
 **Board:** 160×75 mm, 4-layer, 1.6 mm | **Generated:** 2026-04-03 15:36:39
 
@@ -455,7 +457,7 @@ These are known JLCPCB DFM false positives documented by other users with FPC an
 
 ### Report: 2026-04-04 (v3 — Full report after all fixes)
 
-<a className="pdf-download" href="/img/dfm/jlcpcb-dfm-report-2026-04-04-full.pdf" target="_blank">Download full JLCPCB DFM report v3 (PDF)</a>
+<a className="pdf-download" href={useBaseUrl('/img/dfm/jlcpcb-dfm-report-2026-04-04-full.pdf')} target="_blank">Download full JLCPCB DFM report v3 (PDF)</a>
 
 **Generated:** 2026-04-04 00:12:25 | **Fixes applied:** USB meander, C26 bypass cap, VIA\_MIN 0.50mm, fiducials
 

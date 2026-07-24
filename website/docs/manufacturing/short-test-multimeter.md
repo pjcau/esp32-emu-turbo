@@ -116,7 +116,9 @@ probe directions.
 Legend: **PASS** = what a healthy board shows. **If FAIL** → jump to the
 [Diagnostic Matrix](#diagnostic-matrix).
 
-:::danger The one rule that prevents false alarms
+#### The one rule that prevents false alarms {#the-one-rule-that-prevents-false-alarms}
+
+:::danger One rule
 **Any probe point that reaches an IC pin** (ESP32, IP5306, USBLC6/ESD, SD card) can read a
 **diode drop in ONE direction** — that is an internal protection/steering diode, **not a
 short**. Confirm with **diode mode (`▶|`)**: *directional* (≈0.3–0.7 V one way, OL the

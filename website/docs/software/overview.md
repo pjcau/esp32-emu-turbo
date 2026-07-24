@@ -54,7 +54,7 @@ All systems run at full speed on ESP32-S3 N16R8 @ 240MHz. QEMU benchmark confirm
 | **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
 | **Phase 3** | All Emulators at Full Speed | ⏳ Needs HW | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
 | **Phase 4** | SNES Optimization (30→60 FPS) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization) |
-| **Phase 5** | v2 Audio Coprocessor (ESP32-S3-MINI-1) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor-esp32-s3-mini-1) |
+| **Phase 5** | v2 Audio Coprocessor (ESP32-S3-MINI-1) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor) |
 
 ---
 

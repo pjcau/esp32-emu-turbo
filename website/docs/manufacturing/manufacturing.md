@@ -171,7 +171,7 @@ The one-time fees (engineering $24, stencil $16.18, setup $50.37, fixture $16.18
 
 ## v2 PCB — Audio Coprocessor Addition
 
-The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5 — Software Architecture](/docs/software#phase-5--v2-hardware-audio-coprocessor)). This offloads 100% of audio processing from the main ESP32-S3.
+The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5 — Software Architecture](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor)). This offloads 100% of audio processing from the main ESP32-S3.
 
 ### v2 Additional Assembly Components
 

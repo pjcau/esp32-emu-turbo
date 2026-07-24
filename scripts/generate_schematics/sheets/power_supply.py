@@ -385,13 +385,24 @@ class PowerSupplySheet(SchematicSheet):
         # ═══════════════════════════════════════════════
         sw_x, sw_y = 30, 160
         self.text("POWER SWITCH", sw_x - 5, sw_y - 12, 2.54, True)
+        # Value kept as "SS-12D00G3" to match the CPL/footprint key (legacy
+        # name); the actual part is MSK12C02 (LCSC C431540) — noted as text
+        # below. Renaming the footprint key across routing/footprints/CPL is
+        # a v2 cleanup item.
         self.sym("SW_Push", "SW_PWR", "SS-12D00G3", sw_x, sw_y, ["1", "2"])
-        # BAT+ to switch in, switch out to VBUS line
+        self.text("Actual part: MSK12C02 (LCSC C431540)", sw_x - 5, sw_y + 14, 1.5)
+        # v1 AS-BUILT: only the switch COMMON pin (pad 2) is routed — it taps
+        # the BAT+ net as a stub. Throw pins 1/3 are unrouted (see
+        # hardware/datasheet_specs.py::SW_PWR), so the slide switch does NOT
+        # break the battery path: J3 -> Q1 -> BAT+ -> IP5306 pin 6 is
+        # continuous copper. Power on/off relies on the IP5306 KEY logic
+        # (SW13/MENU via R16) and its automatic light-load standby.
+        # v2 respin: route the battery through pins 1-2 in series.
         self.glabel("BAT+", sw_x - 12, sw_y, 180, "input")
         self.wire(sw_x - 5.08, sw_y, sw_x - 12, sw_y)
-        self.glabel("VBUS_SW", sw_x + 12, sw_y, 0, "output")
-        self.wire(sw_x + 5.08, sw_y, sw_x + 12, sw_y)
-        self.text("Slide switch on enclosure edge", sw_x - 5, sw_y + 10, 1.5)
+        self.text("N.C. (v1: throw pins unrouted)", sw_x + 7, sw_y, 1.5)
+        self.text("!! v1 as-built: NOT in series - cannot disconnect battery", sw_x - 5, sw_y + 8, 1.5)
+        self.text("Power on/off = IP5306 KEY + auto-standby. v2: wire pins 1-2 in series.", sw_x - 5, sw_y + 11, 1.5)
 
         # ═══════════════════════════════════════════════
         # CHARGING LEDs (driven by IP5306 LED outputs)
