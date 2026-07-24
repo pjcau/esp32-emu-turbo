@@ -143,8 +143,8 @@ Buy the **bare LCD panel** (NOT a module with PCB breakout):
 All production files are pre-packaged in the **`release_jlcpcb/`** folder at the project root (v2.1):
 
 1. **Gerber ZIP** — `release_jlcpcb/gerbers.zip` (ready to upload, inner layers with zone fill)
-2. **BOM.csv** — `release_jlcpcb/bom.csv` (27 part-number groups, 75 placements)
-3. **CPL.csv** — `release_jlcpcb/cpl.csv` (75 component placements)
+2. **BOM.csv** — `release_jlcpcb/bom.csv` (28 part-number groups, 77 placements)
+3. **CPL.csv** — `release_jlcpcb/cpl.csv` (77 component placements)
 
 ### Order Settings
 - Layers: **4**
@@ -303,7 +303,7 @@ Script: `python3 scripts/simulate_circuit.py`
 ### Schematic/PCB Consistency — PASS
 
 - All **78 JLCPCB CPL components** matched between schematic, PCB, and CPL
-- 3 off-board components excluded: battery (BT1), display module (U4), speaker (SPK1)
+- 3 off-board components excluded: battery (BT1), display module (DS1), speaker (SPK1)
 - PCB: 559 trace segments, 320 vias, 54 nets, 87 footprints
 
 Script: `python3 scripts/verify_schematic_pcb.py`
@@ -375,7 +375,7 @@ v2 Total: **82 unique component references**, **78 assembled by JLCPCB**.
 
 1. Upload `release_jlcpcb/gerbers.zip` to [jlcpcb.com](https://jlcpcb.com/)
 2. Upload `release_jlcpcb/bom.csv` and `release_jlcpcb/cpl.csv` for SMT assembly
-3. Order 5× PCBs with SMT assembly (75 components)
+3. Order 5× PCBs with SMT assembly (77 components)
 4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
 5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
 

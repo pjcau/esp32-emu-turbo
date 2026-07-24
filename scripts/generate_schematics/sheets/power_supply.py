@@ -6,6 +6,12 @@ from ..sheet_base import SchematicSheet
 class PowerSupplySheet(SchematicSheet):
     title = "Power Supply"
     page_number = 1
+    # Upgraded to A3 (297x420 landscape) so the USB-C / IP5306 / battery
+    # cluster, the USB ESD block, the AMS1117 regulator, the power
+    # switch and the charging LEDs can each sit in their own zone
+    # without overlapping annotation text. Previously A4 (210x297) —
+    # too small once R22/R23/U4 (USB ESD) were added.
+    paper = "A3"
     needed_symbols = [
         "USB_C", "IP5306", "AMS1117-3.3", "Conn_JST_PH_2",
         "Battery", "C", "R", "L", "SW_Push", "LED",
@@ -51,9 +57,14 @@ class PowerSupplySheet(SchematicSheet):
         # only the schematic could not see the ESD protection. Now
         # instantiated so the schematic matches the CPL.
         #
-        # Placed well below the main USB-C/IP5306 area to avoid spatial
-        # clashes with existing symbols on the same sheet.
-        u4x, u4y = 45, 160
+        # RELOCATED (2026-07-24): the previous position (45, 160) sat
+        # directly on top of SW_PWR, C1, U3 (AMS1117) and C2 which all
+        # live at y=160 in the VOLTAGE REGULATOR / POWER SWITCH row.
+        # Now placed on its own dedicated USB-DATA row (y=140) tucked
+        # underneath the USB-C connector on the A3-landscape sheet,
+        # well clear of the CHARGING LEDs (x>=250) and of the AMS1117
+        # regulator row (y>=190) below.
+        u4x, u4y = 60, 140
         self.sym("USBLC6_2SC6", "U4", "USBLC6-2SC6", u4x, u4y, range(1, 7))
         self.text("USB ESD TVS", u4x - 8, u4y - 12, 1.5)
         # The USBLC6_2SC6 library symbol in this generator uses the
@@ -78,9 +89,12 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(u4x, u4y - 7.62, u4x, u4y - 12)
 
         # Series resistors R22/R23 between USBLC6 MCU-side and ESP32.
+        # Placed to the right of U4 with the same 6mm vertical spacing
+        # as before; label text moved BELOW each resistor so it does
+        # not run into the adjacent GPIO glabel or the other resistor.
         r22x, r22y = u4x + 30, u4y - 2
         self.sym("R", "R22", "22",  r22x, r22y, ["1", "2"])
-        self.text("D+ 22Ω", r22x + 4, r22y - 2, 1.5)
+        self.text("D+ 22Ω", r22x + 4, r22y + 6, 1.5)
         self.wire(r22x - 3.81, r22y, r22x - 8, r22y)
         self.glabel("USB_DP_MCU", r22x - 8, r22y, 180)
         self.wire(r22x + 3.81, r22y, r22x + 8, r22y)
@@ -88,7 +102,7 @@ class PowerSupplySheet(SchematicSheet):
 
         r23x, r23y = u4x + 30, u4y + 4
         self.sym("R", "R23", "22",  r23x, r23y, ["1", "2"])
-        self.text("D- 22Ω", r23x + 4, r23y - 2, 1.5)
+        self.text("D- 22Ω", r23x + 4, r23y + 6, 1.5)
         self.wire(r23x - 3.81, r23y, r23x - 8, r23y)
         self.glabel("USB_DM_MCU", r23x - 8, r23y, 180)
         self.wire(r23x + 3.81, r23y, r23x + 8, r23y)
@@ -206,9 +220,11 @@ class PowerSupplySheet(SchematicSheet):
             "C", "C19", "22uF",
             cout_x, cout_y, ["1", "2"],
         )
+        # Short label placed above the cap so it does not crowd C27 to
+        # its right or the Q1/C18 cluster below.
         self.text(
-            "VOUT decoupling",
-            cout_x + 3, cout_y - 5, 1.5,
+            "VOUT bulk",
+            cout_x - 3, cout_y - 8, 1.5,
         )
         self.wire(
             cout_x, vout_turn_y, cout_x, cout_y - 3.81,
@@ -217,10 +233,13 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(cout_x, cout_y + 3.81, cout_x, cout_y + 8)
 
         # C27: HF decoupling (10uF) near VOUT
-        c27_x = cout_x + 15
+        # Placed with extra horizontal gap from C19 so its label does
+        # not run into "VOUT bulk" above C19.
+        c27_x = cout_x + 22
         c27_y = cout_y
         self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"])
-        self.text("HF decoupling", c27_x + 3, c27_y - 5, 1.5)
+        self.text("HF bypass", c27_x - 3, c27_y - 8, 1.5)
+        self.wire(cout_x, vout_turn_y, c27_x, vout_turn_y)
         self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
         self.gnd(c27_x, c27_y + 8)
         self.wire(c27_x, c27_y + 3.81, c27_x, c27_y + 8)
@@ -240,10 +259,18 @@ class PowerSupplySheet(SchematicSheet):
         # KiCad's "power input must be driven" requirement on +5V.
 
         # ---- CBAT (C18, 10uF) on BAT line ----
-        cbat_x = 198
-        cbat_y = 98
+        # Moved further down and slightly right of R16 (was cbat_x=198,
+        # causing "BAT decoupling" text to run into Q1's "P-MOSFET RPP /
+        # SI2301CDS" labels). The new tap (185, 87.54) sits between R16
+        # at x=182 and Q1 at x=210 — clear of both the KEY horizontal
+        # wire (which runs at y=90.08 from x=170.16 to x=182) and the
+        # Q1 label cluster.
+        cbat_x = 185
+        cbat_y = 108
         self.sym("C", "C18", "10uF", cbat_x, cbat_y, ["1", "2"])
-        self.text("BAT decoupling", cbat_x + 3, cbat_y - 5, 1.5)
+        # Label placed to the LEFT of the cap to keep the right side
+        # (which points toward Q1/J3) completely clear.
+        self.text("BAT bypass", cbat_x - 16, cbat_y - 8, 1.5)
         # Tee down from BAT wire at y=bat_y
         self.wire(cbat_x, bat_y, cbat_x, cbat_y - 3.81)
         self.gnd(cbat_x, cbat_y + 8)
@@ -262,8 +289,10 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(r16_x, key_y, key_x, key_y)
 
         # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
-        # JST PH 2-pin connector
-        jst_x, jst_y = 228, 92
+        # JST PH 2-pin connector — pushed further right on A3 landscape
+        # so the JST/BT1 pair have room to breathe and the Q1 label
+        # cluster doesn't run into them.
+        jst_x, jst_y = 268, 92
         self.sym(
             "Conn_JST_PH_2", "J3", "JST PH 2-pin",
             jst_x, jst_y, ["1", "2"],
@@ -283,8 +312,10 @@ class PowerSupplySheet(SchematicSheet):
         self.sym("BAT54C", "Q1", "SI2301CDS", q1x, q1y, ["1", "2", "3"])
         # NOTE: reusing BAT54C symbol footprint (SOT-23-3) for Q1 P-MOSFET
         # Pin mapping: 1=Gate(bottom-left), 2=Source(bottom-right), 3=Drain(top)
-        self.text("P-MOSFET RPP", q1x - 5, q1y - 10, 1.5)
-        self.text("SI2301CDS", q1x - 5, q1y - 8, 1.5)
+        # Two-line annotation ABOVE the symbol with 3mm vertical spacing
+        # so the lines don't touch each other or the symbol's Value text.
+        self.text("P-MOSFET RPP", q1x - 6, q1y - 15, 1.5)
+        self.text("(SI2301CDS)",  q1x - 6, q1y - 12, 1.5)
 
         # Q1 pin 3 (Drain) at (q1x, q1y - 3.81-ish) — connects to BAT+ (IP5306 side)
         # Wire BAT+ line from cbat_x to Q1 drain
@@ -301,7 +332,9 @@ class PowerSupplySheet(SchematicSheet):
         # Q1 pin 1 (Gate) — pulled to GND via R24 (100K)
         r24x, r24y = q1x - 8, q1y + 10
         self.sym("R", "R24", "100k", r24x, r24y, ["1", "2"])
-        self.text("Gate pull-down", r24x + 3, r24y - 3, 1.5)
+        # Short label placed BELOW R24 (past its GND arrow) so it does
+        # not run into Q1's symbol/value or the C18 annotation.
+        self.text("Q1 gate PD", r24x - 5, r24y + 14, 1.5)
         # Wire Q1 gate to R24 pin 1
         self.wire(q1x - 5, q1y + 1.27, r24x, q1y + 1.27)
         self.wire(r24x, q1y + 1.27, r24x, r24y - 3.81)
@@ -313,8 +346,9 @@ class PowerSupplySheet(SchematicSheet):
         self.gnd(jst_plus_x, jst_y + 6)
         self.wire(jst_plus_x, jst_minus_y, jst_plus_x, jst_y + 6)
 
-        # Battery symbol (off-board representation)
-        bt_x, bt_y = 248, 90
+        # Battery symbol (off-board representation) — pushed further
+        # right to match the moved JST connector.
+        bt_x, bt_y = 315, 90
         self.sym(
             "Battery", "BT1", "LiPo 3.7V 5000mAh",
             bt_x, bt_y, ["1", "2"],
@@ -334,15 +368,18 @@ class PowerSupplySheet(SchematicSheet):
 
         # ═══════════════════════════════════════════════
         # VOLTAGE REGULATOR SECTION (below)
+        # Pushed further down on the A3 sheet so the title/subtitle
+        # don't collide with the USB ESD block on the row above
+        # (U4 at y=140, R22/R23 at y=138/144).
         # ═══════════════════════════════════════════════
-        self.text("VOLTAGE REGULATOR", 30, 130, 3.81, True)
+        self.text("VOLTAGE REGULATOR", 30, 175, 3.81, True)
         self.text(
             "5V -> AMS1117-3.3 -> 3.3V (800mA max)",
-            30, 137,
+            30, 182,
         )
 
         # Input cap for AMS1117
-        ams_x, ams_y = 80, 160
+        ams_x, ams_y = 80, 200
         c1x, c1y = ams_x - 25, ams_y
         self.sym("C", "C1", "10uF", c1x, c1y, ["1", "2"])
         self.text("Input", c1x - 5, c1y - 7, 1.5)
@@ -381,9 +418,11 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(c2x, ams_y - 2.54, c2x + 12, ams_y - 2.54)
 
         # ═══════════════════════════════════════════════
-        # POWER SWITCH (slide switch on left edge)
+        # POWER SWITCH (moved to its own zone on the right column of
+        # the A3 sheet — previously at (30, 160) where its long help
+        # text overlapped C1 / U3 (AMS1117) / C2 at the same y=160.)
         # ═══════════════════════════════════════════════
-        sw_x, sw_y = 30, 160
+        sw_x, sw_y = 285, 200
         self.text("POWER SWITCH", sw_x - 5, sw_y - 12, 2.54, True)
         # Value kept as "SS-12D00G3" to match the CPL/footprint key (legacy
         # name); the actual part is MSK12C02 (LCSC C431540) — noted as text
@@ -406,8 +445,12 @@ class PowerSupplySheet(SchematicSheet):
 
         # ═══════════════════════════════════════════════
         # CHARGING LEDs (driven by IP5306 LED outputs)
+        # Moved to a dedicated zone in the middle-right of the A3
+        # sheet so the CHARGING INDICATOR LEDs group does not intrude
+        # into the USB ESD row (U4 / R22 / R23 at y=118) nor into the
+        # AMS1117 regulator row (y=160).
         # ═══════════════════════════════════════════════
-        led_x, led_y = 160, 130
+        led_x, led_y = 275, 145
         self.text("CHARGING INDICATOR LEDs", led_x - 30, led_y - 12, 2.54, True)
 
         # LED1 (Red - charging)
@@ -432,9 +475,10 @@ class PowerSupplySheet(SchematicSheet):
         self.text("Full", led_x - 5, led2_y - 6, 1.5)
 
         # ═══════════════════════════════════════════════
-        # DESIGN NOTES
+        # DESIGN NOTES — moved further down to sit below the
+        # VOLTAGE REGULATOR / POWER SWITCH row on the A3 sheet.
         # ═══════════════════════════════════════════════
-        ny = 195
+        ny = 240
         self.text("Design Notes:", 30, ny, 2.54, True)
         self.text(
             "- IP5306 eSOP-8: integrated charger"

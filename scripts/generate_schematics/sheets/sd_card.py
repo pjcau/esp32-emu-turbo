@@ -55,10 +55,10 @@ class SDCardSheet(SchematicSheet):
         # length) which is marginal for SD inrush transients. Adding a
         # dedicated 100 nF within 5 mm of U6 VCC requires a new pad and
         # routing slot (tracked as v2 improvement in hardware-audit-bugs.md).
-        self.text(
-            "v2 TODO: add local 100nF bypass near U6 VCC (R4-MED-1)",
-            sx - 58, sy + 10, 1.5,
-        )
+        # NOTE: this text was previously at (sx-58, sy+10) which drew
+        # the long TODO line right through the U6 module symbol. Now
+        # relocated to the Design Notes block at the bottom of the
+        # page (see below).
 
         # Notes
         ny = 160
@@ -82,4 +82,8 @@ class SDCardSheet(SchematicSheet):
         self.text(
             "- SPI pins: GPIO38/39 (CLK/CS) + GPIO43/44"
             " (MISO/MOSI) — split across WROOM-1 left and right", 30, ny + 32,
+        )
+        self.text(
+            "- v2 TODO (R4-MED-1): add local 100nF bypass"
+            " within 5 mm of U6 VCC", 30, ny + 38,
         )

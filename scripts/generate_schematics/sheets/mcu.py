@@ -43,8 +43,10 @@ class MCUSheet(SchematicSheet):
         self.v33(r_en_x, r_en_y - 8)
         self.wire(r_en_x, r_en_y - 8, r_en_x, en_y)
         self.wire(px_l, en_y, r_en_x, en_y)
-        self.text("EN pull-up: internal to WROOM-1 (R3 DNP)",
-                  r_en_x - 12, r_en_y, 1.5)
+        # Shortened + moved higher so the annotation does not run
+        # into the "RC reset delay" label sitting below it.
+        self.text("EN pull-up on-chip (R3 DNP)",
+                  r_en_x - 30, r_en_y - 5, 1.5)
 
         # --- EN reset capacitor (100nF to GND) ---
         # Cap below EN line: pin 1 (top) connects to EN, pin 2 (bottom) to GND
@@ -67,16 +69,22 @@ class MCUSheet(SchematicSheet):
         self.text("Reset (EN->GND)", sw_rst_x - 18, sw_rst_y, 1.5)
 
         # --- BOOT button (GPIO0 to GND, enter download mode) ---
-        sw_boot_x = c_en_x - 15
-        sw_boot_y = c_en_y + 18
+        # Pushed further down (c_en_y + 55) so its BTN_SELECT glabel
+        # clears the DISPLAY / AUDIO / CONTROLS annotation column
+        # headers, which live at y ~ MCU_Y - 35 .. MCU_Y + 12.
+        sw_boot_x = c_en_x - 30
+        sw_boot_y = c_en_y + 55
         self.sym("SW_Push", "SW_BOOT", "BOOT", sw_boot_x, sw_boot_y, ["1", "2"])
         self.glabel("BTN_SELECT", sw_boot_x, sw_boot_y - 8, 0, "bidirectional")
         self.wire(sw_boot_x, sw_boot_y - 3.81, sw_boot_x, sw_boot_y - 8)
         self.gnd(sw_boot_x, sw_boot_y + 8)
         self.wire(sw_boot_x, sw_boot_y + 3.81, sw_boot_x, sw_boot_y + 8)
-        self.text("Boot (GPIO0->GND)", sw_boot_x - 20, sw_boot_y, 1.5)
-        self.text("Hold BOOT + press RESET", sw_boot_x - 20, sw_boot_y + 12, 1.5)
-        self.text("to enter download mode", sw_boot_x - 20, sw_boot_y + 16, 1.5)
+        # Help text stacked BELOW the switch so it stays in its own
+        # vertical lane and doesn't collide with the CONTROLS group
+        # header (which lives at y = MCU_Y + 8 = 178).
+        self.text("BOOT (GPIO0->GND)", sw_boot_x - 15, sw_boot_y + 13, 1.5)
+        self.text("Hold BOOT + tap RESET", sw_boot_x - 15, sw_boot_y + 17, 1.5)
+        self.text("to enter download mode", sw_boot_x - 15, sw_boot_y + 21, 1.5)
 
         # --- Decoupling cap (100nF near 3V3) ---
         c_dec_x = px_l - 15

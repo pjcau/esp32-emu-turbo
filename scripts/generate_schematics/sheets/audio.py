@@ -41,13 +41,16 @@ class AudioSheet(SchematicSheet):
         # The two glabels below are informational only (dead nets,
         # 1 pad / 0 segments in the PCB cache). Candidates for reuse
         # as ADC2 channels (battery voltage) in v2.
-        self.text("I2S Bus (PDM TX mode — DOUT only):", 30, 55, 2.54, True)
-        self.glabel("I2S_BCLK", 30, 68, 0, "input")
-        self.text("GPIO15 - Bit Clock (UNUSED — PDM mode, v2 free)", 65, 68)
-        self.glabel("I2S_LRCK", 30, 78, 0, "input")
-        self.text("GPIO16 - L/R Word Select (UNUSED — PDM mode, v2 free)", 65, 78)
-        self.glabel("I2S_DOUT", 30, 88, 0, "output")
-        self.text("GPIO17 - PDM sigma-delta out @ 32kHz -> PAM8403", 65, 88)
+        # I2S informational block — moved higher (y=45-65) so its
+        # rightmost text ("PDM sigma-delta out ...") no longer runs
+        # into the PAM8403 VDD/PVDD decoupling caps (C23-C25 at y=90).
+        self.text("I2S Bus (PDM TX mode — DOUT only):", 30, 45, 2.54, True)
+        self.glabel("I2S_BCLK", 30, 55, 0, "input")
+        self.text("GPIO15 - Bit Clock (UNUSED — PDM mode, v2 free)", 65, 55)
+        self.glabel("I2S_LRCK", 30, 62, 0, "input")
+        self.text("GPIO16 - L/R Word Select (UNUSED — PDM mode, v2 free)", 65, 62)
+        self.glabel("I2S_DOUT", 30, 69, 0, "output")
+        self.text("GPIO17 - PDM sigma-delta out @ 32kHz -> PAM8403", 65, 69)
 
         # Speaker (moved further right for orthogonal routing)
         spk_x, spk_y = ax + 65, ay
@@ -98,13 +101,16 @@ class AudioSheet(SchematicSheet):
         # datasheet Fig. 3 requires the bias network to reference VREF so
         # the input DC operating point sits at mid-supply. Tying to GND
         # fights the internal bias and produces asymmetric clipping.
-        r20x, r20y = ax - 35, ay + 18
+        # Spread R20/R21 further apart (15mm gap instead of 10mm) and
+        # move the descriptive text BELOW the VREF glabels so nothing
+        # collides with the PAM8403 module or with each other.
+        r20x, r20y = ax - 45, ay + 18
         self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
         self.wire(r20x, r20y - 3.81, r20x, c22y)
         # Bottom terminal goes to VREF via a named label stub.
         self.wire(r20x, r20y + 3.81, r20x, r20y + 6)
         self.glabel("VREF", r20x, r20y + 6, 270, "input")
-        self.text("INL bias to VREF", r20x + 3, r20y)
+        self.text("INL bias → VREF", r20x - 8, r20y + 14, 1.5)
 
         # INR bias resistor (R21, 20k) — biases INR node to VREF (pin 8).
         # Same rationale as R20 — see R4-HIGH-3.
@@ -113,16 +119,18 @@ class AudioSheet(SchematicSheet):
         self.wire(r21x, r21y - 3.81, r21x, c22y)
         self.wire(r21x, r21y + 3.81, r21x, r21y + 6)
         self.glabel("VREF", r21x, r21y + 6, 270, "input")
-        self.text("INR bias to VREF", r21x + 3, r21y)
+        self.text("INR bias → VREF", r21x - 8, r21y + 14, 1.5)
 
-        # VDD decoupling (C23, 1uF) — VDD pin to GND
+        # VDD decoupling (C23, 1uF) — VDD pin to GND. Labels placed
+        # BELOW each cap so they don't extend rightward into the next
+        # cap's label or into the I2S info block (moved up to y=45-69).
         c23x, c23y = ax - 20, ay - 20
         self.sym("C", "C23", "1uF", c23x, c23y, ["1", "2"])
         self.glabel("+5V", c23x, c23y - 8, 0, "input")
         self.wire(c23x, c23y - 3.81, c23x, c23y - 8)
         self.gnd(c23x, c23y + 8)
         self.wire(c23x, c23y + 3.81, c23x, c23y + 8)
-        self.text("VDD decoupl.", c23x + 3, c23y)
+        self.text("VDD", c23x - 3, c23y + 11, 1.5)
 
         # PVDD top bypass (C24, 1uF) — power output stage
         c24x, c24y = ax, ay - 20
@@ -131,7 +139,7 @@ class AudioSheet(SchematicSheet):
         self.wire(c24x, c24y - 3.81, c24x, c24y - 8)
         self.gnd(c24x, c24y + 8)
         self.wire(c24x, c24y + 3.81, c24x, c24y + 8)
-        self.text("PVDD top", c24x + 3, c24y)
+        self.text("PVDD-top", c24x - 5, c24y + 11, 1.5)
 
         # PVDD bottom bypass (C25, 1uF) — power output stage
         c25x, c25y = ax + 20, ay - 20
@@ -140,7 +148,7 @@ class AudioSheet(SchematicSheet):
         self.wire(c25x, c25y - 3.81, c25x, c25y - 8)
         self.gnd(c25x, c25y + 8)
         self.wire(c25x, c25y + 3.81, c25x, c25y + 8)
-        self.text("PVDD bottom", c25x + 3, c25y)
+        self.text("PVDD-bot", c25x - 5, c25y + 11, 1.5)
 
         # Notes
         ny = 165

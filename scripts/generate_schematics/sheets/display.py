@@ -99,22 +99,25 @@ class DisplaySheet(SchematicSheet):
         self.wire(dx - 30, dy - 12.7, dx - 10.16, dy - 12.7)
 
         # --- Control signals (left side) ---
-        # FPC pin numbers in parentheses (per ILI9488 datasheet)
+        # FPC pin numbers in parentheses (per ILI9488 datasheet).
+        # Annotation text is placed further LEFT (dx - 72 instead of
+        # dx - 50) so the long tied-net notes do not overlap the
+        # LCD_RD / LCD_BL global labels at dx - 35.
         ctrl_pins = [
-            ("LCD_CS", -10.16, "GPIO12 (FPC9)"),
-            ("LCD_RST", -7.62, "GPIO13 (FPC15)"),
-            ("LCD_DC", -5.08, "GPIO14 (FPC10)"),
-            ("LCD_WR", -2.54, "GPIO46 (FPC11)"),
-            ("LCD_RD", 0, "+3V3 tied (FPC12, write-only)"),
-            ("LCD_BL", 5.08, "+3V3 tied (FPC33, always-on)"),
+            ("LCD_CS", -10.16, "GPIO12 / FPC9"),
+            ("LCD_RST", -7.62, "GPIO13 / FPC15"),
+            ("LCD_DC", -5.08, "GPIO14 / FPC10"),
+            ("LCD_WR", -2.54, "GPIO46 / FPC11"),
+            ("LCD_RD", 0, "+3V3 (FPC12, RO)"),
+            ("LCD_BL", 5.08, "+3V3 (FPC33, BL)"),
         ]
-        self.text("Control signals:", dx - 60, dy - 14, 2, True)
+        self.text("Control signals:", dx - 72, dy - 14, 2, True)
         for net, yoff, gpio in ctrl_pins:
             px = dx - 10.16
             py = dy + yoff
             self.wire(px, py, px - 25, py)
             self.glabel(net, px - 25, py, 180)
-            self.text(gpio, px - 50, py, 1.5)
+            self.text(gpio, px - 62, py, 1.5)
 
         # --- Data bus (right side) ---
         data_pins = [

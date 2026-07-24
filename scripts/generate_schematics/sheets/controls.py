@@ -104,7 +104,11 @@ class ControlsSheet(SchematicSheet):
         # through forward-biased Schottky diodes. Pull-up and debounce are
         # provided by BTN_START's and BTN_SELECT's individual R/C pairs
         # downstream — no separate pull-up/debounce on MENU_K needed.
-        mx, my = 335, 250
+        # Relocated between the D-PAD and FACE BUTTONS columns in the
+        # empty strip below row 3 of the grid (was mx=335, my=250 —
+        # the title collided with R15 in the R-button cell above it
+        # on the SYSTEM+SHOULDER column).
+        mx, my = 130, 260
         self.text("MENU BUTTON", mx - 15, my - 15, 2.54, True)
 
         # SW13 menu switch — closes MENU_K to GND.

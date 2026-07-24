@@ -160,18 +160,18 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 
 | Source | Components |
 |:---|:---|
-| Schematic (6 sub-sheets) | 79 unique refs |
-| PCB footprints | 87 refs |
-| JLCPCB CPL (assembly) | 75 refs |
+| Schematic (6 sub-sheets) | 81 unique refs |
+| PCB footprints | 83 refs |
+| JLCPCB CPL (assembly) | 77 refs |
 
 ### Off-board components (correct exclusions)
 
 | Ref | Component | Reason |
 |:---|:---|:---|
 | BT1 | LiPo battery | Connected via JST-PH cable |
-| J2 | PSP joystick | Removed in v2 (was optional) |
+| DS1 | ILI9488 display | Bare panel, connected via FPC cable to J4 (not assembled by JLCPCB) |
+| R14 | Resistor | DNP (do-not-populate) |
 | SPK1 | 28mm speaker | Soldered manually to pads |
-| U4 | ILI9488 display | Connected via FPC cable |
 
 ---
 

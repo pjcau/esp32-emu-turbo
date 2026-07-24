@@ -305,7 +305,7 @@ When ordering the custom PCB from JLCPCB, the following components are **NOT inc
 
 | Component | Ref | Price | Connection to PCB | Solder? |
 |-----------|-----|-------|-------------------|---------|
-| **ILI9488 3.95" bare LCD panel** (40P FPC 0.5mm, resistive touch NC) | U4 | ~$3.95 | FPC ribbon → J4 connector (slide + latch) | No |
+| **ILI9488 3.95" bare LCD panel** (40P FPC 0.5mm, resistive touch NC) | — | ~$3.95 | FPC ribbon → J4 connector (slide + latch) | No |
 | **LiPo 105080 5000mAh battery** | BT1 | ~$6-8 | JST PH plug → J3 connector | No |
 | **Speaker 28mm 8Ω** | SPK1 | ~$0.80 | 2 wires → solder pads | Yes (easy) |
 | ~~PSP joystick~~ (removed) | ~~J2~~ | — | Removed in v2 — GPIOs reassigned to USB data and BTN_R | — |
