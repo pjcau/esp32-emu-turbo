@@ -387,6 +387,14 @@ Find your failing test(s) in the left column → the likely root cause and where
 
 ## 5b. Current board findings — proto #1 (2026-07-14)
 
+:::tip SOLVED (2026-07-24) — root cause found: C2 tantalum mounted reversed
+The AMS1117 burnouts described below were traced to **C2 (22 µF tantalum output cap)
+soldered 180° rotated**: its stripe (+ anode) sits on the GND pad, and the
+reverse-biased tantalum degraded into a hard +3V3↔GND short. Full photo evidence,
+failure chain and repair plan:
+**[Incident: C2 Tantalum Mounted Reversed](../rework/incident-c2-reversed.md)**.
+:::
+
 :::danger U2 is likely fine — the AMS1117 burn is the real, separate fault
 **Symptom:** connecting only USB-C (5 V), the **AMS1117 (U3)** overheats and burns —
 repeatedly, across several replacement regulators. **This is the real, confirmed problem.**
