@@ -43,6 +43,95 @@ COPPER_LAYERS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
 ZONE_SIMPLIFY_MM = 0.02
 
 
+def clearance_report(cache):
+    """Where different nets come closest — the short-circuit risk map.
+
+    This does not implement its own clearance maths. It imports the same
+    functions `verify_copper_clearance.py` uses, so the numbers the
+    explorer draws are by construction the numbers the gate enforces —
+    a second engine would eventually disagree with the first, and then
+    nobody would know which one to believe.
+
+    The geometry is copper-edge to copper-edge, per layer, over tracks,
+    pads and vias (a via and a THT pad exist on every copper layer, so
+    hole-adjacent copper is included). JLCDFM measures mask aperture to
+    mask aperture instead, subtracting ~0.05 mm of mask expansion per
+    side, so it sees roughly 0.10 mm less than these figures.
+    """
+    import verify_copper_clearance as CC
+
+    nets = {n["id"]: n["name"] for n in cache["nets"]}
+    layers, worst = [], []
+    for layer in COPPER_LAYERS:
+        feats = CC.build_layer_features(cache, layer)
+        merged = CC.merge_by_net(feats)
+        gaps = CC.find_gaps(merged, nets, threshold=CC.GAP_WARN)
+        rows = []
+        for gap, na, nb, ax, ay, bx, by in gaps:
+            rows.append({
+                "layer": layer, "gap": round(gap, 4),
+                "a": na, "b": nb,
+                "x": round((ax + bx) / 2, 3), "y": round((ay + by) / 2, 3),
+                "severity": "danger" if gap < CC.GAP_DANGER else "warn",
+                # find_gaps labels one side "<net> (same-net)" when the two
+                # sub-polygons carry the same net — a fab dry-film risk,
+                # not an electrical short.
+                "sameNet": "(same-net)" in na or "(same-net)" in nb,
+            })
+        worst.extend(rows)
+        layers.append({
+            "layer": layer,
+            "features": len(feats),
+            "nets": len(merged),
+            "danger": sum(1 for r in rows if r["severity"] == "danger"),
+            "warn": sum(1 for r in rows if r["severity"] == "warn"),
+        })
+    worst.sort(key=lambda r: r["gap"])
+    return {"dangerMm": CC.GAP_DANGER, "warnMm": CC.GAP_WARN,
+            "layers": layers, "violations": worst}
+
+
+def _pad_sort_key(p):
+    """Deterministic, human order: numeric pin numbers sort numerically."""
+    num = str(p["num"])
+    return (p["ref"], 0, int(num), "") if num.isdigit() \
+        else (p["ref"], 1, 0, num)
+
+
+def merge_through_pads(pads):
+    """Collapse a through-hole pad's per-layer copies into one pad.
+
+    `pcb_cache` emits one entry per copper layer a pad touches, so a THT
+    pad on a 4-layer board appears up to four times. That is right for a
+    clearance check — each layer really does have copper there — but wrong
+    for an explorer: J1 pin 13 was listed four times, and the "Pad" count
+    on every connector was inflated.
+
+    It also made the output order unstable. The per-layer copies are
+    identical apart from `layer`, so any sort keyed on the pad number left
+    them tied, and their relative order came from whatever the cache
+    happened to emit — enough to make two runs differ and the freshness
+    check cry stale for no reason.
+    """
+    merged = {}
+    for p in pads:
+        k = (p["ref"], str(p["num"]), p["x"], p["y"], p["w"], p["h"], p["type"])
+        if k in merged:
+            merged[k]["layers"].append(p["layer"])
+        else:
+            q = dict(p)
+            q["layers"] = [p["layer"]]
+            merged[k] = q
+    out = []
+    for q in merged.values():
+        q["layers"] = sorted(set(q["layers"]),
+                             key=lambda l: COPPER_LAYERS.index(l)
+                             if l in COPPER_LAYERS else 99)
+        q["layer"] = q["layers"][0]        # primary layer, for colouring
+        out.append(q)
+    return sorted(out, key=_pad_sort_key)
+
+
 def dangling_ends(cache, net_name):
     """Track endpoints that reach nothing — copper that stops in the air.
 
@@ -203,7 +292,7 @@ def main():
     # Components. A ref with no parsed footprint still gets an entry built
     # from its pads, so nothing silently vanishes from the explorer.
     pads_by_ref = {}
-    for p in cache["pads"]:
+    for p in merge_through_pads(cache["pads"]):
         pads_by_ref.setdefault(p["ref"], []).append(p)
 
     components = []
@@ -232,20 +321,21 @@ def main():
             "pads": [
                 {"num": p["num"], "net": p["net"], "x": p["x"], "y": p["y"],
                  "w": p["w"], "h": p["h"], "shape": p["shape"],
-                 "layer": p["layer"], "type": p["type"], "drill": p["drill"]}
-                for p in sorted(pads, key=lambda q: (len(str(q["num"])),
-                                                     str(q["num"])))
+                 "layer": p["layer"], "layers": p["layers"],
+                 "type": p["type"], "drill": p["drill"]}
+                for p in pads
             ],
         })
 
     # Nets, each carrying the refs it touches so the UI can answer
     # "where does this go?" without walking geometry in the browser.
     net_pads = {}
-    for p in cache["pads"]:
+    for p in merge_through_pads(cache["pads"]):
         if p["net"]:
             net_pads.setdefault(p["net"], []).append(
                 {"ref": p["ref"], "num": p["num"], "x": p["x"], "y": p["y"],
-                 "layer": p["layer"], "type": p["type"]})
+                 "layer": p["layer"], "layers": p["layers"],
+                 "type": p["type"]})
 
     seg_by_net, via_by_net = {}, {}
     for s in cache["segments"]:
@@ -289,8 +379,7 @@ def main():
             "id": nid,
             "name": name,
             "type": net_types.get(name, "signal"),
-            "pads": sorted(net_pads.get(nid, []),
-                           key=lambda p: (p["ref"], str(p["num"]))),
+            "pads": net_pads.get(nid, []),
             "segments": segs,
             "vias": via_by_net.get(nid, []),
             "zoneLayers": sorted(set(zone_nets.get(nid, []))),
@@ -300,7 +389,7 @@ def main():
 
     # Unrouted pads (net 0) are worth showing, not hiding.
     unnetted = [{"ref": p["ref"], "num": p["num"]}
-                for p in cache["pads"] if not p["net"]]
+                for p in merge_through_pads(cache["pads"]) if not p["net"]]
 
     data = {
         "generatedFrom": os.path.basename(PCB),
@@ -313,6 +402,7 @@ def main():
         "nets": nets,
         "unnettedPads": unnetted,
         "danglingEnds": dangling_ends(cache, net_name),
+        "clearance": clearance_report(cache),
     }
 
     payload = json.dumps(data, separators=(",", ":"))
@@ -344,6 +434,14 @@ def main():
           f"{len(cache['vias'])} vias, {len(edges)} outline primitives")
     print(f"    {len(zone_fills)} zone fill islands "
           f"({sum(len(z['holes']) for z in zone_fills)} clearance holes)")
+    cl = data["clearance"]
+    nd = sum(l["danger"] for l in cl["layers"])
+    nw = sum(l["warn"] for l in cl["layers"])
+    print(f"    clearance: {nd} DANGER (<{cl['dangerMm']}mm), "
+          f"{nw} WARN (<{cl['warnMm']}mm)")
+    if nd:
+        print("    WARN  different-net copper below the fab minimum — "
+              "see verify_copper_clearance.py")
     if data["danglingEnds"]:
         print(f"    WARN  {len(data['danglingEnds'])} dangling track ends "
               f"(copper that reaches nothing) — see verify_dangling_copper.py")

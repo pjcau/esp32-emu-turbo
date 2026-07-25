@@ -164,6 +164,8 @@
   .hl-via { fill: none; stroke: #fff; stroke-width: .12; }
   .hl-via-barrel { stroke: #fff; stroke-width: .22; opacity: .9; }
   .dang { stroke: #f85149; stroke-width: .22; fill: none; }
+  .clr-danger { stroke: #f85149; stroke-width: .18; fill: none; }
+  .clr-warn { stroke: #f0883e; stroke-width: .18; fill: none; }
   #sep { width: 92px; accent-color: var(--accent); }
 </style>
 </head>
@@ -195,7 +197,7 @@
     <input type="range" id="sep" min="3" max="30" step="1" value="12">
   </div>
   <button class="tgl" id="flip">Vista da retro</button>
-  <button class="tgl on" id="dang">Punti morti</button>
+  <button class="tgl on" id="dang">Difetti</button>
   <div class="spacer"></div>
   <div class="hint" id="stat">…</div>
 </header>
@@ -513,6 +515,14 @@ function render() {
       gD.appendChild(el('line', { class: 'dang', x1: sx + 1.4, y1: sy - 1.4,
         x2: sx - 1.4, y2: sy + 1.4 }));
     });
+    // Copper that comes too close to a different net — the short risk.
+    ((DATA.clearance || {}).violations || []).forEach(v => {
+      const [sx, sy] = project(v.x, v.y, layerZ(v.layer));
+      const cls = v.severity === 'danger' ? 'clr-danger' : 'clr-warn';
+      gD.appendChild(el('circle', { class: cls, cx: sx, cy: sy, r: 1.1 }));
+      gD.appendChild(el('circle', { class: cls, cx: sx, cy: sy, r: 1.8,
+        opacity: .45 }));
+    });
     root.appendChild(gD);
   }
 
@@ -615,6 +625,33 @@ function showHome() {
       Tutto il routing sta su F.Cu e B.Cu, e le via sono l'unico modo in
       cui una net raggiunge i piani interni. Guardalo in <b>3D stack</b>.
     </div>
+
+    ${DATA.clearance ? `
+    <h3>Cortocircuiti e distanze</h3>
+    <table><thead><tr><th>Layer</th><th>Feature</th><th>Net</th>
+      <th>&lt;${DATA.clearance.dangerMm}</th><th>&lt;${DATA.clearance.warnMm}</th></tr></thead><tbody>
+    ${DATA.clearance.layers.map(l => `<tr>
+      <td><span class="chip ${LAYER_CHIP[l.layer] || ''}">${esc(l.layer.replace('.Cu', ''))}</span></td>
+      <td class="mono">${l.features}</td>
+      <td class="mono">${l.nets}</td>
+      <td class="mono" style="color:${l.danger ? '#f85149' : 'inherit'}">${l.danger}</td>
+      <td class="mono" style="color:${l.warn ? '#f0883e' : 'inherit'}">${l.warn}</td>
+    </tr>`).join('')}
+    </tbody></table>
+    ${DATA.clearance.violations.length ? `
+    <table style="margin-top:8px"><thead><tr><th>Gap</th><th>Fra</th><th>Dove</th></tr></thead><tbody>
+    ${DATA.clearance.violations.map(v => `<tr>
+      <td class="mono" style="color:${v.severity === 'danger' ? '#f85149' : '#f0883e'}">
+        ${(v.gap * 1000).toFixed(0)} µm</td>
+      <td class="goes">${esc(v.a)} ↔ ${esc(v.b)}${v.sameNet ? '' : ' <b>(net diverse)</b>'}</td>
+      <td class="mono">${v.x.toFixed(2)}, ${v.y.toFixed(2)}</td></tr>`).join('')}
+    </tbody></table>` : `
+    <div class="goes">Nessuna coppia di rame sotto ${DATA.clearance.warnMm} mm.</div>`}
+    <div class="goes" style="margin-top:8px">
+      Distanza bordo-rame fra net diverse, layer per layer, su piste, pad e
+      via. JLCDFM misura invece apertura-maschera contro apertura-maschera e
+      toglie ~0.05 mm per lato: vede circa 0.10 mm meno di questi numeri.
+    </div>` : ''}
 
     ${(DATA.danglingEnds || []).length ? `
     <h3>Punti morti (${DATA.danglingEnds.length})</h3>

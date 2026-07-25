@@ -2,7 +2,7 @@
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-isolation verify-jlcpcb-vias verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
-       net-explorer net-explorer-check verify-sch-pins verify-dangling \
+       net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help stats
@@ -94,6 +94,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_net_explorer_fresh \
 	verify_net_connectivity \
 	verify_netlist_diff \
+	verify_netlist_vs_kicad \
 	verify_polarity \
 	verify_power_net_integrity \
 	verify_power_paths \
@@ -138,6 +139,9 @@ verify-sch-pins: ## Fail when a schematic symbol pin has no wire/label/junction 
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
+
+verify-netlist-kicad: ## Cross-check our parsed netlist against KiCad's own IPC-D-356 export
+	@$(T) verify-netlist-kicad python3 scripts/verify_netlist_vs_kicad.py
 
 net-explorer: ## Regenerate the PCB Net Explorer data (website/static/net-explorer-data.json)
 	@$(T) net-explorer python3 scripts/generate_net_explorer.py
