@@ -90,14 +90,18 @@ _POLARIZED_PREFIXES = ("D", "LED", "Q", "U", "J", "SW_PWR")
 # C2, J4, etc.) on the FAIL/REVIEW list is INTENTIONAL — they must
 # remain visible until each is empirically cleared.
 
+#
+# NOTE (2026-07-25): Q1 was removed from this list. It is now cleared
+# ANALYTICALLY by the rigid-rotation test in `_rigid_rotation_match()`:
+# our sot23_3() footprint is the EasyEDA C10487 reference rotated 90°
+# with pin numbering preserved (max pad error 0.000mm), and the SOT-23
+# family has an explicit correction in `_JLCPCB_ROT_CORRECTIONS`. A
+# computed full-constellation proof is strictly stronger than a
+# hand-maintained δ_row sign-off, so the entry was dead code. Its
+# empirical evidence (boards R4-R8) is preserved in
+# hardware/datasheets/POLARITY_AUDIT.md.
+
 _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
-    "Q1": (
-        90,
-        "SI2301 SOT-23 P-MOSFET. Same δ=90° family as D1. Boards R4-R8 "
-        "(8+ prototypes) power up via slide switch SW_PWR → Q1 conducts "
-        "correctly → physical polarity validated. CPL rotation=90° "
-        "compensates empirically.",
-    ),
     "U2": (
         90,
         "IP5306 ESOP-8. Boards R4-R8 charge via USB-C and boost to 5V → "
@@ -432,6 +436,129 @@ def _native_row_dir(our: dict, placement_rot: float) -> tuple[float, float] | No
     return (p2[0] - p1[0], p2[1] - p1[1])
 
 
+def _native_all_pads(our: dict, placement_rot: float) -> dict:
+    """All of our pads in native (pre-rotate, pre-mirror) relative frame."""
+    out = {}
+    for num in our["pads"]:
+        p = _native_rel_pad(our, num, placement_rot)
+        if p is not None:
+            out[num] = p
+    return out
+
+
+def _centroid(pads: dict) -> tuple[float, float]:
+    xs = [p[0] for p in pads.values()]
+    ys = [p[1] for p in pads.values()]
+    return (sum(xs) / len(xs), sum(ys) / len(ys))
+
+
+def _min_pitch(pads: dict) -> float:
+    """Smallest centre-to-centre distance between two pads."""
+    pts = list(pads.values())
+    best = float("inf")
+    for i in range(len(pts)):
+        for j in range(i + 1, len(pts)):
+            d = math.dist(pts[i], pts[j])
+            if d < best:
+                best = d
+    return best
+
+
+def _rigid_rotation_match(ours_native: dict, ee_pads: dict):
+    """Test whether our pad constellation is EasyEDA's, rigidly rotated.
+
+    Returns (angle_deg, max_err_mm, tol_mm) when our footprint is the
+    EasyEDA reference rotated by a multiple of 90° with the pin numbering
+    PRESERVED — i.e. every pad number lands on the same physical position
+    relative to the package body. Returns None otherwise.
+
+    Why this matters (and why δ_row alone is not a defect signal):
+
+      δ_row only compares the pad-1→pad-2 direction. A non-zero δ_row can
+      mean either of two very different things:
+
+        (a) BENIGN — the two libraries simply DRAW the same land pattern
+            at different angles. EasyEDA draws SOT-23-3 with pads 1/2
+            stacked in a column; the KiCad standard draws them in a row.
+            Pin numbering is identical, so no pin can ever land on the
+            wrong net. The CPL angle for such a part is set by the
+            per-family constant in `_JLCPCB_ROT_CORRECTIONS`, which is
+            empirically derived against JLCPCB's own parts library — NOT
+            by δ_row. (JLCPCB's 0° reference is the tape-and-reel/library
+            orientation of the component, which is why the correction
+            database is keyed by package family rather than by footprint
+            drawing.)
+
+        (b) REAL BUG — the pad NUMBERING is permuted or mirrored relative
+            to the package geometry, so pin 1 of the physical part lands
+            on the pad we routed to pin 2. This is the C2 tantalum and
+            LED2 class of defect, and no rotation can repair it.
+
+      A rigid-rotation match with numbering preserved proves we are in
+      case (a). Failing the match leaves us in case (b) and we must FAIL.
+
+    Guard: at least 3 distinct pads are required. For a 2-pad symmetric
+    part (0805 LED, tantalum cap) a 180° rotation and a pad-1/pad-2 swap
+    are geometrically INDISTINGUISHABLE, so this test must never be used
+    to clear them — their polarity has to come from the silkscreen or 3D
+    marker instead. That is why LED2 and C2 stay on the manual lists.
+    """
+    common = sorted(set(ours_native) & set(ee_pads))
+    if len(common) < 3:
+        return None
+
+    ours_c = {k: ours_native[k] for k in common}
+    ee_c = {k: ee_pads[k] for k in common}
+    co, ce = _centroid(ours_c), _centroid(ee_c)
+
+    # Scale-aware tolerance: land-pattern pad sizes legitimately differ
+    # between libraries (e.g. 1.24mm vs 1.10mm pad offsets on SOT-23),
+    # but any genuine pin permutation displaces a pad by at least a full
+    # pitch. 40% of the tightest pitch separates the two cleanly.
+    tol = 0.4 * _min_pitch(ee_c)
+
+    best = None
+    for deg in (0, 90, 180, 270):
+        a = math.radians(deg)
+        cos_a, sin_a = math.cos(a), math.sin(a)
+        worst = 0.0
+        for k in common:
+            ox = ours_c[k][0] - co[0]
+            oy = ours_c[k][1] - co[1]
+            ex = ee_c[k][0] - ce[0]
+            ey = ee_c[k][1] - ce[1]
+            rx = ex * cos_a - ey * sin_a
+            ry = ex * sin_a + ey * cos_a
+            d = math.dist((ox, oy), (rx, ry))
+            if d > worst:
+                worst = d
+        if best is None or worst < best[1]:
+            best = (deg, worst)
+
+    if best is not None and best[1] <= tol:
+        return (best[0], best[1], tol)
+    return None
+
+
+def _family_correction(footprint_name: str):
+    """Return (pattern, correction) if the package has an explicit entry
+    in the JLCPCB rotation-correction database, else None.
+
+    An explicit family entry means the drawing-frame offset for this
+    package family has already been measured against JLCPCB's parts
+    library and baked into the export formula. Packages that fall through
+    to `_JLCPCB_ROT_DEFAULT` have NOT been characterised, so a rotation
+    offset on those is not automatically accounted for.
+    """
+    from scripts.generate_pcb.jlcpcb_export import (  # noqa: E402
+        _JLCPCB_ROT_CORRECTIONS,
+    )
+    for pattern, corr in _JLCPCB_ROT_CORRECTIONS:
+        if re.match(pattern, footprint_name):
+            return (pattern, corr)
+    return None
+
+
 def _placement_rotations() -> dict:
     """Pull placement rotations per ref from jlcpcb_export._build_placements()."""
     # Import lazily to avoid circulars
@@ -550,8 +677,67 @@ def _print_row(status: str, ref: str, detail: str):
 
 # ── Main check ──────────────────────────────────────────────────────
 
+def _self_test() -> None:
+    """Regression guards for the geometric reasoning itself.
+
+    These run on EVERY invocation (they are pure arithmetic, ~0ms) so the
+    discrimination power of `_rigid_rotation_match()` can never silently
+    rot. A loosened tolerance or a dropped guard fails the run loudly
+    instead of quietly clearing a real polarity bug.
+
+    Guards the 2026-07-25 D1 fix; see hardware/datasheets/POLARITY_AUDIT.md
+    "Checker model correction".
+    """
+    fails: list[str] = []
+
+    # Real geometry: our sot23_3() vs live EasyEDA C37704 (BAT54C).
+    ours_sot23 = {"1": (-0.95, 1.10), "2": (0.95, 1.10), "3": (0.0, -1.10)}
+    ee_sot23 = {"1": (1.24, 0.95), "2": (1.24, -0.95), "3": (-1.24, 0.0)}
+
+    # 1. The benign drawing-rotation case MUST be recognised (this is D1/Q1).
+    m = _rigid_rotation_match(ours_sot23, ee_sot23)
+    if m is None:
+        fails.append(
+            "SOT-23 90° drawing rotation not recognised — D1/Q1 would "
+            "regress to a false FAIL")
+    elif m[0] != 90:
+        fails.append(f"SOT-23 rotation detected as {m[0]}°, expected 90°")
+
+    # 2. A genuine pin PERMUTATION must NOT be cleared. Swapping pads 1/2
+    #    is the C2/LED2 class of defect; if this ever passes, the checker
+    #    has stopped protecting against reversed parts.
+    swapped = dict(ee_sot23)
+    swapped["1"], swapped["2"] = ee_sot23["2"], ee_sot23["1"]
+    if _rigid_rotation_match(ours_sot23, swapped) is not None:
+        fails.append(
+            "pad 1/2 SWAP was accepted as a rigid rotation — tolerance is "
+            "too loose, real reversed-part bugs would pass")
+
+    # 3. Two-pad symmetric parts must NEVER be auto-cleared: for them a
+    #    180° rotation and a pin swap are indistinguishable (LED2, C2).
+    if _rigid_rotation_match(
+            {"1": (-0.95, 0.0), "2": (0.95, 0.0)},
+            {"1": (1.05, 0.0), "2": (-1.05, 0.0)}) is not None:
+        fails.append(
+            "2-pad part was auto-cleared — LED2/C2 polarity bugs would be "
+            "silenced (rotation and pin-swap are indistinguishable there)")
+
+    # 4. D1 must be resolved by the formula, never by an allowlist entry.
+    if "D1" in _GEOMETRIC_MISMATCH_ALLOWLIST:
+        fails.append(
+            "D1 is in _GEOMETRIC_MISMATCH_ALLOWLIST — it must be cleared by "
+            "the rigid-rotation proof, not by silencing (see POLARITY_AUDIT)")
+
+    if fails:
+        sys.stderr.write("FATAL: verify_easyeda_footprint self-test failed\n")
+        for f in fails:
+            sys.stderr.write(f"  - {f}\n")
+        sys.exit(2)
+
+
 def main() -> int:
     t0 = time.time()
+    _self_test()
     print("── EasyEDA reference footprint verification ──")
     print(f"  BOM:   {BOM_FILE.relative_to(BASE)}")
     print(f"  PCB:   {PCB_FILE.relative_to(BASE)}")
@@ -602,6 +788,42 @@ def main() -> int:
             continue
 
         plc = placements.get(ref, {"rot": 0, "layer": "bottom"})
+
+        # ── Is a pad correspondence even DEFINED? ────────────────────
+        #
+        # The whole geometric comparison assumes that a given pad NAME
+        # denotes the same physical pin in both libraries. That assumption
+        # breaks when the two libraries use different naming schemes —
+        # e.g. USB-C J1, where our footprint numbers pads 1..14 while the
+        # EasyEDA reference names them by USB-C signal (A1B12, A5, B8, …)
+        # and reuses 13/14 for the SHIELD through-holes.
+        #
+        # In that situation the old code silently fell back to "first pad
+        # in the file" for pad 1 and "lowest numeric pad > 1" for pad 2,
+        # which manufactured a correspondence between completely unrelated
+        # pads (our signal pin 13 vs EasyEDA's shield post 13) and emitted
+        # a fabricated δ_row. That is worse than not checking: it pushes a
+        # reviewer toward adding a bogus CPL override to a real part. It
+        # also made the verdict depend on file/glob ordering, which is why
+        # J1 flip-flopped with cache state.
+        #
+        # Report "cannot verify" loudly instead of inventing a number.
+        ee_names = {k for k in ee["pads_by_num"] if k.strip()}
+        our_names = {k for k in ours["pads"] if k.strip()}
+        shared = ee_names & our_names
+        if "1" not in ee_names or "1" not in our_names or len(shared) < 2:
+            res.add(
+                "WARN", ref,
+                f"pkg={footprint} — pad-naming schemes are not comparable:"
+                f" ours={sorted(our_names)[:8]}{'…' if len(our_names) > 8 else ''}"
+                f" vs easyeda={sorted(ee_names)[:8]}{'…' if len(ee_names) > 8 else ''}"
+                f" (shared names={sorted(shared) or 'none'}). A pad name does"
+                f" NOT denote the same pin in both libraries, so no"
+                f" geometric cross-check is possible. This is NOT a pass —"
+                f" verify pin-1 orientation manually against the datasheet"
+                f" and the JLCPCB 3D preview."
+            )
+            continue
 
         # Origin-agnostic orientation: vector from pad 1 to pad 2, in both
         # our native library frame and EasyEDA native frame. If EasyEDA and
@@ -686,6 +908,44 @@ def main() -> int:
                             "in jlcpcb_export.py)")
             else:
                 if override is None:
+                    # ── Drawing-frame rotation, not a pin-mapping bug? ──
+                    #
+                    # δ_row != 0 is NOT by itself a defect. It is only a
+                    # defect if the pad NUMBERING is permuted relative to
+                    # the package geometry. Prove which case we are in by
+                    # fitting a rigid rotation across ALL pads (a much
+                    # stronger test than the pad-1→pad-2 direction alone).
+                    #
+                    # If our constellation is the EasyEDA reference rigidly
+                    # rotated with numbering preserved, AND the package
+                    # family has an explicit, empirically-derived entry in
+                    # `_JLCPCB_ROT_CORRECTIONS`, then the drawing-frame
+                    # offset is already accounted for by the export formula
+                    # and no per-part override is needed.
+                    rigid = _rigid_rotation_match(
+                        _native_all_pads(ours, plc["rot"]),
+                        ee["pads_by_num"],
+                    )
+                    fam = _family_correction(footprint)
+                    if rigid is not None and fam is not None:
+                        angle, err, tol = rigid
+                        pattern, corr = fam
+                        res.add(
+                            "OK", ref,
+                            detail
+                            + f"  (drawing-frame rotation only: our"
+                            f" footprint == EasyEDA reference rotated"
+                            f" {angle}°, all {len(ee['pads_by_num'])} pads"
+                            f" matched with numbering PRESERVED, max"
+                            f" err={err:.3f}mm <= tol={tol:.3f}mm — no pin"
+                            f" permutation. CPL angle is set by the"
+                            f" empirically-derived family correction"
+                            f" {pattern!r}={corr}° in"
+                            f" _JLCPCB_ROT_CORRECTIONS, so no override is"
+                            f" required.)"
+                        )
+                        continue
+
                     # Check PENDING-validation list first. An entry here
                     # means we have a SUSPECTED polarity/rotation bug
                     # that is queued for empirical validation on a
