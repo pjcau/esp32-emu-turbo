@@ -3,6 +3,7 @@
 
 import csv
 import json
+import math
 import os
 import re
 import shutil
@@ -114,34 +115,61 @@ def test_mounting_hole_text():
 
 
 def test_c1_c2_spacing():
-    """Test 7: C1/C2 spacing from U3."""
-    print("\n── C1/C2 Spacing Tests ──")
+    """Test 7: SY8089 buck (U3) hot-loop geometry.
+
+    Replaces the old AMS1117 C1/C2 spacing test. C2 (22uF tantalum) no
+    longer exists — the buck uses C30, a non-polarized MLCC, on its output.
+
+    What matters for a 1 MHz switcher (datasheet AN_SY8089/A page 8):
+      - C1 (C_IN) must sit as close as the land patterns allow to the
+        IN/GND pins, so the high-di/dt loop stays small.
+      - C30 (C_OUT) must sit close to the inductor output pad.
+      - The LX node must stay small.
+    These are geometric facts read back from the CPL, so a placement
+    regression is caught immediately.
+    """
+    print("\n── SY8089 Buck Loop Geometry Tests ──")
+    import math
     cpl = read_cpl()
 
+    check("C2 (22uF tantalum) removed from CPL", "C2" not in cpl,
+          "C2 still present — it must not be assembled")
+
+    c1_x = float(cpl["C1"]["Mid X"].replace("mm", ""))
     c1_y = float(cpl["C1"]["Mid Y"].replace("mm", ""))
-    c2_y = float(cpl["C2"]["Mid Y"].replace("mm", ""))
+    u3_x = float(cpl["U3"]["Mid X"].replace("mm", ""))
     u3_y = float(cpl["U3"]["Mid Y"].replace("mm", ""))
+    c30_x = float(cpl["C30"]["Mid X"].replace("mm", ""))
+    c30_y = float(cpl["C30"]["Mid Y"].replace("mm", ""))
+    l2_x = float(cpl["L2"]["Mid X"].replace("mm", ""))
+    l2_y = float(cpl["L2"]["Mid Y"].replace("mm", ""))
 
-    check("C1 Mid Y = 57.00mm", abs(c1_y - 57.00) < 0.01, f"got {c1_y}")
-    check("C2 Mid Y = 62.50mm", abs(c2_y - 62.50) < 0.01, f"got {c2_y}")
+    check("U3 Mid = (119.80, 53.50)",
+          abs(u3_x - 119.80) < 0.01 and abs(u3_y - 53.50) < 0.01,
+          f"got ({u3_x}, {u3_y})")
 
-    # C1 now beside U3 (not above) — check min distance to VIN pin
-    # U3 VIN (pin 3) at y≈58.65, C1 center at y=55.0 → 3.7mm gap
-    import math
-    c1_to_u3 = math.hypot(c1_y - u3_y, 0)  # same X column, Y gap only
-    check(f"C1-U3 distance <= 5mm", c1_to_u3 <= 5.0,
-          f"dist={c1_to_u3:.2f}mm")
+    # C_IN centre-to-centre distance from the regulator. SOT-23-5 pads end
+    # at u3_y+1.25; the 1206 pads start at c1_y-0.90 → 0.95mm edge gap.
+    d_c1_u3 = math.hypot(c1_x - u3_x, c1_y - u3_y)
+    check("C_IN (C1) within 3.5mm of U3", d_c1_u3 <= 3.5,
+          f"dist={d_c1_u3:.2f}mm")
+    c1_pad_top = c1_y - 0.90        # 1206 pad half-height
+    u3_pad_bot = u3_y + 1.25        # SOT-23-5 pad row + half pad height
+    check("C1-U3 pad gap in 0.20..1.50mm (tight hot loop, assemblable)",
+          0.20 <= (c1_pad_top - u3_pad_bot) <= 1.50,
+          f"gap={c1_pad_top - u3_pad_bot:.2f}mm")
 
-    # SOT-223 extends ±3.9mm from center (pads at ±3.15, size 1.5mm)
-    u3_top = u3_y + 3.9    # signal pads top edge
+    # C_OUT next to the inductor output pad.
+    d_c30_l2 = math.hypot(c30_x - l2_x, c30_y - l2_y)
+    check("C_OUT (C30) within 5.5mm of L2", d_c30_l2 <= 5.5,
+          f"dist={d_c30_l2:.2f}mm")
 
-    # C2 (1206) extends ±0.9mm from center
-    c2_top = c2_y - 0.9
-
-    gap_u3_c2 = c2_top - u3_top
-
-    check(f"U3-C2 gap >= 1.5mm", gap_u3_c2 >= 1.5,
-          f"gap={gap_u3_c2:.2f}mm")
+    # LX node length: U3 pin 3 (u3_x+1.30, u3_y+0.95) to L2 pad 2
+    # (l2_x-1.80, l2_y). Datasheet rule 3: minimise LX copper.
+    lx_len = math.hypot((l2_x - 1.80) - (u3_x + 1.30),
+                        l2_y - (u3_y + 0.95))
+    check("BUCK_LX run <= 4.0mm (minimise switch-node copper)",
+          lx_len <= 4.0, f"len={lx_len:.2f}mm")
 
 
 def test_gr_text_vs_holes():
@@ -1630,7 +1658,7 @@ def test_batch_pin_alignment():
     REFS = {
         "U1": "ESP32-S3-WROOM-1-N16R8",
         "U2": "ESOP-8",
-        "U3": "SOT-223",
+        "U3": "SOT-23-5",
         "U5": "SOP-16",
         "J1": "USB-C-16P",
         "J4": "FPC-40P-0.5mm",
@@ -2457,6 +2485,31 @@ _FINE_PITCH_REFS = {"U1", "U2", "U4", "U5", "U6", "J4", "J3", "J1", "L1", "SPK1"
                     "C3", "C4", "C17", "R20", "R21", "C21", "R22", "R23"}
 
 
+def _pad_pair_gap(p1, p2):
+    """Exact edge-to-edge gap between two axis-aligned rectangular pads.
+
+    Every pad emitted by generate_pcb/footprints.py is axis-aligned: pads are
+    pre-rotated at generation time and 90/270 deg rotations swap (w, h), so
+    the stored (x, y, w, h) is already an axis-aligned bounding box.
+
+    The pad-spacing and soldermask-bridge tests used to approximate this with
+    the half-diagonal circumscribed radius, which over-reports badly for
+    elongated pads: an SOT-23-5 pin row (pads 1.10 x 0.60 at 0.95 pitch) has a
+    real 0.35 mm gap but a half-diagonal "gap" of -0.30 mm, and the two pads of
+    a 4x4 inductor (1.50 x 4.00 at 3.60 pitch) have a real 2.10 mm gap but a
+    half-diagonal "gap" of -0.67 mm. That systematic error is why those tests
+    needed the _FINE_PITCH_REFS bypass to pass at all — the bypass was hiding
+    the measurement bug, and along with it every genuine pad-spacing problem on
+    U1/U2/U5/J1/J4/U6. With the exact geometry the bypass is unnecessary: the
+    whole board reports 0 violations with no refs excluded.
+    """
+    dx = abs(p1["x"] - p2["x"]) - (p1["w"] + p2["w"]) / 2
+    dy = abs(p1["y"] - p2["y"]) - (p1["h"] + p2["h"]) / 2
+    if dx > 0 and dy > 0:
+        return math.hypot(dx, dy)   # diagonal separation
+    return max(dx, dy)              # overlapping in one axis (or both)
+
+
 def test_jlcdfm_trace_spacing():
     """JLCDFM: Minimum trace-to-trace spacing >= 0.15mm on ALL layers.
 
@@ -2596,11 +2649,13 @@ def test_jlcdfm_pad_to_board_edge():
 def test_jlcdfm_pad_spacing():
     """JLCDFM: All pad pairs on same layer, different nets, gap >= 0.15mm.
 
-    Iterates over ALL pads grouped by layer. Uses bounding-box distance.
-    Excludes violations between fine-pitch IC/connector pads (structural).
+    Iterates over ALL pads grouped by layer and measures the exact
+    edge-to-edge gap between axis-aligned pad rectangles (_pad_pair_gap).
+    NO refs are excluded: the previous _FINE_PITCH_REFS bypass only existed
+    to absorb the half-diagonal approximation error, and with exact geometry
+    the whole board passes with every ref measured.
     """
     print("\n── JLCDFM: Pad-to-Pad Spacing (0.15mm) ──")
-    import math
     MIN_GAP = 0.15
     pads = _get_cache()["pads"]
 
@@ -2610,7 +2665,6 @@ def test_jlcdfm_pad_spacing():
         by_layer.setdefault(p["layer"], []).append(p)
 
     violations = []
-    structural = 0
     for layer, lpads in by_layer.items():
         if "Cu" not in layer:
             continue
@@ -2620,17 +2674,8 @@ def test_jlcdfm_pad_spacing():
                 p1, p2 = lpads[i], lpads[j]
                 if p1["net"] == p2["net"] or p1["net"] == 0 or p2["net"] == 0:
                     continue
-                dist = math.hypot(p1["x"] - p2["x"], p1["y"] - p2["y"])
-                # Conservative pad radius = half-diagonal
-                r1 = math.hypot(p1["w"] / 2, p1["h"] / 2)
-                r2 = math.hypot(p2["w"] / 2, p2["h"] / 2)
-                gap = dist - r1 - r2
+                gap = _pad_pair_gap(p1, p2)
                 if gap < MIN_GAP:
-                    # Structural: at least one pad on a fine-pitch/large-pad IC
-                    # (inherent to package or conservative diagonal approximation)
-                    if p1["ref"] in _FINE_PITCH_REFS or p2["ref"] in _FINE_PITCH_REFS:
-                        structural += 1
-                        continue
                     violations.append(
                         f"{layer}: {p1['ref']}[{p1['num']}] net{p1['net']} "
                         f"@({p1['x']:.2f},{p1['y']:.2f}) vs "
@@ -2644,8 +2689,6 @@ def test_jlcdfm_pad_spacing():
             print(f"    VIOLATION: {v}")
         if len(violations) > 20:
             print(f"    ... and {len(violations) - 20} more")
-    if structural:
-        print(f"    (excluded {structural} structural fine-pitch pad pairs)")
 
     check(f"JLCDFM pad spacing >= {MIN_GAP}mm ({sum(len(v) for v in by_layer.values())} pads)",
           len(violations) == 0,
@@ -3108,12 +3151,13 @@ def test_jlcdfm_soldermask_bridge():
     For adjacent pads on the same layer with different nets, the mask bridge
     (gap between openings) must be >= 0.1mm to avoid solder bridging.
 
-    Excludes fine-pitch IC pads (U1 ESP32, J4 FPC) where the pad pitch is
-    inherently below the mask bridge threshold — JLCPCB handles these with
-    solder mask defined (SMD) pads and stencil aperture reduction.
+    Measures the exact edge-to-edge rectangle gap (_pad_pair_gap). The old
+    _FINE_PITCH_REFS bypass is gone for the same reason as in
+    test_jlcdfm_pad_spacing: it was compensating for the half-diagonal
+    approximation, and in doing so it exempted every fine-pitch IC from the
+    check it was supposed to police.
     """
     print("\n── JLCDFM: Soldermask Bridge (0.1mm) ──")
-    import math
     MIN_BRIDGE = 0.1
     pads = _get_cache()["pads"]
 
@@ -3125,7 +3169,6 @@ def test_jlcdfm_soldermask_bridge():
         by_layer.setdefault(p["layer"], []).append(p)
 
     violations = []
-    structural = 0
     for layer, lpads in by_layer.items():
         n = len(lpads)
         for i in range(n):
@@ -3135,16 +3178,9 @@ def test_jlcdfm_soldermask_bridge():
                     continue
                 if p1["net"] == 0 or p2["net"] == 0:
                     continue
-                dist = math.hypot(p1["x"] - p2["x"], p1["y"] - p2["y"])
                 # Mask opening = pad size (assume no margin override)
-                r1 = math.hypot(p1["w"] / 2, p1["h"] / 2)
-                r2 = math.hypot(p2["w"] / 2, p2["h"] / 2)
-                bridge = dist - r1 - r2
+                bridge = _pad_pair_gap(p1, p2)
                 if bridge < MIN_BRIDGE:
-                    # Structural: at least one pad on fine-pitch/large-pad IC
-                    if p1["ref"] in _FINE_PITCH_REFS or p2["ref"] in _FINE_PITCH_REFS:
-                        structural += 1
-                        continue
                     violations.append(
                         f"{layer}: {p1['ref']}[{p1['num']}] net{p1['net']} "
                         f"vs {p2['ref']}[{p2['num']}] net{p2['net']} "
@@ -3156,8 +3192,6 @@ def test_jlcdfm_soldermask_bridge():
             print(f"    VIOLATION: {v}")
         if len(violations) > 20:
             print(f"    ... and {len(violations) - 20} more")
-    if structural:
-        print(f"    (excluded {structural} structural fine-pitch mask bridges)")
 
     check(f"JLCDFM soldermask bridge >= {MIN_BRIDGE}mm",
           len(violations) == 0,

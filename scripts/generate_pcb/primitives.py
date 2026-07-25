@@ -186,6 +186,13 @@ NET_LIST = [
     (57, "BAT_IN"),
     # Q1 gate net: pulled to GND via R24 (static, but distinct for schematic clarity)
     (58, "RPP_GATE"),
+    # U3 SY8089AAAC synchronous buck (replaces the AMS1117 LDO):
+    #   BUCK_LX — switch node, U3 pin 3 (LX) -> L2 pin 2
+    #   BUCK_FB — feedback node, U3 pin 5 (FB) -> R25/R26 divider tap + C29
+    # Named with a BUCK_ prefix so they are never confused with net 46 "LX",
+    # which is the IP5306 boost switch node (U2 pin 7 -> L1).
+    (59, "BUCK_LX"),
+    (60, "BUCK_FB"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

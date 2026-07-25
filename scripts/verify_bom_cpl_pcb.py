@@ -79,6 +79,11 @@ JLCPCB_FOOTPRINTS = {
     "SMD-4x4x2mm", "R_0805", "R_0402", "C_0805", "C_1206",
     "SW-SMD-5.1x5.1", "FPC-40P-0.5mm", "SS-12D00G3",
     "SOT-23-6", "SOT-23",
+    # U3 SY8089AAAC (C78988) and L2 SWPA4030S2R2MT (C36409): both land
+    # patterns are verbatim copies of the JLCPCB/EasyEDA reference
+    # footprints fetched with easyeda2kicad, so they are by construction
+    # JLCPCB-compatible (verify_easyeda_footprint reports delta_row = 0).
+    "SOT-23-5", "IND-SMD-4.0x4.0",
 }
 
 PASS = 0

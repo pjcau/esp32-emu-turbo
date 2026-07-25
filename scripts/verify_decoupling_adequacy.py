@@ -47,9 +47,11 @@ def check(name, condition, detail=""):
 # ---- Capacitor value map (from BOM / jlcpcb_export.py) ----
 # ref -> capacitance in uF
 CAP_VALUES = {
-    # AMS1117 support
-    "C1":  10.0,     # AMS1117 input (10uF 0805)
-    "C2":  22.0,     # AMS1117 output (22uF 1206)
+    # U3 SY8089 buck support
+    "C1":  22.0,     # buck input C_IN (22uF 1206 MLCC)
+    "C29": 22e-6,    # FB feed-forward (22pF 0805) — negligible as decoupling
+    "C30": 22.0,     # buck output C_OUT (22uF 1206 MLCC)
+    # C2 (22uF tantalum) deleted — see website/docs/rework/incident-c2-reversed.md
     # ESP32 decoupling
     "C3":  0.1,      # ESP32 EN RC / decoupling (100nF 0805)
     "C4":  0.1,      # ESP32 decoupling (100nF 0805)
@@ -87,12 +89,13 @@ DECOUPLING_REQS = [
     ("U2", "8",  "+5V",   10.0, 22.0, 10.0, 30.0, "IP5306 VOUT (5V boost)"),
     ("U2", "6",  "BAT+",  10.0, 10.0, 10.0, 30.0, "IP5306 BAT (battery terminal)"),
 
-    # AMS1117: 10uF input, 22uF output
-    ("U3", "3",  "+5V",   10.0, 10.0, 10.0, 30.0, "AMS1117 VIN (+5V input)"),
-    ("U3", "2",  "+3V3",  22.0, 22.0, 10.0, 30.0, "AMS1117 VOUT (+3V3 output)"),
-    # Tab is same net as pin 2 (VOUT), but physically offset. Relaxed HF threshold
-    # since C2 (22uF) is positioned near pin 2, not the tab.
-    ("U3", "4",  "+3V3",  10.0, 22.0, 10.0, 30.0, "AMS1117 tab (VOUT, relaxed HF)"),
+    # U3 SY8089AAAC buck (AN_SY8089/A page 7 "Input capacitor" /
+    # "Output capacitor"): >= 10uF ceramic on IN, >= 22uF X5R on the output.
+    # SOT-23-5 pin 4 = IN, pin 3 = LX (switch node, must NOT be decoupled),
+    # so the output requirement is checked on L2 pin 1, which is the actual
+    # +3V3 node after the inductor.
+    ("U3", "4",  "+5V",   10.0, 10.0, 10.0, 30.0, "SY8089 IN (+5V input)"),
+    ("L2", "1",  "+3V3",  22.0, 22.0, 10.0, 30.0, "SY8089 output node (after L2)"),
 
     # PAM8403: 1uF on VDD (pin 6), 100nF on VREF (pin 8)
     ("U5", "6",  "+5V",   1.0,  1.0,  10.0, 15.0, "PAM8403 VDD (analog supply)"),
@@ -218,23 +221,26 @@ def test_ip5306_output_capacitance():
           f"total={total:.1f}uF, caps={[(c[0], c[2]) for c in nearby[:5]]}")
 
 
-def test_ams1117_output_capacitance():
-    """AMS1117 output needs >= 22uF for LDO stability (ESR requirement)."""
-    print("\n-- AMS1117 Output Capacitance --")
+def test_buck_output_capacitance():
+    """SY8089 output needs >= 22uF X5R ceramic (AN_SY8089/A page 7).
+
+    The output node is L2 pin 1 (after the inductor), not a regulator pin —
+    a buck has no VOUT pin. C30 (22uF MLCC) sits directly on it.
+    """
+    print("\n-- SY8089 Output Capacitance --")
     cache = load_cache(PCB_FILE)
     cap_positions = _get_cap_positions(cache)
 
-    pin_pos = _get_ic_pin_pos(cache, "U3", "2")  # VOUT pin
+    pin_pos = _get_ic_pin_pos(cache, "L2", "1")  # output node after inductor
     if not pin_pos:
-        check("AMS1117 VOUT pin found", False)
+        check("SY8089 output node (L2 pin 1) found", False)
         return
 
     px, py = pin_pos
     nearby = _find_caps_near(cap_positions, px, py, 30.0)
     total = sum(c[2] for c in nearby)
 
-    # Expected: C2 (22uF) nearby, plus others on +3V3 rail
-    check(f"AMS1117 VOUT: total >= 22uF (LDO stability)",
+    check("SY8089 output: total >= 22uF (loop stability)",
           total >= 22.0,
           f"total={total:.1f}uF, caps={[(c[0], c[2]) for c in nearby[:5]]}")
 
@@ -266,7 +272,7 @@ def main():
     test_decoupling_adequacy()
     test_esp32_bypass_proximity()
     test_ip5306_output_capacitance()
-    test_ams1117_output_capacitance()
+    test_buck_output_capacitance()
     test_pam8403_vref_bypass()
 
     print(f"\nResults: {PASS} passed, {FAIL} failed")

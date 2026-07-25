@@ -104,13 +104,12 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
         "IP5306 operational on correct pins → physical pin mapping "
         "validated empirically despite 90° native-frame mismatch.",
     ),
-    "U3": (
-        90,
-        "AMS1117-3.3 SOT-223. Boards R4-R8 boot ESP32 on +3V3 rail → LDO "
-        "producing correct output on correct pin → physical polarity "
-        "validated empirically. Candidate for footprint realignment at "
-        "v2 respin.",
-    ),
+    # U3 entry REMOVED (SY8089 swap): the AMS1117-3.3 SOT-223 footprint that
+    # the 90-degree delta_row waiver described no longer exists. U3 is now a
+    # SY8089AAAC in a SOT-23-5 land pattern copied verbatim from the EasyEDA
+    # reference for C78988, so it reports delta_row = 0 and needs no waiver.
+    # Re-adding an entry here would silently re-arm the old exemption for a
+    # completely different part.
     "LED2": (
         180,
         "Green LED 0805 C19171391. Analytical determination (no physical "

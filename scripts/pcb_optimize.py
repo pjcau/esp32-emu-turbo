@@ -27,7 +27,9 @@ BOARD_H = 75.0   # mm
 # ── Power components requiring thermal vias ──────────────────────
 POWER_COMPONENTS = {
     "U2": {"name": "IP5306", "x": 110.0, "y": 42.5, "power_w": 1.5},
-    "U3": {"name": "AMS1117", "x": 125.0, "y": 55.5, "power_w": 0.8},
+    # U3 = SY8089AAAC buck. P_loss = Vout*I*(1/eta-1) ~ 0.19W at 430mA
+    # gaming load (was 0.73W with the AMS1117 LDO).
+    "U3": {"name": "SY8089", "x": 119.8, "y": 53.5, "power_w": 0.2},
     "U5": {"name": "PAM8403", "x": 30.0, "y": 29.5, "power_w": 1.0},
 }
 

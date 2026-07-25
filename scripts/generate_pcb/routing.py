@@ -313,7 +313,11 @@ FPC = enc(55, 2)          # (135.0, 35.5)  — right of slot, vertical (90deg)
 USBC = enc(0, -33.7)      # (80.0, 71.2) — DFM: shield pads clear board edge by 0.525mm
 SD = enc(60, -29.5)       # (140.0, 67.0)  — bottom-right
 IP5306 = enc(30, -5)      # (110.0, 42.5)  — moved left
-AMS1117 = enc(45, -18)    # (125.0, 55.5)  — moved left
+# U3 = SY8089AAAC synchronous buck (SOT-23-5), replaces the AMS1117 LDO.
+# Placed with the IN/FB column facing WEST so the +5V side sits inside the
+# In2.Cu +5V pour (x < 123) while LX / L2 / C_OUT sit east of it, on the
+# continuous +3V3 plane.  See _power_traces() for the full clearance math.
+BUCK = enc(39.8, -16.0)   # (119.8, 53.5)
 PAM8403 = enc(-50, 8)     # (30.0, 29.5)
 L1 = enc(30, -15)         # (110.0, 52.5)  — near IP5306
 JST = enc(0, -25)         # (80.0, 62.5) — moved 5mm closer to USB-C (J1)
@@ -370,8 +374,25 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
-C1_POS = (120.0, 57.0)   # AMS1117 input cap — 3.2mm from VIN, left of SOT-223 body
-C2_POS = (125.0, 62.5)   # AMS1117 output cap (amx, amy+7)
+# ── U3 SY8089AAAC buck converter cluster ─────────────────────────
+# All coordinates are hand-verified against the surrounding copper; see the
+# clearance table in _power_traces()::"buck converter" for the arithmetic.
+# C2 (22uF tantalum, the old AMS1117 output cap) is DELETED — a 1 MHz buck
+# needs a low-ESR MLCC output cap, and C2 was the part that destroyed
+# prototype #1 when it was assembled reversed
+# (website/docs/rework/incident-c2-reversed.md).
+C1_POS = (119.8, 56.6)   # C_IN 22uF 1206 MLCC, rot 180 (pad1 +5V west, pad2 GND east)
+L2_POS = (126.0, 54.45)  # 2.2uH output inductor, rot 0 (pad2 west = BUCK_LX)
+C30_POS = (127.8, 58.9)  # C_OUT 22uF 1206 MLCC, rot 90 (pad1 +3V3 north, pad2 GND south)
+# The divider parts are placed at rot 180 so pad 1 is the WEST pad. That makes
+# the pin numbering match the natural schematic drawing order:
+#   R25/C29: pin 1 = +3V3 (top of the divider), pin 2 = BUCK_FB (tap)
+#   R26:     pin 1 = BUCK_FB (tap),             pin 2 = GND (bottom)
+# Rotating a 2-pad passive by 180 deg does not move either pad, it only swaps
+# which physical pad carries number 1 — the layout below is unaffected.
+R25_POS = (118.0, 63.4)  # FB divider upper 100k, rot 180 (pad1 west = +3V3)
+C29_POS = (118.0, 60.3)  # 22pF feed-forward across R25, rot 180 (same pad sides)
+R26_POS = (121.1, 63.4)  # FB divider lower 22k, rot 180 (pad1 west = BUCK_FB)
 C3_POS = (69.55, 42.0)   # ESP32 decoupling 1 — 0.05mm right of 69.5 (C3[2] gap to BTN_UP: 0.095→0.145mm)
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
 C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
@@ -510,9 +531,10 @@ def _init_pads():
         ("J1", "USB-C-16P", *USBC, 0, "B"),
         ("U6", "TF-01A", *SD, 0, "B"),
         ("U2", "ESOP-8", *IP5306, 0, "B"),
-        ("U3", "SOT-223", *AMS1117, 0, "B"),
+        ("U3", "SOT-23-5", *BUCK, 180, "B"),
         ("U5", "SOP-16", *PAM8403, 90, "B"),
         ("L1", "SMD-4x4x2", *L1, 0, "B"),
+        ("L2", "IND-SMD-4.0x4.0", *L2_POS, 0, "B"),
         ("J3", "JST-PH-2P-SMD", *JST, 180, "B"),
         ("SPK1", "Speaker-22mm", *SPEAKER, 0, "B"),
         ("SW_PWR", "SS-12D00G3", *PWR_SW, 0, "B"),
@@ -551,8 +573,12 @@ def _init_pads():
 
     # Key passives with explicit routing
     passive_placements = [
-        ("C1", "C_0805", *C1_POS, 0, "B"),
-        ("C2", "C_1206", *C2_POS, 0, "B"),
+        # U3 buck cluster (C2 deleted — see C1_POS comment block)
+        ("C1", "C_1206", *C1_POS, 180, "B"),
+        ("C30", "C_1206", *C30_POS, 90, "B"),
+        ("R25", "R_0805", *R25_POS, 180, "B"),
+        ("R26", "R_0805", *R26_POS, 180, "B"),
+        ("C29", "C_0805", *C29_POS, 180, "B"),
         ("C3", "C_0805", *C3_POS, 0, "B"),
         ("C4", "C_0805", *C4_POS, 0, "B"),
         ("C17", "C_0805", *C17_POS, 0, "B"),
@@ -732,6 +758,231 @@ def _hv_route(x1, y1, x2, y2, net, width=W_DATA,
 
 # ── Routing functions ─────────────────────────────────────────────
 
+def _buck_traces(bk_en, bk_gnd, bk_lx, bk_in, bk_fb):
+    """U3 SY8089AAAC synchronous buck: +5V -> 3.327V, 2A continuous.
+
+    Replaces the AMS1117-3.3 LDO. The LDO burned 1.7 V x I_load as heat
+    (0.85 W at 500 mA) and its 22 uF tantalum output cap (C2) destroyed
+    prototype #1 when it was assembled reversed — see
+    website/docs/rework/incident-c2-reversed.md. C2 is deleted; the buck
+    uses a low-ESR MLCC (C30) on the output, as a 1 MHz converter requires.
+
+    Topology (datasheet AN_SY8089/A Rev 0.9A, Figure 1 typical application):
+
+        +5V --[C1 22uF]--+-- IN (4) ---- LX (3) --[L2 2.2uH]--+-- +3V3
+                         |                                     |
+                        GND                              [C30 22uF]
+                                                               |
+                        FB (5) <--+-- R25 100k --+-------------+
+                                  |              |
+                                  |            [C29 22pF]  (across R25)
+                                  +-- R26 22k --+
+                                       |
+                                      GND
+
+        Vout = 0.6 * (1 + R25/R26) = 0.6 * (1 + 100k/22k) = 3.327 V
+        (Vfb = 0.6 V, datasheet page 7 "Feedback resistor dividers")
+
+    EN (pin 1) is tied to the +5V pour: the rail is only present when the
+    IP5306 boost is running, so the buck follows it. EN abs-max is
+    Vin + 0.6 V, so a hard tie to the input rail is within spec. The
+    datasheet's 1 Mohm pull-down recommendation applies only when EN is
+    driven from a high-impedance source, which is not the case here.
+
+    Layout rules applied (datasheet page 8 "Layout Design"):
+      1) GND pin gets a two-via cluster straight into the In1.Cu plane.
+      2) C1 sits 0.95 mm south of the package; the IN -> C1 -> GND loop is
+         closed through In1.Cu (via pair at (122.40, 53.50)/(122.40, 51.80)
+         next to the GND pin and (122.60, 56.60) next to C1.2) rather than
+         through a long B.Cu detour around the LX pad. Physical loop
+         ~4 mm x 3 mm; the return runs directly underneath on the plane.
+      3) LX copper is a single 3.10 mm x 0.76 mm B.Cu run plus the two
+         pads — no vias, no plane, nothing else shares the node.
+         0.76 mm at 1 oz carries ~2.1 A (10 C rise) which covers the 2 A
+         continuous rating.
+      4) FB is routed on F.Cu, which is separated from every switching
+         node (all on B.Cu) by the In1.Cu GND plane AND the In2.Cu power
+         plane. R25/R26/C29 sit in the y > 62 band so their +3V3 sense via
+         lands on the continuous +3V3 plane, i.e. electrically on the far
+         side of C30, not on the inductor node.
+
+    IMPORTANT ZONE CONSTRAINT (this is what killed v1): every +5V feature
+    of this block is at x < 123 and y < 62, i.e. inside the In2.Cu +5V
+    pour; every +3V3 feature is outside it. See _power_zones().
+    """
+    parts = []
+    n_5v = NET_ID["+5V"]
+    n_3v3 = NET_ID["+3V3"]
+    n_gnd = NET_ID["GND"]
+    n_lx = NET_ID["BUCK_LX"]
+    n_fb = NET_ID["BUCK_FB"]
+
+    c1_p1 = _pad("C1", "1")     # (118.30, 56.60) +5V
+    c1_p2 = _pad("C1", "2")     # (121.30, 56.60) GND
+    l2_p2 = _pad("L2", "2")     # (124.20, 54.45) BUCK_LX
+    l2_p1 = _pad("L2", "1")     # (127.80, 54.45) +3V3
+    c30_p1 = _pad("C30", "1")   # (127.80, 57.40) +3V3
+    c30_p2 = _pad("C30", "2")   # (127.80, 60.40) GND
+    # Divider parts are at rot 180 → pad 1 is the WEST pad (see R25_POS).
+    r25_3v3 = _pad("R25", "1")  # (117.05, 63.40) +3V3 sense
+    r25_fb = _pad("R25", "2")   # (118.95, 63.40) BUCK_FB
+    r26_fb = _pad("R26", "1")   # (120.15, 63.40) BUCK_FB
+    r26_gnd = _pad("R26", "2")  # (122.05, 63.40) GND
+    c29_3v3 = _pad("C29", "1")  # (117.05, 60.30) +3V3 sense
+    c29_fb = _pad("C29", "2")   # (118.95, 60.30) BUCK_FB
+
+    # ── +5V input: In2.Cu pour -> C1 -> U3 IN ────────────────────
+    # Two 0.90 mm vias (0.35 mm drill) share the input current; one via is
+    # ~1.5 A, the pair covers the 2 A worst case with margin.
+    #   via A (118.30, 58.30) x[117.85,118.75] y[57.85,58.75]
+    #   via B (119.60, 58.30) x[119.15,120.05] y[57.85,58.75]
+    #   via-to-via gap  1.30 - 0.90                    = 0.40mm ✓
+    #   C1 pad bottom edge 57.50 -> via top 57.85      = 0.35mm ✓
+    #   C1.2 pad left edge 120.70 -> via B right 120.05 = 0.65mm ✓
+    #   C29.1 pad top edge 59.65 -> via bottom 58.75    = 0.90mm ✓
+    _v5_via_y = 58.30
+    parts.append(_via_net(118.30, _v5_via_y, n_5v))
+    parts.append(_via_net(119.60, _v5_via_y, n_5v))
+    parts.append(_seg(118.30, _v5_via_y, 119.60, _v5_via_y,
+                      "B.Cu", W_PWR_HIGH, n_5v))
+    parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], _v5_via_y,
+                      "B.Cu", W_PWR_HIGH, n_5v))
+    # IN pad -> C1.1 (vertical inside the C1.1 pad column, then land on
+    # the pad centre so the pad-net registrar tags C1.1 = +5V).
+    parts.append(_seg(bk_in[0], bk_in[1], bk_in[0], c1_p1[1],
+                      "B.Cu", W_PWR_HIGH, n_5v))
+    parts.append(_seg(bk_in[0], c1_p1[1], c1_p1[0], c1_p1[1],
+                      "B.Cu", W_PWR_HIGH, n_5v))
+
+    # ── GND: input-loop return and regulator thermal path ────────
+    # The GND pin (2) is boxed in by EN (north) and LX (south) on the east
+    # column, so it can only exit east. Two vias take it straight down to
+    # the In1.Cu plane; a third sits next to C1.2 so the C_IN return is
+    # local.
+    #   GND stub y[53.20,53.80] vs LX pad top 54.15  = 0.35mm ✓
+    #                            vs EN pad bottom 52.85 = 0.35mm ✓
+    #   via (122.40,53.50) x[122.10,122.70] vs L2.2 pad left 123.45 = 0.75mm ✓
+    #   via (122.40,51.80) vs EN pad right 121.65    = 0.45mm ✓
+    #   via (122.60,56.60) vs L2.2 pad corner (123.45,56.45): 0.56mm ✓
+    parts.append(_seg(bk_gnd[0], bk_gnd[1], 122.40, bk_gnd[1],
+                      "B.Cu", W_PWR, n_gnd))
+    parts.append(_via_net(122.40, bk_gnd[1], n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(122.40, bk_gnd[1], 122.40, 51.80,
+                      "B.Cu", W_PWR, n_gnd))
+    parts.append(_via_net(122.40, 51.80, n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(c1_p2[0], c1_p2[1], 122.60, c1_p2[1],
+                      "B.Cu", W_PWR, n_gnd))
+    parts.append(_via_net(122.60, c1_p2[1], n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── EN: tied high to the +5V pour ────────────────────────────
+    #   via (121.10, 51.20) OD 0.60, inside the +5V pour (x<123, y<62) ✓
+    #   EN pad top 52.25 -> via bottom 51.50            = 0.75mm ✓
+    #   BUCK_FB via (118.50,51.20) OD 0.50 right edge 118.75 = 2.05mm ✓
+    parts.append(_seg(bk_en[0], bk_en[1], bk_en[0], 51.20,
+                      "B.Cu", W_SIG, n_5v))
+    parts.append(_via_net(bk_en[0], 51.20, n_5v,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── BUCK_LX: U3 pin 3 -> L2 pin 2 ────────────────────────────
+    # Single straight run, no vias — the whole node is 3.10 x 0.76 mm of
+    # B.Cu plus the two pads (datasheet rule 3: minimise LX copper).
+    #   trace y[54.07,54.83] vs GND via (122.40,53.50) top 53.80 = 0.27mm ✓
+    #   trace vs C1.2 pad top 55.70                              = 0.87mm ✓
+    parts.append(_seg(bk_lx[0], bk_lx[1], l2_p2[0], l2_p2[1],
+                      "B.Cu", W_PWR_HIGH, n_lx))
+
+    # ── +3V3 output: L2 -> C30 -> In2.Cu +3V3 plane ──────────────
+    #   vertical x[127.42,128.18] vs BTN_Y B.Cu x=129.24 (w 0.25,
+    #     west edge 129.115)                                  = 0.935mm ✓
+    parts.append(_seg(l2_p1[0], l2_p1[1], c30_p1[0], c30_p1[1],
+                      "B.Cu", W_PWR_HIGH, n_3v3))
+    # Two output vias, both EAST of the +5V pour boundary (x=123) so they
+    # land on the continuous +3V3 plane. Sense/feed point is at C30, i.e.
+    # after the output cap, not at the inductor node.
+    #   trace y[57.02,57.78] vs L2 pad bottom 56.45          = 0.57mm ✓
+    #   via (126.00,57.40) vs C30.1 pad left 126.90          = 0.45mm ✓
+    #   via (124.60,57.40) vs L2.2 pad corner (124.95,56.45) = 0.56mm ✓
+    #   via-to-via gap 1.40 - 0.90                           = 0.50mm ✓
+    parts.append(_seg(c30_p1[0], c30_p1[1], 126.00, c30_p1[1],
+                      "B.Cu", W_PWR_HIGH, n_3v3))
+    parts.append(_seg(126.00, c30_p1[1], 124.60, c30_p1[1],
+                      "B.Cu", W_PWR_HIGH, n_3v3))
+    parts.append(_via_net(126.00, c30_p1[1], n_3v3))
+    parts.append(_via_net(124.60, c30_p1[1], n_3v3))
+
+    # ── C30 GND return: two vias to In1.Cu ───────────────────────
+    #   via (126.30,60.40) right edge 126.60 vs C30.2 pad left 126.90 = 0.30mm ✓
+    #   via-to-via gap 1.30 - 0.60                                    = 0.70mm ✓
+    parts.append(_seg(c30_p2[0], c30_p2[1], 126.30, c30_p2[1],
+                      "B.Cu", W_PWR, n_gnd))
+    parts.append(_via_net(126.30, c30_p2[1], n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(126.30, c30_p2[1], 125.00, c30_p2[1],
+                      "B.Cu", W_PWR, n_gnd))
+    parts.append(_via_net(125.00, c30_p2[1], n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── BUCK_FB: U3 pin 5 -> divider, routed on F.Cu ─────────────
+    # Datasheet rule 4: R25/R26 and the FB trace must not sit next to LX.
+    # Every switching node on this board is on B.Cu; F.Cu is separated
+    # from it by In1.Cu (GND) and In2.Cu (power), so an F.Cu run is the
+    # quietest path available and is a microstrip over solid ground.
+    #   B.Cu stub  (118.50, 52.55) -> (118.50, 51.20)
+    #   via        (118.50, 51.20) OD 0.50
+    #   F.Cu       -> (116.60, 51.20) -> (116.60, 61.85) -> (118.95, 61.85)
+    #   via        (118.95, 61.85) OD 0.50, lands on the B.Cu FB column
+    # Clearances on the F.Cu column x[116.475,116.725]:
+    #   +5V via (115.25, 54.50) OD 0.90 right edge 115.70   = 0.775mm ✓
+    #   GND via (115.05, 51.00) OD 0.60 right edge 115.35   = 1.125mm ✓
+    #   +5V via (118.30, 58.30) OD 0.90 left edge 117.85    = 1.125mm ✓
+    #   R16 / C1 / C29 pads are B.Cu — different layer ✓
+    _fb_via_n = (bk_fb[0], 51.20)
+    _fb_col_x = 116.60
+    _fb_via_s = (r25_fb[0], 61.85)
+    parts.append(_seg(bk_fb[0], bk_fb[1], _fb_via_n[0], _fb_via_n[1],
+                      "B.Cu", W_SIG, n_fb))
+    parts.append(_via_net(_fb_via_n[0], _fb_via_n[1], n_fb,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(_fb_via_n[0], _fb_via_n[1], _fb_col_x, _fb_via_n[1],
+                      "F.Cu", W_SIG, n_fb))
+    parts.append(_seg(_fb_col_x, _fb_via_n[1], _fb_col_x, _fb_via_s[1],
+                      "F.Cu", W_SIG, n_fb))
+    parts.append(_seg(_fb_col_x, _fb_via_s[1], _fb_via_s[0], _fb_via_s[1],
+                      "F.Cu", W_SIG, n_fb))
+    parts.append(_via_net(_fb_via_s[0], _fb_via_s[1], n_fb,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # ── Divider ──────────────────────────────────────────────────
+    # FB column: C29 tap (118.95, 60.30) - via (118.95, 61.85) - R25 tap
+    # (118.95, 63.40) - R26 tap (120.15, 63.40).
+    parts.append(_seg(c29_fb[0], c29_fb[1], r25_fb[0], r25_fb[1],
+                      "B.Cu", W_SIG, n_fb))
+    parts.append(_seg(r25_fb[0], r25_fb[1], r26_fb[0], r26_fb[1],
+                      "B.Cu", W_SIG, n_fb))
+    # +3V3 sense column: C29 (117.05, 60.30) - R25 (117.05, 63.40), then
+    # west to a via that taps the +3V3 plane. y=63.40 is SOUTH of the +5V
+    # pour (which ends at y=62), so this via lands on +3V3 copper — this is
+    # the whole reason the divider sits in the y>62 band.
+    #   via (115.55, 63.40) OD 0.60 right edge 115.85
+    #       vs R25 +3V3 pad left edge 116.55               = 0.70mm ✓
+    parts.append(_seg(c29_3v3[0], c29_3v3[1], r25_3v3[0], r25_3v3[1],
+                      "B.Cu", W_SIG, n_3v3))
+    parts.append(_seg(r25_3v3[0], r25_3v3[1], 115.55, r25_3v3[1],
+                      "B.Cu", W_SIG, n_3v3))
+    parts.append(_via_net(115.55, r25_3v3[1], n_3v3,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    # R26 lower leg -> GND via
+    parts.append(_seg(r26_gnd[0], r26_gnd[1], 123.55, r26_gnd[1],
+                      "B.Cu", W_SIG, n_gnd))
+    parts.append(_via_net(123.55, r26_gnd[1], n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+
+    return parts
+
+
 def _power_traces():
     """Power distribution using exact IC pad positions.
 
@@ -761,12 +1012,19 @@ def _power_traces():
     ip_vout = _pad("U2", "8")     # VOUT (5V boost output)
     ip_ep = _pad("U2", "EP")      # GND (exposed pad)
 
-    # AMS1117 (U3): SOT-223
-    # Pin 1 = GND/ADJ, Pin 2 = VOUT (+3V3), Pin 3 = VIN (+5V), Pin 4 = tab (VOUT)
-    am_gnd = _pad("U3", "1")
-    am_vout = _pad("U3", "2")
-    am_vin = _pad("U3", "3")
-    am_tab = _pad("U3", "4")      # tab = VOUT
+    # U3 = SY8089AAAC synchronous buck (SOT-23-5), rot 180 on B.Cu.
+    # Datasheet AN_SY8089/A p.2: 1=EN, 2=GND, 3=LX, 4=IN, 5=FB.
+    # After rot 180 + B.Cu X-mirror the pads land at:
+    #   IN  (4) west-south (bx-1.30, by+0.95)
+    #   FB  (5) west-north (bx-1.30, by-0.95)
+    #   LX  (3) east-south (bx+1.30, by+0.95)
+    #   GND (2) east-mid   (bx+1.30, by)
+    #   EN  (1) east-north (bx+1.30, by-0.95)
+    bk_en = _pad("U3", "1")
+    bk_gnd = _pad("U3", "2")
+    bk_lx = _pad("U3", "3")
+    bk_in = _pad("U3", "4")
+    bk_fb = _pad("U3", "5")
 
     # USB-C (J1): VBUS on pin 2/11, GND on pin 1/12
     usb_vbus = _pad("J1", "2")    # VBUS pad (was A4)
@@ -877,7 +1135,9 @@ def _power_traces():
         # exposed pad at (108.5, 45.0), (110.0, 45.0), (109.3, 44.5) — these
         # provide the EP→In1.Cu GND plane connection. The east-side stitching
         # via was redundant.
-        (am_gnd[0], am_gnd[1] + 2),       # AMS1117 GND
+        # U3 buck GND vias are emitted in the dedicated buck block below —
+        # they need to be a tight pair right at the GND pin, not a single
+        # generic stitching via.
         # ESP32 GND via handled separately below (needs small via for clearance)
         (jst_n[0], jst_n[1] - 3.5),         # JST GND (offset UP, away from USB-C and BAT+)
     ]
@@ -930,10 +1190,6 @@ def _power_traces():
     # EP pad-net registration is handled upstream by modifying the center
     # thermal via stub to start at the EP centre (see _ip5306_therm_vias).
 
-    parts.append(_seg(am_gnd[0], am_gnd[1], am_gnd[0], am_gnd[1] + 2,
-                       "B.Cu", W_PWR, n_gnd))
-    # Note: AMS1117 thermal relief via existing GND zone on In1.Cu.
-    # Additional stitching vias would overlap +3V3 power trace at x=125.
     # ESP32 GND stub: reduce width to 0.3mm for horizontal from pad to gnd_offset_x.
     # DFM FIX: W_PWR=0.6 (hw=0.30) too wide for LCD_D7 gap. Use 0.3mm (hw=0.15):
     # right edge=80.35, LCD_D7 left edge=81.805 → gap=1.455mm ✓
@@ -982,40 +1238,7 @@ def _power_traces():
     parts.append(_seg(gnd_offset_x, 35.5, 81.0, 35.5, "B.Cu", 0.4, n_gnd))
     parts.append(_via_net(81.0, 35.5, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # ── AMS1117 (U3) GND thermal vias: 2 vias near GND pin for heat dissipation ──
-    # AMS1117 dissipates ~0.85W ((5V-3.3V) x 0.5A). GND pin (pin 1) needs thermal
-    # vias to In1.Cu GND plane for heat spreading.
-    # am_gnd at ~(127.30, 58.65). Existing GND via at (127.30, 60.65).
-    # +3V3 B.Cu vertical at x=125.00 (w=0.6, right edge=125.30) blocks LEFT routing.
-    # Display B.Cu verts at x=129.24+ block far RIGHT.
-    # Strategy: place 2 GND thermal vias offset RIGHT of GND vertical (x=127.30)
-    # to clear C2 pad1 (mirrored) at (126.50, 62.50) size 1.2x1.8.
-    # C2 pad1 right edge = 127.10. Vias at x=127.60: left edge=127.30, gap=0.20mm ✓
-    # Via 1 at (128.30, 61.00): within 3mm of GND pin (~58.65). ✓
-    #   C2 pad1 at (126.50,62.50) size 1.2x1.8: right=127.10, top=61.60.
-    #   Via drill edge: (128.20, 61.00). X gap to pad=1.10mm, Y gap=0.60mm ✓
-    # Via 2 at (128.30, 64.00): within 6mm of GND pin. ✓
-    #   C2 pad1 bottom=63.40: via drill top=63.90, gap=0.50mm ✓
-    # Existing GND via at (127.30, 60.65):
-    #   dist to via1 = sqrt(1.0^2+0.35^2) = 1.06. gap=1.06-0.60=0.46mm ✓
-    # Display B.Cu verts at x=129.24 (w=0.2): gap=129.14-128.60=0.54mm ✓
-    _ams_therm_via_x = am_gnd[0] + 1.0  # ~128.30
-    _ams_gnd_via_y1 = am_gnd[1] + 2.35  # ~61.00
-    _ams_gnd_via_y2 = am_gnd[1] + 5.35  # ~64.00
-    # B.Cu vertical extension then horizontal branch to thermal vias
-    parts.append(_seg(am_gnd[0], am_gnd[1] + 2, am_gnd[0], _ams_gnd_via_y1,
-                       "B.Cu", W_PWR, n_gnd))
-    parts.append(_seg(am_gnd[0], _ams_gnd_via_y1, _ams_therm_via_x, _ams_gnd_via_y1,
-                       "B.Cu", W_PWR, n_gnd))
-    # Thermal via 1
-    parts.append(_via_net(_ams_therm_via_x, _ams_gnd_via_y1, n_gnd,
-                          size=VIA_STD, drill=VIA_STD_DRILL))
-    # Vertical stub to thermal via 2
-    parts.append(_seg(_ams_therm_via_x, _ams_gnd_via_y1, _ams_therm_via_x, _ams_gnd_via_y2,
-                       "B.Cu", W_PWR, n_gnd))
-    # Thermal via 2
-    parts.append(_via_net(_ams_therm_via_x, _ams_gnd_via_y2, n_gnd,
-                          size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.extend(_buck_traces(bk_en, bk_gnd, bk_lx, bk_in, bk_fb))
 
     # JST GND pad to offset via (UP, away from USB-C and BAT+)
     parts.append(_seg(jst_n[0], jst_n[1], jst_n[0], jst_n[1] - 3.5,
@@ -1125,10 +1348,8 @@ def _power_traces():
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1], ip_vout[0] + 0.5, ip_vout[1] - 1.5,
                        "B.Cu", W_PWR, n_5v))
     parts.append(_via_net(ip_vout[0] + 0.5, ip_vout[1] - 1.5, n_5v))
-    # AMS1117 VIN via
-    parts.append(_via_net(am_vin[0], am_vin[1] - 2, n_5v))
-    parts.append(_seg(am_vin[0], am_vin[1], am_vin[0], am_vin[1] - 2,
-                       "B.Cu", W_PWR, n_5v))
+    # U3 buck input: C1 (C_IN) taps the In2.Cu +5V pour through its own via
+    # pair; see _buck_traces(). No dedicated VIN via here any more.
 
     # ── LX: IP5306 SW (pin 7) -> L1 inductor ────────────────
     # Route from SW pin down to L1 pin 2 (closer pin)
@@ -1276,48 +1497,11 @@ def _power_traces():
                            "B.Cu", W_PWR, n_5v))
         parts.append(_via_net(_r16_via_x, r16_p1[1] + 2, n_5v))
 
-    # ── +3V3: AMS1117 output via outside +5V zone ─────────────
-    # AMS1117 VOUT (pin 2) and tab (pin 4) are +3V3
-    # Route to via outside +5V zone (x < 100)
-    # v3_via at am_tab[0] = 125.0 (same X as tab pad), clear of C1 (now at x=121.5, y=55)
-    v3_via_x = am_tab[0]   # 125.0
-    v3_via_y = am_tab[1] - 3
-    # B.Cu vertical from tab pad down to via (widened to 0.5mm for power delivery)
-    parts.append(_seg(v3_via_x, am_tab[1], v3_via_x, v3_via_y,
-                       "B.Cu", W_PWR, n_3v3))
-    parts.append(_via_net(v3_via_x, v3_via_y, n_3v3))
-
-    # ── AMS1117 thermal vias: 4x2 grid under tab pad (pin 4) ──────
-    # Tab pad center at am_tab = (125.0, 52.35), size 3.6x1.8mm.
-    # Pad bounds: x=[123.2, 126.8], y=[51.45, 53.25].
-    # Tab = VOUT (+3V3). Thermal vias connect tab to In2.Cu +3V3 zone for
-    # heat spreading. At 500mA: P_diss = 1.7V * 0.5A = 0.85W. SOT-223 with
-    # 8 thermal vias (was 4) reduces thermal resistance from ~50 to ~35 C/W.
-    # 4x2 grid: 4 columns (X offsets -1.2, -0.4, +0.4, +1.2) x 2 rows (Y ±0.50).
-    # Via size 0.60mm, drill 0.20mm (annular ring 0.20mm, JLCPCB OK).
-    # Hole-to-hole X: 0.80-0.20=0.60mm ≥ 0.25mm ✓
-    # Hole-to-hole Y: 1.00-0.20=0.80mm ≥ 0.25mm ✓
-    # Edge clearance: min 0.30mm from via OD edge to pad edge (same-net, OK) ✓
-    _therm_via_positions = [
-        (am_tab[0] - 1.2, am_tab[1] - 0.50),  # (123.8, 51.85)
-        (am_tab[0] - 0.4, am_tab[1] - 0.50),  # (124.6, 51.85)
-        (am_tab[0] + 0.4, am_tab[1] - 0.50),  # (125.4, 51.85)
-        (am_tab[0] + 1.2, am_tab[1] - 0.50),  # (126.2, 51.85)
-        (am_tab[0] - 1.2, am_tab[1] + 0.50),  # (123.8, 52.85)
-        (am_tab[0] - 0.4, am_tab[1] + 0.50),  # (124.6, 52.85)
-        (am_tab[0] + 0.4, am_tab[1] + 0.50),  # (125.4, 52.85)
-        (am_tab[0] + 1.2, am_tab[1] + 0.50),  # (126.2, 52.85)
-    ]
-    for tvx, tvy in _therm_via_positions:
-        parts.append(_via_net(tvx, tvy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
-        # Short B.Cu stub from via to tab pad center Y (ensures DFM connectivity).
-        # Vertical stubs avoid acute angles that horizontal stubs to shared X create.
-        parts.append(_seg(tvx, tvy, tvx, am_tab[1], "B.Cu", W_PWR, n_3v3))
-
-    # DFM FIX: removed F.Cu horizontal from x=125 to x=100.5 at y=49.35 — this trace
-    # crossed the VBUS F.Cu vertical at x=111, gap=0mm (DANGER violation).
-    # The AMS1117 tab via at (125, 49.35) connects directly to In2.Cu +3V3 zone which
-    # covers the full board, so a second via at x=100.5 is redundant.
+    # ── +3V3 rail source ──────────────────────────────────────────
+    # The +3V3 In2.Cu plane is fed by the buck output via pair placed on the
+    # C30 (C_OUT) node in _buck_traces(): (126.00, 57.40) and (124.60, 57.40),
+    # both east of the +5V pour boundary at x=123 so they land on the
+    # continuous +3V3 plane. Nothing else drives +3V3.
     # ESP32 +3V3: via near pin 2 with B.Cu stub
     # DFM: Via must fit between LCD_D7 F.Cu (y=20.5) and LCD_D6 F.Cu (y=21.5).
     # Both traces w=0.2 (hw=0.10). Via at y=21.0 (center).
@@ -1506,14 +1690,28 @@ def _power_traces():
     # Via endpoints:
     #   (105.5, 48.85): BAT+ via @(105.5, 46.13) dist=2.72mm - 2×0.30 = 2.12mm ≥ 0.25mm ✓
     #                   Inside zone #1 (105-140, 35-65) ✓
-    #   (41.0, 48.85):  C5 pad @(42.05, 49.35) dist=sqrt(1.05²+0.50²)=1.16mm - 0.30 = 0.86mm ✓
-    #                   Inside zone #2 extended (20-42, 24-53) ✓
+    #   (39.0, 48.85):  C5 pad @(42.05, 49.35) dist=sqrt(3.05²+0.50²)=3.09mm - 0.30 = 2.79mm ✓
+    #                   Inside zone #2 (20-39.6, 24-53) with 0.3mm margin ✓
     # Width W_PWR_HIGH=0.76mm, ~2A @1oz, PAM8403 peak 0.6A → 3× margin.
+    #
+    # R22-CRIT-1 FIX: the west via moved from x=41.0 to x=39.0 so the PAM
+    # +5V island can be pulled back from x=42 to x=39.6, freeing the R4
+    # pull-up +3V3 via at (41.80, 44.50) that the island used to trap.
+    # Clearances at the new via (39.0, 48.85), OD 0.60 → edge radius 0.30:
+    #   SPK+ B.Cu vert x=40.00 (w=0.30, left edge 39.85): gap 0.55mm ✓
+    #   BAT+ B.Cu vert x=38.00 (w=0.76, right edge 38.38): gap 0.32mm ✓
+    #   SPK1 pad 1 (39.5, 52.5) 2.0x3.0 (top edge 51.00):  gap 1.85mm ✓
+    #   BAT+ via (38.00, 46.135) OD 0.90: centre dist 2.89mm − 0.75 = 2.14mm ✓
+    # The extra 2 mm of F.Cu run (x=41→39 at y=48.85) is clear: the only
+    # F.Cu in that band is BAT+ at y=46.135 and BTN_SELECT at y=52.65
+    # (x≤35.95) — both ≥2.3mm away.
     _bridge_y = 48.85
+    _bridge_x_west = 39.0
     parts.append(_via_net(105.5, _bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
-    parts.append(_seg(105.5, _bridge_y, 41.0, _bridge_y,
+    parts.append(_seg(105.5, _bridge_y, _bridge_x_west, _bridge_y,
                         "F.Cu", W_PWR_HIGH, n_5v))
-    parts.append(_via_net(41.0, _bridge_y, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_via_net(_bridge_x_west, _bridge_y, n_5v,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts
 
@@ -4505,37 +4703,10 @@ def _passive_traces():
         parts.append(_via_net(c28_p2[0], c28_p2[1] + 1.5, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # C1 AMS1117 input: pad "1" -> +5V (near VIN), pad "2" -> GND via
-    # C1 at (122.0, 55.0), close to VIN pin at (122.70, 58.65) — 3.7mm
-    # Vias route DOWN (+y) to avoid U3 tab pad at (125.0, 52.35) above
-    c1_p1 = _pad("C1", "1")
-    c1_p2 = _pad("C1", "2")
-    if c1_p1:
-        # +5V via below C1 pad 1 — pad1 ~(120.95,57), via at (120.95,59)
-        # Clear of AMS1117 VIN via (122.70,56.65): dist=2.9mm ✓
-        parts.append(_seg(c1_p1[0], c1_p1[1], c1_p1[0], c1_p1[1] + 2.0,
-                          "B.Cu", W_PWR, n_5v))
-        parts.append(_via_net(c1_p1[0], c1_p1[1] + 2.0, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
-    if c1_p2:
-        # GND via below C1 pad 2 — pad2 ~(119.05,57), via at (119.05,59)
-        # Staggered Y from pad1 via for clearance
-        parts.append(_seg(c1_p2[0], c1_p2[1], c1_p2[0], c1_p2[1] + 2.0,
-                          "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(c1_p2[0], c1_p2[1] + 2.0, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
-
-    # C2 AMS1117 output: pad "1" -> AMS1117 tab (+3V3), pad "2" -> GND via
-    c2_p1 = _pad("C2", "1")
-    c2_p2 = _pad("C2", "2")
-    am_tab = _pad("U3", "4")
-    if c2_p1 and am_tab:
-        parts.append(_seg(c2_p1[0], c2_p1[1], am_tab[0], c2_p1[1],
-                          "B.Cu", W_PWR, n_3v3))
-        parts.append(_seg(am_tab[0], c2_p1[1], am_tab[0], am_tab[1],
-                          "B.Cu", W_PWR, n_3v3))
-    if c2_p2:
-        parts.append(_seg(c2_p2[0], c2_p2[1], c2_p2[0], c2_p2[1] + 2,
-                          "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(c2_p2[0], c2_p2[1] + 2, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+    # C1 (buck input cap) and C30 (buck output cap) are routed as part of
+    # the U3 cluster in _buck_traces() — their loops are performance
+    # critical and must stay together with the regulator geometry.
+    # C2 (22uF tantalum, old AMS1117 output cap) has been DELETED.
 
     # C17 near IP5306: VIN decoupling, pad "1" -> VBUS via, pad "2" -> GND via
     # DFM FIX: VBUS via at y-2=33.0 hit LCD_RST F.Cu at y=33.04 (gap=-0.295mm).
@@ -5189,12 +5360,36 @@ def _power_zones():
     # +3V3 zone on In2.Cu (full board, will be split by +5V island)
     parts.append(P.zone_fill("In2.Cu", board_pts, NET_ID["+3V3"], "+3V3"))
 
-    # +5V zone on In2.Cu — power management area (IP5306/AMS1117)
+    # +5V zone on In2.Cu — power management area (IP5306 / U3 buck input)
     # Start at x=105 — historical boundary from when R19 pull-up vias
     # sat at x≈103 (R19 removed in R9-MED-4, but the +5V island stays
     # east of x=105 to keep the BAT+ corridor and LX jog unaffected).
+    #
+    # R22-CRIT-1 FIX (+3V3 split plane, board dead on v1):
+    # The east boundary used to be x=140. That rectangle was far larger
+    # than the +5V copper actually needs and it SWALLOWED every +3V3 via
+    # east of x=123 — the regulator output vias (x=123.8..126.2), the
+    # J4 display-power vias (x=131..133.7) and the FPC pads J4.29/34/35.
+    # Because a lower-priority zone is deleted wherever a higher-priority
+    # zone overlaps it, those vias landed on +5V copper on In2.Cu and were
+    # simply not connected to anything: +3V3 resolved into FOUR isolated
+    # electrical groups (regulator island 4.92 mm², main plane at 0 V,
+    # J4.34/35 orphan, J4.29 orphan). The ESP32 therefore never saw 3.3 V.
+    #
+    # Real +5V extent (measured from the generated PCB, not estimated):
+    #   x 105.5 … 121.1, y 39.0 … 58.3  (IP5306 VOUT, C19, C27, R16, the
+    #   U3 buck C_IN via pair and the U3 EN via). Nothing on +5V lives east
+    #   of x=123 or south of y=62.
+    # V5_EAST = 123.0 frees the whole regulator-output / display-power area
+    # back to the continuous +3V3 plane.
+    # V5_SOUTH = 62.0 frees the y>62 band so the U3 feedback divider
+    # (R25/R26/C29 at y=63.4) can tap +3V3 with a plain via; inside the
+    # pour that via would be an isolated island — exactly the failure mode
+    # this fix is removing.
+    V5_EAST = 123.0
+    V5_SOUTH = 62.0
     v5_pts = [
-        (105, 35), (140, 35), (140, 65), (105, 65),
+        (105, 35), (V5_EAST, 35), (V5_EAST, V5_SOUTH), (105, V5_SOUTH),
     ]
     parts.append(P.zone_fill("In2.Cu", v5_pts, NET_ID["+5V"], "+5V",
                              priority=1))
@@ -5210,8 +5405,18 @@ def _power_zones():
     # path back to the IP5306 +5V rail. The extended south area is clear
     # of +3V3 vias/pads (button pull-up strip starts at x=46.80, outside
     # x=20-42). SPK1 speaker at (30, 52.5) is unaffected (different layer).
+    #
+    # R22-CRIT-1 FIX: the east boundary used to be x=42, which trapped the
+    # R4 pull-up +3V3 via at (41.80, 44.50) (via OD 0.60 → x 41.50..42.10)
+    # inside this +5V island. Boundary pulled back to x=39.6 and the +5V
+    # PAM bridge via moved from x=41.0 to x=39.0 (see _bridge_x in
+    # _power_traces) so the via still sits 0.3 mm inside the pour while the
+    # +3V3 via now clears the island by 1.9 mm.
+    # Easternmost +5V feature in this island is C23.1 (pad right edge
+    # x=38.5) → 1.1 mm margin to the new boundary.
+    V5_PAM_EAST = 39.6
     v5_pam_pts = [
-        (20, 24), (42, 24), (42, 53), (20, 53),
+        (20, 24), (V5_PAM_EAST, 24), (V5_PAM_EAST, 53), (20, 53),
     ]
     parts.append(P.zone_fill("In2.Cu", v5_pam_pts, NET_ID["+5V"], "+5V",
                              priority=2))
@@ -5262,7 +5467,10 @@ def generate_all_traces():
     # trace IS the correct net for the pad (making it same-net = no DRC short).
     n_gnd = NET_ID["GND"]
     n_3v3 = NET_ID["+3V3"]
-    _PAD_NETS[("U3", "2")] = n_3v3       # AMS1117 SOT-223 tab = VOUT (+3V3), intentional
+    # U3 pad nets are set by the explicit stubs in _buck_traces() — the old
+    # override "U3.2 = +3V3" belonged to the AMS1117 SOT-223 (pin 2 = VOUT).
+    # On the SY8089 SOT-23-5, pin 2 is GND; keeping the override would have
+    # shorted the buck GND pin onto the +3V3 plane.
     _PAD_NETS[("U1", "3")] = NET_ID["EN"]  # EN pin, routed from SW_RST via B.Cu
 
     # ── Trace-through-pad same-net fixups (restore commit 9709bea logic) ──

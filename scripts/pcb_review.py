@@ -44,7 +44,7 @@ DATA_NETS.update({40: "USB_D+", 41: "USB_D-"})
 POWER_ICS = {
     "U1": {"name": "ESP32-S3", "x": 80.0, "y": 27.5, "vcc_net": 4},
     "U2": {"name": "IP5306", "x": 110.0, "y": 42.5, "vcc_net": 2},
-    "U3": {"name": "AMS1117", "x": 125.0, "y": 55.5, "vcc_net": 3},
+    "U3": {"name": "SY8089", "x": 119.8, "y": 53.5, "vcc_net": 3},
     "U5": {"name": "PAM8403", "x": 30.0, "y": 29.5, "vcc_net": 3},
     "U6": {"name": "SD Card", "x": 140.0, "y": 67.0, "vcc_net": 4},
 }
@@ -285,14 +285,14 @@ def review_power_integrity(data):
 
     # Check 2: GND vias near power ICs
     # Search radius varies by IC: larger for ICs with dedicated GND thermal vias
-    # placed further from the center (e.g., AMS1117 GND vias at ~6mm from center).
+    # placed further from the center (e.g., U3 buck GND vias ~1.5mm east of the pin).
     # ESP32 EP pad connects to In1.Cu GND plane via zone fill (counts as distributed via).
     # SD card VSS has via-in-pad (pin 6) + 2 shield pin GND vias.
     gnd_vias = [v for v in data["vias"] if v["net"] == 1]  # net 1 = GND
     IC_VIA_RADIUS = {
         "U1": 10.0,  # ESP32: EP pad provides zone-fill GND connection
         "U2": 8.0,   # IP5306: thermal vias below EP pad
-        "U3": 10.0,  # AMS1117: GND thermal vias offset from pin
+        "U3": 10.0,  # SY8089: GND via pair offset east of pin 2
         "U5": 8.0,   # PAM8403
         "U6": 10.0,  # SD Card: shield vias spread across slot
     }
@@ -430,14 +430,15 @@ def review_thermal(data):
     all_vias = data["vias"]
 
     # Thermal analysis for each power IC
-    # AMS1117 (U3): dissipates ~0.85W.  Has 2x GND thermal vias near pin 1
-    # AND 4x +3V3 thermal vias under tab pad (pin 4).  Both count for heat
-    # dissipation since they connect to inner copper planes.
+    # SY8089 buck (U3): dissipates ~0.19W at the 430mA gaming load (the
+    # AMS1117 LDO it replaced dissipated 0.73W). Heat leaves through the two
+    # GND vias at (122.40, 53.50)/(122.40, 51.80) next to pin 2, plus the
+    # C1/C30 GND via cluster. Far less thermal work to do than the LDO.
     # IP5306 (U2): has 3x GND thermal vias below EP pad.
     # PAM8403 (U5): has multiple GND vias nearby.
     THERMAL_CONFIG = {
         "U2": {"radius": 6.0, "nets": {1}, "min_vias": 3},       # GND vias for EP
-        "U3": {"radius": 8.0, "nets": {1, 4}, "min_vias": 3},    # GND + +3V3 (tab) vias
+        "U3": {"radius": 8.0, "nets": {1, 4}, "min_vias": 3},    # GND pair + output +3V3 vias
         "U5": {"radius": 6.0, "nets": {1}, "min_vias": 3},       # GND vias
     }
 

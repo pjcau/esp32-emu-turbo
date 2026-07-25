@@ -27,9 +27,15 @@ MODEL_MAP = {
                      (0, 0, 0), (0, 0, 0)),
     "LED_0805":     (f"{M}/LED_SMD.3dshapes/LED_0805_2012Metric.step",
                      (0, 0, 0), (0, 0, 0)),
-    # SOT-223 (AMS1117): on B.Cu, 270° + 180° = 450° → 90°
+    # SOT-223: legacy AMS1117 package, no longer placed on this board.
     "SOT-223":      (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-223.step",
                      (0, 0, 0), (0, 0, 90)),
+    # SOT-23-5 (U3 SY8089AAAC): on B.Cu with a 180° placement rotation.
+    # Our land pattern is the EasyEDA frame (KiCad standard rotated -90°),
+    # so the KiCad SOT-23-5 model needs +90° on top of the 180° back-side
+    # flip → 270°.
+    "SOT-23-5":     (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-23-5.step",
+                     (0, 0, 0), (0, 0, 270)),
     # ESOP-8 (IP5306): on B.Cu, 0° + 180° = 180°
     "ESOP-8":       (f"{M}/Package_SO.3dshapes/SOIC-8_3.9x4.9mm_P1.27mm.step",
                      (0, 0, 0), (0, 0, 180)),
@@ -53,7 +59,8 @@ MODEL_MAP = {
     "SOT-23-3":     (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-23.step",
                      (0, 0, 0), (0, 0, 90)),
     # No good match — skip these:
-    # "SMD-4x4x2"  → Crystal (no exact 4x4 match in library)
+    # "SMD-4x4x2" / "IND-SMD-4.0x4.0" → no exact 4x4 wire-wound inductor
+# model in the KiCad library; L1/L2 render as bare pads.
     # "FPC-40P-0.5mm" → FPC connector (no exact 40P match)
     # "TF-01A"      → SD card module (no standard model)
     # "Speaker-22mm" → Speaker (no standard model)

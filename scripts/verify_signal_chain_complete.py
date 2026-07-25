@@ -136,11 +136,19 @@ def test_power_chain(net_refs, name_to_id, id_to_name):
     # IP5306 inductor
     verify_chain("Boost", "LX", ["L1", "U2"], net_refs, name_to_id, id_to_name)
 
-    # IP5306 output (+5V) to AMS1117 input
+    # IP5306 output (+5V) to U3 buck input
     verify_chain("5V rail", "+5V", ["U2", "U3"], net_refs, name_to_id, id_to_name)
 
-    # AMS1117 output (+3V3) to ESP32
-    verify_chain("3V3 rail", "+3V3", ["U3", "U1"], net_refs, name_to_id, id_to_name)
+    # U3 buck switch node to the output inductor
+    verify_chain("Buck switch", "BUCK_LX", ["U3", "L2"], net_refs, name_to_id, id_to_name)
+
+    # Buck output (+3V3) to ESP32. A buck has no VOUT pin: the rail is formed
+    # after L2, so L2 (not U3) is the source reference here.
+    verify_chain("3V3 rail", "+3V3", ["L2", "U1"], net_refs, name_to_id, id_to_name)
+
+    # Feedback loop must be closed or the regulator has no output control
+    verify_chain("Buck feedback", "BUCK_FB", ["U3", "R25", "R26", "C29"],
+                 net_refs, name_to_id, id_to_name)
 
     # VBUS from USB connector to IP5306
     verify_chain("USB power", "VBUS", ["J1", "U2"], net_refs, name_to_id, id_to_name)
