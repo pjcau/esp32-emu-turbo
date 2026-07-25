@@ -488,7 +488,7 @@ def _component_placeholders():
     placements.append(("SW_BOOT", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
 
     # BAT54C dual Schottky diode — menu combo (START+SELECT)
-    placements.append(("D1", "SOT-23-3", *routing.D1_POS, 0, "B.Cu"))
+    placements.append(("D1", "SOT-23-3", *routing.D1_POS, routing.D1_ROT, "B.Cu"))
 
     # P-MOSFET reverse polarity protection (v4.0)
     placements.append(("Q1", "SOT-23-3", *routing.Q1_POS, 0, "B.Cu"))

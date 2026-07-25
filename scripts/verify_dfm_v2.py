@@ -2962,47 +2962,74 @@ def test_jlcdfm_unconnected_trace_end():
         ("F.Cu", 90.95, 61.0),
     }
 
-    # Build set of all connection points
-    connection_points = set()
+    # Bin index for a coordinate. Points are matched by scanning the 3x3
+    # neighbourhood of bins and comparing the REAL distance, not by
+    # requiring both points to land in the same bin.
+    #
+    # BUG FIX (2026-07-25): the old code compared quantised keys directly.
+    # Two coincident points straddling a bin boundary hashed differently and
+    # a genuine pad connection was reported as a dead end — e.g. D1 pad 1 at
+    # x=100.275 (parsed exactly) vs the trace endpoint at 100.27499999999999
+    # (computed), which round to 100.30 and 100.25. The same flaw hides real
+    # dead ends: an endpoint 0.04 mm from a pad matched whenever the two
+    # happened to share a bin. Neighbourhood + true distance fixes both
+    # directions.
+    def _bin(x, y):
+        return (int(math.floor(x / TOLERANCE)), int(math.floor(y / TOLERANCE)))
+
+    connection_points = {}   # bin -> [(x, y), ...]
+
+    def _add_connection_point(x, y):
+        connection_points.setdefault(_bin(x, y), []).append((x, y))
+
+    def _has_connection_point(x, y):
+        bx, by = _bin(x, y)
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for cx, cy in connection_points.get((bx + dx, by + dy), ()):
+                    if math.hypot(cx - x, cy - y) <= TOLERANCE:
+                        return True
+        return False
 
     # Via positions
     for v in vias:
-        connection_points.add((round(v["x"] / TOLERANCE) * TOLERANCE,
-                               round(v["y"] / TOLERANCE) * TOLERANCE))
+        _add_connection_point(v["x"], v["y"])
 
     # Pad positions
     for p in pads:
-        connection_points.add((round(p["x"] / TOLERANCE) * TOLERANCE,
-                               round(p["y"] / TOLERANCE) * TOLERANCE))
+        _add_connection_point(p["x"], p["y"])
 
     # Segment endpoints (each endpoint is a connection point for same-net segments)
     seg_endpoints_by_layer = {}
     for s in segs:
         layer = s["layer"]
-        if layer not in seg_endpoints_by_layer:
-            seg_endpoints_by_layer[layer] = {}
+        bins = seg_endpoints_by_layer.setdefault(layer, {})
         for px, py in [(s["x1"], s["y1"]), (s["x2"], s["y2"])]:
-            key = (round(px / TOLERANCE) * TOLERANCE,
-                   round(py / TOLERANCE) * TOLERANCE)
-            if key not in seg_endpoints_by_layer[layer]:
-                seg_endpoints_by_layer[layer][key] = 0
-            seg_endpoints_by_layer[layer][key] += 1
+            bins.setdefault(_bin(px, py), []).append((px, py))
+
+    def _endpoint_count(layer, x, y):
+        """Endpoints within TOLERANCE of (x, y) on this layer."""
+        bx, by = _bin(x, y)
+        bins = seg_endpoints_by_layer.get(layer, {})
+        n = 0
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for ex, ey in bins.get((bx + dx, by + dy), ()):
+                    if math.hypot(ex - x, ey - y) <= TOLERANCE:
+                        n += 1
+        return n
 
     violations = []
     for s in segs:
         layer = s["layer"]
         for px, py in [(s["x1"], s["y1"]), (s["x2"], s["y2"])]:
-            key = (round(px / TOLERANCE) * TOLERANCE,
-                   round(py / TOLERANCE) * TOLERANCE)
-
             # Connected to pad or via?
-            if key in connection_points:
+            if _has_connection_point(px, py):
                 continue
 
             # Connected to another segment on same layer? (count > 1 means
             # at least one OTHER segment shares this endpoint)
-            count = seg_endpoints_by_layer.get(layer, {}).get(key, 0)
-            if count >= 2:
+            if _endpoint_count(layer, px, py) >= 2:
                 continue
 
             # Known zone-fill termination point?

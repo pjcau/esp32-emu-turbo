@@ -6,8 +6,17 @@
 > final CPL rotation verdict. Intended to be read before any CPL / BOM / override
 > change — **do NOT re-derive from scratch each session**.
 >
-> Last verified: 2026-04-15. Review after any LCSC part substitution or footprint
-> library update. Cached EasyEDA footprints live in `scripts/.easyeda_cache/`.
+> Last verified: 2026-07-25 (D1 re-derived, override removed — see below).
+> Previous full pass: 2026-04-15. Review after any LCSC part substitution or
+> footprint library update. Cached EasyEDA footprints live in
+> `scripts/.easyeda_cache/`.
+>
+> **The EasyEDA API currently returns HTTP 403 for every LCSC id**, so
+> `easyeda2kicad` cannot repopulate that cache and
+> `scripts/verify_easyeda_footprint.py` degrades to WARN for all 15
+> polarized refs. Until it works again, the pad coordinates recorded in this
+> document ARE the reference — do not treat a clean
+> `make verify-easyeda` run as evidence.
 
 ---
 
@@ -18,7 +27,7 @@
 | **LED1** | C84256 | LED 0805 red | 0° | — | CORRECT |
 | **LED2** | C19171391 | LED 0805 green | 180° | 180° | CORRECT w/ override |
 | **C2** | C1953590 | Tantalum 22µF 16V 1206 (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | 180° | 180° | CORRECT w/ override |
-| **D1** | C37704 | BAT54C SOT-23 | 270° | 270° | CORRECT w/ override |
+| **D1** | C37704 | BAT54C SOT-23 | 270° | — (removed 2026-07-25) | CORRECT — KiCad rot 180°, formula-derived; see re-derivation below |
 | **Q1** | C10487 | SI2301CDS SOT-23 | 90° | — | CORRECT (datasheet not on disk — uses Vishay SI2301 industry convention) |
 | **U1** | C2913202 | ESP32-S3-WROOM-1 | 0° | — | CORRECT |
 | **U2** | C181692 | IP5306 ESOP-8 | 0° | — | CORRECT |
@@ -126,12 +135,51 @@ package as C2 but non-polarized — no polarity audit needed).
   - pad 2 at `(+1.24, -0.95)` — bottom-right
   - pad 3 at `(-1.24, 0)` — solo LEFT (common cathode pin)
   - fp_circle pin-1 at `(+1.40, +1.46)` — top-right
-- **Our routing**: `scripts/generate_pcb/routing.py:4784-4786`
+- **Our routing**: `scripts/generate_pcb/routing.py::_menu_diode_traces`
   - pad 1 → BTN_START
   - pad 2 → BTN_SELECT
   - pad 3 → MENU_K (diode-OR into MENU input)
-- **CPL rotation**: 270° override (90° base + 180° for JLCPCB 3D alignment).
-- **Verdict**: CORRECT with 270° override.
+- **CPL rotation**: **270°, formula-derived, override REMOVED (2026-07-25)**.
+- **RE-DERIVATION (2026-07-25, R5-CRIT-6 relocation)** — the old entry
+  ("270° override = 90° base + 180° for JLCPCB 3D alignment", commit
+  `c7514e7`) was **wrong by 180°** and is superseded:
+  - C37704 and C10487 (Q1) have **identical SOT-23-3 EasyEDA pad topology**
+    (see the Q1 section below: pad 1 top-right, pad 2 bottom-right, pad 3
+    solo left). Both were placed with our `SOT-23-3` footprint at KiCad 0°
+    on B.Cu, so their required CPL angle must be **identical**.
+  - Q1 uses the plain formula result, **90°**, and is empirically validated
+    on 8+ prototypes (R4-R8 power up through Q1). `_jlcpcb_rotation()` is
+    linear in `rot`, so identical footprint + identical topology + identical
+    layer ⇒ identical CPL angle.
+  - **U4 is NOT a second confirmation** (correction, 2026-07-25, credit to
+    the `d1-polarity` session). The first version of this entry cited U4
+    alongside Q1; that was wrong. Per the U4 section below, C7519's EasyEDA
+    footprint puts pads 1-2-3 on the **TOP row** (pad 1 at `(-0.95, +1.15)`),
+    which **matches** our `sot23_6()` (pad 1 at `(-0.95, +1.10)`) — so U4 has
+    δ_row = **0**, not 90 like D1/Q1. U4 reaches 90° by a different route and
+    carries no information about D1. The derivation rests on Q1 alone, which
+    is sufficient.
+  - **Open question for whoever owns the checker**: U4 (δ_row=0) and Q1
+    (δ_row=90) both end up at CPL 90° and both are empirically validated
+    (a 180° error on U4 would put VBUS on the GND pad and dead-short the
+    rail; boards power up). That means δ_row does not map linearly onto the
+    CPL angle the way `_JLCPCB_ROT_CORRECTIONS` assumes for the whole
+    `^SOT-23` family. This does not affect the D1 conclusion — it is a
+    defect in the reasoning model of `verify_easyeda_footprint.py`.
+  - D1's 270° at KiCad 0° was therefore 180° out. It was never caught by
+    assembly because D1's two anodes were unrouted on every board built so
+    far (that is the R5-CRIT-6 bug itself), so the diode's orientation had
+    no observable effect.
+  - D1 is now placed at **KiCad 180°** (SOT-23 two-pad row faces the
+    BTN_START / BTN_SELECT columns). The same formula
+    `(rot - 180) % 360 + (-90)` yields **270°**, so the emitted CPL angle is
+    numerically unchanged while the physical part finally matches its
+    footprint. The override entry is deleted.
+  - EasyEDA could **not** be re-fetched live: `easyeda2kicad` returns
+    `HTTP 403 Forbidden` for every LCSC id, so `scripts/.easyeda_cache/`
+    cannot be repopulated. The pad coordinates above are the archived copy
+    of that reference and were used for the derivation.
+- **Verdict**: CORRECT at KiCad 180° / CPL 270°, no override.
 
 ### Q1 — SI2301CDS P-MOSFET SOT-23 (C10487)
 - **Datasheet**: `hardware/datasheets/Q1_SI2301CDS-SOT23_C10487.pdf` (198KB,
@@ -294,7 +342,10 @@ Located in `scripts/generate_pcb/jlcpcb_export.py:66-72` as `_JLCPCB_ROT_OVERRID
 _JLCPCB_ROT_OVERRIDES = {
     "U5":  180,  # PAM8403 C5122557 — JLCPCB 3D pin-1 dot alignment
     "J4":  270,  # FPC-40P C2856812 — bottom-contact pin-1 triangle
-    "D1":  270,  # BAT54C C37704 — SOT-23 3D orientation
+    # "D1" REMOVED 2026-07-25 — was 270° at KiCad 0°, which is 180° out vs
+    # the identical-footprint Q1 (90° by formula). D1 now sits at KiCad
+    # 180° and the formula produces the same 270° CPL angle. See the D1
+    # section above for the full derivation (U4 is NOT a reference part).
     "C2":  180,  # Tantalum 22uF C1953590 Vishay TMCMA1C226MTRF — EasyEDA 3D model pre-rotated 180° in kicad_mod, override compensates on bottom layer
     "LED2": 180, # Green LED C19171391 — EasyEDA pad numbering reversed
 }

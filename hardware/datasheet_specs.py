@@ -190,8 +190,12 @@ COMPONENT_SPECS = {
     #   1=OUTL+, 2=PGND, 3=OUTL-, 4=PVDD, 5=MUTE, 6=VDD,
     #   7=INL, 8=VREF, 9=NC, 10=INR, 11=GND, 12=SHDN,
     #   13=PVDD, 14=OUTR-, 15=PGND, 16=OUTR+
-    # We use mono (RIGHT channel wired to speaker): INL=INR=I2S_DOUT
-    # (both tied to the single PDM data line through C22 DC-block).
+    # We use mono (RIGHT channel wired to speaker): INL=INR=PAM_IN_AC
+    # (both tied to the single PDM data line through the C22 DC-block).
+    # C22 is a SERIES cap, so its two terminals are two distinct nets:
+    #   ESP32 GPIO17 --I2S_DOUT--> C22.1 || C22.2 --PAM_IN_AC--> U5.7/U5.10
+    # Do NOT label the PAM side "I2S_DOUT": that made DRC report a
+    # permanent phantom "unconnected" on I2S_DOUT.
     # OUTR+ → SPK+, OUTR- → SPK- (BTL output on the right-channel pair).
     # OUTL+/OUTL- are left floating — PAM8403 datasheet app note allows
     # unused BTL outputs to float; both amplifiers are still biased and
@@ -210,10 +214,10 @@ COMPONENT_SPECS = {
             "4":  {"net": _exact("+5V"),        "function": "PVDD — power supply", "type": "smd"},
             "5":  {"net": _exact("+5V"),        "function": "MUTE — active low, tied high (unmuted)", "type": "smd"},
             "6":  {"net": _exact("+5V"),        "function": "VDD — analog power supply", "type": "smd"},
-            "7":  {"net": _exact("I2S_DOUT"),   "function": "INL — left audio input", "type": "smd"},
+            "7":  {"net": _exact("PAM_IN_AC"),  "function": "INL — left audio input (AC-coupled through C22)", "type": "smd"},
             "8":  {"net": _any_of("PAM_VREF", ""),  "function": "VREF — internal reference (bypass cap C21 to GND)", "type": "smd"},
             "9":  {"net": _unconnected(),       "function": "NC — no connection", "type": "smd"},
-            "10": {"net": _exact("I2S_DOUT"),   "function": "INR — right audio input (tied to INL)", "type": "smd"},
+            "10": {"net": _exact("PAM_IN_AC"),  "function": "INR — right audio input (tied to INL, AC-coupled through C22)", "type": "smd"},
             "11": {"net": _exact("GND"),        "function": "GND — analog ground", "type": "smd"},
             "12": {"net": _exact("+5V"),        "function": "SHDN — active low shutdown, tied high", "type": "smd"},
             "13": {"net": _exact("+5V"),        "function": "PVDD — power supply", "type": "smd"},

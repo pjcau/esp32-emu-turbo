@@ -110,13 +110,17 @@ def test_audio_chain(net_refs, name_to_id, id_to_name):
     """2. Audio chain: ESP32 I2S_DOUT -> C22 -> PAM8403 -> SPK1."""
     print("\n── Audio Chain ──")
 
-    # I2S signals from U1 to PAM8403 (U5)
-    verify_chain("Audio", "I2S_DOUT", ["U1", "U5"], net_refs, name_to_id, id_to_name)
+    # C22 is a SERIES DC-block, so the audio input path is two nets:
+    #   U1 --I2S_DOUT--> C22.1 || C22.2 --PAM_IN_AC--> U5 (INL + INR)
+    # Checking "I2S_DOUT reaches U5" would be checking for a short across
+    # the coupling cap. Verify each half of the chain instead.
+    verify_chain("Audio ESP32→C22", "I2S_DOUT", ["U1", "C22"], net_refs, name_to_id, id_to_name)
+    verify_chain("Audio C22→PAM", "PAM_IN_AC", ["C22", "U5"], net_refs, name_to_id, id_to_name)
     verify_chain("Audio", "I2S_BCLK", ["U1"], net_refs, name_to_id, id_to_name)
     verify_chain("Audio", "I2S_LRCK", ["U1"], net_refs, name_to_id, id_to_name)
 
-    # DC-blocking cap in audio path
-    verify_chain("Audio DC-block", "I2S_DOUT", ["C22", "U5"], net_refs, name_to_id, id_to_name)
+    # Input bias network sits on the amplifier side of the DC-block
+    verify_chain("Audio input bias", "PAM_IN_AC", ["R20", "R21"], net_refs, name_to_id, id_to_name)
 
     # Speaker output
     verify_chain("Speaker", "SPK+", ["U5", "SPK1"], net_refs, name_to_id, id_to_name)

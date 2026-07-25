@@ -339,11 +339,44 @@ SS = [
 ]
 MENU = ("SW13", enc(62, -24.2))   # Synced with board.py MENU_ENC
 # BAT54C dual Schottky diode — menu combo (START+SELECT via D1)
-# Placed on B.Cu, right of SD SPI traces, near board right edge.
-# enc(76,-15) = (156, 52.5) — right of all SD traces (SD_CS max at x=153.5),
-# clear of BTN_R vert@146.85, board edge at x=160. Pin 1 at x=156.95.
-D1_DIODE = ("D1", enc(76, -15))
-D1_POS = enc(76, -15)
+#
+# R5-CRIT-6 FIX (2026-07-25) — D1 RELOCATED from enc(76,-15) = (156, 52.5).
+# At x=156 the two anodes could not be reached: BTN_START and BTN_SELECT
+# both terminate around x=100-102 and every corridor east of there is
+# blocked (south perimeter y=73.95 crosses the J1 back-row shield pads at
+# y=[72.575,74.575]; north crosses IP5306 / L1 / AMS1117 / C17-C19 / the
+# MENU_K F.Cu at x=156 / the USB D+/D- verticals at x=90-91). Result: both
+# anodes were isolated pads and the menu combo did not work.
+#
+# New home: enc(21.225,-19.0) = (101.225, 56.5) on B.Cu, rotation 180°.
+# It sits in the 1.30 mm free channel between the two button columns:
+#   BTN_START  B.Cu vertical x=100.45 (spans y=34.94..73.955)
+#   BTN_SELECT B.Cu vertical x=102.00 (spans y=60.00..63.65)
+# At 180° the SOT-23 two-pad row faces NORTH and the solo cathode pad
+# faces SOUTH, which puts pin 1 (anode → BTN_START) on the west column
+# and pin 2 (anode → BTN_SELECT) on the east column with no crossing:
+#   pin 1 = (100.275, 55.400)   pin 2 = (102.175, 55.400)
+#   pin 3 = (101.225, 57.600)  → MENU_K heads south to the y=62.4 corridor
+# Only MENU_K now has to cross the board, instead of two anode nets.
+# Kept west of x=105 so it does not collide with the parallel SY8089A
+# buck-regulator rework in x=[105,125], y=[39,59].
+D1_DIODE = ("D1", enc(21.225, -19.0))
+D1_POS = enc(21.225, -19.0)
+D1_ROT = 180   # SOT-23 two-pad row faces north; single import point for
+               # board.py placement, _init_pads() and the JLCPCB CPL export.
+
+# Geometry the D1 menu-combo routing hangs off (see _menu_diode_traces).
+# These mirror values produced elsewhere in this module — kept as named
+# constants so a future move of either button column is a one-line change
+# instead of a silent disconnection.
+_MENU_BTN_START_COL_X = 100.45    # BTN_START B.Cu vertical (y=34.94..73.955)
+_MENU_BTN_SELECT_COL_X = 102.00   # BTN_SELECT B.Cu vertical
+_MENU_BTN_SELECT_VIA_Y = 60.00    # BTN_SELECT B.Cu→F.Cu via at (102.00, 60.00)
+_MENU_K_COL_X = 101.225           # MENU_K B.Cu descent, centred in the
+                                  # 1.30 mm channel between the two columns
+_MENU_K_CORRIDOR_Y = 62.400       # MENU_K F.Cu east run: below the VBUS rail
+                                  # (y=61.0) and above the SW13 GND row (63.55)
+_MENU_K_RISER_X = 137.000         # F.Cu riser up to the SW13 terminal row
 # Shoulder buttons on B.Cu (back side, rotated 90deg, aligned to top edge)
 SHOULDER_L = ("SW11", enc(-65, 32))
 SHOULDER_R = ("SW12", enc(65, 32))
@@ -385,7 +418,7 @@ C27_POS = (108.0, 39.0)  # IP5306 VOUT HF decoupling — 2.0mm from pin 8 (new)
 # Spread ~1.5-2mm from U5 body for cleaner layout. Body: x=[27.3,32.7] y=[24.5,34.5].
 # Decoupling at 250kHz effective up to ~7mm.
 C21_POS = (38.0, 23.5)   # VREF bypass cap (pin 8 to GND) — 4.8mm from pin 8
-C22_POS = (33.175, 20.0) # DC-blocking cap in-line on I2S_DOUT vertical (series, distance OK)
+C22_POS = (33.175, 20.0) # DC-blocking cap in series between I2S_DOUT and PAM_IN_AC
 C23_POS = (38.0, 29.5)   # VDD decoupling (pin 6 to GND) — 6.1mm from pin 6
 C24_POS = (29.365, 22.0) # PVDD decoupling (pin 4 to GND) — 4.8mm from pin 4
 C25_POS = (31.5, 37.5)   # PVDD decoupling (pin 13 to GND) — 5.8mm from pin 13
@@ -541,9 +574,10 @@ def _init_pads():
     _PADS[ref_boot] = _compute_pads("SW-SMD-5.1x5.1",
                                      pos_boot[0], pos_boot[1], 0, "B")
 
-    # BAT54C dual Schottky diode (B.Cu, near SW13 menu button)
+    # BAT54C dual Schottky diode (B.Cu, between the BTN_START and
+    # BTN_SELECT columns — see D1_DIODE for the R5-CRIT-6 relocation)
     ref_d1, pos_d1 = D1_DIODE
-    _PADS[ref_d1] = _compute_pads("SOT-23-3", pos_d1[0], pos_d1[1], 0, "B")
+    _PADS[ref_d1] = _compute_pads("SOT-23-3", pos_d1[0], pos_d1[1], D1_ROT, "B")
 
     # P-MOSFET reverse polarity protection (v4.0)
     _PADS["Q1"] = _compute_pads("SOT-23-3", Q1_POS[0], Q1_POS[1], 0, "B")
@@ -2296,8 +2330,10 @@ def _i2s_traces():
       7=INL, 8=VREF, 9=NC, 10=INR, 11=GND, 12=SHDN,
       13=PVDD, 14=-OUT_R, 15=PGND, 16=+OUT_R
 
-    Audio input: only I2S_DOUT (GPIO 17) routed to INR (pin 10) and INL
-      (pin 7) for mono. BCLK/LRCK unused by PAM8403 (analog amp, not I2S).
+    Audio input: only I2S_DOUT (GPIO 17) reaches C22.1; C22.2 onward the
+      node is PAM_IN_AC, feeding INR (pin 10) and INL (pin 7) for mono.
+      C22 is a SERIES DC-block, so the two sides are two distinct nets.
+      BCLK/LRCK unused by PAM8403 (analog amp, not I2S).
     Speaker: BTL right channel: SPK+ = +OUT_R (pin 16), SPK- = -OUT_R (pin 14).
     Power: PVDD (4,13) + VDD (6) → +5V; PGND (2,15) + GND (11) → GND.
     Control: MUTE (5) + SHDN (12) → +5V (always on/unmuted).
@@ -2308,7 +2344,8 @@ def _i2s_traces():
 
     n_5v = NET_ID["+5V"]
     n_gnd = NET_ID["GND"]
-    n_dout = NET_ID["I2S_DOUT"]
+    n_dout = NET_ID["I2S_DOUT"]      # ESP32 side of C22
+    n_pam_in = NET_ID["PAM_IN_AC"]   # PAM8403 side of C22 (AC-coupled)
     n_bclk = NET_ID["I2S_BCLK"]
     n_lrck = NET_ID["I2S_LRCK"]
     n_spk_p = NET_ID["SPK+"]
@@ -2358,15 +2395,23 @@ def _i2s_traces():
         # C22 at (33.175, 20.0) rotated 90° on B.Cu: pad1 at (33.175, 19.05), pad2 at (33.175, 20.95)
         c22_p1 = _pad("C22", "1")
         c22_p2 = _pad("C22", "2")
-        if c22_p1 and c22_p2 and pam_inl:
-            # Via → C22 pad 1 (source side)
-            parts.append(_seg(inrx, mountain_y, c22_p1[0], c22_p1[1], "B.Cu", W_DATA, n_dout))
-            # C22 pad 2 → INL pad (same x column, stops at INL to avoid
-            # collinear overlap with INR→INL bridge below)
-            parts.append(_seg(c22_p2[0], c22_p2[1], pam_inl[0], pam_inl[1], "B.Cu", W_DATA, n_dout))
-        else:
-            # Fallback: direct trace if C22 pads not resolved
-            parts.append(_seg(inrx, mountain_y, inrx, inry, "B.Cu", W_DATA, n_dout))
+        if not (c22_p1 and c22_p2 and pam_inl):
+            # Never silence: the old fallback drew a direct I2S_DOUT trace from
+            # the mountain via to INR, shorting across the DC-block cap. That
+            # would put the ESP32 GPIO DC level straight onto the PAM8403
+            # inputs. If the C22 pads cannot be resolved the generator is
+            # broken and must stop, not emit a wrong board.
+            raise RuntimeError(
+                "audio input: cannot resolve C22 pads "
+                f"(C22.1={c22_p1}, C22.2={c22_p2}, U5.7={pam_inl}) — "
+                "the series DC-block would be bypassed"
+            )
+        # Via → C22 pad 1 (source side, still I2S_DOUT)
+        parts.append(_seg(inrx, mountain_y, c22_p1[0], c22_p1[1], "B.Cu", W_DATA, n_dout))
+        # C22 pad 2 → INL pad. From here east the net is PAM_IN_AC: the cap
+        # dielectric separates it from I2S_DOUT, so it must carry a distinct
+        # net name or DRC reports a permanent phantom "unconnected".
+        parts.append(_seg(c22_p2[0], c22_p2[1], pam_inl[0], pam_inl[1], "B.Cu", W_DATA, n_pam_in))
 
     if pam_inr and pam_inl:
         inrx, inry = pam_inr
@@ -2374,8 +2419,8 @@ def _i2s_traces():
         # Bridge INR to INL for mono (same X column, vertical trace).
         # Split at y=28.0 to form T-junction for R20 detour (see _pam_passive_traces).
         _r20_branch_y = 28.0
-        parts.append(_seg(inrx, inry, inrx, _r20_branch_y, "B.Cu", W_DATA, n_dout))
-        parts.append(_seg(inrx, _r20_branch_y, inrx, inly, "B.Cu", W_DATA, n_dout))
+        parts.append(_seg(inrx, inry, inrx, _r20_branch_y, "B.Cu", W_DATA, n_pam_in))
+        parts.append(_seg(inrx, _r20_branch_y, inrx, inly, "B.Cu", W_DATA, n_pam_in))
 
     # ── Speaker output: BTL right channel
     # SPK+ = +OUT_R (pin 16), SPK- = -OUT_R (pin 14)
@@ -2541,7 +2586,7 @@ def _i2s_traces():
     # U5 at (30.0, 29.5), SOP-16, rotated 90deg on B.Cu.
     # GND pins: 2 (PGND), 11 (GND), 15 (PGND).
     # PAM_VREF B.Cu trace at x=34.45 (y=23.5..26.15) — avoid!
-    # I2S_DOUT B.Cu at x=33.17 (y=20.95..26.80) — avoid!
+    # PAM_IN_AC B.Cu at x=33.17 (y=20.95..26.80) — avoid!
     # Place 3 thermal vias LEFT of IC center, clear of VREF and I2S traces.
     # U5 GND pins at approximate x=25.5..28.1. Use x=23..26 at y=22.0.
     pam_pgnd2 = _pad("U5", "2")  # PGND top row
@@ -2550,7 +2595,7 @@ def _i2s_traces():
         # Existing GND pin vias at ~3-5mm; these thermal vias at ~2-3mm.
         # Constraints:
         #   SPK+ B.Cu at x=24.50 — stay right of x=25.5
-        #   I2S_DOUT B.Cu at x=33.17 — stay left of x=32.0
+        #   PAM_IN_AC B.Cu at x=33.17 — stay left of x=32.0
         #   PAM_VREF B.Cu at x=34.45 — stay left
         #   OUTL+ at y≈24.9, OUTL- at y≈34.3 — place between
         # Place 3 vias in a column at x=26.5 (between SPK+ and IC center):
@@ -2590,22 +2635,24 @@ def _pam_passive_traces():
 
     n_gnd = NET_ID["GND"]
     n_5v = NET_ID["+5V"]
-    n_dout = NET_ID["I2S_DOUT"]
+    # R20/R21 tap the PAM8403 side of the C22 series DC-block, so they sit on
+    # PAM_IN_AC — NOT on I2S_DOUT (which stops at C22.1 on the ESP32 side).
+    n_pam_in = NET_ID["PAM_IN_AC"]
     n_vref = NET_ID["PAM_VREF"]
 
     # ── R20: INL (pin 7) → R20 → GND via
     # R20 at (36.0, 26.800) rot 0: pad1 at ~(35.05, 26.8), pad2 at ~(36.95, 26.8)
-    # INL pin 7 at (33.175, 26.800) on top row. I2S_DOUT bridge also at y=26.8
-    # from INR to INL. R20 pad1 is right of the I2S_DOUT vert at x=33.175, so
-    # the horiz trace from INL to R20 is an extension of the same I2S_DOUT net.
-    # GND via from R20 pad2 goes UP 1.5mm to avoid the I2S_DOUT horizontal.
+    # INL pin 7 at (33.175, 26.800) on top row. The PAM_IN_AC bridge also runs
+    # at y=26.8 from INR to INL. R20 pad1 is right of the PAM_IN_AC vert at
+    # x=33.175, so the horiz trace from INL to R20 is an extension of the same
+    # PAM_IN_AC net. GND via from R20 pad2 goes UP 1.5mm to avoid it.
     pam_inl = _pad("U5", "7")
     r20_p1 = _pad("R20", "1")  # (38.95, 26.8) — far from INL (GND side)
     r20_p2 = _pad("R20", "2")  # (37.05, 26.8) — near INL (signal side)
     if pam_inl and r20_p1 and r20_p2:
         # DFM FIX: old horizontal from INL (33.175, 26.8) to R20_p2 (37.05, 26.8)
         # crossed U5 pin 8 (VREF, net PAM_VREF) at x=34.445, AABB x=[34.145,34.745].
-        # When pin 8 is soldered, I2S_DOUT shorts to VREF pad.
+        # When pin 8 is soldered, PAM_IN_AC shorts to VREF pad.
         #
         # Fix: T-branch from the INR→INL bridge at y=28.0 (below top-row pad
         # bottom edge 27.575 + 0.325mm clearance), then horizontal RIGHT to
@@ -2616,10 +2663,10 @@ def _pam_passive_traces():
         _r20_detour_y = 28.0  # below top-row pad bottom (27.575) + gap
         parts.append(_seg(pam_inl[0], _r20_detour_y,
                           r20_p2[0], _r20_detour_y,
-                          "B.Cu", W_DATA, n_dout))
+                          "B.Cu", W_DATA, n_pam_in))
         parts.append(_seg(r20_p2[0], _r20_detour_y,
                           r20_p2[0], r20_p2[1],
-                          "B.Cu", W_DATA, n_dout))
+                          "B.Cu", W_DATA, n_pam_in))
         # GND stub from R20 pad 1 (far pad): go UP 1.5mm then via
         # DFM FIX: via shifted left 0.10mm for SPK+ clearance at x=39.5 w=0.3.
         # Via right edge = 38.85+0.25 = 39.10, SPK+ left = 39.35, gap=0.25mm ✓
@@ -2640,11 +2687,11 @@ def _pam_passive_traces():
         # BTN_RIGHT runs B.Cu vert at x=34.20 from y=30.65 downward.
         # Route: INR (33.175,32.2) → via to F.Cu → F.Cu horiz to R21 pad2 x
         # → via back to B.Cu at R21 pad2.
-        parts.append(_via_net(pam_inr[0], pam_inr[1], n_dout, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(pam_inr[0], pam_inr[1], n_pam_in, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(pam_inr[0], pam_inr[1],
                           r21_p2[0], r21_p2[1],
-                          "F.Cu", W_DATA, n_dout))
-        parts.append(_via_net(r21_p2[0], r21_p2[1], n_dout, size=VIA_STD, drill=VIA_STD_DRILL))
+                          "F.Cu", W_DATA, n_pam_in))
+        parts.append(_via_net(r21_p2[0], r21_p2[1], n_pam_in, size=VIA_STD, drill=VIA_STD_DRILL))
         # GND stub from R21 pad 1 (far pad): go DOWN 1.5mm then via
         # DFM FIX: via shifted left 0.10mm for SPK+ clearance at x=39.5
         _gnd_vx = r21_p1[0] - 0.10
@@ -2657,22 +2704,22 @@ def _pam_passive_traces():
     # ── C21: VREF (pin 8) → C21 → GND via
     # C21 at (36.5, 24.5) rot 0: pad1 at ~(35.55, 24.5), pad2 at ~(37.45, 24.5)
     # VREF pin 8 at (34.445, 26.800). Route UP from pin 8 on B.Cu to y=24.5,
-    # then RIGHT to C21 pad 1. Vert at x=34.445 is right of I2S_DOUT vert at
+    # then RIGHT to C21 pad 1. Vert at x=34.445 is right of PAM_IN_AC vert at
     # x=33.175 (gap=34.445-33.175-0.1-0.1=1.07mm OK). Horiz at y=24.5 does not
-    # cross any existing traces (I2S_DOUT bridge is at y=26.8 and y=32.2).
+    # cross any existing traces (PAM_IN_AC bridge is at y=26.8 and y=32.2).
     pam_vref = _pad("U5", "8")
     c21_p1 = _pad("C21", "1")
     c21_p2 = _pad("C21", "2")
     if pam_vref and c21_p1 and c21_p2:
         # c21_p2 at (35.55, 24.5) = near pad (VREF side)
         # c21_p1 at (37.45, 24.5) = far pad (GND side)
-        # COLLISION FIX: VREF pin 8 at (34.445, 26.800). I2S_DOUT horiz (net26)
+        # COLLISION FIX: VREF pin 8 at (34.445, 26.800). PAM_IN_AC horiz (net59)
         # runs at y=26.8 from INL (33.175) to R20 pad2 (35.05) on B.Cu.
         # Starting the VREF vert at (34.445, 26.800) creates a segment-segment
-        # crossing with the I2S_DOUT horiz (gap=-0.200mm).
+        # crossing with the PAM_IN_AC horiz (gap=-0.200mm).
         # Fix: start VREF vert at pad top edge (y=26.15), 0.65mm above pad center.
         # The pad copper naturally connects the VREF vert to pin 8.
-        # VREF vert bottom edge at 26.15+0.10=26.25; I2S_DOUT top edge at 26.80-0.10=26.70.
+        # VREF vert bottom edge at 26.15+0.10=26.25; PAM_IN_AC top edge at 26.80-0.10=26.70.
         # Gap = 0.45mm >> 0.10mm required. OK.
         _vref_start_y = pam_vref[1] - 0.65  # pad top edge = 26.800 - 0.65 = 26.15
         # Explicit net assignment: segment starts offset from pad center so
@@ -2696,10 +2743,10 @@ def _pam_passive_traces():
 
     # ── C23: VDD (pin 6) decoupling → GND via
     # C23 at (36.0, 29.5) rotated 90°: pads at ~(36.0, 28.55) and ~(36.0, 30.45)
-    # VDD pin 6 at (31.905, 26.800). Must cross I2S_DOUT vert at x=33.175.
-    # Solution: use F.Cu bridge to cross the I2S_DOUT vert safely.
+    # VDD pin 6 at (31.905, 26.800). Must cross PAM_IN_AC vert at x=33.175.
+    # Solution: use F.Cu bridge to cross the PAM_IN_AC vert safely.
     # Route: VDD(6) → vert up to bridge_y → via to F.Cu → F.Cu horiz to x=36.0
-    # (crosses I2S_DOUT B.Cu vert on DIFFERENT LAYER) → via back to B.Cu →
+    # (crosses PAM_IN_AC B.Cu vert on DIFFERENT LAYER) → via back to B.Cu →
     # vert down to C23 pad 1.
     pam_vdd6 = _pad("U5", "6")
     c23_p1 = _pad("C23", "1")
@@ -2712,7 +2759,7 @@ def _pam_passive_traces():
                           "B.Cu", W_PWR, n_5v))
         # Via to F.Cu (VIA_MIN for R20 pad clearance)
         parts.append(_via_net(pam_vdd6[0], bridge_y, n_5v, size=VIA_MIN, drill=VIA_MIN_DRILL))
-        # F.Cu: horiz right to C23 column (crosses I2S_DOUT B.Cu vert safely)
+        # F.Cu: horiz right to C23 column (crosses PAM_IN_AC B.Cu vert safely)
         parts.append(_seg(pam_vdd6[0], bridge_y,
                           c23_p1[0], bridge_y,
                           "F.Cu", 0.50, n_5v))
@@ -3085,13 +3132,34 @@ def _usb_traces():
     return parts
 
 
+# ── Tap points on button approach verticals ──────────────────────────
+# A branch that lands on the MIDDLE of an existing segment is electrically
+# fine, but it leaves the branch endpoint without a coincident endpoint —
+# indistinguishable from a dead-end stub both for the DFM checker and for a
+# human reading the file. Registering the tap here splits the vertical so
+# the junction becomes a real 3-way endpoint.
+#   (100.45, BTN_START) @ y=55.400 — D1 anode 1 stub (R5-CRIT-6 relocation)
+_VERT_TAP_POINTS = {
+    (100.45, "BTN_START"): (55.400,),
+}
+_NET_NAME_BY_ID = {nid: name for name, nid in NET_ID.items()}
+
+
 def _pu_jog_vert(x, y1, y2, width, net):
-    """B.Cu vertical — pass through directly.
+    """B.Cu vertical — pass through directly, split at registered taps.
 
     Pull-up/debounce pad conflicts are prevented at the approach column
     allocation stage (passive_trace_xs forbidden zone check).
     """
-    return [_seg(x, y1, x, y2, "B.Cu", width, net)]
+    taps = sorted(
+        (ty for ty in _VERT_TAP_POINTS.get(
+            (round(x, 3), _NET_NAME_BY_ID.get(net, "")), ())
+         if min(y1, y2) < ty < max(y1, y2)),
+        reverse=(y1 > y2),
+    )
+    ys = [y1, *taps, y2]
+    return [_seg(x, ys[i], x, ys[i + 1], "B.Cu", width, net)
+            for i in range(len(ys) - 1)]
 
 
 def _button_traces():
@@ -4801,29 +4869,78 @@ def _reset_boot_traces():
 
 
 def _menu_diode_traces():
-    """BAT54C menu combo diode (D1) routing.
+    """BAT54C menu combo diode (D1) routing — R5-CRIT-6 FIX (2026-07-25).
 
-    Circuit: SW13 (menu button) triggers BTN_START + BTN_SELECT simultaneously
-    via dual Schottky diode D1 (BAT54C, SOT-23-3, B.Cu).
+    Circuit: SW13 (menu button) pulls BTN_START + BTN_SELECT low at the
+    same time through the dual Schottky diode D1 (BAT54C, SOT-23-3, B.Cu).
 
-    D1 pinout (BAT54C):
-      Pin 1 (Anode 1) → BTN_START net
-      Pin 2 (Anode 2) → BTN_SELECT net
-      Pin 3 (Common Cathode) → MENU_K net → SW13 pad 2
+    D1 pinout (BAT54C, common cathode):
+      Pin 1 (Anode 1)        -> BTN_START
+      Pin 2 (Anode 2)        -> BTN_SELECT
+      Pin 3 (Common Cathode) -> MENU_K -> SW13 pads 1+2
 
-    SW13 pad 3/4 → GND (when button pressed, cathode goes LOW,
-    pulling both BTN_START and BTN_SELECT LOW through D1 anodes).
+    SW13 pads 3/4 -> GND. Pressing SW13 grounds the cathode, so both
+    anodes are pulled low through the diodes and firmware sees the
+    START+SELECT combo without the user pressing two buttons.
 
-    D1 position: enc(68,-23) = (148, 60.5) on B.Cu, right of SW13.
-    SW13 position: enc(62,-25) = (142, 62.5) on F.Cu.
+    WHAT WAS BROKEN
+    ---------------
+    D1 used to sit at (156, 52.5), next to SW13. Its two anodes ended in
+    isolated pads: BTN_START and BTN_SELECT both terminate around
+    x=100-102 and no corridor reaches x=156.
+      * south perimeter at y=73.955 crosses the J1 USB-C back-row shield
+        pads (J1.13b / J1.14b) which occupy y=[72.575, 74.575];
+      * north through the power area is blocked by IP5306, L1, the
+        regulator, the C17-C19 pads, the MENU_K F.Cu at x=156 and the
+        USB_D+/D- verticals at x=90-91.
+    KiCad DRC reported "BTN_START track <-> D1 pad 1" and
+    "BTN_SELECT track <-> D1 pad 2" as unconnected, and the menu combo
+    had to be pressed by hand.
 
-    Routing:
-      1. D1 cathode (pin 3) → via → F.Cu short trace → SW13 pad 2 (MENU_K net)
-      2. SW13 pads 3,4 → GND vias
-      3. D1 anode 1 (pin 1, BTN_START) → B.Cu trace → via → connect to
-         BTN_START pull-up/debounce junction at (R12 pad 2 area, y=46)
-      4. D1 anode 2 (pin 2, BTN_SELECT) → B.Cu trace → via → connect to
-         BTN_SELECT pull-up/debounce junction
+    THE FIX
+    -------
+    Move D1 to the buttons instead of dragging the buttons to D1, so only
+    ONE net (MENU_K) has to cross the board. D1 now sits at
+    (101.225, 56.5) rotated 180 deg, in the 1.30 mm free channel between
+    the two button columns:
+
+        BTN_START  B.Cu vertical x=100.45  (y=34.94..73.955)
+        BTN_SELECT B.Cu vertical x=102.00  (y=60.00..63.65)
+
+    At 180 deg the SOT-23 two-pad row faces north, so pin 1 lands on the
+    west column and pin 2 on the east column with no crossing:
+
+        D1.1 = (100.275, 55.400)  ->  0.175 mm stub east onto x=100.45
+        D1.2 = (102.175, 55.400)  ->  0.175 mm stub west onto x=102.00,
+                                      then the BTN_SELECT column is
+                                      extended north from y=60.00
+        D1.3 = (101.225, 57.600)  ->  MENU_K south to the y=62.400
+                                      F.Cu corridor, then east to SW13
+
+    MENU_K corridor clearances (verified against the generated PCB):
+      B.Cu vertical x=101.225, y=57.60..62.40, w=0.25 (edges 101.100/101.350)
+        vs BTN_START  vert (edges 100.325/100.575)   gap 0.525 mm
+        vs BTN_SELECT vert (edges 101.875/102.125)   gap 0.525 mm
+      via (101.225, 62.400) size 0.60 (AABB x=[100.925,101.525])
+        vs BTN_START  vert                           gap 0.350 mm
+        vs BTN_SELECT vert                           gap 0.350 mm
+        vs SW_BOOT.2 pad (x=[101.5,102.5] y=[63.3,64.0])
+                                                     gap 0.600 mm
+        vs VBUS F.Cu y=61.0 (bottom edge 61.38)      gap 0.720 mm
+      F.Cu y=62.400, x=101.225..137.0, w=0.25 (edges 62.275/62.525)
+        vs VBUS F.Cu y=61.0 + its vertical at x=111  gap 0.895 mm
+        vs GND via (127.30, 60.65) r=0.45            gap 1.175 mm
+        vs GND via (128.30, 61.00) r=0.30            gap 0.725 mm
+        vs GND via (135.00, 63.55) r=0.30            gap 0.725 mm
+        vs GND vias (123.50, 64.50) / (128.30, 64.00) gap >= 1.175 mm
+        C2 / U3 / U6 / SW_BOOT pads and the BTN_A/BTN_X/BTN_Y verticals
+        crossing this band are all B.Cu, so they do not share the layer.
+      F.Cu vertical x=137.0, y=59.85..62.40
+        vs BTN_R F.Cu jog at x=137, y=64.40..65.39   gap 2.000 mm
+        vs SW13.3 pad (x=[138.5,139.5])              gap 1.375 mm
+
+    Everything stays west of x=105 in the y=[39,59] band so it does not
+    collide with the parallel SY8089A buck-regulator rework.
     """
     parts = []
     _init_pads()
@@ -4833,9 +4950,9 @@ def _menu_diode_traces():
     n_menu_k = NET_ID["MENU_K"]
 
     # ── Assign pad nets ──
-    _PAD_NETS[("D1", "1")] = n_start    # Anode 1 → BTN_START
-    _PAD_NETS[("D1", "2")] = n_sel      # Anode 2 → BTN_SELECT
-    _PAD_NETS[("D1", "3")] = n_menu_k   # Common cathode → MENU_K
+    _PAD_NETS[("D1", "1")] = n_start     # Anode 1 → BTN_START
+    _PAD_NETS[("D1", "2")] = n_sel       # Anode 2 → BTN_SELECT
+    _PAD_NETS[("D1", "3")] = n_menu_k    # Common cathode → MENU_K
     _PAD_NETS[("SW13", "2")] = n_menu_k  # SW13 terminal → cathode junction
     _PAD_NETS[("SW13", "1")] = n_menu_k  # SW13 terminal (shorted pair with pad 2)
     _PAD_NETS[("SW13", "3")] = n_gnd     # SW13 → GND
@@ -4849,82 +4966,82 @@ def _menu_diode_traces():
     sw13_p2 = _pad("SW13", "2")
     sw13_p3 = _pad("SW13", "3")
     sw13_p4 = _pad("SW13", "4")
+    if not all((d1_p1, d1_p2, d1_p3, sw13_p1, sw13_p2, sw13_p3, sw13_p4)):
+        # Never silence: the menu combo is a functional feature. If a pad
+        # cannot be resolved the generator must stop rather than emit a
+        # board with floating diode anodes again — that is R5-CRIT-6.
+        raise RuntimeError(
+            "menu diode: cannot resolve D1/SW13 pads "
+            f"(D1={d1_p1},{d1_p2},{d1_p3} "
+            f"SW13={sw13_p1},{sw13_p2},{sw13_p3},{sw13_p4})"
+        )
 
-    # ── 1. D1 cathode → SW13 pads 1+2 (MENU_K net) ──
-    # D1 pin 3 (cathode) on B.Cu at (~156, 51.4).
-    # SW13 pads 1 and 2 are on F.Cu at (139.0, 59.85) and (145.0, 59.85)
-    # — the two terminals of the same internal switch contact (both on
-    # MENU_K net per _PAD_NETS).
-    # CONSTRAINTS: SD_CLK@152.5, SD_CS@153.5 B.Cu verts, BTN_R@146.85 B.Cu vert.
-    # Cannot route B.Cu horizontal LEFT through SD traces.
-    # Strategy: via RIGHT NEXT TO D1 pin 3, then F.Cu all the way to SW13.
-    # Via at D1 pin 3 position — on B.Cu pad, switch to F.Cu immediately.
-    #
-    # R17 (2026-04-12): the F.Cu horizontal previously stopped at SW13 pad 2
-    # (x=145.0), leaving SW13 pad 1 (x=139.0) as a same-net island —
-    # KiCad doesn't auto-bridge tact-switch pads with the same net
-    # number, and DRC flagged it as unconnected. The trace now extends
-    # all the way to pad 1 (x=139.0) so it lays copper across both
-    # pads in one shot.
-    if d1_p3 and sw13_p1 and sw13_p2:
-        # Via right at cathode pad — no B.Cu routing needed
-        parts.append(_via_net(d1_p3[0], d1_p3[1], n_menu_k,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
-        # F.Cu L-shape: via → down to SW13 pad row, then left to pad 1
-        parts.append(_seg(d1_p3[0], d1_p3[1], d1_p3[0], sw13_p2[1],
-                          "F.Cu", W_SIG, n_menu_k))
-        parts.append(_seg(d1_p3[0], sw13_p2[1], sw13_p1[0], sw13_p2[1],
-                          "F.Cu", W_SIG, n_menu_k))
+    # ── 1. D1 anode 1 (pin 1) → BTN_START column ──
+    # The BTN_START B.Cu vertical already runs at x=100.45 through
+    # y=55.400, so a 0.175 mm stub east from the pad centre lands on its
+    # centreline and forms an explicit T-junction.
+    parts.append(_seg(d1_p1[0], d1_p1[1], _MENU_BTN_START_COL_X, d1_p1[1],
+                      "B.Cu", W_SIG, n_start))
 
-    # ── 2. SW13 GND pads → vias ──
-    # SW13 pads 3,4 at y=63.55. Route to GND vias.
-    # CONSTRAINTS:
-    #   BTN_R F.Cu jog at y=64.0 from x=137→146.5
-    #   BTN_R B.Cu vert at x=146.85, BTN_R via at (146.85, 65.29)
-    #   SD_CS B.Cu vert at x=138.86 from y=61.72 to y=71.25
-    # SW13 pad 3 at (139.0, 63.55): route LEFT+UP to GND via.
-    # CONSTRAINTS:
-    #   SD_CS B.Cu vert at x=138.86 from y=61.72 to y=71.25
-    #   U6 pad 2 on B.Cu near (139, 62)
-    #   BTN_R F.Cu jog at y=64 from x=137→146.5
-    # Route LEFT to x=135 (clear of SD_CS@138.86 by 3.86mm), then UP to via
-    if sw13_p3:
-        gnd_via_x = 135.00  # left, clear of SD_CS and U6
-        gnd_via_y = sw13_p3[1] - 2.0   # 61.55
-        parts.append(_seg(sw13_p3[0], sw13_p3[1], gnd_via_x, sw13_p3[1],
-                          "F.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_seg(gnd_via_x, sw13_p3[1], gnd_via_x, gnd_via_y,
-                          "F.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(gnd_via_x, gnd_via_y, n_gnd,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
-    # SW13 pad 4 at (145.0, 63.55): BTN_R F.Cu jog at y=64 blocks going south.
-    # Route RIGHT to x=148 (right of BTN_R jog endpoint at 146.5), then DOWN.
-    if sw13_p4:
-        gnd_jog_x = 148.00   # right of BTN_R F.Cu jog start (146.5) by 1.5mm
-        gnd_via_y = 66.50    # below BTN_R via (65.29+0.45=65.74) by 0.76mm
-        parts.append(_seg(sw13_p4[0], sw13_p4[1], gnd_jog_x, sw13_p4[1],
-                          "F.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_seg(gnd_jog_x, sw13_p4[1], gnd_jog_x, gnd_via_y,
-                          "F.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(gnd_jog_x, gnd_via_y, n_gnd,
-                              size=VIA_STD, drill=VIA_STD_DRILL))
+    # ── 2. D1 anode 2 (pin 2) → BTN_SELECT column ──
+    # BTN_SELECT only reached down to (102.00, 60.00) — the via that drops
+    # onto its F.Cu channel at y=58. Stub west onto the column, then
+    # extend the column from the D1 pad row south to that via.
+    parts.append(_seg(d1_p2[0], d1_p2[1], _MENU_BTN_SELECT_COL_X, d1_p2[1],
+                      "B.Cu", W_SIG, n_sel))
+    parts.append(_seg(_MENU_BTN_SELECT_COL_X, d1_p2[1],
+                      _MENU_BTN_SELECT_COL_X, _MENU_BTN_SELECT_VIA_Y,
+                      "B.Cu", W_SIG, n_sel))
 
-    # ── 3 & 4. D1 anodes (BTN_START / BTN_SELECT) ──
-    # R5-CRIT-6 (2026-04-10): the BAT54C menu-combo connection from D1
-    # anodes to the BTN_START / BTN_SELECT pull-up junctions on the
-    # button strip cannot be routed on v3.x without crossing SD traces.
-    # The menu-combo shortcut is documented as accepted technical debt
-    # ("v2 respin" in memory feedback_r4_schematic_pcb_sync.md and
-    # net_connectivity --accepted) — the buttons SW9/SW10 still work
-    # individually, only the simultaneous-press shortcut is disabled.
-    #
-    # R17 (2026-04-12): removed the vestigial B.Cu stubs + vias on
-    # D1 pins 1 and 2 (previously at (156.95, 56.10) and (155.05, 51.10))
-    # because they connected to nothing downstream. KiCad DRC reported
-    # them as via_dangling. The pad net assignments above
-    # (D1.1=BTN_START, D1.2=BTN_SELECT) remain so verify_datasheet_nets
-    # still sees the intended schematic connectivity; net_connectivity
-    # already accepts these two nets as fragmented tech debt.
+    # ── 3. D1 cathode (pin 3) → MENU_K → SW13 pads 1+2 ──
+    # South on B.Cu in the free channel, via to F.Cu, then the long east
+    # run at y=62.400 (between the VBUS F.Cu rail at y=61.0 and the SW13
+    # GND row at y=63.55), north at x=137.0, finally east across BOTH
+    # SW13 terminals — KiCad does not auto-bridge same-net tact-switch
+    # pads, so the copper has to be laid over pad 1 and pad 2 (R17).
+    parts.append(_seg(d1_p3[0], d1_p3[1], _MENU_K_COL_X, _MENU_K_CORRIDOR_Y,
+                      "B.Cu", W_SIG, n_menu_k))
+    parts.append(_via_net(_MENU_K_COL_X, _MENU_K_CORRIDOR_Y, n_menu_k,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(_MENU_K_COL_X, _MENU_K_CORRIDOR_Y,
+                      _MENU_K_RISER_X, _MENU_K_CORRIDOR_Y,
+                      "F.Cu", W_SIG, n_menu_k))
+    parts.append(_seg(_MENU_K_RISER_X, _MENU_K_CORRIDOR_Y,
+                      _MENU_K_RISER_X, sw13_p1[1],
+                      "F.Cu", W_SIG, n_menu_k))
+    parts.append(_seg(_MENU_K_RISER_X, sw13_p1[1], sw13_p1[0], sw13_p1[1],
+                      "F.Cu", W_SIG, n_menu_k))
+    parts.append(_seg(sw13_p1[0], sw13_p1[1], sw13_p2[0], sw13_p2[1],
+                      "F.Cu", W_SIG, n_menu_k))
+
+    # ── 4. SW13 GND pads → vias ──
+    # SW13 pad 3 at (139.0, 63.55): route LEFT to x=135.0 and drop the via
+    # right there.
+    # R5-CRIT-6 (2026-07-25): the via used to sit at (135.0, 61.55) with a
+    # 2 mm F.Cu riser between them. That riser occupied x=[134.85,135.15],
+    # y=[61.40,63.70] on F.Cu — straight across the only usable MENU_K
+    # corridor at y=62.400. Dropping the riser frees the corridor.
+    # Via (135.0, 63.55) size 0.60 → AABB x=[134.7,135.3], y=[63.25,63.85]:
+    #   vs U6.13 pad B.Cu (right edge 133.68)         gap 1.020 mm
+    #   vs BTN_R F.Cu y=65.29 (top edge 65.19)        gap 1.340 mm
+    #   vs MENU_K F.Cu y=62.400 (bottom edge 62.525)  gap 0.725 mm
+    #   vs SD_CS B.Cu vert x=138.86                   gap 3.560 mm
+    gnd_via_x = 135.00  # left, clear of SD_CS@138.86 and U6
+    parts.append(_seg(sw13_p3[0], sw13_p3[1], gnd_via_x, sw13_p3[1],
+                      "F.Cu", W_PWR_LOW, n_gnd))
+    parts.append(_via_net(gnd_via_x, sw13_p3[1], n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    # SW13 pad 4 at (145.0, 63.55): BTN_R F.Cu jog at y=64 blocks going
+    # south. Route RIGHT to x=148 (right of the jog endpoint at 146.5),
+    # then DOWN.
+    gnd_jog_x = 148.00   # right of BTN_R F.Cu jog start (146.5) by 1.5mm
+    gnd_via_y = 66.50    # below BTN_R via (65.29+0.45=65.74) by 0.76mm
+    parts.append(_seg(sw13_p4[0], sw13_p4[1], gnd_jog_x, sw13_p4[1],
+                      "F.Cu", W_PWR_LOW, n_gnd))
+    parts.append(_seg(gnd_jog_x, sw13_p4[1], gnd_jog_x, gnd_via_y,
+                      "F.Cu", W_PWR_LOW, n_gnd))
+    parts.append(_via_net(gnd_jog_x, gnd_via_y, n_gnd,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts
 
