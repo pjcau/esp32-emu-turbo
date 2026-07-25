@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law verify-zone-fill test-zone-fill analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -110,7 +110,8 @@ VERIFY_ALL_SCRIPTS = \
 	verify_usb_impedance_stackup \
 	verify_usb_return_path \
 	verify_via_in_pad \
-	verify_zone_connectivity
+	verify_zone_connectivity \
+	verify_zone_fill_sanity
 
 verify-all: ## Run every pass/fail verification script (fails if any check fails)
 	@echo "Running verification suite ($(words $(VERIFY_ALL_SCRIPTS)) checks)..."
@@ -135,6 +136,12 @@ verify-cpl-law: ## CPL rotation law — every part must obey ONE law per layer (
 
 test-cpl-law: ## Mutation tests: plant rotation errors, require the law gate to catch every one
 	@$(T) test-cpl-law python3 scripts/test_cpl_rotation_law.py
+
+verify-zone-fill: ## Zone-fill sanity — no duplicated islands, poured area fits the board, no zone left empty
+	@$(T) verify-zone-fill python3 scripts/verify_zone_fill_sanity.py
+
+test-zone-fill: ## Mutation tests: double / strip / oversize the fill, require the gate to catch every case
+	@$(T) test-zone-fill python3 scripts/test_zone_fill_sanity.py
 
 analyze-pin1: ## Locate each LCSC part's PHYSICAL polarity marker (silk asymmetry + 3D mesh, two independent extractors)
 	@$(T) analyze-pin1 python3 scripts/analyze_pin1_marker.py
