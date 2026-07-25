@@ -2449,3 +2449,313 @@ All polarity-class gates remain GREEN: DFA 9/9 (override-aware) · polarity 47/4
 1. **Bundle fix**: J1 USB-C pads 13/14 height 1.10→1.20mm (closes R21-HIGH-1) AND expand B.Cu GND keep-out around J1.1/J1.12 NPTH (closes R21-HIGH-2) — both at J1, do them in one commit.
 2. Re-run Layer 1 → if clean, proceed to Layer 2 prose audit as Round 24.
 
+
+---
+
+## Round 24 Findings (2026-07-25) — schematic↔PCB connectivity drift
+
+**Trigger**: user reported connection problems recurring for a second time.
+**Scope**: full Layer 1 gate suite + targeted Layer 2 review of the failures.
+**Base**: `c311010` (local `main`; `origin/main` was 1 merge behind at start).
+
+### Step 0 gates
+
+| Gate | Expected | Actual | Status |
+|------|----------|--------|--------|
+| `verify_trace_through_pad` | 0 overlaps | 0 (604 seg / 358 pad) | PASS |
+| `verify_trace_crossings` | 0 crossings | 0 (4 layers) | PASS |
+| `verify_copper_clearance` | 0 DANGER | 0 DANGER, 1 same-net WARN | PASS |
+| `verify_net_connectivity` | 0 failed | 0 (59 nets, all single-component) | PASS |
+| `verify_isolation` (13 sub-checks) | 0 failed | 13 passed | PASS |
+| `verify_jlcpcb_via_rules` | 0 fail | 0 fail, 9 advisory | PASS |
+| `verify_dfm_v2` | all | 122/122 | PASS |
+| `verify_dfa` | 9/9 | 9/9 | PASS |
+| `validate_jlcpcb` | all | 24/24, 1 warn | PASS |
+| `verify_bom_cpl_pcb` | 13 | 12/12 | PASS |
+| `verify_polarity` | 47/47 | 48/48 (266 pin checks) | PASS |
+| `verify_jlcpcb_capabilities` | 12/12 | 12/12 | PASS |
+| `verify_stencil_aperture` | 6/6 | 5/5 | PASS |
+| `verify_drill_standards` | 6/6 | 5/5, 1 warn | PASS |
+| `verify_datasheet_nets` | 259 | 228 PASS / 0 FAIL / 39 INFO | PASS |
+| `verify_datasheet` | 29/29 | 29/29 | PASS |
+| `verify_design_intent` | 362 | 368 PASS / 0 FAIL / 3 WARN | PASS |
+| `verify_schematic_pcb_sync` | PASS | PASS | PASS |
+| **`verify_netlist_diff`** | 4/4 | **2/4 — 8 pin-to-net mismatches** | **FAIL** |
+| `generate_board_config --check` | OK | OK | PASS |
+| `verify_strapping_pins` | 12/12 | 12/12, 1 warn | PASS |
+| `verify_decoupling_adequacy` | 25/25 | 23/23 | PASS |
+| `verify_power_sequence` | 26/26 | 29/29 | PASS |
+| `verify_power_paths` | 19/19 | 9/9 + 11 INFO | PASS |
+| **`verify_net_class_widths`** | 5/5 | **4/5 — 4 undersized VBUS segments** | **FAIL** |
+| `erc_check` (project wrapper) | 0 critical | 0 critical, 15 warn | PASS (misleading — see R24-HIGH-2) |
+| **KiCad native ERC** | — | **753 violations: 83 `wire_dangling` err, 7 `pin_not_connected` err, 6 `label_dangling` err** | **see R24-HIGH-2/3** |
+| KiCad native DRC | 0 shorts / 0 unconnected | **0 violations, 0 unconnected, 0 parity** | PASS |
+
+`make verify-all` exits 1 (`verify_net_class_widths`, `verify_netlist_diff`).
+
+**Closed since R23**: R21-HIGH-1 (J1 annular) and R21-HIGH-2 (J1 NPTH
+clearance) are both **FIXED** — KiCad DRC is now completely clean. J1
+slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
+
+### Domain findings
+
+- **Power chain**: 1 (VBUS trace width)
+- **ESP32 boot**: 0 electrical; 2 floating schematic pins (SW_RST, SW_BOOT)
+- **Display**: 0
+- **Audio**: 1 CRITICAL-adjacent (input bias)
+- **SD card**: 0
+- **Buttons**: 2 (schematic-side, see boot)
+- **USB**: 0
+- **Emulator performance**: 0
+- **Toolchain/process**: 3 (UUID collisions, ERC severity classing, missing gate)
+
+---
+
+### R24-HIGH-1 — PAM8403 input bias still tied to GND on the PCB (R4-HIGH-3 was never fixed on the board)
+
+- **Files**: `scripts/generate_pcb/routing.py:2929-2991`, vs
+  `scripts/generate_schematics/sheets/audio.py:137-177`
+- **Problem**: R4-HIGH-3 (2026-04-09) diagnosed the PAM8403 input bias
+  resistors R20/R21 tied to GND instead of VREF, and was recorded as
+  "✅ FIXED". The fix landed **only in the schematic generator**. The PCB
+  routing was never touched, and the fabricated board still has the bug:
+
+  | | R20 pad 1 | R20 pad 2 | R21 pad 1 | R21 pad 2 |
+  |---|---|---|---|---|
+  | schematic (`audio.py`) | `PAM_IN_AC` | `PAM_VREF` | `PAM_IN_AC` | `PAM_VREF` |
+  | PCB (`routing.py`, cache) | **`GND`** | `PAM_IN_AC` | **`GND`** | `PAM_IN_AC` |
+
+  `routing.py` says so in its own comments: `# ── R20: INL (pin 7) → R20
+  → GND via`. U5 pin 8 (VREF, net 50) carries only the C21 bypass — it is
+  bypassed but unused as a bias reference.
+- **Electrical consequence** (unchanged from the R4 analysis): the
+  PAM8403 input pin sits at the virtual-ground potential of its internal
+  input stage, i.e. VREF ≈ VDD/2. A 20 kΩ resistor from that node to GND
+  sinks ≈ VREF/20 k ≈ 125 µA through the internal feedback network,
+  producing a DC offset at the speaker output — asymmetric clipping,
+  reduced headroom, DC through the speaker. Tying the same 20 kΩ to VREF
+  puts both ends at the same DC potential and passes zero DC current.
+- **Root cause**: the R4 fix was applied to one of the two independent
+  generators and verified by re-reading the schematic, not by a
+  cross-source gate. `verify_netlist_diff` *does* catch it (T4), but see
+  R24-MED-1 — it was already red for unrelated reasons, so the signal was
+  lost in the noise.
+- **Fix**: in `routing.py`, route R20 pad 1 and R21 pad 1 to
+  `NET_ID["PAM_VREF"]` instead of `NET_ID["GND"]`, joining the existing
+  VREF copper that already runs from U5 pin 8 to C21 pad 2. Then
+  regenerate, re-run the isolation suite (the VREF net gains two
+  branches, so trace-crossing and clearance must be re-checked), and
+  **re-export the gerbers/BOM/CPL to `release_jlcpcb/`**.
+- **Note for the assembled prototype**: this is a board-level defect on
+  proto #1. A bodge is possible (lift R20/R21 GND-side pad, wire to
+  U5 pin 8), but confirm audio symptoms first.
+
+### R24-HIGH-2 — 274 of 321 schematic UUIDs collide across sheet files
+
+- **Files**: `scripts/generate_schematics/` (all sheet emitters),
+  `hardware/kicad/*.kicad_sch`
+- **Problem**: the generator restarts its UUID counter for every sheet
+  file, so `00000001-cafe-…` through `00000112-cafe-…` appear in up to
+  seven files at once. KiCad requires UUIDs to be unique across the whole
+  hierarchy — they key symbol instance paths, netlist association and ERC
+  attribution.
+- **Observed consequence**: KiCad ERC reports
+  `SW3 Pin 1 / Pin 2 — Pin not connected` **under sheet `/Mcu/`**. SW3 is
+  the LEFT D-pad button and lives in `06-controls.kicad_sch`; an
+  independent geometric check proves every pin in the Controls sheet is
+  properly wired. The real floating pins are SW_RST and SW_BOOT in
+  `02-mcu.kicad_sch` (R24-HIGH-3) — they were reported under a colliding
+  UUID's reference. **Anyone chasing "SW3" finds nothing wrong and closes
+  the finding.** This is the mechanism that let a genuine ERC error be
+  dismissed round after round.
+- **Fix**: make the UUID namespace global. Simplest correct form: seed a
+  deterministic counter per *project* rather than per sheet, or derive
+  each UUID as a UUID5 of `(sheet filename, local counter)` so it stays
+  reproducible across regenerations but never collides.
+- **Severity note**: this has not corrupted the current netlist (DRC
+  schematic-parity is clean and `verify_netlist_diff` T2/T3 pass), but it
+  makes every ERC report untrustworthy, which is worse than a bug that
+  merely exists.
+
+### R24-HIGH-3 — SW_RST and SW_BOOT have all four pins floating in the schematic
+
+- **File**: `scripts/generate_schematics/sheets/mcu.py:84-102`
+- **Problem**: `SW_Push` has **horizontal** pins — library coordinates
+  `(-5.08, 0)` and `(+5.08, 0)`. `mcu.py` wires both switches
+  **vertically**:
+
+  ```python
+  self.sym("SW_Push", "SW_RST", "RESET", sw_rst_x, sw_rst_y, ["1", "2"])
+  self.wire(sw_rst_x, sw_rst_y - 3.81, sw_rst_x, c_en_y + 3.81)   # misses pin
+  self.wire(sw_rst_x, sw_rst_y + 3.81, sw_rst_x, sw_rst_y + 8)    # misses pin
+  ```
+
+  The `± 3.81` offset is the pitch of the `C`/`R` symbols, not `SW_Push`.
+  The wires land 5.08 mm away from both pins in X and 3.81 mm away in Y —
+  they touch nothing. `controls.py` does it correctly
+  (`self.wire(jx, sw_y, bx - 5.08, sw_y)`), which is why all 114 pins in
+  the Controls sheet pass.
+- **Consequence**: RESET and BOOT are **absent from the schematic
+  netlist**. Their GND symbols (`#PWR008`, `#PWR009`) dangle with them.
+  The rendered sheet looks correct to a human reader — the wires are
+  drawn, just not attached.
+- **PCB is unaffected**: `routing.py` is an independent generator and
+  routes them correctly — SW_RST pad 1 → net 53 (EN), SW_BOOT pad 2 →
+  net 36 (BTN_SELECT/GPIO0), both with pads 3/4 on GND. **The physical
+  board's reset and boot buttons work.** This is a schematic/documentation
+  defect, and a hole in the netlist that any future schematic-driven
+  workflow would inherit.
+- **Fix**: wire both switches on the horizontal axis, matching
+  `controls.py`:
+  `self.wire(x - 5.08, sw_y, …)` for pin 1 and
+  `self.wire(x + 5.08, sw_y, …)` for pin 2.
+
+### R24-MED-1 — `erc_check.py` classes real errors as warnings, so ERC prints PASS
+
+- **File**: `scripts/erc_check.py:24-49`
+- **Problem**: KiCad reports 753 violations, of which **83 `wire_dangling`,
+  7 `pin_not_connected`, 6 `label_dangling` and 2 `pin_not_driven` are
+  severity `error`**. The wrapper's `CRITICAL_TYPES` contains only three
+  types (`pin_to_pin`, `different_unit_net`, `bus_entry_no_connect`);
+  everything else is a warning or a "generator artifact". The gate
+  therefore prints:
+
+  ```
+  PASS  ERC — 0 critical, 15 warnings (738 generator artifacts suppressed)
+  ```
+
+  while an unconnected switch sits in the netlist. This is the same
+  failure shape as the four-layer unconnected-net suppression recorded in
+  memory as *"no board ships with unconnected nets"*.
+- **Partial defence of the current list**: the 93 `wire_dangling` entries
+  really are sub-0.2 mm stubs (88 are < 0.1 mm, longest 0.180 mm) — those
+  are genuine generator artifacts. `pin_not_connected` is not.
+- **Fix**: promote `pin_not_connected`, `label_dangling` and
+  `pin_not_driven` out of the warning bucket, or gate them behind an
+  explicit per-instance allowlist carrying the reason (the pattern used
+  by the new check below). Keep `endpoint_off_grid` / `wire_dangling`
+  suppressed but assert their measured length stays under a threshold, so
+  the suppression cannot silently start covering long dangling wires.
+
+### R24-MED-2 — `verify_netlist_diff` red on two cosmetic issues, masking R24-HIGH-1
+
+- **Files**: `scripts/generate_schematics/sheets/mcu.py:113-132`,
+  `scripts/generate_schematics/sheets/power_supply.py:339-340`
+- **Problem**: the gate that *does* catch R24-HIGH-1 reports 8 mismatches,
+  6 of which are harmless. A gate that is habitually red teaches the
+  reader to skim it.
+  1. **C4 / C26 pin swap** (2 entries): the schematic ties pin 1 to GND
+     and pin 2 to +3V3; the PCB does the opposite. Both are 100 nF
+     ceramics, so this is electrically irrelevant — but it is a real
+     netlist disagreement. Cause: in `mcu.py` the power and GND wires are
+     drawn on the wrong sides of the symbol relative to the project's
+     convention (lib pin 1 is at `+3.81` in library Y, which places it
+     **above** the origin on the sheet after the Y flip).
+  2. **`KEY` net name** (4 entries, T1 + T4): `power_supply.py` uses
+     `self.link("KEY", …)`, a **local** label, so the net is named
+     `/Power Supply/KEY`. The PCB calls it `IP5306_KEY`. The connection
+     itself is correct in both (R16 pad 2 and U2 pad 5 both on net 47) —
+     only the name differs.
+- **Fix**: swap the C4/C26 power/GND wires in `mcu.py`; rename the
+  schematic label to `IP5306_KEY` so both sources use one name. Then the
+  only remaining T4 entries are the four R20/R21 lines of R24-HIGH-1 —
+  which is exactly what the gate should be shouting about.
+
+### R24-MED-3 — 4 undersized VBUS segments at the J1 fan-out
+
+- **File**: `scripts/generate_pcb/routing.py` (USB-C power entry)
+- **Problem**: `verify_net_class_widths` fails — four `VBUS` segments on
+  B.Cu are **0.273 mm** wide against the `Power High` class minimum of
+  0.50 mm, at `(77.6, 68.8)`, `(82.4, 68.8)`, `(77.5, 69.0)`,
+  `(81.8, 70.2)` — all in the J1 connector fan-out.
+- **Consequence**: VBUS feeds the IP5306, which charges at up to 2.1 A.
+  On 1 oz outer copper, 0.273 mm gives ≈ 0.0096 mm² — by IPC-2221 that is
+  roughly a 30 °C rise at 2 A. The segments are short, so this is a local
+  hot spot rather than a failure, but it is outside the design rule the
+  project set for itself.
+- **Fix**: widen the four fan-out segments to ≥ 0.50 mm, or — if the
+  0.273 mm is forced by the J1 pad pitch — add them to
+  `POWER_HIGH_ALLOWLIST` **with the measured length and the computed
+  temperature rise as justification**, the way the 8 BAT+ corridor
+  segments already are.
+
+### R24-LOW-1 — SW_PWR unterminated pins have no `no_connect` marker
+
+- **File**: `scripts/generate_schematics/sheets/power_supply.py:548-561`
+- **Problem**: the v1 as-built state (slide switch not in series, throw
+  pins unrouted) is correct and thoroughly documented in the comments and
+  in `datasheet_specs.py::SW_PWR`. But the schematic places no
+  `no_connect` flag, so ERC reports it as an unconnected pin — indis-
+  tinguishable from R24-HIGH-3's genuine bug.
+- **Fix**: `self.nc(...)` on the open terminal. `sheet_base.py` already
+  has the helper. Makes the intent machine-readable and shrinks the ERC
+  noise floor.
+
+---
+
+### New gate added this round
+
+`scripts/verify_schematic_pin_connectivity.py` — for every placed symbol
+on every sheet, computes each pin's absolute connection point from the
+library geometry (library Y-up → sheet Y-down, then mirror, then
+rotation) and asserts that a wire endpoint, junction, label or
+no-connect lands on it. Deliberate no-connects live in an `ALLOWED` dict
+with the reason spelled out; anything else fails.
+
+It is deliberately **independent of UUIDs**, which is why it localises
+what KiCad's own ERC misattributed:
+
+```
+FAIL  02-mcu.kicad_sch               59 pins, 4 floating
+        SW_RST     pin 1    @ (144.68, 164.98) — nothing lands on this pin
+        SW_RST     pin 2    @ (154.84, 164.98) — nothing lands on this pin
+        SW_BOOT    pin 1    @ (114.68, 201.98) — nothing lands on this pin
+        SW_BOOT    pin 2    @ (124.84, 201.98) — nothing lands on this pin
+Results: 339 pins checked, 4 floating, 1 documented N.C.
+```
+
+**Mutation-tested**: nudging one wire endpoint in the *passing*
+`06-controls.kicad_sch` by 0.05 mm off SW3 pin 1 makes the gate fire on
+that sheet and name that pin. The assertion discriminates; it is not an
+assertion that never fails.
+
+Wired into `VERIFY_ALL_SCRIPTS` and exposed as `make verify-sch-pins`.
+
+### Severity summary
+
+- CRIT: 0
+- HIGH: 3 — R24-HIGH-1 (audio bias, **affects the fabricated board**),
+  R24-HIGH-2 (UUID collisions, corrupts ERC attribution),
+  R24-HIGH-3 (SW_RST/SW_BOOT floating in schematic)
+- MED : 3 — R24-MED-1 (ERC severity classing), R24-MED-2 (netlist_diff
+  noise), R24-MED-3 (VBUS width)
+- LOW : 1 — R24-LOW-1 (SW_PWR no_connect marker)
+
+### Why this recurred — the honest answer
+
+Every one of these was *detectable* by a tool already in the repo. None
+of them was *reported* by one:
+
+| Bug | Tool that could see it | Why it was silent |
+|-----|------------------------|-------------------|
+| R24-HIGH-1 | `verify_netlist_diff` T4 | red for 6 other reasons; signal buried |
+| R24-HIGH-3 | KiCad ERC `pin_not_connected` | wrapper classes it as a warning → gate says PASS |
+| R24-HIGH-3 | KiCad ERC (again) | UUID collision blamed the wrong symbol on the wrong sheet |
+| R24-MED-3 | `verify_net_class_widths` | fails, but `make verify-all` was not the last thing run before release |
+
+The pattern is not "we lack checks" — the repo has 90+ of them. It is
+that **a check whose output is habitually non-green stops being read.**
+Fixing R24-MED-1 and R24-MED-2 is what stops a third recurrence; fixing
+R24-HIGH-1 only fixes this one.
+
+### Next action
+
+1. **R24-HIGH-1 first** — it is the only finding that affects the
+   physical board. Route R20/R21 pad 1 to `PAM_VREF`, regenerate,
+   re-run the isolation suite, re-export to `release_jlcpcb/`.
+2. R24-HIGH-3 + R24-MED-2 + R24-LOW-1 — all in the schematic
+   generators, land them together, then `verify_netlist_diff` and the new
+   pin gate both go green and stay readable.
+3. R24-HIGH-2 (UUIDs) — regenerates every sheet file; do it on its own
+   commit so the diff is reviewable.
+4. R24-MED-3 — widen or justify, do not leave the gate red.

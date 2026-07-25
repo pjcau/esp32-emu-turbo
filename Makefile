@@ -97,6 +97,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_power_sequence \
 	verify_schematic_pcb \
 	verify_schematic_pcb_sync \
+	verify_schematic_pin_connectivity \
 	verify_sd_interface \
 	verify_signal_chain_complete \
 	verify_stackup \
@@ -127,6 +128,9 @@ repo-map-check: ## Fail if docs/REPO_MAP.md is stale vs the scripts on disk
 	@$(T) repo-map-check python3 scripts/generate_repo_map.py --check
 verify-sch-crossings: ## Fail when two schematic wires cross without a junction (use a labelled link instead)
 	@$(T) verify-sch-crossings python3 scripts/verify_schematic_crossings.py
+
+verify-sch-pins: ## Fail when a schematic symbol pin has no wire/label/junction on it (undeclared floating pin)
+	@$(T) verify-sch-pins python3 scripts/verify_schematic_pin_connectivity.py
 
 docs-bom: ## Regenerate the docs BOM table from release_jlcpcb/bom.csv
 	@$(T) docs-bom python3 scripts/generate_docs_bom.py
