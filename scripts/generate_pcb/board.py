@@ -121,7 +121,17 @@ SHOULDER_R_ENC = (65, 32)
 FPC_ENC = (55, 2)      # Next to FPC slot, right side (vertical)
 
 # USB-C (bottom center edge)
-USBC_ENC = (0, -BOARD_H / 2 + 3.8)  # 3.8mm from bottom edge (DFM: shield pads clear edge by 0.525mm)
+# R21 (2026-07-25): 3.80 -> 3.85 mm. The rear shield pads had to grow from
+# 1.80 to 1.92 mm tall to reach a JLCPCB-legal 0.25 mm annular ring (see
+# footprints.usb_c_16p, "ANNULAR BUDGET"), which pushed their outer edge to
+# 0.425 mm from the board edge — under the 0.5 mm min_copper_edge_clearance
+# in the board setup. Backing J1 off by 0.05 mm restores 0.515 mm while
+# still leaving the front shield pads 0.205 mm clear of the BTN_B channel
+# above them. Both ends are within ~0.015 mm of their limit: do not move
+# J1, the board outline, or channel 5 without redoing that budget.
+# The 0.05 mm shift is far inside 3D-print tolerance, so the enclosure
+# USB-C cutout does not need to change.
+USBC_ENC = (0, -BOARD_H / 2 + 3.85)  # 3.85mm from bottom edge (rear shield pads clear edge by 0.515mm)
 
 # SD card slot (bottom right)
 SD_ENC = (60, -BOARD_H / 2 + 8)
@@ -251,8 +261,21 @@ def _silkscreen_labels():
     parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 1.0))
     px, py = enc_to_pcb(*LED_FULL_ENC)
     parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 1.0))
+    # Front branding.
+    # R21 FIX (2026-07-25): moved from (CX=80.0, 73.0) to (110.0, 73.0).
+    # At x=80 the string straddled J1's rear shield through-holes, whose
+    # solder-mask openings punch through to F.Mask even though the
+    # connector itself is on the bottom side — KiCad DRC reported 2x
+    # silk_over_copper ("Silkscreen clipped by solder mask", J1 pads 13
+    # and 14). Enlarging those pads for the annular-ring fix made the
+    # overlap worse, so the text moves instead of the copper.
+    # (110.0, 73.0) keeps the branding on the same bottom edge of the
+    # front side and is the widest mask-opening-free window there: the
+    # whole span x=94.5..127.0 at this y is clear of pads and of any
+    # other F.Silkscreen item, so an ~18 mm string at 1.2 mm height fits
+    # with margin on both sides.
     parts.append(P.gr_text(
-        "CPJ&CP 2026 v2", CX, 73.0, "F.SilkS", 1.2,
+        "CPJ&CP 2026 v2", 110.0, 73.0, "F.SilkS", 1.2,
     ))
 
     # ── Back Fab (IC + connector labels, visible in 3D renders) ──

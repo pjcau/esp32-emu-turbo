@@ -232,13 +232,23 @@ def mounting_hole(x, y, drill=2.5, pad_d=3.5):
 
     DFM: NPTH eliminates 4× THT-to-SMD and 2× pad spacing DANGER violations
     caused by the old PTH copper pad interfering with nearby SMD components.
+
+    R21 FIX (2026-07-25): the footprint identifier used to be
+    "MountingHole:MountingHole_2.5mm", i.e. it named an external KiCad
+    library ("MountingHole") which this project's fp-lib-table does not
+    contain — KiCad DRC raised 6x lib_footprint_issues, one per hole.
+    Every other footprint this generator emits is fully embedded in the
+    board file and carries a bare, library-less identifier ("C_0805",
+    "USB-C-16P", "Fiducial", ...). The mounting hole now follows the same
+    convention: it is self-contained here, so it must not claim to come
+    from a library that would have to be resolved at load time.
     """
     ref_uid = uid()
     val_uid = uid()
     fp_uid = uid()
     pad_uid = uid()
     return (
-        f'  (footprint "MountingHole:MountingHole_{drill}mm"\n'
+        f'  (footprint "MountingHole_{drill}mm"\n'
         f'    (layer "F.Cu")\n'
         f'    (uuid "{fp_uid}")\n'
         f'    (at {x} {y})\n'

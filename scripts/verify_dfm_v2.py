@@ -3,12 +3,43 @@
 
 import csv
 import json
+import math
 import os
 import re
 import shutil
 import subprocess
 import sys
 import zipfile
+
+
+def _capsule_rect_gap(x1, y1, x2, y2, hw, bx1, by1, bx2, by2):
+    """Exact edge-to-edge gap between a trace capsule and an AABB.
+
+    Trace copper is every point within `hw` of the centreline segment, so
+    the gap is (segment-to-rectangle distance) - hw. Negative means the
+    copper overlaps the rectangle. Both shapes are convex, so the minimum
+    is attained at a segment endpoint or a rectangle corner.
+
+    Needed because a segment's own AABB only equals its copper when the
+    segment is horizontal or vertical; for a diagonal it is the bounding
+    box of the capsule and reports overlaps that do not exist.
+    """
+    def _point_rect_dist(px, py):
+        return math.hypot(max(bx1 - px, 0.0, px - bx2),
+                          max(by1 - py, 0.0, py - by2))
+
+    def _point_seg_dist(px, py):
+        vx, vy = x2 - x1, y2 - y1
+        l2 = vx * vx + vy * vy
+        if l2 <= 0.0:
+            return math.hypot(px - x1, py - y1)
+        t = max(0.0, min(1.0, ((px - x1) * vx + (py - y1) * vy) / l2))
+        return math.hypot(px - (x1 + t * vx), py - (y1 + t * vy))
+
+    dist = min(_point_rect_dist(x1, y1), _point_rect_dist(x2, y2))
+    for cx, cy in ((bx1, by1), (bx2, by1), (bx1, by2), (bx2, by2)):
+        dist = min(dist, _point_seg_dist(cx, cy))
+    return dist - hw
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RELEASE = os.path.join(BASE, "release_jlcpcb")
@@ -44,8 +75,11 @@ def test_cpl_positions():
     cpl = read_cpl()
 
     # J1: footprint now matches JLCPCB C2765186 exactly, no position correction needed
+    # R21 (2026-07-25): 71.20 -> 71.15. The rear shield pads grew to 1.92mm
+    # tall for a JLCPCB-legal 0.25mm annular ring, so J1 had to back 0.05mm
+    # off the board edge (see footprints.usb_c_16p "ANNULAR BUDGET").
     j1_y = float(cpl["J1"]["Mid Y"].replace("mm", ""))
-    check("J1 Mid Y = 71.20mm (DFM: shield pads clear board edge)", abs(j1_y - 71.20) < 0.01,
+    check("J1 Mid Y = 71.15mm (DFM: shield pads clear board edge)", abs(j1_y - 71.15) < 0.01,
           f"got {j1_y}")
 
     # SW_PWR: footprint now matches JLCPCB C431540 exactly, no correction needed
@@ -2175,9 +2209,19 @@ def test_trace_through_ic_pad():
             pad_ymin = py - ph / 2
             pad_ymax = py + ph / 2
 
-            # AABB overlap
+            # AABB overlap. The segment AABB equals the trace copper
+            # exactly while the segment is axis-aligned, which is true of
+            # almost every trace on this board. For a diagonal it is the
+            # bounding box of the capsule and overstates the copper near
+            # the corners, so confirm with the exact capsule-vs-rect
+            # distance before reporting.
             if (seg_xmax > pad_xmin and seg_xmin < pad_xmax and
                     seg_ymax > pad_ymin and seg_ymin < pad_ymax):
+                if (abs(sx2 - sx1) > 1e-6 and abs(sy2 - sy1) > 1e-6
+                        and _capsule_rect_gap(sx1, sy1, sx2, sy2, sw / 2,
+                                              pad_xmin, pad_ymin,
+                                              pad_xmax, pad_ymax) >= 0.0):
+                    continue
                 s_name = net_names.get(s_net, f"net{s_net}")
                 p_name = net_names.get(p["net"], "NC") if p["net"] != 0 else "NC"
                 entry = (f"{p['ref']}[{p['num']}]({p_name}) "
