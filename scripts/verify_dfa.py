@@ -467,11 +467,11 @@ def test_polarity_verification():
 
     Verifies:
     - LED orientation consistency (all LEDs same EFFECTIVE polarity —
-      cpl_rot minus any `_JLCPCB_ROT_OVERRIDES` compensation)
+      cpl_rot minus any `_JLCPCB_ROT_DELTAS` compensation)
     - IC pin-1 alignment (ICs at same effective rotation within package type)
     - BOM polarity-sensitive parts have expected footprints
 
-    Override-aware: `_JLCPCB_ROT_OVERRIDES` entries exist to compensate for
+    Override-aware: `_JLCPCB_ROT_DELTAS` entries exist to compensate for
     EasyEDA footprint anomalies (e.g. LED2 C19171391 has pad 1 on the anode
     side vs LED1 C84256 on cathode side; a 180° override rotates the physical
     part so the datasheet cathode lands on our GND pad 1). The test compares
@@ -482,13 +482,13 @@ def test_polarity_verification():
     # Load per-component rotation overrides (source of truth: jlcpcb_export.py)
     try:
         sys.path.insert(0, os.path.join(BASE, "scripts"))
-        from generate_pcb.jlcpcb_export import _JLCPCB_ROT_OVERRIDES
+        from generate_pcb.jlcpcb_export import _JLCPCB_ROT_DELTAS
     except ImportError:
-        _JLCPCB_ROT_OVERRIDES = {}
+        _JLCPCB_ROT_DELTAS = {}
 
     def effective_rot(ref: str, cpl_rot: float) -> float:
         """CPL rotation minus the override for `ref` (mod 360)."""
-        override = _JLCPCB_ROT_OVERRIDES.get(ref, 0)
+        override = _JLCPCB_ROT_DELTAS.get(ref, 0)
         return (cpl_rot - override) % 360
 
     cpl = read_cpl()
@@ -509,9 +509,9 @@ def test_polarity_verification():
         if not all(e == effs[0] for e in effs):
             issues.append(
                 f"LED polarity mismatch (effective rotation after "
-                f"_JLCPCB_ROT_OVERRIDES compensation): "
+                f"_JLCPCB_ROT_DELTAS compensation): "
                 + ", ".join(
-                    f"{d}=eff{eff}°(raw{raw}°,ovr{_JLCPCB_ROT_OVERRIDES.get(d, 0)}°)/{layer}"
+                    f"{d}=eff{eff}°(raw{raw}°,ovr{_JLCPCB_ROT_DELTAS.get(d, 0)}°)/{layer}"
                     for d, (eff, layer, raw) in led_rotations.items()
                 )
             )
@@ -549,7 +549,7 @@ def test_polarity_verification():
                 issues.append(
                     f"IC polarity mismatch ({package}/{layer}, effective rot): "
                     + ", ".join(
-                        f"{d}=eff{e}°(raw{raw}°,ovr{_JLCPCB_ROT_OVERRIDES.get(d, 0)}°)"
+                        f"{d}=eff{e}°(raw{raw}°,ovr{_JLCPCB_ROT_DELTAS.get(d, 0)}°)"
                         for d, e, raw in components
                     )
                 )

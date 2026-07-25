@@ -1701,10 +1701,10 @@ def test_batch_pin_alignment():
     cpl = read_cpl()
     _, placements = _component_placeholders()
 
-    # Build board position lookup: ref -> (x, y, kicad_rotation)
+    # Build board position lookup: ref -> (x, y, kicad_rotation, layer)
     board_data = {}
     for ref, fp_name, fx, fy, rot, layer in placements:
-        board_data[ref] = (fx, fy, rot)
+        board_data[ref] = (fx, fy, rot, layer)
 
     def _transform_pad(lx, ly, rot_deg, fx, fy):
         """Apply rotate -> mirror_X -> translate (matches PCB file convention)."""
@@ -1718,56 +1718,48 @@ def test_batch_pin_alignment():
         # Translate
         return (fx + rx, fy + ry)
 
-    from generate_pcb.jlcpcb_export import _JLCPCB_ROT_OVERRIDES
+    from generate_pcb.jlcpcb_export import (
+        _JLCPCB_ROT_DELTAS, _jlcpcb_rotation,
+    )
 
     for ref, fp_name in REFS.items():
-        fx, fy, kicad_rot = board_data[ref]
+        fx, fy, kicad_rot, layer = board_data[ref]
         cpl_rot = float(cpl[ref]["Rotation"])
 
-        # Components with rotation overrides: verified via JLCPCB 3D preview,
-        # not via mathematical model (JLCPCB's transform differs from KiCad's).
-        # Dedicated tests (e.g. test_j4_fpc_orientation) cover geometric correctness.
-        if ref in _JLCPCB_ROT_OVERRIDES and kicad_rot != cpl_rot:
-            expected = _JLCPCB_ROT_OVERRIDES[ref]
-            check(
-                f"{ref} ({fp_name}) CPL rotation override = {expected}° "
-                f"(JLCPCB 3D verified)",
-                cpl_rot == expected,
-                f"expected {expected}°, got {cpl_rot}°",
-            )
-            continue
-
-        # Get raw footprint pads (local coordinates, no mirror/rotation)
-        gen, _ = FP.FOOTPRINTS[fp_name]
-        raw = gen("B")
-        model_pins = {}
-        for elem in raw:
-            num_m = re.search(r'\(pad\s+"([^"]*)"', elem)
-            at_m = re.search(r'\(at\s+([-\d.]+)\s+([-\d.]+)\)', elem)
-            if not num_m or not at_m:
-                continue
-            model_pins[num_m.group(1)] = (
-                float(at_m.group(1)), float(at_m.group(2)))
-
-        # Compare reference (KiCad rotation) vs JLCPCB model (CPL rotation)
-        max_err = 0.0
-        worst_pin = ""
-        pin_count = 0
-
-        for pin, (lx, ly) in model_pins.items():
-            ref_x, ref_y = _transform_pad(lx, ly, kicad_rot, fx, fy)
-            jlc_x, jlc_y = _transform_pad(lx, ly, cpl_rot, fx, fy)
-            err = math.hypot(jlc_x - ref_x, jlc_y - ref_y)
-            if err > max_err:
-                max_err = err
-                worst_pin = pin
-            pin_count += 1
-
+        # What this asserts: the CPL FILE on disk carries the angle the
+        # generator computes today. That is the stale-upload check — a
+        # design-side rotation fix is not done until the CPL is regenerated
+        # and re-uploaded.
+        #
+        # What it deliberately does NOT assert any more: that cpl_rot equals
+        # kicad_rot. The previous version transformed every pad twice, once
+        # with kicad_rot and once with cpl_rot, and required the two clouds to
+        # coincide within 0.1mm — which is just `cpl_rot == kicad_rot` written
+        # geometrically. For a bottom-side part the two are SUPPOSED to differ:
+        # that difference is the whole purpose of _JLCPCB_ROT_CORRECTIONS. So
+        # the check passed U1/U2/U3/J1/U6 by tautology (their correction
+        # happens to net out to 0°) and needed a hand-maintained excuse list
+        # for U5 and J4, the only two where it bit. A gate that has to be told
+        # which parts not to look at proves nothing about those parts.
+        #
+        # Geometric correctness of the angle itself is proven positively, from
+        # the EasyEDA reference land patterns, by
+        # scripts/verify_cpl_rotation_law.py — one law per layer, no per-part
+        # sign-off table.
+        # _component_placeholders() reports KiCad layer names ("B.Cu"/"F.Cu");
+        # _jlcpcb_rotation() speaks the CPL vocabulary ("bottom"/"top").
+        # Passing the raw name silently takes the top-side branch and skips
+        # the mirror + package correction entirely.
+        side = "bottom" if layer in ("B.Cu", "bottom") else "top"
+        expected = _jlcpcb_rotation(kicad_rot, side, fp_name, ref=ref)
+        delta = _JLCPCB_ROT_DELTAS.get(ref)
+        origin = (f"formula + {delta}° tape delta" if delta
+                  else f"formula from KiCad {kicad_rot:.0f}°/{side}")
         check(
-            f"{ref} ({fp_name}) {pin_count}-pin CPL rotation "
-            f"(err={max_err:.3f}mm)",
-            max_err < 0.1,
-            f"worst pin {worst_pin}: {max_err:.3f}mm",
+            f"{ref} ({fp_name}) CPL rotation = {expected:.0f}° ({origin})",
+            cpl_rot == expected,
+            f"CPL file has {cpl_rot:.0f}°, generator emits {expected:.0f}° — "
+            f"regenerate and re-upload the CPL",
         )
 
     # Verify CPL position corrections match expected values
@@ -1775,7 +1767,7 @@ def test_batch_pin_alignment():
     from generate_pcb.jlcpcb_export import _JLCPCB_POS_CORRECTIONS
 
     for ref in REFS:
-        fx, fy, _ = board_data[ref]
+        fx, fy, _, _ = board_data[ref]
         cpl_x = float(cpl[ref]["Mid X"].replace("mm", ""))
         cpl_y = float(cpl[ref]["Mid Y"].replace("mm", ""))
         dx, dy = _JLCPCB_POS_CORRECTIONS.get(ref, (0, 0))

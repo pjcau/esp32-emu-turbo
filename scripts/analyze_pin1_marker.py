@@ -3,12 +3,12 @@
 
 Why this exists
 ---------------
-`_JLCPCB_ROT_OVERRIDES` in scripts/generate_pcb/jlcpcb_export.py is a
+`_JLCPCB_ROT_DELTAS` in scripts/generate_pcb/jlcpcb_export.py is a
 hand-maintained table. Every entry in it was originally chosen by trying a
 value, looking at the JLCPCB 3D preview, and trying again (see git history:
 `39e350c` D1 "90 -> 180", then `c7514e7` D1 "180 -> 270" the same day).
 `verify_easyeda_footprint.py` then checks that a *sign-off exists* for each
-mismatch — via `_JLCPCB_ROT_OVERRIDES`, `_GEOMETRIC_MISMATCH_ALLOWLIST` or
+mismatch — via `_JLCPCB_ROT_DELTAS`, `_GEOMETRIC_MISMATCH_ALLOWLIST` or
 `_PENDING_VALIDATION` — not that the emitted angle is *geometrically right*.
 A gate that asks "did somebody sign this off?" cannot catch a wrong sign-off.
 

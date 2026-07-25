@@ -34,16 +34,37 @@ DRU_PATH = Path("hardware/kicad/esp32-emu-turbo.kicad_dru")
 # violations will surface as true positives.
 KNOWN_ACCEPTABLE = {
     "solder_mask_bridge": "Fine-pitch FPC/USB-C connectors (expected, JLCPCB handles this)",
-    "hole_clearance": "Via-in-pad for button footprints (intentional design)",
-    "via_dangling": "Zone-connected vias appear dangling before zone fill",
-    "track_dangling": "Zone-connected tracks appear dangling before zone fill",
-    "courtyardOverlap": "Overlapping courtyards on dense areas (acceptable for PCBA)",
-    "clearance_zone": "Via vs inner-layer zone clearance (JLCPCB adds thermal relief automatically)",
-    "clearance_borderline": "Trace spacing 0.075-0.09mm (JLCPCB 4-layer manufactures fine at >=0.075mm)",
     "lib_footprint_mismatch": "Generated footprints differ from KiCad library copies (cosmetic)",
-    "isolated_copper": "Small copper fills isolated from nets (removed during manufacturing)",
     "text_height": "Silkscreen text below 1mm height (cosmetic, does not affect assembly)",
 }
+
+# ─── Removed from KNOWN_ACCEPTABLE 2026-07-25 — do not reintroduce ────
+#
+# Seven entries were promoted to REAL_ISSUES below. At the time of the change
+# the DRC reported 0 violations of every type, so this is a no-op on the
+# current board and purely a change to what a FUTURE regression is allowed to
+# do quietly. Each was justified by a claim that does not hold:
+#
+#   isolated_copper   "small copper fills isolated from nets, removed during
+#                     manufacturing" — this is the exact signature of the v1
+#                     dead board. The In2.Cu +3V3 pour was carved into 4
+#                     groups and the AMS1117 fed a 4.92 mm² orphan island.
+#                     An isolated fill is not swarf, it is an open circuit.
+#   via_dangling      "appear dangling before zone fill" — false: --run fills
+#   track_dangling    zones and THEN runs DRC, so the report is post-fill.
+#                     A dangling via after the fill is a real open.
+#   clearance_zone    "JLCPCB adds thermal relief automatically" — an
+#                     assumption about the fab, not a property of the design.
+#                     Via-to-inner-zone clearance loss is a short.
+#   clearance_borderline  "JLCPCB 4-layer manufactures fine at >=0.075mm" —
+#                     contradicts the published 4-layer minimum this repo
+#                     enforces everywhere else (verify_copper_clearance uses
+#                     0.15mm preferred / 0.10mm danger).
+#   hole_clearance    "via-in-pad for button footprints (intentional)" — stale:
+#                     verify_via_in_pad's KNOWN_INTENTIONAL is empty and the
+#                     gate passes, i.e. there is no intentional via-in-pad left.
+#   courtyardOverlap  "acceptable for PCBA" — courtyard overlap is how parts
+#                     collide on the assembly line; that is DFA's whole job.
 
 # Zone clearance violations (via vs GND zone on inner layers) are expected
 # because the generator places vias without thermal relief offsets.
@@ -70,6 +91,48 @@ ZONE_CLEARANCE_PATTERN = "zone clearance"
 
 # Violation types that indicate REAL issues to fix
 REAL_ISSUES = {
+    "isolated_copper": {
+        "severity": "CRITICAL",
+        "source": "scripts/generate_pcb/routing.py + zone priorities",
+        "fix": "A fill island isolated from its net is an OPEN, not swarf. "
+               "Run verify_power_net_integrity.py to see which net split.",
+    },
+    "via_dangling": {
+        "severity": "CRITICAL",
+        "source": "scripts/generate_pcb/routing.py",
+        "fix": "Post-fill dangling via = the via never reached the zone. "
+               "Check the zone actually pours around it (verify_zone_connectivity.py).",
+    },
+    "track_dangling": {
+        "severity": "CRITICAL",
+        "source": "scripts/generate_pcb/routing.py",
+        "fix": "Post-fill dangling track = an open segment. Trace it with "
+               "verify_net_connectivity.py.",
+    },
+    "clearance_zone": {
+        "severity": "HIGH",
+        "source": "scripts/generate_pcb/board.py (zone definitions)",
+        "fix": "Via-to-inner-zone clearance loss is a short. Move the via or "
+               "add a proper thermal relief — do not assume the fab fixes it.",
+    },
+    "clearance_borderline": {
+        "severity": "HIGH",
+        "source": "scripts/generate_pcb/routing.py",
+        "fix": "Below the JLCPCB 4-layer minimum enforced elsewhere in this "
+               "repo. Widen the gap to >=0.15mm.",
+    },
+    "hole_clearance": {
+        "severity": "HIGH",
+        "source": "scripts/generate_pcb/primitives.py",
+        "fix": "Drill-to-drill or drill-to-pad spacing below fab minimum. "
+               "See the via-to-via >=0.25mm hole-gap rule.",
+    },
+    "courtyardOverlap": {
+        "severity": "MEDIUM",
+        "source": "scripts/generate_pcb/board.py (placement)",
+        "fix": "Overlapping courtyards are colliding parts at assembly. "
+               "Separate the placements or shrink the courtyard to the real body.",
+    },
     "clearance_trace": {
         "severity": "HIGH",
         "source": "scripts/generate_pcb/routing.py",
@@ -334,7 +397,11 @@ def analyze(report_path, update_baseline=False):
     if update_baseline:
         save_baseline(counts)
 
-    return real_count
+    # Uncategorized types count as failures. They used to be printed under
+    # "review manually" and then dropped from the return value, so a DRC
+    # violation type nobody had classified yet exited 0 — a new failure mode
+    # arriving in a KiCad upgrade would have been reported as CLEAN.
+    return real_count + unknown_count
 
 
 def fill_zones():

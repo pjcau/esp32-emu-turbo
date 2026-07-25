@@ -37,9 +37,15 @@ DECOUPLING_PAIRS = [
     ("C26", "U1", "+3V3", "local", "ESP32 decoupling (north, bypass)"),
     ("C17", "U2", "VBUS", "local", "IP5306 input decoupling"),
     ("C18", "U2", "BAT+", "bulk", "IP5306 battery decoupling"),
-    ("C1", "U3", "+5V", "local", "AMS1117 input decoupling"),
-    ("C2", "U3", "+3V3", "bulk", "AMS1117 output decoupling (rail)"),
-    ("C27", "U3", "+5V", "bulk", "AMS1117 input decoupling (rail)"),
+    # U3 is a SY8089AAAC buck, not the original AMS1117 LDO. C2 (the LDO's
+    # 22uF tantalum output cap) no longer exists; the buck's output bulk cap
+    # is C30, the non-polarized 22uF MLCC sitting next to L2.1 on +3V3.
+    # The stale ("C2", "U3", "+3V3") entry meant this rail's output cap was
+    # silently unchecked — _find_pads returned nothing and the row reported
+    # SKIP, which the summary counted as "not a failure".
+    ("C1", "U3", "+5V", "local", "SY8089 input decoupling"),
+    ("C30", "U3", "+3V3", "bulk", "SY8089 buck output decoupling (rail)"),
+    ("C27", "U3", "+5V", "bulk", "SY8089 input decoupling (rail)"),
     ("C23", "U5", "+5V", "local", "PAM8403 supply decoupling"),
     ("C24", "U5", "+5V", "local", "PAM8403 supply decoupling (alt)"),
     ("C25", "U5", "+5V", "local", "PAM8403 output decoupling"),
@@ -128,7 +134,10 @@ def analyze_decoupling(cache):
         if not cap_pad:
             results.append({
                 "cap": cap_ref, "ic": ic_ref, "net": net_name, "desc": desc,
-                "type": cap_type, "status": "SKIP", "reason": "cap pad not found",
+                "type": cap_type, "status": "FAIL",
+                "reason": f"{cap_ref} has no pad on {net_name} — the part was "
+                          f"renamed or removed and this table was not updated, "
+                          f"so its decoupling path is no longer being checked",
             })
             continue
 
@@ -138,7 +147,9 @@ def analyze_decoupling(cache):
         if not ic_pad:
             results.append({
                 "cap": cap_ref, "ic": ic_ref, "net": net_name, "desc": desc,
-                "type": cap_type, "status": "SKIP", "reason": "IC pad not found",
+                "type": cap_type, "status": "FAIL",
+                "reason": f"{ic_ref} has no pad on {net_name} — stale table "
+                          f"entry, this decoupling path is unverified",
             })
             continue
 
