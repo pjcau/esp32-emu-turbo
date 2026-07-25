@@ -186,6 +186,13 @@ NET_LIST = [
     (57, "BAT_IN"),
     # Q1 gate net: pulled to GND via R24 (static, but distinct for schematic clarity)
     (58, "RPP_GATE"),
+    # Audio AC-coupled input node: PAM8403 side of the C22 series DC-block.
+    # C22.1 is I2S_DOUT (ESP32 PDM TX), C22.2 is PAM_IN_AC. They are two
+    # electrically distinct nets separated by the cap dielectric — labelling
+    # both "I2S_DOUT" made DRC report a permanent phantom "unconnected"
+    # on I2S_DOUT, which masked real faults. Carries: C22.2, U5.7 (INL),
+    # U5.10 (INR) and the R20/R21 VREF bias taps.
+    (59, "PAM_IN_AC"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

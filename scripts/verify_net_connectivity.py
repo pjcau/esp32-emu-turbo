@@ -74,19 +74,11 @@ ZONE_FILLED_NETS = {"GND", "+3V3", "+5V"}
 #
 # Format: {net_name: (max_accepted_components, rationale)}
 ACCEPTED_FRAGMENTATIONS = {
-    # C22 is a series DC-blocking capacitor between ESP32 PDM TX
-    # (GPIO21 = I2S_DOUT) and the PAM8403 Class-D audio input (INL, INR).
-    # Both pads are labeled "I2S_DOUT" in datasheet_specs.py because there
-    # is no separate net name for the AC-coupled PAM input side. The cap
-    # body physically separates C22.1 (ESP32 side) from C22.2 (PAM side) —
-    # so there are 2 distinct copper components on this "logical" net.
-    # Electrically this is the correct DC-block behavior. For a fully clean
-    # netlist we should introduce a new net "PAM_IN_AC" for the PAM side,
-    # but that is cosmetic and out of scope for R6. TODO v2 PCB respin.
-    "I2S_DOUT": (
-        2,
-        "C22 DC-block cap between ESP32 PDM TX and PAM8403 INL (AC coupling by design; both sides labeled I2S_DOUT, v2 respin should rename PAM side)",
-    ),
+    # I2S_DOUT: FIXED (2026-07-25). The PAM8403 side of the C22 series
+    # DC-block is now its own net, "PAM_IN_AC" (net 59). Both nets are
+    # single connected copper components, so neither needs an entry here.
+    # Do not re-add: a series cap must be modelled as two nets, not as one
+    # "logically fragmented" net.
 
     # All 12 button nets have a pull-up resistor (R4..R15) and debounce cap
     # (C5..C16) placed in a strip at y=[46,50] with refs aligned at
@@ -118,18 +110,16 @@ ACCEPTED_FRAGMENTATIONS = {
     # R8 session: all 11 remaining button R/C bridges fixed via south-highway
     # F.Cu routes (BTN_A/LEFT/DOWN/RIGHT/UP at y=55-57, BTN_L at y=57.5,
     # BTN_SELECT via SW_BOOT F.Cu y=58, BTN_START at y=43 via R7 bridge).
-    # All 12 button nets are now connected except D1 menu-diode anodes.
+    # All 12 button nets are now connected, D1 menu-diode anodes included.
 
-    # BTN_START: R12/C13 junction connected in R7 commit 0880d3d via
-    # B.Cu stub north to y=43 + F.Cu diagonal to (90.75, 34.94). Only
-    # D1.1 dangling via at (156.95, 56.10) remains isolated.
-    "BTN_START":  (2, "D1.1 menu-diode anode isolated — R5-CRIT-6, menu-combo shortcut disabled (v2 respin)"),
-
-    # BTN_SELECT: R13/C14 junction connected in R8 via B.Cu stub to SW_BOOT
-    # F.Cu at (88.95, 58). SW_BOOT.2 connected in R8 via F.Cu (102, 60)→
-    # (102, 58)→(60.45, 58) route. Only D1.2 dangling via at (155.05, 51.10)
-    # remains isolated — same v2 respin issue as D1.1.
-    "BTN_SELECT": (2, "D1.2 menu-diode anode isolated — R5-CRIT-6, menu-combo shortcut disabled (v2 respin)"),
+    # BTN_START / BTN_SELECT: FIXED (2026-07-25, R5-CRIT-6). D1 was moved
+    # from (156, 52.5) — where neither anode could be reached — into the
+    # 1.30 mm channel between the two button columns at (101.225, 56.5),
+    # rotated 180°. D1.1 now taps the BTN_START vertical at (100.45,
+    # 55.400) and D1.2 taps the BTN_SELECT vertical at (102.00, 55.400);
+    # MENU_K is the only net that crosses the board. See
+    # routing._menu_diode_traces for the full clearance table.
+    # Both nets are single connected copper components — no entry needed.
 
     # USB-C receptacle VBUS pins J1.2, J1.9, J1.11 should all be shorted for
     # reversible-plug operation. The PCB escape area south of the J1 footprint

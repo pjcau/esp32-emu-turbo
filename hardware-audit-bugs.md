@@ -266,12 +266,20 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 - **Impact**: **HIGH functional**. Download mode currently requires either the USB-JTAG path or manually shorting GPIO0 to GND. SW_BOOT as a physical button is decorative.
 - **Fix plan**: route a B.Cu/F.Cu trace from SW_BOOT.2 to the nearest BTN_SELECT copper (probably the R13/C14 junction at x=88.95 after R5-CRIT-4 is fixed, or directly to the SW10→ESP32 trace).
 
-### R5-CRIT-6 — Menu combo diode D1 not connected to BTN_START/BTN_SELECT
+### R5-CRIT-6 — Menu combo diode D1 not connected to BTN_START/BTN_SELECT — **FIXED 2026-07-25**
 
 - **Files**: `scripts/generate_pcb/routing.py::_menu_diode_traces`, cache
 - **Evidence**: D1.2 (155.05, 53.60) → short B.Cu stub to (155.05, 51.10) → dangling via. Same structure for the BTN_START side. The "menu combo" (SW13 triggers BTN_START + BTN_SELECT via dual Schottky D1) is electrically inert.
 - **Impact**: **MEDIUM functional**. The menu combo shortcut (one button triggers two simultaneously) does not work. Users must press BTN_START + BTN_SELECT separately to reach the emulator menu. Not blocking for basic gameplay, blocks the menu UX shortcut.
-- **Fix plan**: route D1.1 and D1.2 to reach the BTN_START and BTN_SELECT networks respectively.
+- **Root cause**: D1 was placed at (156, 52.5) next to SW13, but BTN_START and BTN_SELECT both terminate around x=100-102 and **no corridor reaches x=156**. The south perimeter at y=73.955 crosses the J1 USB-C back-row shield pads (y=[72.575, 74.575]); the north path is blocked by IP5306, L1, the regulator, the C17-C19 pads, the MENU_K F.Cu at x=156 and the USB_D+/D- verticals at x=90-91. Several sessions tried to route from the old position and failed — the position itself was the bug.
+- **Fix (2026-07-25)**: relocate D1 instead of routing to it, so only **one** net (MENU_K) has to cross the board.
+  - D1 moved to **(101.225, 56.5), KiCad rotation 180°, B.Cu** — the 1.30 mm free channel between the BTN_START column (x=100.45) and the BTN_SELECT column (x=102.00). At 180° the SOT-23 two-pad row faces north, so D1.1 lands on the west column and D1.2 on the east column with no crossing.
+  - D1.1 (100.275, 55.400) → 0.175 mm B.Cu stub onto x=100.45; the BTN_START vertical is split at y=55.400 so the tap is a real 3-way junction.
+  - D1.2 (102.175, 55.400) → 0.175 mm B.Cu stub onto x=102.00; the BTN_SELECT column extended north from y=60.00.
+  - D1.3 (101.225, 57.600) → B.Cu south to (101.225, 62.400) → via → F.Cu east at y=62.400 to x=137.0 → north to y=59.850 → east across SW13 pads 1 and 2.
+  - The SW13 pad-3 GND via moved from (135.0, 61.55) to (135.0, 63.55): its 2 mm F.Cu riser sat straight across the only usable MENU_K corridor.
+  - CPL: D1's `_JLCPCB_ROT_OVERRIDES` entry removed and re-derived — see `hardware/datasheets/POLARITY_AUDIT.md`. The old 270° at KiCad 0° was 180° out versus the identical-footprint Q1/U4 (90° by formula, validated on 8+ boards); at KiCad 180° the formula yields the same 270° so the emitted CPL angle is unchanged.
+- **Verification**: KiCad DRC reports **zero** unconnected items for BTN_START and BTN_SELECT (was 1 each); both removed from `verify_net_connectivity.py::ACCEPTED_FRAGMENTATIONS`.
 
 ### Summary of the 10 remaining DRC dangling vias
 
@@ -1116,10 +1124,12 @@ has the R6/R7/R8/R9 copper-connectivity + clearance fixes all verified.
   R6/R7/R8.
 - Menu combo via SW13 → D1 (BAT54C) dual-Schottky with common cathode
   on MENU_K. D1.1 anode → BTN_START, D1.2 anode → BTN_SELECT.
-  Currently the D1 anodes are **isolated** on the PCB (R5-CRIT-6,
-  accepted as v2-respin tech debt — menu-combo shortcut disabled, users
-  can still press START + SELECT simultaneously and the firmware's
-  `BTN_MENU_COMBO` bitmask detects it via `input.c::input_menu_pressed`).
+  **FIXED 2026-07-25** (R5-CRIT-6): D1 relocated to (101.225, 56.5) at
+  180° between the two button columns, both anodes routed, MENU_K taken
+  across the board on the F.Cu y=62.400 corridor. Pressing SW13 now
+  drives both nets. Firmware needs no change — `BTN_MENU_COMBO` in
+  `input.c::input_menu_pressed` already detects the START+SELECT mask,
+  which is exactly what the diode-OR produces.
 - R19 (MENU_K pull-up) and C20 (MENU_K debounce) were **deleted** by
   R9-MED-4 because MENU_K was a dead net — the pull-up came from the
   downstream BTN_START/BTN_SELECT 10k resistors through D1's forward
