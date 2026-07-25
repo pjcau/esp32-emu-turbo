@@ -1182,8 +1182,15 @@ can clean up in a follow-up commit without touching geometry or
 routing. None of them block manufacturing or firmware operation.
 
 Remaining v2-respin tech debt (unchanged from R5/R6/R7/R8/R9):
-- 4 accepted net fragmentations (BTN_SELECT/BTN_START D1 menu-diode,
-  I2S_DOUT C22 AC-coupling, VBUS J1.9/11 reversible)
+- ~~4 accepted net fragmentations (BTN_SELECT/BTN_START D1 menu-diode,
+  I2S_DOUT C22 AC-coupling, VBUS J1.9/11 reversible)~~
+  **SUPERSEDED 2026-07-25 — now 1, not 4.** BTN_START and BTN_SELECT
+  fixed by the R5-CRIT-6 D1 relocation; I2S_DOUT was never a real
+  fragmentation and is gone (the PAM8403 side of the C22 series DC-block
+  is now its own net, `PAM_IN_AC`). Only **VBUS** (J1.9/11 reversible,
+  R5-CRIT-9) is still allowlisted in
+  `verify_net_connectivity.py::ACCEPTED_FRAGMENTATIONS`. That file is the
+  source of truth — do not re-derive the count from this line.
 - R9-LOW-1 (MountingHole library not in fp-lib-table, 6 DRC warnings)
 - R9-LOW-2 (2 silkscreen labels clipped by mask)
 - BUG-L1 (IP5306 KEY bootstrap from VOUT)
