@@ -43,28 +43,39 @@ simulate: ## Run electrical circuit simulation/verification
 pcb-check: ## Run PCB short circuit / zone fill analysis
 	@$(T) pcb-check python3 scripts/short_circuit_analysis.py
 
-verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + consistency)
+# Every script listed here must exit 0 for `verify-all` to pass.
+# Add new pre-production checks here, not as an extra line in the recipe.
+VERIFY_ALL_SCRIPTS := \
+	verify_dfm_v2 verify_dfa drc_check simulate_circuit \
+	verify_schematic_pcb short_circuit_analysis verify_polarity \
+	verify_datasheet_nets verify_antenna_keepout verify_stackup \
+	verify_net_class_widths verify_design_intent verify_trace_through_pad \
+	verify_trace_crossings verify_copper_clearance verify_net_connectivity \
+	verify_power_net_integrity verify_easyeda_footprint
+
+verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + consistency) — FAILS if any check fails
 	@echo "Running verification suite..."
-	@$(T) verify-all sh -c '\
-		python3 scripts/verify_dfm_v2.py & \
-		python3 scripts/verify_dfa.py & \
-		python3 scripts/drc_check.py & \
-		python3 scripts/simulate_circuit.py & \
-		python3 scripts/verify_schematic_pcb.py & \
-		python3 scripts/short_circuit_analysis.py & \
-		python3 scripts/verify_polarity.py & \
-		python3 scripts/verify_datasheet_nets.py & \
-		python3 scripts/verify_antenna_keepout.py & \
-		python3 scripts/verify_stackup.py & \
-		python3 scripts/verify_net_class_widths.py & \
-		python3 scripts/verify_design_intent.py & \
-		python3 scripts/verify_trace_through_pad.py & \
-		python3 scripts/verify_trace_crossings.py & \
-		python3 scripts/verify_copper_clearance.py & \
-		python3 scripts/verify_net_connectivity.py & \
-		python3 scripts/verify_power_net_integrity.py & \
-		python3 scripts/verify_easyeda_footprint.py & \
-		wait'
+	@# The checks run concurrently, but each PID is waited on individually so
+	@# its exit status is actually collected. A bare `wait` returns 0 no matter
+	@# what its children did, which made this target incapable of failing — the
+	@# fourth layer of suppression that let a dead board reach fabrication.
+	@# See website/docs/rework/incident-3v3-split-plane.md.
+	@$(T) verify-all sh -c 'pids=""; \
+		for s in $(VERIFY_ALL_SCRIPTS); do \
+			python3 scripts/$$s.py & \
+			pids="$$pids $$!:$$s"; \
+		done; \
+		rc=0; failed=""; \
+		for p in $$pids; do \
+			if ! wait $${p%%:*}; then rc=1; failed="$$failed $${p#*:}"; fi; \
+		done; \
+		if [ $$rc -ne 0 ]; then \
+			echo ""; \
+			echo "======================================================"; \
+			echo "  verify-all FAILED —$$failed"; \
+			echo "======================================================"; \
+		fi; \
+		exit $$rc'
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
