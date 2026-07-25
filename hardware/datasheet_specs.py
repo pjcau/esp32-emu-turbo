@@ -50,6 +50,38 @@ COMPONENT_SPECS = {
     # reference retrieved via easyeda2kicad — wide signal 0.55mm,
     # narrow signal 0.30mm, rear shield 1.2×1.8, NPTH drill 0.70mm.
     # Pin names changed to duplicate 13/14 to match JLCPCB/EasyEDA reference.
+    #
+    # R22 CORRECTION (2026-07-25): the land -> contact map below was wrong
+    # for lands 3, 5, 8 and 9, and the errors were mutually consistent
+    # enough to survive several reviews. Re-derived by reading the
+    # datasheet itself rather than by reasoning about USB-C in general:
+    # the "RECOMMENDED PCB LAYOUT (TOP VIEW)" on page 1 labels every one
+    # of the 12 lands with the receptacle contact(s) it carries. Rendered
+    # at 1800 dpi the labels sit directly over their lands and read, left
+    # to right:
+    #
+    #   A1·B12 | A4·B9 | B8 | A5 | B7 | A6 | A7 | B6 | A8 | B5 | B4·A9 | B1·A12
+    #    wide     wide   ..... eight narrow 0.30 mm lands .....   wide     wide
+    #
+    # which matches the drawing's own "0.60(4X)" / "0.30(8X)" land-width
+    # callouts (4 wide, 8 narrow). Feeding those through the PIN
+    # ASSIGNMENTS table on the same sheet gives the land map used here.
+    # Cross-check: the resulting sequence is 180°-rotationally symmetric
+    # (reversing it swaps every A contact for its B partner), exactly as a
+    # USB-C receptacle must be — the old map was not symmetric, which is
+    # what made it wrong.
+    #
+    # Two consequences, both already implemented in the PCB by
+    # routing._usb_c_reversibility_traces():
+    #   - land 9 is SBU1, NOT VBUS. It was on the VBUS net, which is why
+    #     DRC kept demanding a VBUS connection to it. All four VBUS
+    #     contacts (A4/B9/B4/A9) are already carried by the two wide
+    #     lands 2 and 11, so nothing is lost by freeing land 9.
+    #   - lands 5 (B7=DN2) and 8 (B6=DP2) are the flipped-orientation USB
+    #     2.0 pair and previously had no net at all. USB Type-C r2.1 §4.2
+    #     requires a device with no USB mux to tie A6-B6 and A7-B7 on the
+    #     PCB; without that the board does not enumerate with the plug
+    #     upside down. They are now shorted to lands 6 and 7.
     # ======================================================================
     "J1": {
         "component": "USB-C 16-Pin Connector",
@@ -57,18 +89,18 @@ COMPONENT_SPECS = {
         "datasheet": "J1_USB-C-16pin_C2765186.pdf",
         "datasheet_page": 1,
         "pins": {
-            "1":   {"net": _exact("GND"),      "function": "GND (A1/A12 merged)", "type": "smd"},
-            "2":   {"net": _exact("VBUS"),     "function": "VBUS (A4/B4 merged)", "type": "smd"},
-            "3":   {"net": _unconnected(),     "function": "DM_B (DN2) — no USB mux, OK unconnected", "type": "smd"},
-            "4":   {"net": _exact("USB_CC1"),  "function": "CC1", "type": "smd"},
-            "5":   {"net": _unconnected(),     "function": "DM_A (DN1) — no USB mux, OK unconnected", "type": "smd"},
-            "6":   {"net": _exact("USB_D+"),   "function": "DP_A (DP1)", "type": "smd"},
-            "7":   {"net": _exact("USB_D-"),   "function": "DP_B (DN1/DP2 — used as D-)", "type": "smd"},
-            "8":   {"net": _unconnected(),     "function": "SBU — unused", "type": "smd"},
-            "9":   {"net": _exact("VBUS"),     "function": "VBUS (A9/B9 merged)", "type": "smd"},
-            "10":  {"net": _exact("USB_CC2"),  "function": "CC2", "type": "smd"},
-            "11":  {"net": _exact("VBUS"),     "function": "VBUS (B4 merged)", "type": "smd"},
-            "12":  {"net": _exact("GND"),      "function": "GND (B1/B12 merged)", "type": "smd"},
+            "1":   {"net": _exact("GND"),      "function": "A1+B12 — GND (merged land)", "type": "smd"},
+            "2":   {"net": _exact("VBUS"),     "function": "A4+B9 — VBUS (merged land)", "type": "smd"},
+            "3":   {"net": _unconnected(),     "function": "B8 — SBU2, unused (no alt-mode/audio accessory)", "type": "smd"},
+            "4":   {"net": _exact("USB_CC1"),  "function": "A5 — CC1 (5.1k pull-down R1)", "type": "smd"},
+            "5":   {"net": _exact("USB_D-"),   "function": "B7 — DN2, flipped-orientation D- (tied to A7 per USB-C r2.1 §4.2)", "type": "smd"},
+            "6":   {"net": _exact("USB_D+"),   "function": "A6 — DP1, normal-orientation D+", "type": "smd"},
+            "7":   {"net": _exact("USB_D-"),   "function": "A7 — DN1, normal-orientation D-", "type": "smd"},
+            "8":   {"net": _exact("USB_D+"),   "function": "B6 — DP2, flipped-orientation D+ (tied to A6 per USB-C r2.1 §4.2)", "type": "smd"},
+            "9":   {"net": _unconnected(),     "function": "A8 — SBU1, unused (no alt-mode/audio accessory)", "type": "smd"},
+            "10":  {"net": _exact("USB_CC2"),  "function": "B5 — CC2 (5.1k pull-down R2)", "type": "smd"},
+            "11":  {"net": _exact("VBUS"),     "function": "B4+A9 — VBUS (merged land)", "type": "smd"},
+            "12":  {"net": _exact("GND"),      "function": "B1+A12 — GND (merged land)", "type": "smd"},
             "13":  {"net": _exact("GND"),      "function": "Shield (front left)", "type": "thru_hole", "min_drill": 0.5},
             "14":  {"net": _exact("GND"),      "function": "Shield (front right)", "type": "thru_hole", "min_drill": 0.5},
             # Rear shield pads also named "13"/"14" (duplicate names, same GND net).
