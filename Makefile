@@ -1,5 +1,6 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-isolation verify-jlcpcb-vias verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -132,6 +133,11 @@ docs-bom: ## Regenerate the docs BOM table from release_jlcpcb/bom.csv
 
 docs-bom-check: ## Fail if the docs BOM table is stale vs the shipped BOM
 	@$(T) docs-bom-check python3 scripts/generate_docs_bom.py --check
+verify-jlcpcb-vias: ## JLCPCB published via/hole/slot limits (jlcpcb.com/blog/pcb-via-design-best-practices)
+	@$(T) verify-jlcpcb-vias python3 scripts/verify_jlcpcb_via_rules.py
+
+verify-isolation: ## Isolation gate — 13 checks: connected where intended, isolated everywhere else (~2s)
+	@$(T) verify-isolation python3 scripts/verify_isolation.py
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
