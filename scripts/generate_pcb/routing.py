@@ -885,10 +885,15 @@ def _power_traces():
     ip_vbus_via_x = ip_vbus[0] - 2  # 108.0
     ip_vbus_via_y = ip_vbus[1] - 0.5  # DFM: 0.5mm above pad to clear U2[EP]
 
-    # 1. B.Cu stub from USB VBUS pad LEFT to x=82.0
-    #    NOTE: no x-offset needed — trace goes straight down from pad center.
-    parts.append(_seg(usb_vbus[0], usb_vbus[1], vbus_fcu_start_x, usb_vbus[1],
-                       "B.Cu", W_PWR, n_vbus))
+    # 1. (removed) There used to be a B.Cu stub from the USB VBUS pad LEFT
+    #    to x=82.0 here. The R16 fix above tucked the vertical onto the pad
+    #    centre (vbus_fcu_start_x = usb_vbus[0]), which turned that stub
+    #    into a ZERO-LENGTH segment: start and end both (82.40, 68.775).
+    #    KiCad keeps such a segment, gerbers carry it as a degenerate flash,
+    #    and verify_power_net_integrity reported VBUS as two groups because
+    #    the orphan has no extent to touch anything. The vertical in step 2
+    #    already starts on the pad centre, so the stub has nothing to do —
+    #    deleted rather than given a token length.
     # 2. B.Cu vertical UP from y=68.255 to y=61.0 (above all button F.Cu channels)
     parts.append(_seg(vbus_fcu_start_x, usb_vbus[1], vbus_fcu_start_x, vbus_fcu_y,
                        "B.Cu", W_PWR, n_vbus))
@@ -3230,35 +3235,68 @@ def _usb_c_reversibility_traces():
     # ── VBUS: land 11 -> land 2 ─────────────────────────────────────
     # Both wide VBUS lands are pinned between a peg hole on their outer
     # side and a 0.30 mm signal land on their inner side, so the escape
-    # has to thread the diagonal gap between the two. Measured on the
-    # left side: peg centre (77.11, 69.845) to land 10's lower-left
-    # corner (78.10, 69.325) is 1.118 mm, minus the 0.325 mm hole radius
-    # leaves 0.793 mm of free span. That span has to hold
-    #     0.300 mm (validate_jlcpcb NPTH-to-copper, stricter than the
-    #               0.254 mm in the .kicad_dru — the tighter one wins)
-    #   + trace width
-    #   + 0.200 mm (pad to track)
-    # so the widest trace that fits is 0.293 mm. W_SIG (0.25) is used and
-    # the centreline biased 0.02 mm off the NPTH side, leaving 0.32 mm to
-    # the peg hole and 0.223 mm to the land corner. The escape runs
+    # has to thread the diagonal gap between the two. The escape runs
     # perpendicular to the peg-to-corner line, which is the only
     # orientation in which anything fits at all — a purely vertical drop
     # out of land 11 is impossible, the peg keepout covers it entirely.
     #
-    # 0.25 mm is thin for a power net, but this is a PARALLEL path, not
-    # the supply: land 2 keeps its 0.60 mm run to the IP5306. Over the
-    # ~9 mm round trip the link adds ~18 mOhm, against ~20 mOhm for the
-    # two connector contacts it brings online, so current splits roughly
-    # 55/45 between the two VBUS land pairs — which is the entire point.
-    _esc_w = W_SIG
+    # R22 (2026-07-25): the gap is now solved instead of guessed, and the
+    # corridor below it is widened to the Power High width.
+    #
+    # WIDTH OF THE GATE IS A HARD GEOMETRIC LIMIT, NOT A STYLE CHOICE.
+    # The free span between the peg hole and the corner of the adjacent
+    # land is fixed by the connector's own datasheet dimensions — both
+    # features belong to J1, so nothing on the board can move to open it
+    # up. Along the peg-centre-to-land-corner line the budget is
+    #     |PQ| = 1.1183 mm
+    #   - 0.325 mm  peg hole radius
+    #   - 0.300 mm  NPTH-to-copper (validate_jlcpcb; stricter than the
+    #               0.254 mm in the .kicad_dru, so the tighter one wins)
+    #   - 0.200 mm  pad-to-track
+    #   = 0.293 mm  widest trace that can physically pass
+    # Confirmed independently by a maximin-clearance path search over an
+    # exact B.Cu clearance field (0.2888 mm at 5 um resolution, pinch at
+    # (77.795, 69.485) — i.e. exactly this gap). The same search puts the
+    # alternative escape, upward into the board interior, at 0.170 mm,
+    # and that route is topologically blocked further on anyway: every
+    # one of lands 3..10 drops a B.Cu via/trace through the band above,
+    # and F.Cu is spanned end to end by the BTN_B and USB_CC1 runs.
+    # So 0.50 mm cannot be reached here by ANY routing; the Power High
+    # class minimum is unsatisfiable at this gate. It is deliberately NOT
+    # allowlisted — verify_net_class_widths is meant to keep reporting it.
+    #
+    # The width is therefore solved from the geometry rather than typed
+    # in, so it always uses the whole available budget: if the footprint
+    # or the clearance rules ever change, the escape widens by itself and
+    # is capped at W_PWR_HIGH once the gap can take it.
+    #
+    # This is in any case a PARALLEL bond, not the supply path: land 2
+    # keeps its 0.60 mm run to the IP5306. At 0.273 mm the gate carries
+    # 0.93 A on its own (IPC-2221, external, 1 oz, 10 C rise) and the
+    # link as a whole is ~9.7 mOhm, against ~20 mOhm for the two
+    # connector contacts it brings online, so of the IP5306's 2.1 A peak
+    # roughly 0.7 A takes this path — inside the gate's rating.
     _peg_x, _peg_y = USBC[0] - 2.89, USBC[1] - 1.305      # left peg hole
     _peg_r = 0.325
-    _corner = (p11[0] + 0.65, p11[1] + 0.55)              # land 10 lower-left
+    _C_NPTH = 0.30        # NPTH to copper
+    _C_PAD = 0.20         # pad to track
+    _MARGIN = 0.01        # absorbs KiCad's 0.005 mm polygon chord error
+    _l10 = _pad("J1", "10")
+    _corner = (_l10[0] - 0.15, _l10[1] + 0.55)            # land 10 lower-left
     _dx, _dy = _corner[0] - _peg_x, _corner[1] - _peg_y
     _span = math.hypot(_dx, _dy)
+    _free = _span - (_peg_r + _C_NPTH) - _C_PAD
+    _esc_w = round(min(W_PWR_HIGH, _free - 2 * _MARGIN), 3)
+    if _esc_w < W_SIG:
+        raise RuntimeError(
+            "J1 VBUS escape gate collapsed to %.3f mm (was 0.273 mm). "
+            "The peg-to-land-10 span is now %.4f mm — check whether the "
+            "J1 footprint or the clearance constants changed."
+            % (_esc_w, _span))
     _ux, _uy = _dx / _span, _dy / _span                   # peg -> corner
-    # Gate point: hole edge + NPTH clearance + half trace + 0.02 bias.
-    _gate_d = _peg_r + 0.30 + _esc_w / 2 + 0.02
+    # Gate point: hole edge + NPTH clearance + half trace + margin, which
+    # centres the trace in the free span.
+    _gate_d = _peg_r + _C_NPTH + _esc_w / 2 + _MARGIN
     _gate = (_peg_x + _ux * _gate_d, _peg_y + _uy * _gate_d)
     _px, _py = -_uy, _ux                                  # perpendicular, downward
     _esc_in = (round(_gate[0] - 0.55 * _px, 3), round(_gate[1] - 0.55 * _py, 3))
@@ -3269,9 +3307,17 @@ def _usb_c_reversibility_traces():
     _esc_out_r = (round(2 * USBC[0] - _esc_out[0], 3), _esc_out[1])
     # Start/finish on the land origins so the link has no free endpoints
     # (JLCDFM dead-end check). Both stubs stay wholly inside their land.
-    # In-land stubs and the two diagonal escapes are necked to _esc_w;
-    # the corridor run below the lands is unconstrained so it stays at
-    # W_PWR_LOW.
+    # In-land stubs and the two diagonal escapes are necked to _esc_w
+    # because they share the gate's budget.
+    #
+    # Everything past the gate is in open copper and carries the full
+    # Power High width. It used to be W_PWR_LOW (0.30 mm) for no reason
+    # other than matching the gate; measured against the clearance field
+    # the two vertical legs take 1.045 mm and the cross-connector run
+    # 0.850 mm before anything is violated, so W_PWR_HIGH (0.76 mm) fits
+    # with 0.143 / 0.045 mm of margin. Widening it drops the link from
+    # ~17.4 mOhm to ~9.7 mOhm, which is what actually decides how much of
+    # the charging current the second VBUS land pair carries.
     parts.append(_seg(p11[0], p11[1], _esc_in[0], _esc_in[1],
                        "B.Cu", _esc_w, n_vbus))
     parts.append(_seg(p2[0], p2[1], _esc_in_r[0], _esc_in_r[1],
@@ -3279,11 +3325,11 @@ def _usb_c_reversibility_traces():
     parts.append(_seg(_esc_in[0], _esc_in[1], _esc_out[0], _esc_out[1],
                        "B.Cu", _esc_w, n_vbus))
     parts.append(_seg(_esc_out[0], _esc_out[1], _esc_out[0], _vbus_link_y,
-                       "B.Cu", W_PWR_LOW, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
     parts.append(_seg(_esc_out[0], _vbus_link_y, _esc_out_r[0], _vbus_link_y,
-                       "B.Cu", W_PWR_LOW, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
     parts.append(_seg(_esc_out_r[0], _vbus_link_y, _esc_out_r[0], _esc_out_r[1],
-                       "B.Cu", W_PWR_LOW, n_vbus))
+                       "B.Cu", W_PWR_HIGH, n_vbus))
     parts.append(_seg(_esc_out_r[0], _esc_out_r[1], _esc_in_r[0], _esc_in_r[1],
                        "B.Cu", _esc_w, n_vbus))
     _PAD_NETS[("J1", "11")] = n_vbus

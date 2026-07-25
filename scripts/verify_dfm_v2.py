@@ -3651,6 +3651,41 @@ def test_jlcdfm_slot_width():
           f"{len(violations)} violations")
 
 
+def test_degenerate_segments():
+    """Zero-length track segments -- orphan copper with no extent.
+
+    R22 GUARD (2026-07-25). The VBUS run to the IP5306 used to start with a
+    stub from J1 pad 2 to `vbus_fcu_start_x`; a later fix set that variable
+    to the pad's own x, which silently turned the stub into a segment whose
+    start and end are the same point.
+
+    A zero-length segment is invisible in every check that measures a gap
+    BETWEEN two things -- it has no extent, so it collides with nothing and
+    DRC stays clean. It still reaches the fabricator as a degenerate flash,
+    and it fragments net-connectivity graphs: verify_power_net_integrity
+    reported VBUS as two electrically separate groups because the orphan
+    could not be shown to touch the rest of the net.
+
+    Any segment whose endpoints coincide is dead copper. The generator
+    should emit no segment at all rather than one of zero length.
+    """
+    print("\n── Degenerate (Zero-Length) Segments ──")
+
+    bad = []
+    for s in _cached_segments():
+        if abs(s["x2"] - s["x1"]) < 1e-9 and abs(s["y2"] - s["y1"]) < 1e-9:
+            bad.append(s)
+
+    detail = ""
+    if bad:
+        detail = "%d zero-length segment(s): " % len(bad) + ", ".join(
+            "%s (%.3f,%.3f) w=%.2f net=%s"
+            % (s["layer"], s["x1"], s["y1"], s["w"], s.get("net"))
+            for s in bad[:5])
+    check(f"No zero-length track segments ({len(_cached_segments())} segments)",
+          not bad, detail)
+
+
 def test_zone_fill_freshness():
     """Zone fill freshness -- detect stale or unfilled copper zones.
 
@@ -3854,6 +3889,7 @@ if __name__ == "__main__":
     print("KiBot/KiPadCheck-Inspired Checks")
     print("=" * 60)
     test_zone_fill_freshness()
+    test_degenerate_segments()
     test_silk_to_pad_distance()
 
     print(f"\n{'=' * 60}")
