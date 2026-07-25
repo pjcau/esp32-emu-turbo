@@ -435,34 +435,77 @@ def test_T5_orphan_nets(cache, net_map, net_pads):
     # Exclude power/GND nets (these connect via zones, not pad-to-pad)
     power_nets = {"GND", "+5V", "+3V3", "VBUS", "BAT+", "LX", "EN"}
 
-    # Nets intentionally connected to a single component (by design)
-    # LCD_BL: backlight tied to 3V3 at FPC connector (no GPIO)
-    # LCD_RD: read strobe tied HIGH at FPC connector (no GPIO)
-    # LED1_RA, LED2_RA: LED anode through resistor (2-component but
-    #   one side may be a passive on the same net)
-    # IP5306_KEY: tied via resistor to BAT+ (single IC endpoint)
-    # BTN_MENU: legacy net, menu now uses START+SELECT combo via D1 BAT54C
-    # I2S_BCLK/LRCK: assigned to U1 pads but no target device (PAM8403 is analog)
-    KNOWN_SINGLE = {"LCD_BL", "LCD_RD", "I2S_BCLK", "I2S_LRCK", "BTN_MENU"}
+    # Nets intentionally connected to a single component (by design).
+    #
+    # I2S_BCLK / I2S_LRCK: assigned to U1 pads with no target device. The
+    #   audio path is PDM, not I2S: software/main/audio.c configures
+    #   I2S_PDM_TX with `.clk = I2S_GPIO_UNUSED` and drives only I2S_DOUT
+    #   (GPIO17) into C22 -> PAM8403, which is an analog amplifier. So the
+    #   two clock nets genuinely terminate at the MCU. Confirmed: neither
+    #   carries any segment or via, so there is no dangling copper either.
+    #
+    # Entries removed 2026-07-25 — LCD_BL, LCD_RD, BTN_MENU. All three had
+    # ZERO pads on the board by then: LCD_BL/LCD_RD were folded into +3V3
+    # (routing.py hard-ties J4.8 and J4.29, so the nets stopped existing)
+    # and BTN_MENU was deleted in R9-MED-4. A waiver for a net that no
+    # longer exists is not harmless: it stands ready to greet a REGRESSION
+    # that recreates a floating LCD_BL with "single-component (by design)".
+    KNOWN_SINGLE = {"I2S_BCLK", "I2S_LRCK"}
 
+    # A KNOWN_SINGLE entry naming a net that is not on the board is stale,
+    # and staleness is the failure mode this list has already had once.
+    # Fail on it rather than letting it sit and wait.
+    stale = sorted(KNOWN_SINGLE - all_net_names)
+    check("T5", "No stale KNOWN_SINGLE entries", not stale,
+          f"these nets no longer exist on the board: {stale} — "
+          f"remove them, do not leave a waiver armed for a net that "
+          f"may come back for a different reason")
+
+    # Zero-pad and one-pad nets are different defects and are reported
+    # differently — this is a severity classification, NOT an exemption.
+    #
+    #   1 component  = a signal that leaves a part and arrives nowhere. Real
+    #                  electrical fault, and the case this test exists for.
+    #                  FAIL.
+    #   0 components = a net declared in primitives.NET_LIST that no pad
+    #                  carries. It has no copper, so it cannot short or open
+    #                  anything; it is a generator leftover. WARN, and it is
+    #                  named so it stays visible instead of being filtered.
+    #
+    # Currently LCD_RD and LCD_BL: routing.py hard-ties both FPC pins to +3V3
+    # (J4.29 and J4.8 are on the +3V3 net and verified connected by
+    # verify_power_net_integrity), so the two names survive only as
+    # declarations. Removing them from NET_LIST is the real cleanup, but it
+    # forces a full PCB regeneration that drops every filled_polygon and so
+    # needs a zone re-fill and a release re-sync — deliberately not bundled
+    # into a verification-side change.
     orphans = []
+    undeclared = []
     for net_name in sorted(all_net_names):
         if net_name in power_nets:
             continue
         pads = net_pads.get(net_name, [])
         components = set(ref for ref, _ in pads)
-        if len(components) <= 1:
-            if net_name in KNOWN_SINGLE:
+        if net_name in KNOWN_SINGLE:
+            if len(components) <= 1:
                 info("T5", f"Net '{net_name}' single-component (by design)",
                      f"component: {sorted(components)}")
-            else:
-                orphans.append((net_name, len(components), components))
+            continue
+        if len(components) == 0:
+            undeclared.append(net_name)
+        elif len(components) == 1:
+            orphans.append((net_name, len(components), components))
 
     for net_name, count, comps in orphans:
         comp_str = sorted(comps)[0] if comps else "NONE"
         check("T5", f"Net '{net_name}' has >1 component",
               False,
               f"only {count} component(s): {comp_str}")
+
+    if undeclared:
+        warn("T5", f"{len(undeclared)} net(s) declared with no pads",
+             f"{undeclared} — prune from primitives.NET_LIST on the next "
+             f"PCB regeneration (needs a zone re-fill + release sync)")
 
     if not orphans:
         check("T5", "No orphan nets found", True)

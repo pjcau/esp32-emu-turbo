@@ -727,7 +727,7 @@ def sot23_6(layer="B"):
 #   pad 3  (+1.30, -0.95)   all 1.100 x 0.600 rect
 # Keeping our library frame identical to EasyEDA's is deliberate:
 # verify_easyeda_footprint then reports delta_row = 0 for U3 and NO
-# _JLCPCB_ROT_OVERRIDES entry is required (the CPL default correction
+# _JLCPCB_ROT_DELTAS entry is required (the CPL default correction
 # of 180 deg already preserves the placement rotation).
 #
 # Pinout — AN_SY8089/A Rev 0.9A page 2 ("Pinout (top view)"):

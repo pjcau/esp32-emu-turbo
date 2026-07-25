@@ -2344,15 +2344,25 @@ def _display_traces():
 
     if pos_rd:
         px, py = pos_rd[0], pos_rd[1]
-        # NOTE: via_x=131.0 lands on a tiny orphan +3V3 fill island
-        # (x=130.74..131.25, y=39.51..39.99) created by LCD data approach
-        # traces fragmenting the In2.Cu +3V3 fill. Cannot relocate via
-        # further LEFT without crossing LCD net vert at x=130.4 (different
-        # net, same-layer crossing on B.Cu). Bridging via F.Cu would add
-        # 2 vias + routing for marginal gain: display has 5 other +3V3
-        # pads (2, 3, 7, 8, 34) that reach the main zone — loss of pad 29
-        # is redundancy only, not functional. Documented tech debt for v2.
-        via_x = 131.0  # orphan island (see note)
+        # RESOLVED 2026-07-25 — this via is NOT on an orphan island.
+        # verify_power_net_integrity reports +3V3 as a single connected group
+        # (98 copper items, 29 pads, 4 filled islands total for 4 zones), and
+        # J4.29 is in that group. A later zone re-fill merged the fragment the
+        # note below described.
+        #
+        # The note is kept because its REASONING was wrong and must not be
+        # copied: it argued that "display has 5 other +3V3 pads (2,3,7,8,34)
+        # that reach the main zone, so loss of pad 29 is redundancy only".
+        # Pad 29 is not a supply pad. It is the panel's RD strobe (FPC pin 12)
+        # which is hard-tied HIGH because the display is write-only. On an
+        # orphan island it is not a redundant supply connection — it is a
+        # FLOATING CMOS input on the display controller. If a future fill ever
+        # re-fragments this area, that is a real defect, not accepted debt.
+        #
+        # Original constraint, still true: the via cannot move further LEFT
+        # without crossing the LCD net vertical at x=130.4 (different net,
+        # same layer on B.Cu).
+        via_x = 131.0
         parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
         parts.append(_via_net(via_x, py, n_3v3,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))

@@ -3,7 +3,7 @@
 
 The problem this replaces
 -------------------------
-`_JLCPCB_ROT_OVERRIDES` (scripts/generate_pcb/jlcpcb_export.py) is a
+`_JLCPCB_ROT_DELTAS` (scripts/generate_pcb/jlcpcb_export.py) is a
 hand-tuned per-part table, and `verify_easyeda_footprint.py` checks that a
 *sign-off exists* for each geometric mismatch -- via that table, via
 `_GEOMETRIC_MISMATCH_ALLOWLIST`, or via `_PENDING_VALIDATION`. A gate shaped

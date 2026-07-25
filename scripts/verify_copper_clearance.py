@@ -132,17 +132,17 @@ def merge_by_net(features):
         else:
             by_net.setdefault(net_id, []).append(poly)
 
+    # No try/except here on purpose. These unions used to be wrapped in
+    # `except Exception: continue`, which dropped the ENTIRE net from `merged`
+    # when its geometry failed to union — and the gate then reported PASS,
+    # having simply not compared that net against anything. A clearance gate
+    # that silently stops looking at +3V3 is worse than no gate.
+    # If shapely raises here, the geometry is broken and that is the finding.
     merged = {}
     for net_id, polys in by_net.items():
-        try:
-            merged[net_id] = (unary_union(polys), [])
-        except Exception:
-            continue
+        merged[net_id] = (unary_union(polys), [])
     if nonet_polys:
-        try:
-            merged["<no net>"] = (unary_union(nonet_polys), [])
-        except Exception:
-            pass
+        merged["<no net>"] = (unary_union(nonet_polys), [])
     return merged
 
 
@@ -176,10 +176,10 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
                     or pa_bounds[3] + BROAD_PHASE < pb_bounds[1]
                     or pb_bounds[3] + BROAD_PHASE < pa_bounds[1]):
                 continue
-            try:
-                d = pa.distance(pb)
-            except Exception:
-                continue
+            # Unguarded: a failed distance() is a broken polygon, and
+            # swallowing it silently skips exactly the pair that might be
+            # shorting. Let it raise.
+            d = pa.distance(pb)
             if d < threshold:
                 na = nets.get(ka, str(ka)) if isinstance(ka, int) else ka
                 nb = nets.get(kb, str(kb)) if isinstance(kb, int) else kb
@@ -224,10 +224,8 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
         # Pairwise distance between sub-polygons of the same net
         for i in range(len(subs)):
             for j in range(i + 1, len(subs)):
-                try:
-                    d = subs[i].distance(subs[j])
-                except Exception:
-                    continue
+                # Unguarded — see the note in find_gaps().
+                d = subs[i].distance(subs[j])
                 if d < threshold and d > 0.001:
                     try:
                         pt_a, pt_b = nearest_points(subs[i], subs[j])

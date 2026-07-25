@@ -68,13 +68,32 @@ _JLCPCB_POS_CORRECTIONS = {
     "J3": (0, -3.5),     # JST PH 2P: model origin offset from pad center at 180° rotation
 }
 
-# ── Per-component rotation overrides (bypass formula) ──
-# Use when a specific LCSC part's 3D model has non-standard orientation.
-# The JLCPCB C5122557 (PAM8403) 3D model's default orientation differs
-# from the generic SOP correction database. Tested empirically.
-_JLCPCB_ROT_OVERRIDES = {
-    "U5": 180,   # PAM8403 (C5122557) — formula (90°→180°); 90° was wrong per JLCPCB DFM
-    "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
+# ── Per-component rotation DELTAS (added on top of the formula) ──
+#
+# These are ADDITIVE corrections, not absolute angles. Read this before
+# touching an entry.
+#
+# This table used to be `_JLCPCB_ROT_OVERRIDES` and it returned an ABSOLUTE
+# CPL angle, discarding `rot` and `layer` entirely. That is how D1 was able
+# to carry a frozen 270° that was 180° out for months: the emitted angle no
+# longer tracked the placement. Rotating an overridden part in the layout
+# changed the copper but NOT the CPL, so the part would be assembled at the
+# old orientation with no gate able to notice.
+#
+# As deltas, a layout rotation propagates automatically and the entry keeps
+# meaning one thing only: "this LCSC part's tape orientation differs from
+# what the package-family formula predicts, by exactly this much".
+#
+# Converted 2026-07-25. The emitted CPL is byte-identical to the previous
+# absolute table — verified against release_jlcpcb/cpl.csv.
+#
+# "U5" entry REMOVED in the same change: PAM8403 (C5122557) is SOP-16, the
+# formula already yields 180° via the `^SOP-` → 270 correction, and the old
+# absolute override restated that same 180°. Its delta was 0, i.e. it was
+# dead code that also skewed verify_dfa's effective-rotation comparison by
+# subtracting a compensation that never existed.
+_JLCPCB_ROT_DELTAS = {
+    "J4": 180,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
     # "C2" override REMOVED: C2 (22uF tantalum, AMS1117 output cap) no longer
     # exists. It was the most dangerous polarized part on the board and it
     # destroyed prototype #1 when assembled reversed
@@ -144,25 +163,31 @@ _JLCPCB_ROT_OVERRIDES = {
 
 
 def _jlcpcb_rotation(rot, layer, footprint_name, ref=None):
-    """Compute JLCPCB CPL rotation from KiCad rotation."""
-    # Per-component override (bypass formula entirely)
-    if ref and ref in _JLCPCB_ROT_OVERRIDES:
-        return _JLCPCB_ROT_OVERRIDES[ref]
+    """Compute JLCPCB CPL rotation from KiCad rotation.
 
+    The placement formula always runs; a `_JLCPCB_ROT_DELTAS` entry is then
+    ADDED to its result. Nothing bypasses the formula, so the emitted angle
+    always tracks the part's rotation in the layout.
+    """
     if layer != "bottom":
-        return rot  # Top side: no correction needed
+        angle = rot % 360  # Top side: no mirror, no package correction
+    else:
+        # Bottom-side mirror (community-validated formula)
+        angle = (rot - 180) % 360
 
-    # Bottom-side mirror (community-validated formula)
-    rot = (rot - 180) % 360
+        # Per-footprint correction (from database)
+        correction = _JLCPCB_ROT_DEFAULT
+        for pattern, corr in _JLCPCB_ROT_CORRECTIONS:
+            if re.match(pattern, footprint_name):
+                correction = corr
+                break
+        angle = (angle + correction) % 360
 
-    # Per-footprint correction (from database)
-    correction = _JLCPCB_ROT_DEFAULT
-    for pattern, corr in _JLCPCB_ROT_CORRECTIONS:
-        if re.match(pattern, footprint_name):
-            correction = corr
-            break
+    # Per-part tape-orientation delta, applied on top of the formula
+    if ref:
+        angle = (angle + _JLCPCB_ROT_DELTAS.get(ref, 0)) % 360
 
-    return (rot + correction) % 360
+    return angle
 
 
 def _build_placements():
