@@ -65,7 +65,9 @@ VERIFY_ALL_SCRIPTS = \
 	short_circuit_analysis \
 	simulate_circuit \
 	spice_power_check \
+	test_cpl_rotation_law \
 	test_pcb_connectivity \
+	test_power_net_integrity \
 	validate_jlcpcb \
 	verify_antenna_keepout \
 	verify_battery_protection \
@@ -74,6 +76,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_component_connectivity \
 	verify_copper_balance \
 	verify_copper_clearance \
+	verify_cpl_rotation_law \
 	verify_datasheet \
 	verify_datasheet_nets \
 	verify_decoupling_adequacy \
@@ -86,7 +89,9 @@ VERIFY_ALL_SCRIPTS = \
 	verify_esd_protection \
 	verify_gerber_integrity \
 	verify_ground_loops \
+	verify_isolation \
 	verify_jlcpcb_capabilities \
+	verify_jlcpcb_via_rules \
 	verify_net_class_widths \
 	verify_net_connectivity \
 	verify_netlist_diff \
@@ -95,6 +100,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_power_paths \
 	verify_power_resonance \
 	verify_power_sequence \
+	verify_schematic_crossings \
 	verify_schematic_pcb \
 	verify_schematic_pcb_sync \
 	verify_sd_interface \

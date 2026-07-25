@@ -42,23 +42,32 @@ def _statuses() -> dict[str, str]:
     return {r["ref"]: r["status"] for r in LAW.evaluate()}
 
 
-class InjectOverride:
-    """Temporarily force a component's emitted CPL angle."""
+class InjectRotationError:
+    """Temporarily ADD `error_deg` to a component's emitted CPL angle.
 
-    def __init__(self, ref: str, value: int):
-        self.ref, self.value = ref, value
-        self.had = ref in EXPORT._JLCPCB_ROT_OVERRIDES
-        self.prev = EXPORT._JLCPCB_ROT_OVERRIDES.get(ref)
+    `_JLCPCB_ROT_DELTAS` entries are deltas on top of the placement formula,
+    so the planted error has to be added to whatever the part already carries.
+    Writing `error_deg` straight into the dict would instead REPLACE the
+    part's real delta, and for a part that already has one (J4, LED2) a
+    planted 180° would cancel against its configured 180° and emit the
+    correct angle — the mutation test would then report the gate as asleep
+    when it was the injector that never moved the part.
+    """
+
+    def __init__(self, ref: str, error_deg: int):
+        self.ref, self.error = ref, error_deg
+        self.had = ref in EXPORT._JLCPCB_ROT_DELTAS
+        self.prev = EXPORT._JLCPCB_ROT_DELTAS.get(ref, 0)
 
     def __enter__(self):
-        EXPORT._JLCPCB_ROT_OVERRIDES[self.ref] = self.value
+        EXPORT._JLCPCB_ROT_DELTAS[self.ref] = (self.prev + self.error) % 360
         return self
 
     def __exit__(self, *exc):
         if self.had:
-            EXPORT._JLCPCB_ROT_OVERRIDES[self.ref] = self.prev
+            EXPORT._JLCPCB_ROT_DELTAS[self.ref] = self.prev
         else:
-            EXPORT._JLCPCB_ROT_OVERRIDES.pop(self.ref, None)
+            EXPORT._JLCPCB_ROT_DELTAS.pop(self.ref, None)
         return False
 
 
@@ -101,9 +110,7 @@ class TestMutations(unittest.TestCase):
         missed = []
         for ref in compliant:
             for wrong in (90, 180, 270):
-                current = next(
-                    r["cpl"] for r in LAW.evaluate() if r["ref"] == ref)
-                with InjectOverride(ref, int((current + wrong) % 360)):
+                with InjectRotationError(ref, wrong):
                     st = _statuses().get(ref)
                 if st != "FAIL":
                     missed.append(f"{ref} +{wrong}deg -> {st}")
@@ -117,20 +124,21 @@ class TestMutations(unittest.TestCase):
         baseline = _statuses()
         compliant = [ref for ref, st in baseline.items() if st == "OK"]
         for ref in compliant[:5]:
-            current = next(
-                r["cpl"] for r in LAW.evaluate() if r["ref"] == ref)
-            with InjectOverride(ref, int(current % 360)):
+            with InjectRotationError(ref, 0):
                 self.assertEqual(
                     _statuses().get(ref), "OK",
                     f"{ref} failed when re-given its own correct angle — the "
                     f"gate rejects everything and its failures are worthless")
 
-    def test_overrides_are_restored_after_mutation(self):
+    def test_deltas_are_restored_after_mutation(self):
         """A leaked mutation would corrupt every later check in the suite."""
-        before = dict(EXPORT._JLCPCB_ROT_OVERRIDES)
-        with InjectOverride("LED1", 123):
-            pass
-        self.assertEqual(dict(EXPORT._JLCPCB_ROT_OVERRIDES), before)
+        before = dict(EXPORT._JLCPCB_ROT_DELTAS)
+        with InjectRotationError("LED1", 123):
+            self.assertNotEqual(
+                dict(EXPORT._JLCPCB_ROT_DELTAS), before,
+                "the injector did not actually mutate the table — every "
+                "mutation test above would be testing nothing")
+        self.assertEqual(dict(EXPORT._JLCPCB_ROT_DELTAS), before)
 
 
 if __name__ == "__main__":

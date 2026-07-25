@@ -8,7 +8,7 @@ footprint fetched via `easyeda2kicad`.
 Detects the same class of bug that caused the C2 tantalum reversal:
   - Pad 1 physically on the wrong side of the footprint
   - Pin numbering rotated vs EasyEDA convention
-  - Missing or stale `_JLCPCB_ROT_OVERRIDES` entries
+  - Missing or stale `_JLCPCB_ROT_DELTAS` entries
 
 Policy (no silencing):
   - Polarized parts with geometric pad-1 mismatch → FAIL (suggests override)
@@ -161,7 +161,7 @@ def _apply_pad_aliases(ee: dict, lcsc: str) -> dict:
 #     proof (prototype batch, power-up behaviour, measured output, etc).
 #     A missing/empty evidence string also causes a FAIL.
 #
-# IMPORTANT: this allowlist is INDEPENDENT of _JLCPCB_ROT_OVERRIDES in
+# IMPORTANT: this allowlist is INDEPENDENT of _JLCPCB_ROT_DELTAS in
 # jlcpcb_export.py. The override dict corrects CPL rotation at export
 # time. The allowlist records "this δ_row native-frame mismatch has
 # been physically validated". Do not conflate the two.
@@ -213,7 +213,7 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
         "manufacturer convention difference). With our KiCad LED_0805 "
         "pad 1 = cathode → GND routing and 0° rotation, EasyEDA's "
         "physical anode would land on our GND pad → LED reverse-biased "
-        "and dark. _JLCPCB_ROT_OVERRIDES['LED2']=180 in "
+        "and dark. _JLCPCB_ROT_DELTAS['LED2']=180 in "
         "scripts/generate_pcb/jlcpcb_export.py flips the part so the "
         "physical cathode lands on our GND pad → forward-biased.",
     ),
@@ -223,7 +223,7 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
 # ── PENDING-VALIDATION list (suspected bugs awaiting empirical result) ──
 #
 # This dict is DISTINCT from both:
-#   - `_JLCPCB_ROT_OVERRIDES` (jlcpcb_export.py): compensation rotations
+#   - `_JLCPCB_ROT_DELTAS` (jlcpcb_export.py): compensation rotations
 #     that are actively applied to the CPL file at export time.
 #   - `_GEOMETRIC_MISMATCH_ALLOWLIST` (above): empirically validated
 #     native-frame mismatches (evidence already collected).
@@ -255,7 +255,7 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
 #     without CPL compensation) → MOVE entry to
 #     `_GEOMETRIC_MISMATCH_ALLOWLIST` with empirical evidence string.
 #   - If the batch confirms the footprint is WRONG (component reversed) →
-#     ADD the rotation to `_JLCPCB_ROT_OVERRIDES` in jlcpcb_export.py AND
+#     ADD the rotation to `_JLCPCB_ROT_DELTAS` in jlcpcb_export.py AND
 #     remove the entry from here.
 #   - Either way, `_PENDING_VALIDATION` MUST shrink over time; a growing
 #     dict is a red flag.
@@ -662,8 +662,8 @@ def _cpl_rotation_for(ref: str) -> float | None:
 
 
 def _current_override(ref: str) -> int | None:
-    from scripts.generate_pcb.jlcpcb_export import _JLCPCB_ROT_OVERRIDES
-    return _JLCPCB_ROT_OVERRIDES.get(ref)
+    from scripts.generate_pcb.jlcpcb_export import _JLCPCB_ROT_DELTAS
+    return _JLCPCB_ROT_DELTAS.get(ref)
 
 
 # ── BOM expansion ───────────────────────────────────────────────────
@@ -998,7 +998,7 @@ def main() -> int:
         # footprint-layout mismatch. A non-zero δ_row means our footprint
         # has its pins rotated relative to EasyEDA's reference, which
         # WILL produce wrong CPL placement unless compensated by:
-        #   - A _JLCPCB_ROT_OVERRIDES entry, OR
+        #   - A _JLCPCB_ROT_DELTAS entry, OR
         #   - Built-in formula correction matching the package family
         #
         # For polarized parts we require either a match (δ=0) OR an
@@ -1162,7 +1162,7 @@ def main() -> int:
                     # If cpl_rot is non-zero AND aligns with delta, accept.
                     # We can't cleanly derive this without assembly
                     # feedback, so conservatively FAIL and ask human.
-                    fix = (f"add `_JLCPCB_ROT_OVERRIDES[\"{ref}\"] = "
+                    fix = (f"add `_JLCPCB_ROT_DELTAS[\"{ref}\"] = "
                            f"<value>` (candidate from δ_row={delta}°)"
                            f" in scripts/generate_pcb/jlcpcb_export.py,"
                            " then order sample and confirm polarity")
