@@ -2953,15 +2953,9 @@ def _pam_passive_traces():
         parts.append(_seg(r20_p2[0], _r20_detour_y,
                           r20_p2[0], r20_p2[1],
                           "B.Cu", W_DATA, n_pam_in))
-        # GND stub from R20 pad 1 (far pad): go UP 1.5mm then via
-        # DFM FIX: via shifted left 0.10mm for SPK+ clearance at x=39.5 w=0.3.
-        # Via right edge = 38.85+0.25 = 39.10, SPK+ left = 39.35, gap=0.25mm ✓
-        _gnd_vx = r20_p1[0] - 0.10
-        parts.append(_seg(r20_p1[0], r20_p1[1],
-                          _gnd_vx, r20_p1[1] - 1.5,
-                          "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(_gnd_vx, r20_p1[1] - 1.5,
-                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        # R20 pad 1 (far pad) is the BIAS side — it goes to PAM_VREF, not GND.
+        # Built once for R20+R21 together in the VREF bias rail below, after
+        # C21 has established where the VREF node sits. See R4-HIGH-3.
 
     # ── R21: INR (pin 10) → R21 → GND via
     # R21 at (36.0, 32.200) rot 0: pad1 at ~(35.05, 32.2), pad2 at ~(36.95, 32.2)
@@ -2978,14 +2972,8 @@ def _pam_passive_traces():
                           r21_p2[0], r21_p2[1],
                           "F.Cu", W_DATA, n_pam_in))
         parts.append(_via_net(r21_p2[0], r21_p2[1], n_pam_in, size=VIA_STD, drill=VIA_STD_DRILL))
-        # GND stub from R21 pad 1 (far pad): go DOWN 1.5mm then via
-        # DFM FIX: via shifted left 0.10mm for SPK+ clearance at x=39.5
-        _gnd_vx = r21_p1[0] - 0.10
-        parts.append(_seg(r21_p1[0], r21_p1[1],
-                          _gnd_vx, r21_p1[1] + 1.5,
-                          "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(_gnd_vx, r21_p1[1] + 1.5,
-                              n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        # R21 pad 1 (far pad) is the BIAS side — PAM_VREF, not GND.
+        # Built in the VREF bias rail below, together with R20. See R4-HIGH-3.
 
     # ── C21: VREF (pin 8) → C21 → GND via
     # C21 at (36.5, 24.5) rot 0: pad1 at ~(35.55, 24.5), pad2 at ~(37.45, 24.5)
@@ -3026,6 +3014,46 @@ def _pam_passive_traces():
                           "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(_gnd_vx, c21_p1[1] + 1.0,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── VREF bias rail: C21.2 → R20.1 → R21.1 (R4-HIGH-3) ──
+    # The PAM8403 single-ended app circuit (datasheet Fig. 3) biases INL/INR
+    # to VREF (pin 8), NOT to GND. Tying the bias resistors to GND fights the
+    # amplifier's internal mid-supply bias and produces asymmetric clipping.
+    # The schematic has always specified VREF (sheets/audio.py); the routing
+    # still tied both far pads to GND, and the two disagreed for 4 pins in
+    # verify_netlist_diff. This rail is that fix on the copper side.
+    #
+    # Lane choice — the far pads (C21.1, R20.1, R21.1) all sit at x=38.95:
+    #   * x=38.95 vertical R20.1(26.5) → R21.1(32.5) is clear. SPK+ B.Cu runs
+    #     at x=40.00 w=0.3 (left edge 39.85) → gap 0.80mm. +5V B.Cu at x=38.00
+    #     w=0.5 (right edge 38.25) → gap 0.60mm. Nothing crosses that span:
+    #     PAM_IN_AC B.Cu horiz at y=28.00 stops at x=37.05, and the y=32.50
+    #     PAM_IN_AC leg is on F.Cu.
+    #   * Going UP from R20.1 is blocked by C21.1 (GND) at (38.95, 23.50).
+    #     So the rail reaches VREF via a jog at y=25.20, threading between the
+    #     C21 GND via (38.85, 24.50, size 0.6 → top edge 24.80; gap 0.30mm)
+    #     and the +5V via (38.00, 25.80, size 0.5 → bottom edge 25.55; gap
+    #     0.25mm), then climbs x=37.05 to C21.2. R20.2 (PAM_IN_AC) starts at
+    #     y=25.85, above the jog → gap 0.55mm.
+    if r20_p1 and r21_p1 and c21_p2:
+        _vref_jog_y = 25.20
+        _x_far = r20_p1[0]      # 38.95 — shared by R20.1 / R21.1
+        _x_near = c21_p2[0]     # 37.05 — VREF side of C21
+        # C21.2 down to the jog, then right to the far-pad lane.
+        parts.append(_seg(_x_near, c21_p2[1], _x_near, _vref_jog_y,
+                          "B.Cu", W_DATA, n_vref))
+        parts.append(_seg(_x_near, _vref_jog_y, _x_far, _vref_jog_y,
+                          "B.Cu", W_DATA, n_vref))
+        # Down the far-pad lane through R20.1 to R21.1.
+        parts.append(_seg(_x_far, _vref_jog_y, _x_far, r20_p1[1],
+                          "B.Cu", W_DATA, n_vref))
+        parts.append(_seg(_x_far, r20_p1[1], _x_far, r21_p1[1],
+                          "B.Cu", W_DATA, n_vref))
+        # Both far pads now carry VREF. Explicit: the rail runs THROUGH the
+        # pad centres, so pad-net auto-detection would otherwise leave them
+        # on whatever it inferred first.
+        _PAD_NETS[("R20", "1")] = n_vref
+        _PAD_NETS[("R21", "1")] = n_vref
 
     # ── C23: VDD (pin 6) decoupling → GND via
     # C23 at (36.0, 29.5) rotated 90°: pads at ~(36.0, 28.55) and ~(36.0, 30.45)

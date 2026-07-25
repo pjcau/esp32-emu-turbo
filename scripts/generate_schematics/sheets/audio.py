@@ -148,7 +148,11 @@ class AudioSheet(SchematicSheet):
         # top terminal. They now reach the amplifier input node through
         # an explicit I2S_DOUT label stub going left.
         r20x, r20y = ax - 50, ay + 24
-        self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
+        # angle=180: draws identically (the R symbol is vertically symmetric)
+        # but puts pin 1 on the BOTTOM, matching the footprint — the board's
+        # pad 1 (x=38.95) is the VREF side. Without this the nets agree while
+        # the pin NUMBERS stay swapped, and verify_netlist_diff still fails.
+        self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"], angle=180)
         # Top terminal joins the amplifier-side node by name. The old wire ran
         # from here straight up to (r20x, c22y) — a point inside the C22 symbol
         # body touching neither pin, so the bias network was dangling in the
@@ -163,7 +167,8 @@ class AudioSheet(SchematicSheet):
         # INR bias resistor (R21, 20k) — biases INR node to VREF (pin 8).
         # Same rationale as R20 — see R4-HIGH-3.
         r21x, r21y = ax - 50, ay + 40
-        self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"])
+        # angle=180 for the same reason as R20 — pad 1 is the VREF side.
+        self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"], angle=180)
         # Top terminal joins the amplifier-side node by name. The old wire ran
         # from here straight up to (r21x, c22y) — a point inside the C22 symbol
         # body touching neither pin, so the bias network was dangling in the

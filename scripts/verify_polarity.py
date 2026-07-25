@@ -395,10 +395,15 @@ _strict("C24", [("1", "GND"), ("2", "+5V")])
 _strict("C25", [("1", "+5V"), ("2", "GND")])
 
 # ============================================================
-# R20, R21: PAM8403 input resistors
+# R20, R21: PAM8403 input bias resistors
 # ============================================================
-_strict("R20", [("1", "GND"), ("2", "PAM_IN_AC")])
-_strict("R21", [("1", "GND"), ("2", "PAM_IN_AC")])
+# Pad 1 is VREF, NOT GND (R4-HIGH-3). The PAM8403 single-ended app circuit
+# (datasheet Fig. 3) biases INL/INR to the internal mid-supply reference on
+# pin 8; tying them to GND fights that bias and produces asymmetric clipping.
+# These expectations previously read "GND" — they encoded the routing bug,
+# so this gate passed while schematic and PCB disagreed on 4 pins.
+_strict("R20", [("1", "PAM_VREF"), ("2", "PAM_IN_AC")])
+_strict("R21", [("1", "PAM_VREF"), ("2", "PAM_IN_AC")])
 
 # ============================================================
 # C5-C16: Debounce capacitors
