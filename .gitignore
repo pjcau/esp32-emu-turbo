@@ -76,3 +76,6 @@ software/benchmark/sdkconfig.old
 software/benchmark/dependencies.lock
 software/benchmark/managed_components/
 software/benchmark/spiffs_data/
+
+# agent worktrees (transient, never committed)
+.claude/worktrees/
