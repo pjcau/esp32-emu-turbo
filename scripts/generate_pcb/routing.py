@@ -734,7 +734,17 @@ def _init_pads():
         from .pad_positions import get_all_pad_positions
         from .board import MOUNT_HOLES_ENC, enc_to_pcb
         all_pads = get_all_pad_positions()
-        _GRID.register_pads(all_pads)
+        # Pads whose net must be seeded before the first trace arrives.
+        # Derived from NET_ID, never hardcoded — the previous copy of this
+        # table inside collision.py went stale on J3.1 (BAT+ -> BAT_IN) and
+        # turned a legitimate same-net connection into a reported short.
+        _seed_nets = {
+            ("J1", "13"): NET_ID["GND"],    # shield front (duplicate pad name)
+            ("J1", "14"): NET_ID["GND"],    # shield rear  (duplicate pad name)
+            ("J3", "1"): NET_ID["BAT_IN"],  # JST pin 1 — through Q1 RPP MOSFET
+            ("J3", "2"): NET_ID["GND"],     # JST pin 2
+        }
+        _GRID.register_pads(all_pads, _seed_nets)
         _GRID.register_slot()
         _GRID.register_board_edges()
         _GRID.register_mounting_holes(

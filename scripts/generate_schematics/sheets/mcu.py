@@ -110,7 +110,7 @@ class MCUSheet(SchematicSheet):
         # --- Decoupling cap (100nF near 3V3) ---
         c_dec_x = px_l - 15
         c_dec_y = MCU_Y - 45  # above 3V3 pins
-        self.sym("C", "C4", "100nF", c_dec_x, c_dec_y, ["1", "2"])
+        self.sym("C", "C4", "100nF", c_dec_x, c_dec_y, ["1", "2"], angle=180)
         # Stop on the pin-1 +3V3 line and tap it, instead of running past
         # it down to pwr2_y: the old wire crossed that line at (169.76,
         # 131.90) and then lay on top of the pwr2->pwr riser for its last
@@ -125,7 +125,7 @@ class MCUSheet(SchematicSheet):
         # --- C26: Additional VDD bypass (100nF, close to pin 2) ---
         c26_x = c_dec_x + 15
         c26_y = c_dec_y
-        self.sym("C", "C26", "100nF", c26_x, c26_y, ["1", "2"])
+        self.sym("C", "C26", "100nF", c26_x, c26_y, ["1", "2"], angle=180)
         self.wire(c26_x, c26_y + 3.81, c26_x, pwr2_y)
         self.gnd(c26_x, c26_y - 8)
         self.wire(c26_x, c26_y - 3.81, c26_x, c26_y - 8)

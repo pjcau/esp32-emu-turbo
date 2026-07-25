@@ -335,7 +335,7 @@ class PowerSupplySheet(SchematicSheet):
         #     verify_schematic_crossings.py.
         # 76.5 puts the Reference at 71.5 (0.365mm clear of the junction) and
         # the stub end at 84.1 (0.88mm clear of the y=85 wire).
-        r16_y = 76.5
+        r16_y = 72
         self.sym("R", "R16", "100k", r16_x, r16_y, ["1", "2"])
         self.text("Always-on", r16_x + 3, r16_y - 3, 1.5)
         # R16 pin1 (top) -> +5V by TAPPING the rail, not by a second
@@ -347,8 +347,15 @@ class PowerSupplySheet(SchematicSheet):
         # R16 pin2 (bottom) -> KEY BY LABEL, not by wire.
         # The orthogonal route went down x=182 from y=79.81 to y=90.08 and
         # crossed the IP5306 lines at y=85.00 and y=87.54 on the way.
-        self.link("KEY", r16_x, r16_y + 3.81, 270)
-        self.link("KEY", key_x, key_y, 0)
+        # GLOBAL label, and named IP5306_KEY to match the board's net.
+        # A local label is scoped to the sheet, so KiCad exported it as
+        # "/Power Supply/KEY" while the PCB called the same node
+        # IP5306_KEY — two of the T4 pin-to-net mismatches, plus the T1
+        # "schematic net missing from PCB" failure, for one naming slip.
+        self.link("IP5306_KEY", r16_x, r16_y + 3.81, 270, glob=True)
+# Points UP, not right: a rightward stub extends the KEY horizontal
+        # past x=185, where C18's tap crosses it (see the CBAT comment).
+        self.link("IP5306_KEY", key_x, key_y, 90, glob=True)
 
         # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
         # JST PH 2-pin connector — pushed further right on A3 landscape
@@ -582,25 +589,35 @@ class PowerSupplySheet(SchematicSheet):
         self.text("CHARGING INDICATOR LEDs", led_x - 30, led_y - 12, 2.54, True)
 
         # LED1 (Red - charging)
-        self.sym("R", "R17", "1k", led_x - 15, led_y, ["1", "2"])
+        self.sym("R", "R17", "1k", led_x - 15, led_y, ["1", "2"], angle=180)
         self.sym("LED", "LED1", "Red", led_x, led_y, ["1", "2"])
         self.v33(led_x - 15, led_y - 8)
         self.wire(led_x - 15, led_y - 8, led_x - 15, led_y - 3.81)
         self.wire(led_x - 15, led_y + 3.81, led_x - 3.81, led_y)
+        # NAME the R17<->LED1 junction. The wire above already connects them,
+        # but KiCad drops unnamed nets from the exported netlist, so the node
+        # was invisible to verify_netlist_diff while the board called it
+        # LED1_RA. Global, not local: a local label would export as
+        # "/Power Supply/LED1_RA" and still not match.
+        self.wire(led_x - 3.81, led_y, led_x - 3.81, led_y + 7)
+        self.glabel("LED1_RA", led_x - 3.81, led_y + 7, 270)
         self.gnd(led_x + 8, led_y)
         self.wire(led_x + 3.81, led_y, led_x + 8, led_y)
         self.text("Charging", led_x - 18, led_y - 8, 1.5)
 
         # LED2 (Green - fully charged)
         led2_y = led_y + 18
-        self.sym("R", "R18", "1k", led_x - 15, led2_y, ["1", "2"])
+        self.sym("R", "R18", "1k", led_x - 15, led2_y, ["1", "2"], angle=180)
         self.sym("LED", "LED2", "Green", led_x, led2_y, ["1", "2"])
         self.v33(led_x - 15, led2_y - 8)
         self.wire(led_x - 15, led2_y - 8, led_x - 15, led2_y - 3.81)
         self.wire(led_x - 15, led2_y + 3.81, led_x - 3.81, led2_y)
+        # Same as LED1 — name the R18<->LED2 junction.
+        self.wire(led_x - 3.81, led2_y, led_x - 3.81, led2_y + 7)
+        self.glabel("LED2_RA", led_x - 3.81, led2_y + 7, 270)
         self.gnd(led_x + 8, led2_y)
         self.wire(led_x + 3.81, led2_y, led_x + 8, led2_y)
-        self.text("Full", led_x - 5, led2_y - 6, 1.5)
+        self.text("Full", led_x + 12, led2_y - 6, 1.5)
 
         # ═══════════════════════════════════════════════
         # DESIGN NOTES — moved further down to sit below the
