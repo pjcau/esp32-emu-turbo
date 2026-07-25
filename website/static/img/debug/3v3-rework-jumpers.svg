@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1175 706" width="1175" height="706">
+  <title>+3V3 rework jumpers</title>
+  <rect width="100%" height="100%" fill="#0d1117"/>
+  <text x="587.40" y="26.40" font-family="ui-monospace,Menlo,monospace" font-size="15.0" font-weight="bold" fill="#e6edf3" text-anchor="middle">REWORK +3V3 — VISTA DAL BASSO (lato B.Cu, come tieni la board)</text>
+  <rect x="59.40" y="59.40" width="1056.00" height="495.00" fill="none" stroke="#30363d" stroke-width="2" rx="6"/>
+  <rect x="525.69" y="202.22" width="123.42" height="125.14" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="587.40" y="194.30" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">U1 ESP32-S3</text>
+  <rect x="211.94" y="214.24" width="24.92" height="158.93" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="224.40" y="206.32" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">J4 FPC display</text>
+  <rect x="554.89" y="509.69" width="65.01" height="39.27" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="587.40" y="501.76" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">J1 USB-C</text>
+  <rect x="136.22" y="462.82" width="110.35" height="79.48" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="191.40" y="559.46" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">U6 microSD</text>
+  <rect x="823.68" y="519.42" width="55.44" height="30.36" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="851.40" y="511.50" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">SW_PWR</text>
+  <rect x="365.64" y="323.37" width="47.52" height="33.07" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="389.40" y="315.45" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">U2 IP5306</text>
+  <rect x="271.26" y="400.95" width="38.28" height="49.50" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="290.40" y="393.03" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">U3 AMS1117</text>
+  <rect x="884.10" y="232.32" width="66.59" height="43.56" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="917.40" y="224.40" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">U5 PAM8403</text>
+  <rect x="374.22" y="396.66" width="30.36" height="18.48" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="389.40" y="388.74" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">L1</text>
+  <rect x="561.33" y="429.33" width="52.14" height="46.53" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="587.40" y="421.41" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">J3 batt</text>
+  <rect x="646.14" y="327.36" width="20.46" height="18.48" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="656.37" y="363.00" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">C3</text>
+  <rect x="497.97" y="327.36" width="20.46" height="18.48" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="508.20" y="363.00" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">C4</text>
+  <rect x="276.54" y="462.66" width="27.72" height="18.48" fill="#161b22" stroke="#484f58" stroke-width="1.2" rx="2"/>
+  <text x="290.40" y="498.30" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#8b949e" text-anchor="middle">C2</text>
+  <circle cx="529.65" cy="214.57" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="232.65" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="235.95" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="252.45" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="321.75" r="4.95" fill="#f85149" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="338.25" r="4.95" fill="#f85149" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="341.55" r="4.95" fill="#f85149" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="184.40" cy="466.78" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="290.40" cy="446.49" r="4.95" fill="#f85149" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="290.40" cy="404.91" r="4.95" fill="#f85149" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="650.10" cy="336.60" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="501.93" cy="336.60" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="511.50" cy="191.73" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="956.67" cy="488.40" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="910.47" cy="488.40" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="837.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="804.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="771.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="738.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="705.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="672.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="639.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="606.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="573.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="540.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="474.87" cy="363.00" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="547.80" cy="224.73" r="4.95" fill="#3fb950" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="280.50" cy="471.90" r="4.95" fill="#f85149" stroke="#0d1117" stroke-width="0.8"/>
+  <line x1="290.40" y1="404.91" x2="501.93" y2="336.60" stroke="#f0b72f" stroke-width="3.4" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="290.40" cy="404.91" r="7.59" fill="#f0b72f" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="501.93" cy="336.60" r="7.59" fill="#f0b72f" stroke="#0d1117" stroke-width="0.8"/>
+  <line x1="232.90" y1="321.75" x2="232.90" y2="235.95" stroke="#58a6ff" stroke-width="3.4" stroke-linecap="round" opacity="0.95"/>
+  <circle cx="232.90" cy="321.75" r="7.59" fill="#58a6ff" stroke="#0d1117" stroke-width="0.8"/>
+  <circle cx="232.90" cy="235.95" r="7.59" fill="#58a6ff" stroke="#0d1117" stroke-width="0.8"/>
+  <text x="389.40" y="359.04" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#f0b72f" text-anchor="middle">U3 tab (pad 4)</text>
+  <line x1="389.40" y1="364.32" x2="369.60" y2="381.48" stroke="#f0b72f" stroke-width="0.9" stroke-dasharray="2 2"/>
+  <text x="501.93" y="316.14" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="normal" fill="#f0b72f" text-anchor="middle">C4 pad 1</text>
+  <circle cx="184.40" cy="466.75" r="15.84" fill="none" stroke="#6e7681" stroke-width="1.4" stroke-dasharray="3 2"/>
+  <line x1="195.36" y1="456.06" x2="173.58" y2="477.84" stroke="#f85149" stroke-width="1.8"/>
+  <line x1="173.58" y1="456.06" x2="195.36" y2="477.84" stroke="#f85149" stroke-width="1.8"/>
+  <text x="184.40" y="510.84" font-family="ui-monospace,Menlo,monospace" font-size="9.5" font-weight="normal" fill="#8b949e" text-anchor="middle">via +3V3 a 14.6 mm — NON usabile,</text>
+  <text x="184.40" y="528.00" font-family="ui-monospace,Menlo,monospace" font-size="9.5" font-weight="normal" fill="#8b949e" text-anchor="middle">sepolta sotto U6 microSD + SW13</text>
+  <rect x="69.30" y="572.22" width="33.00" height="17.16" fill="#3fb950" rx="1"/>
+  <text x="112.20" y="587.40" font-family="ui-monospace,Menlo,monospace" font-size="11.0" font-weight="normal" fill="#8b949e" text-anchor="start">pad +3V3 sul piano principale  —  0 V oggi</text>
+  <rect x="69.30" y="599.94" width="33.00" height="17.16" fill="#f85149" rx="1"/>
+  <text x="112.20" y="615.12" font-family="ui-monospace,Menlo,monospace" font-size="11.0" font-weight="normal" fill="#8b949e" text-anchor="start">pad +3V3 su isola orfana  —  3.3 V solo su U3/C2</text>
+  <rect x="69.30" y="627.66" width="33.00" height="17.16" fill="#f0b72f" rx="1"/>
+  <text x="112.20" y="642.84" font-family="ui-monospace,Menlo,monospace" font-size="11.0" font-weight="normal" fill="#8b949e" text-anchor="start">PONTE 1 (obbligatorio)  U3 tab  ->  C4 pad 1   33.7 mm</text>
+  <rect x="69.30" y="655.38" width="33.00" height="17.16" fill="#58a6ff" rx="1"/>
+  <text x="112.20" y="670.56" font-family="ui-monospace,Menlo,monospace" font-size="11.0" font-weight="normal" fill="#8b949e" text-anchor="start">PONTE 2 (obbligatorio)  J4.29/34/35  ->  J4.3   passo 0.5 mm</text>
+</svg>

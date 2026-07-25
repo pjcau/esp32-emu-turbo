@@ -1,0 +1,150 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 595 748" width="595" height="748">
+  <title>J4 +3V3 island pins</title>
+  <rect width="100%" height="100%" fill="#0d1117"/>
+  <text x="263.50" y="57.80" font-family="ui-monospace,Menlo,monospace" font-size="15.0" font-weight="bold" fill="#e6edf3" text-anchor="middle">J4 — pin di alimentazione del display</text>
+  <rect x="221.00" y="99.45" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="104.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">1</text>
+  <text x="263.50" y="104.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 40  GND</text>
+  <rect x="221.00" y="107.95" width="17.00" height="5.10" fill="#3fb950" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="113.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">2</text>
+  <text x="263.50" y="113.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 39  +3V3</text>
+  <rect x="221.00" y="116.45" width="17.00" height="5.10" fill="#3fb950" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="121.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">3</text>
+  <text x="263.50" y="121.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 38  +3V3</text>
+  <rect x="221.00" y="124.95" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="130.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">4</text>
+  <text x="263.50" y="130.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 37  GND</text>
+  <rect x="221.00" y="133.45" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="138.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">5</text>
+  <text x="263.50" y="138.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 36  GND</text>
+  <rect x="221.00" y="141.95" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="147.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">6</text>
+  <text x="263.50" y="147.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 35  GND</text>
+  <rect x="221.00" y="150.45" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="155.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">7</text>
+  <text x="263.50" y="155.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 34  GND</text>
+  <rect x="221.00" y="158.95" width="17.00" height="5.10" fill="#3fb950" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="164.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">8</text>
+  <text x="263.50" y="164.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 33  +3V3</text>
+  <rect x="221.00" y="167.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="172.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">9</text>
+  <text x="263.50" y="172.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 32  —</text>
+  <rect x="221.00" y="175.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="181.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">10</text>
+  <text x="263.50" y="181.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 31  —</text>
+  <rect x="221.00" y="184.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="189.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">11</text>
+  <text x="263.50" y="189.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 30  —</text>
+  <rect x="221.00" y="192.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="198.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">12</text>
+  <text x="263.50" y="198.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 29  —</text>
+  <rect x="221.00" y="201.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="206.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">13</text>
+  <text x="263.50" y="206.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 28  —</text>
+  <rect x="221.00" y="209.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="215.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">14</text>
+  <text x="263.50" y="215.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 27  —</text>
+  <rect x="221.00" y="218.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="223.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">15</text>
+  <text x="263.50" y="223.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 26  —</text>
+  <rect x="221.00" y="226.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="232.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">16</text>
+  <text x="263.50" y="232.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 25  —</text>
+  <rect x="221.00" y="235.45" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="240.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">17</text>
+  <text x="263.50" y="240.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 24  LCD_D7</text>
+  <rect x="221.00" y="243.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="249.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">18</text>
+  <text x="263.50" y="249.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 23  LCD_D6</text>
+  <rect x="221.00" y="252.45" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="257.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">19</text>
+  <text x="263.50" y="257.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 22  LCD_D5</text>
+  <rect x="221.00" y="260.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="266.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">20</text>
+  <text x="263.50" y="266.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 21  LCD_D4</text>
+  <rect x="221.00" y="269.45" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="274.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">21</text>
+  <text x="263.50" y="274.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 20  LCD_D3</text>
+  <rect x="221.00" y="277.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="283.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">22</text>
+  <text x="263.50" y="283.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 19  LCD_D2</text>
+  <rect x="221.00" y="286.45" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="291.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">23</text>
+  <text x="263.50" y="291.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 18  LCD_D1</text>
+  <rect x="221.00" y="294.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="300.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">24</text>
+  <text x="263.50" y="300.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 17  LCD_D0</text>
+  <rect x="221.00" y="303.45" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="308.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">25</text>
+  <text x="263.50" y="308.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 16  GND</text>
+  <rect x="221.00" y="311.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="317.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">26</text>
+  <text x="263.50" y="317.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 15  LCD_RST</text>
+  <rect x="221.00" y="320.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="325.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">27</text>
+  <text x="263.50" y="325.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 14  —</text>
+  <rect x="221.00" y="328.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="334.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">28</text>
+  <text x="263.50" y="334.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 13  —</text>
+  <rect x="221.00" y="337.45" width="17.00" height="5.10" fill="#f85149" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="342.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">29</text>
+  <text x="263.50" y="342.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 12  +3V3</text>
+  <rect x="221.00" y="345.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="351.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">30</text>
+  <text x="263.50" y="351.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 11  LCD_WR</text>
+  <rect x="221.00" y="354.45" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="359.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">31</text>
+  <text x="263.50" y="359.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 10  LCD_DC</text>
+  <rect x="221.00" y="362.95" width="17.00" height="5.10" fill="#1f6feb" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="368.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">32</text>
+  <text x="263.50" y="368.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 9  LCD_CS</text>
+  <rect x="221.00" y="371.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="376.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">33</text>
+  <text x="263.50" y="376.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 8  —</text>
+  <rect x="221.00" y="379.95" width="17.00" height="5.10" fill="#f85149" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="385.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">34</text>
+  <text x="263.50" y="385.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 7  +3V3</text>
+  <rect x="221.00" y="388.45" width="17.00" height="5.10" fill="#f85149" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="393.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">35</text>
+  <text x="263.50" y="393.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 6  +3V3</text>
+  <rect x="221.00" y="396.95" width="17.00" height="5.10" fill="#6e7681" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="402.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">36</text>
+  <text x="263.50" y="402.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#c9d1d9" text-anchor="start">panel 5  GND</text>
+  <rect x="221.00" y="405.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="410.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">37</text>
+  <text x="263.50" y="410.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 4  —</text>
+  <rect x="221.00" y="413.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="419.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">38</text>
+  <text x="263.50" y="419.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 3  —</text>
+  <rect x="221.00" y="422.45" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="427.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">39</text>
+  <text x="263.50" y="427.72" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 2  —</text>
+  <rect x="221.00" y="430.95" width="17.00" height="5.10" fill="#21262d" stroke="#0d1117" stroke-width="0.5"/>
+  <text x="209.10" y="436.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#8b949e" text-anchor="end">40</text>
+  <text x="263.50" y="436.22" font-family="ui-monospace,Menlo,monospace" font-size="8.5" font-weight="normal" fill="#484f58" text-anchor="start">panel 1  —</text>
+  <circle cx="229.50" cy="340.00" r="15.30" fill="none" stroke="#f85149" stroke-width="1.4"/>
+  <circle cx="229.50" cy="382.50" r="15.30" fill="none" stroke="#f85149" stroke-width="1.4"/>
+  <circle cx="229.50" cy="391.00" r="15.30" fill="none" stroke="#f85149" stroke-width="1.4"/>
+  <circle cx="229.50" cy="119.00" r="15.30" fill="none" stroke="#3fb950" stroke-width="1.4"/>
+  <line x1="158.10" y1="119.00" x2="158.10" y2="391.00" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round"/>
+  <line x1="158.10" y1="340.00" x2="220.15" y2="340.00" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="220.15" cy="340.00" r="4.08" fill="#58a6ff"/>
+  <line x1="158.10" y1="382.50" x2="220.15" y2="382.50" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="220.15" cy="382.50" r="4.08" fill="#58a6ff"/>
+  <line x1="158.10" y1="391.00" x2="220.15" y2="391.00" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="220.15" cy="391.00" r="4.08" fill="#58a6ff"/>
+  <line x1="158.10" y1="119.00" x2="220.15" y2="119.00" stroke="#58a6ff" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="220.15" cy="119.00" r="4.08" fill="#58a6ff"/>
+  <text x="147.90" y="255.00" font-family="ui-monospace,Menlo,monospace" font-size="10.0" font-weight="bold" fill="#58a6ff" text-anchor="end">PONTE 2</text>
+  <text x="209.10" y="484.50" font-family="ui-monospace,Menlo,monospace" font-size="9.0" font-weight="normal" fill="#8b949e" text-anchor="end">pad J4</text>
+  <rect x="127.50" y="510.00" width="20.40" height="17.00" fill="#3fb950" rx="0.2"/>
+  <text x="154.70" y="524.45" font-family="ui-monospace,Menlo,monospace" font-size="9.0" font-weight="normal" fill="#8b949e" text-anchor="start">+3V3 collegato al piano  (J4.2 / J4.3 / J4.8)</text>
+  <rect x="127.50" y="535.50" width="20.40" height="17.00" fill="#f85149" rx="0.2"/>
+  <text x="154.70" y="549.95" font-family="ui-monospace,Menlo,monospace" font-size="9.0" font-weight="normal" fill="#8b949e" text-anchor="start">+3V3 su isola orfana  (J4.29 / J4.34 / J4.35)</text>
+  <rect x="127.50" y="561.00" width="20.40" height="17.00" fill="#6e7681" rx="0.2"/>
+  <text x="154.70" y="575.45" font-family="ui-monospace,Menlo,monospace" font-size="9.0" font-weight="normal" fill="#8b949e" text-anchor="start">GND</text>
+  <rect x="127.50" y="586.50" width="20.40" height="17.00" fill="#1f6feb" rx="0.2"/>
+  <text x="154.70" y="600.95" font-family="ui-monospace,Menlo,monospace" font-size="9.0" font-weight="normal" fill="#8b949e" text-anchor="start">segnale</text>
+  <rect x="127.50" y="612.00" width="20.40" height="17.00" fill="#21262d" rx="0.2"/>
+  <text x="154.70" y="626.45" font-family="ui-monospace,Menlo,monospace" font-size="9.0" font-weight="normal" fill="#8b949e" text-anchor="start">nessun net (pad libero)</text>
+</svg>
