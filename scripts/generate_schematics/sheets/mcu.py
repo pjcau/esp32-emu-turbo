@@ -111,7 +111,13 @@ class MCUSheet(SchematicSheet):
         c_dec_x = px_l - 15
         c_dec_y = MCU_Y - 45  # above 3V3 pins
         self.sym("C", "C4", "100nF", c_dec_x, c_dec_y, ["1", "2"])
-        self.wire(c_dec_x, c_dec_y + 3.81, c_dec_x, pwr2_y)
+        # Stop on the pin-1 +3V3 line and tap it, instead of running past
+        # it down to pwr2_y: the old wire crossed that line at (169.76,
+        # 131.90) and then lay on top of the pwr2->pwr riser for its last
+        # 2.54 mm. Same net throughout, but it drew as a crossing plus a
+        # duplicated segment. Guarded by verify_schematic_crossings.py.
+        self.wire(c_dec_x, c_dec_y + 3.81, c_dec_x, pwr_y)
+        self.junction(c_dec_x, pwr_y)
         self.gnd(c_dec_x, c_dec_y - 8)
         self.wire(c_dec_x, c_dec_y - 3.81, c_dec_x, c_dec_y - 8)
         self.text("Decoupling", c_dec_x - 10, c_dec_y, 1.5)

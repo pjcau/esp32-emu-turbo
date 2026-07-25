@@ -116,6 +116,9 @@ verify-all: ## Run every pass/fail verification script (fails if any check fails
 	@echo "Running verification suite ($(words $(VERIFY_ALL_SCRIPTS)) checks)..."
 	@$(T) verify-all scripts/run-verifiers.sh $(VERIFY_ALL_SCRIPTS)
 
+verify-sch-crossings: ## Fail when two schematic wires cross without a junction (use a labelled link instead)
+	@$(T) verify-sch-crossings python3 scripts/verify_schematic_crossings.py
+
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
 
