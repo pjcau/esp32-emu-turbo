@@ -212,6 +212,8 @@ Config: `.claude/settings.json` (hooks section)
 | `make fast-check` | Full pipeline with local kicad-cli (~5s) |
 | `make verify-fast` | Quick DFM check only (43 tests, 1.4s) |
 | `make verify-dfa` | Quick DFA check (9 assembly tests) |
+| `make verify-power-nets` | Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must each be ONE piece of copper (catches split-plane dead boards; no allowlist) |
+| `make test-power-nets` | Regression tests for the power-net integrity detector |
 | `make validate-jlcpcb` | JLCPCB manufacturing validation (drill, edge, copper, gerbers) |
 | `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |
 | `make release-prep` | Full pipeline: generate → gerbers → verify → render |

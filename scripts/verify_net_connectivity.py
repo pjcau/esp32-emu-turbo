@@ -26,18 +26,43 @@ Historical motivation:
     indefinitely — the pad-net labels were correct, only the copper
     continuity was broken. See hardware-audit-bugs.md §R5 for details.
 
+2026-07-25 — zone-filled nets are now checked BY DEFAULT:
+    GND / +3V3 / +5V used to be skipped here, with the rationale "we
+    don't parse zone filled_polygons — the zone is assumed to stitch
+    everything together". That assumption is false when the zone is
+    itself split, and it is exactly how PCB v1 shipped dead: the In2.Cu
+    +3V3 pour was carved into 4 electrically separate groups by two
+    higher-priority +5V zones, the AMS1117 fed a 4.92 mm² orphan island,
+    and the ESP32 / display / SD card sat at 0 V. The one script written
+    to catch "a pad on an isolated copper island" skipped the three nets
+    it happened to happen on.
+
+    The fix is not just to stop skipping — an unparsed zone would make
+    every power net look shredded. Zone-filled nets are now analysed with
+    the real poured geometry via scripts/pcb_copper_graph.py, which reads
+    zone filled_polygon blocks island by island.
+
+    --skip-zones restores the old behaviour. It exists for debugging a
+    signal-net regression in isolation, NOT as a way to make this script
+    green. See website/docs/rework/incident-3v3-split-plane.md.
+
 Coverage and limitations:
-    - Zone-filled nets (GND / +3V3 / +5V) are SKIPPED by default because
-      we don't parse zone filled_polygons — the zone is assumed to
-      stitch everything together. Override with --include-zones.
     - The check is pure-geometric: items that overlap in 2D and share
       at least one copper layer are considered electrically connected.
     - Vias are treated as multi-layer nodes (connect F.Cu ↔ B.Cu at
       their center).
     - Through-hole pads are treated as multi-layer nodes.
+    - Zone-filled nets additionally include every zone fill island as a
+      node, on that zone's layer.
+
+Related gate:
+    scripts/verify_power_net_integrity.py is the hard gate on the five
+    power nets, with no allowlist at all. This script covers every net
+    and keeps the documented signal-net technical debt below.
 
 Usage:
     python3 scripts/verify_net_connectivity.py
+    python3 scripts/verify_net_connectivity.py --skip-zones
     Exit code 0 = pass, 1 = at least one net fragmented.
 """
 
@@ -49,16 +74,20 @@ from collections import defaultdict
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 
+import pcb_copper_graph as CG  # noqa: E402
 from pcb_cache import load_cache  # noqa: E402
 
 PCB_FILE = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_pcb")
 
-# Nets that have full-board copper pour zones. The zone-fill is assumed
-# to stitch every item on these nets together. We skip the connectivity
-# check for them to avoid false positives.
+# Nets that have copper pour zones. These are analysed with the real poured
+# geometry (scripts/pcb_copper_graph.py) instead of the pad/via/segment-only
+# graph below, because the pour is what carries the current.
 #
-# If you add a new pour zone in routing.py::_power_zones(), add the net
-# name here so the new zone is respected.
+# NOT an exemption list — these nets are checked, just by a zone-aware code
+# path. --skip-zones is the debugging escape hatch, not a pass condition.
+#
+# If you add a new pour zone in routing.py::_power_zones(), add the net name
+# here so its fill is taken into account.
 ZONE_FILLED_NETS = {"GND", "+3V3", "+5V"}
 
 # ─── Accepted fragmentations (technical debt, not failures) ─────────
@@ -345,6 +374,8 @@ class UnionFind:
 # ─────────────────────────────────────────────────────────────────────
 
 def _describe_item(kind, item):
+    if isinstance(item, CG.CopperNode):
+        return item.label
     if kind == "pad":
         return f"pad {item.get('ref')}.{item.get('num')}@({item['x']:.2f},{item['y']:.2f})"
     if kind == "via":
@@ -421,7 +452,29 @@ def analyze_net(net_name, pads, vias, segs):
     return list(comps.values())
 
 
-def run_check(cache, include_zones=False):
+def analyze_zone_net(net_name, geom):
+    """Zone-aware component analysis for a net that has a copper pour.
+
+    Delegates to scripts/pcb_copper_graph.py so the poured islands are real
+    geometry, not an assumption. Returns the same shape as analyze_net():
+    a list of components, each a list of (kind, item) tuples.
+    """
+    comps = []
+    for group in CG.groups_for(net_name, geom):
+        comp = []
+        for node in group:
+            if node.label.startswith("PAD "):
+                kind = "pad"
+            elif node.label.startswith("VIA"):
+                kind = "via"
+            else:
+                kind = "seg"
+            comp.append((kind, node))
+        comps.append(comp)
+    return comps
+
+
+def run_check(cache, geom=None, include_zones=True):
     """Run the connectivity check on every net in the cache."""
     net_map = {n["id"]: n["name"] for n in cache["nets"]}
 
@@ -443,7 +496,12 @@ def run_check(cache, include_zones=False):
     for net_id, name in sorted(net_map.items(), key=lambda kv: kv[1]):
         if any(name.startswith(pref) for pref in EXCLUDED_NET_PREFIXES):
             continue
-        if not include_zones and name in ZONE_FILLED_NETS:
+        if name in ZONE_FILLED_NETS:
+            if not include_zones:
+                continue
+            comps = analyze_zone_net(name, geom)
+            if len(comps) > 1:
+                results.append((name, comps))
             continue
         pads = by_net_pads.get(net_id, [])
         vias = by_net_vias.get(net_id, [])
@@ -460,9 +518,10 @@ def main():
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument(
-        "--include-zones",
+        "--skip-zones",
         action="store_true",
-        help="Also check GND/+3V3/+5V nets (may false-positive if zones aren't parsed)",
+        help="Do NOT check GND/+3V3/+5V (debugging only — this is how the "
+             "PCB v1 dead-board bug stayed hidden; never use it to get a pass)",
     )
     ap.add_argument(
         "--strict",
@@ -470,8 +529,10 @@ def main():
         help="Fail on ACCEPTED_FRAGMENTATIONS as well (bypass technical-debt allowlist)",
     )
     args = ap.parse_args()
+    include_zones = not args.skip_zones
 
     cache = load_cache(PCB_FILE)
+    geom = CG.parse_copper(PCB_FILE) if include_zones else None
 
     print()
     print("=" * 62)
@@ -480,15 +541,18 @@ def main():
     print()
 
     net_count = len(cache["nets"])
-    skipped = 0 if args.include_zones else len(ZONE_FILLED_NETS)
+    skipped = 0 if include_zones else len(ZONE_FILLED_NETS)
+    zone_label = ("zone-aware (real filled_polygon geometry)"
+                  if include_zones else "SKIPPED — --skip-zones was passed")
     print(f"  Nets in PCB          : {net_count}")
-    print(f"  Zone-filled (skipped): {skipped} ({', '.join(sorted(ZONE_FILLED_NETS))})")
+    print(f"  Zone-filled nets     : {', '.join(sorted(ZONE_FILLED_NETS))} "
+          f"— {zone_label}")
     print(f"  Pads checked         : {len(cache['pads'])}")
     print(f"  Vias checked         : {len(cache['vias'])}")
     print(f"  Segments checked     : {len(cache['segments'])}")
     print()
 
-    fragmented = run_check(cache, include_zones=args.include_zones)
+    fragmented = run_check(cache, geom, include_zones=include_zones)
 
     # Partition into failures vs. accepted technical debt
     failures = []

@@ -99,6 +99,16 @@ connect them is itself split. A real defect was suppressed by a category of
 accepted false positives. See the project rule: *never silence errors — no
 "known false positive" filter without proof*.
 
+`scripts/verify_net_connectivity.py` was written for exactly this failure mode
+— its own docstring says "a pad ... sitting on an isolated copper island that
+never reaches the rest". It skipped `GND`, `+3V3` and `+5V` by default, for the
+same reason: it does not parse zone `filled_polygon` blocks, so it assumed the
+pour connected them. The one script that would have found the bug excluded the
+three nets it happened on.
+
+**Both suppressions are gone**, and a positive proof replaced them — see
+[The regression guard](#the-regression-guard) below.
+
 ## Rework on the prototype
 
 Both jumpers are **mandatory**. Jumper 1 powers the board; jumper 2 powers the
@@ -164,6 +174,58 @@ behaviour.
 PCB, that pad carries **no net at all** — like pads 9–16, 27, 28, 33 and
 37–40. Confirm which numbering is in use before calling a pin dead.
 
+## The regression guard
+
+The guard landed with this writeup. It is deliberately unforgiving.
+
+### `make verify-power-nets`
+
+`scripts/verify_power_net_integrity.py` fails (exit 1) when any of `+3V3`,
+`+5V`, `GND`, `VBUS` or `BAT+` resolves to more than one geometric group. On
+failure it prints, for every orphan group, its pads, its island areas and its
+distance from the main group — enough to write the rework instructions from the
+output alone.
+
+It has **no allowlist**, by design. A power net split in two is an open
+circuit; there is no rationale under which that is acceptable, and every
+previous connectivity check in this repo was defeated by exactly such a list.
+
+A power net that carries no copper at all also fails, rather than passing
+vacuously — otherwise renaming a net in the generator would silently disarm the
+gate.
+
+### The detector
+
+`scripts/pcb_copper_graph.py` is now the single implementation, imported by the
+gate, by `verify_net_connectivity.py` and by the figure renderer above — so the
+figures and the gate cannot disagree about the same board.
+
+It runs union-find over zone `filled_polygon` islands, vias, track segments and
+pads: two pieces of copper are joined when they share a layer and their
+geometries intersect. Copper is modelled with a deliberate over-approximation
+(pads as circumscribed circles, vias spanning all four layers), so it can only
+ever **merge** groups that are really separate — never split a group that is
+really joined. A reported split is therefore never a geometric false positive.
+
+Control, on this board: `GND` → 1 group, `+5V` → 1 group, `+3V3` → 4 groups.
+
+### What was removed
+
+| Suppression | Was | Now |
+|---|---|---|
+| `scripts/drc_baseline.json` | `"unconnected_zone": 7`, `"unconnected_accepted": 4` | deleted |
+| `drc_native.py` `ZONE_CONNECTED_NETS` / `ACCEPTED_UNCONNECTED_NETS` | reclassified real opens into those two buckets | deleted; every unconnected item is reported as `unconnected_items` (CRITICAL) |
+| `drc_native.py` exit code | `sys.exit(0)  # Always exit 0 (advisory)` | exits 1 when real issues are found |
+| `verify_net_connectivity.py` | skipped `GND` / `+3V3` / `+5V` unless `--include-zones` | checks them **by default**, with real poured geometry; `--skip-zones` is a debugging flag, not a pass condition |
+
+### Where it runs
+
+`make verify-power-nets`, and inside `make verify-all`, `make release-prep`, and
+the Stop hook (`.claude/hooks/stop-verify-dfm.sh`) whenever PCB files change.
+Detector regression tests: `make test-power-nets`
+(`scripts/test_power_net_integrity.py`) — synthetic split-plane fixtures plus
+the `GND`/`+5V` false-positive control on the real board.
+
 ## v2 fix
 
 The prototype rework is a patch. The layout fix is one of:
@@ -174,8 +236,21 @@ The prototype rework is a patch. The layout fix is one of:
 3. Route `+3V3` from the regulator output to the ESP32 area with explicit
    copper instead of relying on the plane.
 
-Whichever is chosen, it must be paired with a **regression guard**: a test that
-fails when any power net resolves to more than one geometric group. The
-grouping code in `scripts/render_3v3_rework_figures.py` (`groups_for()`) is the
-working implementation. The baselined `unconnected_zone` entries must be
-removed at the same time, not kept alongside the guard.
+`make verify-power-nets` is red until one of them lands. That is the point —
+it is the acceptance test for the fix.
+
+### Also surfaced by the new gate
+
+With the `unconnected_*` buckets gone, `VBUS` fails too, in **4** groups rather
+than the 3 previously allowlisted as R5-CRIT-9:
+
+| Group | Contains |
+|---|---|
+| main | `J1.2`, `U2.1`, `U4.5`, `C17.1` |
+| orphan | `J1.9` — USB-C reverse-orientation VBUS pad |
+| orphan | `J1.11` — USB-C reverse-orientation VBUS pad |
+| orphan | a **zero-length** `B.Cu` segment at (82.40, 68.83) |
+
+The first two are the known single-plug-orientation limitation. The degenerate
+segment is new information and was never in any allowlist — it was hidden by
+the same suppression.

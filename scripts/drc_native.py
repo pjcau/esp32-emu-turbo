@@ -12,6 +12,8 @@ Usage:
     python3 scripts/drc_native.py --run                    # Run DRC + analyze
     python3 scripts/drc_native.py --run --update-baseline  # Run + save baseline
     python3 scripts/drc_native.py <drc-report.json>        # Analyze existing report
+
+Exit code 0 = no real issues, 1 = real issues found.
 """
 
 import json
@@ -38,8 +40,6 @@ KNOWN_ACCEPTABLE = {
     "courtyardOverlap": "Overlapping courtyards on dense areas (acceptable for PCBA)",
     "clearance_zone": "Via vs inner-layer zone clearance (JLCPCB adds thermal relief automatically)",
     "clearance_borderline": "Trace spacing 0.075-0.09mm (JLCPCB 4-layer manufactures fine at >=0.075mm)",
-    "unconnected_zone": "Power/data nets connected through inner-layer zones (not direct traces)",
-    "unconnected_accepted": "R5-CRIT-6 / R5-CRIT-9 / AC-coupling — documented v2-respin tech debt",
     "lib_footprint_mismatch": "Generated footprints differ from KiCad library copies (cosmetic)",
     "isolated_copper": "Small copper fills isolated from nets (removed during manufacturing)",
     "text_height": "Silkscreen text below 1mm height (cosmetic, does not affect assembly)",
@@ -50,22 +50,23 @@ KNOWN_ACCEPTABLE = {
 # JLCPCB handles this with automatic thermal relief generation.
 ZONE_CLEARANCE_PATTERN = "zone clearance"
 
-# Nets that are connected through inner-layer copper zones (In1.Cu GND, In2.Cu +3V3/+5V).
-# KiCad DRC sees trace segments on B.Cu/F.Cu as "unconnected" because the zone fill
-# doesn't always bridge them. These are NOT real disconnections — the inner-layer
-# zones provide the connection in the manufactured board.
-ZONE_CONNECTED_NETS = {"GND", "VBUS", "+5V", "+3V3", "BAT+", "LCD_D4", "BTN_MENU"}
-
-# Nets with accepted copper fragmentation — documented v2-respin technical
-# debt (same list as scripts/verify_net_connectivity.py
-# ACCEPTED_FRAGMENTATIONS). DRC reports these as unconnected_items but the
-# hardware-audit suite has explicitly accepted them. Must stay in sync
-# with verify_net_connectivity.py or we drift in two places.
+# ─── Removed suppressions — do not reintroduce ───────────────────────
 #
-#   BTN_SELECT, BTN_START — R5-CRIT-6 D1 menu-diode anode isolated
-#   I2S_DOUT               — C22 AC-coupling cap between ESP32 PDM TX and PAM8403 INL
-#   MENU_K                 — SW13 menu button F.Cu stub not reaching the track (pre-existing)
-ACCEPTED_UNCONNECTED_NETS = {"BTN_SELECT", "BTN_START", "I2S_DOUT", "MENU_K"}
+# ZONE_CONNECTED_NETS and ACCEPTED_UNCONNECTED_NETS used to live here. They
+# reclassified real DRC unconnected_items into two invented buckets
+# ("unconnected_zone" and "unconnected_accepted") which were then baselined
+# away in drc_baseline.json.
+#
+# The rationale was: "Power/data nets connected through inner-layer zones (not
+# direct traces)". That assumption is false when the zone is itself split. On
+# PCB v1 the In2.Cu +3V3 pour was carved into 4 separate groups by two
+# higher-priority +5V zones; the AMS1117 fed a 4.92 mm² orphan island and the
+# board was completely dead. KiCad's DRC WAS reporting those opens — this code
+# is what hid them. See website/docs/rework/incident-3v3-split-plane.md.
+#
+# Unconnected items are now reported as unconnected_items (CRITICAL), full
+# stop. Zone-aware connectivity is proven positively, not assumed, by
+# scripts/verify_power_net_integrity.py.
 
 # Violation types that indicate REAL issues to fix
 REAL_ISSUES = {
@@ -198,30 +199,14 @@ def categorize_violations(report):
         if len(details[vtype]) < 5:  # Keep top 5 examples
             details[vtype].append(desc)
 
-    # Count unconnected items, splitting zone-connected (known), accepted
-    # (documented tech debt), vs real unconnected items.
+    # Count unconnected items. Every one of them is a real open circuit —
+    # there is no "but a zone will bridge it" exemption (see the note above
+    # the removed suppression constants).
     unconnected = report.get("unconnected_items", [])
     for u in unconnected:
         items = u.get("items", [])
         net_names = [i.get("description", "") for i in items]
-        # Accepted fragmentations — match verify_net_connectivity allowlist
-        is_accepted = any(
-            f"[{net}]" in desc
-            for desc in net_names
-            for net in ACCEPTED_UNCONNECTED_NETS
-        )
-        # Zone-connected (GND / +3V3 / +5V) bridged by inner planes
-        is_zone = any(
-            f"[{net}]" in desc
-            for desc in net_names
-            for net in ZONE_CONNECTED_NETS
-        )
-        if is_accepted:
-            vtype = "unconnected_accepted"
-        elif is_zone:
-            vtype = "unconnected_zone"
-        else:
-            vtype = "unconnected_items"
+        vtype = "unconnected_items"
         counts[vtype] += 1
         if vtype not in details:
             details[vtype] = []
@@ -443,7 +428,12 @@ def main():
             sys.exit(1)
 
     real_count = analyze(report_path, update_baseline=update)
-    sys.exit(0)  # Always exit 0 (advisory)
+    # Exit non-zero when there are real issues. This used to be a hard
+    # "always exit 0 (advisory)" — which meant the CRITICAL unconnected_items
+    # count was computed and then thrown away. Combined with the
+    # unconnected_zone / unconnected_accepted buckets (removed above), a dead
+    # board passed DRC.
+    sys.exit(1 if real_count else 0)
 
 
 if __name__ == "__main__":

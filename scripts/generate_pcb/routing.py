@@ -772,7 +772,22 @@ def _fpc_display_pin(display_pin):
 # ── Manhattan routing helpers ─────────────────────────────────────
 
 def _seg(x1, y1, x2, y2, layer="B.Cu", width=W_DATA, net=0):
-    """Shorthand for segment. Auto-registers pad-net associations."""
+    """Shorthand for segment. Auto-registers pad-net associations.
+
+    Raises on a zero-length segment. Such a segment is degenerate copper: it
+    has no extent, so it connects nothing, yet it still lands in the netlist
+    as an isolated fragment of its net. One of these sat on VBUS at
+    (82.40, 68.78) for the whole life of v1, hidden by the unconnected_zone
+    baseline, and only surfaced when that suppression was removed. They are
+    always a bug — usually a jog left behind after its two endpoints were
+    aligned — so fail loudly rather than emit copper nobody asked for.
+    """
+    if abs(x2 - x1) < 1e-6 and abs(y2 - y1) < 1e-6:
+        raise ValueError(
+            f"zero-length segment at ({x1}, {y1}) on {layer}, net {net}: "
+            f"degenerate copper connects nothing. Remove the call, or give "
+            f"the segment a real endpoint."
+        )
     if net != 0:
         _init_pads()
         for x, y in [(x1, y1), (x2, y2)]:
@@ -1177,10 +1192,14 @@ def _power_traces():
     ip_vbus_via_x = ip_vbus[0] - 2  # 108.0
     ip_vbus_via_y = ip_vbus[1] - 0.5  # DFM: 0.5mm above pad to clear U2[EP]
 
-    # 1. B.Cu stub from USB VBUS pad LEFT to x=82.0
-    #    NOTE: no x-offset needed — trace goes straight down from pad center.
-    parts.append(_seg(usb_vbus[0], usb_vbus[1], vbus_fcu_start_x, usb_vbus[1],
-                       "B.Cu", W_PWR, n_vbus))
+    # 1. (removed) The horizontal stub that used to jog from the VBUS pad to
+    #    the vertical is gone. Once the vertical was tucked to x=82.40 to be
+    #    centered on pad 2, vbus_fcu_start_x == usb_vbus[0], so the stub was a
+    #    ZERO-LENGTH segment: degenerate copper with no extent, on the VBUS
+    #    net, connected to nothing. It survived because the unconnected_zone
+    #    baseline swallowed it — verify_power_net_integrity.py reported it as
+    #    a separate VBUS group the moment that suppression was removed.
+    #    The vertical below starts at the pad, so nothing is lost.
     # 2. B.Cu vertical UP from y=68.255 to y=61.0 (above all button F.Cu channels)
     parts.append(_seg(vbus_fcu_start_x, usb_vbus[1], vbus_fcu_start_x, vbus_fcu_y,
                        "B.Cu", W_PWR, n_vbus))

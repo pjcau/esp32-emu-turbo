@@ -1,7 +1,5 @@
 {
   "via_dangling": 6,
   "lib_footprint_issues": 6,
-  "silk_over_copper": 2,
-  "unconnected_zone": 7,
-  "unconnected_accepted": 4
+  "silk_over_copper": 2
 }

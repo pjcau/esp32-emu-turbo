@@ -1,6 +1,6 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda validate-jlcpcb pcb-check external-dfm \
-       export-gerbers release-prep firmware-sync-check \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-power-nets validate-jlcpcb pcb-check external-dfm \
+       export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help stats
@@ -62,6 +62,7 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		python3 scripts/verify_trace_crossings.py & \
 		python3 scripts/verify_copper_clearance.py & \
 		python3 scripts/verify_net_connectivity.py & \
+		python3 scripts/verify_power_net_integrity.py & \
 		python3 scripts/verify_easyeda_footprint.py & \
 		wait'
 
@@ -79,6 +80,12 @@ verify-copper-clearance: ## Copper-to-copper clearance gate (JLCDFM preferred 0.
 
 verify-net-connectivity: ## Per-net copper connectivity — every net must be a single component
 	@$(T) verify-net-connectivity python3 scripts/verify_net_connectivity.py
+
+verify-power-nets: ## Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must each be ONE piece of copper (catches split-plane dead boards)
+	@$(T) verify-power-nets python3 scripts/verify_power_net_integrity.py
+
+test-power-nets: ## Regression tests for the power-net integrity detector
+	@$(T) test-power-nets python3 scripts/test_power_net_integrity.py
 
 verify-intent: ## Design intent adversary (18 tests, 300+ cross-source consistency checks)
 	@$(T) verify-intent python3 scripts/verify_design_intent.py
@@ -110,7 +117,7 @@ fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
 external-dfm: ## External DFM analysis via KiBot + Tracespace (Docker)
 	@$(T) external-dfm bash scripts/external-dfm.sh
 
-release-prep: generate-pcb export-gerbers-fast verify-trace-through-pad verify-net-connectivity verify-easyeda verify-all verify-dfa render-pcb ## Full release pipeline (fast gerber export)
+release-prep: generate-pcb export-gerbers-fast verify-trace-through-pad verify-power-nets verify-net-connectivity verify-easyeda verify-all verify-dfa render-pcb ## Full release pipeline (fast gerber export)
 	@echo "Release prep complete: PCB generated, verified, rendered"
 
 render-all: generate-schematic docker-build ## Full render pipeline (generate + export, parallel renders)
