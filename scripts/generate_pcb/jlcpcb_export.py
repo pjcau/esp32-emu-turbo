@@ -23,7 +23,7 @@ from .board import (
     ESP32_ENC, FPC_ENC, USBC_ENC, SD_ENC,
     DPAD_ENC, DPAD_OFFSETS, ABXY_ENC, ABXY_OFFSETS,
     SS_ENC, SS_OFFSETS, SHOULDER_L_ENC, SHOULDER_R_ENC,
-    IP5306_ENC, AMS1117_ENC, PAM8403_ENC,
+    IP5306_ENC, BUCK_ENC, PAM8403_ENC,
     INDUCTOR_ENC, JST_BAT_ENC,
     PWR_SWITCH_ENC, LED_CHARGE_ENC, LED_FULL_ENC,
     MENU_ENC, SPEAKER_ENC,
@@ -36,6 +36,15 @@ from .routing import D1_POS, D1_ROT
 # These values combine with the bottom-side mirror to produce correct
 # JLCPCB pick-and-place orientation.
 _JLCPCB_ROT_CORRECTIONS = [
+    # SOT-23-5 MUST come before the generic "^SOT-23" rule below.
+    # Our SOT-23-5 footprint (footprints.sot23_5) is a verbatim copy of the
+    # JLCPCB/EasyEDA reference land pattern for C78988, i.e. it is already
+    # in JLCPCB's own library frame — unlike SOT-23-3 / SOT-23-6, which use
+    # the KiCad-standard frame and therefore need the -90 correction.
+    # verify_easyeda_footprint reports delta_row = 0 for U3, confirming the
+    # frames match, so the default correction (180, cancels the bottom-side
+    # mirror) is the correct one here.
+    (r"^SOT-23-5", 180),
     (r"^SOP-(?!18_|4_)", 270),   # SOP packages (except SOP-18, SOP-4)
     (r"^SOIC-", 270),            # SOIC packages
     (r"^TSSOP-", 270),           # TSSOP packages
@@ -66,6 +75,14 @@ _JLCPCB_POS_CORRECTIONS = {
 _JLCPCB_ROT_OVERRIDES = {
     "U5": 180,   # PAM8403 (C5122557) — formula (90°→180°); 90° was wrong per JLCPCB DFM
     "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
+    # "C2" override REMOVED: C2 (22uF tantalum, AMS1117 output cap) no longer
+    # exists. It was the most dangerous polarized part on the board and it
+    # destroyed prototype #1 when assembled reversed
+    # (website/docs/rework/incident-c2-reversed.md). The SY8089 buck uses
+    # C30, a non-polarized 22uF MLCC, on its output instead.
+    # U3 needs NO override: footprints.sot23_5 is a verbatim copy of the
+    # EasyEDA/JLCPCB reference land pattern for C78988 (delta_row = 0), so
+    # the SOT-23-5 entry in _JLCPCB_ROT_CORRECTIONS (180) is sufficient.
     # D1 (BAT54C, C37704): override REMOVED 2026-07-25 — re-derived while
     # relocating D1 for R5-CRIT-6.
     #   Old state: KiCad rot 0° + override 270°.
@@ -83,16 +100,15 @@ _JLCPCB_ROT_OVERRIDES = {
     #             rot   0°      90°       180°     270°
     #     C37704       2.210   0.187 ✓   2.210    3.120  mm
     #     C10487       2.074   0.000 ✓   2.074    2.933  mm
-    #   Both land on the same 90°, and no pin PERMUTATION is required —
-    #   so this is a drawing-convention difference between EasyEDA's
-    #   library and ours, NOT a polarity defect. (Reproduced independently
-    #   in this session; matches the d1-polarity session's figures.)
+    #   Both land on the same 90°, and no pin PERMUTATION is required — so
+    #   this is a drawing-convention difference between EasyEDA's library
+    #   and ours, NOT a polarity defect. (Derived independently twice.)
     #   Q1 emits the plain formula result, 90°, with no override, and is
     #   empirically validated — boards R4-R8 (8+ prototypes) power up
     #   through Q1, so its physical polarity is proven. That evidence now
     #   lives in POLARITY_AUDIT.md; it used to sit in
-    #   verify_easyeda_footprint.py's allowlist, but that entry was
-    #   deleted once the computed proof above made it dead code.
+    #   verify_easyeda_footprint.py's allowlist, but that entry was deleted
+    #   once the computed proof above made it dead code.
     #   _jlcpcb_rotation() is linear in `rot`, so identical footprint +
     #   identical land pattern + identical layer ⇒ identical CPL angle.
     #   D1's 270° at KiCad 0° was therefore 180° out (introduced
@@ -106,19 +122,20 @@ _JLCPCB_ROT_OVERRIDES = {
     #   the TOP row (pad 1 at (-0.95,+1.15)), which MATCHES our sot23_6()
     #   (pad 1 at (-0.95,+1.10)) — no rotation offset, unlike D1/Q1. U4
     #   arrives at 90° by a different route and says nothing about D1.
-    #   Thanks to the d1-polarity session for catching this.
     #
     #   Do NOT reason about this from row/column layout alone. EasyEDA
     #   simply draws SOT-23-3 with pads 1/2 in a column and SOT-23-6 with
     #   pads 1/2/3 in a row — an inconsistency internal to its own library.
-    #   JLCPCB's 0° reference is the part's orientation in ITS parts
-    #   library (tape-and-reel), which is why _JLCPCB_ROT_CORRECTIONS is
-    #   keyed by package FAMILY and not by footprint drawing.
+    #   JLCPCB's 0° reference is the part's orientation in ITS parts library
+    #   (tape-and-reel), which is why _JLCPCB_ROT_CORRECTIONS is keyed by
+    #   package FAMILY and not by footprint drawing.
     #
     #   D1 is now placed at KiCad 180°, for which the same formula yields
     #   270° — the emitted CPL angle is unchanged, but it is now derived
     #   and the physical part finally matches its footprint.
-    "C2": 180,   # Tantalum 22uF (C1953590 Vishay TMCMA1C226MTRF) — JLCPCB 3D model stripe/+ oriented opposite to our pad 1
+    #   (EasyEDA could not be re-fetched live: the API returns HTTP 403 for
+    #   every LCSC id, so scripts/.easyeda_cache/ cannot be repopulated —
+    #   POLARITY_AUDIT.md is the archived copy of that reference.)
     "LED2": 180, # Green LED 0805 (C19171391) — EasyEDA footprint has pad 1 on cathode-silk-OPPOSITE
                  # side (pad 1 x=+1.05, cathode silk notch at x=-0.34..-2.22), inverted vs LED1
                  # C84256 (pad 1 x=-1.10 co-located with cathode silk). Datasheet page 1 confirms
@@ -245,10 +262,11 @@ def _build_placements():
     p.append(("U2", "IP5306",
               "ESOP-8", ix, iy, 0, "bottom"))
 
-    # AMS1117 LDO (near IP5306)
-    amx, amy = enc_to_pcb(*AMS1117_ENC)
-    p.append(("U3", "AMS1117-3.3",
-              "SOT-223", amx, amy, 0, "bottom"))
+    # U3 SY8089AAAC synchronous buck (SOT-23-5), replaces the AMS1117 LDO.
+    # rot 180 puts IN/FB on the west side, inside the In2.Cu +5V pour.
+    bkx, bky = enc_to_pcb(*BUCK_ENC)
+    p.append(("U3", "SY8089AAAC",
+              "SOT-23-5", bkx, bky, 180, "bottom"))
 
     # PAM8403 audio amp (rotated 90° for routing to speaker below)
     px, py = enc_to_pcb(*PAM8403_ENC)
@@ -259,6 +277,11 @@ def _build_placements():
     lx, ly = enc_to_pcb(*INDUCTOR_ENC)
     p.append(("L1", "1uH",
               "SMD-4x4x2", lx, ly, 0, "bottom"))
+
+    # L2: SY8089 buck output inductor (2.2uH, SWPA4030S2R2MT / C36409)
+    from scripts.generate_pcb.routing import L2_POS
+    p.append(("L2", "2.2uH",
+              "IND-SMD-4.0x4.0", L2_POS[0], L2_POS[1], 0, "bottom"))
 
     # JST battery connector
     jx, jy = enc_to_pcb(*JST_BAT_ENC)
@@ -371,11 +394,23 @@ def _build_placements():
     p.append(("R20", "20k", "R_0805", 38.0, 26.5, 0, "bottom"))
     p.append(("R21", "20k", "R_0805", 38.0, 32.5, 0, "bottom"))
 
-    # ── AMS1117 support caps ──
-    p.append(("C1", "10uF", "C_0805",
-              amx - 5.0, amy + 1.5, 0, "bottom"))  # left of SOT-223 body (3.2mm from VIN)
-    p.append(("C2", "22uF", "C_1206",
-              amx, amy + 7, 0, "bottom"))
+    # ── U3 SY8089 buck passives ──
+    # C2 (22uF tantalum) is GONE: it was the AMS1117 output cap and it
+    # destroyed prototype #1 when assembled reversed. A 1 MHz buck needs a
+    # low-ESR MLCC (C30) anyway — 2.9 ohm ESR tantalum is unusable here.
+    from scripts.generate_pcb.routing import (
+        C1_POS, C29_POS, C30_POS, R25_POS, R26_POS,
+    )
+    p.append(("C1", "22uF", "C_1206",
+              C1_POS[0], C1_POS[1], 180, "bottom"))    # C_IN  (datasheet: >=10uF ceramic on IN)
+    p.append(("C30", "22uF", "C_1206",
+              C30_POS[0], C30_POS[1], 90, "bottom"))   # C_OUT (datasheet: >=22uF X5R ceramic)
+    p.append(("R25", "100k", "R_0805",
+              R25_POS[0], R25_POS[1], 180, "bottom"))    # FB upper
+    p.append(("R26", "22k", "R_0805",
+              R26_POS[0], R26_POS[1], 180, "bottom"))    # FB lower -> 0.6*(1+100/22)=3.327V
+    p.append(("C29", "22pF", "C_0805",
+              C29_POS[0], C29_POS[1], 180, "bottom"))    # feed-forward across R25
 
     return p
 
