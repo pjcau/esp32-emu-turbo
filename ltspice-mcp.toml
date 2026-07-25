@@ -1,0 +1,20 @@
+# ltspice-mcp configuration for ESP32 Emu Turbo.
+# Picked up automatically from the project root (server CWD).
+#
+# LTspice is not installed on this host; ngspice 46 (homebrew) is the
+# simulator. Netlist decks (.cir/.net) work fully. Editing LTspice .asc
+# schematics would need LTspice's .asy symbol libraries and is not used.
+
+[simulator]
+default = "ngspice"
+ngbehavior = "hsa"
+
+[security]
+# Sandbox: the server may only read/write inside these directories.
+allowed_paths = ["hardware/simulation"]
+
+[simulation]
+timeout = 300.0
+
+[tools]
+profile = "full"

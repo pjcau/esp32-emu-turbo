@@ -12,7 +12,18 @@
       "Edit",
       "Glob",
       "Grep",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(cp hardware/kicad/jlcpcb/bom.csv hardware/kicad/jlcpcb/cpl.csv hardware/kicad/jlcpcb/bom-summary.md hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/)",
+      "Bash(cp hardware/kicad/jlcpcb/bom.csv hardware/kicad/jlcpcb/cpl.csv hardware/kicad/jlcpcb/bom-summary.md hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/jlcpcb/)",
+      "Bash(cp hardware/kicad/esp32-emu-turbo.kicad_pcb release_jlcpcb/)",
+      "Bash(cp -R hardware/kicad/gerbers release_jlcpcb/gerbers)",
+      "Bash(cp -R hardware/kicad/gerbers release_jlcpcb/jlcpcb/gerbers.tmp)",
+      "Bash(cp -R hardware/kicad/gerbers release_jlcpcb/jlcpcb/gerbers)",
+      "Bash(cp hardware/kicad/jlcpcb/bom.csv release_jlcpcb/bom.csv)",
+      "Bash(cp hardware/kicad/jlcpcb/cpl.csv release_jlcpcb/cpl.csv)",
+      "Bash(cp hardware/kicad/esp32-emu-turbo.kicad_pcb release_jlcpcb/esp32-emu-turbo.kicad_pcb)",
+      "Bash(cp -r hardware/kicad/gerbers release_jlcpcb/gerbers)",
+      "Bash(cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/gerbers.zip)"
     ],
     "deny": [
       "Bash(rm -rf /*)",

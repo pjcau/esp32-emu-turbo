@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "ltspice": {
+      "type": "stdio",
+      "command": "ltspice-mcp",
+      "args": [],
+      "env": {}
+    }
+  }
+}

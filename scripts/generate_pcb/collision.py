@@ -337,10 +337,23 @@ class CollisionGrid:
             label=f"net{net} {layer} ({x1:.2f},{y1:.2f})->({x2:.2f},{y2:.2f})",
         )
 
+        # A trace's copper is a capsule (rounded rectangle swept along the
+        # centreline), which the segment AABB represents EXACTLY while the
+        # segment is horizontal or vertical — true of almost every trace on
+        # this board. For a diagonal the AABB is the bounding box of the
+        # capsule and badly overstates the copper near the corners, which
+        # reports collisions that do not exist. Use the exact capsule
+        # distance in that case instead of loosening the rule.
+        diagonal = abs(x2 - x1) > _EPS and abs(y2 - y1) > _EPS
+
         for obs in hits:
             required = _required_clearance("segment", obs.kind)
-            gap = _aabb_gap(seg_xmin, seg_ymin, seg_xmax, seg_ymax,
-                            obs.xmin, obs.ymin, obs.xmax, obs.ymax)
+            if diagonal:
+                gap = _capsule_rect_gap(x1, y1, x2, y2, hw,
+                                        obs.xmin, obs.ymin, obs.xmax, obs.ymax)
+            else:
+                gap = _aabb_gap(seg_xmin, seg_ymin, seg_xmax, seg_ymax,
+                                obs.xmin, obs.ymin, obs.xmax, obs.ymax)
             if gap < required - _EPS:
                 violations.append(Violation(
                     obstacle_a=seg_obs,
@@ -551,6 +564,40 @@ def _aabb_gap(ax1: float, ay1: float, ax2: float, ay2: float,
     overlap_x = min(ax2 - bx1, bx2 - ax1)
     overlap_y = min(ay2 - by1, by2 - ay1)
     return -min(overlap_x, overlap_y)
+
+
+def _capsule_rect_gap(x1: float, y1: float, x2: float, y2: float,
+                      hw: float,
+                      bx1: float, by1: float, bx2: float, by2: float) -> float:
+    """Exact edge-to-edge gap between a trace capsule and an AABB.
+
+    The trace copper is the set of points within `hw` of the centreline
+    segment, so the gap is (distance from the segment to the rectangle)
+    minus `hw`. Returns negative on overlap, matching _aabb_gap's sign
+    convention (there the magnitude is a penetration depth; here it is the
+    shortfall, which is what the caller compares against a clearance).
+    """
+    # Distance from the segment to the rectangle: sample the segment
+    # against the rect and the rect's edges against the segment. Both are
+    # convex, so the minimum is attained either at a segment endpoint or
+    # at a rectangle corner (or the two intersect, i.e. distance 0).
+    def _point_rect_dist(px, py):
+        dx = max(bx1 - px, 0.0, px - bx2)
+        dy = max(by1 - py, 0.0, py - by2)
+        return math.hypot(dx, dy)
+
+    def _point_seg_dist(px, py):
+        vx, vy = x2 - x1, y2 - y1
+        L2 = vx * vx + vy * vy
+        if L2 <= 0.0:
+            return math.hypot(px - x1, py - y1)
+        t = max(0.0, min(1.0, ((px - x1) * vx + (py - y1) * vy) / L2))
+        return math.hypot(px - (x1 + t * vx), py - (y1 + t * vy))
+
+    dist = min(_point_rect_dist(x1, y1), _point_rect_dist(x2, y2))
+    for cx, cy in ((bx1, by1), (bx2, by1), (bx1, by2), (bx2, by2)):
+        dist = min(dist, _point_seg_dist(cx, cy))
+    return dist - hw
 
 
 def _suggest_nudge(x1: float, y1: float, x2: float, y2: float,

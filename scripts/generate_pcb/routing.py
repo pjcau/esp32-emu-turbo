@@ -37,6 +37,12 @@ W_PWR_LOW = 0.30      # Light power stubs: +3V3/GND short cap-to-via runs (~0.5A
 W_SIG = 0.25
 W_DATA = 0.2
 W_AUDIO = 0.3
+# Narrow width used only where a button channel has to thread the gap
+# between the CC1 via and J1's front shield pads (see the BTN_B bypass in
+# _button_traces). 0.15 mm is well above the 0.09 mm JLCPCB / .kicad_dru
+# minimum and carries a pulled-up button input, so the extra ~0.3 ohm over
+# the 12 mm bypass is irrelevant.
+W_J1_BYPASS = 0.15
 
 # ── Via sizes (JLCPCB 4-layer: AR >= 0.15mm recommended) ─────────
 VIA_STD = 0.60       # standard via OD (AR=0.20mm with drill 0.20)
@@ -91,10 +97,24 @@ def _init_keepout_zones():
     global _KEEPOUT_CIRCLES
     _KEEPOUT_CIRCLES = []
     # Mounting holes: 3.5mm pad + 0.5mm clearance = 2.25mm radius
-    from .board import MOUNT_HOLES_ENC, enc_to_pcb
+    from .board import MOUNT_HOLES_ENC, enc_to_pcb, USBC_ENC
     for ex, ey in MOUNT_HOLES_ENC:
         mx, my = enc_to_pcb(ex, ey)
         _KEEPOUT_CIRCLES.append((mx, my, 2.25))  # 1.75mm pad radius + 0.5mm clearance
+
+    # J1 lives in a 0.015 mm-tight vertical budget between the BTN_B button
+    # channel and the board edge (see footprints.usb_c_16p "ANNULAR BUDGET").
+    # board.py and routing.py each carry their own copy of its position, so
+    # a one-sided edit would silently move the shield pads into the button
+    # channels. Fail loudly instead of drifting.
+    _board_usbc = enc_to_pcb(*USBC_ENC)
+    if (round(_board_usbc[0], 4), round(_board_usbc[1], 4)) != (
+            round(USBC[0], 4), round(USBC[1], 4)):
+        raise AssertionError(
+            f"J1 placement out of sync: board.USBC_ENC -> {_board_usbc}, "
+            f"routing.USBC = {USBC}. Update both (and re-check the J1 "
+            f"annular budget in footprints.usb_c_16p)."
+        )
 
 
 # Detour Y allocation counter: assigns unique Y offsets for traces detouring
@@ -310,7 +330,49 @@ def _crosses_slot(x1, y1, x2, y2):
 
 ESP32 = enc(0, 10)        # (80.0, 27.5)
 FPC = enc(55, 2)          # (135.0, 35.5)  — right of slot, vertical (90deg)
-USBC = enc(0, -33.7)      # (80.0, 71.2) — DFM: shield pads clear board edge by 0.525mm
+# R21 (2026-07-25): -33.70 -> -33.65 (J1 backed 0.05 mm off the board edge)
+# so the taller rear shield pads keep 0.5 mm copper-to-edge. Must stay in
+# sync with board.USBC_ENC — asserted in _init_keepout_zones().
+USBC = enc(0, -33.65)     # (80.0, 71.15) — rear shield pads clear board edge by 0.515mm
+
+# ── J1 USB-C shield THT pads, in board coordinates ───────────────
+# Derived from the footprint's single source of truth so the button
+# F.Cu channels below re-tune themselves if the land pattern changes.
+# J1 is placed unrotated, so local Y adds directly to the origin Y.
+J1_SHIELD_XS = (USBC[0] - FP.USBC_SHIELD_DX, USBC[0] + FP.USBC_SHIELD_DX)
+J1_FRONT_PAD_TOP = (USBC[1] + FP.USBC_SHIELD_FRONT_DY
+                    - FP.USBC_SHIELD_FRONT_H / 2)          # 68.265
+J1_FRONT_PAD_BOTTOM = (USBC[1] + FP.USBC_SHIELD_FRONT_DY
+                       + FP.USBC_SHIELD_FRONT_H / 2)       # 70.385
+J1_REAR_PAD_TOP = (USBC[1] + FP.USBC_SHIELD_REAR_DY
+                   - FP.USBC_SHIELD_REAR_H / 2)            # 72.565
+J1_REAR_PAD_BOTTOM = (USBC[1] + FP.USBC_SHIELD_REAR_DY
+                      + FP.USBC_SHIELD_REAR_H / 2)         # 74.485
+J1_SHIELD_HALF_W = FP.USBC_SHIELD_FRONT_W / 2              # 0.60
+
+# CC1 escape: J1 pad 4 goes up on B.Cu, vias to F.Cu here, then runs west
+# to R1. Module-level because the BTN_B bypass in _button_traces is pinned
+# against the bottom edge of the via this creates.
+CC1_FCU_Y = 67.40  # midpoint between BTN_A(66.8) and BTN_B(68.0)
+
+
+def _crosses_j1_front_shield(x1, x2, y, width):
+    """True if an F.Cu horizontal at y would violate clearance to either
+    J1 front shield THT pad.
+
+    Used to decide whether a button channel needs a bypass. Purely
+    geometric so it re-evaluates itself if the land pattern or J1's
+    placement moves — no hardcoded channel index.
+    """
+    pad_clearance = 0.20
+    if not (J1_FRONT_PAD_TOP - pad_clearance - width / 2
+            < y
+            < J1_FRONT_PAD_BOTTOM + pad_clearance + width / 2):
+        return False
+    lo, hi = min(x1, x2), max(x1, x2)
+    return any(lo <= px + J1_SHIELD_HALF_W and hi >= px - J1_SHIELD_HALF_W
+               for px in J1_SHIELD_XS)
+
 SD = enc(60, -29.5)       # (140.0, 67.0)  — bottom-right
 IP5306 = enc(30, -5)      # (110.0, 42.5)  — moved left
 # U3 = SY8089AAAC synchronous buck (SOT-23-5), replaces the AMS1117 LDO.
@@ -1155,23 +1217,17 @@ def _power_traces():
                        "B.Cu", W_PWR, n_gnd))
 
     # ── USB-C extra pad net assignments (GND, VBUS, Shield) ────
-    # The USB-C connector area is densely routed (D+/D-/CC1/CC2 verticals,
-    # VBUS vertical, button approach columns). Explicit B.Cu traces to most
-    # pads would cross existing routes. Instead:
-    # - Assign net IDs to pads (for DRC net awareness)
-    # - GND pads connect through In1.Cu GND zone (zone fill)
-    # - VBUS pads 9/11 link to pad 2 via short same-row stub (no crossings)
-    # - Shield THT pads connect through In1.Cu GND zone (plated holes)
+    # R21 (2026-07-25): pads 1, 9 and 11 used to be given a net here and
+    # then left to "connect through the zone fill". That does not work for
+    # SMD pads: an SMD pad has no barrel, so it never touches In1.Cu or
+    # In2.Cu, and KiCad DRC correctly reported all three as unconnected.
+    # Pad 9 was additionally on the WRONG net — it is SBU1, not VBUS (see
+    # the land map in footprints.usb_c_16p).
+    # Real copper is now routed in _usb_c_reversibility_traces(); the net
+    # assignments for 1, 9 and 11 live there with the traces that justify
+    # them. Only the shield THT pads, which do have plated barrels into
+    # the In1.Cu GND plane, are assigned here.
     #
-    # Pad 1 (GND): directly assign net, zone fill connects via In1.Cu
-    _PAD_NETS[("J1", "1")] = n_gnd
-    # Pad 9 (VBUS): directly assign net
-    _PAD_NETS[("J1", "9")] = n_vbus
-    # Pad 11 (VBUS): directly assign net
-    _PAD_NETS[("J1", "11")] = n_vbus
-    # Pad 9 to pad 11: no explicit stub needed — CC2 B.Cu vertical at x=78.25
-    # runs between these pads at y=68.83, blocking any horizontal stub.
-    # Both pads have VBUS net assigned; zone fill on In2.Cu connects them.
     # Shield pads 13, 14 (front + rear, duplicate names) → GND net assignment.
     # THT pads have plated barrels connecting to In1.Cu GND zone automatically.
     # NOTE: USB shield tied directly to signal GND (no RC filter). Acceptable for
@@ -3231,14 +3287,13 @@ def _usb_traces():
     #   CC1 vias at y=67.4 (r=0.25): gap to BTN_A(66.925)=0.225mm ✓, BTN_B(67.875)=0.225mm ✓
     #   F.Cu horiz x=[74.95,81.25]: USB GND via now at y=66.0 (clear) ✓
     if usb_cc1 and r1_p1:
-        _cc1_fcu_y = 67.40  # midpoint between BTN_A(66.8) and BTN_B(68.0)
-        parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], _cc1_fcu_y,
+        parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], CC1_FCU_Y,
                            "B.Cu", W_SIG, n_cc1))
-        parts.append(_via_net(usb_cc1[0], _cc1_fcu_y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
-        parts.append(_seg(usb_cc1[0], _cc1_fcu_y, r1_p1[0], _cc1_fcu_y,
+        parts.append(_via_net(usb_cc1[0], CC1_FCU_Y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(usb_cc1[0], CC1_FCU_Y, r1_p1[0], CC1_FCU_Y,
                            "F.Cu", W_SIG, n_cc1))
-        parts.append(_via_net(r1_p1[0], _cc1_fcu_y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
-        parts.append(_seg(r1_p1[0], _cc1_fcu_y, r1_p1[0], r1_p1[1],
+        parts.append(_via_net(r1_p1[0], CC1_FCU_Y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(r1_p1[0], CC1_FCU_Y, r1_p1[0], r1_p1[1],
                            "B.Cu", W_SIG, n_cc1))
 
     # CC2 → R2: B.Cu only (R2 moved near J1, no layer change needed).
@@ -3279,6 +3334,200 @@ def _usb_traces():
     # correctly flagged them as via_dangling. Removed. To improve USB
     # return path integrity in v2, route a small F.Cu GND patch under
     # the USB D+ serpentine and connect a stitching via to that patch.
+
+    return parts
+
+
+def _usb_c_reversibility_traces():
+    """Wire up the J1 lands that make the receptacle orientation-agnostic.
+
+    A USB-C receptacle presents each signal twice, once on the A row and
+    once on the B row, so that the plug lands on a live contact whichever
+    way round it goes in. On this 12-land part (see the land map in
+    footprints.usb_c_16p) that means:
+
+        GND   lands 1 (A1+B12) and 12 (B1+A12)
+        VBUS  lands 2 (A4+B9)  and 11 (B4+A9)
+        D+    lands 6 (A6/DP1) and 8  (B6/DP2)
+        D-    lands 7 (A7/DN1) and 5  (B7/DN2)
+        CC1   land 4,  CC2 land 10  (already terminated by R1 / R2)
+
+    Before R21 only one land of each pair was wired: 12, 2, 6, 7. Two
+    separate defects came out of that.
+
+    1. VBUS / GND (the DRC "unconnected" reports). Lands 1 and 11 were
+       given a net and left to "connect through the zone fill", but they
+       are SMD lands with no barrel, so they never reached In1.Cu or
+       In2.Cu and sat electrically floating. The board still charged —
+       the merged A4+B9 land alone is live in both orientations — but on
+       two of the four VBUS contacts and two of the four GND contacts
+       instead of all four. The datasheet rates each contact at 40 mOhm
+       max, and the IP5306 pulls up to 2.1 A, so halving the contact
+       count roughly doubles the connector's share of the charging-path
+       drop and its self-heating. Now bonded with real copper.
+
+    2. D+ / D- (the actual "USB-C is not reversible" defect, and it does
+       NOT show up as a DRC unconnected item because lands 5 and 8 had no
+       net at all, so nothing was looking for them). USB Type-C r2.1
+       s4.2 requires a USB 2.0 device to tie A6-B6 and A7-B7 together on
+       the PCB, because a C-to-A or captive cable populates only one of
+       the two pairs in the plug. With only A6/A7 wired, the plug's data
+       pair lands on B6/B7 in the flipped orientation and the device
+       simply does not enumerate. Charging worked either way round, which
+       is why this was never caught on the bench. Now shorted.
+
+    Everything here is on B.Cu (J1's own side) except a single 1 mm F.Cu
+    hop that lets the two data links cross, because the two shorts
+    interleave (6-8 has to step over 7, 5-7 has to step over 6) and a
+    planar crossing is impossible.
+
+    Geometry notes, board coordinates, J1 origin (80.0, 71.15):
+      signal land row  y = 68.775, lands span y = 68.225 .. 69.325
+      land pitch       0.50 mm, wide lands 0.55 wide, narrow 0.30
+      peg NPTH         (77.11, 69.845) and (82.89, 69.845), r = 0.325
+      front shield     x 75.075..76.275 / 83.725..84.925, y 68.265..70.385
+      rear shield      y 72.565..74.485
+    The band y = 70.5 .. 72.4 between the two shield rows is empty on
+    B.Cu across the whole connector and is what makes this routable.
+    """
+    parts = []
+    _init_pads()
+
+    n_gnd = NET_ID["GND"]
+    n_vbus = NET_ID["VBUS"]
+    n_dp = NET_ID["USB_D+"]
+    n_dm = NET_ID["USB_D-"]
+
+    p1 = _pad("J1", "1")     # GND  (A1 + B12)
+    p2 = _pad("J1", "2")     # VBUS (A4 + B9)  — already routed to the IP5306
+    p5 = _pad("J1", "5")     # D-   (B7 / DN2)
+    p6 = _pad("J1", "6")     # D+   (A6 / DP1) — already routed to U4/R22
+    p7 = _pad("J1", "7")     # D-   (A7 / DN1) — already routed to U4/R23
+    p8 = _pad("J1", "8")     # D+   (B6 / DP2)
+    p11 = _pad("J1", "11")   # VBUS (B4 + A9)
+    if not all((p1, p2, p5, p6, p7, p8, p11)):
+        return parts
+
+    # ── GND: land 1 -> front shield tab 13 ──────────────────────────
+    # The shield tab is a plated through-hole already bonded to the
+    # In1.Cu GND plane, and it sits 0.525 mm to the right of land 1 with
+    # nothing in between, so a straight stub on the land row is the whole
+    # connection. Kept on the row (y = 68.775) rather than angled down,
+    # because that puts the trace 1.114 mm from the right peg hole —
+    # comfortably past the 0.879 mm the "NPTH to Track" rule needs for a
+    # 0.60 mm trace. Left end clears land 2 (VBUS) by 0.225 mm.
+    # The second leg drops onto the tab's centre so both ends of the link
+    # terminate on a pad origin (JLCDFM dead-end check); it is 0.30 mm
+    # inside the tab's own copper, so it adds no new clearance case.
+    _shield_x = J1_SHIELD_XS[1]
+    _shield_y = USBC[1] + FP.USBC_SHIELD_FRONT_DY
+    parts.append(_seg(p1[0], p1[1], _shield_x, p1[1], "B.Cu", W_PWR, n_gnd))
+    parts.append(_seg(_shield_x, p1[1], _shield_x, _shield_y, "B.Cu", W_PWR, n_gnd))
+    _PAD_NETS[("J1", "1")] = n_gnd
+
+    # ── VBUS: land 11 -> land 2 ─────────────────────────────────────
+    # Both wide VBUS lands are pinned between a peg hole on their outer
+    # side and a 0.30 mm signal land on their inner side, so the escape
+    # has to thread the diagonal gap between the two. Measured on the
+    # left side: peg centre (77.11, 69.845) to land 10's lower-left
+    # corner (78.10, 69.325) is 1.118 mm, minus the 0.325 mm hole radius
+    # leaves 0.793 mm of free span. That span has to hold
+    #     0.300 mm (validate_jlcpcb NPTH-to-copper, stricter than the
+    #               0.254 mm in the .kicad_dru — the tighter one wins)
+    #   + trace width
+    #   + 0.200 mm (pad to track)
+    # so the widest trace that fits is 0.293 mm. W_SIG (0.25) is used and
+    # the centreline biased 0.02 mm off the NPTH side, leaving 0.32 mm to
+    # the peg hole and 0.223 mm to the land corner. The escape runs
+    # perpendicular to the peg-to-corner line, which is the only
+    # orientation in which anything fits at all — a purely vertical drop
+    # out of land 11 is impossible, the peg keepout covers it entirely.
+    #
+    # 0.25 mm is thin for a power net, but this is a PARALLEL path, not
+    # the supply: land 2 keeps its 0.60 mm run to the IP5306. Over the
+    # ~9 mm round trip the link adds ~18 mOhm, against ~20 mOhm for the
+    # two connector contacts it brings online, so current splits roughly
+    # 55/45 between the two VBUS land pairs — which is the entire point.
+    _esc_w = W_SIG
+    _peg_x, _peg_y = USBC[0] - 2.89, USBC[1] - 1.305      # left peg hole
+    _peg_r = 0.325
+    _corner = (p11[0] + 0.65, p11[1] + 0.55)              # land 10 lower-left
+    _dx, _dy = _corner[0] - _peg_x, _corner[1] - _peg_y
+    _span = math.hypot(_dx, _dy)
+    _ux, _uy = _dx / _span, _dy / _span                   # peg -> corner
+    # Gate point: hole edge + NPTH clearance + half trace + 0.02 bias.
+    _gate_d = _peg_r + 0.30 + _esc_w / 2 + 0.02
+    _gate = (_peg_x + _ux * _gate_d, _peg_y + _uy * _gate_d)
+    _px, _py = -_uy, _ux                                  # perpendicular, downward
+    _esc_in = (round(_gate[0] - 0.55 * _px, 3), round(_gate[1] - 0.55 * _py, 3))
+    _esc_out = (round(_gate[0] + 0.85 * _px, 3), round(_gate[1] + 0.85 * _py, 3))
+    # Cross-connector run, mid-way between the two shield rows.
+    _vbus_link_y = 72.10
+    _esc_in_r = (round(2 * USBC[0] - _esc_in[0], 3), _esc_in[1])
+    _esc_out_r = (round(2 * USBC[0] - _esc_out[0], 3), _esc_out[1])
+    # Start/finish on the land origins so the link has no free endpoints
+    # (JLCDFM dead-end check). Both stubs stay wholly inside their land.
+    # In-land stubs and the two diagonal escapes are necked to _esc_w;
+    # the corridor run below the lands is unconstrained so it stays at
+    # W_PWR_LOW.
+    parts.append(_seg(p11[0], p11[1], _esc_in[0], _esc_in[1],
+                       "B.Cu", _esc_w, n_vbus))
+    parts.append(_seg(p2[0], p2[1], _esc_in_r[0], _esc_in_r[1],
+                       "B.Cu", _esc_w, n_vbus))
+    parts.append(_seg(_esc_in[0], _esc_in[1], _esc_out[0], _esc_out[1],
+                       "B.Cu", _esc_w, n_vbus))
+    parts.append(_seg(_esc_out[0], _esc_out[1], _esc_out[0], _vbus_link_y,
+                       "B.Cu", W_PWR_LOW, n_vbus))
+    parts.append(_seg(_esc_out[0], _vbus_link_y, _esc_out_r[0], _vbus_link_y,
+                       "B.Cu", W_PWR_LOW, n_vbus))
+    parts.append(_seg(_esc_out_r[0], _vbus_link_y, _esc_out_r[0], _esc_out_r[1],
+                       "B.Cu", W_PWR_LOW, n_vbus))
+    parts.append(_seg(_esc_out_r[0], _esc_out_r[1], _esc_in_r[0], _esc_in_r[1],
+                       "B.Cu", _esc_w, n_vbus))
+    _PAD_NETS[("J1", "11")] = n_vbus
+    # Land 9 is SBU1, not VBUS. It was on the VBUS net until R21, which
+    # is why DRC kept asking for a VBUS connection to it. SBU1/SBU2 are
+    # unused by this design (no alternate mode, no analog audio adapter
+    # accessory), so they stay deliberately unconnected — and must stay
+    # off VBUS, since an audio adapter would drive them.
+
+    # ── D+ / D- : land 6 <-> land 8, and land 7 <-> land 5 ──────────
+    # The two shorts interleave in X (8, 7, 6, 5 left to right, linking
+    # 8-6 and 7-5), so exactly one of them has to change layer. There is
+    # no room to do that anywhere except directly below the lands: at
+    # 0.5 mm pitch a 0.50 mm via on one land column leaves 0.175 mm to a
+    # 0.15 mm trace on the neighbouring column, which is the project's
+    # CLEARANCE_VIA_TRACE target exactly and 0.085 mm above the JLCPCB
+    # minimum. Hence W_J1_BYPASS and VIA_MIN here rather than the usual
+    # W_DATA / VIA_STD.
+    #
+    # D- takes the layer change because its two lands (7 and 5) are the
+    # outer pair of the interleave, so its vias land on the outer columns
+    # and only have to clear D+ on one side each.
+    #
+    # Stub length is ~2.6 mm of unterminated branch on each data line.
+    # ESP32-S3's native USB is Full Speed (12 Mbit/s, ~5 ns edges): a
+    # 2.6 mm stub is under 0.2% of a wavelength, so it is electrically
+    # invisible. Same reasoning as the Zdiff note in the project memory.
+    _dm_hop_y = 70.00   # free F.Cu band between BTN_B (68.00) and BTN_X (70.81)
+    parts.append(_seg(p7[0], p7[1], p7[0], _dm_hop_y, "B.Cu", W_J1_BYPASS, n_dm))
+    parts.append(_via_net(p7[0], _dm_hop_y, n_dm,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(p7[0], _dm_hop_y, p5[0], _dm_hop_y,
+                       "F.Cu", W_J1_BYPASS, n_dm))
+    parts.append(_via_net(p5[0], _dm_hop_y, n_dm,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(p5[0], _dm_hop_y, p5[0], p5[1], "B.Cu", W_J1_BYPASS, n_dm))
+    _PAD_NETS[("J1", "5")] = n_dm
+
+    # D+ stays on B.Cu, dropping past the D- vias (0.175 mm clear on each
+    # side) into the empty band between the two shield rows.
+    _dp_link_y = 71.40
+    parts.append(_seg(p8[0], p8[1], p8[0], _dp_link_y, "B.Cu", W_J1_BYPASS, n_dp))
+    parts.append(_seg(p8[0], _dp_link_y, p6[0], _dp_link_y,
+                       "B.Cu", W_J1_BYPASS, n_dp))
+    parts.append(_seg(p6[0], _dp_link_y, p6[0], p6[1], "B.Cu", W_J1_BYPASS, n_dp))
+    _PAD_NETS[("J1", "8")] = n_dp
 
     return parts
 
@@ -3375,7 +3624,9 @@ def _button_traces():
     # Ch8-Ch9 via-trace: 72.95-72.35-0.275-0.125=0.20mm ✓ (via r=0.275 for 0.55mm via)
     # Ch8 vs J1:13b pad(72.675): trace top=72.475, gap=0.20mm ✓
     # Ch9 vs J1 pads: F.Cu stops at x~73, doesn't reach J1:14b(x=74.975) ✓
-    _J1_FRONT_PAD_BOTTOM = 70.375  # front shield pad bottom edge
+    # R21 (2026-07-25): was hardcoded 70.375, which had already drifted
+    # (the real edge was 70.425). Now derived from the footprint.
+    _J1_FRONT_PAD_BOTTOM = J1_FRONT_PAD_BOTTOM  # front shield pad bottom edge
     for i, b in enumerate(btn_data):
         if i <= 5:
             # Channels 0-5: normal spacing below J1 pad zone
@@ -3935,13 +4186,21 @@ def _button_traces():
         # 72.30: gap = 72.675 - 72.30 - 0.125 = 0.25 mm ✓. Gap to ch7 BTN_Y
         # (71.55 with R9-HIGH-4 fix): 72.30 - 0.125 - 71.55 - 0.125 = 0.50 mm ✓.
         if i == 8:  # BTN_START — bypass J1 rear shield pads 14b and 13b
-            _bypass_y = 72.30   # R9-HIGH-5: was 72.38 (0.17 mm gap, fail)
-            # Pad 14b bypass: jog at x=74.47 up, straight past, jog back at x=76.87
-            _p14b_jog_start = 74.47   # pad left (74.97) - 0.175 - 0.125 - margin
-            _p14b_jog_end = 76.87     # pad right (76.37) + 0.175 + 0.125 + margin
-            # Pad 13b bypass: jog at x=83.13 up, straight past, jog back at x=85.53
-            _p13b_jog_start = 83.13   # pad left (83.63) - 0.175 - 0.125 - margin
-            _p13b_jog_end = 85.53     # pad right (85.03) + 0.175 + 0.125 + margin
+            # R21 (2026-07-25): derived from J1_REAR_PAD_TOP instead of the
+            # old literal 72.30, which assumed a 1.80 mm-tall rear pad. The
+            # pad is now 1.92 mm (JLCPCB annular ring) and 0.05 mm higher,
+            # so its top edge moved from 72.675 to 72.565 and the literal
+            # would have left only 0.14 mm instead of the required 0.20 mm.
+            # Lower bound is the channel-7 approach vias at y=71.56
+            # (r=0.275 -> bottom 71.835): 72.20 - 0.125 = 72.075, gap 0.24 mm.
+            _bypass_y = round(J1_REAR_PAD_TOP - 0.20 - W_SIG / 2 - 0.04, 3)
+            _rear_l, _rear_r = J1_SHIELD_XS
+            # Jog columns: pad edge + trace half width + 0.20 clearance + margin
+            _jog_off = J1_SHIELD_HALF_W + W_SIG / 2 + 0.20 + 0.28
+            _p14b_jog_start = round(_rear_l - _jog_off, 3)
+            _p14b_jog_end = round(_rear_l + _jog_off, 3)
+            _p13b_jog_start = round(_rear_r - _jog_off, 3)
+            _p13b_jog_end = round(_rear_r + _jog_off, 3)
             # Segment order: vx → pad14b_jog_start → bypass14b → pad14b_jog_end →
             #                pad13b_jog_start → bypass13b → pad13b_jog_end → ax
             # All segments at cy=73.955 except bypasses at _bypass_y=72.38
@@ -3969,6 +4228,46 @@ def _button_traces():
             parts.append(_seg(_p13b_jog_end, _bypass_y, _p13b_jog_end, cy,
                                "F.Cu", W_SIG, net))
             parts.append(_seg(_p13b_jog_end, cy, ax, cy, "F.Cu", W_SIG, net))
+        elif _crosses_j1_front_shield(vx, ax, cy, W_SIG):
+            # BTN_B (channel 5, y=68.0) — bypass J1 FRONT shield pads.
+            #
+            # R21 (2026-07-25). The front shield pads had to grow from
+            # 2.10 to 2.12 mm tall for a JLCPCB-legal 0.25 mm annular ring
+            # and their top edge is now 68.265, only 0.14 mm below this
+            # channel's bottom edge at full W_SIG. Rather than move the
+            # whole channel plan, step over the two pads exactly the way
+            # channel 8 steps over the rear pads.
+            #
+            # Bypass Y is pinned between two hard obstacles:
+            #   above — the CC1 via at (74.95, 67.40), VIA_STD r=0.30, so
+            #           bottom edge 67.70. It sits inside the left pad's
+            #           bypass window in X, so it cannot be dodged.
+            #   below — the front shield pad top edge at 68.265.
+            # That is a 0.565 mm window and it must hold 0.20 mm + trace +
+            # 0.20 mm, hence the narrowed W_J1_BYPASS. Widening this trace
+            # or lowering the CC1 via re-breaks the annular ring. The real
+            # v2 fix is to move R1 (and its via) out of this corridor.
+            _cc1_via_bottom = CC1_FCU_Y + VIA_STD / 2          # 67.70
+            _fb_y = round((_cc1_via_bottom + 0.20 + W_J1_BYPASS / 2
+                           + J1_FRONT_PAD_TOP - 0.20 - W_J1_BYPASS / 2) / 2, 3)
+            _fb_off = J1_SHIELD_HALF_W + W_J1_BYPASS / 2 + 0.20 + 0.10
+            _l, _r = J1_SHIELD_XS
+            _windows = sorted(
+                [(round(_l - _fb_off, 3), round(_l + _fb_off, 3)),
+                 (round(_r - _fb_off, 3), round(_r + _fb_off, 3))]
+            )
+            _lo, _hi = min(vx, ax), max(vx, ax)
+            _cursor = _lo
+            for _wx0, _wx1 in _windows:
+                parts.append(_seg(_cursor, cy, _wx0, cy, "F.Cu", W_SIG, net))
+                parts.append(_seg(_wx0, cy, _wx0, _fb_y,
+                                   "F.Cu", W_J1_BYPASS, net))
+                parts.append(_seg(_wx0, _fb_y, _wx1, _fb_y,
+                                   "F.Cu", W_J1_BYPASS, net))
+                parts.append(_seg(_wx1, _fb_y, _wx1, cy,
+                                   "F.Cu", W_J1_BYPASS, net))
+                _cursor = _wx1
+            parts.append(_seg(_cursor, cy, _hi, cy, "F.Cu", W_SIG, net))
         else:
             parts.append(_seg(vx, cy, ax, cy, "F.Cu", W_SIG, net))
         parts.append(_via_net(ax, cy, net, size=_btn_via_sz, drill=_btn_via_drill))
@@ -5451,6 +5750,7 @@ def generate_all_traces():
     all_parts.extend(_i2s_traces())
     all_parts.extend(_pam_passive_traces())
     all_parts.extend(_usb_traces())
+    all_parts.extend(_usb_c_reversibility_traces())
     all_parts.extend(_button_traces())
     all_parts.extend(_passive_traces())
     all_parts.extend(_led_traces())

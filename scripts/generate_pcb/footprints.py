@@ -18,12 +18,15 @@ from . import primitives as P
 
 # ── Helper ────────────────────────────────────────────────────────
 def _pad(num, typ, shape, x, y, w, h, layers, net=0, drill=None,
-         solder_mask_margin=None):
+         solder_mask_margin=None, roundrect_rratio=None):
     """Generate a single KiCad pad S-expression.
 
     ``drill`` can be a float for a circular drill or a tuple (w, h) for
     an oval/slot drill.  KiCad syntax: ``(drill 0.6)`` vs
     ``(drill oval 0.6 1.5)``.
+
+    ``roundrect_rratio`` is required when ``shape`` is ``roundrect``: it
+    is the corner radius as a fraction of the pad's SHORT side.
     """
     if drill is None:
         d = ""
@@ -34,9 +37,17 @@ def _pad(num, typ, shape, x, y, w, h, layers, net=0, drill=None,
     net_s = f' (net {net} "")' if net == 0 else f' (net {net})'
     mask_s = (f" (solder_mask_margin {solder_mask_margin})"
               if solder_mask_margin is not None else "")
+    if shape == "roundrect":
+        if roundrect_rratio is None:
+            raise ValueError("roundrect pad requires roundrect_rratio")
+        rr_s = f" (roundrect_rratio {roundrect_rratio})"
+    elif roundrect_rratio is not None:
+        raise ValueError(f"roundrect_rratio is meaningless on a {shape} pad")
+    else:
+        rr_s = ""
     return (
         f'    (pad "{num}" {typ} {shape} (at {x} {y})'
-        f' (size {w} {h}){d}'
+        f' (size {w} {h}){d}{rr_s}'
         f' (layers {layers}){net_s}{mask_s}'
         f' (uuid "{P.uid()}"))\n'
     )
@@ -279,10 +290,54 @@ def sop16(layer="B"):
 # Ref: JLCPCB/EasyEDA package USB-C-SMD_TYPE-C-6PIN-2MD-073
 # 12 signal pads (pins 1-12) at y=-2.375, 4 shield THT pads (pins 13-14),
 # 2 NPTH positioning holes.
-# Pin mapping (JLCPCB 1-14 scheme):
-#   1=GND, 2=VBUS, 3=USB_DM_B, 4=CC1, 5=USB_DM_A, 6=USB_DP_A,
-#   7=USB_DP_B, 8=SBU, 9=VBUS, 10=CC2, 11=VBUS, 12=GND,
-#   13=SHIELD_FRONT, 14=SHIELD_REAR
+# Pin mapping (JLCPCB 1-14 scheme).
+# R21 CORRECTION (2026-07-25): the previous mapping listed pad 9 as VBUS
+# and pad 8 as "SBU". Both were wrong. The datasheet page 1 "RECOMMENDED
+# PCB LAYOUT (TOP VIEW)" labels every land with its USB-C contact name;
+# read at 600 dpi they are, left to right:
+#   A1+B12 | A4+B9 | B8 | A5 | B7 | A6 | A7 | B6 | A8 | B5 | B4+A9 | B1+A12
+# The 16-contact receptacle is reduced to 12 lands by merging the two GND
+# pairs and the two VBUS pairs; the USB 3 lanes (positions 2,3,10,11) are
+# absent. Cross-checked against the "PIN ASSIGNMENTS" table on the same
+# sheet. Resulting land -> signal map:
+#   1  = A1 + B12 = GND      (wide)
+#   2  = A4 + B9  = VBUS     (wide)
+#   3  = B8       = SBU2
+#   4  = A5       = CC1
+#   5  = B7       = USB_D-   (DN2, flipped-orientation D-)
+#   6  = A6       = USB_D+   (DP1, normal-orientation D+)
+#   7  = A7       = USB_D-   (DN1, normal-orientation D-)
+#   8  = B6       = USB_D+   (DP2, flipped-orientation D+)
+#   9  = A8       = SBU1
+#   10 = B5       = CC2
+#   11 = B4 + A9  = VBUS     (wide)
+#   12 = B1 + A12 = GND      (wide)
+#   13 = SHIELD_FRONT, 14 = SHIELD_REAR
+# Consequences, both handled in routing._usb_c_reversibility_traces():
+#   - pad 9 must NOT be on VBUS (it is SBU1);
+#   - pads 5 and 8 must be shorted to pads 7 and 6 respectively, which
+#     is what USB Type-C r2.1 s4.2 requires of a USB 2.0 device
+#     (A6<->B6 and A7<->B7 tied on the PCB) for orientation independence.
+# ── J1 shield THT geometry — SINGLE SOURCE OF TRUTH ─────────────
+# routing.py needs these to keep the BTN_B / BTN_START F.Cu button
+# channels clear of the shield pads, and board-level DFM checks quote
+# them. They were previously duplicated as magic numbers in routing.py
+# ("front shield pad bottom edge = 70.375", "pad 1.4x1.8mm") which had
+# already drifted 0.05 mm out of date. Import them, do not retype them.
+# Footprint-local coordinates (mm); J1 is placed unrotated on B.Cu, and
+# the B-side mirror is in X only, so local Y == board Y offset.
+USBC_SHIELD_DX = 4.325          # |x| of all four shield tabs
+USBC_SHIELD_FRONT_DY = -1.825   # front (plug-side) tab row
+USBC_SHIELD_REAR_DY = 2.375     # rear (body-back) tab row
+USBC_SHIELD_FRONT_W = 1.20      # front pad copper, X
+USBC_SHIELD_FRONT_H = 2.12      # front pad copper, Y
+USBC_SHIELD_REAR_W = 1.20       # rear pad copper, X
+USBC_SHIELD_REAR_H = 1.92       # rear pad copper, Y
+USBC_SHIELD_SLOT_W = 0.65       # both slots, X (JLCPCB min millable 0.61)
+USBC_SHIELD_FRONT_SLOT_H = 1.60 # front slot, Y (datasheet 1.70 — see usb_c_16p)
+USBC_SHIELD_REAR_SLOT_H = 1.40  # rear slot, Y (datasheet value)
+
+
 def usb_c_16p(layer="B"):
     """USB-C 16-pin 2MD(073) — C2765186.
 
@@ -313,8 +368,19 @@ def usb_c_16p(layer="B"):
     # 0.55 × 1.10 mm.  R17 had shrunk height to 1.04 mm to satisfy a
     # local DRC hole_clearance rule (0.20 mm to NPTH), but JLCPCB's own
     # reference footprint specifies 1.10 mm, so their manufacturing
-    # process handles the 0.171 mm gap.  The DRC violation is suppressed
-    # via board-level rule override for J1 NPTH pads.
+    # process handles the 0.171 mm gap.
+    #
+    # R21 FIX (2026-07-25): rect -> roundrect, corner ratio 0.25.
+    # The lower inner corner of lands 1 and 12 was the closest copper to
+    # the peg NPTH: 0.5212 mm centre-to-corner, minus the 0.325 mm hole
+    # radius = 0.1962 mm, just under the 0.20 mm "NPTH with copper
+    # around" rule (0.1712 mm before the peg hole was corrected to the
+    # datasheet's 0.65 mm). The land SIZE is JLCPCB reference and must
+    # not shrink, but a square corner is not part of that reference —
+    # rounding it to the KiCad/IPC-standard 25% ratio pulls the nearest
+    # copper back to 0.2172 mm without touching the land's extents,
+    # solderable area, or the 3D-model alignment. Applied to all four
+    # wide lands so the footprint stays symmetric.
     wide_pads = [
         ("1",  -3.200),   # GND
         ("2",  -2.400),   # VBUS
@@ -322,8 +388,9 @@ def usb_c_16p(layer="B"):
         ("12",  3.200),   # GND
     ]
     for name, x in wide_pads:
-        pads.append(_pad(name, "smd", "rect", x, -2.375, 0.55, 1.10, layers,
-                         solder_mask_margin=0))
+        pads.append(_pad(name, "smd", "roundrect", x, -2.375, 0.55, 1.10,
+                         layers, solder_mask_margin=0,
+                         roundrect_rratio=0.25))
 
     # Narrow signal pads (pins 3-10): 0.30 × 1.10 mm, 0.5mm pitch at y=-2.375
     # Source: same as wide pads — exact JLCPCB reference dimensions
@@ -362,29 +429,118 @@ def usb_c_16p(layer="B"):
     # but JLCPCB can't manufacture below 0.61mm.  0.65mm gives safe
     # margin (component pins ~0.50mm → 0.075mm clearance per side).
     #
-    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.1×2.10 mm, drill oval 0.65×1.6
-    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.2×1.80 mm, drill oval 0.65×1.5
-    pads.append(_pad("13", "thru_hole", "oval", -4.325, -1.825, 1.1, 2.1, THT,
-                     drill=(0.65, 1.6), solder_mask_margin=0))
-    pads.append(_pad("14", "thru_hole", "oval",  4.325, -1.825, 1.1, 2.1, THT,
-                     drill=(0.65, 1.6), solder_mask_margin=0))
-    pads.append(_pad("13", "thru_hole", "oval", -4.325, 2.375, 1.2, 1.8, THT,
-                     drill=(0.65, 1.5), solder_mask_margin=0))
-    pads.append(_pad("14", "thru_hole", "oval",  4.325, 2.375, 1.2, 1.8, THT,
-                     drill=(0.65, 1.5), solder_mask_margin=0))
+    # R21 FIX (2026-07-25): SLOT HEIGHTS corrected + PADS ENLARGED.
+    #
+    # Two independent problems were found by KiCad DRC (annular_width x4
+    # against the JLCPCB "Pad Size" rule, min annular width 0.25 mm):
+    #
+    # (a) The slot heights carried over from R19 did NOT match the
+    #     datasheet after all. Re-reading the "RECOMMENDED PCB LAYOUT
+    #     (TOP VIEW)" view on datasheet page 1 (sheet 1 of 1, rev A) at
+    #     600 dpi, the shield tabs are dimensioned as OUTER/INNER pairs:
+    #         Front tab: "2.10(2X)" outer pad, "1.70(2X)" slot
+    #         Rear  tab: "1.80(2X)" outer pad, "1.40(2X)" slot
+    #     R19 had front slot 1.60 (should be 1.70) and rear slot 1.50
+    #     (should be 1.40). The rear error is what produced the
+    #     0.1449 mm annular report: (1.80 - 1.50) / 2 = 0.15 mm.
+    #
+    # (b) Even the datasheet's own recommended land pattern only gives
+    #     (2.10-1.70)/2 = (1.80-1.40)/2 = 0.20 mm annular, which is below
+    #     the JLCPCB 0.25 mm minimum annular ring for plated through
+    #     holes. The datasheet land pattern is therefore NOT directly
+    #     manufacturable at JLCPCB and the pads must be grown.
+    #
+    # The pads cannot simply be grown, though: J1 is wedged into a
+    # 6.4 mm vertical strip with a hard wall on each side.
+    #     top    : the BTN_B F.Cu button channel (routing.py channel 5)
+    #     bottom : the board edge (min_copper_edge_clearance 0.5 mm)
+    # Because the two shield rows are rigidly 4.20 mm apart, moving J1
+    # to help one row hurts the other by exactly as much: the sum
+    # (front pad height + rear pad height) is a constant set by that
+    # strip, and it is ~0.07 mm SHORT of what the datasheet slots plus a
+    # 0.25 mm ring would need. See ANNULAR BUDGET below.
+    #
+    # Resolution, in priority order:
+    #   1. Widen both pads in X to 1.20 mm. X is unconstrained (the
+    #      neighbours are J1's own GND signal pads) and the X annular is
+    #      computed on the straight flanks of the stadium outline, so it
+    #      is exact: (1.20 - 0.65)/2 = 0.275 mm. This alone clears the
+    #      two 0.2250 mm front reports.
+    #   2. Rear slot -> 1.40 mm, the DATASHEET value (it was 1.50 mm,
+    #      i.e. 0.10 mm LARGER than the manufacturer asks for). Shrinking
+    #      a slot to the manufacturer's own recommendation cannot stop the
+    #      tab fitting. This is what clears the 0.1449 mm rear reports.
+    #   3. Front slot stays at 1.60 mm, i.e. 0.10 mm under the datasheet's
+    #      1.70 mm recommendation. This is the one deliberate deviation
+    #      and it is backed by hardware, not by argument: prototype #1 was
+    #      fabricated and assembled from this exact footprint revision
+    #      (commit caf2b2c, 2026-04-13) and J1 soldered down cleanly —
+    #      see website/docs/manufacturing/short-test-multimeter.md,
+    #      "USB-C (J1) ... solder OK". The front tab therefore physically
+    #      passes a 0.65 x 1.60 mm slot. Widening it to the datasheet's
+    #      1.70 mm would buy assembly float we have measured we do not
+    #      need, at the cost of 0.05 mm of ring we demonstrably do.
+    #   4. Free the last ~0.05 mm by narrowing and lifting the BTN_B
+    #      channel where it passes the front shield pads, and by nudging
+    #      J1 0.05 mm away from the board edge. Both in routing.py /
+    #      board.py, keyed off J1_SHIELD_* below.
+    #
+    # ANNULAR BUDGET (all values mm, board Y increases downward):
+    #   BTN_B bypass bottom edge (y=67.975, w=0.15)     68.050
+    #   + 0.20 pad-to-track                             ------
+    #   front pad top                                   68.250
+    #   front pad height                                  2.12   -> ring 0.260
+    #   ...                                             ------
+    #   rear pad bottom                                 74.485
+    #   + 0.50 board setup copper-to-edge               ------
+    #   board edge                                      75.000  (0.515 actual)
+    # Slack left over: ~0.015 mm at each end. This is at the geometric
+    # limit of the current placement. The v2 way out is to move R1 (and
+    # with it the CC1 via at (74.95, 67.40), which is what stops the
+    # BTN_B bypass rising any further) clear of the channel, then lift
+    # channel 5 by ~0.5 mm — after which the datasheet's 1.70 mm front
+    # slot fits with a full 0.25 mm ring.
+    #
+    # Slot WIDTH stays at 0.65 mm (R20): the datasheet says 0.60 mm but
+    # JLCPCB cannot mill a plated slot narrower than 0.61 mm. The tab is
+    # ~0.50 mm thick, so 0.65 mm still captures it.
+    #
+    # Front pair: pad 13/14 at y=-1.825 (plug side), 1.20x2.12, slot 0.65x1.60
+    # Rear  pair: pad 13/14 at y=+2.375 (body back), 1.20x1.92, slot 0.65x1.40
+    for _name, _sx in (("13", -1), ("14", 1)):
+        pads.append(_pad(
+            _name, "thru_hole", "oval",
+            _sx * USBC_SHIELD_DX, USBC_SHIELD_FRONT_DY,
+            USBC_SHIELD_FRONT_W, USBC_SHIELD_FRONT_H, THT,
+            drill=(USBC_SHIELD_SLOT_W, USBC_SHIELD_FRONT_SLOT_H),
+            solder_mask_margin=0))
+        pads.append(_pad(
+            _name, "thru_hole", "oval",
+            _sx * USBC_SHIELD_DX, USBC_SHIELD_REAR_DY,
+            USBC_SHIELD_REAR_W, USBC_SHIELD_REAR_H, THT,
+            drill=(USBC_SHIELD_SLOT_W, USBC_SHIELD_REAR_SLOT_H),
+            solder_mask_margin=0))
 
     # NPTH positioning holes (no pad, no net)
-    # Source: EasyEDA reference — 0.70mm drill (was 0.65mm in prior
-    # footprint). Component pegs are ø0.50 mm, so 0.70 mm gives
-    # 0.10 mm clearance per side.
+    # R21 FIX (2026-07-25): 0.70 -> 0.65 mm. The datasheet "RECOMMENDED
+    # PCB LAYOUT" explicitly calls out "O0.65(2X)" with a leader to the
+    # positioning hole; 0.70 came from the EasyEDA community footprint.
+    # Datasheet rule applies (see hardware/datasheets/POLARITY_AUDIT.md
+    # and the C2 tantalum lesson: never trust EasyEDA over the datasheet).
+    # Component pegs are 00.50 mm (bottom view), so 0.65 mm still gives
+    # 0.075 mm clearance per side.
+    # Side effect: the 0.025 mm radius reduction also buys back clearance
+    # to the J1.1 / J1.12 pad corners, and it is what makes the VBUS
+    # escape route past the peg holes geometrically possible at all
+    # (see routing._usb_c_reversibility_traces).
     pads.append(
         f'    (pad "" np_thru_hole circle (at -2.89 -1.305)'
-        f' (size 0.70 0.70) (drill 0.70)'
+        f' (size 0.65 0.65) (drill 0.65)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
     pads.append(
         f'    (pad "" np_thru_hole circle (at 2.89 -1.305)'
-        f' (size 0.70 0.70) (drill 0.70)'
+        f' (size 0.65 0.65) (drill 0.65)'
         f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
     )
 
