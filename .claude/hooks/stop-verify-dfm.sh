@@ -129,7 +129,23 @@ if [ "$EE_CHANGED" = true ] && [ -f "$EE_SCRIPT" ]; then
     fi
 fi
 
-TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + PN_FAIL_COUNT + EE_FAIL_COUNT))
+# ── Isolation gate ────────────────────────────────────────────────
+# The repo has 53 verification scripts, but before this only five ran
+# automatically on a PCB change. Everything answering "is anything shorted
+# to anything else?" lived in the other forty-eight — i.e. it ran when
+# somebody remembered. The whole set costs ~2s, so there is no reason for
+# it to be optional. scripts/verify_isolation.py composes it: pads, drilled
+# holes, copper layers and zones, connected where intended and isolated
+# everywhere else.
+ISO_SCRIPT="$PROJECT_DIR/scripts/verify_isolation.py"
+ISO_FAIL_COUNT=0
+if [ -f "$ISO_SCRIPT" ]; then
+    ISO_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$ISO_SCRIPT" 2>&1) || true
+    ISO_FAIL_COUNT=$(echo "$ISO_OUTPUT" | grep -cE "^[[:space:]]*\[(FAIL|MISS)" 2>/dev/null | tr -d ' \n')
+    [ -z "$ISO_FAIL_COUNT" ] && ISO_FAIL_COUNT=0
+fi
+
+TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + PN_FAIL_COUNT + EE_FAIL_COUNT + ISO_FAIL_COUNT))
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     echo "" >&2
@@ -162,12 +178,19 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
         echo "$EE_OUTPUT" | grep -E "^\s*\[FAIL" | head -15 >&2
         echo "" >&2
     fi
+    if [ "$ISO_FAIL_COUNT" -gt 0 ]; then
+        echo "── Isolation gate (verify_isolation.py): $ISO_FAIL_COUNT check(s) not clean ──" >&2
+        echo "$ISO_OUTPUT" | grep -E "^[[:space:]]*\[(FAIL|MISS)" >&2
+        echo "  Something is shorted, unconnected, or on the wrong layer." >&2
+        echo "" >&2
+    fi
     echo "Run for full details:" >&2
     [ "$FAIL_COUNT" -gt 0 ]     && echo "  python3 scripts/verify_dfm_v2.py" >&2
     [ "$TTP_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_trace_through_pad.py" >&2
     [ "$NC_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_net_connectivity.py" >&2
     [ "$PN_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_power_net_integrity.py" >&2
     [ "$EE_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_easyeda_footprint.py" >&2
+    [ "$ISO_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_isolation.py --verbose" >&2
     echo "Fix issues before committing." >&2
     exit 2
 fi
@@ -176,7 +199,7 @@ fi
 PASS_COUNT=$(echo "$DFM_OUTPUT" | grep -c "PASS\|OK" 2>/dev/null || echo "0")
 if [ "$PASS_COUNT" -gt 0 ]; then
     echo "" >&2
-    echo "PCB verification passed: DFM $PASS_COUNT tests OK, trace-through-pad clean." >&2
+    echo "PCB verification passed: DFM $PASS_COUNT tests OK, isolation gate clean (13 checks)." >&2
 fi
 
 exit 0
