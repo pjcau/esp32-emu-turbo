@@ -2,7 +2,7 @@
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        verify-isolation verify-jlcpcb-vias verify-zone-fill test-zone-fill verify-sch-overlaps \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
-       net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad \
+       net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad open-issues \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help stats
@@ -144,6 +144,9 @@ verify-sch-crossings: ## Fail when two schematic wires cross without a junction 
 
 verify-sch-pins: ## Fail when a schematic symbol pin has no wire/label/junction on it (undeclared floating pin)
 	@$(T) verify-sch-pins python3 scripts/verify_schematic_pin_connectivity.py
+
+open-issues: ## Which hardware gates are red right now (same report the SessionStart hook injects)
+	@python3 scripts/open_issues_report.py --text
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py

@@ -107,6 +107,7 @@ Cross-agent sync points: `config.py` ↔ `board_config.h` (GPIO),
 | PostToolUse | `Bash` (generate_pcb/release) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
 | PostToolUse | `Bash` (project scripts) | Enforces failure reporting before manual workarounds |
 | PostToolUse | `Edit`, `Write` (PCB/PCBA files) | Reminds to run `verify_dfa.py` (DFA + SMT DFM) |
+| SessionStart | (every session) | Runs `scripts/open_issues_report.py` — injects which hardware gates are currently red, derived by running them, so it can never go stale |
 | PreCompact | (before compaction) | Saves session state backup to `.claude/backups/` |
 | Stop | (after response) | Auto-runs DFM verification if PCB files changed |
 
@@ -127,6 +128,7 @@ Config: `.claude/settings.json` (hooks section)
 | `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |
 | `make release-prep` | Full pipeline: generate → gerbers → verify → render |
 | `make firmware-sync-check` | Verify GPIO sync, fail on mismatch |
+| `make open-issues` | Which hardware gates are red right now (same report injected at session start) |
 | `make net-explorer` | Regenerate the PCB Net Explorer data (auto-run by `make generate-pcb`) |
 | `make verify-sch-pins` | Fail on a schematic symbol pin with no wire/label/junction on it |
 | `make verify-all` | Full verification suite (DFM + DFA + DRC + sim + consistency) |

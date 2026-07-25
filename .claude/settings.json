@@ -1,5 +1,17 @@
 {
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/scripts/open_issues_report.py",
+            "timeout": 45,
+            "statusMessage": "Checking open hardware gates..."
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
