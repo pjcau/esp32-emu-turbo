@@ -24,10 +24,15 @@ class SDCardSheet(SchematicSheet):
         self.glabel("+3V3", sx - 30, sy - 3.81, 0, "input")
         self.wire(sx - 30, sy - 3.81, sx - 10.16, sy - 3.81)
 
-        # GND
-        self.gnd(sx - 30, sy + 8)
-        self.wire(sx - 10.16, sy, sx - 30, sy)
-        self.wire(sx - 30, sy, sx - 30, sy + 8)
+        # GND — global label, NOT a power-symbol drop.
+        # A vertical GND stub from (sx-30, sy) down to (sx-30, sy+8)
+        # passes exactly through (sx-30, sy+3.81), which is the anchor
+        # of the SD_CS global label below. In KiCad an endpoint landing
+        # on a wire is a connection, so that shorted SD_CS to GND.
+        # A horizontal global label on the pin-2 row cannot collide
+        # with the +3V3 (sy-3.81) or SD_CS (sy+3.81) rows.
+        self.glabel("GND", sx - 30, sy, 0, "input")
+        self.wire(sx - 30, sy, sx - 10.16, sy)
 
         # SPI signals (right side) with GPIO annotations
         self.text("SPI bus:", sx + 18, sy - 10, 2, True)

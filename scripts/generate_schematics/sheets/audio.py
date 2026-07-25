@@ -24,10 +24,13 @@ class AudioSheet(SchematicSheet):
         self.glabel("+5V", ax - 30, ay - 3.81, 0, "input")
         self.wire(ax - 30, ay - 3.81, ax - 10.16, ay - 3.81)
 
-        # GND
-        self.gnd(ax - 30, ay + 8)
-        self.wire(ax - 10.16, ay, ax - 30, ay)
-        self.wire(ax - 30, ay, ax - 30, ay + 8)
+        # GND — global label, NOT a power-symbol drop.
+        # Same defect as sheet 5: a vertical GND stub from (ax-30, ay)
+        # down to (ax-30, ay+8) passes through (ax-30, ay+3.81), the
+        # anchor of the I2S_DOUT label / U5 input row, and shorted the
+        # amplifier input to ground.
+        self.glabel("GND", ax - 30, ay, 0, "input")
+        self.wire(ax - 30, ay, ax - 10.16, ay)
 
         # Audio input from I2S (DOUT)
         self.glabel("I2S_DOUT", ax - 30, ay + 3.81, 0, "input")
@@ -58,6 +61,12 @@ class AudioSheet(SchematicSheet):
         self.text("28mm speaker", spk_x + 8, spk_y - 5)
         self.text("8 ohm / 0.5W", spk_x + 8, spk_y + 1)
 
+        # SPK+ / SPK- carry the same net names the PCB uses, so the
+        # speaker terminals are no longer PCB-only nets needing a T2
+        # allowlist entry in verify_netlist_diff.py.
+        self.glabel("SPK+", ax + 16, ay - 3.81, 0, "output")
+        self.glabel("SPK-", ax + 40, ay, 0, "output")
+
         # SPK+ wire (orthogonal L-shape)
         spk_plus_y = ay - 3.81
         self.wire(ax + 10.16, spk_plus_y, spk_x - 3.81, spk_plus_y)
@@ -69,7 +78,7 @@ class AudioSheet(SchematicSheet):
         self.wire(spk_x - 10, spk_y + 0.635, spk_x - 3.81, spk_y + 0.635)
 
         # --- PAM8403 passive components (per datasheet application circuit) ---
-        self.text("PAM8403 Passives:", 30, 135, 2.54, True)
+        self.text("PAM8403 Passives:", 30, 122, 2.54, True)
 
         # VREF bypass capacitor (C21, 100nF) — PAM8403 pin 8 (VREF) to GND.
         # VREF is the internal half-supply bias rail. R20/R21 (below) tie
@@ -77,24 +86,46 @@ class AudioSheet(SchematicSheet):
         # A VREF glabel is emitted so the bias resistor wiring can
         # reference it without running a long visible net through the
         # schematic page.
+        # The node is named PAM_VREF — the same name routing.py uses on
+        # the board. It used to be called VREF here only, which forced
+        # both a T1 ("VREF missing from PCB") and a T2 ("PAM_VREF has no
+        # schematic counterpart") allowlist entry in
+        # verify_netlist_diff.py for what is one and the same node.
+        # C21 is placed at 180 deg so pin 1 is the GND terminal and pin 2
+        # the PAM_VREF terminal, matching the C_0805 pads on the board
+        # (routing.py: C21 pad 1 -> GND, pad 2 -> PAM_VREF).
         c21x, c21y = ax + 30, ay + 25
-        self.sym("C", "C21", "100nF", c21x, c21y, ["1", "2"])
+        self.sym("C", "C21", "100nF", c21x, c21y, ["1", "2"], angle=180)
         self.wire(c21x, c21y - 3.81, c21x, c21y - 10)
         self.wire(c21x, c21y - 10, ax + 10.16, c21y - 10)
         self.gnd(c21x, c21y + 8)
         self.wire(c21x, c21y + 3.81, c21x, c21y + 8)
-        # Emit the VREF label at the top terminal of C21 so R20/R21 bias
-        # stubs can reference it by name.
-        self.glabel("VREF", c21x, c21y - 10, 90, "output")
-        self.text("VREF bypass (pin 8)", c21x + 3, c21y)
+        # Emit the PAM_VREF label at the far (left) end of C21's top
+        # stub so the label text runs into open sheet instead of over
+        # the capacitor's own reference designator.
+        self.glabel("PAM_VREF", ax + 10.16, c21y - 10, 180, "output")
+        self.text("VREF bypass (pin 8)", c21x + 5, c21y)
 
         # DC-blocking capacitor (C22, 0.47uF) — input coupling.
-        c22x, c22y = ax - 45, ay + 3.81
-        self.sym("C", "C22", "0.47uF", c22x, c22y, ["1", "2"])
-        self.wire(c22x + 3.81, c22y, c22x + 15, c22y)
-        self.wire(c22x - 3.81, c22y, c22x - 8, c22y)
-        self.glabel("I2S_DOUT", c22x - 8, c22y, 0, "input")
-        self.text("DC-block", c22x - 3, c22y - 5)
+        #
+        # BUG FIX: the "C" library symbol has its pins VERTICALLY at
+        # (0, +/-3.81), but this block wired horizontal stubs at
+        # (c22x +/- 3.81, c22y). Neither stub touched a pin, so C22 was
+        # floating in the exported netlist — the schematic showed the
+        # PDM output reaching the amplifier with no coupling capacitor.
+        # Placing the symbol at 90 deg puts the pins where the existing
+        # horizontal wiring already is, which also matches the board
+        # (routing.py places C22 at 90 deg as well).
+        # Moved up to its own row (was on the amplifier input row at
+        # y=ay+3.81, where the rotated symbol's vertical value text ran
+        # straight through R20 below it).
+        c22x, c22y = ax - 50, ay - 10
+        self.sym("C", "C22", "0.47uF", c22x, c22y, ["1", "2"], angle=90)
+        self.wire(c22x - 3.81, c22y, c22x - 12, c22y)
+        self.glabel("I2S_DOUT", c22x - 12, c22y, 180, "input")
+        self.wire(c22x + 3.81, c22y, c22x + 12, c22y)
+        self.glabel("I2S_DOUT", c22x + 12, c22y, 0, "output")
+        self.text("DC-block (in series on I2S_DOUT)", c22x - 14, c22y - 7, 1.5)
 
         # INL bias resistor (R20, 20k) — biases INL node to VREF (pin 8),
         # NOT to GND. R4-HIGH-3: PAM8403 single-ended app circuit per
@@ -104,22 +135,34 @@ class AudioSheet(SchematicSheet):
         # Spread R20/R21 further apart (15mm gap instead of 10mm) and
         # move the descriptive text BELOW the VREF glabels so nothing
         # collides with the PAM8403 module or with each other.
-        r20x, r20y = ax - 45, ay + 18
+        # BUG FIX: the top stub used to run from the pin up to
+        # (r20x, c22y), which is the *centre* of the C22 symbol — a point
+        # with no wire and no pin on it. R20/R21 therefore had a floating
+        # top terminal. They now reach the amplifier input node through
+        # an explicit I2S_DOUT label stub going left.
+        r20x, r20y = ax - 50, ay + 24
         self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
-        self.wire(r20x, r20y - 3.81, r20x, c22y)
-        # Bottom terminal goes to VREF via a named label stub.
-        self.wire(r20x, r20y + 3.81, r20x, r20y + 6)
-        self.glabel("VREF", r20x, r20y + 6, 270, "input")
-        self.text("INL bias → VREF", r20x - 8, r20y + 14, 1.5)
+        self.wire(r20x, r20y - 3.81, r20x - 12, r20y - 3.81)
+        self.glabel("I2S_DOUT", r20x - 12, r20y - 3.81, 180, "input")
+        # Bottom terminal goes to PAM_VREF via a named label stub.
+        self.wire(r20x, r20y + 3.81, r20x - 12, r20y + 3.81)
+        self.glabel("PAM_VREF", r20x - 12, r20y + 3.81, 180, "input")
+        self.text("INL bias", r20x + 4, r20y, 1.5)
 
         # INR bias resistor (R21, 20k) — biases INR node to VREF (pin 8).
         # Same rationale as R20 — see R4-HIGH-3.
-        r21x, r21y = ax - 25, ay + 18
+        r21x, r21y = ax - 50, ay + 40
         self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"])
-        self.wire(r21x, r21y - 3.81, r21x, c22y)
-        self.wire(r21x, r21y + 3.81, r21x, r21y + 6)
-        self.glabel("VREF", r21x, r21y + 6, 270, "input")
-        self.text("INR bias → VREF", r21x - 8, r21y + 14, 1.5)
+        self.wire(r21x, r21y - 3.81, r21x - 12, r21y - 3.81)
+        self.glabel("I2S_DOUT", r21x - 12, r21y - 3.81, 180, "input")
+        self.wire(r21x, r21y + 3.81, r21x - 12, r21y + 3.81)
+        self.glabel("PAM_VREF", r21x - 12, r21y + 3.81, 180, "input")
+        self.text("INR bias", r21x + 4, r21y, 1.5)
+        self.text("R20/R21 bias the amplifier inputs to PAM_VREF (R4-HIGH-3).",
+                  r21x - 12, r21y + 12, 1.5)
+        self.text("AS-BUILT v1: the board ties them to GND instead — see "
+                  "_T4_STRUCTURAL_EXCEPTIONS in scripts/verify_netlist_diff.py.",
+                  r21x - 12, r21y + 16, 1.5)
 
         # VDD decoupling (C23, 1uF) — VDD pin to GND. Labels placed
         # BELOW each cap so they don't extend rightward into the next
@@ -134,7 +177,12 @@ class AudioSheet(SchematicSheet):
 
         # PVDD top bypass (C24, 1uF) — power output stage
         c24x, c24y = ax, ay - 20
-        self.sym("C", "C24", "1uF", c24x, c24y, ["1", "2"])
+        # 180 deg: on the board C24's pad 1 is the GND terminal and pad 2
+        # the PVDD/+5V terminal (routing.py: PVDD pin 4 -> C24 pad 2,
+        # C24 pad 1 -> GND via), the opposite of C23/C25. Rotating the
+        # symmetric capacitor symbol aligns the pin numbers with the pads
+        # without changing how the sheet looks.
+        self.sym("C", "C24", "1uF", c24x, c24y, ["1", "2"], angle=180)
         self.glabel("+5V", c24x, c24y - 8, 0, "input")
         self.wire(c24x, c24y - 3.81, c24x, c24y - 8)
         self.gnd(c24x, c24y + 8)
@@ -151,7 +199,7 @@ class AudioSheet(SchematicSheet):
         self.text("PVDD-bot", c25x - 5, c25y + 11, 1.5)
 
         # Notes
-        ny = 165
+        ny = 178
         self.text("Design Notes:", 30, ny, 2.54, True)
         self.text(
             "- PAM8403: filterless Class-D stereo amplifier"

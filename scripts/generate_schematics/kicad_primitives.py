@@ -76,9 +76,19 @@ class KiCadContext:
         )
 
     def symbol(self, lib: str, ref: str, val: str,
-               x: float, y: float, pins: list) -> str:
+               x: float, y: float, pins: list, angle: int = 0) -> str:
+        """Place a symbol instance.
+
+        ``angle`` rotates the symbol body (KiCad convention: CCW degrees).
+        It is used to make a symmetric two-terminal part's *pin numbering*
+        agree with the PCB footprint's pad numbering without changing how
+        the part is drawn. A 180 deg rotation of a vertically symmetric
+        R/C symbol looks identical but swaps which end is pin 1, which is
+        exactly what is needed when the footprint on the board has pad 1
+        on the opposite end from the default symbol orientation.
+        """
         s = (
-            f'  (symbol (lib_id "{lib}") (at {x} {y} 0) (unit 1)'
+            f'  (symbol (lib_id "{lib}") (at {x} {y} {angle}) (unit 1)'
             f' (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)'
             f' (uuid "{self.uid()}")'
             f' (property "Reference" "{ref}" (at {x} {y - 5} 0)'

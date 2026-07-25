@@ -71,42 +71,77 @@ class PowerSupplySheet(SchematicSheet):
         # simple 6-pin pad layout (pins on the left/right edges). We
         # connect the logical nets via glabels with short wire stubs.
         stub = 6
-        # Left side stubs (to USB-C side)
+        # USBLC6-2SC6 pin table (ST doc ID 11265 Rev 5, p.1 "Functional
+        # diagram (top view)", mirrored in
+        # hardware/datasheets/U4_USBLC6-2SC6_C7519.pdf):
+        #
+        #     I/O1  1 | 6  I/O1
+        #     GND   2 | 5  VBUS
+        #     I/O2  3 | 4  I/O2
+        #
+        # Pins 1 and 6 are the SAME internal node (I/O1); pins 3 and 4
+        # are the SAME internal node (I/O2). The part is a two-line
+        # protector, so each data line is bonded out twice to let the
+        # trace run *through* the package. Consequently pin 6 CANNOT
+        # carry the post-series-resistor net: putting USB_DM_MCU on
+        # pin 6 while USB_D- sits on pin 1 would short R23 out
+        # internally (same for USB_DP_MCU / R22 on pins 4 / 3).
+        # The PCB (routing.py _PAD_NETS) already has 1=6=USB_D- and
+        # 3=4=USB_D+; the schematic now agrees.
+        #
+        # Left side stubs (connector side)
         self.glabel("USB_D-", u4x - 10 - stub, u4y - 2.54, 180)
         self.wire(u4x - 10 - stub, u4y - 2.54, u4x - 10, u4y - 2.54)
         self.glabel("USB_D+", u4x - 10 - stub, u4y,        180)
         self.wire(u4x - 10 - stub, u4y,        u4x - 10, u4y)
-        # Right side stubs (to ESP32 side, via R22/R23)
-        self.glabel("USB_DM_MCU", u4x + 10 + stub, u4y + 2.54, 0)
+        # Right side stubs — SAME nets as the left side (internal node),
+        # they are the pins the D+/D- traces leave the TVS on toward
+        # R22/R23. The pre/post split is made by R22/R23, not by U4.
+        self.glabel("USB_D-", u4x + 10 + stub, u4y + 2.54, 0)
         self.wire(u4x + 10, u4y + 2.54, u4x + 10 + stub, u4y + 2.54)
-        self.glabel("USB_DP_MCU", u4x + 10 + stub, u4y,        0)
+        self.glabel("USB_D+", u4x + 10 + stub, u4y,        0)
         self.wire(u4x + 10, u4y,        u4x + 10 + stub, u4y)
         # GND on bottom
         self.gnd(u4x, u4y + 12)
         self.wire(u4x, u4y + 7.62, u4x, u4y + 12)
-        # VBUS reference tap on top (typed as power input on USBLC6 pin 5)
-        self.glabel("+5V", u4x, u4y - 12, 90, "input")
+        # Pin 5 is the VBUS clamp reference — it must sit on the USB
+        # input rail (VBUS), NOT on +5V. +5V is the IP5306 BOOST OUTPUT
+        # and is present even with the cable unplugged; tying the TVS
+        # reference there would forward-bias the VBUS clamp from the
+        # battery whenever no charger is attached.
+        self.glabel("VBUS", u4x, u4y - 12, 90, "input")
         self.wire(u4x, u4y - 7.62, u4x, u4y - 12)
 
         # Series resistors R22/R23 between USBLC6 MCU-side and ESP32.
-        # Placed to the right of U4 with the same 6mm vertical spacing
-        # as before; label text moved BELOW each resistor so it does
-        # not run into the adjacent GPIO glabel or the other resistor.
-        r22x, r22y = u4x + 30, u4y - 2
+        #
+        # BUG FIX: these two resistors used to be wired HORIZONTALLY
+        # (stubs at r22x ± 3.81) while the "R" library symbol has its
+        # pins VERTICALLY at (0, ±3.81). Both stubs therefore missed
+        # both pins and R22/R23 were completely floating in the netlist
+        # — the exported netlist contained no node for either part, so
+        # the schematic silently claimed the USB data lines went
+        # straight from the TVS to the MCU with no series termination.
+        #
+        # Pin order follows the PCB footprint (routing.py _PAD_NETS):
+        #   R22: pad 1 = USB_DP_MCU (MCU side), pad 2 = USB_D+ (TVS side)
+        #   R23: pad 1 = USB_DM_MCU (MCU side), pad 2 = USB_D-  (TVS side)
+        # The "R" symbol has pin 1 on top and pin 2 at the bottom, so the
+        # MCU-side label goes above and the connector-side label below.
+        r22x, r22y = u4x + 30, u4y - 6
         self.sym("R", "R22", "22",  r22x, r22y, ["1", "2"])
-        self.text("D+ 22Ω", r22x + 4, r22y + 6, 1.5)
-        self.wire(r22x - 3.81, r22y, r22x - 8, r22y)
-        self.glabel("USB_DP_MCU", r22x - 8, r22y, 180)
-        self.wire(r22x + 3.81, r22y, r22x + 8, r22y)
-        self.glabel("GPIO20", r22x + 8, r22y, 0)
+        self.text("D+ 22Ω", r22x + 4, r22y, 1.5)
+        self.wire(r22x, r22y - 3.81, r22x, r22y - 8)
+        self.glabel("USB_DP_MCU", r22x, r22y - 8, 90)
+        self.wire(r22x, r22y + 3.81, r22x, r22y + 8)
+        self.glabel("USB_D+", r22x, r22y + 8, 270)
 
-        r23x, r23y = u4x + 30, u4y + 4
+        r23x, r23y = u4x + 46, u4y - 6
         self.sym("R", "R23", "22",  r23x, r23y, ["1", "2"])
-        self.text("D- 22Ω", r23x + 4, r23y + 6, 1.5)
-        self.wire(r23x - 3.81, r23y, r23x - 8, r23y)
-        self.glabel("USB_DM_MCU", r23x - 8, r23y, 180)
-        self.wire(r23x + 3.81, r23y, r23x + 8, r23y)
-        self.glabel("GPIO19", r23x + 8, r23y, 0)
+        self.text("D- 22Ω", r23x + 4, r23y, 1.5)
+        self.wire(r23x, r23y - 3.81, r23x, r23y - 8)
+        self.glabel("USB_DM_MCU", r23x, r23y - 8, 90)
+        self.wire(r23x, r23y + 3.81, r23x, r23y + 8)
+        self.glabel("USB_D-", r23x, r23y + 8, 270)
 
         # CC1, CC2 pull-down resistors (5.1k for USB-C UFP detection)
         r1x, r1y = 78, 98
@@ -237,7 +272,14 @@ class PowerSupplySheet(SchematicSheet):
         # not run into "VOUT bulk" above C19.
         c27_x = cout_x + 22
         c27_y = cout_y
-        self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"])
+        # Placed at 180 deg: the C_0805 land for C27 on the board has
+        # pad 1 on the GND side and pad 2 on the +5V side (routing.py
+        # _c27 block: pad 1 -> GND via, pad 2 -> VOUT via), the opposite
+        # of C19/C23/C25. Rotating the (vertically symmetric) capacitor
+        # symbol keeps the drawing identical while making pin 1 the
+        # bottom/GND terminal, so schematic and PCB agree on which pad
+        # is which.
+        self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"], angle=180)
         self.text("HF bypass", c27_x - 3, c27_y - 8, 1.5)
         self.wire(cout_x, vout_turn_y, c27_x, vout_turn_y)
         self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
@@ -389,9 +431,11 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(c1x, c1y + 3.81, c1x, c1y + 10)
 
         # AMS1117-3.3 Regulator
+        # Pins are numbered per the SOT-223 datasheet land pattern:
+        # 1 = GND/ADJ, 2 = VOUT, 3 = VIN, 4 = tab (VOUT).
         self.sym(
             "AMS1117-3.3", "U3", "AMS1117-3.3",
-            ams_x, ams_y, ["1", "2", "3"],
+            ams_x, ams_y, ["1", "2", "3", "4"],
         )
         # VIN from +5V rail
         self.v5(ams_x - 15, ams_y - 10)

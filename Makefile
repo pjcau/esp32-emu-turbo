@@ -43,27 +43,77 @@ simulate: ## Run electrical circuit simulation/verification
 pcb-check: ## Run PCB short circuit / zone fill analysis
 	@$(T) pcb-check python3 scripts/short_circuit_analysis.py
 
-verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + consistency)
-	@echo "Running verification suite..."
-	@$(T) verify-all sh -c '\
-		python3 scripts/verify_dfm_v2.py & \
-		python3 scripts/verify_dfa.py & \
-		python3 scripts/drc_check.py & \
-		python3 scripts/simulate_circuit.py & \
-		python3 scripts/verify_schematic_pcb.py & \
-		python3 scripts/short_circuit_analysis.py & \
-		python3 scripts/verify_polarity.py & \
-		python3 scripts/verify_datasheet_nets.py & \
-		python3 scripts/verify_antenna_keepout.py & \
-		python3 scripts/verify_stackup.py & \
-		python3 scripts/verify_net_class_widths.py & \
-		python3 scripts/verify_design_intent.py & \
-		python3 scripts/verify_trace_through_pad.py & \
-		python3 scripts/verify_trace_crossings.py & \
-		python3 scripts/verify_copper_clearance.py & \
-		python3 scripts/verify_net_connectivity.py & \
-		python3 scripts/verify_easyeda_footprint.py & \
-		wait'
+# ── verify-all ────────────────────────────────────────────────────
+# Every pass/fail verifier in scripts/. "All" means all: if a script
+# exits non-zero on a bad board, it belongs in this list.
+#
+# Deliberately NOT in the list, with reasons:
+#   validate_skills   lints .claude/skills metadata, not the hardware
+#   drc_native        needs `--run` plus a live kicad-cli DRC pass; it is
+#                     driven by `make fast-check` / the /drc-native skill
+#   pcb_review        scored design review, always exits 0
+#   pcb_optimize      layout optimisation report, always exits 0
+#   violation_matrix  cross-tabulates other tools' output, always exits 0
+#   generate_*, render_*, inject-3d-models, kicad_fill_zones,
+#   update_component, jlcpcb_parts, net_classifier, pcb_cache
+#                     generators/helpers, not checks
+VERIFY_ALL_SCRIPTS = \
+	analyze_pad_distances \
+	drc_check \
+	erc_check \
+	short_circuit_analysis \
+	simulate_circuit \
+	spice_power_check \
+	test_pcb_connectivity \
+	validate_jlcpcb \
+	verify_antenna_keepout \
+	verify_battery_protection \
+	verify_bom_cpl_pcb \
+	verify_bom_values \
+	verify_component_connectivity \
+	verify_copper_balance \
+	verify_copper_clearance \
+	verify_datasheet \
+	verify_datasheet_nets \
+	verify_decoupling_adequacy \
+	verify_decoupling_paths \
+	verify_design_intent \
+	verify_dfa \
+	verify_dfm_v2 \
+	verify_drill_standards \
+	verify_easyeda_footprint \
+	verify_esd_protection \
+	verify_gerber_integrity \
+	verify_ground_loops \
+	verify_jlcpcb_capabilities \
+	verify_net_class_widths \
+	verify_net_connectivity \
+	verify_netlist_diff \
+	verify_polarity \
+	verify_power_paths \
+	verify_power_resonance \
+	verify_power_sequence \
+	verify_schematic_pcb \
+	verify_schematic_pcb_sync \
+	verify_sd_interface \
+	verify_signal_chain_complete \
+	verify_stackup \
+	verify_stencil_aperture \
+	verify_strapping_pins \
+	verify_test_points \
+	verify_thermal_budget \
+	verify_thermal_relief \
+	verify_trace_crossings \
+	verify_trace_through_pad \
+	verify_usb_impedance \
+	verify_usb_impedance_stackup \
+	verify_usb_return_path \
+	verify_via_in_pad \
+	verify_zone_connectivity
+
+verify-all: ## Run every pass/fail verification script (fails if any check fails)
+	@echo "Running verification suite ($(words $(VERIFY_ALL_SCRIPTS)) checks)..."
+	@$(T) verify-all scripts/run-verifiers.sh $(VERIFY_ALL_SCRIPTS)
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py

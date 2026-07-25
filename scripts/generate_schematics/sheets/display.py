@@ -69,6 +69,11 @@ from ..sheet_base import SchematicSheet
 class DisplaySheet(SchematicSheet):
     title = "Display - ILI9488 4.0in 8080 Parallel"
     page_number = 3
+    # A3 (420x297 landscape): the FPC connector block sits at x=260,
+    # which is off the right-hand edge of an A4 sheet (210 mm wide) —
+    # J4 was being drawn outside the page border and did not appear in
+    # the exported SVG/PDF at all.
+    paper = "A3"
     needed_symbols = ["ST7796S_Module", "FPC_16P"]
 
     def build(self):
@@ -147,14 +152,30 @@ class DisplaySheet(SchematicSheet):
         # Wire display module outputs to FPC pins
         # Schematic uses simplified 16-pin symbol; physical FPC-40P footprint
         # maps these to correct pins per ILI9488 datasheet
+        # fpc_nets[i] is the net on FPC_16P symbol pin (i+1). The order
+        # here is the one encoded in J4_SYM_PIN_TO_PAD in
+        # scripts/verify_netlist_diff.py — changing it without updating
+        # that table will make the netlist cross-check fail.
+        #
+        # Pins 7 and 8 carry "+3V3", not "LCD_RD"/"LCD_BL": on the board
+        # the panel's RD pin (panel 12 -> pad 29) and LED-A pin
+        # (panel 33 -> pad 8) are hard-tied to the 3.3 V rail — RD
+        # because the interface is write-only, LED-A because the
+        # backlight is always on. The DS1 side keeps the LCD_RD /
+        # LCD_BL names as documentation of which panel pin is involved.
         fpc_nets = [
             "+3V3", "GND", "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
-            "LCD_RD", "LCD_BL",
+            "+3V3", "+3V3",
             "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3",
             "LCD_D4", "LCD_D5", "LCD_D6", "LCD_D7",
         ]
+        # FPC_16P pin n sits at world y = fpc_y - 17.78 + (n-1)*2.54.
+        # BUG FIX: this loop used to compute py = fpc_y + 17.78 - i*2.54,
+        # which walks the pins backwards (net[0] landed on pin 15) and
+        # ran one step off the end of the symbol, so LCD_D7 attached to
+        # nothing at all — the schematic showed a 7-bit data bus.
         for i, net in enumerate(fpc_nets):
-            py = fpc_y + 17.78 - i * 2.54
+            py = fpc_y - 17.78 + i * 2.54
             px = fpc_x - 7.62
             self.glabel(net, px - 10, py, 180, "input")
             self.wire(px, py, px - 10, py)

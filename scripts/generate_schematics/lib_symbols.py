@@ -53,6 +53,19 @@ _SYMBOL_ESP32 = """    (symbol "ESP32-S3-WROOM-1" (pin_names (offset 1.016)) (in
         (pin power_in line (at 0 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "40" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 2.54 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "41" (effects (font (size 1.016 1.016)))))))\n"""
 
+# AMS1117 SOT-223 pin numbering, per the manufacturer datasheet
+# (hardware/datasheets/U3_AMS1117-3.3_C6186.pdf, "SOT-223 Top View,
+# 3 PIN FIXED/ADJUSTABLE VERSION"):
+#     1 = Ground/Adjust
+#     2 = VOUT
+#     3 = VIN
+#     4 = tab, electrically VOUT
+# The symbol used to be numbered 1=VIN / 2=GND / 3=VOUT, which is the
+# generic three-terminal-regulator convention and does NOT match the
+# SOT-223 land pattern used on the board. That mismatch was the origin
+# of the "U3.3 +3V3 vs +5V" entry that used to sit in the
+# verify_netlist_diff T4 allowlist. The graphical layout is unchanged
+# (VIN left, GND bottom, VOUT right) — only the pin numbers moved.
 _SYMBOL_AMS1117 = """    (symbol "AMS1117-3.3" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 5.08 0) (effects (font (size 1.27 1.27))))
       (property "Value" "AMS1117-3.3" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
@@ -60,9 +73,10 @@ _SYMBOL_AMS1117 = """    (symbol "AMS1117-3.3" (pin_names (offset 1.016)) (in_bo
       (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
       (symbol "AMS1117-3.3_0_1" (rectangle (start -5.08 3.81) (end 5.08 -3.81) (stroke (width 0.254) (type default)) (fill (type background))))
       (symbol "AMS1117-3.3_1_1"
-        (pin power_in line (at -7.62 2.54 0) (length 2.54) (name "VIN" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
-        (pin power_in line (at 0 -6.35 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin power_out line (at 7.62 2.54 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
+        (pin power_in line (at -7.62 2.54 0) (length 2.54) (name "VIN" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
+        (pin power_in line (at 0 -6.35 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin power_out line (at 7.62 2.54 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin power_out line (at 7.62 2.54 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)) hide)) (number "4" (effects (font (size 1.016 1.016)) hide)))))\n"""
 
 _SYMBOL_C = """    (symbol "C" (pin_names (offset 0.254) hide) (in_bom yes) (on_board yes)
       (property "Reference" "C" (at 0.635 2.54 0) (effects (font (size 1.27 1.27)) (justify left)))

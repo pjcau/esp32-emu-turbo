@@ -4,6 +4,27 @@ from ..sheet_base import SchematicSheet
 from ..config import GPIO_NETS, ESP_PINS
 
 
+# GPIOs whose *net* at the module pin is not the same as the functional
+# net name recorded in config.GPIO_NETS.
+#
+# GPIO19/GPIO20 are the native USB D-/D+ pins. Between the USB-C
+# connector and these pins the design has U4 (USBLC6-2SC6 TVS) and the
+# 22 ohm series resistors R22/R23, so the MCU pin sits on the
+# POST-resistor node, not on the bus net:
+#
+#     J1 -- USB_D+ -- U4(3,4) -- R22 -- USB_DP_MCU -- U1.14 (GPIO20)
+#     J1 -- USB_D- -- U4(1,6) -- R23 -- USB_DM_MCU -- U1.13 (GPIO19)
+#
+# hardware/datasheet_specs.py records exactly these nets for U1 pins
+# 13/14, and routing.py assigns them on the board. config.GPIO_NETS is
+# left alone because it is the GPIO -> *function* map shared with the
+# firmware header (software/main/board_config.h).
+_MCU_SIDE_NETS = {
+    19: "USB_DM_MCU",
+    20: "USB_DP_MCU",
+}
+
+
 class MCUSheet(SchematicSheet):
     title = "MCU - ESP32-S3-WROOM-1 N16R8"
     page_number = 2
@@ -143,7 +164,7 @@ class MCUSheet(SchematicSheet):
                 continue
 
             if isinstance(gpio, int):
-                net = GPIO_NETS.get(gpio, f"GPIO{gpio}")
+                net = _MCU_SIDE_NETS.get(gpio) or GPIO_NETS.get(gpio, f"GPIO{gpio}")
             else:
                 net = gpio
 
