@@ -68,7 +68,7 @@ The bottom side hosts the main circuitry:
 | R4–R13,R15     | 10k (pull-ups)              | C17414        | R_0805    |
 | R16            | 100k                        | C149504       | R_0805    |
 | R17, R18       | 1k                          | C17513        | R_0805    |
-| R20, R21       | 20k (PAM8403 gain set)       | C4184         | R_0805    |
+| R20, R21       | 20k (PAM8403 gain set)       | C4328         | R_0805    |
 | C1, C17, C18, C27, C28 | 10uF                | C15850        | C_0805    |
 | C2             | 22uF tantalum 16V (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | C1953590 | C_1206    |
 | C19            | 22uF                        | C12891        | C_1206    |

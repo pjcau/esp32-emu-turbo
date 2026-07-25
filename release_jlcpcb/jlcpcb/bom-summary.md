@@ -19,7 +19,7 @@
 | R16,R24,R25 | 100k (KEY pull-up, Q1 gate, buck FB upper) | 0805 | C149504 | Basic | 3 | ~$0.002 |
 | R26 | 22k (buck FB lower) | 0805 | C17560 | Basic | 1 | ~$0.002 |
 | R17-R18 | 1k (LED limiting) | 0805 | C17513 | Basic | 2 | ~$0.002 |
-| R20-R21 | 20k (PAM8403 INL/INR bias) | 0805 | C4184 | Basic | 2 | ~$0.002 |
+| R20-R21 | 20k (PAM8403 INL/INR bias) | 0805 | C4328 | Basic | 2 | ~$0.002 |
 | C3-C16,C21 | 100nF (decoupling) | 0805 | C49678 | Basic | 16 | ~$0.002 |
 | C22 | 0.47uF (PAM8403 DC-block) | 0805 | C13967 | Basic | 1 | ~$0.005 |
 | C23-C25 | 1uF (PAM8403 VDD/PVDD) | 0805 | C28323 | Basic | 3 | ~$0.005 |
