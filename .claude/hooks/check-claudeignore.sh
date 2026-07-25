@@ -103,4 +103,58 @@ if [ -n "$BLOCKED" ]; then
     exit 2
 fi
 
+# ── Second tier: .claudeheavy — token landmines ─────────────────────
+#
+# These files are legitimate to work with, but a whole-file Read costs so
+# many tokens that it damages the session (the .kicad_pcb alone is ~265k).
+# So Read/Edit/Write are blocked while Grep is deliberately ALLOWED: grep
+# returns only matching lines, which is the access pattern we want. Bash
+# and the Python scripts are unaffected — pcb_cache.py stays the sanctioned
+# path for PCB data.
+#
+# Measured by scripts/context_budget.py (metric M2).
+
+HEAVYFILE="$PROJECT_DIR/.claudeheavy"
+case "$TOOL_NAME" in
+    Read|Edit|Write) ;;
+    *) exit 0 ;;
+esac
+[ -f "$HEAVYFILE" ] || exit 0
+
+HEAVY=$(python3 -c "
+import fnmatch, pathlib, sys
+
+rel_path = '$REL_PATH'
+patterns = []
+with open('$HEAVYFILE') as f:
+    for line in f:
+        line = line.strip()
+        if line and not line.startswith('#'):
+            patterns.append(line)
+
+for pattern in patterns:
+    if (fnmatch.fnmatch(rel_path, pattern)
+            or fnmatch.fnmatch(rel_path.split('/')[-1], pattern)):
+        print(pattern)
+        sys.exit(0)
+
+parts = pathlib.PurePath(rel_path).parts
+for pattern in patterns:
+    if pattern.endswith('/'):
+        for part in parts[:-1]:
+            if fnmatch.fnmatch(part, pattern.rstrip('/')):
+                print(pattern)
+                sys.exit(0)
+" 2>/dev/null || echo "")
+
+if [ -n "$HEAVY" ]; then
+    SIZE=$(wc -c < "$FILE_PATH" 2>/dev/null || echo 0)
+    echo ">>> $REL_PATH matches .claudeheavy pattern: $HEAVY" >&2
+    echo ">>> Reading it whole would cost ~$((SIZE / 4)) tokens." >&2
+    echo ">>> Grep on this file IS allowed — use it, or read the parsed" >&2
+    echo ">>> form (scripts/pcb_cache.py for PCB data), or slice it with" >&2
+    echo ">>> Read offset/limit if you truly need the raw text." >&2
+    exit 2
+fi
+
 exit 0

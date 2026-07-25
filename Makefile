@@ -77,6 +77,15 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 		fi; \
 		exit $$rc'
 
+context-budget: ## Measure what this repo costs a context window (M1 preamble, M2 landmines, M3 navigation, M4 recency)
+	@$(T) context-budget python3 scripts/context_budget.py
+
+repo-map: ## Regenerate docs/REPO_MAP.md — the script index (read it instead of grepping 448k tokens)
+	@$(T) repo-map python3 scripts/generate_repo_map.py
+
+repo-map-check: ## Fail if docs/REPO_MAP.md is stale vs the scripts on disk
+	@$(T) repo-map-check python3 scripts/generate_repo_map.py --check
+
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
 
