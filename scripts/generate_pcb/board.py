@@ -135,8 +135,11 @@ SPEAKER_DIAM = 22.0
 
 # IP5306 power management (left-center, back — moved from slot zone)
 IP5306_ENC = (30, -5)
-# AMS1117 LDO regulator (below center, back — near IP5306)
-AMS1117_ENC = (45, -18)
+# U3 SY8089AAAC synchronous buck (SOT-23-5) — replaces the AMS1117 LDO.
+# enc(39.8, -16) = pcb (119.8, 53.5). Placed so the IN/FB column faces WEST
+# (inside the In2.Cu +5V pour) and LX/L2/C_OUT sit EAST of the pour on the
+# continuous +3V3 plane. See routing._buck_traces().
+BUCK_ENC = (39.8, -16.0)
 # PAM8403 audio amplifier (left area, back)
 PAM8403_ENC = (-50, 8)
 # L1 inductor (near IP5306, with clearance)
@@ -260,8 +263,8 @@ def _silkscreen_labels():
     parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.Fab"))
     px, py = enc_to_pcb(*IP5306_ENC)
     parts.append(P.gr_text("IP5306", px, py - 10, "B.Fab", 1.0))
-    px, py = enc_to_pcb(*AMS1117_ENC)
-    parts.append(P.gr_text("AMS1117", px + 8, py - 3, "B.Fab", 1.0))
+    px, py = enc_to_pcb(*BUCK_ENC)
+    parts.append(P.gr_text("SY8089", px + 1.2, py - 4.7, "B.Fab", 1.0))
     px, py = enc_to_pcb(*PAM8403_ENC)
     parts.append(P.gr_text("PAM8403", px, py - 5, "B.Fab", 1.0))
 
@@ -305,8 +308,10 @@ def _silkscreen_labels():
     parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*IP5306_ENC)
     parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 1.0))
-    px, py = enc_to_pcb(*AMS1117_ENC)
-    parts.append(P.gr_text("AMS1117", px + 8, py - 3, "B.SilkS", 1.0))
+    # U3 buck label: placed north of the SOT-23-5 in the clear band
+    # y≈48.8 (C18.1 pad ends at x=117.45, FPC slot at x≥125.5 / y≤47.5).
+    px, py = enc_to_pcb(*BUCK_ENC)
+    parts.append(P.gr_text("SY8089", px + 1.2, py - 4.7, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PAM8403_ENC)
     parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 1.0))
     # Connectors
@@ -364,11 +369,15 @@ def _silkscreen_labels():
         ("C17", "10uF", 110.0, 35.0, 4.5, 0),
         ("C18", "10uF", 116.0, 49.0, 0, 2.5),
         ("C19", "22uF", 110.0, 58.5, 0, 2.5),
-        # AMS1117 caps
-        ("C1", "10uF", 120.0, 57.0, 0, -2.0),
-        ("C2", "22uF", 125.0, 62.5, 0, -2.0),
-        # Inductor
+        # U3 SY8089 buck converter cluster (C2 tantalum deleted)
+        ("C1", "22uF", 119.8, 56.6, 0, 2.5),
+        ("C30", "22uF", 127.8, 58.9, -3.2, 0),
+        ("R25", "100k", 118.0, 63.4, 0, -1.6),
+        ("R26", "22k", 121.1, 63.4, 0, -1.6),
+        ("C29", "22pF", 118.0, 60.3, 0, -1.6),
+        # Inductors
         ("L1", "1uH", 110.0, 52.5, -4.5, 0),
+        ("L2", "2.2uH", 126.0, 54.45, 0, 3.2),
         # PAM8403 passives — right side of U5
         ("C21", "100nF", 38.0, 23.5, 0, -2.0),
         ("C22", "0.47u", 33.175, 20.0, -3.5, 0),
@@ -469,14 +478,16 @@ def _component_placeholders():
     px, py = enc_to_pcb(*IP5306_ENC)
     placements.append(("U2", "ESOP-8", px, py, 0, "B.Cu"))
 
-    px, py = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("U3", "SOT-223", px, py, 0, "B.Cu"))
+    px, py = enc_to_pcb(*BUCK_ENC)
+    placements.append(("U3", "SOT-23-5", px, py, 180, "B.Cu"))
 
     px, py = enc_to_pcb(*PAM8403_ENC)
     placements.append(("U5", "SOP-16", px, py, 90, "B.Cu"))
 
     px, py = enc_to_pcb(*INDUCTOR_ENC)
     placements.append(("L1", "SMD-4x4x2", px, py, 0, "B.Cu"))
+    # L2: SY8089 buck output inductor (2.2uH, SWPA4030S2R2MT / C36409)
+    placements.append(("L2", "IND-SMD-4.0x4.0", *routing.L2_POS, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*JST_BAT_ENC)
     placements.append(("J3", "JST-PH-2P-SMD", px, py, 180, "B.Cu"))
@@ -556,11 +567,14 @@ def _component_placeholders():
     placements.append(("C24", "C_0805", *routing.C24_POS, 90, "B.Cu"))  # PVDD top
     placements.append(("C25", "C_0805", *routing.C25_POS, 90, "B.Cu"))  # PVDD bottom
 
-    # AMS1117 support caps (±7mm spacing for DFM clearance from SOT-223 pads)
-    # C1 at amx-1 to keep pads outside FPC slot zone (slot starts at x=125.5)
-    amx, amy = enc_to_pcb(*AMS1117_ENC)
-    placements.append(("C1", "C_0805", amx - 5.0, amy + 1.5, 0, "B.Cu"))  # left of SOT-223 body, 3.2mm from VIN
-    placements.append(("C2", "C_1206", amx, amy + 7, 0, "B.Cu"))
+    # U3 SY8089 buck passives. C2 (22uF tantalum) is DELETED — a 1 MHz buck
+    # needs a low-ESR MLCC output cap, and C2 is the part that destroyed
+    # prototype #1 when assembled reversed.
+    placements.append(("C1", "C_1206", *routing.C1_POS, 180, "B.Cu"))   # C_IN 22uF MLCC
+    placements.append(("C30", "C_1206", *routing.C30_POS, 90, "B.Cu"))  # C_OUT 22uF MLCC
+    placements.append(("R25", "R_0805", *routing.R25_POS, 180, "B.Cu"))   # FB upper 100k
+    placements.append(("R26", "R_0805", *routing.R26_POS, 180, "B.Cu"))   # FB lower 22k
+    placements.append(("C29", "C_0805", *routing.C29_POS, 180, "B.Cu"))   # 22pF feed-forward
 
     # Board-level fiducials at opposite corners for pick-and-place alignment.
     # 1mm copper dot, 2mm mask opening (0.5mm margin), no paste.
@@ -583,10 +597,12 @@ def _component_placeholders():
         "SOP-16": (-7, 7),
         "ESOP-8": (-5, 5),
         "SOT-223": (-5, 5),
+        "SOT-23-5": (-3, 3),
         "Speaker-22mm": (-13, 13),
         "JST-PH-2P-SMD": (-3, 3),
         "SS-12D00G3": (-4, 4),
         "SMD-4x4x2": (-4, 4),
+        "IND-SMD-4.0x4.0": (-4, 4),
         "Fiducial": (-2, 2),
         "SOT-23-3": (-3, 3),
     }

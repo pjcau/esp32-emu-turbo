@@ -64,6 +64,23 @@ _SYMBOL_AMS1117 = """    (symbol "AMS1117-3.3" (pin_names (offset 1.016)) (in_bo
         (pin power_in line (at 0 -6.35 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
         (pin power_out line (at 7.62 2.54 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
 
+# SY8089AAAC — 2A synchronous step-down regulator, SOT-23-5 (LCSC C78988).
+# Pin numbering follows the datasheet (AN_SY8089/A Rev 0.9A page 2) exactly,
+# so schematic pin numbers match the PCB footprint pin numbers 1:1:
+#   1 = EN, 2 = GND, 3 = LX, 4 = IN, 5 = FB
+_SYMBOL_SY8089 = """    (symbol "SY8089AAAC" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
+      (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "SY8089AAAC" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "SY8089AAAC_0_1" (rectangle (start -6.35 5.08) (end 6.35 -5.08) (stroke (width 0.254) (type default)) (fill (type background))))
+      (symbol "SY8089AAAC_1_1"
+        (pin power_in line (at -8.89 2.54 0) (length 2.54) (name "IN" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
+        (pin input line (at -8.89 -2.54 0) (length 2.54) (name "EN" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin output line (at 8.89 2.54 180) (length 2.54) (name "LX" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
+        (pin input line (at 8.89 -2.54 180) (length 2.54) (name "FB" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))))\n"""
+
 _SYMBOL_C = """    (symbol "C" (pin_names (offset 0.254) hide) (in_bom yes) (on_board yes)
       (property "Reference" "C" (at 0.635 2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
       (property "Value" "C" (at 0.635 -2.54 0) (effects (font (size 1.27 1.27)) (justify left)))
@@ -348,7 +365,8 @@ _SYMBOL_FPC_16P = """    (symbol "FPC_16P" (pin_names (offset 1.016)) (in_bom ye
 # Registry: symbol name -> definition string
 SYMBOLS: dict[str, str] = {
     "ESP32-S3-WROOM-1": _SYMBOL_ESP32,
-    "AMS1117-3.3": _SYMBOL_AMS1117,
+    "AMS1117-3.3": _SYMBOL_AMS1117,   # legacy, unused since the SY8089 swap
+    "SY8089AAAC": _SYMBOL_SY8089,
     "C": _SYMBOL_C,
     "R": _SYMBOL_R,
     "SW_Push": _SYMBOL_SW_PUSH,

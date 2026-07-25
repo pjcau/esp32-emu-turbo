@@ -17,7 +17,7 @@ Checks:
   T3  Duplicate GPIO: same GPIO# assigned to multiple signals
   T4  Signal endpoint: every GPIO signal reaches its destination component
   T5  Orphan nets: nets declared in PCB but connected to only 0-1 pads
-  T6  Power chain: VBUS → IP5306 → +5V → AMS1117 → +3V3 → all VDD pins
+  T6  Power chain: VBUS → IP5306 → +5V → SY8089 buck → +3V3 → all VDD pins
   T7  GND completeness: every component has at least one pad on GND
   T8  Button circuit: each button has signal GPIO + GND path
   T9  ESP32 pin capability: pins used for functions they actually support
@@ -497,14 +497,16 @@ def test_T6_power_chain(net_pads, ref_pads):
     v5_comps = set(r for r, _ in net_pads.get("+5V", []))
     check("T6", "+5V reaches IP5306 VOUT (U2)", "U2" in v5_comps,
           f"+5V components: {sorted(v5_comps)}")
-    check("T6", "+5V reaches AMS1117 VIN (U3)", "U3" in v5_comps,
+    check("T6", "+5V reaches SY8089 IN (U3)", "U3" in v5_comps,
           f"+5V components: {sorted(v5_comps)}")
     check("T6", "+5V reaches PAM8403 (U5)", "U5" in v5_comps,
           f"+5V components: {sorted(v5_comps)}")
 
     # +3V3 must reach: U3 (VOUT), U1 (ESP32), J4 (FPC display), U6 (SD)
     v33_comps = set(r for r, _ in net_pads.get("+3V3", []))
-    check("T6", "+3V3 reaches AMS1117 VOUT (U3)", "U3" in v33_comps,
+    # A buck has no VOUT pin: the +3V3 rail is formed after the inductor,
+    # so the source of +3V3 is L2, not U3.
+    check("T6", "+3V3 reaches buck output inductor (L2)", "L2" in v33_comps,
           f"+3V3 components: {sorted(v33_comps)}")
     check("T6", "+3V3 reaches ESP32 (U1)", "U1" in v33_comps,
           f"+3V3 components: {sorted(v33_comps)}")
@@ -916,8 +918,10 @@ def test_T19_pin_electrical_conflicts(specs, net_pads):
     # Map: (ref, pin) -> "output" | "input" | "power_out" | None
     OUTPUT_PINS = {
         ("U2", "8"):  "power_out",   # IP5306 VOUT (+5V boost)
-        ("U3", "2"):  "power_out",   # AMS1117 VOUT (tab)
-        ("U3", "4"):  "power_out",   # AMS1117 VOUT (+3V3)
+        # U3 is a SY8089 buck: pin 3 (LX) is the only driven output. Pin 4
+        # (IN) is a power INPUT — listing it as a driver on +5V would flag a
+        # phantom conflict against the IP5306 VOUT that actually feeds it.
+        ("U3", "3"):  "power_out",   # SY8089 LX (switch node -> L2)
         ("U5", "1"):  "output",      # PAM8403 OUTL+
         ("U5", "3"):  "output",      # PAM8403 OUTL-
         ("U5", "14"): "output",      # PAM8403 OUTR-
@@ -1037,11 +1041,13 @@ def test_T22_power_rail_decoupling(ref_pads, net_pads):
             "rail": "+5V",
             "desc": "C19 (22uF bulk) + C27 (10uF HF)",
         },
-        "AMS1117": {
-            "caps": ["C1", "C2"],
+        "SY8089 buck": {
+            "caps": ["C1", "C30"],
             "rail_in": "+5V",
             "rail_out": "+3V3",
-            "desc": "C1 (10uF input) + C2 (22uF tantalum output)",
+            "desc": "C1 (22uF MLCC input) + C30 (22uF MLCC output). "
+                    "C2 (22uF tantalum) was deleted — reversed assembly "
+                    "destroyed prototype #1.",
         },
         "ESP32 VDD": {
             "caps": ["C3", "C4", "C26", "C28"],

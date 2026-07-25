@@ -166,20 +166,46 @@ COMPONENT_SPECS = {
     },
 
     # ======================================================================
-    # U3 — AMS1117-3.3 LDO Regulator (C6186)
-    # Datasheet: U3_AMS1117-3.3_C6186.pdf, page 1
-    # SOT-223: Pin 1=GND/ADJ, 2=VOUT, 3=VIN, Tab(4)=VOUT
+    # U3 — SY8089AAAC 2A Synchronous Buck Regulator (C78988)
+    # Datasheet: U3_SY8089AAAC_C78988.pdf (AN_SY8089/A Rev 0.9A), page 2
+    # SOT-23-5: Pin 1=EN, 2=GND, 3=LX, 4=IN, 5=FB
+    # Replaces the AMS1117-3.3 LDO: 5V->3.3V at up to 2A with ~90% efficiency
+    # instead of burning 1.7V x I_load as heat (0.85 W at 500 mA).
+    # Vout = 0.6 * (1 + R25/R26) = 0.6 * (1 + 100k/22k) = 3.327 V.
+    # EN is tied to the +5V rail (always on while the IP5306 boost runs);
+    # EN abs-max is Vin + 0.6 V so the hard tie is within spec.
     # ======================================================================
     "U3": {
-        "component": "AMS1117-3.3 LDO Regulator",
-        "lcsc": "C6186",
-        "datasheet": "U3_AMS1117-3.3_C6186.pdf",
-        "datasheet_page": 1,
+        "component": "SY8089AAAC 2A Synchronous Buck Regulator",
+        "lcsc": "C78988",
+        "datasheet": "U3_SY8089AAAC_C78988.pdf",
+        "datasheet_page": 2,
         "pins": {
-            "1": {"net": _exact("GND"),   "function": "GND/Adjust", "type": "smd"},
-            "2": {"net": _any_of("", "+3V3"),  "function": "VOUT tab — +3V3 trace (intentional, tab=VOUT)", "type": "smd"},
-            "3": {"net": _exact("+5V"),   "function": "VIN (5V input)", "type": "smd"},
-            "4": {"net": _exact("+3V3"),  "function": "Tab/heatsink — VOUT (3.3V)", "type": "smd"},
+            "1": {"net": _exact("+5V"),      "function": "EN — enable, tied high to the input rail (do not float)", "type": "smd"},
+            "2": {"net": _exact("GND"),      "function": "GND — ground return, two vias to the In1.Cu plane", "type": "smd"},
+            "3": {"net": _exact("BUCK_LX"),  "function": "LX — switch node to L2 (2.2uH)", "type": "smd"},
+            "4": {"net": _exact("+5V"),      "function": "IN — 5V input, decoupled by C1 (22uF MLCC)", "type": "smd"},
+            "5": {"net": _exact("BUCK_FB"),  "function": "FB — feedback, R25/R26 divider tap + C29 feed-forward", "type": "smd"},
+        },
+    },
+
+    # ======================================================================
+    # L2 — 2.2uH output inductor for U3 (SWPA4030S2R2MT, C36409)
+    # 2.2uH +/-20%, Isat 2.95 A, DCR 39 mOhm, 4.0 x 4.0 mm.
+    # Datasheet rule (AN_SY8089/A page 8): Isat must exceed the peak
+    # inductor current at full load, and DCR should stay below 50 mOhm.
+    #   Ipk = Iout + (Vout*(1-Vout/Vin))/(2*Fsw*L)
+    #       = 2.0 + (3.3*(1-3.3/5.5))/(2*1e6*2.2e-6) = 2.0 + 0.30 = 2.30 A
+    #   2.95 A Isat > 2.30 A peak  ✓
+    # ======================================================================
+    "L2": {
+        "component": "2.2uH 2.95A Power Inductor (buck output)",
+        "lcsc": "C36409",
+        "datasheet": "",
+        "datasheet_page": 0,
+        "pins": {
+            "1": {"net": _exact("+3V3"),     "function": "Output side — +3V3 rail / C30", "type": "smd"},
+            "2": {"net": _exact("BUCK_LX"),  "function": "Switch side — U3 pin 3 (LX)", "type": "smd"},
         },
     },
 

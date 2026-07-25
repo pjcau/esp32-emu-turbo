@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Thermal Budget Verification — junction temperature for power ICs.
 
-Computes junction temperatures for U2 (IP5306), U3 (AMS1117), U5 (PAM8403)
+Computes junction temperatures for U2 (IP5306), U3 (SY8089 buck), U5 (PAM8403)
 under idle, gaming, and peak load scenarios.
 
 Ambient: 40C (worst case handheld in summer).
@@ -26,11 +26,14 @@ ICS = {
         "Rth_ja": 80,    # C/W
         "Tj_max": 150,   # C
     },
-    "U3_AMS1117": {
+    "U3_SY8089": {
         "ref": "U3",
-        "package": "SOT-223",
-        "Rth_ja": 90,    # C/W
-        "Tj_max": 125,   # C
+        "package": "SOT-23-5",
+        # AN_SY8089/A Rev 0.9A page 2 "Package Thermal Resistance":
+        # theta_JA = 170 C/W, Tj max = 150 C (junction temperature range
+        # -40..125 C recommended, 150 C absolute).
+        "Rth_ja": 170,   # C/W
+        "Tj_max": 125,   # C (recommended operating junction max)
     },
     "U5_PAM8403": {
         "ref": "U5",
@@ -75,7 +78,7 @@ SAFE_MARGIN = 25  # C below Tj_max
 
 # Voltage rails
 V_IN = 5.0      # USB/boost output
-V_OUT = 3.3     # AMS1117 output
+V_OUT = 3.3     # SY8089 buck output (3.327V nominal)
 V_BAT = 3.7     # Nominal battery voltage
 
 # Efficiency figures
@@ -108,9 +111,22 @@ def info(name, detail=""):
     print(f"  INFO  {name}  {detail}")
 
 
-def compute_ams1117_dissipation(i_3v3_mA):
-    """AMS1117 linear regulator dissipation: P = (Vin - Vout) * I"""
-    return (V_IN - V_OUT) * (i_3v3_mA / 1000.0)
+# SY8089AAAC synchronous buck efficiency at 5V in / 3.3V out.
+# AN_SY8089/A Rev 0.9A Figure 2 (Efficiency vs Load Current, Vin=5.0V):
+# ~88% at 100 mA, ~92% at 0.3-1 A, ~90% at 2 A. 88% is the conservative
+# figure used across the whole load range here.
+SY8089_ETA = 0.88
+
+
+def compute_buck_dissipation(i_3v3_mA):
+    """SY8089 synchronous buck dissipation: P_loss = P_out * (1/eta - 1).
+
+    This is the entire point of the AMS1117 -> SY8089 swap: the LDO burned
+    (Vin - Vout) * I = 1.7 V * I, the buck burns only the conversion loss.
+    At 430 mA gaming load: 0.73 W (LDO) -> 0.19 W (buck).
+    """
+    p_out = V_OUT * (i_3v3_mA / 1000.0)
+    return p_out / SY8089_ETA - p_out
 
 
 def compute_ip5306_dissipation(scenario):
@@ -121,8 +137,10 @@ def compute_ip5306_dissipation(scenario):
     """
     i_3v3 = scenario["I_3v3_mA"] / 1000.0
     i_audio = scenario["I_audio_mA"] / 1000.0
-    # Total 5V output: AMS1117 input + audio amp
-    p_out_5v = V_IN * (i_3v3 + i_audio)
+    # Total 5V output: buck input + audio amp. The buck draws
+    # P_out/eta at 5V, i.e. LESS 5V current than the LDO did (which drew
+    # the full 3V3 load current), so this is now scaled by Vout/(Vin*eta).
+    p_out_5v = V_OUT * i_3v3 / SY8089_ETA + V_IN * i_audio
     p_loss = p_out_5v / IP5306_ETA - p_out_5v
     return p_loss
 
@@ -161,12 +179,12 @@ def main():
               f"audio_Pout={scenario['audio_pout_W']:.1f}W, "
               f"T_ambient={T_AMBIENT}C")
 
-        # AMS1117
-        p_ams = compute_ams1117_dissipation(scenario["I_3v3_mA"])
-        tj_ams = T_AMBIENT + p_ams * ICS["U3_AMS1117"]["Rth_ja"]
-        tj_max_ams = ICS["U3_AMS1117"]["Tj_max"]
+        # U3 buck
+        p_ams = compute_buck_dissipation(scenario["I_3v3_mA"])
+        tj_ams = T_AMBIENT + p_ams * ICS["U3_SY8089"]["Rth_ja"]
+        tj_max_ams = ICS["U3_SY8089"]["Tj_max"]
 
-        info(f"U3 AMS1117: P={p_ams:.3f}W, Tj={tj_ams:.1f}C "
+        info(f"U3 SY8089:  P={p_ams:.3f}W, Tj={tj_ams:.1f}C "
              f"(max {tj_max_ams}C, margin={tj_max_ams - tj_ams:.1f}C)")
 
         # IP5306
@@ -187,14 +205,14 @@ def main():
 
         # Checks for gaming scenario (primary use case)
         if scenario_name == "gaming":
-            # AMS1117 — the hottest IC (linear regulator)
+            # U3 buck (was the hottest IC on the board as an LDO)
             if tj_ams < tj_max_ams - SAFE_MARGIN:
-                check(f"U3 AMS1117 Tj < {tj_max_ams - SAFE_MARGIN}C (gaming)", True)
+                check(f"U3 SY8089 Tj < {tj_max_ams - SAFE_MARGIN}C (gaming)", True)
             elif tj_ams < tj_max_ams:
-                warn(f"U3 AMS1117 Tj={tj_ams:.1f}C (gaming)",
+                warn(f"U3 SY8089 Tj={tj_ams:.1f}C (gaming)",
                      f"above safe margin ({tj_max_ams - SAFE_MARGIN}C) but below max ({tj_max_ams}C)")
             else:
-                check(f"U3 AMS1117 Tj < {tj_max_ams}C (gaming)", False,
+                check(f"U3 SY8089 Tj < {tj_max_ams}C (gaming)", False,
                       f"Tj={tj_ams:.1f}C exceeds max!")
 
             # IP5306
@@ -222,7 +240,7 @@ def main():
         # and thermal mass prevents instantaneous Tj rise
         if scenario_name == "peak":
             for ic_name, tj, tj_max in [
-                ("U3 AMS1117", tj_ams, tj_max_ams),
+                ("U3 SY8089", tj_ams, tj_max_ams),
                 ("U2 IP5306", tj_ip, tj_max_ip),
                 ("U5 PAM8403", tj_pam, tj_max_pam),
             ]:
@@ -233,12 +251,13 @@ def main():
                          "WiFi bursts are short — thermal mass prevents instantaneous rise. "
                          "Consider heatsink pad or duty-cycle limiting for sustained WiFi.")
 
-    # AMS1117 specific: compute max current before thermal limit
-    print(f"\n-- AMS1117 Thermal Limit --")
-    tj_budget = ICS["U3_AMS1117"]["Tj_max"] - SAFE_MARGIN - T_AMBIENT
-    max_power = tj_budget / ICS["U3_AMS1117"]["Rth_ja"]
-    max_current_mA = max_power / (V_IN - V_OUT) * 1000
-    info(f"AMS1117 max safe current (Tj<{ICS['U3_AMS1117']['Tj_max'] - SAFE_MARGIN}C): "
+    # U3 specific: compute max current before thermal limit
+    print(f"\n-- SY8089 Thermal Limit --")
+    tj_budget = ICS["U3_SY8089"]["Tj_max"] - SAFE_MARGIN - T_AMBIENT
+    max_power = tj_budget / ICS["U3_SY8089"]["Rth_ja"]
+    # P_loss = V_OUT * I * (1/eta - 1)  ->  I = P_loss / (V_OUT * (1/eta - 1))
+    max_current_mA = max_power / (V_OUT * (1 / SY8089_ETA - 1)) * 1000
+    info(f"SY8089 max safe current (Tj<{ICS['U3_SY8089']['Tj_max'] - SAFE_MARGIN}C): "
          f"{max_current_mA:.0f}mA ({max_power:.2f}W)")
     info(f"Gaming load uses {SCENARIOS['gaming']['I_3v3_mA']}mA "
          f"({SCENARIOS['gaming']['I_3v3_mA']/max_current_mA*100:.0f}% of thermal budget)")

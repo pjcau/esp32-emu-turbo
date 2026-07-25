@@ -48,12 +48,16 @@ COMPONENTS_5V = {
 }
 
 # Regulator specs
-AMS1117_MAX_CURRENT = 0.800      # A (SOT-223)
-AMS1117_VIN = 5.0                # V
-AMS1117_VOUT = 3.3               # V
-AMS1117_DROPOUT = 1.2            # V
-AMS1117_RTH_JA = 90.0            # degC/W (SOT-223 typical)
-AMS1117_TJ_MAX = 125.0           # degC
+# U3 = SY8089AAAC synchronous buck (SOT-23-5, LCSC C78988).
+# Values from AN_SY8089/A Rev 0.9A: 2A continuous / 3A peak, Vin 2.7-5.5V,
+# theta_JA = 170 C/W, Tj max 125 C recommended, efficiency ~88-92% at
+# Vin=5V / Vout=3.3V (Figure 2).
+BUCK_MAX_CURRENT = 2.000         # A continuous (3A peak)
+BUCK_VIN = 5.0                   # V
+BUCK_VOUT = 3.327                # V  = 0.6 * (1 + 100k/22k)
+BUCK_ETA = 0.88                  # conservative efficiency across the range
+BUCK_RTH_JA = 170.0              # degC/W (SOT-23-5, datasheet page 2)
+BUCK_TJ_MAX = 125.0              # degC
 AMBIENT_TEMP = 40.0              # degC (worst case inside enclosure)
 
 IP5306_MAX_OUTPUT = 2.4          # A (5V boost output)
@@ -84,15 +88,19 @@ PASSIVES = {
     "R17": {"value": 1000,   "unit": "ohm", "function": "LED1 current limit"},
     "R18": {"value": 1000,   "unit": "ohm", "function": "LED2 current limit"},
     "R19": {"value": 10000,  "unit": "ohm", "function": "BTN pull-up"},
-    "C1":  {"value": 10e-6,  "unit": "F",   "function": "AMS1117 input decoupling"},
-    "C2":  {"value": 22e-6,  "unit": "F",   "function": "AMS1117 output bulk"},
+    "C1":  {"value": 22e-6,  "unit": "F",   "function": "SY8089 buck input cap (C_IN)"},
+    "C30": {"value": 22e-6,  "unit": "F",   "function": "SY8089 buck output cap (C_OUT, MLCC)"},
+    "C29": {"value": 22e-12, "unit": "F",   "function": "SY8089 FB feed-forward cap"},
     "C3":  {"value": 100e-9, "unit": "F",   "function": "ESP32 EN reset delay"},
     "C4":  {"value": 100e-9, "unit": "F",   "function": "ESP32 3V3 bypass"},
     "C17": {"value": 10e-6,  "unit": "F",   "function": "IP5306 input cap"},
     "C18": {"value": 10e-6,  "unit": "F",   "function": "IP5306 output cap"},
     "C19": {"value": 22e-6,  "unit": "F",   "function": "IP5306 VOUT bulk"},
-    "L1":  {"value": 1e-6,   "unit": "H",   "function": "Boost inductor",
+    "L1":  {"value": 1e-6,   "unit": "H",   "function": "IP5306 boost inductor",
              "current_rating": 4.5},
+    # L2: Sunlord SWPA4030S2R2MT (C36409) — 2.2uH, Isat 2.95A, DCR 39mOhm
+    "L2":  {"value": 2.2e-6, "unit": "H",   "function": "SY8089 buck output inductor",
+             "current_rating": 2.95},
     "D1":  {"value": 0.3,   "unit": "V",   "function": "BAT54C dual Schottky (menu combo diode)"},
 }
 # Button debounce caps C5-C16, C20
@@ -207,50 +215,57 @@ def check_power_budget():
           f"  max {max_3v3*1000:6.1f} mA")
 
     e, w = _check(
-        f"AMS1117 capacity: {max_3v3*1000:.0f}mA / "
-        f"{AMS1117_MAX_CURRENT*1000:.0f}mA "
-        f"({max_3v3/AMS1117_MAX_CURRENT*100:.0f}%)",
-        ["3V3 demand exceeds AMS1117 800mA max"] if max_3v3 > AMS1117_MAX_CURRENT else [],
+        f"SY8089 capacity: {max_3v3*1000:.0f}mA / "
+        f"{BUCK_MAX_CURRENT*1000:.0f}mA "
+        f"({max_3v3/BUCK_MAX_CURRENT*100:.0f}%)",
+        ["3V3 demand exceeds SY8089 2A continuous max"]
+        if max_3v3 > BUCK_MAX_CURRENT else [],
     )
     errors.extend(e)
 
-    # AMS1117 thermal
-    p_dissipation = (AMS1117_VIN - AMS1117_VOUT) * max_3v3
-    tj = AMBIENT_TEMP + p_dissipation * AMS1117_RTH_JA
+    # SY8089 thermal: a switcher dissipates the conversion loss only,
+    # not (Vin - Vout) * I like the AMS1117 LDO it replaced.
+    p_dissipation = BUCK_VOUT * max_3v3 * (1 / BUCK_ETA - 1)
+    tj = AMBIENT_TEMP + p_dissipation * BUCK_RTH_JA
     thermal_errs = []
     thermal_warns = []
-    if p_dissipation > 1.5:
+    if p_dissipation > 0.6:
         thermal_errs.append(
-            f"Dissipation {p_dissipation:.2f}W exceeds 1.5W absolute max")
+            f"Dissipation {p_dissipation:.2f}W exceeds the SOT-23-5 "
+            f"0.6W package limit (datasheet page 2)")
     elif tj > 100:
         thermal_warns.append(
-            f"Junction temp {tj:.1f}C is high (Tj_max={AMS1117_TJ_MAX}C)")
+            f"Junction temp {tj:.1f}C is high (Tj_max={BUCK_TJ_MAX}C)")
 
-    print(f"\n  AMS1117 thermal:")
-    print(f"    P = (Vin - Vout) x I = ({AMS1117_VIN} - {AMS1117_VOUT})"
-          f" x {max_3v3*1000:.0f}mA = {p_dissipation:.3f} W")
+    print(f"\n  SY8089 thermal:")
+    print(f"    P_loss = Vout x I x (1/eta - 1) = {BUCK_VOUT} x "
+          f"{max_3v3*1000:.0f}mA x (1/{BUCK_ETA} - 1) = {p_dissipation:.3f} W")
     print(f"    Tj = {AMBIENT_TEMP}C + {p_dissipation:.3f}W x "
-          f"{AMS1117_RTH_JA} C/W = {tj:.1f}C")
+          f"{BUCK_RTH_JA} C/W = {tj:.1f}C")
 
     e, w = _check(
-        f"AMS1117 thermal: {p_dissipation:.3f}W, Tj={tj:.1f}C",
+        f"SY8089 thermal: {p_dissipation:.3f}W, Tj={tj:.1f}C",
         thermal_errs, thermal_warns,
     )
     errors.extend(e)
     warnings.extend(w)
 
-    # +5V rail (includes AMS1117 pass-through)
+    # +5V rail (includes the buck input current).
+    # A buck draws P_out/(Vin*eta), NOT the full 3V3 load current the way
+    # the AMS1117 LDO did — that is the battery-life win of this change.
     typ_5v_direct = sum(c["typ"] for c in COMPONENTS_5V.values())
     max_5v_direct = sum(c["max"] for c in COMPONENTS_5V.values())
-    typ_5v_total = typ_5v_direct + typ_3v3  # AMS1117 input = 3V3 output
-    max_5v_total = max_5v_direct + max_3v3
+    typ_buck_in = BUCK_VOUT * typ_3v3 / (BUCK_ETA * BUCK_VIN)
+    max_buck_in = BUCK_VOUT * max_3v3 / (BUCK_ETA * BUCK_VIN)
+    typ_5v_total = typ_5v_direct + typ_buck_in
+    max_5v_total = max_5v_direct + max_buck_in
 
     print(f"\n  +5V Rail:")
     for name, draw in COMPONENTS_5V.items():
         print(f"    {name:40s}  typ {draw['typ']*1000:6.1f} mA"
               f"  max {draw['max']*1000:6.1f} mA")
-    print(f"    {'AMS1117 (3V3 pass-through)':40s}  typ {typ_3v3*1000:6.1f} mA"
-          f"  max {max_3v3*1000:6.1f} mA")
+    print(f"    {'SY8089 buck (3V3 rail input)':40s}  typ {typ_buck_in*1000:6.1f} mA"
+          f"  max {max_buck_in*1000:6.1f} mA")
     print(f"    {'TOTAL':40s}  typ {typ_5v_total*1000:6.1f} mA"
           f"  max {max_5v_total*1000:6.1f} mA")
 
@@ -462,7 +477,7 @@ def check_component_values():
     # Decoupling capacitor presence
     ic_caps = {
         "ESP32 (U1)":     ["C3", "C4"],
-        "AMS1117 (U3)":   ["C1", "C2"],
+        "SY8089 (U3)":    ["C1", "C30"],
         "IP5306 (U2)":    ["C17", "C18", "C19"],
     }
     print(f"\n  Decoupling capacitors:")
@@ -494,15 +509,34 @@ def check_component_values():
     )
     errors.extend(e)
 
-    # AMS1117 output cap requirement
-    c2_val = PASSIVES["C2"]["value"]
-    print(f"\n  AMS1117 output cap:")
-    print(f"    C2 = {c2_val*1e6:.0f} uF (datasheet requires >= 22 uF)")
+    # L2: SY8089 output inductor. AN_SY8089/A page 8:
+    #   Isat,min > Iout,max + Vout(1 - Vout/Vin,max) / (2 * Fsw * L)
+    l2 = PASSIVES["L2"]
+    i_ripple = (BUCK_VOUT * (1 - BUCK_VOUT / 5.5)) / (2 * 1e6 * l2["value"])
+    i_peak = BUCK_MAX_CURRENT + i_ripple
+    print(f"\n  Inductor L2 (buck output):")
+    print(f"    Value: {l2['value']*1e6:.1f} uH, Isat: {l2['current_rating']} A")
+    print(f"    Ipk at 2A load = 2.000 + {i_ripple:.3f} = {i_peak:.3f} A")
     e, w = _check(
-        "AMS1117 output cap",
-        [f"C2 = {c2_val*1e6:.0f}uF < 22uF required"]
-        if c2_val < 22e-6 else [],
+        f"L2 saturation: {l2['current_rating']}A > {i_peak:.2f}A peak",
+        [f"L2 Isat {l2['current_rating']}A < {i_peak:.2f}A peak inductor current"]
+        if i_peak > l2["current_rating"] else [],
     )
+    errors.extend(e)
+
+    # SY8089 input/output cap requirements (AN_SY8089/A page 7):
+    #   IN: >= 10uF ceramic. OUT: >= 22uF X5R ceramic.
+    cin_val = PASSIVES["C1"]["value"]
+    cout_val = PASSIVES["C30"]["value"]
+    print(f"\n  SY8089 caps:")
+    print(f"    C1  = {cin_val*1e6:.0f} uF C_IN  (datasheet requires >= 10 uF ceramic)")
+    print(f"    C30 = {cout_val*1e6:.0f} uF C_OUT (datasheet requires >= 22 uF X5R)")
+    cap_errs = []
+    if cin_val < 10e-6:
+        cap_errs.append(f"C1 = {cin_val*1e6:.0f}uF < 10uF required on IN")
+    if cout_val < 22e-6:
+        cap_errs.append(f"C30 = {cout_val*1e6:.0f}uF < 22uF required on the output")
+    e, w = _check("SY8089 input/output caps", cap_errs)
     errors.extend(e)
 
     return errors, warnings

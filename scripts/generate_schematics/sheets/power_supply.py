@@ -1,4 +1,4 @@
-"""Sheet 1: Power Supply - USB-C -> IP5306 bare IC -> AMS1117 -> 3.3V."""
+"""Sheet 1: Power Supply - USB-C -> IP5306 bare IC -> SY8089 buck -> 3.3V."""
 
 from ..sheet_base import SchematicSheet
 
@@ -7,13 +7,13 @@ class PowerSupplySheet(SchematicSheet):
     title = "Power Supply"
     page_number = 1
     # Upgraded to A3 (297x420 landscape) so the USB-C / IP5306 / battery
-    # cluster, the USB ESD block, the AMS1117 regulator, the power
+    # cluster, the USB ESD block, the SY8089 buck regulator, the power
     # switch and the charging LEDs can each sit in their own zone
     # without overlapping annotation text. Previously A4 (210x297) —
     # too small once R22/R23/U4 (USB ESD) were added.
     paper = "A3"
     needed_symbols = [
-        "USB_C", "IP5306", "AMS1117-3.3", "Conn_JST_PH_2",
+        "USB_C", "IP5306", "SY8089AAAC", "Conn_JST_PH_2",
         "Battery", "C", "R", "L", "SW_Push", "LED",
         "USBLC6_2SC6", "BAT54C",
     ]
@@ -23,7 +23,7 @@ class PowerSupplySheet(SchematicSheet):
         self.text("POWER SUPPLY", 30, 25, 5, True)
         self.text(
             "USB-C -> IP5306 SOP-8 (charge + boost)"
-            " -> AMS1117-3.3 -> 3.3V rail", 30, 33,
+            " -> SY8089AAAC buck -> 3.3V rail", 30, 33,
         )
 
         # ═══════════════════════════════════════════════
@@ -374,48 +374,114 @@ class PowerSupplySheet(SchematicSheet):
         # ═══════════════════════════════════════════════
         self.text("VOLTAGE REGULATOR", 30, 175, 3.81, True)
         self.text(
-            "5V -> AMS1117-3.3 -> 3.3V (800mA max)",
+            "5V -> SY8089AAAC synchronous buck -> 3.327V (2A cont. / 3A peak)",
             30, 182,
         )
-
-        # Input cap for AMS1117
-        ams_x, ams_y = 80, 200
-        c1x, c1y = ams_x - 25, ams_y
-        self.sym("C", "C1", "10uF", c1x, c1y, ["1", "2"])
-        self.text("Input", c1x - 5, c1y - 7, 1.5)
-        self.v5(c1x, c1y - 10)
-        self.wire(c1x, c1y - 10, c1x, c1y - 3.81)
-        self.gnd(c1x, c1y + 10)
-        self.wire(c1x, c1y + 3.81, c1x, c1y + 10)
-
-        # AMS1117-3.3 Regulator
-        self.sym(
-            "AMS1117-3.3", "U3", "AMS1117-3.3",
-            ams_x, ams_y, ["1", "2", "3"],
+        self.text(
+            "Replaces AMS1117-3.3 LDO: ~90% efficiency instead of burning"
+            " 1.7V x Iload (0.85W at 500mA).",
+            30, 187, 1.8,
         )
-        # VIN from +5V rail
-        self.v5(ams_x - 15, ams_y - 10)
-        self.wire(ams_x - 15, ams_y - 10, ams_x - 15, ams_y - 2.54)
-        self.wire(ams_x - 7.62, ams_y - 2.54, ams_x - 15, ams_y - 2.54)
-        # AMS1117 GND
-        self.gnd(ams_x, ams_y + 13)
-        self.wire(ams_x, ams_y + 6.35, ams_x, ams_y + 13)
 
-        # Output cap (tantalum)
-        c2x, c2y = ams_x + 30, ams_y
-        self.sym("C", "C2", "22uF tant.", c2x, c2y, ["1", "2"])
-        self.text("Output", c2x - 3, c2y - 7, 1.5)
-        # VOUT to cap (horizontal)
-        self.wire(ams_x + 7.62, ams_y - 2.54, c2x, ams_y - 2.54)
-        self.wire(c2x, ams_y - 2.54, c2x, c2y - 3.81)
-        self.gnd(c2x, c2y + 10)
-        self.wire(c2x, c2y + 3.81, c2x, c2y + 10)
+        # ── Input side ──────────────────────────────────────────
+        # C_IN: datasheet AN_SY8089/A requires >= 10uF ceramic on IN and
+        # shows 22uF in the typical application. C1 is a 22uF X5R MLCC.
+        u3x, u3y = 100, 205
+        in_y = u3y - 2.54     # world Y of the IN pin (local +2.54)
+        en_y = u3y + 2.54     # world Y of the EN pin (local -2.54)
 
-        # 3.3V output
-        self.v33(c2x, c2y - 12)
-        self.wire(c2x, c2y - 12, c2x, c2y - 3.81)
-        self.glabel("+3V3", c2x + 12, ams_y - 2.54, 0, "output")
-        self.wire(c2x, ams_y - 2.54, c2x + 12, ams_y - 2.54)
+        c1x, c1y = 75, 206.27
+        self.sym("C", "C1", "22uF", c1x, c1y, ["1", "2"])
+        self.text("C_IN", c1x - 11, c1y - 2, 1.5)
+        self.v5(c1x, 196)
+        self.wire(c1x, 196, c1x, in_y)           # +5V rail down to C1 pin 1
+        self.wire(c1x, in_y, u3x - 8.89, in_y)   # +5V rail across to U3 IN
+        self.gnd(c1x, 216)
+        self.wire(c1x, c1y + 3.81, c1x, 216)
+
+        # ── SY8089AAAC ──────────────────────────────────────────
+        self.sym(
+            "SY8089AAAC", "U3", "SY8089AAAC",
+            u3x, u3y, ["1", "2", "3", "4", "5"],
+        )
+        # EN tied high to the input rail. Datasheet: "Pull high (>1.5V) to
+        # turn on. Do not float." EN abs-max is Vin+0.6V, so a hard tie to
+        # the input rail is in spec; the 1M pull-down in the datasheet note
+        # is only needed when EN is driven from a high-impedance source.
+        self.v5(80, en_y)
+        self.wire(80, en_y, u3x - 8.89, en_y)
+        self.text("EN tied to VIN (always on)", 76, en_y - 3, 1.5)
+        # GND
+        self.gnd(u3x, u3y + 15)
+        self.wire(u3x, u3y + 7.62, u3x, u3y + 15)
+
+        # ── Switch node -> inductor ─────────────────────────────
+        l2x, l2y = 125, 206.27
+        self.sym("L", "L2", "2.2uH", l2x, l2y, ["1", "2"])
+        self.text("Isat 2.95A", l2x + 4, l2y + 2, 1.5)
+        # LX -> L2 pin 2. The horizontal run is split at x=117 so the
+        # BUCK_LX global label sits on a wire ENDPOINT (a floating label
+        # would leave the net unnamed and break the schematic<->PCB net
+        # cross-check).
+        self.wire(u3x + 8.89, in_y, u3x + 8.89, l2y + 3.81)
+        self.wire(u3x + 8.89, l2y + 3.81, 117, l2y + 3.81)
+        self.wire(117, l2y + 3.81, l2x, l2y + 3.81)
+        self.glabel("BUCK_LX", 117, l2y + 3.81, 0, "passive")
+
+        # ── Output side ─────────────────────────────────────────
+        # C_OUT: datasheet recommends >= 22uF X5R ceramic. C30 is a 22uF
+        # 1206 MLCC — deliberately NOT a tantalum: the old AMS1117 output
+        # cap C2 (22uF tantalum) destroyed prototype #1 when assembled
+        # reversed, and 2.9 ohm ESR is unusable at 1MHz anyway.
+        c30x, c30y = 150, 206.27
+        self.sym("C", "C30", "22uF", c30x, c30y, ["1", "2"])
+        self.text("C_OUT (MLCC)", c30x + 4, c30y - 2, 1.5)
+        self.wire(l2x, in_y, c30x, in_y)          # L2 pin 1 -> C30 pin 1
+        self.gnd(c30x, 216)
+        self.wire(c30x, c30y + 3.81, c30x, 216)
+        self.v33(165, 196)
+        self.wire(165, 196, 165, in_y)
+        self.wire(c30x, in_y, 165, in_y)
+        self.glabel("+3V3", 180, in_y, 0, "output")
+        self.wire(165, in_y, 180, in_y)
+
+        # ── Feedback divider ────────────────────────────────────
+        # Vout = 0.6 * (1 + R25/R26) = 0.6 * (1 + 100k/22k) = 3.327 V
+        # C29 (22pF) across R25 is the datasheet feed-forward cap that
+        # speeds up the load-transient response.
+        # Placed in the free right-hand column (x 195..230) so it does not
+        # collide with the Design Notes block (x 30..180, y 240+).
+        r25x, fb_y = 205, 215
+        c29x = 220
+        r26y = 235
+        self.sym("R", "R25", "100k", r25x, fb_y, ["1", "2"])
+        self.sym("C", "C29", "22pF", c29x, fb_y, ["1", "2"])
+        self.sym("R", "R26", "22k", r25x, r26y, ["1", "2"])
+
+        # Top of the divider = +3V3, sensed AFTER C30 (not at the inductor).
+        self.v33(r25x, fb_y - 12)
+        self.wire(r25x, fb_y - 12, r25x, fb_y - 3.81)
+        self.wire(r25x, fb_y - 3.81, c29x, fb_y - 3.81)
+
+        # Tap node: R25 bottom + C29 bottom + R26 top + U3 FB pin.
+        self.wire(r25x, fb_y + 3.81, c29x, fb_y + 3.81)
+        self.wire(r25x, fb_y + 3.81, r25x, 225)
+        self.wire(r25x, 225, r25x, r26y - 3.81)
+        # FB pin -> tap node. Split at x=160 so the BUCK_FB global label
+        # sits on a wire endpoint.
+        self.wire(u3x + 8.89, en_y, u3x + 8.89, 225)
+        self.wire(u3x + 8.89, 225, 160, 225)
+        self.wire(160, 225, r25x, 225)
+        self.glabel("BUCK_FB", 160, 225, 0, "passive")
+
+        # Bottom leg to GND
+        self.gnd(r25x, r26y + 13)
+        self.wire(r25x, r26y + 3.81, r25x, r26y + 13)
+
+        self.text("FEEDBACK DIVIDER", 195, 258, 2.54, True)
+        self.text("Vout = 0.6 x (1 + 100k/22k) = 3.327V", 195, 264, 1.8)
+        self.text("C29 = datasheet feed-forward cap (load transient)",
+                  195, 269, 1.8)
 
         # ═══════════════════════════════════════════════
         # POWER SWITCH (moved to its own zone on the right column of
@@ -448,7 +514,7 @@ class PowerSupplySheet(SchematicSheet):
         # Moved to a dedicated zone in the middle-right of the A3
         # sheet so the CHARGING INDICATOR LEDs group does not intrude
         # into the USB ESD row (U4 / R22 / R23 at y=118) nor into the
-        # AMS1117 regulator row (y=160).
+        # buck regulator row (y=175+).
         # ═══════════════════════════════════════════════
         led_x, led_y = 275, 145
         self.text("CHARGING INDICATOR LEDs", led_x - 30, led_y - 12, 2.54, True)
@@ -501,9 +567,14 @@ class PowerSupplySheet(SchematicSheet):
             30, ny + 24,
         )
         self.text(
-            "- AMS1117-3.3: stable 3.3V for"
-            " ESP32-S3 and peripherals (800mA)",
+            "- SY8089AAAC buck: 3.327V for ESP32-S3"
+            " and peripherals (2A cont., 3A peak)",
             30, ny + 30,
+        )
+        self.text(
+            "- C2 (22uF tantalum) DELETED: reversed assembly destroyed"
+            " prototype #1; C30 is a non-polarized MLCC",
+            30, ny + 36,
         )
         self.text(
             "- 5.1k CC pull-downs identify"

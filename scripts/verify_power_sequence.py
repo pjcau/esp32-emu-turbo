@@ -2,16 +2,16 @@
 """Power Sequencing Verification.
 
 Verifies that the power-up sequence is safe and meets timing requirements:
-  1. AMS1117 input (+5V) is upstream of output (+3V3)
+  1. SY8089 buck input (+5V) is upstream of output (+3V3)
   2. ESP32 EN pin has RC delay for proper boot timing
   3. No component receives power before its supply is stable
   4. Brownout detector configuration in firmware
-  5. Power path: BAT+ -> IP5306 -> +5V -> AMS1117 -> +3V3 -> ESP32
+  5. Power path: BAT+ -> IP5306 -> +5V -> SY8089 -> +3V3 -> ESP32
 
 Power-up sequence (expected):
   T0:  Battery connects (BAT+ via SW_PWR)
   T1:  IP5306 boots, boost converter starts (+5V ramps)
-  T2:  +5V stable -> AMS1117 regulates (+3V3 ramps)
+  T2:  +5V stable -> SY8089 regulates (+3V3 ramps)
   T3:  +3V3 stable -> EN pin rises through RC (R3/C3, tau=1ms)
   T4:  EN reaches threshold -> ESP32 resets, samples strapping pins
   T5:  ESP32 boots (flash -> application)
@@ -74,7 +74,7 @@ def _get_pad(cache, ref, pin):
 
 
 def test_power_chain_topology():
-    """Test 1-5: Verify power chain: BAT -> IP5306 -> +5V -> AMS1117 -> +3V3."""
+    """Test 1-5: Verify power chain: BAT -> IP5306 -> +5V -> SY8089 -> +3V3."""
     print("\n-- Power Chain Topology --")
     cache = load_cache(PCB_FILE)
     net_map = {n["name"]: n["id"] for n in cache["nets"]}
@@ -99,31 +99,55 @@ def test_power_chain_topology():
     else:
         check("IP5306 VOUT pad found", False)
 
-    # 3. AMS1117 VIN (pin 3) should be on +5V net
-    am_vin = _get_pad(cache, "U3", "3")
-    if am_vin:
+    # 3. U3 SY8089 buck IN (pin 4) should be on +5V net
+    bk_in = _get_pad(cache, "U3", "4")
+    if bk_in:
         n5v_id = net_map.get("+5V", -1)
-        check("AMS1117 VIN (pin 3) on +5V net",
-              am_vin["net"] == n5v_id,
-              f"net={am_vin['net']}, expected +5V={n5v_id}")
+        check("SY8089 IN (pin 4) on +5V net",
+              bk_in["net"] == n5v_id,
+              f"net={bk_in['net']}, expected +5V={n5v_id}")
     else:
-        check("AMS1117 VIN pad found", False)
+        check("SY8089 IN pad found", False)
 
-    # 4. AMS1117 VOUT (pin 2) should be on +3V3 net
-    am_vout = _get_pad(cache, "U3", "2")
-    if am_vout:
-        n3v3_id = net_map.get("+3V3", -1)
-        check("AMS1117 VOUT (pin 2) on +3V3 net",
-              am_vout["net"] == n3v3_id,
-              f"net={am_vout['net']}, expected +3V3={n3v3_id}")
+    # 4. U3 buck output reaches +3V3 through L2 (pin 3 LX -> L2.2, L2.1 -> +3V3).
+    #    A switching regulator has no "VOUT pin": the rail is formed after the
+    #    inductor, so the check follows LX -> L2 -> +3V3.
+    bk_lx = _get_pad(cache, "U3", "3")
+    l2_lx = _get_pad(cache, "L2", "2")
+    l2_out = _get_pad(cache, "L2", "1")
+    n_lx = net_map.get("BUCK_LX", -1)
+    n3v3_id = net_map.get("+3V3", -1)
+    if bk_lx and l2_lx and l2_out:
+        check("SY8089 LX (pin 3) on BUCK_LX net",
+              bk_lx["net"] == n_lx,
+              f"net={bk_lx['net']}, expected BUCK_LX={n_lx}")
+        check("L2 bridges BUCK_LX -> +3V3",
+              l2_lx["net"] == n_lx and l2_out["net"] == n3v3_id,
+              f"L2.2={l2_lx['net']}, L2.1={l2_out['net']}")
     else:
-        check("AMS1117 VOUT pad found", False)
+        check("SY8089 LX / L2 pads found", False)
 
-    # 5. AMS1117 input upstream of output (VIN.net != VOUT.net)
-    if am_vin and am_vout:
-        check("AMS1117 input/output on different nets",
-              am_vin["net"] != am_vout["net"],
-              f"both on net {am_vin['net']}")
+    # 5. Buck input upstream of output (IN.net != output rail)
+    if bk_in and l2_out:
+        check("Buck input/output on different nets",
+              bk_in["net"] != l2_out["net"],
+              f"both on net {bk_in['net']}")
+
+    # 6. Feedback divider present and on the correct nets — this is what
+    #    actually programs the output voltage on a switcher.
+    n_fb = net_map.get("BUCK_FB", -1)
+    bk_fb = _get_pad(cache, "U3", "5")
+    r25_fb = _get_pad(cache, "R25", "2")
+    r26_gnd = _get_pad(cache, "R26", "2")
+    n_gnd_id = net_map.get("GND", -1)
+    check("SY8089 FB (pin 5) on BUCK_FB net",
+          bool(bk_fb) and bk_fb["net"] == n_fb,
+          f"net={bk_fb['net'] if bk_fb else None}, expected BUCK_FB={n_fb}")
+    check("R25/R26 divider terminates BUCK_FB and GND",
+          bool(r25_fb) and bool(r26_gnd)
+          and r25_fb["net"] == n_fb and r26_gnd["net"] == n_gnd_id,
+          f"R25.2={r25_fb['net'] if r25_fb else None}, "
+          f"R26.2={r26_gnd['net'] if r26_gnd else None}")
 
 
 def test_en_rc_timing():
@@ -201,8 +225,8 @@ def test_no_early_power():
     """Test 11-13: No IC receives signal before its power is stable.
 
     Critical paths:
-    - PAM8403 VDD (+5V) must come from same rail as AMS1117 input
-    - SD card VDD (+3V3) through AMS1117 (downstream of ESP32)
+    - PAM8403 VDD (+5V) must come from same rail as SY8089 buck input
+    - SD card VDD (+3V3) through SY8089 buck (downstream of ESP32)
     - USB ESD (U4) VBUS powers from same VBUS as IP5306
     """
     print("\n-- No Early Power Issues --")
@@ -217,11 +241,11 @@ def test_no_early_power():
               pam_vdd["net"] == n5v,
               f"net={pam_vdd['net']}, expected +5V={n5v}")
 
-    # SD card module VDD on +3V3 -- downstream of AMS1117
+    # SD card module VDD on +3V3 -- downstream of SY8089 buck
     sd_vdd = _get_pad(cache, "U6", "4")
     if sd_vdd:
         n3v3 = net_map.get("+3V3", -1)
-        check("SD card VDD on +3V3 (downstream of AMS1117)",
+        check("SD card VDD on +3V3 (downstream of SY8089 buck)",
               sd_vdd["net"] == n3v3,
               f"net={sd_vdd['net']}, expected +3V3={n3v3}")
 
@@ -269,7 +293,7 @@ def test_gnd_continuity():
     ics = [
         ("U1", "ESP32", ["40", "41"]),
         ("U2", "IP5306", ["EP"]),
-        ("U3", "AMS1117", ["1"]),
+        ("U3", "SY8089", ["2"]),
         ("U5", "PAM8403", ["3", "9", "11"]),  # GND pins on PAM8403
     ]
 
@@ -339,7 +363,7 @@ def test_power_sequence_summary():
     """Test 19: Power sequence summary."""
     print("\n-- Power Sequence Summary --")
     info("Expected boot sequence",
-         "BAT+ -> SW_PWR -> IP5306(boost) -> +5V -> AMS1117(LDO) -> +3V3 -> "
+         "BAT+ -> SW_PWR -> IP5306(boost) -> +5V -> SY8089(buck) -> +3V3 -> "
          "R3/C3(RC delay) -> EN rises -> ESP32 boot")
     check("Power topology verified (upstream -> downstream ordering)", True)
 

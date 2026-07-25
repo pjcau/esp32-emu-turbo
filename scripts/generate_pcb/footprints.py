@@ -561,6 +561,35 @@ def sot23_6(layer="B"):
     ]
 
 
+# ── SOT-23-5 (SY8089AAAC synchronous buck, LCSC C78988) ─────────
+# Pad geometry copied VERBATIM from the JLCPCB/EasyEDA reference
+# footprint fetched with easyeda2kicad:
+#   scripts/.easyeda_cache/C78988/fp.pretty/
+#       SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BR.kicad_mod
+#   pad 1  (+1.30, +0.95)   pad 4 (-1.30, -0.95)
+#   pad 2  (+1.30,  0.00)   pad 5 (-1.30, +0.95)
+#   pad 3  (+1.30, -0.95)   all 1.100 x 0.600 rect
+# Keeping our library frame identical to EasyEDA's is deliberate:
+# verify_easyeda_footprint then reports delta_row = 0 for U3 and NO
+# _JLCPCB_ROT_OVERRIDES entry is required (the CPL default correction
+# of 180 deg already preserves the placement rotation).
+#
+# Pinout — AN_SY8089/A Rev 0.9A page 2 ("Pinout (top view)"):
+#   1 = EN, 2 = GND, 3 = LX, 4 = IN, 5 = FB
+# Note this footprint is the EasyEDA frame, which is the KiCad-standard
+# SOT-23-5 frame rotated -90 deg; that is why "SOT-23-5" needs its own
+# entry in _JLCPCB_ROT_CORRECTIONS ahead of the generic "^SOT-23" rule.
+def sot23_5(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    return [
+        _pad("1", "smd", "rect", 1.30, 0.95, 1.10, 0.60, layers),   # EN
+        _pad("2", "smd", "rect", 1.30, 0.00, 1.10, 0.60, layers),   # GND
+        _pad("3", "smd", "rect", 1.30, -0.95, 1.10, 0.60, layers),  # LX
+        _pad("4", "smd", "rect", -1.30, -0.95, 1.10, 0.60, layers),  # IN
+        _pad("5", "smd", "rect", -1.30, 0.95, 1.10, 0.60, layers),   # FB
+    ]
+
+
 # ── SOT-23-3 (BAT54C dual Schottky diode) ───────────────────────
 # KiCad standard SOT-23-3 footprint, 0.95mm pitch
 # Bottom row: pins 1,2 at y=+1.10  Top row: pin 3 at y=-1.10
@@ -648,6 +677,23 @@ def inductor_4x4(layer="B"):
     ]
 
 
+# ── SMD power inductor 4.0x4.0mm (SWPA4030S2R2MT, LCSC C36409) ──
+# Pad geometry copied VERBATIM from the JLCPCB/EasyEDA reference
+# footprint fetched with easyeda2kicad:
+#   scripts/.easyeda_cache/C36409/fp.pretty/
+#       IND-SMD_L4.0-W4.0_LQH44PN2R2MP0L.kicad_mod
+#   pad 1 (-1.80, 0) and pad 2 (+1.80, 0), both 1.500 x 4.000 rect.
+# Wider and taller pads than the legacy SMD-4x4x2 land pattern used by
+# L1, so it gets its own footprint name instead of being merged.
+# Non-polarized: pad 1 / pad 2 are interchangeable.
+def inductor_4x4_c36409(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    return [
+        _pad("1", "smd", "rect", -1.80, 0, 1.50, 4.00, layers),
+        _pad("2", "smd", "rect", 1.80, 0, 1.50, 4.00, layers),
+    ]
+
+
 # ── Fiducial marker (1mm SMD pad, 2mm mask opening) ─────────────
 def fiducial(layer="F"):
     layers = SMD_F if layer == "F" else SMD_B
@@ -673,6 +719,7 @@ FOOTPRINTS = {
     "JST-PH-2P-SMD": (jst_ph_2p, "B"),
     "R_0402": (passive_0402, "B"),
     "SOT-23-6": (sot23_6, "B"),
+    "SOT-23-5": (sot23_5, "B"),
     "SOT-23-3": (sot23_3, "B"),
     "R_0805": (passive_0805, "B"),
     "C_0805": (passive_0805, "B"),
@@ -681,6 +728,7 @@ FOOTPRINTS = {
     "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
     "Speaker-22mm": (speaker_22mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),
+    "IND-SMD-4.0x4.0": (inductor_4x4_c36409, "B"),
     "Fiducial": (fiducial, "F"),
 }
 

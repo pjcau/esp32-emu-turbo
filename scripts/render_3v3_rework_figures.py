@@ -330,7 +330,7 @@ def fig_plane_split(zones, vias, segs, fps, grps):
                  size=11, px=True, fill="#ffa198", anchor="end")
 
     u3 = next(f for f in fps if f["ref"] == "U3")
-    svg.text(u3["x"], u3["y"] + 9.0, "U3 AMS1117", size=11, px=True,
+    svg.text(u3["x"], u3["y"] + 9.0, "U3 SY8089", size=11, px=True,
              fill="#e6edf3", weight="bold")
     j4 = next(f for f in fps if f["ref"] == "J4")
     svg.text(j4["x"] - 1, j4["y"] - 14.0, "J4 FPC", size=11, px=True,
@@ -352,7 +352,7 @@ def fig_plane_split(zones, vias, segs, fps, grps):
 LANDMARKS = ["U1", "U2", "U3", "U5", "U6", "J1", "J3", "J4", "L1", "C2",
              "C4", "C3", "SW_PWR"]
 LABEL_BELOW = {"C2", "U6", "C4", "C3"}
-NICE = {"U1": "U1 ESP32-S3", "U2": "U2 IP5306", "U3": "U3 AMS1117",
+NICE = {"U1": "U1 ESP32-S3", "U2": "U2 IP5306", "U3": "U3 SY8089",
         "U5": "U5 PAM8403", "U6": "U6 microSD", "J1": "J1 USB-C",
         "J3": "J3 batt", "J4": "J4 FPC display", "L1": "L1",
         "C2": "C2", "C4": "C4", "C3": "C3", "SW_PWR": "SW_PWR"}

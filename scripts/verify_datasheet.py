@@ -74,15 +74,19 @@ DATASHEET_SPECS = {
         "tht_drill_mm": None,
     },
     "U3": {
-        "name": "AMS1117-3.3",
-        "datasheet": "U3_AMS1117-3.3_C6186.pdf",
-        "footprint": "SOT-223",
-        "signal_pins": 4,        # 3 pins + 1 tab
-        "pitch_mm": 2.3,         # pin 1-2 and 2-3 spacing
-        "body_w_mm": 6.5,        # SOT-223 body
-        "body_h_mm": 3.5,
-        "pad_span_x_mm": 4.6,    # pin 1 to pin 3
-        "pad_span_y_mm": 6.3,    # signal to tab span
+        # SY8089AAAC, SOT-23-5 (LCSC C78988). Land pattern is a verbatim
+        # copy of the EasyEDA/JLCPCB reference footprint:
+        #   pads 1.10 x 0.60, 3-pin column at x=+1.30 (0.95 pitch),
+        #   2-pin column at x=-1.30. Rows are 2.60mm apart.
+        "name": "SY8089AAAC",
+        "datasheet": "U3_SY8089AAAC_C78988.pdf",
+        "footprint": "SOT-23-5",
+        "signal_pins": 5,
+        "pitch_mm": 0.95,        # pin 1-2 / 2-3 spacing within a column
+        "body_w_mm": 3.0,        # SOT-23-5 body length (datasheet 2.80-3.10)
+        "body_h_mm": 1.7,        # body width (datasheet 1.50-1.70)
+        "pad_span_x_mm": 2.6,    # column centre to column centre
+        "pad_span_y_mm": 1.9,    # pin 1 to pin 3 (2 * 0.95)
         "npth_count": 0,
         "tht_drill_mm": None,
     },
@@ -311,8 +315,8 @@ class TestDatasheetCompliance(unittest.TestCase):
                          f"U2 ({spec['name']}): expected {spec['signal_pins']} "
                          f"signal pads, got {len(pads)}")
 
-    def test_pin_count_U3_AMS1117(self):
-        """U3 AMS1117: 4 pads (3 pins + tab)"""
+    def test_pin_count_U3_SY8089(self):
+        """U3 SY8089AAAC: 5 pads (SOT-23-5)"""
         spec = DATASHEET_SPECS["U3"]
         pads = _unique_pads(_signal_pads(self.pad_groups.get("U3", [])))
         self.assertEqual(len(pads), spec["signal_pins"],

@@ -139,19 +139,34 @@ _strict("U2", [
 ])
 
 # ============================================================
-# U3: AMS1117 (SOT-223)
+# U3: SY8089AAAC synchronous buck (SOT-23-5)
 # ============================================================
-# Pin 1=GND, Pin 2=VOUT(+3V3), Pin 3=VIN(+5V), Pin 4=tab(+3V3)
-# Pin 2 (VOUT) connected to +3V3 via tab (pin 4) and internal zone --
-# no direct trace endpoint reaches pin 2 pad center, so it stays net 0.
+# Datasheet AN_SY8089/A p.2: 1=EN, 2=GND, 3=LX, 4=IN, 5=FB.
+# Every pin has a direct trace endpoint on its pad centre, so all five
+# are strict (no zone-only connections here).
 _strict("U3", [
-    ("1", "GND"),
-    ("3", "+5V"),
-    ("4", "+3V3"),
+    ("1", "+5V"),       # EN tied to the input rail (do not float)
+    ("2", "GND"),
+    ("3", "BUCK_LX"),   # switch node -> L2
+    ("4", "+5V"),       # IN
+    ("5", "BUCK_FB"),   # feedback tap
 ])
-_zone("U3", [
-    ("2", "+3V3"),     # VOUT: zone-connected via tab and +3V3 zone
+
+# ============================================================
+# L2: buck output inductor (2.2uH)
+# ============================================================
+_strict("L2", [
+    ("1", "+3V3"),      # output side
+    ("2", "BUCK_LX"),   # switch side
 ])
+
+# ============================================================
+# U3 feedback divider + feed-forward cap
+# ============================================================
+# Vout = 0.6 * (1 + R25/R26) = 0.6 * (1 + 100k/22k) = 3.327 V
+_strict("R25", [("1", "+3V3"), ("2", "BUCK_FB")])
+_strict("R26", [("1", "BUCK_FB"), ("2", "GND")])
+_strict("C29", [("1", "+3V3"), ("2", "BUCK_FB")])
 
 # ============================================================
 # U5: PAM8403 (SOP-16, rotated 90 deg)
@@ -353,8 +368,11 @@ _zone("C28", [("1", "+3V3"), ("2", "GND")])
 # C1-C4, C17-C19: Decoupling capacitors
 # ============================================================
 # C1-C4, C17-C19 ARE in _init_pads() so they get net injection
+# C1 is now the SY8089 input cap (22uF MLCC), C30 its output cap.
+# C2 (22uF tantalum) has been deleted — see
+# website/docs/rework/incident-c2-reversed.md.
 _strict("C1", [("1", "+5V"), ("2", "GND")])
-_strict("C2", [("1", "+3V3"), ("2", "GND")])
+_strict("C30", [("1", "+3V3"), ("2", "GND")])
 _strict("C3", [("1", "+3V3"), ("2", "GND")])
 _strict("C4", [("1", "+3V3"), ("2", "GND")])
 _strict("C26", [("1", "+3V3"), ("2", "GND")])
@@ -558,12 +576,24 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("U2", "6", "BAT+")
         self._check_strict("U2", "7", "LX")
 
-    def test_ams1117_polarity(self):
-        """U3 (AMS1117): GND/VIN/VOUT/tab correct."""
-        self._check_strict("U3", "1", "GND")
-        self._check_zone_ok("U3", "2", "+3V3")  # VOUT via tab/zone, not direct trace
-        self._check_strict("U3", "3", "+5V")
-        self._check_strict("U3", "4", "+3V3")
+    def test_buck_polarity(self):
+        """U3 (SY8089AAAC): EN/GND/LX/IN/FB on the correct pins."""
+        self._check_strict("U3", "1", "+5V")
+        self._check_strict("U3", "2", "GND")
+        self._check_strict("U3", "3", "BUCK_LX")
+        self._check_strict("U3", "4", "+5V")
+        self._check_strict("U3", "5", "BUCK_FB")
+
+    def test_buck_output_stage(self):
+        """L2 / R25 / R26 / C29: buck output and feedback divider."""
+        self._check_strict("L2", "1", "+3V3")
+        self._check_strict("L2", "2", "BUCK_LX")
+        self._check_strict("R25", "1", "+3V3")
+        self._check_strict("R25", "2", "BUCK_FB")
+        self._check_strict("R26", "1", "BUCK_FB")
+        self._check_strict("R26", "2", "GND")
+        self._check_strict("C29", "1", "+3V3")
+        self._check_strict("C29", "2", "BUCK_FB")
 
     def test_pam8403_power(self):
         """U5 (PAM8403): VDD/PVDD/GND on correct pins."""
@@ -665,8 +695,8 @@ class PolarityVerificationTest(unittest.TestCase):
         """C1-C4, C17-C19: correct power/GND polarity."""
         self._check_strict("C1", "1", "+5V")
         self._check_strict("C1", "2", "GND")
-        self._check_strict("C2", "1", "+3V3")
-        self._check_strict("C2", "2", "GND")
+        self._check_strict("C30", "1", "+3V3")
+        self._check_strict("C30", "2", "GND")
         self._check_strict("C3", "1", "+3V3")
         self._check_strict("C3", "2", "GND")
         self._check_strict("C4", "1", "+3V3")
