@@ -162,6 +162,9 @@
   .hl-seg { fill: none; stroke: #fff; stroke-linecap: round; opacity: .95; }
   .hl-pad { fill: none; stroke: #fff; stroke-width: .18; }
   .hl-via { fill: none; stroke: #fff; stroke-width: .12; }
+  .hl-via-barrel { stroke: #fff; stroke-width: .22; opacity: .9; }
+  .dang { stroke: #f85149; stroke-width: .22; fill: none; }
+  #sep { width: 92px; accent-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -182,7 +185,17 @@
     <button class="tgl layer on" data-layer="In2.Cu">In2</button>
     <button class="tgl layer on" data-layer="B.Cu">B.Cu</button>
   </div>
+  <div class="grp">
+    <label class="tag">Vista</label>
+    <button class="tgl mode on" data-mode="2d">2D</button>
+    <button class="tgl mode" data-mode="3d">3D stack</button>
+  </div>
+  <div class="grp" id="sepgrp" style="display:none">
+    <label class="tag">Distanza</label>
+    <input type="range" id="sep" min="3" max="30" step="1" value="12">
+  </div>
   <button class="tgl" id="flip">Vista da retro</button>
+  <button class="tgl on" id="dang">Punti morti</button>
   <div class="spacer"></div>
   <div class="hint" id="stat">…</div>
 </header>
@@ -198,9 +211,12 @@
     </div>
     <div id="legend">
       <div><i style="background:var(--f-cu)"></i>F.Cu</div>
-      <div><i style="background:var(--in1)"></i>In1.Cu — GND plane</div>
-      <div><i style="background:var(--in2)"></i>In2.Cu — +3V3 / +5V</div>
+      <div><i style="background:var(--in1)"></i>In1.Cu — piano GND (0 piste)</div>
+      <div><i style="background:var(--in2)"></i>In2.Cu — piano +3V3/+5V (0 piste)</div>
       <div><i style="background:var(--b-cu)"></i>B.Cu</div>
+      <div><i style="background:#f85149"></i>punto morto</div>
+      <div style="color:var(--faint);margin-top:4px">3D: trascina = ruota ·
+        shift+trascina = sposta</div>
     </div>
   </div>
   <aside id="side"></aside>
@@ -226,7 +242,8 @@ let DATA = null;
 let netById = new Map(), compByRef = new Map(), padOwner = new Map();
 let view = { x: 0, y: 0, w: 160, h: 75 };
 let state = { side: 'all', layers: new Set(['F.Cu', 'In1.Cu', 'In2.Cu', 'B.Cu']),
-              flip: false, selNet: null, selRef: null };
+              flip: false, selNet: null, selRef: null,
+              mode: '2d', az: -22, el: 34, sep: 12, dangling: true };
 
 const el = (n, a = {}) => { const e = document.createElementNS(NS, n);
   for (const k in a) e.setAttribute(k, a[k]); return e; };
@@ -262,13 +279,59 @@ function boot() {
   showHome();
 }
 
+// ── projection ────────────────────────────────────────────────
+// One code path serves both views. 2D is simply the 3D camera looking
+// straight down (elevation 90°, azimuth 0), where z drops out of the
+// equation — so there is no separate "2D renderer" to keep in sync.
+//
+//   rotate about Z by az, then tilt the camera by el:
+//     sx = X'
+//     sy = Y'·sin(el) − z·cos(el)
+//
+// z is the layer depth. The real stackup is 1.6 mm across 4 layers,
+// which at board scale is invisible, so 3D mode explodes it — the point
+// is to read which layer a track lives on and where a via crosses, not
+// to be dimensionally honest about the substrate.
+const LAYER_ORDER = ['B.Cu', 'In2.Cu', 'In1.Cu', 'F.Cu'];  // painted back to front
+const LAYER_DEPTH = { 'F.Cu': 0, 'In1.Cu': 1, 'In2.Cu': 2, 'B.Cu': 3 };
+
+function layerZ(layer) {
+  return state.mode === '3d' ? -LAYER_DEPTH[layer] * state.sep : 0;
+}
+function project(x, y, z) {
+  const c = center();
+  const dx = x - c.x, dy = y - c.y;
+  if (state.mode !== '3d') return [x, y];
+  const a = state.az * Math.PI / 180, e = state.el * Math.PI / 180;
+  const X = dx * Math.cos(a) - dy * Math.sin(a);
+  const Y = dx * Math.sin(a) + dy * Math.cos(a);
+  return [c.x + X, c.y + Y * Math.sin(e) - z * Math.cos(e)];
+}
+function center() {
+  const b = rawBox();
+  return { x: (b.x1 + b.x2) / 2, y: (b.y1 + b.y2) / 2 };
+}
+
 // ── viewport ──────────────────────────────────────────────────
-function bbox() {
+function rawBox() {
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
   const add = (x, y) => { if (x < x1) x1 = x; if (x > x2) x2 = x;
                           if (y < y1) y1 = y; if (y > y2) y2 = y; };
   DATA.outline.forEach(e => { add(e.x1, e.y1); add(e.x2, e.y2); });
   if (!isFinite(x1)) DATA.components.forEach(c => c.pads.forEach(p => add(p.x, p.y)));
+  return { x1, y1, x2, y2 };
+}
+function bbox() {
+  // Project the eight corners of the layer stack, not just the board
+  // rectangle — in 3D the tilted lower layers stick out past both.
+  const b = rawBox();
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  [b.x1, b.x2].forEach(x => [b.y1, b.y2].forEach(y =>
+    LAYER_ORDER.forEach(l => {
+      const [sx, sy] = project(x, y, layerZ(l));
+      if (sx < x1) x1 = sx; if (sx > x2) x2 = sx;
+      if (sy < y1) y1 = sy; if (sy > y2) y2 = sy;
+    })));
   return { x1, y1, x2, y2 };
 }
 function fit() {
@@ -283,12 +346,37 @@ function applyView() {
 }
 
 // ── render ────────────────────────────────────────────────────
+function pline(x1, y1, x2, y2, z, attrs) {
+  const [ax, ay] = project(x1, y1, z), [bx, by] = project(x2, y2, z);
+  return el('line', Object.assign({ x1: ax, y1: ay, x2: bx, y2: by }, attrs));
+}
+function ppoly(rings, z, attrs) {
+  const d = rings.map(r => 'M ' + r.map(([x, y]) => {
+    const [sx, sy] = project(x, y, z); return `${sx.toFixed(3)} ${sy.toFixed(3)}`;
+  }).join(' L ') + ' Z').join(' ');
+  return el('path', Object.assign({ d, 'fill-rule': 'evenodd' }, attrs));
+}
+function prect(cx, cy, w, h, z, attrs) {
+  // Pads are axis-aligned in board space; under the projection they
+  // become parallelograms, so emit the four projected corners.
+  const r = [[cx - w / 2, cy - h / 2], [cx + w / 2, cy - h / 2],
+             [cx + w / 2, cy + h / 2], [cx - w / 2, cy + h / 2]];
+  return ppoly([r], z, attrs);
+}
+function pcircle(cx, cy, r, z, attrs) {
+  const [sx, sy] = project(cx, cy, z);
+  const ry = state.mode === '3d'
+    ? r * Math.sin(state.el * Math.PI / 180) : r;
+  return el('ellipse', Object.assign({ cx: sx, cy: sy, rx: r, ry }, attrs));
+}
+
 function render() {
+  hideTip();
   while (svg.firstChild) svg.removeChild(svg.firstChild);
 
   const root = el('g');
-  if (state.flip) {
-    const b = bbox();
+  if (state.flip && state.mode !== '3d') {
+    const b = rawBox();
     root.setAttribute('transform', `translate(${b.x1 + b.x2} 0) scale(-1 1)`);
   }
   svg.appendChild(root);
@@ -299,106 +387,168 @@ function render() {
   root.appendChild(gHi);
   const base = state.selNet !== null ? gDim : root;
 
-  // board outline
-  const gO = el('g');
-  DATA.outline.forEach(e => {
-    if (e.type === 'line') {
-      gO.appendChild(el('line', { class: 'outline',
-        x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2 }));
-    } else {
-      gO.appendChild(el('path', { class: 'outline',
-        d: arcPath(e.x1, e.y1, e.xm, e.ym, e.x2, e.y2) }));
-    }
-  });
-  base.appendChild(gO);
+  // Vias first in 3D: they are the vertical structure the layers hang on,
+  // and drawing them under everything keeps the pads readable.
+  if (state.mode === '3d') {
+    const gVia = el('g', { opacity: .45 });
+    DATA.nets.forEach(n => n.vias.forEach(v => {
+      const [x0, y0] = project(v.x, v.y, 0);
+      const [x1, y1] = project(v.x, v.y, layerZ('B.Cu'));
+      gVia.appendChild(el('line', { x1: x0, y1: y0, x2: x1, y2: y1,
+        stroke: '#6e7681', 'stroke-width': .12 }));
+    }));
+    base.appendChild(gVia);
+  }
 
-  // tracks, back-most layer first so F.Cu reads on top
-  ['B.Cu', 'In2.Cu', 'In1.Cu', 'F.Cu'].forEach(layer => {
+  LAYER_ORDER.forEach(layer => {
     if (!state.layers.has(layer)) return;
-    const g = el('g', { stroke: LAYER_COLOR[layer], opacity: .85 });
+    const z = layerZ(layer);
+    const col = LAYER_COLOR[layer];
+    const g = el('g');
+
+    // board outline repeated per plane — this is what makes the stack read
+    if (state.mode === '3d') {
+      DATA.outline.forEach(e => {
+        if (e.type === 'line') {
+          g.appendChild(pline(e.x1, e.y1, e.x2, e.y2, z,
+            { class: 'outline', opacity: .5 }));
+        } else {
+          g.appendChild(pline(e.x1, e.y1, e.x2, e.y2, z,
+            { class: 'outline', opacity: .5 }));
+        }
+      });
+    }
+
+    // poured copper (In1/In2 are planes only — no tracks at all)
+    DATA.zoneFills.filter(f => f.layer === layer).forEach(f => {
+      g.appendChild(ppoly([f.outer, ...f.holes], z, {
+        fill: col, opacity: .16, stroke: col,
+        'stroke-width': .06, 'stroke-opacity': .5 }));
+    });
+
+    // tracks
     DATA.nets.forEach(n => n.segments.forEach(s => {
       if (s.layer !== layer) return;
-      g.appendChild(el('line', { class: 'seg', x1: s.x1, y1: s.y1,
-        x2: s.x2, y2: s.y2, 'stroke-width': s.width }));
+      g.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, {
+        class: 'seg', stroke: col, opacity: .85, 'stroke-width': s.width }));
     }));
+
+    // pads on this layer
+    DATA.components.forEach(c => {
+      if (state.side !== 'all' && c.side !== state.side) return;
+      c.pads.forEach(p => {
+        if (p.layer !== layer) return;
+        g.appendChild(prect(p.x, p.y, p.w, p.h, z, { class: 'pad', fill: col }));
+        if (p.drill > 0) g.appendChild(pcircle(p.x, p.y, p.drill / 2, z,
+          { class: 'viahole' }));
+      });
+    });
+
+    // via annulus on this plane
+    DATA.nets.forEach(n => n.vias.forEach(v => {
+      g.appendChild(pcircle(v.x, v.y, v.size / 2, z, { class: 'via' }));
+      g.appendChild(pcircle(v.x, v.y, v.drill / 2, z, { class: 'viahole' }));
+    }));
+
     base.appendChild(g);
   });
 
-  // vias
-  const gV = el('g');
-  DATA.nets.forEach(n => n.vias.forEach(v => {
-    gV.appendChild(el('circle', { class: 'via', cx: v.x, cy: v.y, r: v.size / 2 }));
-    gV.appendChild(el('circle', { class: 'viahole', cx: v.x, cy: v.y, r: v.drill / 2 }));
-  }));
-  base.appendChild(gV);
+  // 2D-only chrome: single outline, component bodies, refs, click targets
+  if (state.mode !== '3d') {
+    const gO = el('g');
+    DATA.outline.forEach(e => {
+      if (e.type === 'line') {
+        gO.appendChild(el('line', { class: 'outline',
+          x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2 }));
+      } else {
+        gO.appendChild(el('path', { class: 'outline',
+          d: arcPath(e.x1, e.y1, e.xm, e.ym, e.x2, e.y2) }));
+      }
+    });
+    base.appendChild(gO);
+  }
 
-  // components
   const gC = el('g');
   DATA.components.forEach(c => {
     if (state.side !== 'all' && c.side !== state.side) return;
     const bb = padBox(c);
+    if (!bb) return;
+    const z = layerZ(c.side === 'B' ? 'B.Cu' : 'F.Cu');
     const g = el('g');
 
-    if (bb) {
-      g.appendChild(el('rect', {
-        class: 'body' + (state.selRef === c.ref ? ' sel' : ''),
-        x: bb.x1 - .2, y: bb.y1 - .2,
-        width: (bb.x2 - bb.x1) + .4, height: (bb.y2 - bb.y1) + .4, rx: .2 }));
-    }
-    c.pads.forEach(p => {
-      if (!state.layers.has(p.layer) && p.type === 'smd') return;
-      const col = LAYER_COLOR[p.layer] || '#8b949e';
-      const r = el('rect', { class: 'pad', fill: col,
-        x: p.x - p.w / 2, y: p.y - p.h / 2, width: p.w, height: p.h,
-        rx: p.shape === 'circle' || p.shape === 'oval' ? Math.min(p.w, p.h) / 2 : .08 });
-      g.appendChild(r);
-      if (p.drill > 0) {
-        g.appendChild(el('circle', { class: 'viahole',
-          cx: p.x, cy: p.y, r: p.drill / 2 }));
-      }
-    });
+    g.appendChild(ppoly([[[bb.x1 - .2, bb.y1 - .2], [bb.x2 + .2, bb.y1 - .2],
+                          [bb.x2 + .2, bb.y2 + .2], [bb.x1 - .2, bb.y2 + .2]]],
+      z, { class: 'body' + (state.selRef === c.ref ? ' sel' : '') }));
 
-    if (bb && (bb.x2 - bb.x1) > 2.2) {
-      const t = el('text', { class: 'reftxt', x: (bb.x1 + bb.x2) / 2,
-        y: bb.y1 - .5 });
+    if ((bb.x2 - bb.x1) > 2.2) {
+      const [tx, ty] = project((bb.x1 + bb.x2) / 2, bb.y1 - .5, z);
+      const t = el('text', { class: 'reftxt', x: tx, y: ty });
       t.textContent = c.ref;
-      if (state.flip) t.setAttribute('transform',
-        `translate(${(bb.x1 + bb.x2)} 0) scale(-1 1)`);
+      if (state.flip && state.mode !== '3d')
+        t.setAttribute('transform', `translate(${(bb.x1 + bb.x2)} 0) scale(-1 1)`);
       g.appendChild(t);
     }
 
-    if (bb) {
-      const hit = el('rect', { class: 'hit', x: bb.x1 - .4, y: bb.y1 - .4,
-        width: (bb.x2 - bb.x1) + .8, height: (bb.y2 - bb.y1) + .8 });
-      hit.addEventListener('click', ev => { ev.stopPropagation(); selectRef(c.ref); });
-      hit.addEventListener('mousemove', ev => showTip(ev,
-        `${c.ref}${c.value ? ' · ' + c.value : ''} · ${c.side === 'F' ? 'fronte' : 'retro'}`));
-      hit.addEventListener('mouseleave', hideTip);
-      g.appendChild(hit);
-    }
+    const hit = ppoly([[[bb.x1 - .4, bb.y1 - .4], [bb.x2 + .4, bb.y1 - .4],
+                        [bb.x2 + .4, bb.y2 + .4], [bb.x1 - .4, bb.y2 + .4]]],
+      z, { class: 'hit' });
+    hit.addEventListener('click', ev => { ev.stopPropagation(); selectRef(c.ref); });
+    hit.addEventListener('mousemove', ev => showTip(ev,
+      `${c.ref}${c.value ? ' · ' + c.value : ''} · ${c.side === 'F' ? 'fronte' : 'retro'}`));
+    hit.addEventListener('mouseleave', hideTip);
+    g.appendChild(hit);
     gC.appendChild(g);
   });
   base.appendChild(gC);
 
-  // highlighted net on top of the dimmed board
+  // dangling copper — always on top, never dimmed: it is a defect marker
+  if (state.dangling && DATA.danglingEnds) {
+    const gD = el('g');
+    DATA.danglingEnds.forEach(d => {
+      const z = layerZ(d.layer);
+      const [sx, sy] = project(d.x, d.y, z);
+      gD.appendChild(el('circle', { class: 'dang', cx: sx, cy: sy, r: .9 }));
+      gD.appendChild(el('line', { class: 'dang', x1: sx - 1.4, y1: sy - 1.4,
+        x2: sx + 1.4, y2: sy + 1.4 }));
+      gD.appendChild(el('line', { class: 'dang', x1: sx + 1.4, y1: sy - 1.4,
+        x2: sx - 1.4, y2: sy + 1.4 }));
+    });
+    root.appendChild(gD);
+  }
+
+  // highlighted net, drawn on top of the dimmed board
   if (state.selNet !== null) {
     const n = netById.get(state.selNet);
     if (n) {
-      n.segments.forEach(s => gHi.appendChild(el('line', {
-        class: 'hl-seg', x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2,
-        stroke: LAYER_COLOR[s.layer] || '#fff',
-        'stroke-width': Math.max(s.width, .25) })));
-      n.segments.forEach(s => gHi.appendChild(el('line', {
-        class: 'hl-seg', x1: s.x1, y1: s.y1, x2: s.x2, y2: s.y2,
-        stroke: '#fff', opacity: .35,
-        'stroke-width': Math.max(s.width, .25) + .18 })));
-      n.vias.forEach(v => gHi.appendChild(el('circle', {
-        class: 'hl-via', cx: v.x, cy: v.y, r: v.size / 2 + .1 })));
+      n.segments.forEach(s => {
+        const z = layerZ(s.layer);
+        gHi.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, { class: 'hl-seg',
+          stroke: '#fff', opacity: .35,
+          'stroke-width': Math.max(s.width, .25) + .18 }));
+        gHi.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, { class: 'hl-seg',
+          stroke: LAYER_COLOR[s.layer] || '#fff',
+          'stroke-width': Math.max(s.width, .25) }));
+      });
+      // In 3D a via is the interesting part: it is where the net changes
+      // layer, so draw the whole barrel rather than a ring per plane.
+      n.vias.forEach(v => {
+        if (state.mode === '3d') {
+          const [x0, y0] = project(v.x, v.y, 0);
+          const [x1, y1] = project(v.x, v.y, layerZ('B.Cu'));
+          gHi.appendChild(el('line', { class: 'hl-via-barrel',
+            x1: x0, y1: y0, x2: x1, y2: y1 }));
+        }
+        LAYER_ORDER.forEach(l => {
+          if (state.mode !== '3d' && l !== 'F.Cu') return;
+          gHi.appendChild(pcircle(v.x, v.y, v.size / 2 + .1, layerZ(l),
+            { class: 'hl-via' }));
+        });
+      });
       n.pads.forEach(p => {
         const c = compByRef.get(p.ref);
         const pd = c && c.pads.find(q => String(q.num) === String(p.num));
         const r = pd ? Math.max(pd.w, pd.h) / 2 + .18 : .5;
-        gHi.appendChild(el('circle', { class: 'hl-pad', cx: p.x, cy: p.y, r }));
+        gHi.appendChild(pcircle(p.x, p.y, r, layerZ(p.layer), { class: 'hl-pad' }));
       });
     }
   }
@@ -428,7 +578,6 @@ function padBox(c) {
   });
   return { x1, y1, x2, y2 };
 }
-
 // ── inspector ─────────────────────────────────────────────────
 function showHome() {
   const front = DATA.components.filter(c => c.side === 'F');
@@ -446,6 +595,39 @@ function showHome() {
     <div class="kv"><span>Via</span><span>${(DATA.stats || {}).vias || 0}</span></div>
     <h3>Fronte — F.Cu (${front.length})</h3><div>${list(front)}</div>
     <h3>Retro — B.Cu (${back.length})</h3><div>${list(back)}</div>
+
+    <h3>Layer</h3>
+    <table><thead><tr><th>Layer</th><th>Piste</th><th>Piano</th></tr></thead><tbody>
+    ${DATA.copperLayers.map(l => {
+      const segs = DATA.nets.reduce((a, n) =>
+        a + n.segments.filter(s => s.layer === l).length, 0);
+      const z = DATA.zoneFills.filter(f => f.layer === l);
+      return `<tr>
+        <td><span class="chip ${LAYER_CHIP[l] || ''}">${esc(l)}</span></td>
+        <td class="mono">${segs || '—'}</td>
+        <td class="goes">${z.length
+          ? z.map(f => `${esc(f.net)} ${f.area} mm²`).join('<br>')
+          : '—'}</td></tr>`;
+    }).join('')}
+    </tbody></table>
+    <div class="goes" style="margin-top:8px">
+      In1.Cu e In2.Cu non hanno <b>nessuna pista</b>: sono piani pieni.
+      Tutto il routing sta su F.Cu e B.Cu, e le via sono l'unico modo in
+      cui una net raggiunge i piani interni. Guardalo in <b>3D stack</b>.
+    </div>
+
+    ${(DATA.danglingEnds || []).length ? `
+    <h3>Punti morti (${DATA.danglingEnds.length})</h3>
+    <div class="warnbox">Rame che finisce in aria: l'estremo non tocca
+      nessun pad, via, giunzione o piano. Nessun altro controllo li vede —
+      <code>verify_net_connectivity</code> chiede se la net è UN pezzo solo,
+      e un moncone attaccato da un lato lo è.</div>
+    <table><thead><tr><th>Net</th><th>Layer</th><th>Posizione</th></tr></thead><tbody>
+    ${DATA.danglingEnds.map(d => `<tr class="clk clknet" data-net="${d.netId}">
+      <td class="net">${esc(d.net)}</td>
+      <td><span class="chip ${LAYER_CHIP[d.layer] || ''}">${esc(d.layer.replace('.Cu', ''))}</span></td>
+      <td class="mono">${d.x.toFixed(2)}, ${d.y.toFixed(2)}</td></tr>`).join('')}
+    </tbody></table>` : ''}
     <h3>Net per lunghezza</h3>
     <table><thead><tr><th>Net</th><th>Layer</th><th>mm</th><th>Pad</th></tr></thead><tbody>
     ${DATA.nets.slice().sort((a, b) => b.length - a.length).slice(0, 18).map(n => `
@@ -621,6 +803,24 @@ document.querySelectorAll('.tgl.layer').forEach(b =>
 document.getElementById('flip').addEventListener('click', e => {
   state.flip = !state.flip; e.target.classList.toggle('on', state.flip); render();
 });
+document.getElementById('dang').addEventListener('click', e => {
+  state.dangling = !state.dangling;
+  e.target.classList.toggle('on', state.dangling); render();
+});
+document.querySelectorAll('.tgl.mode').forEach(b =>
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.tgl.mode').forEach(o => o.classList.remove('on'));
+    b.classList.add('on');
+    state.mode = b.dataset.mode;
+    document.getElementById('sepgrp').style.display =
+      state.mode === '3d' ? 'flex' : 'none';
+    document.getElementById('flip').style.display =
+      state.mode === '3d' ? 'none' : '';
+    fit(); render();
+  }));
+document.getElementById('sep').addEventListener('input', e => {
+  state.sep = +e.target.value; fit(); render();
+});
 document.getElementById('zin').addEventListener('click', () => zoom(1 / 1.3));
 document.getElementById('zout').addEventListener('click', () => zoom(1.3));
 document.getElementById('zfit').addEventListener('click', fit);
@@ -643,19 +843,36 @@ svg.addEventListener('wheel', ev => {
 
 let drag = null;
 svg.addEventListener('mousedown', ev => {
-  drag = { x: ev.clientX, y: ev.clientY, vx: view.x, vy: view.y };
+  // In 3D the natural drag is orbiting the stack; hold Shift to pan.
+  const rotating = state.mode === '3d' && !ev.shiftKey;
+  drag = { x: ev.clientX, y: ev.clientY, vx: view.x, vy: view.y,
+           az: state.az, el: state.el, rotating };
   svg.classList.add('drag');
 });
 window.addEventListener('mousemove', ev => {
   if (!drag) return;
+  if (drag.rotating) {
+    state.az = drag.az + (ev.clientX - drag.x) * 0.35;
+    // Clamp elevation: at 0° the planes collapse into lines, at 90° the
+    // stack collapses into the 2D view — neither is a useful 3D read.
+    state.el = Math.min(85, Math.max(8, drag.el - (ev.clientY - drag.y) * 0.3));
+    render();
+    return;
+  }
   const r = svg.getBoundingClientRect();
   const sx = view.w / r.width, sy = view.h / r.height;
-  view.x = drag.vx - (ev.clientX - drag.x) * sx * (state.flip ? -1 : 1);
+  view.x = drag.vx - (ev.clientX - drag.x) * sx
+           * (state.flip && state.mode !== '3d' ? -1 : 1);
   view.y = drag.vy - (ev.clientY - drag.y) * sy;
   applyView();
 });
+let dragged = false;
+window.addEventListener('mousemove', () => { if (drag) dragged = true; });
 window.addEventListener('mouseup', () => { drag = null; svg.classList.remove('drag'); });
 svg.addEventListener('click', () => {
+  // A drag ends in a click event; without this, orbiting the 3D stack
+  // would clear the selection every time you let go.
+  if (dragged) { dragged = false; return; }
   if (state.selNet !== null || state.selRef !== null) {
     state.selNet = null; state.selRef = null; render(); showHome();
   }

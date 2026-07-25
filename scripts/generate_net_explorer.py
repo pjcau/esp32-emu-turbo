@@ -36,6 +36,80 @@ OUT = os.path.join(PROJECT_DIR, "website/static/net-explorer-data.json")
 
 COPPER_LAYERS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
 
+# Douglas-Peucker tolerance for the zone fills. 0.02 mm is well under the
+# 0.09 mm minimum clearance, so a simplified outline can never make two
+# nets look closer than they are — this is for drawing, and every
+# clearance judgement still belongs to verify_copper_clearance.py.
+ZONE_SIMPLIFY_MM = 0.02
+
+
+def dangling_ends(cache, net_name):
+    """Track endpoints that reach nothing — copper that stops in the air.
+
+    No existing gate sees these. `verify_net_connectivity` asks whether a
+    net is ONE connected component; a stub hanging off a routed net is
+    still part of that one component, so it passes. KiCad DRC reports
+    unconnected *pads*, and these stubs leave no pad unconnected. The
+    result is copper that goes nowhere and nothing complains.
+
+    An endpoint is fine when it is a junction with another segment, lands
+    on a via or a pad of its own net, or ends inside its own zone fill on
+    the same layer. Anything else is a dead end.
+    """
+    from shapely.geometry import Point
+
+    key = lambda x, y: (round(x, 3), round(y, 3))  # noqa: E731
+
+    degree = {}
+    for s in cache["segments"]:
+        for x, y in ((s["x1"], s["y1"]), (s["x2"], s["y2"])):
+            k = (s["net"], s["layer"], key(x, y))
+            degree[k] = degree.get(k, 0) + 1
+
+    vias = {}
+    for v in cache["vias"]:
+        vias.setdefault(v["net"], set()).add(key(v["x"], v["y"]))
+
+    pads = {}
+    for p in cache["pads"]:
+        if p["net"]:
+            pads.setdefault(p["net"], []).append(
+                (p["x"], p["y"], p["w"], p["h"]))
+
+    zones = {}
+    for z in zone_geometry():
+        zones.setdefault((z["net"], z["layer"]), []).extend(z["polys"])
+
+    out = []
+    for (net, layer, (x, y)), deg in degree.items():
+        if deg > 1:
+            continue
+        if key(x, y) in vias.get(net, ()):
+            continue
+        # 0.06 mm slack: endpoints are placed at pad centres or edges, and
+        # the cache rounds. Anything further is not touching the pad.
+        if any(abs(x - px) <= pw / 2 + 0.06 and abs(y - py) <= ph / 2 + 0.06
+               for px, py, pw, ph in pads.get(net, ())):
+            continue
+        polys = zones.get((net_name.get(net, ""), layer), ())
+        if any(poly.buffer(0).contains(Point(x, y)) for poly in polys):
+            continue
+        out.append({"net": net_name.get(net, "?"), "netId": net,
+                    "layer": layer, "x": x, "y": y})
+    return sorted(out, key=lambda d: (d["net"], d["x"], d["y"]))
+
+
+def zone_geometry():
+    """Real poured copper, island by island, holes included.
+
+    pcb_cache only counts filled_polygon blocks; pcb_copper_graph parses
+    them into Shapely polygons. Reuse it rather than writing a third
+    zone parser.
+    """
+    import pcb_copper_graph
+
+    return pcb_copper_graph.parse_copper(PCB).zones
+
 
 # ── footprint metadata + board outline (parsed from the .kicad_pcb) ───
 
@@ -183,6 +257,26 @@ def main():
     for z in cache["zones"]:
         zone_nets.setdefault(z["net"], []).append(z["layer"])
 
+    # Poured copper. In1.Cu and In2.Cu carry NO routed tracks at all — they
+    # are solid planes — so without the fill geometry those two layer
+    # toggles show an empty board and read as broken. The fill also has to
+    # be the REAL poured shape, holes included: the clearance holes around
+    # every via and pad are what makes a plane legible as a plane.
+    zone_fills = []
+    for z in zone_geometry():
+        for poly in z["polys"]:
+            simple = poly.simplify(ZONE_SIMPLIFY_MM, preserve_topology=True)
+            zone_fills.append({
+                "net": z["net"],
+                "layer": z["layer"],
+                "priority": z["priority"],
+                "outer": [[round(x, 3), round(y, 3)]
+                          for x, y in simple.exterior.coords],
+                "holes": [[[round(x, 3), round(y, 3)] for x, y in r.coords]
+                          for r in simple.interiors],
+                "area": round(poly.area, 1),
+            })
+
     nets = []
     for nid, name in sorted(net_name.items()):
         if nid == 0:
@@ -214,9 +308,11 @@ def main():
         "stats": cache.get("stats", {}),
         "copperLayers": COPPER_LAYERS,
         "outline": edges,
+        "zoneFills": zone_fills,
         "components": components,
         "nets": nets,
         "unnettedPads": unnetted,
+        "danglingEnds": dangling_ends(cache, net_name),
     }
 
     payload = json.dumps(data, separators=(",", ":"))
@@ -240,13 +336,17 @@ def main():
         f.write(payload)
 
     unparsed = [c["ref"] for c in components if c["unparsed"]]
-    size_kb = os.path.getsize(OUT) / 1024
-    print(f"  Wrote {os.path.relpath(OUT, PROJECT_DIR)} ({size_kb:.0f} kB)")
+    print(f"  Wrote {rel} ({os.path.getsize(OUT) / 1024:.0f} kB)")
     print(f"    {len(components)} components "
           f"({sum(1 for c in components if c['side'] == 'F')} front / "
           f"{sum(1 for c in components if c['side'] == 'B')} back)")
     print(f"    {len(nets)} nets, {len(cache['segments'])} segments, "
           f"{len(cache['vias'])} vias, {len(edges)} outline primitives")
+    print(f"    {len(zone_fills)} zone fill islands "
+          f"({sum(len(z['holes']) for z in zone_fills)} clearance holes)")
+    if data["danglingEnds"]:
+        print(f"    WARN  {len(data['danglingEnds'])} dangling track ends "
+              f"(copper that reaches nothing) — see verify_dangling_copper.py")
     if unnetted:
         print(f"    {len(unnetted)} pads on no net (shown as unrouted)")
     if unparsed:
