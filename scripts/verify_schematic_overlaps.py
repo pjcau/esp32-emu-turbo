@@ -2,13 +2,15 @@
 """Schematic legibility gate — nothing printable may overlap anything else.
 
 Sister gate to verify_schematic_crossings.py. That one guarantees no WIRE
-crosses another; this one guarantees no LABEL, JUNCTION or TEXT lands on top
-of another item. Both exist for the same reason: a schematic that is
-electrically correct but unreadable cannot be reviewed, and an unreviewable
-schematic is where net-level bugs hide.
+CROSSES another; this one guarantees nothing is drawn ON TOP of anything
+else — labels, junctions, text, and wires laid over other wires. Both exist
+for the same reason: a schematic that is electrically correct but unreadable
+cannot be reviewed, and an unreviewable schematic is where net-level bugs
+hide.
 
 What is checked, item against item:
 
+  wire          collinear wires drawn on top of one another
   text          free-standing annotation
   label         local net label (sheet-scoped)
   global_label  global net label
@@ -139,6 +141,47 @@ def parse_items(text, sheet):
     return items
 
 
+def parse_wires(text):
+    """[(x1, y1, x2, y2)] for every wire segment on the sheet."""
+    out = []
+    for m in re.finditer(
+        r"\(wire\s*\(pts\s*\(xy ([\d.\-]+) ([\d.\-]+)\)\s*\(xy ([\d.\-]+) ([\d.\-]+)\)",
+        text,
+    ):
+        out.append(tuple(float(g) for g in m.groups()))
+    return out
+
+
+def collinear_overlap(a, b):
+    """Length of shared run between two COLLINEAR segments, else 0.
+
+    Two wires drawn on top of each other read as one line but are two nets'
+    worth of ink; KiCad also merges them silently. Only exactly-collinear
+    pairs count — a crossing is verify_schematic_crossings.py's job.
+    """
+    ax1, ay1, ax2, ay2 = a
+    bx1, by1, bx2, by2 = b
+    ux, uy = ax2 - ax1, ay2 - ay1
+    vx, vy = bx2 - bx1, by2 - by1
+    la, lb = math.hypot(ux, uy), math.hypot(vx, vy)
+    if la < EPS or lb < EPS:
+        return 0.0
+    # Parallel?
+    if abs(ux * vy - uy * vx) > 1e-6 * la * lb:
+        return 0.0
+    # Same infinite line? (b's start must lie on a)
+    wx, wy = bx1 - ax1, by1 - ay1
+    if abs(ux * wy - uy * wx) > 1e-6 * la:
+        return 0.0
+    # Project both onto a's direction and intersect the 1-D intervals.
+    ux, uy = ux / la, uy / la
+    ta1, ta2 = 0.0, la
+    tb1 = wx * ux + wy * uy
+    tb2 = (bx2 - ax1) * ux + (by2 - ay1) * uy
+    lo, hi = max(min(ta1, ta2), min(tb1, tb2)), min(max(ta1, ta2), max(tb1, tb2))
+    return max(0.0, hi - lo)
+
+
 def overlap(a, b):
     """Overlapping area of two boxes, 0 if they only touch."""
     ax1, ay1, ax2, ay2 = a
@@ -161,6 +204,17 @@ def check_sheet(path, list_all=False):
             a = overlap(b1, b2)
             if a > 0:
                 hits.append((a, k1, n1, k2, n2))
+    hits.sort(reverse=True, key=lambda h: h[0])
+
+    wires = parse_wires(text)
+    for i in range(len(wires)):
+        for j in range(i + 1, len(wires)):
+            run = collinear_overlap(wires[i], wires[j])
+            if run > EPS:
+                w1, w2 = wires[i], wires[j]
+                hits.append((run, "wire",
+                             f"({w1[0]},{w1[1]})->({w1[2]},{w1[3]})", "wire",
+                             f"({w2[0]},{w2[1]})->({w2[2]},{w2[3]})"))
     hits.sort(reverse=True, key=lambda h: h[0])
 
     status = "OK  " if not hits else "FAIL"

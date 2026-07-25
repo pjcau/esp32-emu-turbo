@@ -13,7 +13,7 @@ Complete electrical design for the ESP32 Emu Turbo, split into 6 detailed schema
 <div className="sheet-grid">
   <a href="#sheet-1--power-supply" className="sheet-card">
     <h4>1. Power Supply</h4>
-    <p>USB-C, IP5306, AMS1117, battery</p>
+    <p>USB-C, IP5306, SY8089A buck, battery</p>
   </a>
   <a href="#sheet-2--mcu-esp32-s3" className="sheet-card">
     <h4>2. MCU</h4>
@@ -66,7 +66,7 @@ make render-schematics    # Export SVG + PDF
                           ┌───────┴───────┐
                           │               │
                     ┌─────┴─────┐   ┌─────┴──────┐
-                    │ LiPo Batt │   │  AMS1117   │
+                    │ LiPo Batt │   │  SY8089A   │
                     │ 3.7V      │   │ 5V -> 3.3V │
                     │ 5000 mAh  │   └─────┬──────┘
                     │ (105080)  │         │
@@ -95,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 voltage regulator, Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
+USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC 2A step-down (buck) regulator, Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
 
 <div className="schematic-container">
 
@@ -108,14 +108,14 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | J1 | USB-C connector | — | 5V power input | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
-| J3 | JST PH 2-pin THT connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| J3 | JST PH 2-pin SMD connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
 | R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
 | R16 | Resistor | 100 kΩ | IP5306 KEY pin pull-down | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R17 | Resistor | 1 kΩ | LED1 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | R18 | Resistor | 1 kΩ | LED2 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
 | BT1 | Battery | LiPo 3.7V 5000mAh | 105080 cell | — |
-| U3 | LDO regulator | AMS1117-3.3 | 5V to 3.3V, 800mA max | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
+| U3 | Buck regulator | SY8089AAAC | 5V to 3.3V, 2A cont. / 3A peak | [PDF](/datasheets/U3_SY8089AAAC_C78988.pdf) |
 | U4 | USB ESD TVS | USBLC6-2SC6 SOT-23-6 (C7519) | USB D+/D− ESD protection | — |
 | R22, R23 | Resistor | 22 Ω 0402 (C25092) | USB D+/D− series resistors | — |
 | Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
@@ -149,7 +149,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
                           ┌─────────────┐
   USB-C ──VBUS────────────┤ pin 1 (VIN) │
   (5V)                    │             │
-                          │   IP5306    │──pin 8 (VOUT)──► +5V ──► AMS1117 ──► +3V3
+                          │   IP5306    │──pin 8 (VOUT)──► +5V ──► SY8089A ──► +3V3
                           │             │                          (U3)       (ESP32, LCD, SD)
   Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │
   (3.7V)   (J3)   (RPP)   │             │──pin 7 (LX)──── L1 ────► BAT+

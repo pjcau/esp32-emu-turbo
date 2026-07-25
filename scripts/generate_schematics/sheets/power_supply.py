@@ -250,11 +250,14 @@ class PowerSupplySheet(SchematicSheet):
         # Route VOUT up then right to avoid L1
         vout_turn_y = 70
         self.wire(vout_x, vout_y, vout_x, vout_turn_y)
-        self.wire(vout_x, vout_turn_y, 215, vout_turn_y)
 
         # COUT (C19, 22uF) on VOUT rail
         cout_x = 205
         cout_y = 78
+        # Rail drawn ONCE, up to the first tap. It used to run to x=215 and
+        # then be redrawn 205->227 and 215->225, so ~20mm of the rail was
+        # two or three wires of ink stacked on each other.
+        self.wire(vout_x, vout_turn_y, cout_x, vout_turn_y)
         self.sym(
             "C", "C19", "22uF",
             cout_x, cout_y, ["1", "2"],
@@ -296,8 +299,11 @@ class PowerSupplySheet(SchematicSheet):
         # +5V power symbol and global label
         self.v5(215, vout_turn_y - 5)
         self.wire(215, vout_turn_y - 5, 215, vout_turn_y)
-        self.glabel("+5V", 225, vout_turn_y, 0, "output")
-        self.wire(215, vout_turn_y, 225, vout_turn_y)
+        # Junction: this vertical lands mid-span on the cout_x->c27_x rail.
+        self.junction(215, vout_turn_y)
+        # Label sits on the rail's own right-hand end (c27_x), so no extra
+        # wire is needed — the 215->225 stub duplicated the rail underneath.
+        self.glabel("+5V", c27_x, vout_turn_y, 0, "output")
 
         # NOTE: PWR_FLAG on +5V was REMOVED because IP5306 VOUT (pin 8) is
         # already typed as `power_out` in the library symbol, so it
@@ -388,7 +394,11 @@ class PowerSupplySheet(SchematicSheet):
 
         # Q1 pin 3 (Drain) at (q1x, q1y - 3.81-ish) — connects to BAT+ (IP5306 side)
         # Wire BAT+ line from cbat_x to Q1 drain
-        self.wire(cbat_x, bat_y, q1x, bat_y)
+        # Starts at l1_x, not cbat_x: cbat_x (185) is left of l1_x (190), so
+        # this span used to re-draw 5mm of the bat_x->l1_x rail above it.
+        self.wire(l1_x, bat_y, q1x, bat_y)
+        # C18 taps the rail mid-span now, so it needs a dot.
+        self.junction(cbat_x, bat_y)
         self.wire(q1x, bat_y, q1x, q1y - 5)
         self.label("BAT+", q1x + 2, bat_y - 2)
 
@@ -492,8 +502,11 @@ class PowerSupplySheet(SchematicSheet):
         # BUCK_LX global label sits on a wire ENDPOINT (a floating label
         # would leave the net unnamed and break the schematic<->PCB net
         # cross-check).
-        self.wire(u3x + 8.89, in_y, u3x + 8.89, l2y + 3.81)
-        self.wire(u3x + 8.89, l2y + 3.81, 117, l2y + 3.81)
+        # SW exits RIGHT before dropping. Dropping first ran it straight down
+        # the shared right-hand pin column, over the FB pin and along FB's own
+        # vertical -- two different nets on one line.
+        self.wire(u3x + 8.89, in_y, 117, in_y)
+        self.wire(117, in_y, 117, l2y + 3.81)
         self.wire(117, l2y + 3.81, l2x, l2y + 3.81)
         self.glabel("BUCK_LX", 117, l2y + 3.81, 0, "passive")
 
@@ -538,6 +551,12 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(r25x, 225, r25x, r26y - 3.81)
         # FB pin -> tap node. Split at x=160 so the BUCK_FB global label
         # sits on a wire endpoint.
+        # FB drops on its OWN column (u3x+14), not u3x+8.89: the SW node
+        # already runs down x=u3x+8.89 from in_y to L2, so the two shared
+        # 2.54mm of the same vertical line. KiCad kept them as separate nets
+        # (it connects by shared endpoints and junctions, not bare overlap),
+        # but two different nets drawn on one line is exactly what a reader
+        # misreads as a connection. Guarded by verify_schematic_overlaps.py.
         self.wire(u3x + 8.89, en_y, u3x + 8.89, 225)
         self.wire(u3x + 8.89, 225, 160, 225)
         self.wire(160, 225, r25x, 225)

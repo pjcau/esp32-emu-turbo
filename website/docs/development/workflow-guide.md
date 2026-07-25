@@ -245,7 +245,7 @@ After release:
     |
     '-- Layer 2: Domain-by-domain prose review (8 domains)
         |
-        |-- Step 1: Power chain (USB-C -> IP5306 -> AMS1117 -> ESP32)
+        |-- Step 1: Power chain (USB-C -> IP5306 -> SY8089A -> ESP32)
         |-- Step 2: ESP32 boot (strapping pins, PSRAM mode)
         |-- Step 3: Display (ILI9488 8080 parallel, FPC)
         |-- Step 4: Audio (I2S PDM -> PAM8403 -> speaker)

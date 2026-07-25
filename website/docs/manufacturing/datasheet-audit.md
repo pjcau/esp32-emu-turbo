@@ -84,14 +84,14 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 | **Reality** | Pin 1 has net=0 in PCB (not connected). ESP32 module gets GND through pin 41 (exposed pad). Multiple GND pins on perimeter are redundant. Module works fine. |
 | **Action** | None required. Cosmetic schematic fix optional. |
 
-### AMS1117 (U3) — All 3 pin names swapped in symbol
+### SY8089AAAC (U3) — supersedes the AMS1117 LDO
 
 | Detail | Value |
 |--------|-------|
-| **Severity** | LOW — no functional impact |
-| **Problem** | Symbol: pin 1=VIN, 2=GND, 3=VOUT. Datasheet: pin 1=GND, 2=VOUT, 3=VIN. |
-| **Reality** | Routing code maps pins correctly: `am_gnd = _pad("U3", "1")`, `am_vout = _pad("U3", "2")`, `am_vin = _pad("U3", "3")`. PCB nets verified: pad 1=GND, pad 3=+5V, pad 4(tab)=+3V3. All correct. |
-| **Action** | None required. Routing compensates. Cosmetic schematic fix optional. |
+| **Severity** | None — historical note |
+| **Change** | U3 is now an SY8089AAAC 2A step-down (buck) in SOT-23-5 (C78988), replacing the AMS1117-3.3 LDO in SOT-223 (C6186). L2 (2.2uH) and C30 (22uF 1206) are its switching passives. |
+| **Previous finding** | The old AMS1117 symbol had all 3 pin names swapped against its datasheet; routing.py compensated, so the board was correct. That symbol, and the `am_gnd`/`am_vout`/`am_vin` pad lookups it refers to, no longer exist. |
+| **Action** | None. Retained so the earlier audit entry is not simply lost. |
 
 ---
 
@@ -112,7 +112,7 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 |--------|-------|
 | **Datasheet** | 3x 22uF = 66uF on VOUT |
 | **PCB** | 1x 22uF (C19) |
-| **Risk** | Moderate — output ripple ~200-300mV instead of ~100mV. Acceptable because AMS1117 LDO downstream provides additional regulation. |
+| **Risk** | Moderate — output ripple ~200-300mV instead of ~100mV. Acceptable because the SY8089A buck downstream provides additional regulation. |
 | **Action** | None for v2. Consider adding 1-2 extra 22uF caps in v3 if ripple is measured as problematic. |
 
 ### IP5306 (U2) — LED pins floating
@@ -164,9 +164,9 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 
 | Detail | Value |
 |--------|-------|
-| **Change** | THT version (C173752, S2B-PH-K-S) — connector body on B.Cu |
-| **PCB** | THT pads ø1.6mm, drill 0.85mm, pitch 2.0mm |
-| **Risk** | None — drill 0.85mm meets JLCPCB minimum (≥0.80mm). |
+| **Change** | SMD version (C295747) — connector body on B.Cu |
+| **PCB** | SMD pads, 2.0mm pitch (pads 1.0 x 2.5mm, plus two 1.5 x 3.4mm mounting pads) |
+| **Risk** | None — no drilled holes, so the old 0.85mm THT drill minimum no longer applies. |
 | **Action** | None. |
 
 ---

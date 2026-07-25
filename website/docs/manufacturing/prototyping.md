@@ -20,7 +20,7 @@ Step-by-step guide to assemble the ESP32 Emu Turbo prototype on a breadboard.
 
 ### Step 1: Power Rail
 
-Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V with the AMS1117.
+Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V. (The final PCB uses an SY8089AAAC buck; an AMS1117-3.3 module is fine for breadboarding.)
 
 ```
 [IP5306 Module]
@@ -36,8 +36,13 @@ Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V 
   VOUT ──> Breadboard 3.3V rail (through 22µF cap)
 ```
 
-:::caution Capacitors are mandatory
-The AMS1117 requires both input (10µF) and output (22µF) capacitors for stable operation. Tantalum capacitors are recommended. Without them, the regulator may oscillate.
+:::caution Capacitors are mandatory — and use MLCC, not tantalum
+The regulator needs both an input and an output capacitor or it may oscillate.
+Use **non-polarized MLCC** parts.
+
+Do **not** substitute a tantalum. The v1 board carried a 22µF tantalum (C2) on
+this rail; a reversed one destroyed prototype #1, and the part was deleted from
+the design. The shipping board uses C30, a 22µF 1206 MLCC.
 :::
 
 ### Step 2: ESP32-S3 DevKit

@@ -100,10 +100,10 @@ Static electrical analysis — verifies power budget, signal timing, component v
 
 | Rail | Typical | Maximum | Regulator | Headroom |
 |:---|---:|---:|:---|:---|
-| +3V3 | 250 mA | 335 mA | AMS1117 (800 mA) | 58% |
+| +3V3 | 250 mA | 335 mA | SY8089A buck (2 A) | 83% |
 | +5V | 283 mA | 387 mA | IP5306 (2.4 A) | 84% |
 
-**AMS1117 thermal:** P = (5.0 - 3.3) x 335mA = 0.57W, Tj = 91°C (below 125°C max)
+**SY8089A thermal:** a switching buck at ~90% efficiency loses P = 3.3V x 335mA x (1/0.9 - 1) = ~0.12W, against 0.57W for the AMS1117 LDO it replaced at the same load.
 
 **Battery life:** 11.8h typical, 8.6h heavy use (5000mAh LiPo)
 
@@ -112,7 +112,7 @@ LiPo 3.7V 5000mAh
   |
   +--[IP5306 boost]--> +5V (387mA max)
   |    |
-  |    +--[AMS1117 LDO]--> +3V3 (335mA max)
+  |    +--[SY8089A buck]--> +3V3 (335mA max)
   |    |    |-- ESP32-S3 (200mA)
   |    |    |-- Display (100mA)
   |    |    +-- SD card (30mA)
@@ -142,8 +142,8 @@ LiPo 3.7V 5000mAh
 | R4–R13, R15 | 10k | Button pull-ups | Logic HIGH = 3.3V > 2.475V (Vih) |
 | R16 | 100k | IP5306 KEY pull-down | Keeps KEY low when idle |
 | R17, R18 | 1k | LED current limiting | 1.3mA red, 1.1mA green |
-| C1 | 10uF | AMS1117 input | Datasheet requirement |
-| C2 | 22uF tantalum (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω @ 100kHz) | AMS1117 output | Datasheet: >= 22uF, ESR 0.3-22Ω |
+| C1 | 22uF 1206 (C12891) | SY8089A input | Datasheet requirement |
+| C30 | 22uF 1206 MLCC (C12891) | SY8089A output | C2, the 22uF tantalum, was REMOVED: reversed assembly destroyed prototype #1. The buck needs a low-ESR ceramic, not a tantalum. |
 | C3, C4 | 100nF | ESP32 decoupling | Standard practice |
 | C5–C16 | 100nF | Button debounce | RC = 1ms with 10k pull-ups |
 | C17, C18 | 10uF | IP5306 decoupling | Datasheet requirement |

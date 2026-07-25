@@ -77,7 +77,11 @@ class MCUSheet(SchematicSheet):
         self.wire(r_en_x, en_y, c_en_x, en_y)
         self.wire(c_en_x, en_y, c_en_x, c_en_y - 3.81)
         self.gnd(c_en_x, c_en_y + 8)
-        self.wire(c_en_x, c_en_y + 3.81, c_en_x, c_en_y + 8)
+        # No stub down to the GND symbol: the SW_RST wire below already runs
+        # the full column from c_en_y+3.81 past c_en_y+8, so this stub was a
+        # second wire drawn on top of it. The GND pin lands mid-span, hence
+        # the junction.
+        self.junction(c_en_x, c_en_y + 8)
         self.text("RC reset delay", c_en_x - 15, c_en_y + 3, 1.5)
 
         # --- RESET button (EN to GND, active-low) ---

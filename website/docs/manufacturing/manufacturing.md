@@ -56,7 +56,7 @@ The bottom side hosts the main circuitry:
 | :------------- | :-------------------------- | :------------ | :-------- |
 | **U1**         | ESP32-S3-WROOM-1 (N16R8)    | C2913202      | Module    |
 | **U2**         | IP5306 (charge management)  | C181692       | ESOP-8    |
-| **U3**         | AMS1117-3.3 (LDO regulator) | C6186         | SOT-223   |
+| **U3**         | SY8089AAAC (2A buck regulator) | C78988     | SOT-23-5  |
 | **U5**         | PAM8403 (audio amplifier)   | C5122557      | SOP-16    |
 | **J1**         | USB-C connector (16-pin)    | C2765186      | USB-C-SMD |
 | **J3**         | JST-PH 2-pin SMD (battery)  | C295747       | JST-PH-2P-SMD |
@@ -136,7 +136,7 @@ PCB fabrication takes 5 days in all cases. Standard assembly (7–8 days) is inc
 ### What's included in the $39.57/unit
 
 Each assembled board arrives with **all SMT components soldered**:
-- ESP32-S3 module, IP5306 charger, AMS1117 regulator, PAM8403 amplifier
+- ESP32-S3 module, IP5306 charger, SY8089A buck regulator, PAM8403 amplifier
 - USB-C, JST battery, and FPC display connectors
 - All passive components (resistors, capacitors, inductor)
 - Power slide switch, 12 tactile buttons, and status LEDs
@@ -202,4 +202,4 @@ The v2 addition is minor in cost ($3.27 per unit) but eliminates 48% of SNES fra
 | Misc (pull-ups, buttons)    | 10 mA       | 10 mA       | Same                        |
 | **Total**                   | **~290 mA** | **~340 mA** | +50 mA                      |
 
-**v2 battery life:** 5000 mAh / 340 mA ~ **14.7 hours** typical gameplay (vs 17h on v1). The 50 mA increase from the coprocessor is modest — the AMS1117 regulator (800 mA max) still has ample headroom at 340 mA typical / 740 mA peak.
+**v2 battery life:** 5000 mAh / 340 mA ~ **14.7 hours** typical gameplay (vs 17h on v1). The 50 mA increase from the coprocessor is modest — the SY8089A buck regulator (2 A max) still has ample headroom at 340 mA typical / 740 mA peak.

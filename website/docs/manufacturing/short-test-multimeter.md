@@ -38,8 +38,8 @@ Knowing this is what turns "it beeps" into "the fault is *there*".
 USB-C ─VBUS─► C17 ─► IP5306(VIN)                 [VBUS: raw USB 5V]
                      IP5306(VOUT) ─► C19,C27,C1 ─► +5V rail
                                                     │
-Battery ─BAT_IN─► Q1(RPP) ─BAT+─► IP5306(BAT)      +5V ─► AMS1117(VIN)
-                             │                             AMS1117(VOUT/tab) ─► C2 ─► +3V3 rail
+Battery ─BAT_IN─► Q1(RPP) ─BAT+─► IP5306(BAT)      +5V ─► SY8089A(VIN)
+                             │                             SY8089A(SW) ─► L2 ─► C30 ─► +3V3 rail
                              └─► C18, L1                                              │
                                                        +3V3 ─► ESP32-S3, 12× button pull-ups (10k),
                                                                 LEDs, all decoupling caps
@@ -48,10 +48,10 @@ Battery ─BAT_IN─► Q1(RPP) ─BAT+─► IP5306(BAT)      +5V ─► AMS111
 | Net | Source | Also present on (probe points) |
 |-----|--------|-------------------------------|
 | **VBUS** | USB-C VBUS pin | **C17**+, IP5306 VIN(pin 1) |
-| **+5V** | IP5306 VOUT (pin 8) | **C19**+, **C27**+, **C1**+, R16, AMS1117 VIN(pin 3), USBLC6 |
+| **+5V** | IP5306 VOUT (pin 8) | **C19**+, **C27**+, **C1**+, R16, SY8089A VIN(pin 3), USBLC6 |
 | **BAT+** | IP5306 BAT (pin 6), post-RPP | **C18**+, L1, Q1 drain |
 | **BAT_IN** | Battery connector J3.1 | Q1 source, BT1+ (pre-RPP) |
-| **+3V3** | AMS1117 VOUT / **tab** | **C2**+, C26, C_dec, ESP32 3V3 pins, R4–R15 (button pull-ups), R17/R18 (LEDs) |
+| **+3V3** | **C30**+ (buck output) | C26, C_dec, ESP32 3V3 pins, R4–R15 (button pull-ups), R17/R18 (LEDs) |
 | **GND** | everywhere | USB-C shell, every cap − pad, ESP32 GND pad |
 
 ---
@@ -63,7 +63,7 @@ Battery ─BAT_IN─► Q1(RPP) ─BAT+─► IP5306(BAT)      +5V ─► AMS111
 | Color | Net | Where to touch |
 |-------|-----|----------------|
 | 🔵 Blue | **GND** | USB-C metal shell (keep BLACK probe here) |
-| 🔴 Red | **+3V3** | large **tab** of the AMS1117 |
+| 🔴 Red | **+3V3** | **C30** positive pad (the SY8089A is SOT-23-5 — no tab) |
 | 🟠 Orange | **+5V** | IP5306 (output side) or AMS1117 input pin |
 | 🟣 Purple | **VBUS** | C17, next to the IP5306 VIN pin |
 | 🟢 Green | **BAT+ / BAT_IN** | battery connector (silk "BATT") |

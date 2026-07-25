@@ -150,9 +150,9 @@ When the display is mounted in landscape (CCW rotation), Pin 1 is at the south e
 
 | Option | Specification | Price | Link |
 |---|---|---|---|
-| **AMS1117-3.3V** | LDO 5V->3.3V, 800mA | **$0.24** | [AliExpress](https://www.aliexpress.com/item/32886395040.html) |
+| **SY8089AAAC** | Buck 5V->3.3V, 2A | **$0.24** | [AliExpress](https://www.aliexpress.com/item/32886395040.html) |
 
-**Recommended:** LiPo 5000mAh + IP5306 + AMS1117 (~$7-10)
+**Recommended:** LiPo 5000mAh + IP5306 + SY8089A (~$7-10)
 
 :::note Estimated battery life with 5000mAh
 At an average draw of ~300mA (ESP32-S3 + display + audio), the 5000mAh battery provides approximately **14-16 hours** of continuous gameplay.
@@ -160,11 +160,11 @@ At an average draw of ~300mA (ESP32-S3 + display + audio), the 5000mAh battery p
 
 :::info Power architecture
 ```
-USB-C -> [IP5306] -> 5V -> [AMS1117] -> 3.3V -> ESP32-S3
+USB-C -> [IP5306] -> 5V -> [SY8089A] -> 3.3V -> ESP32-S3
             |
        [LiPo Battery]
 ```
-The IP5306 manages battery charge/discharge and provides stable 5V output. The AMS1117 steps it down to 3.3V for the ESP32.
+The IP5306 manages battery charge/discharge and provides stable 5V output. The SY8089A buck steps it down to 3.3V for the ESP32.
 :::
 
 ---
@@ -218,7 +218,7 @@ The IP5306 manages battery charge/discharge and provides stable 5V output. The A
 | Display | ILI9488 3.95" 8-bit parallel (bare panel) | $3.95 |
 | Battery | LiPo 105080 5000mAh | $6.50 |
 | Charging | IP5306 USB-C | $1.59 |
-| Regulator | AMS1117-3.3V | $0.24 |
+| Regulator | SY8089AAAC | $0.24 |
 | Controls | Tact switch 20pcs (12 buttons: D-pad, A, B, X, Y, Start, Select, L, R) | $1.04 |
 | Extra controls | Rubber pads | $1.05 |
 | Audio | Speaker + PAM8403 | $1.25 |
@@ -259,7 +259,7 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 |-----|-----------|---------|------|-------|-----------|
 | U1 | ESP32-S3-WROOM-1-N16R8 | Module | C2913202 | Extended | [PDF](/datasheets/U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf) |
 | U2 | IP5306 charger+boost IC | eSOP-8 | C181692 | Extended | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
-| U3 | AMS1117-3.3 LDO | SOT-223 | C6186 | Basic | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
+| U3 | SY8089AAAC buck | SOT-23-5 | C78988 | Basic | [PDF](/datasheets/U3_SY8089AAAC_C78988.pdf) |
 | U5 | PAM8403 audio amplifier | SOP-16 | C5122557 | Extended | [PDF](/datasheets/U5_PAM8403_C5122557.pdf) |
 | J1 | USB-C 16-pin connector | SMT | C2765186 | Extended | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
 | U6 | Micro SD slot (TF-01A) | SMT | C91145 | Extended | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
