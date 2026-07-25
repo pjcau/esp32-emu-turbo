@@ -16,6 +16,7 @@ Exit code 0 = all checks passed, 1 = errors found.
 
 import math
 import os
+import re
 import sys
 
 # ── Project imports ──────────────────────────────────────────────────
@@ -651,6 +652,195 @@ def check_gpio_conflicts():
     return errors, warnings
 
 
+# ── Menu combo (SW13 -> MENU_K -> D1 -> START + SELECT) ─────────────
+#
+# The menu button is NOT a thirteenth button.  Topology:
+#
+#            +3V3                     +3V3
+#              |                        |
+#            [Rpu]                    [Rpu]           (10k pull-ups)
+#              |                        |
+#   ESP32 --+--+-- BTN_START   ESP32 --+--+-- BTN_SELECT
+#           |  |                       |  |
+#         [Cdb] \                    [Cdb] \          (100nF debounce)
+#           |    \___ D1.1 anode       |    \___ D1.2 anode
+#          GND        \                GND        /
+#                      \______________________ __/
+#                                 D1.3 (common cathode)
+#                                      |
+#                                    MENU_K
+#                                      |
+#                                    SW13
+#                                      |
+#                                     GND
+#
+# D1 is a BAT54C dual Schottky.  Pressing SW13 pulls MENU_K low, both
+# diodes conduct, and BTN_START + BTN_SELECT go low together.  Firmware
+# reads that two-bit pattern as BTN_MENU_COMBO.  That is why there are
+# 12 pull-up/debounce networks for 13 buttons, and why R9-MED-4 deleted
+# the BTN_MENU net along with R19/C20.
+#
+# WHY THIS CHECKS COPPER, NOT DECLARATIONS:
+# D1's anode pads carried the correct net numbers for the entire life
+# of v1, yet no copper ever reached them (R5-CRIT-6; R17 then deleted
+# the dangling stubs, leaving two pads floating).  Any check written
+# against the declared netlist would have passed happily throughout the
+# bug.  So this verifies that each anode is in the SAME connected
+# copper island as that button's pull-up resistor and the ESP32 pin.
+
+_MENU_SWITCH = "SW13"
+_MENU_DIODE = "D1"
+_MENU_CATHODE_NET = "MENU_K"
+
+
+def _menu_combo_facts():
+    """Extract the menu-combo topology from the generated PCB.
+
+    Returns (errors, anode_nets, islands) where islands maps a button
+    net name to the connected-copper component containing D1's anode.
+    """
+    from scripts.pcb_cache import load_cache
+    from scripts.verify_net_connectivity import analyze_net
+
+    pcb = os.path.join(_PROJECT_ROOT, "hardware", "kicad",
+                       "esp32-emu-turbo.kicad_pcb")
+    cache = load_cache(pcb)
+    net_name = {n["id"]: n["name"] for n in cache["nets"]}
+
+    errors = []
+
+    def nets_of(ref):
+        return {net_name.get(p["net"], ""): p["num"]
+                for p in cache["pads"] if p["ref"] == ref}
+
+    diode = nets_of(_MENU_DIODE)
+    switch = nets_of(_MENU_SWITCH)
+
+    if not diode:
+        return ([f"{_MENU_DIODE} (menu combo diode) is not on the board"],
+                [], {})
+    if not switch:
+        return ([f"{_MENU_SWITCH} (menu button) is not on the board"], [], {})
+
+    # SW13 must short MENU_K to GND.
+    if _MENU_CATHODE_NET not in switch:
+        errors.append(
+            f"{_MENU_SWITCH} has no pad on {_MENU_CATHODE_NET} — the menu "
+            f"button does not drive the diode cathode")
+    if "GND" not in switch:
+        errors.append(
+            f"{_MENU_SWITCH} has no pad on GND — pressing menu would not "
+            f"pull {_MENU_CATHODE_NET} low")
+
+    # D1 must have the common cathode on MENU_K and two anodes on two
+    # distinct button nets.
+    if _MENU_CATHODE_NET not in diode:
+        errors.append(
+            f"{_MENU_DIODE} has no pad on {_MENU_CATHODE_NET} — the common "
+            f"cathode is not tied to the menu switch")
+    anode_nets = sorted(n for n in diode
+                        if n in BUTTON_NETS and n != _MENU_CATHODE_NET)
+    if len(anode_nets) != 2:
+        errors.append(
+            f"{_MENU_DIODE} drives {len(anode_nets)} button net(s) "
+            f"{anode_nets} — a BAT54C menu combo must OR into exactly 2")
+
+    # Copper connectivity: each anode must sit in the same island as the
+    # pull-up and the MCU pin for that button.
+    by_net = {"pads": {}, "vias": {}, "segs": {}}
+    for kind, key in (("pads", "pads"), ("vias", "vias"), ("segs", "segments")):
+        for item in cache[key]:
+            if item.get("net"):
+                by_net[kind].setdefault(item["net"], []).append(item)
+
+    islands = {}
+    for net in anode_nets:
+        nid = next((i for i, n in net_name.items() if n == net), None)
+        comps = analyze_net(net, by_net["pads"].get(nid, []),
+                            by_net["vias"].get(nid, []),
+                            by_net["segs"].get(nid, []))
+        anode_island = None
+        for comp in comps:
+            refs = {it.get("ref") for kind, it in comp if kind == "pad"}
+            if _MENU_DIODE in refs:
+                anode_island = refs
+                break
+        if anode_island is None:
+            errors.append(
+                f"{_MENU_DIODE} anode on {net} is not attached to any "
+                f"copper on that net (floating pad)")
+            continue
+        islands[net] = anode_island
+
+        pullups = anode_island & set(PULL_UP_REFS)
+        if not pullups:
+            errors.append(
+                f"{_MENU_DIODE} anode on {net} reaches copper, but not the "
+                f"same island as the {net} pull-up — pressing menu would "
+                f"not pull {net} low")
+        if "U1" not in anode_island:
+            errors.append(
+                f"{_MENU_DIODE} anode on {net} is not in the same island as "
+                f"the ESP32 (U1) pin — the MCU would never see the combo")
+
+    return errors, anode_nets, islands
+
+
+def _firmware_menu_combo_nets():
+    """Which button nets board_config.h expects the menu combo to assert."""
+    header = os.path.join(_PROJECT_ROOT, "software", "main", "board_config.h")
+    if not os.path.exists(header):
+        return None
+    text = open(header).read()
+    m = re.search(r'#define\s+BTN_MENU_COMBO\s+\(([^)]*)\)', text)
+    if not m:
+        return None
+    masks = re.findall(r'BTN_MASK_(\w+)', m.group(1))
+    return sorted(f"BTN_{name}" for name in masks)
+
+
+def check_menu_combo():
+    """Verify the menu combo is real, in copper, and matches firmware."""
+    errors, anode_nets, islands = _menu_combo_facts()
+    warnings = []
+
+    print(f"\n  Menu combo ({_MENU_SWITCH} -> {_MENU_CATHODE_NET} -> "
+          f"{_MENU_DIODE} -> START + SELECT):")
+
+    # BTN_MENU must stay deleted (R9-MED-4).
+    if "BTN_MENU" in {name for _, name in NET_LIST if name}:
+        errors.append(
+            "BTN_MENU net is back — the menu is a START+SELECT combo "
+            "through D1, a dedicated net strands R19/C20 (R9-MED-4)")
+
+    print(f"    {_MENU_DIODE} anodes drive: "
+          f"{', '.join(anode_nets) if anode_nets else 'NOTHING'}")
+    for net in anode_nets:
+        island = islands.get(net)
+        if island:
+            pu = sorted(island & set(PULL_UP_REFS))
+            print(f"    {net:11s}: anode in copper island with "
+                  f"{len(island)} pads (pull-up {pu[0] if pu else 'MISSING'})")
+        else:
+            print(f"    {net:11s}: anode NOT connected")
+
+    # Firmware must decode exactly the nets the diodes actually pull.
+    fw_nets = _firmware_menu_combo_nets()
+    print(f"    firmware BTN_MENU_COMBO: "
+          f"{', '.join(fw_nets) if fw_nets else 'NOT FOUND'}")
+    if fw_nets is None:
+        errors.append(
+            "BTN_MENU_COMBO not found in software/main/board_config.h — "
+            "firmware cannot decode the menu combo")
+    elif anode_nets and fw_nets != anode_nets:
+        errors.append(
+            f"firmware BTN_MENU_COMBO decodes {fw_nets} but D1 pulls "
+            f"{anode_nets} — hardware and firmware disagree")
+
+    e, w = _check("Menu combo (SW13 + D1 BAT54C)", errors)
+    return e, w + warnings
+
+
 # ── Check 5: Net Connectivity Analysis ──────────────────────────────
 
 def check_net_connectivity():
@@ -668,9 +858,17 @@ def check_net_connectivity():
             errors.append(f"Power net '{pn}' not declared")
     e, w = _check("Power net declarations", errors)
 
-    # Verify all signal nets declared
-    all_signal_nets = DISPLAY_NETS + AUDIO_NETS + SD_NETS + BUTTON_NETS + ["BTN_MENU"]
-    all_signal_nets += USB_DATA_NETS + ["SPK+", "SPK-"]
+    # Verify all signal nets declared.
+    #
+    # There is deliberately no BTN_MENU net.  R9-MED-4 (2026-04-11)
+    # removed it, together with R19/C20: the menu button SW13 does not
+    # have a signal net of its own.  It shorts MENU_K to GND and D1
+    # (BAT54C dual Schottky) ORs that pull-down into BTN_START and
+    # BTN_SELECT, so the menu is a *combo*, not a thirteenth button.
+    # MENU_K is the diode-cathode junction and is checked as part of
+    # that combo in check_menu_combo().
+    all_signal_nets = DISPLAY_NETS + AUDIO_NETS + SD_NETS + BUTTON_NETS
+    all_signal_nets += USB_DATA_NETS + ["SPK+", "SPK-", "MENU_K"]
     missing_nets = [n for n in all_signal_nets if n not in net_names]
     print(f"\n  Signal nets: {len(all_signal_nets)} expected, "
           f"{len(all_signal_nets) - len(missing_nets)} declared")
@@ -680,25 +878,39 @@ def check_net_connectivity():
     )
     errors.extend(e)
 
-    # Button circuit completeness
+    # Button circuit completeness.
+    #
+    # Exactly one pull-up and one debounce cap per button NET.  There
+    # are 12 button nets and 13 buttons: SW13 (menu) has no net of its
+    # own, it borrows the START and SELECT chains through D1.  So the
+    # correct count is len(BUTTON_NETS), and it is an equality — a
+    # thirteenth R/C pair would be the R19/C20 stranded-on-a-dead-net
+    # bug (R9-MED-4) coming back.
     print(f"\n  Button circuits:")
     print(f"    Pull-up resistors: {len(PULL_UP_REFS)} "
           f"({', '.join(PULL_UP_REFS[:3])}...{PULL_UP_REFS[-1]})")
     print(f"    Debounce caps:     {len(DEBOUNCE_REFS)} "
           f"({', '.join(DEBOUNCE_REFS[:3])}...{DEBOUNCE_REFS[-1]})")
-    print(f"    Button nets:       {len(BUTTON_NETS) + 1} "
-          f"(12 directional + BTN_MENU)")
+    print(f"    Button nets:       {len(BUTTON_NETS)} "
+          f"(12 discrete; menu = START+SELECT combo via D1)")
 
-    btn_count = len(BUTTON_NETS) + 1  # +1 for BTN_MENU
+    btn_count = len(BUTTON_NETS)
     btn_errs = []
-    if len(PULL_UP_REFS) < btn_count:
+    if len(PULL_UP_REFS) != btn_count:
         btn_errs.append(
-            f"Only {len(PULL_UP_REFS)} pull-ups for {btn_count} buttons")
-    if len(DEBOUNCE_REFS) < btn_count:
+            f"{len(PULL_UP_REFS)} pull-ups for {btn_count} button nets "
+            f"(expected exactly one each)")
+    if len(DEBOUNCE_REFS) != btn_count:
         btn_errs.append(
-            f"Only {len(DEBOUNCE_REFS)} debounce caps for {btn_count} buttons")
+            f"{len(DEBOUNCE_REFS)} debounce caps for {btn_count} button nets "
+            f"(expected exactly one each)")
     e, w = _check("Button circuit completeness", btn_errs)
     errors.extend(e)
+
+    # Menu combo (SW13 -> MENU_K -> D1 -> BTN_START + BTN_SELECT)
+    e, w = check_menu_combo()
+    errors.extend(e)
+    warnings.extend(w)
 
     # USB differential pair
     print(f"\n  USB differential pair:")
@@ -722,7 +934,7 @@ def check_net_connectivity():
     print(f"    Display: {len(DISPLAY_NETS)}")
     print(f"    SPI: {len(SD_NETS)}")
     print(f"    I2S: {len(AUDIO_NETS)}")
-    print(f"    Buttons: {len(BUTTON_NETS) + 1}")
+    print(f"    Buttons: {len(BUTTON_NETS)} + MENU_K (combo junction)")
     print(f"    USB: 2")
     print(f"    Audio: 2")
     print(f"    USB data: {len(USB_DATA_NETS)}")
