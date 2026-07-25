@@ -17,6 +17,7 @@ Usage:
 import hashlib
 import json
 import math
+import os
 import re
 import time
 from pathlib import Path
@@ -321,8 +322,27 @@ def build_cache(pcb_path=None, cache_path=None):
     data = parse_pcb_full(pcb_path)
     data["pcb_hash"] = _sha256(pcb_path)
 
-    with open(cache_path, "w") as f:
-        json.dump(data, f, separators=(",", ":"))
+    # Write atomically. `open(path, "w")` truncates first, so any concurrent
+    # reader sees a torn or empty file during the write. `make verify-all`
+    # fans out ~50 verifiers that each call load_cache(), so that window was
+    # being hit routinely: the suite reported random subsets of failures, and
+    # scripts that failed inside it passed when run alone. A verification gate
+    # whose verdict depends on a race is worth no more than one that cannot
+    # fail at all.
+    #
+    # os.replace() is atomic on POSIX and on Windows, so a reader gets either
+    # the whole old file or the whole new one. The temp file must live in the
+    # same directory to guarantee it is on the same filesystem.
+    tmp_path = cache_path.with_name(f".{cache_path.name}.{os.getpid()}.tmp")
+    try:
+        with open(tmp_path, "w") as f:
+            json.dump(data, f, separators=(",", ":"))
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp_path, cache_path)
+    except BaseException:
+        tmp_path.unlink(missing_ok=True)
+        raise
 
     ms = (time.time() - t0) * 1000
     s = data["stats"]
