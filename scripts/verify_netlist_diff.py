@@ -28,10 +28,10 @@ Remaining suppressions, all narrow and evidence-backed:
             from the exported netlist, so they cannot be compared).
   T3_ALLOW  DS1 — schematic-only logical panel symbol; the physical
             part is J4.
-  _T4_STRUCTURAL_EXCEPTIONS  four exact (ref, pin, sch_net, pcb_net)
-            tuples for the PAM8403 input bias network, where schematic
-            and board describe genuinely different circuits and the
-            board is the side that is wrong. See the comment there.
+  _T4_STRUCTURAL_EXCEPTIONS  EMPTY, and must stay that way. It once held
+            four tuples for the PAM8403 input bias network; the board has
+            since been re-routed to match the schematic. See the comment
+            there before ever adding an entry.
 
 Usage:
     python3 scripts/verify_netlist_diff.py
@@ -238,34 +238,18 @@ T3_ALLOW = {"DS1"}
 # requires stating (a) the physical evidence, (b) which side is wrong,
 # (c) where the fix has to be made.
 #
-# ── R20 / R21: PAM8403 input bias network ──────────────────────────
-# Schematic: R20/R21 sit between the amplifier input node (I2S_DOUT)
-# and PAM_VREF. Board: they sit between the same input node and GND
-# (scripts/generate_pcb/routing.py::_pam_passive_traces, "GND stub from
-# R20 pad 1" / "GND stub from R21 pad 1"), and they tap the INR->INL
-# bridge at y=28.0, i.e. the AMPLIFIER side of the C22 coupling cap.
+# ── R20 / R21: PAM8403 input bias network — CLOSED ────────────────
+# This set used to carry four tuples for R20/R21, excusing a board that
+# tied the amplifier input bias to GND while the schematic specified VREF.
+# The exception documented its own fix: re-route R20 pad 1 and R21 pad 1
+# from their GND vias to the PAM_VREF node at C21 pad 2. That is done --
+# routing.py now builds a VREF bias rail down the x=38.95 lane, and the
+# board passes DFM 122/0, native DRC 0 violations and power-net integrity.
 #
-# Which side is wrong: the BOARD. The PAM8403 biases INL/INR internally
-# to VREF (hardware/datasheets/U5_PAM8403_C5122557.pdf, pin 8:
-# "internal reference source, connect a bypass capacitor from VREF to
-# GND"). Two 20k resistors from the amplifier-side input node to GND
-# put a 10k DC load on that internal bias and pull the input operating
-# point below mid-supply — the asymmetric-clipping failure the
-# R4-HIGH-3 note describes. Placed on the source side of C22 they would
-# be harmless; they are not on the source side.
-#
-# Why it is not fixed here: closing it means re-routing R20 pad 1 and
-# R21 pad 1 from their GND vias to the PAM_VREF node at C21 pad 2,
-# through a copper region that routing.py has already tuned for
-# clearance against SPK+, C23 and the U5 pad row. That is an electrical
-# board change in the audio block, not a netlist-bookkeeping change,
-# and it needs its own DFM/DRC pass. Tracked as an open PCB bug.
-_T4_STRUCTURAL_EXCEPTIONS = {
-    ("R20", "1", "I2S_DOUT", "GND"),
-    ("R20", "2", "PAM_VREF", "I2S_DOUT"),
-    ("R21", "1", "I2S_DOUT", "GND"),
-    ("R21", "2", "PAM_VREF", "I2S_DOUT"),
-}
+# Keep this EMPTY. An exception here hides a real schematic/PCB divergence,
+# which is the bug class this gate exists to catch: for four releases it
+# reported PASS while the two sides described different circuits.
+_T4_STRUCTURAL_EXCEPTIONS = set()
 
 
 def _t4_is_allowed(ref, pin, sch_net, pcb_net):

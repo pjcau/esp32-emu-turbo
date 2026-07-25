@@ -66,7 +66,7 @@ class PowerSupplySheet(SchematicSheet):
         # regulator row (y>=190) below.
         u4x, u4y = 60, 140
         self.sym("USBLC6_2SC6", "U4", "USBLC6-2SC6", u4x, u4y, range(1, 7))
-        self.text("USB ESD TVS", u4x - 8, u4y - 12, 1.5)
+        self.text("USB ESD TVS", u4x - 20, u4y - 16, 1.5)
         # The USBLC6_2SC6 library symbol in this generator uses the
         # simple 6-pin pad layout (pins on the left/right edges). We
         # connect the logical nets via glabels with short wire stubs.
@@ -284,7 +284,10 @@ class PowerSupplySheet(SchematicSheet):
         # bottom/GND terminal, so schematic and PCB agree on which pad
         # is which.
         self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"], angle=180)
-        self.text("HF bypass", c27_x - 3, c27_y - 8, 1.5)
+        # BELOW the cap, not above: above at c27_x-3 collided with the +5V
+        # rail label, and shifting it left ran it into "VOUT bulk" over C19.
+        # Underneath is empty (the GND symbol prints no visible text).
+        self.text("HF bypass", c27_x - 5, c27_y + 13, 1.5)
         self.wire(cout_x, vout_turn_y, c27_x, vout_turn_y)
         self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
         self.gnd(c27_x, c27_y + 8)
@@ -324,7 +327,15 @@ class PowerSupplySheet(SchematicSheet):
 
         # ---- KEY pull-up (R16 100k to +5V, always-on) ----
         r16_x = 182
-        r16_y = 76
+        # 76.5, threading two constraints half a millimetre apart:
+        #   * at 76.0 the Reference field (y-5) landed on the +5V rail
+        #     junction at y=70 — verify_schematic_overlaps.py.
+        #   * at 79.0 the KEY link stub (y+3.81, then 3.81 further) reached
+        #     y=86.6 and crossed the IP5306 wire at y=85 —
+        #     verify_schematic_crossings.py.
+        # 76.5 puts the Reference at 71.5 (0.365mm clear of the junction) and
+        # the stub end at 84.1 (0.88mm clear of the y=85 wire).
+        r16_y = 76.5
         self.sym("R", "R16", "100k", r16_x, r16_y, ["1", "2"])
         self.text("Always-on", r16_x + 3, r16_y - 3, 1.5)
         # R16 pin1 (top) -> +5V by TAPPING the rail, not by a second
@@ -578,7 +589,7 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(led_x - 15, led_y + 3.81, led_x - 3.81, led_y)
         self.gnd(led_x + 8, led_y)
         self.wire(led_x + 3.81, led_y, led_x + 8, led_y)
-        self.text("Charging", led_x - 5, led_y - 6, 1.5)
+        self.text("Charging", led_x - 18, led_y - 8, 1.5)
 
         # LED2 (Green - fully charged)
         led2_y = led_y + 18
@@ -630,10 +641,10 @@ class PowerSupplySheet(SchematicSheet):
         self.text(
             "- 5.1k CC pull-downs identify"
             " USB-C UFP (5V sink)",
-            30, ny + 36,
+            30, ny + 42,
         )
         self.text(
             "- Battery: LiPo 3.7V 5000mAh"
             " via JST PH connector",
-            30, ny + 42,
+            30, ny + 48,
         )
