@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-cpl-law test-cpl-law analyze-pin1 validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -67,6 +67,15 @@ verify-all: ## Run all pre-production checks (DRC + DFM + DFA + simulation + con
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
+
+verify-cpl-law: ## CPL rotation law — every part must obey ONE law per layer (replaces per-part sign-off table)
+	@$(T) verify-cpl-law python3 scripts/verify_cpl_rotation_law.py
+
+test-cpl-law: ## Mutation tests: plant rotation errors, require the law gate to catch every one
+	@$(T) test-cpl-law python3 scripts/test_cpl_rotation_law.py
+
+analyze-pin1: ## Locate each LCSC part's PHYSICAL polarity marker (silk asymmetry + 3D mesh, two independent extractors)
+	@$(T) analyze-pin1 python3 scripts/analyze_pin1_marker.py
 
 verify-trace-through-pad: ## Trace-through-pad overlap check (catches fab-shorts from missing _PAD_NETS)
 	@$(T) verify-trace-through-pad python3 scripts/verify_trace_through_pad.py
