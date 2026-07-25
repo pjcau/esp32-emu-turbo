@@ -148,8 +148,24 @@ package as C2 but non-polarized — no polarity audit needed).
     solo left). Both were placed with our `SOT-23-3` footprint at KiCad 0°
     on B.Cu, so their required CPL angle must be **identical**.
   - Q1 uses the plain formula result, **90°**, and is empirically validated
-    on 8+ prototypes (R4-R8 power up through Q1). U4 (SOT-23-6, same family,
-    KiCad 0°, B.Cu) is likewise 90° with no override.
+    on 8+ prototypes (R4-R8 power up through Q1). `_jlcpcb_rotation()` is
+    linear in `rot`, so identical footprint + identical topology + identical
+    layer ⇒ identical CPL angle.
+  - **U4 is NOT a second confirmation** (correction, 2026-07-25, credit to
+    the `d1-polarity` session). The first version of this entry cited U4
+    alongside Q1; that was wrong. Per the U4 section below, C7519's EasyEDA
+    footprint puts pads 1-2-3 on the **TOP row** (pad 1 at `(-0.95, +1.15)`),
+    which **matches** our `sot23_6()` (pad 1 at `(-0.95, +1.10)`) — so U4 has
+    δ_row = **0**, not 90 like D1/Q1. U4 reaches 90° by a different route and
+    carries no information about D1. The derivation rests on Q1 alone, which
+    is sufficient.
+  - **Open question for whoever owns the checker**: U4 (δ_row=0) and Q1
+    (δ_row=90) both end up at CPL 90° and both are empirically validated
+    (a 180° error on U4 would put VBUS on the GND pad and dead-short the
+    rail; boards power up). That means δ_row does not map linearly onto the
+    CPL angle the way `_JLCPCB_ROT_CORRECTIONS` assumes for the whole
+    `^SOT-23` family. This does not affect the D1 conclusion — it is a
+    defect in the reasoning model of `verify_easyeda_footprint.py`.
   - D1's 270° at KiCad 0° was therefore 180° out. It was never caught by
     assembly because D1's two anodes were unrouted on every board built so
     far (that is the R5-CRIT-6 bug itself), so the diode's orientation had
@@ -327,9 +343,9 @@ _JLCPCB_ROT_OVERRIDES = {
     "U5":  180,  # PAM8403 C5122557 — JLCPCB 3D pin-1 dot alignment
     "J4":  270,  # FPC-40P C2856812 — bottom-contact pin-1 triangle
     # "D1" REMOVED 2026-07-25 — was 270° at KiCad 0°, which is 180° out vs
-    # the identical-footprint Q1/U4 (90° by formula). D1 now sits at KiCad
+    # the identical-footprint Q1 (90° by formula). D1 now sits at KiCad
     # 180° and the formula produces the same 270° CPL angle. See the D1
-    # section above for the full derivation.
+    # section above for the full derivation (U4 is NOT a reference part).
     "C2":  180,  # Tantalum 22uF C1953590 Vishay TMCMA1C226MTRF — EasyEDA 3D model pre-rotated 180° in kicad_mod, override compensates on bottom layer
     "LED2": 180, # Green LED C19171391 — EasyEDA pad numbering reversed
 }

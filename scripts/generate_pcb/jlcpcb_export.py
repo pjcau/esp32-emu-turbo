@@ -69,29 +69,44 @@ _JLCPCB_ROT_OVERRIDES = {
     # D1 (BAT54C, C37704): override REMOVED 2026-07-25 — re-derived while
     # relocating D1 for R5-CRIT-6.
     #   Old state: KiCad rot 0° + override 270°.
-    #   Formula for a bottom-side "^SOT-23" at KiCad 0° is 90°, and that is
-    #   what Q1 (SI2301CDS, C10487) and U4 (USBLC6-2SC6, C7519) — same
-    #   package family, same layer, same KiCad rotation — both use with no
-    #   override, both signed off in hardware/datasheets/POLARITY_AUDIT.md.
-    #   The archived EasyEDA reference geometry recorded there is identical
-    #   in topology for both SOT-23-3 parts:
-    #     C37704 pad 1 (+1.24,+0.95) pad 2 (+1.24,-0.95) pad 3 (-1.24, 0)
-    #     C10487 pad 1 (+1.10,+0.95) pad 2 (+1.10,-0.95) pad 3 (-1.10, 0)
-    #   Identical footprint + identical KiCad rotation ⇒ identical CPL
-    #   angle, so D1's 270° at rot 0° was 180° out (introduced empirically
-    #   in c7514e7 "180° → 270° per JLCPCB", with no geometric evidence).
-    #   Physical corroboration: verify_easyeda_footprint.py's allowlist
-    #   records Q1 as "δ=90° family as D1 … boards R4-R8 (8+ prototypes)
-    #   power up via SW_PWR → Q1 conducts correctly → physical polarity
-    #   validated. CPL rotation=90° compensates empirically." D1's anodes
-    #   were never connected on those boards, so its 270° was never
-    #   exercised — the error could not have been caught by assembly.
+    #
+    #   The reference part is Q1 (SI2301CDS, C10487) and ONLY Q1:
+    #     * same library footprint — both use footprints.sot23_3()
+    #     * same layer (bottom) and same KiCad rotation (0°) as D1 was
+    #     * same EasyEDA pad topology, per the archived geometry in
+    #       hardware/datasheets/POLARITY_AUDIT.md:
+    #         C37704 pad 1 (+1.24,+0.95) pad 2 (+1.24,-0.95) pad 3 (-1.24,0)
+    #         C10487 pad 1 (+1.10,+0.95) pad 2 (+1.10,-0.95) pad 3 (-1.10,0)
+    #       i.e. pads 1/2 stacked in a COLUMN, pad 3 solo on the far side,
+    #       while our sot23_3() puts pads 1/2 in a ROW — a real 90° native
+    #       -frame offset (δ_row=90) shared by both parts.
+    #   Q1 emits the plain formula result, 90°, with no override, and is
+    #   empirically validated: verify_easyeda_footprint.py's allowlist
+    #   records "boards R4-R8 (8+ prototypes) power up via SW_PWR → Q1
+    #   conducts correctly → physical polarity validated."
+    #   _jlcpcb_rotation() is linear in `rot`, so identical footprint +
+    #   identical topology + identical layer ⇒ identical CPL angle. D1's
+    #   270° at KiCad 0° was therefore 180° out (introduced empirically in
+    #   c7514e7 "180° → 270° per JLCPCB", with no geometric evidence).
+    #   It was never caught by assembly because D1's anodes were unrouted
+    #   on every board built so far — that is R5-CRIT-6 itself.
+    #
+    #   NOT a reference part: U4 (USBLC6-2SC6, C7519). An earlier version
+    #   of this comment cited it as a second confirmation; that was wrong.
+    #   Per POLARITY_AUDIT.md, C7519's EasyEDA footprint puts pads 1-2-3 on
+    #   the TOP row (pad 1 at (-0.95,+1.15)), which MATCHES our sot23_6()
+    #   (pad 1 at (-0.95,+1.10)) — δ_row=0, not 90. U4 arrives at 90° by a
+    #   different route and says nothing about D1. Thanks to the d1-polarity
+    #   session for catching this.
+    #
     #   D1 is now placed at KiCad 180°, for which the same formula yields
     #   270° — the emitted CPL angle is unchanged, but it is now derived
     #   and the physical part finally matches its footprint.
-    #   (EasyEDA could not be re-fetched live: the API returns HTTP 403 for
-    #   every LCSC id, so scripts/.easyeda_cache/ cannot be repopulated —
-    #   POLARITY_AUDIT.md is the archived copy of that reference.)
+    #   (EasyEDA could not be re-fetched from this worktree: the API
+    #   returned HTTP 403 for every LCSC id, so scripts/.easyeda_cache/
+    #   could not be repopulated and POLARITY_AUDIT.md's archived copy was
+    #   used instead. The d1-polarity session reports the API is reachable
+    #   again and is confirming against live fetches.)
     "C2": 180,   # Tantalum 22uF (C1953590 Vishay TMCMA1C226MTRF) — JLCPCB 3D model stripe/+ oriented opposite to our pad 1
     "LED2": 180, # Green LED 0805 (C19171391) — EasyEDA footprint has pad 1 on cathode-silk-OPPOSITE
                  # side (pad 1 x=+1.05, cathode silk notch at x=-0.34..-2.22), inverted vs LED1
