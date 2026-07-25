@@ -142,13 +142,20 @@ class KiCadContext:
         exactly what is needed when the footprint on the board has pad 1
         on the opposite end from the default symbol orientation.
         """
+        # Keep the Reference/Value fields OUTSIDE the drawn body. The old
+        # fixed +-5mm printed them across the outline of anything taller --
+        # U3 (body +-5.08) and U6 (+-6.35) both had their Value struck
+        # through the component. Derived from the symbol's own graphics, so a
+        # symbol that grows pushes its labels out by itself.
+        from .lib_symbols import body_half_height
+        _fo = max(5.0, body_half_height(lib) + 2.0)
         s = (
             f'  (symbol (lib_id "{lib}") (at {x} {y} {angle}) (unit 1)'
             f' (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)'
             f' (uuid "{self.uid()}")'
-            f' (property "Reference" "{ref}" (at {x} {y - 5} 0)'
+            f' (property "Reference" "{ref}" (at {x} {y - _fo} 0)'
             f' (effects (font (size 1.27 1.27))))'
-            f' (property "Value" "{val}" (at {x} {y + 5} 0)'
+            f' (property "Value" "{val}" (at {x} {y + _fo} 0)'
             f' (effects (font (size 1.27 1.27))))'
         )
         for p in pins:

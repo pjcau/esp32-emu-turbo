@@ -58,7 +58,9 @@ class ControlsSheet(SchematicSheet):
             by = row_start_y + row * row_spacing
 
             # Cell label
-            self.text(f"{name} ({gpio})", bx - 15, by - 5, 2, True)
+            # by-9, not by-5: at size 2 this label is ~16mm wide and its right
+            # end ran into the GND symbol sitting at (bx, by).
+            self.text(f"{name} ({gpio})", bx - 15, by - 9, 2, True)
 
             # Pull-up resistor (10k to +3V3).
             # Placed at 180 deg so pin 1 is the BOTTOM terminal (the

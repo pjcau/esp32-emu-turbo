@@ -200,7 +200,7 @@ class AudioSheet(SchematicSheet):
         self.wire(c23x, c23y - 3.81, c23x, c23y - 8)
         self.gnd(c23x, c23y + 8)
         self.wire(c23x, c23y + 3.81, c23x, c23y + 8)
-        self.text("VDD", c23x - 3, c23y + 11, 1.5)
+        self.text("VDD", c23x - 3, c23y + 14, 1.5)
 
         # PVDD top bypass (C24, 1uF) — power output stage
         c24x, c24y = ax, ay - 20
@@ -214,7 +214,9 @@ class AudioSheet(SchematicSheet):
         self.wire(c24x, c24y - 3.81, c24x, c24y - 8)
         self.gnd(c24x, c24y + 8)
         self.wire(c24x, c24y + 3.81, c24x, c24y + 8)
-        self.text("PVDD-top", c24x - 5, c24y + 11, 1.5)
+        # ABOVE this cap, unlike its two neighbours: C24 sits directly over
+        # U5, so anything placed below it lands inside the amplifier body.
+        self.text("PVDD-top", c24x + 4, c24y - 9, 1.5)
 
         # PVDD bottom bypass (C25, 1uF) — power output stage
         c25x, c25y = ax + 20, ay - 20
@@ -223,7 +225,7 @@ class AudioSheet(SchematicSheet):
         self.wire(c25x, c25y - 3.81, c25x, c25y - 8)
         self.gnd(c25x, c25y + 8)
         self.wire(c25x, c25y + 3.81, c25x, c25y + 8)
-        self.text("PVDD-bot", c25x - 5, c25y + 11, 1.5)
+        self.text("PVDD-bot", c25x - 5, c25y + 14, 1.5)
 
         # Notes
         ny = 178

@@ -1,5 +1,7 @@
 """KiCad library symbol definitions for all components."""
 
+import re
+
 # Each key is the symbol name used as lib_id
 # Symbols needed per sheet are selected at render time
 
@@ -415,3 +417,26 @@ def lib_symbols_block(needed: list[str]) -> str:
             parts.append(SYMBOLS[name])
     parts.append("  )\n")
     return "".join(parts)
+
+
+def body_half_height(name: str) -> float:
+    """Half-height of a symbol's drawn body, in mm (0 if it has no graphics).
+
+    Derived from the symbol's own graphics rather than a per-part table, so a
+    symbol that grows cannot silently start printing its Reference/Value
+    across its own outline -- which is exactly what U3 (body +-5.08) did while
+    the fields sat at +-5.
+    """
+    src = SYMBOLS.get(name)
+    if not src:
+        return 0.0
+    ys = []
+    for m in re.finditer(r"\(rectangle \(start ([\d.\-]+) ([\d.\-]+)\) \(end ([\d.\-]+) ([\d.\-]+)\)", src):
+        ys += [float(m.group(2)), float(m.group(4))]
+    for pl in re.finditer(r"\(polyline\s*\(pts((?:\s*\(xy [\d.\-]+ [\d.\-]+\))+)\)", src):
+        for xy in re.finditer(r"\(xy [\d.\-]+ ([\d.\-]+)\)", pl.group(1)):
+            ys.append(float(xy.group(1)))
+    for c in re.finditer(r"\(circle \(center [\d.\-]+ ([\d.\-]+)\) \(radius ([\d.\-]+)\)", src):
+        cy, rr = float(c.group(1)), float(c.group(2))
+        ys += [cy - rr, cy + rr]
+    return max((abs(y) for y in ys), default=0.0)

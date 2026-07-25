@@ -146,7 +146,7 @@ class DisplaySheet(SchematicSheet):
         # --- FPC Connector (physical connector on PCB back) ---
         fpc_x, fpc_y = 260, 120
         self.text("FPC RIBBON CONNECTOR (J4)", fpc_x - 15, fpc_y - 25, 2, True)
-        self.text("(40P on PCB, 16 active signals shown)", fpc_x - 15, fpc_y - 20, 1.5)
+        self.text("(40P on PCB, 16 active signals shown)", fpc_x - 45, fpc_y - 23, 1.5)
         self.sym("FPC_16P", "J4", "FPC-16P-0.5mm", fpc_x, fpc_y, range(1, 17))
 
         # Wire display module outputs to FPC pins

@@ -389,7 +389,7 @@ class PowerSupplySheet(SchematicSheet):
         # Pin mapping: 1=Gate(bottom-left), 2=Source(bottom-right), 3=Drain(top)
         # Two-line annotation ABOVE the symbol with 3mm vertical spacing
         # so the lines don't touch each other or the symbol's Value text.
-        self.text("P-MOSFET RPP", q1x - 6, q1y - 15, 1.5)
+        self.text("P-MOSFET RPP", q1x + 8, q1y - 26, 1.5)
         self.text("(SI2301CDS)",  q1x - 6, q1y - 12, 1.5)
 
         # Q1 pin 3 (Drain) at (q1x, q1y - 3.81-ish) — connects to BAT+ (IP5306 side)
@@ -489,7 +489,7 @@ class PowerSupplySheet(SchematicSheet):
         # is only needed when EN is driven from a high-impedance source.
         self.v5(80, en_y)
         self.wire(80, en_y, u3x - 8.89, en_y)
-        self.text("EN tied to VIN (always on)", 76, en_y - 3, 1.5)
+        self.text("EN tied to VIN (always on)", 46, en_y - 11, 1.5)
         # GND
         self.gnd(u3x, u3y + 15)
         self.wire(u3x, u3y + 7.62, u3x, u3y + 15)
@@ -622,7 +622,7 @@ class PowerSupplySheet(SchematicSheet):
         self.glabel("LED1_RA", led_x - 3.81, led_y + 7, 270)
         self.gnd(led_x + 8, led_y)
         self.wire(led_x + 3.81, led_y, led_x + 8, led_y)
-        self.text("Charging", led_x - 18, led_y - 8, 1.5)
+        self.text("Charging", led_x - 32, led_y - 8, 1.5)
 
         # LED2 (Green - fully charged)
         led2_y = led_y + 18

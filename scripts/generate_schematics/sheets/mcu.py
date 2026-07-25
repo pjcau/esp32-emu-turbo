@@ -91,7 +91,7 @@ class MCUSheet(SchematicSheet):
         self.wire(sw_rst_x, sw_rst_y - 3.81, sw_rst_x, c_en_y + 3.81)
         self.gnd(sw_rst_x, sw_rst_y + 8)
         self.wire(sw_rst_x, sw_rst_y + 3.81, sw_rst_x, sw_rst_y + 8)
-        self.text("Reset (EN->GND)", sw_rst_x - 18, sw_rst_y, 1.5)
+        self.text("Reset (EN->GND)", sw_rst_x - 25, sw_rst_y, 1.5)
 
         # --- BOOT button (GPIO0 to GND, enter download mode) ---
         # Pushed further down (c_en_y + 55) so its BTN_SELECT glabel
@@ -122,18 +122,18 @@ class MCUSheet(SchematicSheet):
         # duplicated segment. Guarded by verify_schematic_crossings.py.
         self.wire(c_dec_x, c_dec_y + 3.81, c_dec_x, pwr_y)
         self.junction(c_dec_x, pwr_y)
-        self.gnd(c_dec_x, c_dec_y - 8)
-        self.wire(c_dec_x, c_dec_y - 3.81, c_dec_x, c_dec_y - 8)
-        self.text("Decoupling", c_dec_x - 10, c_dec_y, 1.5)
+        self.gnd(c_dec_x, c_dec_y - 10)
+        self.wire(c_dec_x, c_dec_y - 3.81, c_dec_x, c_dec_y - 10)
+        self.text("Decoupling", c_dec_x - 15, c_dec_y, 1.5)
 
         # --- C26: Additional VDD bypass (100nF, close to pin 2) ---
         c26_x = c_dec_x + 15
         c26_y = c_dec_y
         self.sym("C", "C26", "100nF", c26_x, c26_y, ["1", "2"], angle=180)
         self.wire(c26_x, c26_y + 3.81, c26_x, pwr2_y)
-        self.gnd(c26_x, c26_y - 8)
-        self.wire(c26_x, c26_y - 3.81, c26_x, c26_y - 8)
-        self.text("VDD bypass", c26_x - 10, c26_y, 1.5)
+        self.gnd(c26_x, c26_y - 10)
+        self.wire(c26_x, c26_y - 3.81, c26_x, c26_y - 10)
+        self.text("VDD bypass", c26_x + 4, c26_y, 1.5)
 
         # --- GND pins (40, 41) at bottom ---
         self.wire(MCU_X, MCU_Y + 41.91, MCU_X, MCU_Y + 48)

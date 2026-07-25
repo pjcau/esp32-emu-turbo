@@ -10,6 +10,7 @@ hide.
 
 What is checked, item against item:
 
+  symbol.body   the drawn component outline
   wire          collinear wires drawn on top of one another
   text          free-standing annotation
   label         local net label (sheet-scoped)
@@ -99,6 +100,59 @@ def _text_box(txt, x, y, angle, size):
     return (x, y - h / 2, x + w, y + h / 2)
 
 
+def parse_lib_bodies(text):
+    """{lib_name: (x1, y1, x2, y2)} local-space body box for each lib symbol.
+
+    The drawn body, from the symbol's graphics (rectangle / polyline / circle).
+    Without this the gate is blind to the most obvious kind of overlap there
+    is: annotation text printed straight across a component. Reference/Value
+    fields count too -- U3's Value sat at y+5 inside a body spanning +-5.08.
+    """
+    bodies = {}
+    for b in blocks(text, "(symbol "):
+        m = re.match(r'\(symbol "([^"]+)"', b)
+        if not m or "_" not in m.group(1):
+            # Top-level definition; its sub-units carry the graphics.
+            top = re.match(r'\(symbol "([^"]+)"', b)
+            if not top:
+                continue
+        name = m.group(1)
+        base = name.rsplit("_", 2)[0] if re.search(r"_\d+_\d+$", name) else name
+        xs, ys = [], []
+        for r in re.finditer(r"\(rectangle \(start ([\d.\-]+) ([\d.\-]+)\) \(end ([\d.\-]+) ([\d.\-]+)\)", b):
+            x1, y1, x2, y2 = (float(g) for g in r.groups())
+            xs += [x1, x2]; ys += [y1, y2]
+        for pl in re.finditer(r"\(polyline\s*\(pts((?:\s*\(xy [\d.\-]+ [\d.\-]+\))+)\)", b):
+            for xy in re.finditer(r"\(xy ([\d.\-]+) ([\d.\-]+)\)", pl.group(1)):
+                xs.append(float(xy.group(1))); ys.append(float(xy.group(2)))
+        for c in re.finditer(r"\(circle \(center ([\d.\-]+) ([\d.\-]+)\) \(radius ([\d.\-]+)\)", b):
+            cx, cy, rr = (float(g) for g in c.groups())
+            xs += [cx - rr, cx + rr]; ys += [cy - rr, cy + rr]
+        if not xs:
+            continue
+        box = (min(xs), min(ys), max(xs), max(ys))
+        prev = bodies.get(base)
+        bodies[base] = box if not prev else (
+            min(prev[0], box[0]), min(prev[1], box[1]),
+            max(prev[2], box[2]), max(prev[3], box[3]))
+    return bodies
+
+
+def place_body(box, x, y, angle):
+    """Local body box -> schematic box at (x, y) with `angle` applied.
+
+    Symbol space has Y up, the sheet has Y down, so local y is negated.
+    """
+    x1, y1, x2, y2 = box
+    a = int(angle) % 360
+    if a in (90, 270):
+        x1, y1, x2, y2 = y1, x1, y2, x2
+    if a in (180, 270):
+        x1, x2 = -x2, -x1
+        y1, y2 = -y2, -y1
+    return (x + x1, y - y2, x + x2, y - y1)
+
+
 def parse_items(text, sheet):
     """Every printable item on a sheet as (kind, name, box)."""
     items = []
@@ -126,6 +180,18 @@ def parse_items(text, sheet):
         x, y = float(m.group(1)), float(m.group(2))
         items.append(("junction", f"({x},{y})",
                       (x - JUNCTION_R, y - JUNCTION_R, x + JUNCTION_R, y + JUNCTION_R)))
+
+    bodies = parse_lib_bodies(text)
+    for b in blocks(text, "(symbol (lib_id"):
+        lid = re.search(r'\(lib_id "([^"]+)"\)', b)
+        at = re.search(r"\(at ([\d.\-]+) ([\d.\-]+) ([\d.\-]+)\)", b)
+        if not (lid and at) or lid.group(1) not in bodies:
+            continue
+        ref = re.search(r'\(property "Reference" "([^"]+)"', b)
+        items.append(("symbol.body", ref.group(1) if ref else lid.group(1),
+                      place_body(bodies[lid.group(1)],
+                                 float(at.group(1)), float(at.group(2)),
+                                 float(at.group(3)))))
 
     # Symbol Reference / Value fields are printed text too — a label dropped
     # on top of "R20" is exactly as unreadable as one dropped on a comment.
@@ -201,6 +267,12 @@ def check_sheet(path, list_all=False):
         for j in range(i + 1, len(items)):
             k1, n1, b1 = items[i]
             k2, n2, b2 = items[j]
+            # A junction dot belongs ON a pin, and pins sit on the body
+            # outline — that pairing is how a connection is drawn, not a
+            # legibility fault. Every other pairing still counts.
+            kinds = {k1, k2}
+            if "junction" in kinds and any(k.startswith("symbol.body") for k in kinds):
+                continue
             a = overlap(b1, b2)
             if a > 0:
                 hits.append((a, k1, n1, k2, n2))
