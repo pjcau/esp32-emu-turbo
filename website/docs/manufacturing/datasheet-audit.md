@@ -84,7 +84,11 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 | **Reality** | Pin 1 has net=0 in PCB (not connected). ESP32 module gets GND through pin 41 (exposed pad). Multiple GND pins on perimeter are redundant. Module works fine. |
 | **Action** | None required. Cosmetic schematic fix optional. |
 
-### AMS1117 (U3) — All 3 pin names swapped in symbol
+### AMS1117 (U3) — All 3 pin names swapped in symbol *(historical — part replaced)*
+
+:::note Superseded
+U3 is now an SY8089AAAC buck in SOT-23-5 ([C78988](https://www.lcsc.com/product-detail/C78988.html)). This finding is kept as a record of the audit; the AMS1117 symbol is no longer used.
+:::
 
 | Detail | Value |
 |--------|-------|
@@ -112,7 +116,7 @@ If not connecting a speaker, PAM8403 rework is unnecessary on existing boards. T
 |--------|-------|
 | **Datasheet** | 3x 22uF = 66uF on VOUT |
 | **PCB** | 1x 22uF (C19) |
-| **Risk** | Moderate — output ripple ~200-300mV instead of ~100mV. Acceptable because AMS1117 LDO downstream provides additional regulation. |
+| **Risk** | Moderate — output ripple ~200-300mV instead of ~100mV. Was acceptable because the AMS1117 LDO downstream added regulation; the SY8089 buck that replaced it rejects input ripple less well, so C19 on the 5V rail now matters more. |
 | **Action** | None for v2. Consider adding 1-2 extra 22uF caps in v3 if ripple is measured as problematic. |
 
 ### IP5306 (U2) — LED pins floating

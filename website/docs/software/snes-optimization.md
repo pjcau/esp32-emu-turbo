@@ -441,10 +441,10 @@ The ESP32-S3-MINI-1 runs two firmware modes, selected by the main ESP32-S3 via a
 |:---|---:|---:|---:|:---|
 | ESP32-S3-MINI-1-N8 | 1 | $3.25 | $3.25 | Audio coprocessor (flash + crystal integrated) |
 | 100nF caps (decoupling) | 2 | $0.01 | $0.02 | Power filtering |
-| 3.3V LDO (shared) | — | — | $0.00 | Uses existing AMS1117 |
+| 3.3V buck (shared) | — | — | $0.00 | Uses existing SY8089 |
 | **Total v2 addition** | | | **$3.27** | |
 
-**v2 total BOM delta:** ~$3.27. The ESP32-S3-MINI-1 runs at 3.3V from the existing AMS1117 regulator (which has 800 mA headroom — the MINI-1 adds ~50 mA for single-core audio tasks, well within budget).
+**v2 total BOM delta:** ~$3.27. The ESP32-S3-MINI-1 runs at 3.3V from the existing SY8089 buck (2 A rating — the MINI-1 adds ~50 mA for single-core audio tasks, well within budget, and unlike the old LDO the extra current costs almost no heat).
 
 **Comparison with RP2040 BOM:** The RP2040 approach cost $0.99 in parts (chip + flash + crystal + caps) but required 14 days of development. The MINI-1 costs $2.28 more per unit but saves 9 days. On a 5-unit JLCPCB order, that is $11.40 total — a trivial cost for 64% less development time. The simpler PCB layout (3 components vs 7) also reduces routing complexity.
 
