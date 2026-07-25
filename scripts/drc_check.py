@@ -395,7 +395,11 @@ UNPUBLISHED_PACKAGE_FAMILIES = {
     "TF-01A",             # micro-SD socket
     "SS-12D00G3",         # slide switch
     "SW-SMD-5.1x5.1",     # tact switch
-    "SMD-4x4x2",          # shielded power inductor
+    "SMD-4x4x2",          # shielded power inductor (L1)
+    "IND-SMD-4.0x4.0",    # shielded power inductor (L2, SY8089 buck output) —
+                          # same class as SMD-4x4x2 above, different footprint
+                          # name. JLCPCB publishes no spacing cell for
+                          # wire-wound power inductors.
     "Speaker-22mm",       # speaker pads
     "Fiducial",           # fiducial mark
 }

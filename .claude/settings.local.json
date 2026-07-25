@@ -23,7 +23,13 @@
       "Bash(cp hardware/kicad/jlcpcb/cpl.csv release_jlcpcb/cpl.csv)",
       "Bash(cp hardware/kicad/esp32-emu-turbo.kicad_pcb release_jlcpcb/esp32-emu-turbo.kicad_pcb)",
       "Bash(cp -r hardware/kicad/gerbers release_jlcpcb/gerbers)",
-      "Bash(cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/gerbers.zip)"
+      "Bash(cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/gerbers.zip)",
+      "Bash(rtk git *)",
+      "Bash(easyeda2kicad --lcsc_id=C37704 --output=./eda_recheck --footprint)",
+      "Bash(cp hardware/kicad/jlcpcb/bom.csv release_jlcpcb/jlcpcb/bom.csv)",
+      "Bash(cp hardware/kicad/jlcpcb/cpl.csv release_jlcpcb/jlcpcb/cpl.csv)",
+      "Bash(cp -r hardware/kicad/gerbers release_jlcpcb/jlcpcb/gerbers)",
+      "Bash(cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/jlcpcb/gerbers.zip)"
     ],
     "deny": [
       "Bash(rm -rf /*)",

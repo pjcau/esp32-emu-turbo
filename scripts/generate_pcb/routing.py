@@ -487,7 +487,14 @@ C30_POS = (127.8, 58.9)  # C_OUT 22uF 1206 MLCC, rot 90 (pad1 +3V3 north, pad2 G
 # which physical pad carries number 1 — the layout below is unaffected.
 R25_POS = (118.0, 63.4)  # FB divider upper 100k, rot 180 (pad1 west = +3V3)
 C29_POS = (118.0, 60.3)  # 22pF feed-forward across R25, rot 180 (same pad sides)
-R26_POS = (121.1, 63.4)  # FB divider lower 22k, rot 180 (pad1 west = BUCK_FB)
+R26_POS = (121.2, 63.4)  # FB divider lower 22k, rot 180 (pad1 west = BUCK_FB)
+                         # x was 121.1: 3.10mm centres on two 0805s leaves only
+                         # 3.10 - 1.45 - 1.45 = 0.20mm of copper gap, under
+                         # JLCPCB's published 0.25mm minimum for 0805<->0805.
+                         # 121.2 gives 3.20mm centres -> 0.30mm gap. Found by
+                         # drc_check's corrected rule, which measures real
+                         # pad-to-pad copper instead of centre distance; the
+                         # old centre-distance rule could not see it.
 C3_POS = (69.55, 42.0)   # ESP32 decoupling 1 — 0.05mm right of 69.5 (C3[2] gap to BTN_UP: 0.095→0.145mm)
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
 C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
