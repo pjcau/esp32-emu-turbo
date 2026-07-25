@@ -338,20 +338,61 @@ package as C2 but non-polarized — no polarity audit needed).
 
 ### J1 — USB-C 16-pin SMD (C2765186)
 - **Datasheet**: `hardware/datasheets/J1_USB-C-16pin_C2765186.pdf` p.1 — 16-pin
-  2MD breakout. Pin 1 = GND (A1), pin 12 = GND (A12/B1), pins 4/9 = VBUS, CC1
-  pin 5, CC2 pin 7, DP1/DN1 pair, DP2/DN2 pair, SBU1/SBU2, plus 4 THT shield
-  slots.
+  2MD breakout: 12 signal lands + 4 THT shield slots.
+- **Land map (CORRECTED 2026-07-25)** — the previous version of this bullet
+  claimed "pins 4/9 = VBUS, CC1 pin 5, CC2 pin 7" and "pin 1 = GND (A1)". All
+  four were **wrong**; they were the stale land map that `j1-reconcile`
+  deleted from `datasheet_specs.py` in `48c1482`, and "land 9 = VBUS" is what
+  kept DRC demanding a VBUS connection on the SBU1 land. The four wide
+  0.60 mm lands each carry **two** contacts; the eight narrow 0.30 mm lands
+  carry one:
+
+  | land | contact(s) | function | x (mm) |
+  |---|---|---|---:|
+  | 1 | A1 + B12 | GND | -3.200 |
+  | 2 | A4 + B9 | **VBUS** | -2.400 |
+  | 3 | B8 | SBU2 | -1.750 |
+  | 4 | A5 | **CC1** | -1.250 |
+  | 5 | B7 | DN2 | -0.750 |
+  | 6 | A6 | DP1 | -0.250 |
+  | 7 | A7 | DN1 | +0.250 |
+  | 8 | B6 | DP2 | +0.750 |
+  | 9 | A8 | **SBU1** | +1.250 |
+  | 10 | B5 | **CC2** | +1.750 |
+  | 11 | B4 + A9 | **VBUS** | +2.400 |
+  | 12 | B1 + A12 | GND | +3.200 |
+
+  Independently confirmed three ways: (a) the USB Type-C r2.1 receptacle
+  pinout applied to the datasheet contact labels; (b) the alias map below,
+  derived from the datasheet drawing by a separate session; (c) the net names
+  in our own `.kicad_pcb` — land 4 is `USB_CC1` and land 10 is `USB_CC2`,
+  which alone disproves "CC1 pin 5, CC2 pin 7".
 - **EasyEDA**: `scripts/.easyeda_cache/C2765186/fp.pretty/USB-C-SMD*.kicad_mod`
   - pad 1 at `(-3.20, -2.38)` — bottom-left pin position
   - pad 12 at `(+3.20, -2.38)` — bottom-right
   - shield pads 13/14 = 4 THT oval slots at corners
   - fp_circle pin-1 at `(-4.45, -2.65)` — bottom-left
-- **Our routing**: `scripts/generate_pcb/routing.py:907-923` — matches USB-C
-  symmetric pinout (GND, VBUS, CC, data, SBU pairs on both A and B rows).
+- **EasyEDA**: `scripts/.easyeda_cache/C2765186/fp.pretty/USB-C-SMD*.kicad_mod`
+  - pad 1 at `(-3.20, -2.38)` — bottom-left pin position
+  - pad 12 at `(+3.20, -2.38)` — bottom-right
+  - shield pads 13/14 = 4 THT oval slots at corners
+  - fp_circle pin-1 at `(-4.45, -2.65)` — bottom-left
+- **Our sources** — cited **by symbol, not line number**. The previous
+  citation `routing.py:907-923` was already wrong when written (that range is
+  the VBUS-to-IP5306 last-mile stubs, not the land map) and drifted a further
+  6 lines afterwards. Line-number citations into generated-from-Python
+  sources rot silently; symbol names do not:
+  - land geometry — `scripts/generate_pcb/footprints.py::usb_c_16p`
+  - pad net assignment — `scripts/generate_pcb/routing.py::_usb_c_reversibility_traces`
 - **CPL rotation**: 0° (no override).
-- **Connector symmetry**: USB-C Type-C is reversible; A-row and B-row are
-  wired identically at the board level, so pin-1 orientation does not affect
-  function. Still, pad 1 (GND) must physically land on the datasheet A1 corner.
+- **Connector symmetry**: USB Type-C is reversible **only because we bond the
+  A-row and B-row pairs on the PCB** (DP1-DP2, DN1-DN2 per USB Type-C r2.1
+  §4.2) — it is not an inherent property of the receptacle. The earlier claim
+  that "A-row and B-row are wired identically at the board level" was **false
+  when written**: lands 5 (B7/DN2) and 8 (B6/DP2) had no net at all, which was
+  the reversibility bug. It became true with `42f51ef`. Given the bonding,
+  pin-1 orientation does not affect function; pad 1 (GND) must still land on
+  the datasheet A1 corner.
 - **Pad-name alias map (added 2026-07-25)**: our footprint numbers the lands
   `1`..`14`; the EasyEDA reference names them by the receptacle contact(s)
   each land carries. With no shared namespace the geometric cross-check was
@@ -393,8 +434,25 @@ package as C2 but non-polarized — no polarity audit needed).
   reports `[OK]` on **positive evidence**, not on absence of a check.
 - **Verdict**: CORRECT — land map verified against the datasheet-derived
   reference, 12/12 lands exact.
-- **Related history**: USB-C shield slots use OVAL drills per datasheet
-  (0.60×1.60 front, 0.60×1.50 rear) — see `MEMORY.md` "USB-C shield THT" entry.
+- **Related history — shield slot drills (CORRECTED 2026-07-25)**: OVAL
+  drills, but the two ends are **deliberately asymmetric** and the old
+  "0.60×1.60 front, 0.60×1.50 rear" was half stale:
+  - **Rear: 0.60 × 1.40 mm** — the 1.50 was 0.10 mm over the datasheet and
+    was precisely what produced the 0.1449 mm annular ring. Corrected by
+    `usbc-and-drc` in `42f51ef` (`footprints.py` `USBC_SHIELD_REAR_SLOT_H`).
+  - **Front: 0.60 × 1.60 mm** — held at 1.60 against the datasheet's 1.70.
+    This is an **intentional 0.10 mm deviation** backed by prototype #1, not
+    an error. Stated explicitly because it otherwise reads as one and invites
+    a well-meaning "fix" back to 1.70.
+
+  Note: this worktree is based on `17ada49` and does **not** contain
+  `42f51ef`, so `footprints.py` here still carries the 1.50 rear value and a
+  docstring repeating it. The values above describe the corrected design and
+  are owned by `usbc-and-drc` / `j1-reconcile`; do not "fix" this table to
+  match a pre-`42f51ef` checkout.
+
+  The `MEMORY.md` "USB-C shield THT" entry is stale for the same reason —
+  flagged to the user rather than edited, since it is user memory.
 
 ### J3 — JST PH 2P SMD battery connector (C295747)
 - **Datasheet**: `hardware/datasheets/J3_JST-PH-2P-SMD_C295747.pdf` — 2-pin SMD
