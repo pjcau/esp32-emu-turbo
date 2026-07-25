@@ -60,9 +60,17 @@ class ControlsSheet(SchematicSheet):
             # Cell label
             self.text(f"{name} ({gpio})", bx - 15, by - 5, 2, True)
 
-            # Pull-up resistor (10k to +3V3)
+            # Pull-up resistor (10k to +3V3).
+            # Placed at 180 deg so pin 1 is the BOTTOM terminal (the
+            # button/signal node) and pin 2 the TOP terminal (+3V3).
+            # That is the pad order the R_0805 lands actually have on the
+            # board (routing.py: pad 1 = BTN_x, pad 2 = +3V3). The
+            # resistor symbol is vertically symmetric, so the drawing is
+            # unchanged; only the pin numbering flips. This removes the
+            # "R4..R15 pin 2" block from the verify_netlist_diff T4
+            # allowlist rather than papering over it.
             ry = by + 5
-            self.sym("R", rr, "10k", bx, ry, ["1", "2"])
+            self.sym("R", rr, "10k", bx, ry, ["1", "2"], angle=180)
             self.v33(bx, by - 5)
             self.wire(bx, by - 5, bx, ry - 3.81)
 

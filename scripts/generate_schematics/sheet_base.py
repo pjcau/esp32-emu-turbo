@@ -78,5 +78,5 @@ class SchematicSheet:
     def nc(self, x, y):
         self.parts.append(self.ctx.no_connect(x, y))
 
-    def sym(self, lib, ref, val, x, y, pins):
-        self.parts.append(self.ctx.symbol(lib, ref, val, x, y, pins))
+    def sym(self, lib, ref, val, x, y, pins, angle=0):
+        self.parts.append(self.ctx.symbol(lib, ref, val, x, y, pins, angle))
