@@ -2,6 +2,7 @@
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-isolation verify-jlcpcb-vias verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
+       net-explorer net-explorer-check verify-sch-pins \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help stats
@@ -26,8 +27,9 @@ docker-build: ## Build Docker images (KiCad + OpenSCAD) — cached if unchanged
 generate-schematic: ## Generate 7 KiCad schematics from Python spec
 	@$(T) generate-schematic docker compose run --rm generate-sch
 
-generate-pcb: ## Generate KiCad PCB + JLCPCB exports (BOM, CPL)
+generate-pcb: ## Generate KiCad PCB + JLCPCB exports (BOM, CPL) + Net Explorer data
 	@$(T) generate-pcb python3 -m scripts.generate_pcb hardware/kicad
+	@$(T) net-explorer python3 scripts/generate_net_explorer.py
 
 render-schematics: docker-build ## Export KiCad schematic to SVG
 	@$(T) render-schematics ./scripts/render-schematics.sh
@@ -88,6 +90,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_ground_loops \
 	verify_jlcpcb_capabilities \
 	verify_net_class_widths \
+	verify_net_explorer_fresh \
 	verify_net_connectivity \
 	verify_netlist_diff \
 	verify_polarity \
@@ -131,6 +134,12 @@ verify-sch-crossings: ## Fail when two schematic wires cross without a junction 
 
 verify-sch-pins: ## Fail when a schematic symbol pin has no wire/label/junction on it (undeclared floating pin)
 	@$(T) verify-sch-pins python3 scripts/verify_schematic_pin_connectivity.py
+
+net-explorer: ## Regenerate the PCB Net Explorer data (website/static/net-explorer-data.json)
+	@$(T) net-explorer python3 scripts/generate_net_explorer.py
+
+net-explorer-check: ## Fail if the Net Explorer data is stale vs the .kicad_pcb
+	@$(T) net-explorer-check python3 scripts/generate_net_explorer.py --check
 
 docs-bom: ## Regenerate the docs BOM table from release_jlcpcb/bom.csv
 	@$(T) docs-bom python3 scripts/generate_docs_bom.py

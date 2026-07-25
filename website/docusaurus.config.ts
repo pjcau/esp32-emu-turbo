@@ -72,6 +72,11 @@ const config: Config = {
           position: 'left',
         },
         {
+          href: 'pathname:///net-explorer.html',
+          label: 'Net Explorer',
+          position: 'left',
+        },
+        {
           href: 'https://github.com/pjcau/esp32-emu-turbo',
           label: 'GitHub',
           position: 'right',
