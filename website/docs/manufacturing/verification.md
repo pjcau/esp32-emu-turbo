@@ -723,7 +723,7 @@ produces a non-zero exit code; everything else is exit-0.
 | `ALLOW` | 0 | Non-zero δ_row mismatch explicitly signed off with empirical evidence (prototype batch + observed behaviour). If δ_row drifts, entry auto-invalidates and the ref re-FAILs. | `_GEOMETRIC_MISMATCH_ALLOWLIST` in `verify_easyeda_footprint.py` |
 | `PENDING` | 0 | Suspected polarity/rotation bug awaiting empirical validation on a specific named production batch. Entry locks in the expected δ_row and carries the test procedure inline. If δ_row drifts, FAIL "PENDING entry stale, re-verify". Printed in yellow. | `_PENDING_VALIDATION` in `verify_easyeda_footprint.py` |
 | `REVIEW` | 0 | Footprint layout matches EasyEDA but an override is still set — typically a 3D-model polarity stripe that points the wrong way in the EasyEDA 3D model (C2 tantalum class). Keep override, document reason. | `_JLCPCB_ROT_OVERRIDES` |
-| `WARN` | 0 | **Could not verify — never "verified good".** LCSC part not on EasyEDA; ref missing from PCB; or **no pad-name correspondence exists between the two libraries** so the geometric check is undefined (J1 USB-C: EasyEDA names pads by signal `A1B12`/`A5`/`B8`…, we number them 1..14, and the only shared names 13/14 mean *signal pins* for us and *shield through-holes* for EasyEDA). Manual review required. | — |
+| `WARN` | 0 | **Could not verify — never "verified good".** LCSC part not on EasyEDA; ref missing from PCB; or no pad-name correspondence exists between the two libraries, so the geometric check is undefined. Manual review required. Where a datasheet-derived translation exists, add it to `_PAD_NAME_ALIASES` instead of leaving the ref unverified. | `_PAD_NAME_ALIASES` |
 | `INFO` | 0 | Non-polarized part (resistor, cap) with δ_row mismatch — no manufacturing impact. | — |
 | `FAIL` | 1 | Polarized part whose pad constellation is **not** a rigid rotation of the reference (pin numbering permuted → a genuinely reversed part), with no override and no allowlist/pending entry. | — |
 
@@ -755,11 +755,31 @@ geometrically *indistinguishable*, so such parts are never auto-cleared —
 their polarity is decided by silkscreen / 3D marker and they stay on the
 manual lists.
 
+#### Pad-name alias maps
+
+The comparison matches pads by **name**, which assumes a name denotes the
+same physical pin in both libraries. USB-C breaks that assumption: our
+footprint numbers the lands `1`..`14`, while the EasyEDA reference names
+them by the receptacle contact(s) each land carries (`A1B12`, `A5`, `B8`…).
+
+`_PAD_NAME_ALIASES` translates our names into EasyEDA's, keyed by **LCSC
+part number** — never by package family, since receptacles with a different
+land count merge their GND/VBUS pairs differently. Shield through-hole posts
+are deliberately excluded: both libraries reuse `13`/`14` for them, but
+neither guarantees the same left/right numbering.
+
+With the C2765186 map applied, J1's 12 signal lands match the
+datasheet-derived reference at 0.0000 mm, so J1 reports `OK` on positive
+evidence rather than being left unverified. Adding a datasheet-derived alias
+map is always preferable to accepting a WARN.
+
 **Self-test**: `_self_test()` runs on every invocation (pure arithmetic).
 It asserts the 90° SOT-23 case is recognised, a pad-1/2 swap is *rejected*,
-2-pad parts are never cleared, and D1 is absent from the allowlist. A
-loosened tolerance fails the run loudly instead of silently clearing a real
-polarity bug.
+2-pad parts are never cleared, and D1 is absent from the allowlist. It also
+guards the alias maps: keys must be LCSC part numbers, aliases must be
+injective, shield posts must stay excluded, and C2765186 must keep its
+pin-1 anchor (`1`→A1B12, `12`→B1A12). A loosened tolerance or a corrupted
+alias fails the run loudly instead of silently comparing the wrong pins.
 
 Separation of concerns — three independent dicts:
 

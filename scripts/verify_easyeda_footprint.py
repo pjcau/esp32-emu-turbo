@@ -59,6 +59,87 @@ CACHE_DIR = SCRIPTS / ".easyeda_cache"
 _POLARIZED_PREFIXES = ("D", "LED", "Q", "U", "J", "SW_PWR")
 
 
+# ── Pad-name alias tables (our pad name -> EasyEDA pad name) ─────────
+#
+# The geometric cross-check matches pads by NAME, which assumes a pad name
+# denotes the same physical pin in both libraries. For most parts it does.
+# For USB-C it does not: our footprint numbers the lands 1..14 while the
+# EasyEDA reference names them by the receptacle contact(s) each land
+# carries (A1B12, A5, B8, …). Without a translation the comparison is
+# undefined and the ref is reported WARN (see the guard in main()).
+#
+# Keyed by LCSC PART NUMBER, deliberately — not by "USB-C". A 16-land or
+# 24-pin receptacle merges its GND/VBUS pairs differently, so a map derived
+# for one part is invalid for another.
+#
+# C2765186 (TYPE-C 16PIN 2MD(073)) — 12 lands. Derived by `j1-reconcile`
+# from hardware/datasheets/J1_USB-C-16pin_C2765186.pdf page 1,
+# "RECOMMENDED PCB LAYOUT (TOP VIEW)", which labels every land with the
+# contact(s) it carries; 4 double-labelled wide lands ("0.60(4X)") and 8
+# single-labelled narrow ones ("0.30(8X)"), left to right:
+#
+#   A1.B12 | A4.B9 | B8 | A5 | B7 | A6 | A7 | B6 | A8 | B5 | B4.A9 | B1.A12
+#
+# Independently corroborated: the EasyEDA footprint lists its pads in
+# byte-identical order to the datasheet drawing.
+#
+# NOTE: our '13'/'14' are deliberately ABSENT from this map. On our side
+# they are the four shield through-hole posts; EasyEDA also reuses '13'/'14'
+# for shield posts, but nothing guarantees the two libraries number the
+# left/right post identically, so including them could inject a phantom
+# mismatch. The meaningful pin-1 anchor is '1' -> A1B12 vs '12' -> B1A12:
+# the two ends of the signal row, 6.40mm apart, whose ordering IS the
+# orientation question.
+_PAD_NAME_ALIASES: dict[str, dict[str, str]] = {
+    "C2765186": {
+        "1": "A1B12", "2": "A4B9", "3": "B8", "4": "A5",
+        "5": "B7", "6": "A6", "7": "A7", "8": "B6",
+        "9": "A8", "10": "B5", "11": "B4A9", "12": "B1A12",
+    },
+}
+
+
+def _apply_pad_aliases(ee: dict, lcsc: str) -> dict:
+    """Re-key an EasyEDA pad set into OUR pad namespace via the alias map.
+
+    Returns `ee` unchanged when the part has no alias table. Otherwise
+    returns a copy whose `pads_by_num`, `pad1` and `row_dir` are expressed
+    in our pad names, so every downstream comparison (row direction,
+    pad-1 delta, rigid-rotation fit) becomes meaningful.
+    """
+    amap = _PAD_NAME_ALIASES.get(lcsc.strip())
+    if not amap:
+        return ee
+
+    src = ee["pads_by_num"]
+    remapped = {ours: src[theirs] for ours, theirs in amap.items()
+                if theirs in src}
+    if not remapped:
+        return ee
+
+    out = dict(ee)
+    out["pads_by_num"] = remapped
+    out["n_pads"] = len(remapped)
+    out["aliased"] = True
+
+    pad1 = remapped.get("1")
+    out["pad1"] = pad1
+    row = None
+    if pad1 is not None:
+        nums = sorted((k for k in remapped if k.isdigit() and int(k) > 1),
+                      key=int)
+        if "2" in remapped:
+            p2 = remapped["2"]
+        elif nums:
+            p2 = remapped[nums[0]]
+        else:
+            p2 = None
+        if p2 is not None:
+            row = (p2[0] - pad1[0], p2[1] - pad1[1])
+    out["row_dir"] = row
+    return out
+
+
 # ── Geometric mismatch ALLOWLIST (explicit, with evidence) ──────────
 #
 # Policy reference: user memory `feedback_never_silence_errors.md` —
@@ -728,6 +809,39 @@ def _self_test() -> None:
             "D1 is in _GEOMETRIC_MISMATCH_ALLOWLIST — it must be cleared by "
             "the rigid-rotation proof, not by silencing (see POLARITY_AUDIT)")
 
+    # 5. Pad-name alias tables must stay well-formed. A wrong alias silently
+    #    compares the wrong pins, which is the exact failure mode the table
+    #    was introduced to remove — so it is guarded, not trusted.
+    for lcsc, amap in _PAD_NAME_ALIASES.items():
+        theirs = list(amap.values())
+        if len(set(theirs)) != len(theirs):
+            fails.append(
+                f"_PAD_NAME_ALIASES[{lcsc!r}] maps two of our pads onto the "
+                f"same EasyEDA pad — the comparison would be degenerate")
+        if not lcsc.startswith("C") or not lcsc[1:].isdigit():
+            fails.append(
+                f"_PAD_NAME_ALIASES key {lcsc!r} is not an LCSC part number. "
+                f"Alias maps MUST be keyed by part, not by package family: "
+                f"USB-C receptacles with a different land count merge their "
+                f"GND/VBUS pairs differently.")
+
+    usbc = _PAD_NAME_ALIASES.get("C2765186", {})
+    if usbc:
+        # Shield posts must stay out: both libraries reuse '13'/'14' for
+        # them, but nothing guarantees they number left/right alike, so
+        # including them could inject a phantom mismatch.
+        if {"13", "14"} & set(usbc):
+            fails.append(
+                "C2765186 alias map includes shield posts 13/14 — remove "
+                "them; the two libraries may number left/right differently")
+        # Pin-1 orientation anchor: the two ends of the signal row.
+        if usbc.get("1") != "A1B12" or usbc.get("12") != "B1A12":
+            fails.append(
+                "C2765186 alias map lost its pin-1 anchor ('1'->A1B12, "
+                "'12'->B1A12) — these two ends of the signal row ARE the "
+                "orientation question; verify against the datasheet "
+                "'RECOMMENDED PCB LAYOUT (TOP VIEW)' before changing")
+
     if fails:
         sys.stderr.write("FATAL: verify_easyeda_footprint self-test failed\n")
         for f in fails:
@@ -781,7 +895,7 @@ def main() -> int:
                     f"LCSC {lcsc} not on EasyEDA (non-polarized, ignored)")
             continue
 
-        ee = _parse_easyeda_mod(mod_path)
+        ee = _apply_pad_aliases(_parse_easyeda_mod(mod_path), lcsc)
         ours = our_map.get(ref)
         if ours is None:
             res.add("WARN", ref, "ref not present in PCB (skipped)")

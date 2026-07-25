@@ -20,10 +20,9 @@
 > their archived coordinates exactly.
 >
 > **Note on WARN**: a WARN from that checker means "could not verify", never
-> "verified good" — currently J1 (USB-C), whose EasyEDA footprint names pads
-> by USB-C signal (`A1B12`, `A5`, `B8`, …) while ours numbers them 1..14, so
-> no pad-name correspondence exists and the geometric check is undefined.
-> J1's pin-1 orientation must be confirmed manually.
+> "verified good". There are currently **no WARN refs** — J1 (USB-C) was the
+> last one and is now positively verified via a datasheet-derived pad-name
+> alias map (see the J1 section).
 
 ---
 
@@ -353,7 +352,47 @@ package as C2 but non-polarized — no polarity audit needed).
 - **Connector symmetry**: USB-C Type-C is reversible; A-row and B-row are
   wired identically at the board level, so pin-1 orientation does not affect
   function. Still, pad 1 (GND) must physically land on the datasheet A1 corner.
-- **Verdict**: CORRECT.
+- **Pad-name alias map (added 2026-07-25)**: our footprint numbers the lands
+  `1`..`14`; the EasyEDA reference names them by the receptacle contact(s)
+  each land carries. With no shared namespace the geometric cross-check was
+  **undefined**, and the checker used to fabricate a comparison from
+  unrelated pads (our signal pin 13 vs EasyEDA's shield post 13), yielding a
+  bogus δ_row=180° FAIL that recommended an override on a real connector. It
+  also made the verdict depend on glob order — the cause of J1's historic
+  cache-dependent flip-flopping.
+
+  The map lives in `verify_easyeda_footprint.py::_PAD_NAME_ALIASES`, keyed by
+  **LCSC part number** (a 16-land or 24-pin receptacle merges its GND/VBUS
+  pairs differently, so it is not reusable across USB-C parts). Derived by
+  the `j1-reconcile` session from `J1_USB-C-16pin_C2765186.pdf` p.1
+  "RECOMMENDED PCB LAYOUT (TOP VIEW)", rendered at 1800 dpi, which labels
+  each land with its contact(s) — 4 wide double-labelled (`0.60(4X)`) and 8
+  narrow single-labelled (`0.30(8X)`), left to right:
+
+  `A1.B12 | A4.B9 | B8 | A5 | B7 | A6 | A7 | B6 | A8 | B5 | B4.A9 | B1.A12`
+
+  Independently corroborated: the EasyEDA footprint lists its pads in
+  byte-identical order to the datasheet drawing.
+
+  Our `13`/`14` are deliberately **excluded**: on both sides they are shield
+  through-hole posts, but nothing guarantees the two libraries number the
+  left/right post alike, so including them could inject a phantom mismatch.
+- **Geometric verification result (2026-07-25)**: with the alias applied,
+  all **12 signal lands match at 0.0000 mm** with rotation 0° and pin
+  numbering preserved (tolerance 0.200 mm = 40 % of the 0.5 mm pitch):
+
+  | land | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | x (mm, centred) | -3.200 | -2.400 | -1.750 | -1.250 | -0.750 | -0.250 | +0.250 | +0.750 | +1.250 | +1.750 | +2.400 | +3.200 |
+  | error | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+
+  The wide/narrow land pattern reproduces the datasheet's `0.60(4X)` /
+  `0.30(8X)` callouts. Pin-1 orientation is confirmed by the row-end anchor
+  `1`→A1B12 at -3.200 and `12`→B1A12 at +3.200, 6.400 mm apart and in the
+  correct order (a reversed row would give δ_row = 180°). J1 therefore
+  reports `[OK]` on **positive evidence**, not on absence of a check.
+- **Verdict**: CORRECT — land map verified against the datasheet-derived
+  reference, 12/12 lands exact.
 - **Related history**: USB-C shield slots use OVAL drills per datasheet
   (0.60×1.60 front, 0.60×1.50 rear) — see `MEMORY.md` "USB-C shield THT" entry.
 
