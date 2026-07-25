@@ -12,183 +12,26 @@ Produces three SVGs into website/static/img/debug/:
 Everything is derived from hardware/kicad/esp32-emu-turbo.kicad_pcb — no
 hand-placed coordinates — so the figures cannot drift from the layout.
 
+The copper parsing and the electrical grouping live in
+scripts/pcb_copper_graph.py, shared with scripts/verify_power_net_integrity.py
+(the regression gate). The figures and the gate therefore always describe the
+same board — they cannot disagree.
+
 Usage:  python3 scripts/render_3v3_rework_figures.py
 """
 
-import math
-import re
-from collections import defaultdict
+import sys
 from pathlib import Path
 
-from shapely.geometry import LineString, Point, Polygon
-
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT / "scripts"))
+
+from pcb_copper_graph import groups_for, parse_copper  # noqa: E402
+
 PCB = ROOT / "hardware/kicad/esp32-emu-turbo.kicad_pcb"
 OUT = ROOT / "website/static/img/debug"
 
 BOARD_W, BOARD_H = 160.0, 75.0
-LAYERS = {"F.Cu", "In1.Cu", "In2.Cu", "B.Cu"}
-
-
-# ── S-expression helpers ────────────────────────────────────────────
-def blocks(src, tok):
-    """Return every balanced-paren block starting with `tok`."""
-    out, i = [], 0
-    while True:
-        i = src.find(tok, i)
-        if i < 0:
-            return out
-        depth, j = 0, i
-        while j < len(src):
-            c = src[j]
-            if c == "(":
-                depth += 1
-            elif c == ")":
-                depth -= 1
-                if depth == 0:
-                    break
-            j += 1
-        out.append(src[i:j + 1])
-        i = j + 1
-
-
-def parse():
-    s = PCB.read_text()
-    netmap = {int(a): b for a, b in
-              re.findall(r'^\s*\(net (\d+) "([^"]*)"\)', s, re.M)}
-
-    zones = []
-    for z in blocks(s, "(zone"):
-        net = re.search(r'\(net_name "([^"]*)"\)', z).group(1)
-        layer = re.search(r"\(layers? ([^)]*)\)", z).group(1).strip('"')
-        prio = re.search(r"\(priority (\d+)\)", z)
-        polys = []
-        for f in blocks(z, "(filled_polygon"):
-            pts = [(float(a), float(b)) for a, b in
-                   re.findall(r"\(xy ([\-0-9.]+) ([\-0-9.]+)\)", f)]
-            if len(pts) >= 3:
-                polys.append(Polygon(pts).buffer(0))
-        zones.append({"net": net, "layer": layer,
-                      "priority": int(prio.group(1)) if prio else 0,
-                      "polys": polys})
-
-    vias = []
-    for v in blocks(s, "(via"):
-        nm = re.search(r"\(net (\d+)\)", v)
-        at = re.search(r"\(at ([\-0-9.]+) ([\-0-9.]+)\)", v)
-        sz = re.search(r"\(size ([\-0-9.]+)\)", v)
-        if not (nm and at):
-            continue
-        vias.append({"net": netmap.get(int(nm.group(1)), ""),
-                     "x": float(at.group(1)), "y": float(at.group(2)),
-                     "size": float(sz.group(1)) if sz else 0.6})
-
-    segs = []
-    for t in blocks(s, "(segment"):
-        nm = re.search(r"\(net (\d+)\)", t)
-        st = re.search(r"\(start ([\-0-9.]+) ([\-0-9.]+)\)", t)
-        en = re.search(r"\(end ([\-0-9.]+) ([\-0-9.]+)\)", t)
-        w = re.search(r"\(width ([\-0-9.]+)\)", t)
-        ly = re.search(r'\(layer "([^"]+)"\)', t)
-        if not (nm and st and en):
-            continue
-        segs.append({"net": netmap.get(int(nm.group(1)), ""),
-                     "x1": float(st.group(1)), "y1": float(st.group(2)),
-                     "x2": float(en.group(1)), "y2": float(en.group(2)),
-                     "w": float(w.group(1)) if w else 0.25,
-                     "layer": ly.group(1) if ly else "F.Cu"})
-
-    fps = []
-    for f in blocks(s, "(footprint "):
-        rm = re.search(r'"Reference" "([^"]+)"', f)
-        if not rm:
-            continue
-        hdr = f[:f.find("(property")] if "(property" in f else f[:300]
-        at = re.search(r"\(at ([\-0-9.]+) ([\-0-9.]+)(?:\s+([\-0-9.]+))?\)", hdr)
-        ly = re.search(r'\(layer "([^"]+)"\)', hdr)
-        if not at:
-            continue
-        fx, fy = float(at.group(1)), float(at.group(2))
-        ang = float(at.group(3) or 0)
-        pads = []
-        for p in blocks(f, '(pad "'):
-            # mounting holes / shield pads can carry an empty pad number
-            num = re.match(r'\(pad "([^"]*)"', p).group(1)
-            pa = re.search(r"\(at ([\-0-9.]+) ([\-0-9.]+)", p)
-            sz = re.search(r"\(size ([\-0-9.]+) ([\-0-9.]+)\)", p)
-            nm = re.search(r'\(net (\d+) "([^"]*)"\)', p)
-            if not pa:
-                continue
-            # Pads in the .kicad_pcb are already pre-rotated and mirrored
-            # (footprints.get_pads: generate -> pre-rotate -> mirror), so
-            # only the footprint header angle (usually 0) still applies.
-            lx, ly_ = float(pa.group(1)), float(pa.group(2))
-            if ang % 360:
-                r = math.radians(ang)
-                lx, ly_ = (lx * math.cos(r) - ly_ * math.sin(r),
-                           lx * math.sin(r) + ly_ * math.cos(r))
-            w, h = ((float(sz.group(1)), float(sz.group(2)))
-                    if sz else (0.5, 0.5))
-            thru = "thru_hole" in p[:60] or "np_thru" in p[:60]
-            pads.append({"num": num, "x": fx + lx, "y": fy + ly_,
-                         "w": w, "h": h,
-                         "net": nm.group(2) if nm else "", "thru": thru})
-        fps.append({"ref": rm.group(1), "x": fx, "y": fy,
-                    "layer": ly.group(1) if ly else "F.Cu", "pads": pads})
-    return zones, vias, segs, fps
-
-
-# ── electrical grouping (same method as the audit) ──────────────────
-def groups_for(net, zones, vias, segs, fps):
-    """Union-find over overlapping copper that shares a layer."""
-    nodes = []
-    for z in zones:
-        if z["net"] != net:
-            continue
-        for k, g in enumerate(z["polys"]):
-            nodes.append((f"ISLAND{k}", {z["layer"]}, g, None))
-    for v in vias:
-        if v["net"] != net:
-            continue
-        nodes.append((f"VIA({v['x']:.2f},{v['y']:.2f})", set(LAYERS),
-                      Point(v["x"], v["y"]).buffer(v["size"] / 2), v))
-    for i, t in enumerate(segs):
-        if t["net"] != net:
-            continue
-        g = LineString([(t["x1"], t["y1"]), (t["x2"], t["y2"])]) \
-            .buffer(t["w"] / 2, cap_style=2)
-        nodes.append((f"SEG{i}", {t["layer"]}, g, None))
-    for f in fps:
-        for p in f["pads"]:
-            if p["net"] != net:
-                continue
-            ls = set(LAYERS) if p["thru"] else {f["layer"]}
-            g = Point(p["x"], p["y"]).buffer(max(p["w"], p["h"]) / 2)
-            nodes.append((f"PAD {f['ref']}.{p['num']}", ls, g,
-                          {"ref": f["ref"], **p}))
-
-    par = list(range(len(nodes)))
-
-    def find(a):
-        while par[a] != a:
-            par[a] = par[par[a]]
-            a = par[a]
-        return a
-
-    for i in range(len(nodes)):
-        for j in range(i + 1, len(nodes)):
-            if not (nodes[i][1] & nodes[j][1]):
-                continue
-            if nodes[i][2].intersects(nodes[j][2]):
-                ra, rb = find(i), find(j)
-                if ra != rb:
-                    par[ra] = rb
-
-    comp = defaultdict(list)
-    for i, n in enumerate(nodes):
-        comp[find(i)].append(n)
-    # largest group first
-    return sorted(comp.values(), key=len, reverse=True)
 
 
 # ── SVG primitives ──────────────────────────────────────────────────
@@ -509,8 +352,8 @@ def fig_j4(fps, grps):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     print(f"parsing {PCB.relative_to(ROOT)} ...")
-    zones, vias, segs, fps = parse()
-    grps = groups_for("+3V3", zones, vias, segs, fps)
+    zones, vias, segs, fps = parse_copper(PCB)
+    grps = groups_for("+3V3", (zones, vias, segs, fps))
     print(f"  +3V3 -> {len(grps)} gruppi elettrici separati")
     fig_plane_split(zones, vias, segs, fps, grps)
     fig_jumpers(zones, vias, segs, fps, grps)

@@ -67,6 +67,31 @@ if [ -f "$NC_SCRIPT" ]; then
     : "${NC_FAIL_COUNT:=0}"
 fi
 
+# ── Power-net integrity check ─────────────────────────────────────
+# Blocking guard against the split-plane class of bug that made PCB v1
+# completely dead: the In2.Cu +3V3 pour was carved into 4 electrically
+# separate groups by two higher-priority +5V zones, so the AMS1117 fed a
+# 4.92 mm2 orphan island while the ESP32 sat at 0 V. Zone-aware — it reads
+# the real filled_polygon geometry, which is exactly what the DRC baseline
+# and verify_net_connectivity both used to assume away.
+# See website/docs/rework/incident-3v3-split-plane.md
+PN_SCRIPT="$PROJECT_DIR/scripts/verify_power_net_integrity.py"
+PN_FAIL_COUNT=0
+PN_OUTPUT=""
+if [ -f "$PN_SCRIPT" ]; then
+    PN_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$PN_SCRIPT" 2>&1) && PN_EXIT=0 || PN_EXIT=$?
+    if [ "$PN_EXIT" -ne 0 ]; then
+        PN_FAIL_COUNT=$(printf "%s\n" "$PN_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
+        PN_FAIL_COUNT=$(printf "%s" "$PN_FAIL_COUNT" | tr -d '[:space:]')
+        : "${PN_FAIL_COUNT:=0}"
+        # Non-zero exit with no FAIL line means the script itself broke —
+        # still signal, never swallow it.
+        if [ "$PN_FAIL_COUNT" -eq 0 ]; then
+            PN_FAIL_COUNT=1
+        fi
+    fi
+fi
+
 # ── EasyEDA reference footprint check ─────────────────────────────
 # Blocking guard against the C2 tantalum class of bugs (footprint pad-1
 # on opposite side vs EasyEDA/JLCPCB reference → reversed polarity at
@@ -104,7 +129,7 @@ if [ "$EE_CHANGED" = true ] && [ -f "$EE_SCRIPT" ]; then
     fi
 fi
 
-TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + EE_FAIL_COUNT))
+TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + PN_FAIL_COUNT + EE_FAIL_COUNT))
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     echo "" >&2
@@ -127,6 +152,11 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
         echo "$NC_OUTPUT" | grep -E "^\s*(FAIL|──)" | head -15 >&2
         echo "" >&2
     fi
+    if [ "$PN_FAIL_COUNT" -gt 0 ]; then
+        echo "── Power-net integrity (verify_power_net_integrity.py): $PN_FAIL_COUNT split power net(s) ──" >&2
+        echo "$PN_OUTPUT" | grep -E "^\s*(FAIL|Group |pads |zone islands|nearest copper|pour gap)" | head -20 >&2
+        echo "" >&2
+    fi
     if [ "$EE_FAIL_COUNT" -gt 0 ]; then
         echo "── EasyEDA footprint (verify_easyeda_footprint.py): $EE_FAIL_COUNT mismatch(es) ──" >&2
         echo "$EE_OUTPUT" | grep -E "^\s*\[FAIL" | head -15 >&2
@@ -136,6 +166,7 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
     [ "$FAIL_COUNT" -gt 0 ]     && echo "  python3 scripts/verify_dfm_v2.py" >&2
     [ "$TTP_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_trace_through_pad.py" >&2
     [ "$NC_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_net_connectivity.py" >&2
+    [ "$PN_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_power_net_integrity.py" >&2
     [ "$EE_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_easyeda_footprint.py" >&2
     echo "Fix issues before committing." >&2
     exit 2
