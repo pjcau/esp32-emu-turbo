@@ -6,17 +6,23 @@
 > final CPL rotation verdict. Intended to be read before any CPL / BOM / override
 > change — **do NOT re-derive from scratch each session**.
 >
-> Last verified: 2026-07-25 (D1 re-derived, override removed — see below).
+> Last verified: 2026-07-25 (D1 re-derived against the LIVE EasyEDA
+> reference, override removed, checker model corrected — see below).
 > Previous full pass: 2026-04-15. Review after any LCSC part substitution or
 > footprint library update. Cached EasyEDA footprints live in
 > `scripts/.easyeda_cache/`.
 >
-> **The EasyEDA API currently returns HTTP 403 for every LCSC id**, so
-> `easyeda2kicad` cannot repopulate that cache and
-> `scripts/verify_easyeda_footprint.py` degrades to WARN for all 15
-> polarized refs. Until it works again, the pad coordinates recorded in this
-> document ARE the reference — do not treat a clean
-> `make verify-easyeda` run as evidence.
+> **EasyEDA API status: WORKING** (re-confirmed 2026-07-25). The earlier
+> `HTTP 403` was transient rate-limiting caused by several agents fetching
+> concurrently, not a permanent block. `easyeda2kicad` repopulates the cache
+> normally and `scripts/verify_easyeda_footprint.py` runs a real comparison
+> for every polarized ref. C37704 and C10487 were re-fetched live and match
+> their archived coordinates exactly.
+>
+> **Note on WARN**: a WARN from that checker means "could not verify", never
+> "verified good". There are currently **no WARN refs** — J1 (USB-C) was the
+> last one and is now positively verified via a datasheet-derived pad-name
+> alias map (see the J1 section).
 
 ---
 
@@ -148,8 +154,35 @@ package as C2 but non-polarized — no polarity audit needed).
     solo left). Both were placed with our `SOT-23-3` footprint at KiCad 0°
     on B.Cu, so their required CPL angle must be **identical**.
   - Q1 uses the plain formula result, **90°**, and is empirically validated
-    on 8+ prototypes (R4-R8 power up through Q1). U4 (SOT-23-6, same family,
-    KiCad 0°, B.Cu) is likewise 90° with no override.
+    on 8+ prototypes (R4-R8 power up through Q1). `_jlcpcb_rotation()` is
+    linear in `rot`, so identical footprint + identical topology + identical
+    layer ⇒ identical CPL angle.
+  - **U4 is NOT a second confirmation** (correction, 2026-07-25, credit to
+    the `d1-polarity` session). The first version of this entry cited U4
+    alongside Q1; that was wrong. Per the U4 section below, C7519's EasyEDA
+    footprint puts pads 1-2-3 on the **TOP row** (pad 1 at `(-0.95, +1.15)`),
+    which **matches** our `sot23_6()` (pad 1 at `(-0.95, +1.10)`) — so U4 has
+    δ_row = **0**, not 90 like D1/Q1. U4 reaches 90° by a different route and
+    carries no information about D1. The derivation rests on Q1 alone, which
+    is sufficient.
+  - **Open question — RESOLVED (2026-07-25, `d1-polarity` session)**: the
+    question was why U4 (δ_row=0) and Q1 (δ_row=90) both land on CPL 90°
+    while both are empirically validated. The answer is that **δ_row is not
+    a predictor of the CPL angle at all**, so there is nothing to
+    reconcile. Two validated data points in the same package family with
+    different δ_row and the same working CPL angle prove directly that the
+    CPL angle is set by the per-family constant, not by δ_row. The
+    mechanism: JLCPCB's 0° reference is the orientation of the part in
+    **JLCPCB's own parts library** (tape-and-reel orientation), whereas
+    δ_row compares two *land-pattern drawings*. EasyEDA simply draws
+    SOT-23-3 with pads 1/2 in a column and SOT-23-6 with pads 1/2/3 in a
+    row — an inconsistency internal to EasyEDA's library that has no
+    bearing on how the physical part sits in its tape. That is exactly why
+    rotation-correction databases are keyed by **package family** rather
+    than per footprint drawing.
+  - Consequently the defect was in `verify_easyeda_footprint.py`, which
+    treated any δ_row ≠ 0 as requiring an override. It has been fixed: see
+    "Checker model correction" below.
   - D1's 270° at KiCad 0° was therefore 180° out. It was never caught by
     assembly because D1's two anodes were unrouted on every board built so
     far (that is the R5-CRIT-6 bug itself), so the diode's orientation had
@@ -159,11 +192,42 @@ package as C2 but non-polarized — no polarity audit needed).
     `(rot - 180) % 360 + (-90)` yields **270°**, so the emitted CPL angle is
     numerically unchanged while the physical part finally matches its
     footprint. The override entry is deleted.
-  - EasyEDA could **not** be re-fetched live: `easyeda2kicad` returns
-    `HTTP 403 Forbidden` for every LCSC id, so `scripts/.easyeda_cache/`
-    cannot be repopulated. The pad coordinates above are the archived copy
-    of that reference and were used for the derivation.
-- **Verdict**: CORRECT at KiCad 180° / CPL 270°, no override.
+  - **LIVE RE-FETCH CONFIRMED (2026-07-25, `d1-polarity` session)**: the
+    earlier `HTTP 403` was transient rate-limiting from several agents
+    fetching concurrently. `python3 -m easyeda2kicad --full
+    --lcsc_id=C37704` now succeeds and returns
+    `SOT-23-3_L2.9-W1.6-P1.90-LS2.8-BR.kicad_mod` with pad 1 `(+1.24,
+    +0.95)`, pad 2 `(+1.24, -0.95)`, pad 3 `(-1.24, 0.00)` — **byte-for-byte
+    identical to the archived coordinates** used in the derivation above.
+    C10487 (Q1) was re-fetched live in the same run and likewise matches
+    its archived copy. The derivation therefore rests on live data, not on
+    an archive.
+  - **Full-constellation proof (live)**: fitting a rigid rotation across
+    all 3 pads (centroid-aligned, pin numbering held fixed) gives:
+
+    | rotation applied to EasyEDA ref | max pad error (D1 / C37704) | (Q1 / C10487) |
+    |---|---|---|
+    | 0°   | 2.210 mm | 2.074 mm |
+    | **90°**  | **0.187 mm** | **0.000 mm** |
+    | 180° | 2.210 mm | 2.074 mm |
+    | 270° | 3.120 mm | 2.933 mm |
+
+    Our `footprints.sot23_3()` is the EasyEDA reference **rotated 90° with
+    pin numbering preserved** — pin 1 stays pin 1. There is **no pin
+    permutation**, so this is a drawing-convention difference, not a
+    polarity defect. The 0.187 mm residual for D1 is purely the landing-pad
+    dimension difference (EasyEDA `x=±1.24` vs our `y=±1.10`); it is far
+    below the 0.760 mm discrimination threshold (40 % of the 1.90 mm
+    pad 1→2 pitch), and any genuine pin swap would displace a pad by a full
+    pitch.
+  - **Why a 180° error would have mattered**: on a SOT-23 the pad field is
+    asymmetric (two pads one side, one pad the other). At CPL 270° with
+    KiCad 0° the single cathode pin would have been driven onto the
+    two-anode side. Harmless only because the anodes were unrouted.
+- **Verdict**: CORRECT at KiCad 180° / CPL 270°, **no override**. Confirmed
+  analytically against the live EasyEDA reference and the Nexperia
+  datasheet; `verify_easyeda_footprint.py` reports D1 `[OK]` with the
+  rigid-rotation proof inline, with **no allowlist entry**.
 
 ### Q1 — SI2301CDS P-MOSFET SOT-23 (C10487)
 - **Datasheet**: `hardware/datasheets/Q1_SI2301CDS-SOT23_C10487.pdf` (198KB,
@@ -180,9 +244,19 @@ package as C2 but non-polarized — no polarity audit needed).
   - pad 3 → BAT (drain — system rail side)
 - **Topology**: standard P-MOSFET reverse-polarity protection.
 - **CPL rotation**: 90° (bottom-side mirror formula, no override).
-- **Geometric mismatch allowlist**: δ_row=90° recorded in
-  `scripts/verify_easyeda_footprint.py::_GEOMETRIC_MISMATCH_ALLOWLIST["Q1"]`
-  with empirical-validation evidence (R4-R8 boards power via SW_PWR → Q1 conducts).
+- **Geometric mismatch allowlist**: **entry REMOVED 2026-07-25.** Q1 is now
+  cleared *analytically* by the rigid-rotation test in
+  `verify_easyeda_footprint.py::_rigid_rotation_match()`: our `sot23_3()`
+  footprint is the live EasyEDA C10487 reference rotated 90° with pin
+  numbering preserved (max pad error **0.000 mm** across all 3 pads), and
+  `^SOT-23` has an explicit correction in `_JLCPCB_ROT_CORRECTIONS`. A
+  computed full-constellation proof is strictly stronger than a
+  hand-maintained δ_row sign-off, so the allowlist entry had become dead
+  code. Q1 now reports `[OK]`, not `[ALLOW]`.
+- **Empirical evidence (preserved here, was the allowlist rationale)**:
+  boards R4-R8 (8+ prototypes) power up through slide switch SW_PWR, which
+  requires Q1 to conduct — physical polarity validated on hardware. This is
+  the anchor for the whole SOT-23-3 family, including D1.
 - **Verdict**: CORRECT.
 
 ### U1 — ESP32-S3-WROOM-1-N16R8 (C2913202)
@@ -278,7 +352,47 @@ package as C2 but non-polarized — no polarity audit needed).
 - **Connector symmetry**: USB-C Type-C is reversible; A-row and B-row are
   wired identically at the board level, so pin-1 orientation does not affect
   function. Still, pad 1 (GND) must physically land on the datasheet A1 corner.
-- **Verdict**: CORRECT.
+- **Pad-name alias map (added 2026-07-25)**: our footprint numbers the lands
+  `1`..`14`; the EasyEDA reference names them by the receptacle contact(s)
+  each land carries. With no shared namespace the geometric cross-check was
+  **undefined**, and the checker used to fabricate a comparison from
+  unrelated pads (our signal pin 13 vs EasyEDA's shield post 13), yielding a
+  bogus δ_row=180° FAIL that recommended an override on a real connector. It
+  also made the verdict depend on glob order — the cause of J1's historic
+  cache-dependent flip-flopping.
+
+  The map lives in `verify_easyeda_footprint.py::_PAD_NAME_ALIASES`, keyed by
+  **LCSC part number** (a 16-land or 24-pin receptacle merges its GND/VBUS
+  pairs differently, so it is not reusable across USB-C parts). Derived by
+  the `j1-reconcile` session from `J1_USB-C-16pin_C2765186.pdf` p.1
+  "RECOMMENDED PCB LAYOUT (TOP VIEW)", rendered at 1800 dpi, which labels
+  each land with its contact(s) — 4 wide double-labelled (`0.60(4X)`) and 8
+  narrow single-labelled (`0.30(8X)`), left to right:
+
+  `A1.B12 | A4.B9 | B8 | A5 | B7 | A6 | A7 | B6 | A8 | B5 | B4.A9 | B1.A12`
+
+  Independently corroborated: the EasyEDA footprint lists its pads in
+  byte-identical order to the datasheet drawing.
+
+  Our `13`/`14` are deliberately **excluded**: on both sides they are shield
+  through-hole posts, but nothing guarantees the two libraries number the
+  left/right post alike, so including them could inject a phantom mismatch.
+- **Geometric verification result (2026-07-25)**: with the alias applied,
+  all **12 signal lands match at 0.0000 mm** with rotation 0° and pin
+  numbering preserved (tolerance 0.200 mm = 40 % of the 0.5 mm pitch):
+
+  | land | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | x (mm, centred) | -3.200 | -2.400 | -1.750 | -1.250 | -0.750 | -0.250 | +0.250 | +0.750 | +1.250 | +1.750 | +2.400 | +3.200 |
+  | error | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+
+  The wide/narrow land pattern reproduces the datasheet's `0.60(4X)` /
+  `0.30(8X)` callouts. Pin-1 orientation is confirmed by the row-end anchor
+  `1`→A1B12 at -3.200 and `12`→B1A12 at +3.200, 6.400 mm apart and in the
+  correct order (a reversed row would give δ_row = 180°). J1 therefore
+  reports `[OK]` on **positive evidence**, not on absence of a check.
+- **Verdict**: CORRECT — land map verified against the datasheet-derived
+  reference, 12/12 lands exact.
 - **Related history**: USB-C shield slots use OVAL drills per datasheet
   (0.60×1.60 front, 0.60×1.50 rear) — see `MEMORY.md` "USB-C shield THT" entry.
 
@@ -327,9 +441,9 @@ _JLCPCB_ROT_OVERRIDES = {
     "U5":  180,  # PAM8403 C5122557 — JLCPCB 3D pin-1 dot alignment
     "J4":  270,  # FPC-40P C2856812 — bottom-contact pin-1 triangle
     # "D1" REMOVED 2026-07-25 — was 270° at KiCad 0°, which is 180° out vs
-    # the identical-footprint Q1/U4 (90° by formula). D1 now sits at KiCad
+    # the identical-footprint Q1 (90° by formula). D1 now sits at KiCad
     # 180° and the formula produces the same 270° CPL angle. See the D1
-    # section above for the full derivation.
+    # section above for the full derivation (U4 is NOT a reference part).
     "C2":  180,  # Tantalum 22uF C1953590 Vishay TMCMA1C226MTRF — EasyEDA 3D model pre-rotated 180° in kicad_mod, override compensates on bottom layer
     "LED2": 180, # Green LED C19171391 — EasyEDA pad numbering reversed
 }
@@ -340,9 +454,67 @@ _JLCPCB_ROT_OVERRIDES = {
 Located in `scripts/verify_easyeda_footprint.py::_GEOMETRIC_MISMATCH_ALLOWLIST`
 with empirical-validation evidence strings. Entries:
 
-- **Q1** (δ=90°) — SI2301 SOT-23, boards R4-R8 (8+ prototypes) validated.
 - **U2** (δ=90°) — IP5306 ESOP-8, charge/boost operational on R4-R8.
 - **U3** (δ=90°) — AMS1117 SOT-223, +3V3 rail operational on R4-R8.
+- **LED2** (δ=180°) — green LED 0805, analytical (EasyEDA pad numbering
+  reversed vs cathode silk); 2-pad part, see caveat below.
+
+Removed 2026-07-25:
+
+- **Q1** — superseded by the analytical rigid-rotation proof (see the Q1
+  section). Not silenced: it now passes a *stronger* computed check.
+- **D1** — never added. D1 was resolved by fixing the checker, not by
+  allowlisting it.
+
+---
+
+## Checker model correction (2026-07-25)
+
+`verify_easyeda_footprint.py` previously treated **any** δ_row ≠ 0 as a
+defect requiring a `_JLCPCB_ROT_OVERRIDES` entry. That model was wrong and
+produced a false FAIL on D1. The script's own comments admitted the gap
+("the CPL rotation may already be compensated … we can't cleanly derive
+this without assembly feedback, so conservatively FAIL and ask human").
+
+**Why δ_row ≠ 0 is not, by itself, a defect.** δ_row compares two
+*land-pattern drawings*. It can mean either of two very different things:
+
+1. **Benign drawing-convention difference** — the same pad field drawn at a
+   different angle, pin numbering intact. EasyEDA draws SOT-23-3 with pads
+   1/2 in a column; the KiCad standard draws them in a row. No pin can land
+   on the wrong net. The CPL angle for such a part comes from the
+   empirically-derived per-family constant in `_JLCPCB_ROT_CORRECTIONS`,
+   because JLCPCB's 0° reference is the part's orientation in **JLCPCB's
+   parts library** (tape-and-reel), not in a footprint drawing.
+2. **Real polarity bug** — pad *numbering* permuted or mirrored relative to
+   the package geometry, so physical pin 1 lands on the pad we routed to
+   pin 2. This is the C2 and LED2 class, and no rotation repairs it.
+
+Proof that δ_row does not drive the CPL angle: Q1 (δ_row = 90) and U4
+(δ_row = 0) are in the same `^SOT-23` family, both emit CPL 90°, and **both
+are empirically validated on hardware**. Two validated points with different
+δ_row and the same working angle settle it.
+
+**The fix** — `_rigid_rotation_match()` fits a rigid rotation across *all*
+pads with pin numbering held fixed. A match proves case 1; a non-match
+leaves case 2 and still FAILs. A part is cleared automatically only when it
+matches rigidly **and** its package family has an explicit entry in
+`_JLCPCB_ROT_CORRECTIONS`. Tolerance is scale-aware (40 % of the tightest
+pad pitch), so a genuine pin swap — always a full pitch — can never pass.
+
+**Two-pad caveat.** For a symmetric 2-pad part (0805 LED, 1206 tantalum) a
+180° rotation and a pad-1/pad-2 swap are geometrically *indistinguishable*.
+The test therefore requires ≥ 3 pads and never clears such parts; C2 and
+LED2 remain on the manual lists, decided by silkscreen / 3D marker.
+
+**Undefined-comparison guard.** If a pad *name* does not denote the same pin
+in both libraries the comparison is meaningless. The old code silently fell
+back to "first pad in file" and "lowest numeric pad > 1", fabricating a
+correspondence — for J1 it compared our signal pin 13 against EasyEDA's
+shield through-hole 13, yielding a bogus δ_row = 180° and a FAIL recommending
+a bogus override. It also made J1's verdict depend on file/glob ordering,
+which is why J1 flip-flopped with cache state. Such refs now report **WARN
+("cannot verify")** instead of an invented number.
 
 ---
 
