@@ -26,6 +26,17 @@ class KiCadContext:
             f' (uuid "{self.uid()}"))\n'
         )
 
+    def junction(self, x: float, y: float) -> str:
+        """Connection dot where a wire ENDS on another wire mid-span.
+
+        Without it KiCad treats the touch as a crossing, not a connection,
+        and so does a human reader. See scripts/verify_schematic_crossings.py.
+        """
+        return (
+            f'  (junction (at {x} {y}) (diameter 0) (color 0 0 0 0)'
+            f' (uuid "{self.uid()}"))\n'
+        )
+
     def global_label(self, name: str, x: float, y: float, angle: float = 0,
                      shape: str = "bidirectional") -> str:
         return (

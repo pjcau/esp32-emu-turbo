@@ -60,6 +60,35 @@ class SchematicSheet:
     def label(self, name, x, y, angle=0):
         self.parts.append(self.ctx.label(name, x, y, angle))
 
+    def junction(self, x, y):
+        self.parts.append(self.ctx.junction(x, y))
+
+    def link(self, name, x, y, angle=0, stub=3.81, glob=False):
+        """Connect a point to a net BY LABEL instead of by a drawn wire.
+
+        Draws a short stub away from the pin and puts the net name on its
+        end. Two link() calls with the same name are connected, with
+        nothing drawn between them — so the connection cannot cross
+        anything, and the sheet stays readable as signal count grows.
+
+        Use this instead of routing a wire across the sheet. `angle` is the
+        direction the stub points: 0 right, 90 up, 180 left, 270 down.
+
+        Set `glob=True` when the net ALREADY carries a global label on this
+        sheet. Mixing a local and a global label of the same name still
+        connects, but KiCad raises `same_local_global_label` and the reader
+        cannot tell which one is authoritative.
+        """
+        import math
+        rad = math.radians(angle)
+        ex = round(x + stub * math.cos(rad), 2)
+        ey = round(y - stub * math.sin(rad), 2)
+        self.wire(x, y, ex, ey)
+        if glob:
+            self.glabel(name, ex, ey, angle)
+        else:
+            self.label(name, ex, ey, angle)
+
     def glabel(self, name, x, y, angle=0, shape="bidirectional"):
         self.parts.append(self.ctx.global_label(name, x, y, angle, shape))
 

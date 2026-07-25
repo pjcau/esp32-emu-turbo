@@ -152,9 +152,13 @@ class PowerSupplySheet(SchematicSheet):
         # sees the connector's full expected net set (datasheet_specs.py).
         self.glabel("USB_CC1", vbus_x + 4, uy, 0)
         self.glabel("USB_CC2", vbus_x + 4, uy + 3.81, 0)
-        # CC1 -> R1 (orthogonal L-shape)
-        self.wire(vbus_x, uy, r1x, uy)
-        self.wire(r1x, uy, r1x, r1y - 3.81)
+        # CC1 -> R1 BY LABEL, not by wire.
+        # The L-shaped route ran down x=78 and crossed the CC2 line at
+        # (78, 88.81). Two different nets crossing reads as a connection to
+        # anyone scanning the sheet, and only the absence of a junction dot
+        # says otherwise. Guarded by scripts/verify_schematic_crossings.py.
+        self.wire(vbus_x, uy, vbus_x + 4, uy)
+        self.link("USB_CC1", r1x, r1y - 3.81, 90, glob=True)
         # CC2 -> R2 (orthogonal L-shape)
         self.wire(vbus_x, uy + 3.81, r2x, uy + 3.81)
         self.wire(r2x, uy + 3.81, r2x, r2y - 3.81)
@@ -323,12 +327,17 @@ class PowerSupplySheet(SchematicSheet):
         r16_y = 76
         self.sym("R", "R16", "100k", r16_x, r16_y, ["1", "2"])
         self.text("Always-on", r16_x + 3, r16_y - 3, 1.5)
-        # R16 pin1 (top) -> +5V
-        self.v5(r16_x, r16_y - 8)
-        self.wire(r16_x, r16_y - 8, r16_x, r16_y - 3.81)
-        # R16 pin2 (bottom) -> KEY via orthogonal route
-        self.wire(r16_x, r16_y + 3.81, r16_x, key_y)
-        self.wire(r16_x, key_y, key_x, key_y)
+        # R16 pin1 (top) -> +5V by TAPPING the rail, not by a second
+        # power symbol. The old stub ran from a redundant +5V symbol at
+        # y=68 down to the pin and crossed the +5V rail at (182, 70) —
+        # same net, so harmless electrically, but it drew as a crossing.
+        self.wire(r16_x, vout_turn_y, r16_x, r16_y - 3.81)
+        self.junction(r16_x, vout_turn_y)
+        # R16 pin2 (bottom) -> KEY BY LABEL, not by wire.
+        # The orthogonal route went down x=182 from y=79.81 to y=90.08 and
+        # crossed the IP5306 lines at y=85.00 and y=87.54 on the way.
+        self.link("KEY", r16_x, r16_y + 3.81, 270)
+        self.link("KEY", key_x, key_y, 0)
 
         # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
         # JST PH 2-pin connector — pushed further right on A3 landscape
