@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
+       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
@@ -126,6 +126,12 @@ repo-map-check: ## Fail if docs/REPO_MAP.md is stale vs the scripts on disk
 	@$(T) repo-map-check python3 scripts/generate_repo_map.py --check
 verify-sch-crossings: ## Fail when two schematic wires cross without a junction (use a labelled link instead)
 	@$(T) verify-sch-crossings python3 scripts/verify_schematic_crossings.py
+
+docs-bom: ## Regenerate the docs BOM table from release_jlcpcb/bom.csv
+	@$(T) docs-bom python3 scripts/generate_docs_bom.py
+
+docs-bom-check: ## Fail if the docs BOM table is stale vs the shipped BOM
+	@$(T) docs-bom-check python3 scripts/generate_docs_bom.py --check
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py

@@ -30,7 +30,7 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
                           +-------+-------+
                           |               |
                     +-----+-----+   +-----+-----+
-                    | LiPo Batt |   | AMS1117    |
+                    | LiPo Batt |   | SY8089     |
                     | 3.7V      |   | 5V -> 3.3V |
                     | 5000 mAh  |   +-----+------+
                     |           |         |

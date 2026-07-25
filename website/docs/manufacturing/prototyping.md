@@ -20,7 +20,7 @@ Step-by-step guide to assemble the ESP32 Emu Turbo prototype on a breadboard.
 
 ### Step 1: Power Rail
 
-Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V with the AMS1117.
+Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V with a buck module. On breadboard an MP1584 mini module is the easiest stand-in for the SY8089AAAC used on the PCB — set its trimmer to 3.3V with NO load connected before wiring it to anything.
 
 ```
 [IP5306 Module]
@@ -30,14 +30,14 @@ Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V 
   BAT- ──> LiPo battery (-)
   USB  ──> USB-C cable (for charging + power)
 
-[AMS1117-3.3]
+[Buck 5V->3.3V]
   VIN  ──> 5V rail (through 10µF cap)
   GND  ──> GND rail
   VOUT ──> Breadboard 3.3V rail (through 22µF cap)
 ```
 
 :::caution Capacitors are mandatory
-The AMS1117 requires both input (10µF) and output (22µF) capacitors for stable operation. Tantalum capacitors are recommended. Without them, the regulator may oscillate.
+The buck needs an input cap (22µF ceramic), an output cap (22µF ceramic) and its inductor close together — the input loop is the high di/dt path. Use **ceramic, not tantalum**: the ESR window that made a tantalum mandatory belonged to the old LDO, and a reversed tantalum is what destroyed prototype #1 ([incident](/docs/rework/incident-c2-reversed)).
 :::
 
 ### Step 2: ESP32-S3 DevKit
@@ -159,8 +159,8 @@ Before powering on, verify with a multimeter:
 
 - [ ] 3.3V rail is NOT shorted to GND
 - [ ] 5V rail is NOT shorted to GND
-- [ ] AMS1117 input cap (10µF) is connected correctly (polarity!)
-- [ ] AMS1117 output cap (22µF) is connected correctly
+- [ ] Buck input cap (22µF ceramic) sits close to VIN/GND — short loop
+- [ ] Buck output cap (22µF ceramic) and inductor are connected
 - [ ] All display data lines (D0-D7) are connected to correct GPIOs
 - [ ] Display control lines (CS, RST, DC, WR, RD) are correct
 - [ ] SD card SPI lines are not swapped (MOSI/MISO confusion is common)
@@ -177,7 +177,7 @@ Double-check all connections with a multimeter in continuity mode. A short circu
 1. Connect USB-C to IP5306 module
 2. Verify 5V on the 5V rail with multimeter
 3. Verify 3.3V on the 3.3V rail
-4. Check the AMS1117 is not getting hot (if it is, there's a short)
+4. Check the regulator is not getting hot. A buck runs near ambient — any warmth at all means a short downstream
 
 ### Test 2: ESP32-S3 Boot
 1. Connect ESP32-S3 DevKit via USB
@@ -226,4 +226,4 @@ Double-check all connections with a multimeter in continuity mode. A short circu
 | Buttons always read LOW | Pull-up resistor missing | Add 10kΩ to 3.3V |
 | Audio crackling | Buffer underrun | Increase I2S DMA buffer size |
 | ESP32-S3 won't boot | EN pin floating | Add 10kΩ pull-up + 100nF cap |
-| AMS1117 overheating | Excessive current draw | Check for shorts on 3.3V rail |
+| Regulator hot, or buck in hiccup | Excessive current draw | Check for shorts on the 3.3V rail |

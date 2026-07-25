@@ -13,7 +13,7 @@ Complete electrical design for the ESP32 Emu Turbo, split into 6 detailed schema
 <div className="sheet-grid">
   <a href="#sheet-1--power-supply" className="sheet-card">
     <h4>1. Power Supply</h4>
-    <p>USB-C, IP5306, AMS1117, battery</p>
+    <p>USB-C, IP5306, SY8089 buck, battery</p>
   </a>
   <a href="#sheet-2--mcu-esp32-s3" className="sheet-card">
     <h4>2. MCU</h4>
@@ -66,7 +66,7 @@ make render-schematics    # Export SVG + PDF
                           ┌───────┴───────┐
                           │               │
                     ┌─────┴─────┐   ┌─────┴──────┐
-                    │ LiPo Batt │   │  AMS1117   │
+                    │ LiPo Batt │   │  SY8089    │
                     │ 3.7V      │   │ 5V -> 3.3V │
                     │ 5000 mAh  │   └─────┬──────┘
                     │ (105080)  │         │
@@ -95,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 voltage regulator, Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
+USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
 
 <div className="schematic-container">
 
@@ -115,7 +115,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | R18 | Resistor | 1 kΩ | LED2 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
 | BT1 | Battery | LiPo 3.7V 5000mAh | 105080 cell | — |
-| U3 | LDO regulator | AMS1117-3.3 | 5V to 3.3V, 800mA max | [PDF](/datasheets/U3_AMS1117-3.3_C6186.pdf) |
+| U3 | Buck regulator | SY8089AAAC | 5V to 3.3V, 2A max, ~93% | [PDF](/datasheets/U3_SY8089AAAC_C78988.pdf) |
 | U4 | USB ESD TVS | USBLC6-2SC6 SOT-23-6 (C7519) | USB D+/D− ESD protection | — |
 | R22, R23 | Resistor | 22 Ω 0402 (C25092) | USB D+/D− series resistors | — |
 | Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
@@ -141,7 +141,20 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
 | Misc (pull-ups, buttons) | 10 mA | 20 mA |
 | **Total** | **~290 mA** | **~690 mA** |
 
-**Battery life:** 5000 mAh / 290 mA ≈ **17 hours** typical gameplay
+**Battery life:** ~**15.7 hours** typical gameplay.
+
+Not `5000 / 290`. That division ignores both conversion stages. The +3V3 rail
+(270 mA typical — PAM8403 sits on +5V) passes through the SY8089 buck at ~93%,
+and the whole 5V rail is produced by the IP5306 boosting 3.7V at ~90%:
+
+```
+I_5V  = 270 / 0.93 + 20  = 212 mA
+I_bat = 212 x 5 / (3.7 x 0.90) = 318 mA   ->  5000 / 318 = 15.7 h
+```
+
+With the AMS1117 LDO this was **11.5 h**: a linear regulator draws the full
+270 mA from the 5V rail regardless of output voltage, so the buck buys ~37%
+more runtime as well as ~7x less heat.
 
 ### Power Path Architecture
 
@@ -149,7 +162,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, AMS1117-3.3 volta
                           ┌─────────────┐
   USB-C ──VBUS────────────┤ pin 1 (VIN) │
   (5V)                    │             │
-                          │   IP5306    │──pin 8 (VOUT)──► +5V ──► AMS1117 ──► +3V3
+                          │   IP5306    │──pin 8 (VOUT)──► +5V ──► SY8089 ──► +3V3
                           │             │                          (U3)       (ESP32, LCD, SD)
   Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │
   (3.7V)   (J3)   (RPP)   │             │──pin 7 (LX)──── L1 ────► BAT+
