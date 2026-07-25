@@ -64,7 +64,7 @@ Battery ─BAT_IN─► Q1(RPP) ─BAT+─► IP5306(BAT)      +5V ─► SY8089
 |-------|-----|----------------|
 | 🔵 Blue | **GND** | USB-C metal shell (keep BLACK probe here) |
 | 🔴 Red | **+3V3** | **C30** positive pad (the SY8089A is SOT-23-5 — no tab) |
-| 🟠 Orange | **+5V** | IP5306 (output side) or AMS1117 input pin |
+| 🟠 Orange | **+5V** | IP5306 (output side) or SY8089A pin 4 (IN) |
 | 🟣 Purple | **VBUS** | C17, next to the IP5306 VIN pin |
 | 🟢 Green | **BAT+ / BAT_IN** | battery connector (silk "BATT") |
 
@@ -74,10 +74,13 @@ Close-ups:
 |------|-----|-----|
 | ![](/img/debug/probe-3v3-ams1117.png) | ![](/img/debug/probe-5v-ip5306.png) | ![](/img/debug/probe-gnd-usbc.png) |
 
-:::note AMS1117 (SOT-223) — exact pins
-Large **tab = VOUT = +3V3**. Looking at the render (component side), the three legs are,
-**left → right: GND · +3V3 · +5V** (pin 1 = GND, pin 2 = VOUT/tab, pin 3 = VIN = +5V).
-Aim at the wide tab for +3V3 — easiest target.
+:::note SY8089AAAC (SOT-23-5) — exact pins
+There is **no tab** — the AMS1117 SOT-223 it replaced had one, this does not.
+Pins are **1 = EN** (tied to +5V), **2 = GND**, **3 = LX** (switch node to L2),
+**4 = IN** (+5V), **5 = FB** (R25/R26 divider tap).
+
+**+3V3 is not on the chip at all** — it is the buck OUTPUT, after L2. Probe it on
+**C30**'s positive pad, which is a much easier target than any SOT-23-5 leg.
 :::
 
 :::note IP5306 — exact pins (this is the ambiguity you asked about)
@@ -125,7 +128,7 @@ short**. Confirm with **diode mode (`▶|`)**: *directional* (≈0.3–0.7 V one
 other) = **normal, proceed**; **~0 Ω / 0 V in BOTH directions** = **real short, stop**.
 
 Only nets that are purely passive read a genuine open. The buzzer alone is reliable for
-**T1–T5** (rails vs GND) and **T6/T8/T10/T12** (across the linear AMS1117). For **T7, T9,
+**T1–T5** (rails vs GND) and **T6/T8/T10/T12** (across the SY8089A buck). For **T7, T9,
 T11, T17** (and any signal→IC test) use the directional diode check.
 :::
 
@@ -136,7 +139,7 @@ the ESP32 on power-up.
 
 | # | Black | Red | PASS | If it beeps (~0 Ω) |
 |---|-------|-----|------|--------------------|
-| **T1** | GND | **+3V3** (AMS1117 tab) | no beep, >100 kΩ | short on 3.3 V rail → A1 |
+| **T1** | GND | **+3V3** (C30 + pad) | no beep, >100 kΩ | short on 3.3 V rail → A1 |
 | **T2** | GND | **+5V** (IP5306) | no beep | short on 5 V rail → A2 |
 | **T3** | GND | **VBUS** (C17) | no beep | short on VBUS → A3 |
 | **T4** | GND | **BAT+** (C18) | no beep | short on BAT+ → A4 |
@@ -150,7 +153,7 @@ warning below).
 
 | # | Probe A | Probe B | PASS | If it beeps |
 |---|---------|---------|------|-------------|
-| **T6** | +5V | +3V3 | no beep (AMS1117 blocks) | B1 (AMS1117 VIN–VOUT) |
+| **T6** | +5V | +3V3 | no beep (buck blocks at 0 V) | B1 (SY8089A IN–output) |
 | **T7** | VBUS | +5V | ⚠️ **may conduct** — verify with diode mode | B2 only if 0 Ω *both* directions |
 | **T8** | VBUS | +3V3 | no beep | B3 (multi-rail bridge) |
 | **T9** | BAT+ | +5V | ⚠️ **may conduct** — verify with diode mode | B4 only if 0 Ω *both* directions |
@@ -166,8 +169,8 @@ these three is normal**, not a short. **Do not** judge T7/T9/T11 with the buzzer
 - Semiconductor path → **~0.3–0.7 V one direction, OL the other** → **normal, proceed**.
 - Real short → **~0.000 V / 0 Ω in *both* directions** → defect, stop.
 
-Tests that cross the **AMS1117** (T6, T8, T10, T12) have no such path — a linear regulator
-blocks at 0 V bias — so those must read genuinely **open**.
+Tests that cross the **SY8089A** (T6, T8, T10, T12) have no such path — an unpowered buck
+does not conduct from input to output — so those must read genuinely **open**.
 :::
 
 :::caution If T8/T10/T11 all beep together
@@ -179,8 +182,8 @@ other and to GND. See [BUG #1/#2/#3](../rework/incident-power-short.md).
 
 | # | Probe A | Probe B | PASS | If it beeps |
 |---|---------|---------|------|-------------|
-| **T12** | AMS1117 **pin 3** (VIN/+5V) | AMS1117 **tab** (VOUT/+3V3) | no beep (regulator doesn't conduct at 0 V) | C1 (solder bridge across regulator) |
-| **T13** | AMS1117 **pin 1** (GND) | AMS1117 **tab** (VOUT) | no beep | A1 |
+| **T12** | SY8089A **pin 4** (IN/+5V) | **C30** + pad (+3V3) | no beep (buck doesn't conduct at 0 V) | C1 (solder bridge across regulator) |
+| **T13** | SY8089A **pin 2** (GND) | **C30** + pad (+3V3) | no beep | A1 |
 | **T14** | IP5306 **VOUT** (pin 8) | IP5306 **GND** (exposed pad) | no beep | A2 |
 | **T15** | each +3V3 cap **C2 / C26 / C_dec** +pad | GND | no beep, all identical | A1 (find *which* cap beeps) |
 | **T16** | each +5V cap **C1 / C19 / C27** +pad | GND | no beep | A2 |
@@ -364,15 +367,15 @@ Find your failing test(s) in the left column → the likely root cause and where
 
 | Code | Failing tests | Most likely cause | Where to look first |
 |------|---------------|-------------------|---------------------|
-| **A1** | T1, T13, T15 | Short on **+3V3** to GND | C2/C26/C_dec (cracked/whiskered MLCC), AMS1117 VOUT↔GND bridge, ESP32 3V3 pad, a button pull-up node, LED solder blob |
-| **A2** | T2, T14, T16 | Short on **+5V** to GND | C1/C19/C27, IP5306 VOUT↔GND, AMS1117 pin 3 area |
+| **A1** | T1, T13, T15 | Short on **+3V3** to GND | C30/C26/C_dec (cracked/whiskered MLCC), buck output↔GND bridge, ESP32 3V3 pad, a button pull-up node, LED solder blob |
+| **A2** | T2, T14, T16 | Short on **+5V** to GND | C1/C19/C27, IP5306 VOUT↔GND, SY8089A pin 4 (IN) area |
 | **A3** | T3 | Short on **VBUS** to GND | C17, USB-C VBUS pin ↔ shell, IP5306 VIN |
 | **A4** | T4, T5 | Short on **BAT+ / BAT_IN** | C18, Q1 (RPP MOSFET) drain↔GND, L1, IP5306 BAT pin, reversed JST |
-| **B1** | T6 | **+5V welded to +3V3** | AMS1117 VIN (pin 3) ↔ VOUT (tab) solder bridge, or a trace/via crossing |
+| **B1** | T6 | **+5V welded to +3V3** | SY8089A IN (pin 4) ↔ LX (pin 3) solder bridge, or a trace/via crossing |
 | **B2** | T7 (0 Ω both dirs) | **VBUS welded to +5V** | IP5306 VIN (pin 1) ↔ VOUT (pin 8) bridge. ⚠️ a *directional* diode reading is the normal internal charge path, not this |
 | **B3** | T8, T10 (esp. together) | **Multi-rail power bridge** — the v1 signature | A via or signal trace overlapping two power traces on F.Cu; see incident BUG #1–#3. Inspect vias near C19 / under the display |
 | **B4** | T9 (0 Ω both dirs) | **BAT welded to +5V** | IP5306 BAT (pin 6) ↔ VOUT (pin 8), or L1 pad bridge. ⚠️ a *directional* diode reading (~0.4 V) is the **normal boost path** — only a both-directions 0 Ω is the defect |
-| **C1** | T12 | Solder bridge **across the AMS1117** | Reflow the SOT-223; check tab↔pin 3 whisker |
+| **C1** | T12 | Solder bridge **across the SY8089A** | Reflow the SOT-23-5; check pin 3↔pin 4 whisker |
 | **D1** | T17 (0 Ω both dirs) | **USB D± shorted** | USBLC6 (U4) reflow, USB-C connector D-pin bridge, R22/R23. ⚠️ a *directional* diode reading is the normal ESD/clamp path, not this |
 | **D2** | T18 = 0 Ω | **Button GPIO shorted to +3V3** | Pull-up resistor blob, GPIO trace pinched to 3V3 |
 | **D2′** | T18 = open | **Missing pull-up** | R4–R15 not soldered / wrong value |
