@@ -28,7 +28,7 @@ from .board import (
     PWR_SWITCH_ENC, LED_CHARGE_ENC, LED_FULL_ENC,
     MENU_ENC, SPEAKER_ENC,
 )
-from .routing import D1_POS
+from .routing import D1_POS, D1_ROT
 
 
 # ── JLCPCB rotation corrections (from JLCKicadTools cpl_rotations_db.csv) ──
@@ -75,7 +75,6 @@ _JLCPCB_POS_CORRECTIONS = {
 _JLCPCB_ROT_OVERRIDES = {
     "U5": 180,   # PAM8403 (C5122557) — formula (90°→180°); 90° was wrong per JLCPCB DFM
     "J4": 270,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
-    "D1": 270,   # BAT54C (C37704) — 90°+180° per JLCPCB 3D alignment
     # "C2" override REMOVED: C2 (22uF tantalum, AMS1117 output cap) no longer
     # exists. It was the most dangerous polarized part on the board and it
     # destroyed prototype #1 when assembled reversed
@@ -84,6 +83,32 @@ _JLCPCB_ROT_OVERRIDES = {
     # U3 needs NO override: footprints.sot23_5 is a verbatim copy of the
     # EasyEDA/JLCPCB reference land pattern for C78988 (delta_row = 0), so
     # the SOT-23-5 entry in _JLCPCB_ROT_CORRECTIONS (180) is sufficient.
+    # D1 (BAT54C, C37704): override REMOVED 2026-07-25 — re-derived while
+    # relocating D1 for R5-CRIT-6.
+    #   Old state: KiCad rot 0° + override 270°.
+    #   Formula for a bottom-side "^SOT-23" at KiCad 0° is 90°, and that is
+    #   what Q1 (SI2301CDS, C10487) and U4 (USBLC6-2SC6, C7519) — same
+    #   package family, same layer, same KiCad rotation — both use with no
+    #   override, both signed off in hardware/datasheets/POLARITY_AUDIT.md.
+    #   The archived EasyEDA reference geometry recorded there is identical
+    #   in topology for both SOT-23-3 parts:
+    #     C37704 pad 1 (+1.24,+0.95) pad 2 (+1.24,-0.95) pad 3 (-1.24, 0)
+    #     C10487 pad 1 (+1.10,+0.95) pad 2 (+1.10,-0.95) pad 3 (-1.10, 0)
+    #   Identical footprint + identical KiCad rotation ⇒ identical CPL
+    #   angle, so D1's 270° at rot 0° was 180° out (introduced empirically
+    #   in c7514e7 "180° → 270° per JLCPCB", with no geometric evidence).
+    #   Physical corroboration: verify_easyeda_footprint.py's allowlist
+    #   records Q1 as "δ=90° family as D1 … boards R4-R8 (8+ prototypes)
+    #   power up via SW_PWR → Q1 conducts correctly → physical polarity
+    #   validated. CPL rotation=90° compensates empirically." D1's anodes
+    #   were never connected on those boards, so its 270° was never
+    #   exercised — the error could not have been caught by assembly.
+    #   D1 is now placed at KiCad 180°, for which the same formula yields
+    #   270° — the emitted CPL angle is unchanged, but it is now derived
+    #   and the physical part finally matches its footprint.
+    #   (EasyEDA could not be re-fetched live: the API returns HTTP 403 for
+    #   every LCSC id, so scripts/.easyeda_cache/ cannot be repopulated —
+    #   POLARITY_AUDIT.md is the archived copy of that reference.)
     "LED2": 180, # Green LED 0805 (C19171391) — EasyEDA footprint has pad 1 on cathode-silk-OPPOSITE
                  # side (pad 1 x=+1.05, cathode silk notch at x=-0.34..-2.22), inverted vs LED1
                  # C84256 (pad 1 x=-1.10 co-located with cathode silk). Datasheet page 1 confirms
@@ -245,9 +270,12 @@ def _build_placements():
     p.append(("SW_BOOT", "SW_Push",
               "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
 
-    # BAT54C dual Schottky diode — menu combo (START+SELECT)
+    # BAT54C dual Schottky diode — menu combo (START+SELECT).
+    # Rotation must track board.py / routing._init_pads(): D1 is placed at
+    # 180° so the SOT-23 two-pad row faces the BTN_START / BTN_SELECT
+    # columns (R5-CRIT-6 relocation).
     p.append(("D1", "BAT54C",
-              "SOT-23", D1_POS[0], D1_POS[1], 0, "bottom"))
+              "SOT-23", D1_POS[0], D1_POS[1], D1_ROT, "bottom"))
 
     # P-MOSFET reverse polarity protection (v4.0)
     from scripts.generate_pcb.routing import Q1_POS, R24_POS

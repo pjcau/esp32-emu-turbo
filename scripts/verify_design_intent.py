@@ -722,7 +722,10 @@ def test_T12_cross_component_nets(net_pads, specs):
         ("USB_DM_MCU", {"R23", "U1"}),
         ("USB_CC1", {"J1", "R1"}),
         ("USB_CC2", {"J1", "R2"}),
-        ("I2S_DOUT", {"U1", "U5"}),
+        # C22 is a SERIES DC-block: I2S_DOUT stops at C22.1, PAM_IN_AC
+        # carries the signal from C22.2 to the amplifier inputs.
+        ("I2S_DOUT", {"U1", "C22"}),
+        ("PAM_IN_AC", {"C22", "U5"}),
         ("SPK+", {"U5", "SPK1"}),
         ("SPK-", {"U5", "SPK1"}),
         ("IP5306_KEY", {"U2"}),
@@ -756,14 +759,25 @@ def test_T14_audio_chain(net_pads):
     """T14: I2S signals connect ESP32 ↔ PAM8403, speaker output."""
     print("\n── T14: Audio signal chain ──")
 
-    # I2S_DOUT: U1 → U5 (PAM8403)
+    # Audio input path crosses the C22 series DC-block, so it is two nets:
+    #   U1 --I2S_DOUT--> C22.1 || C22.2 --PAM_IN_AC--> U5 (INL + INR)
     dout_refs = set(r for r, _ in net_pads.get("I2S_DOUT", []))
-    check("T14", "I2S_DOUT: ESP32(U1) → PAM8403(U5)",
-          "U1" in dout_refs and "U5" in dout_refs,
+    check("T14", "I2S_DOUT: ESP32(U1) → C22 DC-block",
+          "U1" in dout_refs and "C22" in dout_refs,
           f"connected to: {sorted(dout_refs)}")
 
+    pam_in_refs = set(r for r, _ in net_pads.get("PAM_IN_AC", []))
+    check("T14", "PAM_IN_AC: C22 DC-block → PAM8403(U5)",
+          "C22" in pam_in_refs and "U5" in pam_in_refs,
+          f"connected to: {sorted(pam_in_refs)}")
+
+    # The DC-block must NOT be shorted: no single net may touch U1 and U5.
+    check("T14", "C22 DC-block not bypassed (U1 and U5 on distinct nets)",
+          not ({"U1", "U5"} <= dout_refs) and not ({"U1", "U5"} <= pam_in_refs),
+          f"I2S_DOUT={sorted(dout_refs)} PAM_IN_AC={sorted(pam_in_refs)}")
+
     # I2S_BCLK and I2S_LRCK: directly routed (pad net not assigned on U1)
-    # PAM8403 is a Class-D amp, not I2S — only I2S_DOUT (analog) feeds it
+    # PAM8403 is a Class-D amp, not I2S — only the AC-coupled PDM line feeds it
     # BCLK/LRCK go to the I2S DAC (if present) or are unused in this design
     for net in ["I2S_BCLK", "I2S_LRCK"]:
         refs = set(r for r, _ in net_pads.get(net, []))

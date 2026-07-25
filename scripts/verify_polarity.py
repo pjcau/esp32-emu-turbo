@@ -174,7 +174,9 @@ _strict("C29", [("1", "+3V3"), ("2", "BUCK_FB")])
 _strict("U5", [
     ("2", "GND"),
     ("4", "+5V"), ("5", "+5V"), ("6", "+5V"),
-    ("7", "I2S_DOUT"), ("10", "I2S_DOUT"),
+    # INL/INR sit on the PAM8403 side of the C22 series DC-block, so the
+    # net is PAM_IN_AC — I2S_DOUT stops at C22.1 on the ESP32 side.
+    ("7", "PAM_IN_AC"), ("10", "PAM_IN_AC"),
     ("11", "GND"),
     ("12", "+5V"), ("13", "+5V"),
     ("14", "SPK-"), ("15", "GND"), ("16", "SPK+"),
@@ -385,7 +387,9 @@ _strict("C27", [("1", "GND"), ("2", "+5V")])  # VOUT HF decoupling near IP5306
 # C21-C25: PAM8403 decoupling capacitors
 # ============================================================
 _strict("C21", [("1", "GND"), ("2", "PAM_VREF")])
-_strict("C22", [("1", "I2S_DOUT"), ("2", "I2S_DOUT")])  # AC coupling
+# C22 is a SERIES DC-block: the two terminals are two DIFFERENT nets.
+# Expecting the same net on both pads is expecting a short across the cap.
+_strict("C22", [("1", "I2S_DOUT"), ("2", "PAM_IN_AC")])  # AC coupling
 _strict("C23", [("1", "+5V"), ("2", "GND")])
 _strict("C24", [("1", "GND"), ("2", "+5V")])
 _strict("C25", [("1", "+5V"), ("2", "GND")])
@@ -393,8 +397,8 @@ _strict("C25", [("1", "+5V"), ("2", "GND")])
 # ============================================================
 # R20, R21: PAM8403 input resistors
 # ============================================================
-_strict("R20", [("1", "GND"), ("2", "I2S_DOUT")])
-_strict("R21", [("1", "GND"), ("2", "I2S_DOUT")])
+_strict("R20", [("1", "GND"), ("2", "PAM_IN_AC")])
+_strict("R21", [("1", "GND"), ("2", "PAM_IN_AC")])
 
 # ============================================================
 # C5-C16: Debounce capacitors
@@ -604,8 +608,9 @@ class PolarityVerificationTest(unittest.TestCase):
 
     def test_pam8403_audio(self):
         """U5 (PAM8403): audio I/O on correct pins."""
-        self._check_strict("U5", "7", "I2S_DOUT")
-        self._check_strict("U5", "10", "I2S_DOUT")
+        # PAM8403 side of the C22 DC-block — see the U5 _strict table.
+        self._check_strict("U5", "7", "PAM_IN_AC")
+        self._check_strict("U5", "10", "PAM_IN_AC")
         self._check_strict("U5", "14", "SPK-")
         self._check_strict("U5", "16", "SPK+")
 

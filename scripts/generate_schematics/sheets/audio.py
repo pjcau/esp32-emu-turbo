@@ -29,8 +29,12 @@ class AudioSheet(SchematicSheet):
         self.wire(ax - 10.16, ay, ax - 30, ay)
         self.wire(ax - 30, ay, ax - 30, ay + 8)
 
-        # Audio input from I2S (DOUT)
-        self.glabel("I2S_DOUT", ax - 30, ay + 3.81, 0, "input")
+        # Audio input — PAM8403 side of the C22 series DC-block.
+        # NOT I2S_DOUT: C22 separates the ESP32 PDM output (I2S_DOUT, on
+        # C22.1) from the amplifier input node (PAM_IN_AC, on C22.2 and
+        # U5.7/U5.10). Labelling both sides "I2S_DOUT" made DRC report a
+        # permanent phantom "unconnected" on I2S_DOUT.
+        self.glabel("PAM_IN_AC", ax - 30, ay + 3.81, 0, "input")
         self.wire(ax - 30, ay + 3.81, ax - 10.16, ay + 3.81)
 
         # I2S bus reference (informational labels).
@@ -50,7 +54,7 @@ class AudioSheet(SchematicSheet):
         self.glabel("I2S_LRCK", 30, 62, 0, "input")
         self.text("GPIO16 - L/R Word Select (UNUSED — PDM mode, v2 free)", 65, 62)
         self.glabel("I2S_DOUT", 30, 69, 0, "output")
-        self.text("GPIO17 - PDM sigma-delta out @ 32kHz -> PAM8403", 65, 69)
+        self.text("GPIO17 - PDM sigma-delta out @ 32kHz -> C22 -> PAM_IN_AC", 65, 69)
 
         # Speaker (moved further right for orthogonal routing)
         spk_x, spk_y = ax + 65, ay
@@ -89,9 +93,12 @@ class AudioSheet(SchematicSheet):
         self.text("VREF bypass (pin 8)", c21x + 3, c21y)
 
         # DC-blocking capacitor (C22, 0.47uF) — input coupling.
+        # Series element: C22.1 = I2S_DOUT (ESP32 PDM TX side),
+        #                 C22.2 = PAM_IN_AC (amplifier side).
         c22x, c22y = ax - 45, ay + 3.81
         self.sym("C", "C22", "0.47uF", c22x, c22y, ["1", "2"])
         self.wire(c22x + 3.81, c22y, c22x + 15, c22y)
+        self.glabel("PAM_IN_AC", c22x + 15, c22y, 180, "output")
         self.wire(c22x - 3.81, c22y, c22x - 8, c22y)
         self.glabel("I2S_DOUT", c22x - 8, c22y, 0, "input")
         self.text("DC-block", c22x - 3, c22y - 5)
@@ -106,7 +113,12 @@ class AudioSheet(SchematicSheet):
         # collides with the PAM8403 module or with each other.
         r20x, r20y = ax - 45, ay + 18
         self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
-        self.wire(r20x, r20y - 3.81, r20x, c22y)
+        # Top terminal joins the amplifier-side node by name. The old wire ran
+        # from here straight up to (r20x, c22y) — a point that sits inside the
+        # C22 symbol body and touches neither C22 pin, so the bias network was
+        # dangling in the schematic while the PCB routed it correctly.
+        self.wire(r20x, r20y - 3.81, r20x, r20y - 6)
+        self.glabel("PAM_IN_AC", r20x, r20y - 6, 90, "input")
         # Bottom terminal goes to VREF via a named label stub.
         self.wire(r20x, r20y + 3.81, r20x, r20y + 6)
         self.glabel("VREF", r20x, r20y + 6, 270, "input")
@@ -116,7 +128,10 @@ class AudioSheet(SchematicSheet):
         # Same rationale as R20 — see R4-HIGH-3.
         r21x, r21y = ax - 25, ay + 18
         self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"])
-        self.wire(r21x, r21y - 3.81, r21x, c22y)
+        # Same fix as R20: join the amplifier-side node by name instead of a
+        # wire ending in empty space east of the C22 → U5 wire.
+        self.wire(r21x, r21y - 3.81, r21x, r21y - 6)
+        self.glabel("PAM_IN_AC", r21x, r21y - 6, 90, "input")
         self.wire(r21x, r21y + 3.81, r21x, r21y + 6)
         self.glabel("VREF", r21x, r21y + 6, 270, "input")
         self.text("INR bias → VREF", r21x - 8, r21y + 14, 1.5)

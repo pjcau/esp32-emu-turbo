@@ -193,6 +193,13 @@ NET_LIST = [
     # which is the IP5306 boost switch node (U2 pin 7 -> L1).
     (59, "BUCK_LX"),
     (60, "BUCK_FB"),
+    # Audio AC-coupled input node: PAM8403 side of the C22 series DC-block.
+    # C22.1 is I2S_DOUT (ESP32 PDM TX), C22.2 is PAM_IN_AC. They are two
+    # electrically distinct nets separated by the cap dielectric — labelling
+    # both "I2S_DOUT" made DRC report a permanent phantom "unconnected"
+    # on I2S_DOUT, which masked real faults. Carries: C22.2, U5.7 (INL),
+    # U5.10 (INR) and the R20/R21 VREF bias taps.
+    (61, "PAM_IN_AC"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}
