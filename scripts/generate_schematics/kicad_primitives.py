@@ -1,16 +1,59 @@
 """KiCad S-expression primitives for schematic generation."""
 
+# Project name as KiCad sees it (the .kicad_pro basename). Symbol instance
+# paths are scoped to it; a mismatch makes the instance invisible.
+PROJECT_NAME = "esp32-emu-turbo"
+
+
+def sheet_uuid(index: int) -> str:
+    """UUID of the root's ``(sheet ...)`` block for sub-sheet ``index``.
+
+    The root schematic allocates UUIDs from a fresh context: #1 for the root
+    itself, then #2, #3, ... one per sheet in SHEET_DEFS order (``text()``
+    emits no UUID, so nothing else consumes the sequence). Sub-sheet symbols
+    must reference these exact UUIDs in their instance paths, so both sides
+    derive them here rather than each re-deriving the formula.
+    """
+    n = index + 2
+    return f"{n:08x}-cafe-4000-8000-{n:012x}"
+
 
 class KiCadContext:
-    """Manages UUID generation and provides KiCad S-expression helpers."""
+    """Manages UUID generation and provides KiCad S-expression helpers.
 
-    def __init__(self):
+    ``sheet_path`` is the root sheet UUID this file's symbols live under. It
+    is required to emit ``(instances ...)``: without that block KiCad treats
+    every symbol as unannotated, reports "schematic has annotation errors",
+    and DROPS the symbol from the netlist. Power symbols suffer worst — all
+    33 ``gnd()`` ports were silently absent, leaving GND with 3 nodes instead
+    of ~80, so the schematic was not an electrical model of the board.
+    """
+
+    def __init__(self, sheet_path: str | None = None,
+                 project: str = PROJECT_NAME):
         self._n = 0
         self._pn = 0
+        self.sheet_path = sheet_path
+        self.project = project
 
     def uid(self) -> str:
         self._n += 1
         return f"{self._n:08x}-cafe-4000-8000-{self._n:012x}"
+
+    def instances(self, ref: str, unit: int = 1) -> str:
+        """The ``(instances ...)`` block that annotates a symbol.
+
+        Emitted for every symbol. Returns "" only when no sheet path is known
+        (a bare context in a test), which keeps the old behaviour rather than
+        writing a path that points nowhere.
+        """
+        if not self.sheet_path:
+            return ""
+        return (
+            f' (instances (project "{self.project}"'
+            f' (path "/{self.sheet_path}"'
+            f' (reference "{ref}") (unit {unit}))))'
+        )
 
     def wire(self, x1: float, y1: float, x2: float, y2: float) -> str:
         return (
@@ -65,7 +108,8 @@ class KiCadContext:
             f' (effects (font (size 1.27 1.27)) hide))'
             f' (property "Value" "{val}" (at {x} {y + 2} 0)'
             f' (effects (font (size 1.27 1.27)) hide))'
-            f' (pin "1" (uuid "{self.uid()}")))\n'
+            f' (pin "1" (uuid "{self.uid()}"))'
+            f'{self.instances(ref)})\n'
         )
 
     def gnd(self, x: float, y: float) -> str:
@@ -109,4 +153,4 @@ class KiCadContext:
         )
         for p in pins:
             s += f' (pin "{p}" (uuid "{self.uid()}"))'
-        return s + ")\n"
+        return s + self.instances(ref) + ")\n"

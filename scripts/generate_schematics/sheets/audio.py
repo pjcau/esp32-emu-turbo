@@ -148,37 +148,48 @@ class AudioSheet(SchematicSheet):
         # top terminal. They now reach the amplifier input node through
         # an explicit I2S_DOUT label stub going left.
         r20x, r20y = ax - 50, ay + 24
-        self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"])
+        # angle=180: draws identically (the R symbol is vertically symmetric)
+        # but puts pin 1 on the BOTTOM, matching the footprint — the board's
+        # pad 1 (x=38.95) is the VREF side. Without this the nets agree while
+        # the pin NUMBERS stay swapped, and verify_netlist_diff still fails.
+        self.sym("R", "R20", "20k", r20x, r20y, ["1", "2"], angle=180)
         # Top terminal joins the amplifier-side node by name. The old wire ran
         # from here straight up to (r20x, c22y) — a point inside the C22 symbol
         # body touching neither pin, so the bias network was dangling in the
         # schematic while the PCB routed it.
-        self.wire(r20x, r20y - 3.81, r20x, r20y - 6)
-        self.glabel("PAM_IN_AC", r20x, r20y - 6, 90, "input")
+        # Stub 8mm (not 6) and label HORIZONTAL (angle 0, reading right).
+        # A vertical label extends ~7.3mm along the stub axis, so the two
+        # resistors' labels grew toward each other and collided; 6mm also put
+        # the label on top of the symbol's Value field at y+5. Horizontal
+        # labels extend sideways into empty space instead.
+        # Guarded by verify_schematic_overlaps.py.
+        self.wire(r20x, r20y - 3.81, r20x, r20y - 8)
+        self.glabel("PAM_IN_AC", r20x, r20y - 8, 0, "input")
         # Bottom terminal goes to PAM_VREF (net 50) via a named label stub.
-        self.wire(r20x, r20y + 3.81, r20x, r20y + 6)
-        self.glabel("PAM_VREF", r20x, r20y + 6, 270, "input")
-        self.text("INL bias -> PAM_VREF", r20x - 8, r20y + 14, 1.5)
+        self.wire(r20x, r20y + 3.81, r20x, r20y + 8)
+        self.glabel("PAM_VREF", r20x, r20y + 8, 0, "input")
+        self.text("INL bias -> PAM_VREF", r20x - 26, r20y + 8, 1.5)
 
         # INR bias resistor (R21, 20k) — biases INR node to VREF (pin 8).
         # Same rationale as R20 — see R4-HIGH-3.
-        r21x, r21y = ax - 50, ay + 40
-        self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"])
+        # 20mm below R20 (was 16): at 16 the two resistors' label stubs and
+        # Value fields ran into each other. See verify_schematic_overlaps.py.
+        r21x, r21y = ax - 50, ay + 44
+        # angle=180 for the same reason as R20 — pad 1 is the VREF side.
+        self.sym("R", "R21", "20k", r21x, r21y, ["1", "2"], angle=180)
         # Top terminal joins the amplifier-side node by name. The old wire ran
         # from here straight up to (r21x, c22y) — a point inside the C22 symbol
         # body touching neither pin, so the bias network was dangling in the
         # schematic while the PCB routed it.
-        self.wire(r21x, r21y - 3.81, r21x, r21y - 6)
-        self.glabel("PAM_IN_AC", r21x, r21y - 6, 90, "input")
+        # Horizontal labels on 8mm stubs — same reason as R20.
+        self.wire(r21x, r21y - 3.81, r21x, r21y - 8)
+        self.glabel("PAM_IN_AC", r21x, r21y - 8, 0, "input")
         # Bottom terminal goes to PAM_VREF (net 50) via a named label stub.
-        self.wire(r21x, r21y + 3.81, r21x, r21y + 6)
-        self.glabel("PAM_VREF", r21x, r21y + 6, 270, "input")
-        self.text("INR bias -> PAM_VREF", r21x - 8, r21y + 14, 1.5)
+        self.wire(r21x, r21y + 3.81, r21x, r21y + 8)
+        self.glabel("PAM_VREF", r21x, r21y + 8, 0, "input")
+        self.text("INR bias -> PAM_VREF", r21x - 26, r21y + 8, 1.5)
         self.text("R20/R21 bias the amplifier inputs to PAM_VREF (R4-HIGH-3).",
                   r21x - 12, r21y + 18, 1.5)
-        self.text("AS-BUILT v1: the board ties them to GND instead — see "
-                  "_T4_STRUCTURAL_EXCEPTIONS in scripts/verify_netlist_diff.py.",
-                  r21x - 12, r21y + 22, 1.5)
 
         # VDD decoupling (C23, 1uF) — VDD pin to GND. Labels placed
         # BELOW each cap so they don't extend rightward into the next

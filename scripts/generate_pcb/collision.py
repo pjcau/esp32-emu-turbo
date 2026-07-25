@@ -170,13 +170,26 @@ class CollisionGrid:
 
     # ── Pre-population ────────────────────────────────────────
 
-    def register_pads(self, pads_dict: dict):
+    def register_pads(self, pads_dict: dict, known_pad_nets: dict = None):
         """Register all component pads as obstacles.
 
         Args:
             pads_dict: {ref: {pad_num: (x, y, w, h)}} from
                        pad_positions.get_all_pad_positions()
+            known_pad_nets: {(ref, pad_num): net_id} for pads whose net must
+                       be known BEFORE the first trace reaches them. A pad
+                       left at net 0 is skipped by collision queries, and a
+                       pad seeded with the WRONG net reports its own
+                       same-net trace as a short.
+
+        This used to be a hardcoded table inside this function, a second copy
+        of the net map. It went stale: it still said J3 pin 1 was BAT+ (net 5)
+        after routing.py moved it to BAT_IN (net 57) for the reverse-polarity
+        MOSFET, so the BAT_IN trace landing on its own pad was reported as a
+        -0.800mm short on the battery connector. Callers now pass the nets
+        derived from the one map in primitives.NET_ID.
         """
+        known_pad_nets = known_pad_nets or {}
         # Determine which refs are on F.Cu vs B.Cu
         fcu_refs = {
             "SW1", "SW2", "SW3", "SW4", "SW5", "SW6", "SW7", "SW8",
@@ -210,15 +223,7 @@ class CollisionGrid:
                 else:
                     continue
 
-                # Pre-assigned nets for known THT pads (needed because
-                # net=0 pads are skipped in collision queries)
-                _KNOWN_PAD_NETS = {
-                    ("J1", "13"): 1,   # GND (shield front + rear, duplicate names)
-                    ("J1", "14"): 1,   # GND (shield front + rear, duplicate names)
-                    ("J3", "1"): 5,    # BAT+ (JST pin 1)
-                    ("J3", "2"): 1,    # GND (JST pin 2)
-                }
-                pad_net = _KNOWN_PAD_NETS.get((ref, str(num)), 0)
+                pad_net = known_pad_nets.get((ref, str(num)), 0)
                 obs = Obstacle(
                     xmin=round(px - pw / 2, 4),
                     ymin=round(py - ph / 2, 4),

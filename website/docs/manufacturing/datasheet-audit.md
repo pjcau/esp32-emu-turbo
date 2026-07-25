@@ -48,8 +48,8 @@ Full audit of all 20 BOM components against their LCSC datasheets. Datasheets st
 | Ref | Value | Purpose | Distance from pin |
 |-----|-------|---------|-------------------|
 | C22 | 0.47uF | DC-blocking cap (series on I2S_DOUT) | In-line on trace |
-| R20 | 20k | INL bias resistor (pin 7 to GND) | 4.8mm |
-| R21 | 20k | INR bias resistor (pin 10 to GND) | 4.8mm |
+| R20 | 20k | INL bias resistor (pin 7 to VREF pin 8) | 4.8mm |
+| R21 | 20k | INR bias resistor (pin 10 to VREF pin 8) | 4.8mm |
 | C21 | 100nF | VREF bypass cap (pin 8 to GND) | 4.8mm |
 | C23 | 1uF | VDD decoupling (pin 6 to GND) | 6.1mm |
 | C24 | 1uF | PVDD decoupling (pin 4 to GND) | 4.8mm |

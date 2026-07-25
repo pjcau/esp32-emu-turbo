@@ -5,7 +5,7 @@ This creates esp32-emu-turbo.kicad_sch as a root page that contains
 KiCad will then see all components across all sheets.
 """
 
-from .kicad_primitives import KiCadContext
+from .kicad_primitives import KiCadContext, sheet_uuid
 
 
 def generate_root(sheet_defs: list[dict]) -> str:
@@ -51,8 +51,10 @@ def generate_root(sheet_defs: list[dict]) -> str:
         sx = col_x[col]
         sy = row_y_start + row * row_spacing
 
-        sheet_uuid = ctx.uid()
-        sheet_uuids.append(sheet_uuid)
+        # Same helper the sub-sheets use for their instance paths, so the
+        # two sides cannot drift apart.
+        suuid = sheet_uuid(i)
+        sheet_uuids.append(suuid)
 
         filename = sdef["filename"]
         # Derive a clean sheet name from filename
@@ -65,7 +67,7 @@ def generate_root(sheet_defs: list[dict]) -> str:
             f'  (sheet (at {sx} {sy}) (size {sheet_w} {sheet_h})\n'
             f'    (stroke (width 0.001) (type solid))\n'
             f'    (fill (type none))\n'
-            f'    (uuid "{sheet_uuid}")\n'
+            f'    (uuid "{suuid}")\n'
             f'    (property "Sheetname" "{name}"\n'
             f'      (at {sx + 2} {sy - 2} 0)\n'
             f'      (effects (font (size 1.27 1.27))))\n'

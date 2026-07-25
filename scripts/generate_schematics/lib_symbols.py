@@ -276,7 +276,7 @@ _SYMBOL_PWR_FLAG = """    (symbol "PWR_FLAG" (pin_names (offset 0) hide) (in_bom
       (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
       (symbol "PWR_FLAG_0_0" (pin power_out line (at 0 0 90) (length 0) (name "pwr" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))\n"""
 
-_SYMBOL_GND = """    (symbol "GND" (pin_names (offset 0) hide) (in_bom no) (on_board no)
+_SYMBOL_GND = """    (symbol "GND" (power) (pin_names (offset 0) hide) (in_bom no) (on_board no)
       (property "Reference" "#PWR" (at 0 -5.08 0) (effects (font (size 1.27 1.27)) hide))
       (property "Value" "GND" (at 0 -3.81 0) (effects (font (size 1.27 1.27))))
       (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
@@ -284,7 +284,7 @@ _SYMBOL_GND = """    (symbol "GND" (pin_names (offset 0) hide) (in_bom no) (on_b
       (symbol "GND_0_1" (polyline (pts (xy 0 0) (xy 0 -1.27) (xy 1.27 -1.27) (xy 0 -2.54) (xy -1.27 -1.27) (xy 0 -1.27)) (stroke (width 0) (type default)) (fill (type none))))
       (symbol "GND_1_1" (pin power_in line (at 0 0 270) (length 0) (name "GND" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))\n"""
 
-_SYMBOL_3V3 = """    (symbol "+3V3" (pin_names (offset 0) hide) (in_bom no) (on_board no)
+_SYMBOL_3V3 = """    (symbol "+3V3" (power) (pin_names (offset 0) hide) (in_bom no) (on_board no)
       (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
       (property "Value" "+3V3" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
       (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
@@ -295,7 +295,7 @@ _SYMBOL_3V3 = """    (symbol "+3V3" (pin_names (offset 0) hide) (in_bom no) (on_
         (polyline (pts (xy 0 2.54) (xy 0.762 1.27)) (stroke (width 0) (type default)) (fill (type none))))
       (symbol "+3V3_1_1" (pin power_in line (at 0 0 90) (length 0) (name "+3V3" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))))\n"""
 
-_SYMBOL_5V = """    (symbol "+5V" (pin_names (offset 0) hide) (in_bom no) (on_board no)
+_SYMBOL_5V = """    (symbol "+5V" (power) (pin_names (offset 0) hide) (in_bom no) (on_board no)
       (property "Reference" "#PWR" (at 0 -3.81 0) (effects (font (size 1.27 1.27)) hide))
       (property "Value" "+5V" (at 0 3.81 0) (effects (font (size 1.27 1.27))))
       (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))

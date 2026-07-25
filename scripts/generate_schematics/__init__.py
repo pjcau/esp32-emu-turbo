@@ -15,12 +15,16 @@ def main(output_dir: str) -> list[str]:
     os.makedirs(output_dir, exist_ok=True)
     generated = []
 
-    for sheet_def in config.SHEET_DEFS:
+    from .kicad_primitives import sheet_uuid
+
+    for i, sheet_def in enumerate(config.SHEET_DEFS):
         mod = sheet_def["module"]
         filename = sheet_def["filename"]
         path = os.path.join(output_dir, filename)
 
-        ctx = KiCadContext()
+        # Symbols must declare the root sheet UUID they live under, or KiCad
+        # drops them from the netlist as unannotated.
+        ctx = KiCadContext(sheet_path=sheet_uuid(i))
         sheet = mod(ctx)
         content = sheet.render()
 

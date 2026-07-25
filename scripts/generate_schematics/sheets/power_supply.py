@@ -66,7 +66,7 @@ class PowerSupplySheet(SchematicSheet):
         # regulator row (y>=190) below.
         u4x, u4y = 60, 140
         self.sym("USBLC6_2SC6", "U4", "USBLC6-2SC6", u4x, u4y, range(1, 7))
-        self.text("USB ESD TVS", u4x - 8, u4y - 12, 1.5)
+        self.text("USB ESD TVS", u4x - 20, u4y - 16, 1.5)
         # The USBLC6_2SC6 library symbol in this generator uses the
         # simple 6-pin pad layout (pins on the left/right edges). We
         # connect the logical nets via glabels with short wire stubs.
@@ -284,7 +284,10 @@ class PowerSupplySheet(SchematicSheet):
         # bottom/GND terminal, so schematic and PCB agree on which pad
         # is which.
         self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"], angle=180)
-        self.text("HF bypass", c27_x - 3, c27_y - 8, 1.5)
+        # BELOW the cap, not above: above at c27_x-3 collided with the +5V
+        # rail label, and shifting it left ran it into "VOUT bulk" over C19.
+        # Underneath is empty (the GND symbol prints no visible text).
+        self.text("HF bypass", c27_x - 5, c27_y + 13, 1.5)
         self.wire(cout_x, vout_turn_y, c27_x, vout_turn_y)
         self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
         self.gnd(c27_x, c27_y + 8)
@@ -324,7 +327,15 @@ class PowerSupplySheet(SchematicSheet):
 
         # ---- KEY pull-up (R16 100k to +5V, always-on) ----
         r16_x = 182
-        r16_y = 76
+        # 76.5, threading two constraints half a millimetre apart:
+        #   * at 76.0 the Reference field (y-5) landed on the +5V rail
+        #     junction at y=70 — verify_schematic_overlaps.py.
+        #   * at 79.0 the KEY link stub (y+3.81, then 3.81 further) reached
+        #     y=86.6 and crossed the IP5306 wire at y=85 —
+        #     verify_schematic_crossings.py.
+        # 76.5 puts the Reference at 71.5 (0.365mm clear of the junction) and
+        # the stub end at 84.1 (0.88mm clear of the y=85 wire).
+        r16_y = 72
         self.sym("R", "R16", "100k", r16_x, r16_y, ["1", "2"])
         self.text("Always-on", r16_x + 3, r16_y - 3, 1.5)
         # R16 pin1 (top) -> +5V by TAPPING the rail, not by a second
@@ -336,8 +347,15 @@ class PowerSupplySheet(SchematicSheet):
         # R16 pin2 (bottom) -> KEY BY LABEL, not by wire.
         # The orthogonal route went down x=182 from y=79.81 to y=90.08 and
         # crossed the IP5306 lines at y=85.00 and y=87.54 on the way.
-        self.link("KEY", r16_x, r16_y + 3.81, 270)
-        self.link("KEY", key_x, key_y, 0)
+        # GLOBAL label, and named IP5306_KEY to match the board's net.
+        # A local label is scoped to the sheet, so KiCad exported it as
+        # "/Power Supply/KEY" while the PCB called the same node
+        # IP5306_KEY — two of the T4 pin-to-net mismatches, plus the T1
+        # "schematic net missing from PCB" failure, for one naming slip.
+        self.link("IP5306_KEY", r16_x, r16_y + 3.81, 270, glob=True)
+# Points UP, not right: a rightward stub extends the KEY horizontal
+        # past x=185, where C18's tap crosses it (see the CBAT comment).
+        self.link("IP5306_KEY", key_x, key_y, 90, glob=True)
 
         # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
         # JST PH 2-pin connector — pushed further right on A3 landscape
@@ -571,25 +589,35 @@ class PowerSupplySheet(SchematicSheet):
         self.text("CHARGING INDICATOR LEDs", led_x - 30, led_y - 12, 2.54, True)
 
         # LED1 (Red - charging)
-        self.sym("R", "R17", "1k", led_x - 15, led_y, ["1", "2"])
+        self.sym("R", "R17", "1k", led_x - 15, led_y, ["1", "2"], angle=180)
         self.sym("LED", "LED1", "Red", led_x, led_y, ["1", "2"])
         self.v33(led_x - 15, led_y - 8)
         self.wire(led_x - 15, led_y - 8, led_x - 15, led_y - 3.81)
         self.wire(led_x - 15, led_y + 3.81, led_x - 3.81, led_y)
+        # NAME the R17<->LED1 junction. The wire above already connects them,
+        # but KiCad drops unnamed nets from the exported netlist, so the node
+        # was invisible to verify_netlist_diff while the board called it
+        # LED1_RA. Global, not local: a local label would export as
+        # "/Power Supply/LED1_RA" and still not match.
+        self.wire(led_x - 3.81, led_y, led_x - 3.81, led_y + 7)
+        self.glabel("LED1_RA", led_x - 3.81, led_y + 7, 270)
         self.gnd(led_x + 8, led_y)
         self.wire(led_x + 3.81, led_y, led_x + 8, led_y)
-        self.text("Charging", led_x - 5, led_y - 6, 1.5)
+        self.text("Charging", led_x - 18, led_y - 8, 1.5)
 
         # LED2 (Green - fully charged)
         led2_y = led_y + 18
-        self.sym("R", "R18", "1k", led_x - 15, led2_y, ["1", "2"])
+        self.sym("R", "R18", "1k", led_x - 15, led2_y, ["1", "2"], angle=180)
         self.sym("LED", "LED2", "Green", led_x, led2_y, ["1", "2"])
         self.v33(led_x - 15, led2_y - 8)
         self.wire(led_x - 15, led2_y - 8, led_x - 15, led2_y - 3.81)
         self.wire(led_x - 15, led2_y + 3.81, led_x - 3.81, led2_y)
+        # Same as LED1 — name the R18<->LED2 junction.
+        self.wire(led_x - 3.81, led2_y, led_x - 3.81, led2_y + 7)
+        self.glabel("LED2_RA", led_x - 3.81, led2_y + 7, 270)
         self.gnd(led_x + 8, led2_y)
         self.wire(led_x + 3.81, led2_y, led_x + 8, led2_y)
-        self.text("Full", led_x - 5, led2_y - 6, 1.5)
+        self.text("Full", led_x + 12, led2_y - 6, 1.5)
 
         # ═══════════════════════════════════════════════
         # DESIGN NOTES — moved further down to sit below the
@@ -630,10 +658,10 @@ class PowerSupplySheet(SchematicSheet):
         self.text(
             "- 5.1k CC pull-downs identify"
             " USB-C UFP (5V sink)",
-            30, ny + 36,
+            30, ny + 42,
         )
         self.text(
             "- Battery: LiPo 3.7V 5000mAh"
             " via JST PH connector",
-            30, ny + 42,
+            30, ny + 48,
         )
