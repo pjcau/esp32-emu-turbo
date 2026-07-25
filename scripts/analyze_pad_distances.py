@@ -177,29 +177,72 @@ def segment_to_pad_distance(s: Segment, p: Pad) -> float:
     return min_d - sw
 
 
+def _point_segment_distance(px, py, x1, y1, x2, y2) -> float:
+    """Distance from a point to a finite segment's centerline."""
+    dx, dy = x2 - x1, y2 - y1
+    d2 = dx * dx + dy * dy
+    if d2 == 0.0:
+        return math.hypot(px - x1, py - y1)
+    t = max(0.0, min(1.0, ((px - x1) * dx + (py - y1) * dy) / d2))
+    return math.hypot(px - (x1 + t * dx), py - (y1 + t * dy))
+
+
+def _centerline_distance(a: "Segment", b: "Segment") -> float:
+    """Exact minimum distance between two finite segment centerlines."""
+    # Proper intersection => distance 0.
+    d1x, d1y = a.x2 - a.x1, a.y2 - a.y1
+    d2x, d2y = b.x2 - b.x1, b.y2 - b.y1
+    denom = d1x * d2y - d1y * d2x
+    if denom != 0.0:
+        sx, sy = b.x1 - a.x1, b.y1 - a.y1
+        t = (sx * d2y - sy * d2x) / denom
+        u = (sx * d1y - sy * d1x) / denom
+        if 0.0 <= t <= 1.0 and 0.0 <= u <= 1.0:
+            return 0.0
+    # Otherwise the minimum is attained at an endpoint of one of the two.
+    return min(
+        _point_segment_distance(a.x1, a.y1, b.x1, b.y1, b.x2, b.y2),
+        _point_segment_distance(a.x2, a.y2, b.x1, b.y1, b.x2, b.y2),
+        _point_segment_distance(b.x1, b.y1, a.x1, a.y1, a.x2, a.y2),
+        _point_segment_distance(b.x2, b.y2, a.x1, a.y1, a.x2, a.y2),
+    )
+
+
 def segment_to_segment_distance(a: Segment, b: Segment) -> float:
-    """Minimum edge-to-edge distance between two trace segments."""
-    # Axis-aligned only (Manhattan routing) — much simpler
-    # Check if bboxes overlap with half-widths included
-    aw = a.width / 2
-    bw = b.width / 2
+    """Minimum copper edge-to-edge distance between two trace segments.
 
-    # Segment bboxes (center-line)
-    ax1, ax2 = min(a.x1, a.x2), max(a.x1, a.x2)
-    ay1, ay2 = min(a.y1, a.y2), max(a.y1, a.y2)
-    bx1, bx2 = min(b.x1, b.x2), max(b.x1, b.x2)
-    by1, by2 = min(b.y1, b.y2), max(b.y1, b.y2)
+    A trace of width w is a capsule: every point within w/2 of its
+    centerline. So the copper gap is the centerline distance minus both
+    half-widths, floored at zero.
 
-    # Expand by half-widths
-    ax1 -= aw; ax2 += aw; ay1 -= aw; ay2 += aw
-    bx1 -= bw; bx2 += bw; by1 -= bw; by2 += bw
+    This used to compare axis-aligned bounding boxes, on the assumption
+    that routing was Manhattan-only. The board's first diagonal trace (the
+    VBUS escape from J1, which is the only way through the 0.79 mm gap
+    between the peg hole and the adjacent land) broke that assumption: a
+    diagonal segment's AABB is far larger than its copper, so the check
+    reported VBUS <-> USB_CC2 as a 0.0000 mm short where the true gap is
+    0.4882 mm. KiCad's own DRC reported no violation there, which is what
+    exposed the disagreement.
 
-    dx = max(0, max(ax1, bx1) - min(ax2, bx2))
-    dy = max(0, max(ay1, by1) - min(ay2, by2))
+    The same defect was fixed in collision.py and verify_dfm_v2.py; this
+    script was missed because nothing ran it until verify-all grew to
+    cover all 52 checks.
+    """
+    aw = a.width / 2.0
+    bw = b.width / 2.0
 
-    if dx == 0 and dy == 0:
-        return 0.0
-    return math.sqrt(dx*dx + dy*dy)
+    # Fast AABB reject. AABB distance never exceeds the true distance, so
+    # skipping on a large AABB gap can only ever skip a genuine non-hit.
+    ax1, ax2 = min(a.x1, a.x2) - aw, max(a.x1, a.x2) + aw
+    ay1, ay2 = min(a.y1, a.y2) - aw, max(a.y1, a.y2) + aw
+    bx1, bx2 = min(b.x1, b.x2) - bw, max(b.x1, b.x2) + bw
+    by1, by2 = min(b.y1, b.y2) - bw, max(b.y1, b.y2) + bw
+    dx = max(0.0, max(ax1, bx1) - min(ax2, bx2))
+    dy = max(0.0, max(ay1, by1) - min(ay2, by2))
+    if dx > 5.0 or dy > 5.0:
+        return math.hypot(dx, dy)
+
+    return max(0.0, _centerline_distance(a, b) - aw - bw)
 
 
 # ── Main analysis ─────────────────────────────────────────────────
