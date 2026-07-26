@@ -626,7 +626,7 @@ RC, the check switches to verifying the parts are there.
 | T2.3 | SW_PWR switch model — including the known fact that it is **not** in series. The bench must *reproduce* "switch off, board still powered" as expected behaviour, not report it as a bench bug | scenario `switch_off` asserts the board stays powered, citing the v1 invariant |
 | T2.4 | Boot-mode model: sample strapping pins at reset → resulting boot mode | a button held at reset that forces download mode is a FAIL with the pin named |
 
-## Phase 3 — Peripherals: LCD, audio, SD — **T3.1 partial**
+## Phase 3 — Peripherals: LCD, audio, SD — **partial: what the datasheets allow**
 
 ### T3.1 — the display, seen from the panel
 
@@ -676,7 +676,58 @@ command set, MADCTL and rotation, pixel format, and the setup/hold windows a
 does not hold. No frame is rendered and no timing verdict is given, because
 either would look like proof.
 
-T3.2 (audio) and T3.3 (SD) are not started.
+### T3.2 — audio, and the current it costs
+
+`make bench-audio` walks the chain the netlist describes and computes what the
+cited model supports:
+
+| Quantity | Value | Where it comes from |
+|---|---|---|
+| Input high-pass corner | **33.9 Hz** | R20‖R21 = 10 kΩ and C22 = 0.47 µF, both from the netlist and the BOM |
+| Output into 8 Ω | **1.50 W** | *derived* from the rated 3 W into 4 Ω at 5 V (page 1) — halved for double the impedance, and scaled by (V/5)² |
+| Rail current at full output | **339.6 mA** | cited 90 % efficiency + cited 6.3 mA standby |
+
+The corner frequency also settles R25-LOW-1 for good: the two 20 kΩ in
+parallel are the datasheet's **own application circuit** (figure 3, page 3 —
+one 20 kΩ per channel) with INL and INR bridged for mono. The topology is
+right; it carries one part more than a mono design needs.
+
+**The gain is not modelled, so the WAV is parametrised by output level.** The
+PAM8403's closed-loop gain is not on the pages this repo holds, so there is no
+honest mapping from a DAC code to an output amplitude. `--wav` writes what the
+speaker emits at a chosen fraction of the swing the supply allows —
+memoryless gain and clipping only, no frequency response and no THD, because
+neither is cited. The rail **sag** that 340 mA causes is likewise not
+computed: the IP5306's output impedance is still unestablished.
+
+### T3.3 — the SD bus, and a safety analysis about the wrong window
+
+The four SPI signals land on the pads the socket datasheet assigns them, and
+DAT1 is tied to DAT0/MISO as intended. The finding is elsewhere.
+
+**U6.9 (DAT2) sits on the BTN_R net, and BTN_R is GPIO3 — a strapping pin.**
+The assignment is deliberate: `routing.py:6055-6085` gives it the same net
+because the BTN_R track crosses those pads, and concludes it is *"SAFE as long
+as firmware stays in SPI mode (which it does — see software/main/sd.c)"*,
+since a card tri-states DAT1/DAT2 once CMD0 has arrived.
+
+The strapping sample happens **before any of that**. GPIO3 is latched at
+reset, before the boot ROM runs, let alone `sd.c` — so the argument is about
+the wrong window. In the reset window the card has had no CMD0 and DAT2 is not
+tri-stated.
+
+Whether it matters is a second question, and today the answer is no, for a
+reason worth writing down rather than assuming: table 8 on page 15 shows GPIO3
+is **ignored** unless `EFUSE_STRAP_JTAG_SEL` is burned, and the factory default
+leaves it unselected. The exposure is real but inert — and it stops being inert
+the day somebody burns that eFuse.
+
+**The card protocol is not modelled.** CMD0 / CMD8 / ACMD41, the R1/R7
+responses, block addressing and 20 MHz setup/hold all need the SD Physical
+Layer Simplified Specification and a card datasheet, neither of which this repo
+holds — `U6_TF-01A_MicroSD_C91145.pdf` is the **socket**. So T3.3's "mounts a
+host folder and reads a ROM" half stays unbuilt rather than being faked with a
+filesystem shim that would prove nothing about this board.
 
 
 
