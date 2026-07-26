@@ -51,6 +51,7 @@ import tarfile
 import tempfile
 
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 from pcb_cache import build_cache, load_cache          # noqa: E402
@@ -60,6 +61,11 @@ import verify_netlist_diff as vnd                       # noqa: E402
 # from the CPL a DNP. Imported rather than re-derived so "is this part
 # actually assembled?" has one answer in the repo.
 from verify_bom_cpl_pcb import DNP_REFS, HAND_ASSEMBLED  # noqa: E402
+# The second source that checks a pad's net. verify_datasheet_nets compares
+# every pad declared here against its expected net (267 checks today), so a
+# pad the schematic symbol does not represent is not automatically a pad
+# nobody checks — see the D3 note in crosscheck().
+from hardware.datasheet_specs import COMPONENT_SPECS      # noqa: E402
 
 PCB_REL = os.path.join("hardware", "kicad", "esp32-emu-turbo.kicad_pcb")
 
@@ -165,6 +171,11 @@ class BoardNetlist:
 
         self.nets = {k: tuple(v) for k, v in sorted(nets.items())}
         self.refs = set(cache.get("refs", []))
+        # Filled by crosscheck(): pads the schematic does not represent but
+        # datasheet_specs does. Not disputes — verify_datasheet_nets owns
+        # them — but the bench must know they exist, because a model built
+        # from the schematic alone would be missing them.
+        self.pads_only_in_datasheet = []
 
         # Copper carried by each net, so "no pins" can be told apart from
         # "no copper either" — a name with neither is a pure phantom.
@@ -340,23 +351,37 @@ def crosscheck(board, sch):
             "D2", net, "sch", "schematic generator",
             f"single node {ref}.{pin}{why}"))
 
-    # D3 — a pad that carries a net on a ref whose pins are translated,
-    # but that the translation table does not list.
+    # D3 — a pad that carries a net but that NO source accounts for.
     #
-    # Two shapes hide in here and the net's own class separates them, so
-    # no allowlist is needed. A *signal* net on an unmapped pad is the
-    # serious one: a live signal that no cross-check compares (J1's second
-    # USB orientation, U5's VREF, U6's card-detect, SW_PWR's solder tabs).
-    # A *power or ground* net on an unmapped pad is usually a connector
-    # pad the logical symbol does not break out at all. Both are reported;
-    # signal sorts first because a wrong power pad is loud on a bench and a
-    # wrong signal pad is silent.
+    # The first version of this check reported every pad the schematic
+    # translation table does not list, and called them "compared by
+    # nothing". That was wrong, and the correction is worth keeping
+    # visible: all 17 such pads on this board are declared in
+    # `hardware/datasheet_specs.py`, where verify_datasheet_nets compares
+    # each one's net against an expected value. The four most suspicious —
+    # U6.8/U6.9 on the SD data lines and SW_PWR.4b/4d on BTN_SELECT — turn
+    # out to be deliberate same-net fixups with a written safety analysis
+    # (routing.py:6055-6085) that a hard gate protects.
+    #
+    # A check that fires on all seventeen therefore discriminates nothing.
+    # The real hole is a pad in NEITHER source: absent from the schematic
+    # symbol and undeclared in datasheet_specs, so its net is whatever the
+    # copper happened to inject (board._inject_pad_net) and no expectation
+    # exists to contradict it. That set is empty today, which is the
+    # correct answer, not a missing check — see test_vbench.py, which
+    # injects one and requires it to fire.
+    board.pads_only_in_datasheet = []
     for ref, pad, net in board.pads_without_pin:
+        declared = pad in COMPONENT_SPECS.get(ref, {}).get("pins", {})
+        if declared:
+            board.pads_only_in_datasheet.append((ref, pad, net))
+            continue
         kind = board.net_types.get(net, "signal")
         disputes.append(Dispute(
-            "D3", f"{ref} pad {pad}", "pcb",
-            "verify_netlist_diff.SCH_PIN_TO_PCB_PADS",
-            f"carries {net!r} ({kind})", 0 if kind == "signal" else 1))
+            "D3", f"{ref} pad {pad}", "pcb", "unknown",
+            f"carries {net!r} ({kind}) with no schematic pin and no "
+            f"datasheet_specs entry — nothing states what this pad should "
+            f"be on", 0 if kind == "signal" else 1))
 
     # D4 — pin-to-net disagreement. Same comparison verify_netlist_diff's
     # T4 performs, through the same table and the same exception
@@ -474,7 +499,7 @@ def print_summary(board):
 _CODE_MEANING = {
     "D1": "board net with no pad on it",
     "D2": "net with a single pin — a label, not a circuit",
-    "D3": "pin/pad outside the schematic-to-pad translation table",
+    "D3": "pad or pin that no source accounts for",
     "D4": "schematic and board disagree about a pin's net",
     "D5": "part present in only one source",
 }
@@ -488,9 +513,10 @@ _CODE_NOTE = {
           "iterates schematic pins, of which this net has none.",
     "D2": "One pin gives current nowhere to go, so this is either an "
           "unfinished connection or a label that should not be a net.",
-    "D3": "Uncompared by T4. Pad nets are injected by copper overlap "
-          "(board._inject_pad_net), so a mechanical pad can acquire a net "
-          "it was never wired to — signal nets listed first.",
+    "D3": "Neither the schematic symbol nor datasheet_specs says what this "
+          "pad should be on, and pad nets are injected by copper overlap "
+          "(board._inject_pad_net) — so its net is an accident nothing can "
+          "contradict.",
     "D4": "The two sources describe different circuits. Same comparison as "
           "verify_netlist_diff T4, through the same table.",
     "D5": "A DNP land still has pads with nets, so a solver that trusts the "
@@ -498,7 +524,17 @@ _CODE_NOTE = {
 }
 
 
-def print_disputes(disputes):
+def print_disputes(disputes, board=None):
+    if board is not None and board.pads_only_in_datasheet:
+        print(f"  Pads the schematic does not represent, but "
+              f"datasheet_specs does: {len(board.pads_only_in_datasheet)}")
+        print(f"        Not disputes — verify_datasheet_nets compares each "
+              f"one's net against a declared expectation. Listed because a "
+              f"Phase 1 model built from the schematic alone would miss "
+              f"them: "
+              f"{', '.join(f'{r}.{p}' for r, p, _ in board.pads_only_in_datasheet[:6])}"
+              f"{' ...' if len(board.pads_only_in_datasheet) > 6 else ''}")
+        print()
     print(f"  Disputes: {len(disputes)}")
     if not disputes:
         print("    none — the bench has an undisputed netlist to stand on")
@@ -555,7 +591,7 @@ def main(argv=None):
     print_summary(board)
     print()
     print("-" * 72)
-    print_disputes(disputes)
+    print_disputes(disputes, board)
     if the_delta:
         print()
         print("-" * 72)

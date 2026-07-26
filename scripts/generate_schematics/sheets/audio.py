@@ -51,12 +51,22 @@ class AudioSheet(SchematicSheet):
         # I2S informational block — moved higher (y=45-65) so its
         # rightmost text ("PDM sigma-delta out ...") no longer runs
         # into the PAM8403 VDD/PVDD decoupling caps (C23-C25 at y=90).
+        #
+        # These three net names are CAPTIONS, so they are drawn with text()
+        # and not with glabel(). A global label is a connectivity
+        # instrument: used as a caption it declares a net that connects
+        # nothing, which is how a name comes to exist in the schematic
+        # netlist with no pin behind it. All three sat
+        # attached to no wire — scripts/verify_schematic_label_attach.py
+        # reports exactly that, and it is the same instrument-misuse that
+        # left LCD_BL and LCD_RD in the PCB net table with zero pads.
+        # I2S_DOUT is a real net; it is named where it is wired, at C22.
         self.text("I2S Bus (PDM TX mode — DOUT only):", 30, 45, 2.54, True)
-        self.glabel("I2S_BCLK", 30, 55, 0, "input")
+        self.text("I2S_BCLK", 30, 55)
         self.text("GPIO15 - Bit Clock (UNUSED — PDM mode, v2 free)", 65, 55)
-        self.glabel("I2S_LRCK", 30, 62, 0, "input")
+        self.text("I2S_LRCK", 30, 62)
         self.text("GPIO16 - L/R Word Select (UNUSED — PDM mode, v2 free)", 65, 62)
-        self.glabel("I2S_DOUT", 30, 69, 0, "output")
+        self.text("I2S_DOUT", 30, 69)
         self.text("GPIO17 - PDM sigma-delta out @ 32kHz -> C22 -> PAM_IN_AC", 65, 69)
 
         # Speaker (moved further right for orthogonal routing)

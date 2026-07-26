@@ -326,9 +326,39 @@ def test_netlist():
           [d[:5] for d in restored] == [d[:5] for d in base],
           f"{len(restored)} disputes vs {len(base)} before")
 
+    # D3 must fire only for a pad that NEITHER source accounts for, so the
+    # injection removes the datasheet_specs entry that currently explains
+    # one. Without this the class would be untested: it is empty on the
+    # real board, and an empty class proves nothing on its own.
+    if board.pads_without_pin:
+        ref, pad, _ = board.pads_without_pin[0]
+        pins = nl.COMPONENT_SPECS[ref]["pins"]
+        saved = pins.pop(pad)
+        try:
+            after = nl.crosscheck(board, sch)
+            check("D3 fires for a pad in neither the schematic nor "
+                  "datasheet_specs",
+                  any(d.code == "D3" and d.subject == f"{ref} pad {pad}"
+                      for d in after),
+                  f"injected {ref}.{pad}, got "
+                  f"{[d.subject for d in after if d.code == 'D3']}")
+        finally:
+            pins[pad] = saved
+        after = nl.crosscheck(board, sch)
+        check("D3 falls silent again once datasheet_specs explains the pad",
+              not any(d.code == "D3" for d in after),
+              f"still {[d.subject for d in after if d.code == 'D3']}")
+    else:
+        check("D3 fires for a pad in neither source", False,
+              "no pad without a schematic pin — test is stale")
+
     check("the baseline reports the classes Phase 0 is meant to expose",
-          {"D1", "D2", "D3", "D5"} <= base_codes,
+          {"D2", "D5"} <= base_codes,
           f"got {sorted(base_codes)}")
+    check("every pad the schematic omits is explained by datasheet_specs",
+          all(pad in nl.COMPONENT_SPECS.get(ref, {}).get("pins", {})
+              for ref, pad, _ in board.pads_without_pin),
+          "a pad is accounted for by neither source")
 
     # An ambiguous translation table must raise rather than pick a winner.
     saved_map = nl.vnd.SCH_PIN_TO_PCB_PADS.get("LED1")

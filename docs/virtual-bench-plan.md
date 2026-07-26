@@ -189,6 +189,97 @@ scripts in this repo are stdlib-only. A YAML corpus would make the gate
 un-runnable, and an un-runnable gate is a gate nobody reads. The same
 applies to the Phase 4 scenario files (T4.3).
 
+### Triage — 29 disputes down to 5
+
+The plan forbids building the bench on a netlist in dispute, so the classes
+Phase 0 exposed were worked through before Phase 1 opened. Two of them
+turned out to be a fault in the *detector*, which is recorded here because
+that is the more useful half of the lesson.
+
+**D3 was a false-alarm class (17 → 0).** The first version reported every
+pad the schematic translation table does not list and called them "compared
+by nothing". All seventeen are declared in `hardware/datasheet_specs.py`,
+where `verify_datasheet_nets` compares each one against an expected net —
+267 checks, all passing. The four most suspicious readings dissolved on
+inspection: `U6.8`/`U6.9` on the SD data lines and `SW_PWR.4b`/`4d` on
+`BTN_SELECT` are deliberate same-net assignments with a written safety
+analysis at `routing.py:6055-6085`, protecting against real
+trace-through-pad shorts and guarded by a hard gate. A check that fires on
+all seventeen discriminates nothing, so D3 now fires only for a pad in
+*neither* source — empty today, and `test_vbench.py` injects one to prove
+the class still works.
+
+**Two D3 entries were a real defect, in the table rather than the board.**
+`_J1_MAP` in `verify_netlist_diff` claimed "3,5,8 = SBU / unused, no net"
+and mapped D+ to pad 6 and D- to pad 7 alone. The SBU pins are 3 and 9;
+pads 5 and 8 are the flipped-orientation half of the differential pair and
+carry `USB_D-`/`USB_D+`, which `datasheet_specs.py::J1` states pad by pad
+citing USB-C r2.1 §4.2. Two of the four data pads were therefore compared
+by nothing. Fixed; T4 now compares all four.
+
+**The two supply-rail stubs were the serious find.** `BAT+` had one node on
+the schematic (`SW_PWR.1`) and `VBUS` had one (`U4.5`), because three local
+labels in the Power Supply sheet sat 1.5–2 mm off the wires they name:
+`VBUS` at `vbus_y - 2`, `BAT+` at `bat_y - 2`, `BAT_IN` at
+`jst_plus_y - 1.5`. A label that misses its wire leaves the wire unnamed,
+and KiCad drops unnamed nets from the export — so the pins on them do not
+appear with a wrong net, they do not appear at all. Nine pins of the
+battery and USB-input path were absent from the exported netlist:
+`C17.1`, `C18.1`, `J1.2`, `J1.11`, `J3.1`, `L1.x`, `Q1.2`, `Q1.3`, `U2.1`,
+`U2.6`.
+
+That has a consequence for this plan's own record. **Phase -1 item (b) was
+not closed the way it says.** `J3.1`/`Q1.2` stopped being reported by T4
+because both pins left the netlist, not because the drawing was corrected;
+`verify_netlist_diff` iterates schematic pins, so a pin that is not there is
+compared against nothing and the gate goes green. With the labels on their
+wires the rails carry their pins (`BAT+` 5 nodes, `BAT_IN` 3, `VBUS` 4) and
+(b) is genuinely closed.
+
+Attaching the labels immediately exposed what had been hiding underneath:
+**L1 was drawn the wrong way round**, `sch='BAT+'` on pin 2 against the
+board's pin 1, contradicting `datasheet_specs.py::L1` ("pin 1 = Battery
+side"). An inductor is symmetric so nothing was electrically wrong, but the
+netlist said something false about which pad is which, and it could not be
+seen for as long as the rail had no name. Fixed by rotating the symbol
+180°, which is what `symbol()`'s own docstring prescribes for a symmetric
+two-terminal part whose pad 1 is at the other end — a facility that existed
+and had never been used.
+
+**A new gate, because this class has now recurred four times.**
+`scripts/verify_schematic_label_attach.py` checks geometrically that every
+label lies on a wire or junction; no expectations table, a label is
+attached or it is not. It found a fourth instance on its first run: three
+`glabel` calls in the audio sheet used as a *caption* for the I2S bus,
+declaring net names that connect nothing. Captions are now `text()`.
+Registered in `VERIFY_ALL_SCRIPTS` (`make verify-sch-labels`); the routing
+law in `issue_dispatch.py` gives it an owner via `law:schematic`.
+
+**The phantom nets are gone from both sources.** `LCD_BL` and `LCD_RD` had
+zero pads and zero copper: the DFM v3 fix of 2026-04-10 put panel pins 12
+(RD) and 33 (LED-A) directly on `+3V3` but left the names declared in
+`primitives.py::NET_LIST`, and `display.py` kept using them as global
+labels "as documentation of which panel pin is involved". A net name is not
+a comment. The DS1 stubs now carry `+3V3` with the panel pin in the
+annotation text, the two `NET_LIST` slots are removed leaving a documented
+gap (the `BTN_MENU` precedent), and `datasheet_specs.py::J4` pads 8 and 29
+are tightened from `_any_of("LCD_BL", "+3V3")` to `_exact("+3V3")` — an
+expectation that accepts two answers cannot disagree with either. Drawing
+LED-A straight onto the rail also puts R25-HIGH-1, the backlight with no
+ballast, into the drawing instead of behind a signal-sounding name.
+
+**The 5 that remain, and why they are not being closed here.** Four are
+`I2S_BCLK`/`I2S_LRCK` reported on both sides — R10-LOW-2, GPIO15/16
+reserved as net names while the firmware uses PDM TX, which needs only
+DOUT. Closing them means deciding whether the reservation should exist as a
+net at all, and it touches the firmware's GPIO documentation. The fifth is
+`C28`, below, which needs an electrical decision, not a bookkeeping one.
+
+Copper is untouched by all of this: the board file's segment list is
+identical to HEAD's, verified segment by segment. `verify-all` has one
+failure, `verify_cpl_rotation_law` (U2 and J4), which fails identically at
+HEAD.
+
 ### What Phase 0 measured
 
 `make bench-netlist` reports **29 disputes at HEAD, none of them D4** — the

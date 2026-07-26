@@ -89,15 +89,27 @@ _PCB_INTERNAL_PREFIXES = ("unconnected-", "Net-(", "")
 # J1 — USB_C 6-pin logical symbol -> 16-pad USB-C receptacle land.
 # Pad roles from hardware/datasheet_specs.py::J1 (which in turn quotes
 # hardware/datasheets/J1_USB-C-16pin_C2765186.pdf):
-#   1,12,13,14 = GND (shell + both rows)   2,9,11 = VBUS (A4/B4/A9/B9)
-#   4 = CC1     10 = CC2     6 = D+ (DP1)  7 = D- (DN1/DP2)
-#   3,5,8      = SBU / unused, no net
+#   1,12,13,14 = GND (shell + both rows)   2,11 = VBUS (A4+B9 / B4+A9)
+#   4 = CC1     10 = CC2
+#   6 = DP1, 8 = DP2 (D+, both plug orientations)
+#   7 = DN1, 5 = DN2 (D-, both plug orientations)
+#   3,9        = SBU2/SBU1, unused, no net
+#
+# Corrected 2026-07-26: this comment used to read "3,5,8 = SBU / unused,
+# no net" and the map sent D+ to pad 6 only and D- to pad 7 only. Both
+# halves were wrong. The SBU pins are 3 and 9; pads 5 and 8 are the
+# flipped-orientation half of the differential pair, and they carry
+# USB_D-/USB_D+ on this board — datasheet_specs.py::J1 says so pad by
+# pad, citing USB-C r2.1 section 4.2, which is why the two rows are tied
+# together. The consequence of the old map was that T4 compared two of
+# the four data pads and the other two were compared against nothing by
+# this gate. Found by scripts/vbench/netlist.py (dispute class D3).
 _J1_MAP = {
     "1": ("2", "9", "11"),          # VBUS
     "2": ("4",),                    # CC1
     "3": ("10",),                   # CC2
-    "4": ("6",),                    # D+
-    "5": ("7",),                    # D-
+    "4": ("6", "8"),                # D+ = DP1 (A6) + DP2 (B6)
+    "5": ("7", "5"),                # D- = DN1 (A7) + DN2 (B7)
     "6": ("1", "12", "13", "14"),   # GND
 }
 

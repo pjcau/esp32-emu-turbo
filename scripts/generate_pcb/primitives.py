@@ -145,7 +145,21 @@ NET_LIST = [
     (10, "LCD_D4"), (11, "LCD_D5"), (12, "LCD_D6"), (13, "LCD_D7"),
     # Display control
     (14, "LCD_CS"), (15, "LCD_RST"), (16, "LCD_DC"),
-    (17, "LCD_WR"), (18, "LCD_RD"), (19, "LCD_BL"),
+    (17, "LCD_WR"),
+    # Old slots: (18, "LCD_RD"), (19, "LCD_BL") — removed 2026-07-26, gap
+    # left deliberately, same as BTN_MENU below (KiCad tolerates
+    # non-contiguous net IDs, and renumbering would rewrite every net in
+    # the board file for a cosmetic change).
+    #
+    # Both names had ZERO pads and ZERO copper. The DFM v3 fix of
+    # 2026-04-10 (routing.py:2362-2372) put panel pin 12 (RD) and panel
+    # pin 33 (LED-A) directly on +3V3 — RD tied high because the display
+    # is write-only, LED-A because the backlight is always on — but left
+    # the two net names declared here. A declared net with no pad is
+    # invisible to every existing check: verify_netlist_diff T1/T2 compare
+    # names, and the schematic declared them too, so the names matched;
+    # T4 iterates schematic pins, and these had none on the board side.
+    # Found by scripts/vbench/netlist.py (dispute class D1).
     # SD card SPI
     (20, "SD_MOSI"), (21, "SD_MISO"), (22, "SD_CLK"), (23, "SD_CS"),
     # I2S audio

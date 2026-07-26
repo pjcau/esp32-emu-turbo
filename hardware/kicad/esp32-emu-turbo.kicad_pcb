@@ -99,8 +99,6 @@
   (net 15 "LCD_RST")
   (net 16 "LCD_DC")
   (net 17 "LCD_WR")
-  (net 18 "LCD_RD")
-  (net 19 "LCD_BL")
   (net 20 "SD_MOSI")
   (net 21 "SD_MISO")
   (net 22 "SD_CLK")

@@ -110,6 +110,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_power_resonance \
 	verify_power_sequence \
 	verify_schematic_crossings \
+	verify_schematic_label_attach \
 	verify_schematic_pcb \
 	verify_schematic_pcb_sync \
 	verify_schematic_pin_connectivity \
@@ -148,6 +149,9 @@ verify-sch-crossings: ## Fail when two schematic wires cross without a junction 
 
 verify-sch-pins: ## Fail when a schematic symbol pin has no wire/label/junction on it (undeclared floating pin)
 	@$(T) verify-sch-pins python3 scripts/verify_schematic_pin_connectivity.py
+
+verify-sch-labels: ## Fail when a label does not lie on the wire it names (the wire stays unnamed and its pins leave the netlist)
+	@$(T) verify-sch-labels python3 scripts/verify_schematic_label_attach.py
 
 open-issues: ## Which hardware gates are red right now (same report the SessionStart hook injects)
 	@python3 scripts/open_issues_report.py --text

@@ -209,7 +209,12 @@ class PowerSupplySheet(SchematicSheet):
         cin_x, cin_y = 118, 90
         # VBUS horizontal to CIN junction
         self.wire(vbus_x, vbus_y, cin_x, vbus_y)
-        self.label("VBUS", vbus_x + 5, vbus_y - 2)
+        # ON the wire, not 2 mm above it. At vbus_y - 2 this label named
+        # nothing, so the whole USB input rail stayed unnamed and KiCad
+        # dropped it from the exported netlist: VBUS came out with a single
+        # node (U4.5, which has its own global label) while C17.1, U2.1,
+        # J1.2 and J1.11 vanished from the cross-check entirely.
+        self.label("VBUS", vbus_x + 5, vbus_y)
         # CIN junction down to cap
         self.wire(cin_x, vbus_y, cin_x, cin_y - 3.81)
         self.sym("C", "C17", "10uF", cin_x, cin_y, ["1", "2"])
@@ -235,10 +240,24 @@ class PowerSupplySheet(SchematicSheet):
 
         # ---- L1 inductor: BAT -> L1 -> SW ----
         l1_x, l1_y = 190, 85
-        self.sym("L", "L1", "1uH", l1_x, l1_y, ["1", "2"])
+        # Rotated 180 deg so pin 1 is the BOTTOM terminal, which is the one
+        # the BAT+ rail arrives on. Upright, this drawing put pin 2 on BAT+
+        # and pin 1 on the switching node — the reverse of the board and of
+        # datasheet_specs.py::L1, which states pin 1 = "Battery side" and
+        # pin 2 = "SW/LX node (to IP5306 pin 7)". An inductor is symmetric,
+        # so nothing was electrically wrong, but the netlist said something
+        # false about which pad is which.
+        #
+        # This was invisible until the BAT+ label above was moved onto its
+        # wire: while the rail was unnamed, L1 had no BAT+ pin at all in the
+        # exported netlist and T4 had nothing to compare. Rotating rather
+        # than rerouting is what symbol()'s own docstring prescribes for a
+        # symmetric two-terminal part whose pad 1 is at the other end; the
+        # body is a symmetric rectangle, so the sheet looks identical.
+        self.sym("L", "L1", "1uH", l1_x, l1_y, ["1", "2"], 180)
         self.text("1uH >4.5A", l1_x + 3, l1_y - 3, 1.5)
-        # L1 pin1 (top) at (l1_x, l1_y - 3.81)
-        # L1 pin2 (bottom) at (l1_x, l1_y + 3.81)
+        # After the rotation: pin 2 (top) at (l1_x, l1_y - 3.81)
+        #                     pin 1 (bottom) at (l1_x, l1_y + 3.81)
         # BAT -> L1 bottom: horizontal then vertical
         self.wire(bat_x, bat_y, l1_x, bat_y)
         self.wire(l1_x, bat_y, l1_x, l1_y + 3.81)
@@ -400,7 +419,12 @@ class PowerSupplySheet(SchematicSheet):
         # C18 taps the rail mid-span now, so it needs a dot.
         self.junction(cbat_x, bat_y)
         self.wire(q1x, bat_y, q1x, q1y - 5)
-        self.label("BAT+", q1x + 2, bat_y - 2)
+        # Mid-span on the horizontal rail. At (q1x + 2, bat_y - 2) it was
+        # 2 mm off the horizontal and 2 mm off the vertical, i.e. on neither
+        # — so BAT+ came out of the netlist with one node (SW_PWR.1, from
+        # its own global label) while L1.1, C18.1, Q1.3 and U2.6 were
+        # absent. The battery rail was undrawn as far as any gate could see.
+        self.label("BAT+", q1x - 10, bat_y)
 
         # Q1 pin 2 (Source) — connects to BAT_IN → J3.1
         # Source exits to the right toward JST connector.
@@ -415,8 +439,18 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(q1x + 5, q1y + 1.27, q1x + 5, jst_plus_y)
         self.wire(q1x + 5, jst_plus_y, jst_plus_x, jst_plus_y)
         # Label must sit ON the segment it names. At q1y - 0.5 it floated
-        # 1.77mm off every wire and renamed nothing.
-        self.label("BAT_IN", q1x + 8, jst_plus_y - 1.5)
+        # 1.77mm off every wire and renamed nothing — and the correction
+        # that replaced it, jst_plus_y - 1.5, was still 1.5 mm off the same
+        # horizontal, so it renamed nothing either. BAT_IN kept coming out
+        # of the netlist with one node (BT1.1) and both J3.1 and Q1.2 stayed
+        # missing. That is why the T4 mismatch this comment records stopped
+        # being reported: the pins left the netlist, they did not agree.
+        # Placed relative to the wire's right-hand end rather than to Q1:
+        # at q1x + 8 it sits on the wire correctly but lands on C27's
+        # "HF bypass" annotation at (222, 91), which verify_schematic_overlaps
+        # rejects. Anywhere on the span x in [q1x + 5, jst_plus_x] names the
+        # same net, so it goes where there is room.
+        self.label("BAT_IN", jst_plus_x - 20, jst_plus_y)
 
         # Q1 pin 1 (Gate) — pulled to GND via R24 (100K)
         r24x, r24y = q1x - 8, q1y + 10
