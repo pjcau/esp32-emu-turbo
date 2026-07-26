@@ -117,7 +117,7 @@
       "present_now": true,
       "must_report": "C28 has pads on +3V3 and GND but is DNP -- absent from the BOM, the CPL and the schematic, removed from assembly because it sits under the module body -- so the 10 uF it contributes to the ESP32 supply exists in no physical board",
       "expect": "caught",
-      "note": "Found by netlist.py's D5 class while building Phase 0, not by an audit round. Same shape as R25-CRIT-1: a budget computed from a part that is not fitted, in a gate whose comment says its values come from the BOM. jlcpcb_export.py:420 records the removal; verify_decoupling_adequacy.py:59 was never told."
+      "note": "Gate fixed 2026-07-26: verify_decoupling_adequacy now derives the fitted set from verify_bom_cpl_pcb.DNP_REFS, which exposed the real as-built fact — the assembled board has 0.10 uF of bulk within 15 mm of the module's supply pin, not 10 uF. Recorded in docs/known-issues.md RESPIN ('The ESP32-S3 has no bulk capacitor within reach'); the gate passes only while that record exists. C28's land remains on the board and DNP, which is what this entry detects. jlcpcb_export.py:420 records why: the land sits under the module body, so the respin must RELOCATE it, not fit it."
     },
     {
       "id": "R28-HIGH-1",

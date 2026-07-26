@@ -268,6 +268,31 @@ def validate_model(model):
 
     model.datasheet.validate(where)
 
+    # The document must be bound to the PART, not merely exist. This rule
+    # was added the day hardware/datasheets/ gained
+    # DISPLAY-FAMILY_E35RG73248LW6M250-R_FocusLCDs.pdf — a 3.5" panel with
+    # the same ILI9488 controller but a different active area and viewing
+    # direction from this design's 3.95" panel. Before this rule, a model of
+    # our panel citing that file would have validated: the existence check
+    # passed, and every locator inside it would have pointed at a REAL page
+    # of the WRONG part. A citation that cannot be traced to the component
+    # is worse than none, because it looks checked.
+    #
+    # The binding uses this repo's own naming convention, which every
+    # datasheet already follows: <REF>_<part>_<LCSC>.pdf. The model's LCSC
+    # number appearing in the filename is the claim "this document is about
+    # this orderable part". A cross-reference document without the part
+    # number needs renaming to say whose it is, not an exemption here.
+    if model.mpn not in model.datasheet.doc:
+        raise ModelSchemaError(
+            f"{where}: the cited document {model.datasheet.doc!r} does not "
+            f"carry this model's part number {model.mpn!r} in its filename, "
+            f"so nothing binds it to this part. hardware/datasheets/ names "
+            f"files <REF>_<part>_<LCSC>.pdf for exactly this reason — a "
+            f"family datasheet for a similar part would otherwise validate "
+            f"with every locator pointing at a real page of the wrong "
+            f"component.")
+
     if not model.pins:
         raise ModelSchemaError(
             f"{where}: no pins. A part with no pins cannot be connected to "

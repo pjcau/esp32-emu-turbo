@@ -451,6 +451,23 @@ and is six releases stale; the tag is the truth.
   either half alone fails; an unrecorded missing RC fails; the doc anchor
   is asserted to still exist in this file; and re-planting the old
   justification comment must change nothing.
+- **The ESP32-S3 has no bulk capacitor within reach of its supply pin.**
+  C28 (10 µF) was designed 3.7 mm from U1 pin 2 for exactly this job, but its
+  land sits **under the module body**, so it was removed from assembly
+  (`scripts/generate_pcb/jlcpcb_export.py` — "C28 REMOVED from assembly: was
+  at (86,26) UNDER ESP32 module body"). It is not in the BOM, not in the CPL,
+  and not on any assembled board. The nearest bulk on the +3V3 net is C30
+  (22 µF), the buck's own output capacitor, ~45 mm away — outside any useful
+  decoupling radius. What the module's supply pin actually has within 15 mm is
+  C26's 100 nF.
+
+  `verify_decoupling_adequacy` reported this requirement as satisfied for
+  months because its capacitor table was hand-written and still listed C28 —
+  a budget computed from a part that is not fitted, the same shape as the R3
+  story. The gate now derives the fitted set from the CPL (via
+  `verify_bom_cpl_pcb.DNP_REFS`) and passes only while this entry records the
+  deviation. Respin: **relocate** C28 beside the module — fitting it where it
+  is remains impossible.
 - **The display backlight has no current-limiting element at all** (R25-HIGH-1,
   raised 2026-07-26, previously recorded only in `hardware-audit-bugs.md`).
   `J4` pad 8 — panel pin 33, LED-A — sits **directly on `+3V3`**, and the

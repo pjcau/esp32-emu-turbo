@@ -139,8 +139,9 @@ DEBOUNCE_MAX_MS = 10.0
 DEBOUNCE_R = 10000               # ohm
 DEBOUNCE_C = 100e-9              # F
 
-EN_PULLUP_R = 10000              # ohm
-EN_RESET_C = 100e-9              # F
+# EN_PULLUP_R / EN_RESET_C are deleted, not kept at their old values: they
+# described R3 (DNP) and a C3 that is not on EN, and the delay computed from
+# them was R10-LOW-7. The EN check now reads the parts from the copper.
 EN_THRESHOLD_FACTOR = 0.75       # Vih = 0.75 * Vdd
 VDD = 3.3                        # V
 
@@ -404,22 +405,60 @@ def check_signal_timing():
     )
     errors.extend(e)
 
-    # EN reset delay
-    en_tau = EN_PULLUP_R * EN_RESET_C
-    v_threshold = EN_THRESHOLD_FACTOR * VDD
-    # Time to reach threshold: V(t) = Vcc * (1 - e^(-t/tau))
-    # t = -tau * ln(1 - Vth/Vcc)
-    t_en = -en_tau * math.log(1 - v_threshold / VDD)
+    # EN reset delay — REWRITTEN 2026-07-26 (R10-LOW-7, third and last site).
+    #
+    # This block used to compute tau = EN_PULLUP_R * EN_RESET_C and pass an
+    # "EN delay long enough for stable boot" check on it. Neither part is
+    # fitted: R3 is DNP and C3's pads sit on +3V3/GND, so the printed delay
+    # described a network that exists on no board. The current-budget half of
+    # this story was zeroed in 68bb20e; this was the timing half.
+    #
+    # Now the parts are read from the copper. With none there, no time
+    # constant exists to compute, and the check passes only while the absence
+    # is recorded in docs/known-issues.md — the same pattern as
+    # verify_strapping_pins.test_en_rc_delay, which owns the fuller version
+    # of this check.
+    from pcb_cache import load_cache as _load_cache
+    _cache = _load_cache()
+    _id2n = {n["id"]: n["name"] for n in _cache.get("nets", [])}
+    _ref_nets = {}
+    for _p in _cache.get("pads", []):
+        if _p.get("ref"):
+            _ref_nets.setdefault(_p["ref"], set()).add(
+                _id2n.get(_p.get("net", 0), ""))
+    _en_pullup = sorted(r for r, nets in _ref_nets.items()
+                        if r.startswith("R") and {"EN", "+3V3"} <= nets)
+    _en_cap = sorted(c for c, nets in _ref_nets.items()
+                     if c.startswith("C") and {"EN", "GND"} <= nets)
 
     print(f"\n  ESP32 EN reset delay:")
-    print(f"    R3 = {EN_PULLUP_R/1000:.0f}k, C3 = {EN_RESET_C*1e9:.0f}nF")
-    print(f"    tau = {en_tau*1000:.2f} ms")
-    print(f"    Time to reach {v_threshold:.3f}V (Vih): {t_en*1000:.3f} ms")
-    e, w = _check(
-        f"EN delay: {t_en*1000:.2f}ms (min 0.05ms)",
-        ["EN delay too short for stable boot"]
-        if t_en < 50e-6 else [],
-    )
+    if _en_pullup and _en_cap:
+        # The RC exists: report the parts; the time constant itself is
+        # computed by scripts/vbench/transients.py from the BOM's values.
+        print(f"    pull-up {_en_pullup}, cap {_en_cap} — RC present; timing "
+              f"is computed by scripts/vbench/transients.py")
+        e, w = _check("EN RC network present on the copper", [])
+    else:
+        print(f"    pull-up from EN to +3V3: {_en_pullup or 'NONE'}")
+        print(f"    capacitor from EN to GND: {_en_cap or 'NONE'}")
+        print(f"    No RC exists, so no delay is computed. The module "
+              f"datasheet requires this")
+        print(f"    network (p.28 figure 7: R = 10k, C = 1uF); the absence "
+              f"is an as-built")
+        print(f"    limitation for the respin.")
+        try:
+            with open(os.path.join(_PROJECT_ROOT, "docs", "known-issues.md"),
+                      errors="replace") as _fh:
+                _recorded = "EN has no RC delay network" in _fh.read()
+        except OSError:
+            _recorded = False
+        e, w = _check(
+            "EN has NO RC network, and that is a RECORDED as-built limitation",
+            [] if _recorded else
+            ["EN has no pull-up and no capacitor, and docs/known-issues.md "
+             "no longer records it — fit the RC or restore the record; do "
+             "not restore a delay computed from parts that are not there"],
+        )
     errors.extend(e)
 
     return errors, warnings

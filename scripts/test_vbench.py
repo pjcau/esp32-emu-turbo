@@ -144,6 +144,20 @@ def test_schema():
             lambda: good_model(datasheet=DatasheetRef(
                 doc="ILI9488_panel_that_nobody_added.pdf", rev="v1.0")))
 
+    # The document must be bound to the PART, not merely exist. The repo now
+    # holds DISPLAY-FAMILY_E35RG73248LW6M250-R_FocusLCDs.pdf — a real file
+    # describing a DIFFERENT 3.5" panel with the same controller. Before the
+    # binding rule, a model citing it validated with every locator pointing
+    # at a real page of the wrong part.
+    rejects("a real datasheet for a DIFFERENT part is rejected (no mpn in "
+            "the filename)",
+            lambda: good_model(datasheet=DatasheetRef(
+                doc="DISPLAY-FAMILY_E35RG73248LW6M250-R_FocusLCDs.pdf",
+                rev="fam")))
+    rejects("an in-repo document whose filename lacks the model's LCSC "
+            "number is rejected",
+            lambda: good_model(mpn="C99999"))
+
     rejects("an empty datasheet revision is rejected",
             lambda: good_model(datasheet=DatasheetRef(doc=REAL_DOC, rev="")))
 

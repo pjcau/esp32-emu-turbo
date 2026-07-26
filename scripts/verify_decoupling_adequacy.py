@@ -107,13 +107,33 @@ def _dist(x1, y1, x2, y2):
     return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
 
 
+def _dnp_refs():
+    """Footprints on the board that are NOT assembled — derived, not listed.
+
+    Imported from verify_bom_cpl_pcb, which computes the set by executing
+    jlcpcb_export._build_placements() and calling every board footprint
+    absent from the CPL a DNP. One derivation, one answer, repo-wide.
+
+    This gate counted C28's 10 uF toward the ESP32's bulk requirement for
+    months after jlcpcb_export removed C28 from assembly ("was at (86,26)
+    UNDER ESP32 module body"), because CAP_VALUES is a hand-written table
+    and nobody told it — a budget computed from a part that is not fitted,
+    the same shape as the R3 0.33 mA story. Fail-loud on import error, for
+    the same reason verify_bom_cpl_pcb itself does: a decoupling check that
+    cannot see the DNP list must not silently count everything.
+    """
+    from verify_bom_cpl_pcb import DNP_REFS
+    return DNP_REFS
+
+
 def _get_cap_positions(cache):
-    """Build {cap_ref: (x, y)} from PCB cache pads, using pad center."""
+    """Build {cap_ref: (x, y)} for ASSEMBLED capacitors only."""
     pads = cache["pads"]
+    dnp = _dnp_refs()
     cap_centers = {}
     for p in pads:
         ref = p.get("ref", "")
-        if ref.startswith("C") and ref[1:].isdigit():
+        if ref.startswith("C") and ref[1:].isdigit() and ref not in dnp:
             if ref not in cap_centers:
                 cap_centers[ref] = (p["x"], p["y"])
             else:
@@ -121,6 +141,27 @@ def _get_cap_positions(cache):
                 ox, oy = cap_centers[ref]
                 cap_centers[ref] = ((ox + p["x"]) / 2, (oy + p["y"]) / 2)
     return cap_centers
+
+
+# Requirements the assembled board genuinely does not meet, accepted ONLY
+# while docs/known-issues.md records each one in its RESPIN section. The
+# key is the requirement's description from DECOUPLING_REQS; the value is
+# the sentence that must appear in known-issues.md. Same pattern as the EN
+# check in verify_strapping_pins: the gate states the deviation and stays
+# green only while the record exists — delete the record without fixing
+# the board and the gate goes red.
+_RECORDED_LIMITATIONS = {
+    ("U1", "bulk"): "The ESP32-S3 has no bulk capacitor within reach",
+}
+
+
+def _limitation_recorded(sentence):
+    path = os.path.join(BASE, "docs", "known-issues.md")
+    try:
+        with open(path, errors="replace") as fh:
+            return sentence in fh.read()
+    except OSError:
+        return False
 
 
 def _get_ic_pin_pos(cache, ic_ref, pin_num):
@@ -174,8 +215,20 @@ def test_decoupling_adequacy():
 
         # Check bulk: at least min_bulk_uF within max_bulk_dist
         bulk_refs = ", ".join(f"{c[0]}({c[2]}uF@{c[1]:.1f}mm)" for c in bulk_caps) or "none"
+        bulk_ok = bulk_total >= min_bulk_uF
+        limitation = _RECORDED_LIMITATIONS.get((ic_ref, "bulk"))
+        if not bulk_ok and limitation:
+            recorded = _limitation_recorded(limitation)
+            check(f"{desc}: bulk {bulk_total:.2f}uF < {min_bulk_uF}uF — a "
+                  f"RECORDED as-built limitation (known-issues RESPIN)",
+                  recorded,
+                  f"the assembled board misses this requirement (caps="
+                  f"[{bulk_refs}]) and docs/known-issues.md no longer "
+                  f"records it. Either fit the bulk or restore the record — "
+                  f"do not re-add a DNP part to the count.")
+            continue
         check(f"{desc}: bulk decoupling >= {min_bulk_uF}uF within {max_bulk_dist}mm",
-              bulk_total >= min_bulk_uF,
+              bulk_ok,
               f"total={bulk_total:.2f}uF, caps=[{bulk_refs}]")
 
 

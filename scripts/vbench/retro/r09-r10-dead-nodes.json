@@ -9,9 +9,16 @@
       "source": "hardware-audit-bugs.md:671",
       "source_match": "R9-MED-4",
       "phase": 1,
-      "classes": ["dead-node", "netlist-island"],
-      "mutation": {"kind": "move_pin", "ref": "R16", "pin": "1",
-                   "to_net": "BTN_MENU_DEAD"},
+      "classes": [
+        "dead-node",
+        "netlist-island"
+      ],
+      "mutation": {
+        "kind": "move_pin",
+        "ref": "R16",
+        "pin": "1",
+        "to_net": "BTN_MENU_DEAD"
+      },
       "must_report": "R16 pin 1 is on a net with no other pin, so it carries no current and its value has no effect on any node voltage",
       "expect": "caught",
       "note": "R19/C20 were deleted from the design after this finding, so the historical part cannot be re-detached. The mutation reproduces the same electrical shape on R16, which is the surviving resistor of that network."
@@ -23,8 +30,13 @@
       "source": "hardware-audit-bugs.md:856",
       "source_match": "R10-LOW-2",
       "phase": 0,
-      "classes": ["dead-node", "single-pin-net"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "dead-node",
+        "single-pin-net"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "I2S_BCLK and I2S_LRCK each have exactly one pin (U1.8 and U1.9) and zero copper, on both the board and the schematic",
       "expect": "caught",
@@ -37,12 +49,17 @@
       "source": "hardware-audit-bugs.md:980",
       "source_match": "R10-LOW-7",
       "phase": 2,
-      "classes": ["gate-agrees-with-design", "model-vs-bom"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "gate-agrees-with-design",
+        "model-vs-bom"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "the EN node has no resistor and no capacitor on it, so no RC time constant exists to compute; any boot-delay figure derived from R3 = 10k and C3 = 100nF describes a network the board does not have",
       "expect": "caught",
-      "note": "Still live in scripts/simulate_circuit.py, which prints an EN reset delay from EN_PULLUP_R * EN_RESET_C and passes a 'delay long enough for stable boot' check on it. The 0.33 mA current-budget line for the same non-existent resistor was zeroed in 68bb20e; the timing calculation was not. Phase 1 must not inherit either."
+      "note": "FIXED in the gates on 2026-07-26, live as a board fact. simulate_circuit.py no longer computes a delay from R3/C3 — it reads the EN net from the copper, finds no R and no C, and passes only while docs/known-issues.md records the absence (same pattern as verify_strapping_pins). The board still lacks the RC, which is what this entry detects."
     },
     {
       "id": "R26-LOW-1",
@@ -51,8 +68,15 @@
       "source": "hardware-audit-bugs.md:3074",
       "source_match": "R26-LOW-1",
       "phase": 0,
-      "classes": ["dead-node", "phantom-net"],
-      "mutation": {"kind": "declare_net", "net": "LCD_BL", "pads": []},
+      "classes": [
+        "dead-node",
+        "phantom-net"
+      ],
+      "mutation": {
+        "kind": "declare_net",
+        "net": "LCD_BL",
+        "pads": []
+      },
       "must_report": "a net declared in the board's net table that no pad carries; it is not a connection, it is a name, and no existing check can see it — T1/T2 compare names, which matched because both files declared it, and T4 iterates schematic pins, of which it had none",
       "expect": "caught",
       "note": "Fixed on main and in this branch independently and identically on 2026-07-26 — net ids 18/19 retired with a documented gap, the DS1 stubs relabelled +3V3, and datasheet_specs J4 pads 8/29 tightened from _any_of to _exact. Kept as a corpus entry because netlist.py's D1 class is what found it, and a detector that has nothing to rediscover is a detector nobody can measure."
