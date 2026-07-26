@@ -265,63 +265,92 @@ def test_gpio0_boot_mode():
 
 
 def test_en_rc_delay():
-    """Test 8-10: EN pin has proper RC delay for reliable boot."""
-    print("\n-- EN Pin RC Delay --")
-    sch_text = _read_schematics()
+    """Test 8-10: what is actually on the EN net, and whether that is accepted.
 
-    # EN pull-up: either external R3 10k OR the ESP32-S3-WROOM-1 module's
-    # integrated EN pull-up (R3 is DNP on this design — see
-    # scripts/generate_schematics/sheets/mcu.py which documents the
-    # WROOM-1 internal pull-up is sufficient together with the RC below).
-    has_r3 = bool(re.search(r'"R3".*"10k"', sch_text))
-    has_wroom_note = ("R3 DNP" in sch_text
-                      or "internal to WROOM-1" in sch_text
-                      or "WROOM-1 integrates" in sch_text)
-    check("EN: R3 10k pull-up to +3V3 (or WROOM-1 internal)",
-          has_r3 or has_wroom_note,
-          "no R3 and no WROOM-1 integrated pull-up note in schematic")
+    REWRITTEN 2026-07-26. The previous version computed an "EN RC margin" of
+    36.5 ms and passed. Every input to that number was wrong:
 
-    # C3 = 100nF on EN (RC delay)
-    has_c3 = bool(re.search(r'"C3".*"100nF"', sch_text))
-    check("EN: C3 100nF decoupling", has_c3,
-          "C3 not found in schematic")
+      * It used R = 45 kΩ for a "WROOM-1 internal EN pull-up". The module
+        datasheet says the opposite in its own words — page 28, note to
+        figure 7 (外围设计原理图): an RC delay circuit MUST be added at the EN
+        pin, R = 10 kΩ and C = 1 µF recommended. There is no on-module pull-up
+        to rely on. See docs/virtual-bench-plan.md phase -1(a).
+      * It used C = 100 nF for "C3 on EN". C3 is not on EN. On the board its
+        pads sit on +3V3 and GND — it is the third cap in the decoupling row
+        (phase -1(d)).
+      * Its evidence that any of this was true was a **grep of the schematic
+        for the phrase "R3 DNP"**. A gate whose verdict depends on a comment
+        existing cannot disagree with the comment. That is the exact failure
+        mode recorded in memory as "a justification comment outranks the
+        datasheet", implemented as a pass condition.
 
-    # RC time constant computation — R10-LOW-7 fix:
-    #
-    # The original math assumed R = 10 kΩ (external R3). After R4
-    # closed R3 as DNP (WROOM-1 integrates an internal EN pull-up),
-    # the effective R is the module's internal ~45 kΩ. Both cases
-    # still boot reliably because the ESP32-S3 boot ROM waits
-    # ~50 ms between EN rise and strapping-pin sample (not 5 ms;
-    # the 5 ms figure in the original code was Espressif's minimum
-    # EN-valid-to-sample window, not the typical).
-    #
-    # Pick R based on whether R3 is actually populated.
-    R_EXT_R3_OHM   = 10_000
-    R_WROOM_INTERNAL_OHM = 45_000
-    C_EN_F         = 100e-9
-    SAMPLE_WINDOW_MS = 50.0  # ESP32-S3 boot ROM EN-to-sample (typ)
+    What it does now: read the EN net out of the copper, state what is on it,
+    and compute a time constant only from parts that exist. The board's EN has
+    no pull-up and no capacitor, which is a real as-built limitation — so the
+    check passes only while that limitation is recorded in
+    docs/known-issues.md's RESPIN section, and fails the moment either the
+    copper or the record changes without the other.
+    """
+    print("\n-- EN Pin: what the copper has --")
+    cache = load_cache()
+    id_to_name = {n["id"]: n["name"] for n in cache.get("nets", [])}
+    en_pads, ref_nets = [], {}
+    for pad in cache.get("pads", []):
+        ref, num = pad.get("ref", ""), str(pad.get("num", ""))
+        net = id_to_name.get(pad.get("net", 0), "")
+        if not ref or not num:
+            continue
+        ref_nets.setdefault(ref, set()).add(net)
+        if net == "EN":
+            en_pads.append(f"{ref}.{num}")
 
-    if has_r3 and has_c3:
-        R = R_EXT_R3_OHM
-        source = "external R3 10kΩ"
-    elif has_wroom_note and has_c3:
-        R = R_WROOM_INTERNAL_OHM
-        source = "WROOM-1 internal ~45kΩ"
-    else:
-        R = None
+    check("EN net exists on the board", bool(en_pads),
+          "no pad carries the EN net at all")
+    info(f"EN carries {len(en_pads)} pad(s): {', '.join(sorted(en_pads))}")
 
-    if R is not None:
-        tau_ms = R * C_EN_F * 1000
-        three_tau_ms = 3 * tau_ms
-        margin_ms = SAMPLE_WINDOW_MS - three_tau_ms
-        check(
-            f"EN: RC margin = {margin_ms:.1f}ms "
-            f"(tau={tau_ms:.1f}ms via {source}, sample@{SAMPLE_WINDOW_MS:.0f}ms)",
-            margin_ms > 0,
-            f"tau={tau_ms:.1f}ms, 3*tau={three_tau_ms:.1f}ms, "
-            f"sample@{SAMPLE_WINDOW_MS:.0f}ms",
-        )
+    # A pull-up is a resistor with one end on EN and the other on +3V3; a
+    # reset cap is a capacitor from EN to GND. Both derived from the copper.
+    pullup = sorted(r for r, nets in ref_nets.items()
+                    if re.match(r"^R\d", r) and {"EN", "+3V3"} <= nets)
+    reset_cap = sorted(c for c, nets in ref_nets.items()
+                       if re.match(r"^C\d", c) and {"EN", "GND"} <= nets)
+    info(f"pull-up from EN to +3V3: {pullup or 'NONE'}")
+    info(f"capacitor from EN to GND: {reset_cap or 'NONE'}")
+
+    if pullup and reset_cap:
+        # The RC exists: compute tau from the real parts. Values would have to
+        # come from the BOM, which this gate does not read, so it reports the
+        # parts and leaves the timing to scripts/vbench/transients.py.
+        check("EN has the RC delay network the datasheet requires "
+              "(p.28 figure 7)", True,
+              f"pull-up {pullup}, cap {reset_cap}")
+        info("timing is computed by scripts/vbench/transients.py from the "
+             "BOM's values, not estimated here")
+        return
+
+    # No RC. State the deviation, then require it to be a recorded one.
+    try:
+        with open(os.path.join(BASE, "docs", "known-issues.md"),
+                  errors="replace") as fh:
+            respin = fh.read()
+    except OSError as exc:
+        respin = ""
+        warn("cannot read docs/known-issues.md", str(exc))
+    recorded = "EN has no RC delay network" in respin
+
+    check("EN has NO RC delay network, and that is a RECORDED as-built "
+          "limitation",
+          recorded,
+          "the board has no pull-up and no cap on EN, and "
+          "docs/known-issues.md does not record it in the RESPIN section. "
+          "The module datasheet requires this RC (p.28, figure 7: R = 10k, "
+          "C = 1uF). Either fit it or record why not — do not restore a "
+          "computed margin for a network that is not there.")
+    if recorded:
+        info("the datasheet requires R = 10k to +3V3 and C = 1uF to GND at EN "
+             "(p.28, figure 7); the board has neither, and the respin is "
+             "where it lands. scripts/vbench/pins.py derives the boot-time "
+             "consequence from the copper.")
 
 
 def test_firmware_internal_pullup():

@@ -212,6 +212,14 @@ bench-power: bench-rails bench-conflicts bench-thermal bench-transients ## T1.6 
 
 bench-phase1: bench-power ## Everything Phase 1 delivers
 
+bench-pins: ## T2.1 + T2.4 — every ESP32 pin with net/level/role, and the boot mode the copper produces
+	@$(T) bench-pins python3 scripts/vbench/pins.py
+
+bench-buttons: ## T2.2 + T2.3 — debounce RC per button, and the switch_off scenario
+	@$(T) bench-buttons python3 scripts/vbench/buttons.py
+
+bench-phase2: bench-pins bench-buttons ## Everything Phase 2 delivers
+
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
 

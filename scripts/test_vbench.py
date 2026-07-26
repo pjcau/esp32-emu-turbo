@@ -1,4 +1,5 @@
-"""Mutation tests for the Virtual Bench (Phase 0 foundation, Phase 1 physics).
+"""Mutation tests for the Virtual Bench (Phase 0 foundation, Phase 1 physics,
+Phase 2 digital fabric).
 
 Written in the style of `scripts/test_issue_dispatch.py`: break each
 mechanism on purpose and require it to notice. The repo's own lesson is
@@ -25,6 +26,10 @@ Covers:
   F. transients.py — a current limit must not be used as a series resistance,
      the decks must carry the BOM's real values, the simulated ripple must
      agree with the closed form, and a missing simulator must raise.
+  G. pins.py, buttons.py — the boot mode must be derived from the copper and
+     the strapping tables, a button held at reset must force download mode and
+     FAIL, BTN_L's missing pull-up must be derived to be REQUIRED rather than
+     reported as a defect, and switch_off must reproduce the v1 invariant.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -60,6 +65,15 @@ def check(name, condition, detail=""):
     else:
         FAIL += 1
         print(f"  FAIL  {name}  {detail}")
+
+
+def _quiet(fn, *args):
+    """Call a gate's main() without letting its whole report into the suite."""
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        return fn(*args)
 
 
 def rejects(name, build):
@@ -717,9 +731,105 @@ def test_transients():
         shutil.which = saved
 
 
+# ── G. Phase 2: pin fabric, boot mode, buttons, the switch ──────────
+
+def test_phase2():
+    print("\nG. pins.py / buttons.py")
+    from vbench import buttons, pins
+    from vbench.models.u1_esp32s3 import (
+        STRAPPING_DEFAULTS, U1, boot_mode, vdd_spi_voltage)
+
+    try:
+        validate_model(U1)
+        check("U1's strapping model satisfies the citation schema", True)
+    except ModelSchemaError as exc:
+        check("U1's strapping model satisfies the citation schema", False,
+              str(exc))
+
+    # Table 6, page 14, reproduced exactly — including the row that says
+    # GPIO46 is ignored when GPIO0 is high.
+    check("GPIO0=1 is SPI Boot whatever GPIO46 does (table 6)",
+          boot_mode(1, 0)[0] == "SPI Boot"
+          and boot_mode(1, 1)[0] == "SPI Boot")
+    check("GPIO0=0 with GPIO46=0 is Joint Download Boot (table 6)",
+          boot_mode(0, 0)[0] == "Joint Download Boot")
+    check("an undefined GPIO0 gives an UNDEFINED boot mode, not a guess",
+          boot_mode(None, 0)[0] == "UNDEFINED")
+
+    # Table 7, page 15.
+    check("GPIO45=0 selects the 3.3 V VDD_SPI the N16R8's PSRAM needs",
+          vdd_spi_voltage(0)[0] == 3.3)
+    check("GPIO45=1 selects 1.8 V, which is why R14 must stay DNP",
+          vdd_spi_voltage(1)[0] == 1.8)
+
+    # The GPIO3 exception is the one a hand-written table would flatten.
+    check("GPIO3 is recorded as having NO internal pull (p.15 3.3.4)",
+          STRAPPING_DEFAULTS["GPIO3"]["internal"] is None
+          and STRAPPING_DEFAULTS["GPIO3"]["default"] is None)
+    check("GPIO0 pulls up and GPIO45/46 pull down (table 4)",
+          STRAPPING_DEFAULTS["GPIO0"]["default"] == 1
+          and STRAPPING_DEFAULTS["GPIO45"]["default"] == 0
+          and STRAPPING_DEFAULTS["GPIO46"]["default"] == 0)
+
+    # The board, derived end to end.
+    fabric, op, v_rail = pins.fabric()
+    state = pins.strapping_state(fabric)
+    check("this board boots SPI Boot, derived from the copper",
+          boot_mode(state["GPIO0"][0], state["GPIO46"][0])[0] == "SPI Boot",
+          f"GPIO0={state['GPIO0']}, GPIO46={state['GPIO46']}")
+    check("VDD_SPI comes out at 3.3 V because BTN_L floats onto the internal "
+          "pull-down",
+          vdd_spi_voltage(state["GPIO45"][0])[0] == 3.3,
+          f"GPIO45={state['GPIO45']}")
+    check("no octal-PSRAM pin is attached externally",
+          not [p for p in fabric if p.gpio in pins.RESERVED])
+
+    # T2.4's done-when: a button held at reset that forces download mode must
+    # be a FAIL naming the pin.
+    held, _, _ = pins.fabric(hold_nets=("BTN_SELECT",))
+    held_state = pins.strapping_state(held)
+    mode, _ = boot_mode(held_state["GPIO0"][0], held_state["GPIO46"][0])
+    check("holding BTN_SELECT at reset forces Joint Download Boot",
+          mode == "Joint Download Boot", f"got {mode}")
+    check("the pins gate exits non-zero for that scenario",
+          _quiet(pins.main, ["--hold", "BTN_SELECT"]) == 1)
+
+    # T2.2: the debounce RC must come from the netlist and the BOM.
+    survey = buttons.survey()
+    with_rc = [b for b in survey if b.tau_s]
+    check("eleven buttons have a 1.000 ms debounce RC from 10k x 100nF",
+          len(with_rc) == 11
+          and all(abs(b.tau_s - 1e-3) < 1e-9 for b in with_rc),
+          f"{len(with_rc)} with RC: "
+          f"{[(b.net, b.tau_s) for b in with_rc][:3]}")
+    check("the release edge to 70% of rail is 1.204 ms",
+          all(abs(b.t_rise_s - 1.2040e-3) < 1e-6 for b in with_rc),
+          f"got {[b.t_rise_s for b in with_rc][:2]}")
+
+    # BTN_L must be reported as correct-by-design, not as a defect.
+    btn_l = next(b for b in survey if b.net == "BTN_L")
+    check("BTN_L's missing pull-up is derived to be REQUIRED, not a defect",
+          btn_l.pullup_forbidden is not None
+          and btn_l.pullup_forbidden[0] == "GPIO45"
+          and btn_l.r_ohm is None,
+          f"got {btn_l.pullup_forbidden}")
+    check("buttons.py exits 0 despite BTN_L having no RC",
+          _quiet(buttons.main, []) == 0)
+
+    # T2.3: switch_off must reproduce, not report.
+    ok, detail = buttons.switch_off_scenario()
+    check("switch_off leaves the board powered (SW_PWR is not in series)", ok,
+          f"{detail}")
+    check("the reason is derived: SW_PWR's throw pads carry no net",
+          detail["routed_throws"] == [] and detail["common_net"] == "BAT+",
+          f"{detail}")
+    check("the invariant is still recorded in docs/known-issues.md",
+          detail["recorded"])
+
+
 def main():
     print("=" * 72)
-    print("  Virtual Bench Phase 0/1 — mutation tests")
+    print("  Virtual Bench Phase 0/1/2 — mutation tests")
     print("=" * 72)
     test_schema()
     test_corpus()
@@ -727,6 +837,7 @@ def main():
     test_phase1()
     test_thermal()
     test_transients()
+    test_phase2()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

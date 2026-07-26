@@ -534,7 +534,90 @@ wrong answer:
    through 50 mΩ is V/R. It is now labelled an upper bound and paired with
    the current-limited charge time, which is the number an engineer can use.
 
-## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch
+## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch — **DONE**
+
+| Task | State | Where |
+|---|---|---|
+| T2.1 GPIO fabric | **done** | `scripts/vbench/pins.py` · `make bench-pins` |
+| T2.2 button model | **done** | `scripts/vbench/buttons.py` · `make bench-buttons` |
+| T2.3 SW_PWR `switch_off` | **done** — reproduces, does not report | `scripts/vbench/buttons.py` |
+| T2.4 boot-mode model | **done** | `scripts/vbench/pins.py` |
+
+`models/u1_esp32s3.py` carries the strapping tables from the module datasheet
+(技术规格书 v1.3): table 4 page 13 for the internal pulls and their defaults,
+table 5 for the timing, table 6 page 14 for the boot mode, table 7 page 15 for
+VDD_SPI. It deliberately does **not** duplicate the 41-pin table, which lives
+in `datasheet_specs.py::U1` and is already checked by `verify_datasheet_nets`.
+
+**The boot mode is derived, end to end.** `pins.py` joins three things that had
+never been joined: the netlist says what is attached to each U1 pad, T1.1's
+resistive solve says what voltage that produces at reset, and the strapping
+tables say what the chip does with it.
+
+```
+GPIO0  = 1   BTN_SELECT at 3.327 V from the board      -> boot mode, with GPIO46
+GPIO3  = 1   BTN_R at 3.327 V from the board           -> JTAG source
+GPIO45 = 0   BTN_L floats; internal pull-down decides  -> VDD_SPI 3.3 V
+GPIO46 = 0   LCD_WR floats; internal pull-down decides -> boot mode, ROM log
+
+BOOT MODE : SPI Boot        VDD_SPI : 3.3 V
+```
+
+Two things fall out that were previously only asserted:
+
+* **Why R14 must stay DNP now has a page behind it.** GPIO45 selects VDD_SPI
+  (table 7): 0 → 3.3 V, 1 → 1.8 V. An external pull-up would select 1.8 V and
+  starve the N16R8's 3.3 V PSRAM. The bench derives this rather than being
+  told, and `buttons.py` uses the same derivation to report BTN_L's missing
+  pull-up as **required by design** rather than as a defect — the rule being
+  "a strapping pin whose datasheet default is 0 must not carry an external
+  pull-up", which needs no per-part list.
+* **GPIO3 has no internal pull at all** (§3.3.4, page 15: "该管脚没有内部上下拉
+  电阻"). Its strapping value must come from external circuitry that is not
+  high-impedance. This board's pull-up on BTN_R satisfies that — but the
+  requirement was nowhere in the repo, and a hand-written pull table would
+  have flattened GPIO3 into "pull-down like the others".
+
+T2.4's done-when, verbatim: `make bench-pins --hold BTN_SELECT` reports
+`FAIL — the board enters Joint Download Boot instead of SPI Boot because
+BTN_SELECT is held at reset — GPIO0=0, GPIO46=0`.
+
+**T2.2** finds each button's pull-up and debounce cap in the netlist, reads
+their values from the BOM, and computes the release edge: eleven buttons at
+**τ = 1.000 ms** (10 k × 100 nF), rising to 70 % of the rail in **1.204 ms**.
+That is the number a firmware debounce interval has to clear — shorter, and a
+release reads as a second press.
+
+**T2.3** is the opposite kind of assertion. `switch_off` must *reproduce* the
+v1 invariant, and it does, with the reason derived from the copper rather than
+quoted: SW_PWR's common pad sits on BAT+ and **its throw pads carry no net at
+all**, so there is nothing to switch between. BAT+ and +3V3 are unchanged with
+the switch operated. The scenario fails only if a rail moves — which would
+mean the copper changed under a recorded limitation — or if the invariant
+stops being recorded in `docs/known-issues.md`.
+
+### A gate that computed a margin for a network that is not there
+
+`verify_strapping_pins.py::test_en_rc_delay` reported an "EN RC margin =
+36.5 ms" and passed. Every input to that number was wrong:
+
+* It used **R = 45 kΩ** for a "WROOM-1 internal EN pull-up". The module
+  datasheet says the opposite in its own words — page 28, note to figure 7: an
+  RC delay circuit **must** be added at EN, R = 10 kΩ and C = 1 µF
+  recommended. There is no on-module pull-up.
+* It used **C = 100 nF** for "C3 on EN". C3 is not on EN; its pads are on
+  +3V3 and GND (phase -1(d)).
+* Its evidence that any of this held was a **grep of the schematic for the
+  string `"R3 DNP"`**. A gate whose verdict depends on a comment existing
+  cannot disagree with the comment. That is
+  `feedback_comment_outranked_datasheet` implemented as a pass condition.
+
+Rewritten to read the EN net out of the copper: it reports the two pads EN
+actually has (`U1.3`, `SW_RST.1`), that there is **no** resistor to +3V3 and
+**no** capacitor to GND, cites the datasheet requirement, and passes only
+while that deviation is recorded in `docs/known-issues.md`'s RESPIN section.
+It computes a time constant only from parts that exist. If the respin fits the
+RC, the check switches to verifying the parts are there.
 
 | Task | Deliverable | Done when |
 |---|---|---|
