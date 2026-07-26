@@ -169,9 +169,11 @@ dispatch-fast: ## Same, but only the session-start gate subset
 
 # ── Virtual Bench (docs/virtual-bench-plan.md) ───────────────────────
 #
-# Phase 0 only: extract the netlist, cross-check the two sources, define
-# what a component model must cite, and write down the bugs the bench will
-# have to rediscover. Nothing electrical is modelled yet.
+# Phase 0: extract the netlist, cross-check the two sources, define what a
+# component model must cite, and write down the bugs the bench must
+# rediscover. Phase 1: the physics — DC operating point, cited component
+# models, electrical conflicts, junction temperatures. Transients (T1.4) are
+# the one Phase 1 task still open.
 #
 # NONE of these are in VERIFY_ALL_SCRIPTS, deliberately. bench-netlist and
 # bench-retro are *designed* to exit non-zero at this phase — the plan's own
