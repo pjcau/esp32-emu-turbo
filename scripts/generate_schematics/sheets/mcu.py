@@ -61,9 +61,17 @@ class MCUSheet(SchematicSheet):
         en_y = MCU_Y - 33.02  # EN pin level
         r_en_x = px_l - 25
         r_en_y = MCU_Y - 45  # (legacy position kept for layout spacing)
-        self.v33(r_en_x, r_en_y - 8)
-        self.wire(r_en_x, r_en_y - 8, r_en_x, en_y)
+        # NO direct +3V3 tie here. The module's internal pull-up is the
+        # pull-up; a hard wire from EN to the rail made EN and +3V3 the
+        # same schematic net, so SW_RST below — which bridges EN to GND —
+        # was drawn shorting 3V3 straight to ground on every press. The
+        # PCB always had EN as its own copper (verify_netlist_diff T4:
+        # U1.3 sch='+3V3' pcb='EN'); only the drawing was wrong.
         self.wire(px_l, en_y, r_en_x, en_y)
+        # Name the net explicitly. A global label keeps it flat "EN" to
+        # match the PCB net name — a local label would export as
+        # "/MCU/EN" and re-fail the same gate for a different reason.
+        self.glabel("EN", r_en_x, en_y, 180)
         # Shortened + moved higher so the annotation does not run
         # into the "RC reset delay" label sitting below it.
         self.text("EN pull-up on-chip (R3 DNP)",
@@ -77,20 +85,33 @@ class MCUSheet(SchematicSheet):
         self.wire(r_en_x, en_y, c_en_x, en_y)
         self.wire(c_en_x, en_y, c_en_x, c_en_y - 3.81)
         self.gnd(c_en_x, c_en_y + 8)
-        # No stub down to the GND symbol: the SW_RST wire below already runs
-        # the full column from c_en_y+3.81 past c_en_y+8, so this stub was a
-        # second wire drawn on top of it. The GND pin lands mid-span, hence
-        # the junction.
-        self.junction(c_en_x, c_en_y + 8)
+        # C3 pin 2 now needs its own stub to the GND symbol. It used to
+        # rely on the SW_RST column running past it — which is precisely
+        # what put SW_RST's upper terminal on GND instead of EN.
+        self.wire(c_en_x, c_en_y + 3.81, c_en_x, c_en_y + 8)
         self.text("RC reset delay", c_en_x - 15, c_en_y + 3, 1.5)
 
         # --- RESET button (EN to GND, active-low) ---
-        sw_rst_x = c_en_x
+        # Own column, LEFT of C3. Sharing C3's column is what broke this:
+        # the upper stub ran to c_en_y + 3.81, which is C3's BOTTOM pin
+        # (GND), so the schematic drew the reset button bridging GND to
+        # GND and never touching EN. The PCB always had it right
+        # (SW_RST pad 1 = EN, pads 3/4 = GND).
+        sw_rst_x = c_en_x - 12
         sw_rst_y = c_en_y + 18
-        self.sym("SW_Push", "SW_RST", "RESET", sw_rst_x, sw_rst_y, ["1", "2"])
-        self.wire(sw_rst_x, sw_rst_y - 3.81, sw_rst_x, c_en_y + 3.81)
+        # SW_Push pins are HORIZONTAL at x +/- 5.08 (lib_symbols.py:133).
+        # The stubs below were written for the R/C pattern — vertical at
+        # y +/- 3.81 — so they landed ~5mm off both pins and the switch
+        # was drawn connected to nothing at all. angle=270 puts pin 1
+        # (PCB pad 1 = net EN) at the TOP, facing the EN line.
+        self.sym("SW_Push", "SW_RST", "RESET", sw_rst_x, sw_rst_y,
+                 ["1", "2"], angle=270)
+        # Upper terminal -> the EN horizontal, joining it at its left end
+        # (c_en_x, en_y) so the connection is an endpoint, not a T.
+        self.wire(sw_rst_x, sw_rst_y - 5.08, sw_rst_x, en_y)
+        self.wire(sw_rst_x, en_y, c_en_x, en_y)
         self.gnd(sw_rst_x, sw_rst_y + 8)
-        self.wire(sw_rst_x, sw_rst_y + 3.81, sw_rst_x, sw_rst_y + 8)
+        self.wire(sw_rst_x, sw_rst_y + 5.08, sw_rst_x, sw_rst_y + 8)
         self.text("Reset (EN->GND)", sw_rst_x - 25, sw_rst_y, 1.5)
 
         # --- BOOT button (GPIO0 to GND, enter download mode) ---
@@ -99,11 +120,14 @@ class MCUSheet(SchematicSheet):
         # headers, which live at y ~ MCU_Y - 35 .. MCU_Y + 12.
         sw_boot_x = c_en_x - 30
         sw_boot_y = c_en_y + 55
-        self.sym("SW_Push", "SW_BOOT", "BOOT", sw_boot_x, sw_boot_y, ["1", "2"])
+        # Same fix as SW_RST. angle=90 puts pin 2 (PCB pad 2 = net
+        # BTN_SELECT) at the TOP, where the BTN_SELECT glabel stub is.
+        self.sym("SW_Push", "SW_BOOT", "BOOT", sw_boot_x, sw_boot_y,
+                 ["1", "2"], angle=90)
         self.glabel("BTN_SELECT", sw_boot_x, sw_boot_y - 8, 0, "bidirectional")
-        self.wire(sw_boot_x, sw_boot_y - 3.81, sw_boot_x, sw_boot_y - 8)
+        self.wire(sw_boot_x, sw_boot_y - 5.08, sw_boot_x, sw_boot_y - 8)
         self.gnd(sw_boot_x, sw_boot_y + 8)
-        self.wire(sw_boot_x, sw_boot_y + 3.81, sw_boot_x, sw_boot_y + 8)
+        self.wire(sw_boot_x, sw_boot_y + 5.08, sw_boot_x, sw_boot_y + 8)
         # Help text stacked BELOW the switch so it stays in its own
         # vertical lane and doesn't collide with the CONTROLS group
         # header (which lives at y = MCU_Y + 8 = 178).

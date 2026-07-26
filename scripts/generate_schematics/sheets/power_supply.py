@@ -403,10 +403,20 @@ class PowerSupplySheet(SchematicSheet):
         self.label("BAT+", q1x + 2, bat_y - 2)
 
         # Q1 pin 2 (Source) — connects to BAT_IN → J3.1
-        # Source exits to the right toward JST connector
-        self.wire(q1x + 5, q1y + 1.27, jst_plus_x, q1y + 1.27)
-        self.wire(jst_plus_x, q1y + 1.27, jst_plus_x, jst_plus_y)
-        self.label("BAT_IN", q1x + 6, q1y - 0.5)
+        # Source exits to the right toward JST connector.
+        #
+        # Jog UP to jst_plus_y FIRST, then run horizontally. The previous
+        # route ran horizontally at q1y + 1.27 == 93.27, which is exactly
+        # jst_minus_y — so the wire landed on J3 pin 2 (GND) and the
+        # following vertical welded J3.1, J3.2 and Q1.2 into a single
+        # node. The schematic then described a battery connector with its
+        # + and - shorted together, while the PCB copper was correct
+        # (verify_netlist_diff T4: J3.1 sch='GND' pcb='BAT_IN').
+        self.wire(q1x + 5, q1y + 1.27, q1x + 5, jst_plus_y)
+        self.wire(q1x + 5, jst_plus_y, jst_plus_x, jst_plus_y)
+        # Label must sit ON the segment it names. At q1y - 0.5 it floated
+        # 1.77mm off every wire and renamed nothing.
+        self.label("BAT_IN", q1x + 8, jst_plus_y - 1.5)
 
         # Q1 pin 1 (Gate) — pulled to GND via R24 (100K)
         r24x, r24y = q1x - 8, q1y + 10

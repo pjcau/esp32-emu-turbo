@@ -175,12 +175,34 @@ _TACT_MAP_REVERSED = {"1": ("3", "4"), "2": ("1", "2")}
 # hardware/datasheet_specs.py::SW_PWR).
 _SW_PWR_MAP = {"1": ("2",), "2": ("1", "3")}
 
+# LED1 / LED2 — this repo's private LED symbol numbers its pins
+# pin 1 = A (anode), pin 2 = K (cathode) (lib_symbols.py:320-321).
+# The LED_0805 footprint follows the NCD0805R1 / C84256 datasheet,
+# where pad 1 = cathode and pad 2 = anode (routing.py::_led_traces).
+# KiCad's own Device:LED agrees with the footprint, so the symbol is
+# the outlier.
+#
+# This is a numbering translation, NOT a polarity waiver, and each side
+# was checked independently before writing it: on the PCB pad 2 carries
+# LED{n}_RA (through R17/R18 to +3V3) and pad 1 carries GND, i.e. anode
+# to the resistor, cathode to ground; in the schematic pin 1 (A) carries
+# LED{n}_RA and pin 2 (K) carries GND — the same circuit. Only the
+# numbers differ. A wrong entry here still fails T4, exactly as for
+# J1/J4/U5/U6.
+#
+# Deeper fix, deliberately not taken here: renumber the symbol to
+# pin 1 = K / pin 2 = A and swap the wires in power_supply.py, which
+# would remove the outlier instead of translating it.
+_LED_MAP = {"1": ("2",), "2": ("1",)}
+
 SCH_PIN_TO_PCB_PADS = {
     "J1": _J1_MAP,
     "J4": _J4_MAP,
     "U5": _U5_MAP,
     "U6": _U6_MAP,
     "SW_PWR": _SW_PWR_MAP,
+    "LED1": _LED_MAP,
+    "LED2": _LED_MAP,
 }
 for _n in range(1, 14):
     SCH_PIN_TO_PCB_PADS[f"SW{_n}"] = _TACT_MAP

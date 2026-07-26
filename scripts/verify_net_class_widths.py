@@ -132,6 +132,48 @@ def classify_net(net_name):
     return "Signal"
 
 
+def _pads_by_net_layer(cache, nets):
+    """Index pads by (net name, layer) for the burial test below."""
+    idx = defaultdict(list)
+    for p in cache["pads"]:
+        name = nets.get(p["net"], "")
+        if not name:
+            continue
+        idx[(name, p["layer"])].append(p)
+    return idx
+
+
+def _buried_in_own_pad(seg, net_name, pad_idx):
+    """True if this segment lies wholly inside a pad of its own net.
+
+    A track drawn from a pad's origin to a point still inside that pad is
+    not a neck: the copper there is the PAD, which is far wider than the
+    line. Measuring the line's width and calling it undersized flags
+    geometry that does not exist — two of the four "undersized VBUS
+    traces" were the 0.23mm in-land spines of J1 lands 2 and 11, where
+    the real copper is the 0.55mm land.
+
+    The containment test is the pad's INSCRIBED circle, radius
+    min(w, h) / 2, not its bounding box. The cache carries no per-pad
+    rotation, and a rotated rectangle's axis-aligned box claims copper
+    the pad does not have — which would let this exemption swallow a
+    real neck. The inscribed circle is true for any rotation, so it can
+    only ever exempt less than it should, never more.
+
+    The segment must also be no wider than the pad's narrow dimension,
+    so a wide trace clipping a small pad is never called buried.
+    """
+    for p in pad_idx.get((net_name, seg["layer"]), []):
+        r = min(p["w"], p["h"]) / 2.0
+        if seg["width"] > min(p["w"], p["h"]) + 1e-9:
+            continue
+        d1 = ((seg["x1"] - p["x"]) ** 2 + (seg["y1"] - p["y"]) ** 2) ** 0.5
+        d2 = ((seg["x2"] - p["x"]) ** 2 + (seg["y2"] - p["y"]) ** 2) ** 0.5
+        if d1 <= r and d2 <= r:
+            return p
+    return None
+
+
 def test_net_class_widths():
     """Run net class width enforcement checks."""
     print("=" * 60)
@@ -145,6 +187,8 @@ def test_net_class_widths():
     class_segments = defaultdict(list)
     class_violations = defaultdict(list)
     class_width_stats = defaultdict(lambda: defaultdict(int))
+    pad_idx = _pads_by_net_layer(cache, nets)
+    buried = []
 
     for seg in cache["segments"]:
         net_name = nets.get(seg["net"], "")
@@ -160,6 +204,14 @@ def test_net_class_widths():
 
         # Check minimum width with small tolerance for floating point
         if width < min_width - 0.001:
+            pad = _buried_in_own_pad(seg, net_name, pad_idx)
+            if pad is not None:
+                # Reported, never hidden: this is an exemption with a
+                # stated geometric reason, and it stays visible so a
+                # sudden jump in the count is noticeable.
+                buried.append((net_name, seg["layer"], pad["ref"],
+                               pad["num"], width))
+                continue
             class_violations[net_class].append({
                 "net": net_name,
                 "layer": seg["layer"],
@@ -173,6 +225,14 @@ def test_net_class_widths():
 
     # ── Report per net class ──
     print(f"\n── Net Class Width Checks ──")
+
+    if buried:
+        print(f"      IN-PAD: {len(buried)} segment(s) lie wholly inside a "
+              f"pad of their own net — the copper there is the pad, not "
+              f"the line, so its width is not a neck:")
+        for net_name, layer, ref, num, w in buried:
+            print(f"        {net_name:<12} {layer:<6} inside {ref}.{num} "
+                  f"(line {w:.3f}mm)")
 
     for class_name in ["Power High", "Power", "GND", "Signal"]:
         spec = NET_CLASSES[class_name]
