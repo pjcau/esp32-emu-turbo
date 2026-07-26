@@ -115,6 +115,36 @@ Cross-agent sync points: `config.py` ↔ `board_config.h` (GPIO),
 
 Config: `.claude/settings.json` (hooks section)
 
+### Issue dispatch — red gate → owned work order
+
+`scripts/issue_dispatch.py` (`make dispatch`) closes the loop between "a
+gate is red" and "somebody is fixing it". It runs every gate `verify-all`
+runs, turns each failure into `.claude/issues/<gate>.md` — a work order
+naming the owning agent, the skill to open, the severity, the evidence
+and the reproduction command — and writes `.claude/issues/issues.json`
+for machine consumption.
+
+Three properties are deliberate and must survive refactors:
+
+1. **The gate list is parsed from `VERIFY_ALL_SCRIPTS` in the Makefile**,
+   never copied. A second list drifts silently the first time a gate is
+   added.
+2. **Routing is a keyword law + declared exceptions**, and every finding
+   prints which rule decided it (`law:rotation`, `exception:<gate>`).
+   `ROUTING_EXCEPTIONS` is empty on purpose — an entry must say what is
+   non-standard about that gate.
+3. **A failing gate no rule covers is a hard error (exit 2), not a
+   default assignment.** Adding a gate to the Makefile without giving it
+   an owner therefore fails `verify-all`, via `test_issue_dispatch`.
+
+Severity ranks by consequence: `blind-spot` (the verification machinery
+itself is broken, so no other verdict is trustworthy) > `dead-board` >
+`degraded` > `cosmetic`.
+
+`scripts/test_issue_dispatch.py` is a mutation test suite — it breaks the
+router on purpose (unknown gate, renamed Makefile variable, empty gate
+list) and requires it to notice.
+
 ### Makefile Quick Targets
 
 | Target | Description |
@@ -129,6 +159,8 @@ Config: `.claude/settings.json` (hooks section)
 | `make release-prep` | Full pipeline: generate → gerbers → verify → render |
 | `make firmware-sync-check` | Verify GPIO sync, fail on mismatch |
 | `make open-issues` | Which hardware gates are red right now (same report injected at session start) |
+| `make dispatch` | Turn every red gate into an agent work order in `.claude/issues/` — owner, skill, severity, evidence, reproduction command |
+| `make dispatch-fast` | Same, over the session-start gate subset only |
 | `make net-explorer` | Regenerate the PCB Net Explorer data (auto-run by `make generate-pcb`) |
 | `make verify-sch-pins` | Fail on a schematic symbol pin with no wire/label/junction on it |
 | `make verify-all` | Full verification suite (DFM + DFA + DRC + sim + consistency) |

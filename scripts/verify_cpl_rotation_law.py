@@ -225,15 +225,15 @@ def main(argv: list[str]) -> int:
         print("  stating what is physically non-standard about the part.")
     if noref:
         # A missing reference is not a violation and must not be reported as
-        # one: the EasyEDA API returns 403, so scripts/.easyeda_cache/ is the
-        # only source and an incomplete checkout silently changed this gate's
-        # verdict run to run. Exit 2 says "this gate could not judge", which is
-        # a different repair from "the board is wrong".
-        print(f"\n  {noref} part(s) have no cached EasyEDA reference, so the law")
-        print("  could not be evaluated for them. The reference footprints are")
-        print("  tracked under scripts/.easyeda_cache/ — restore them with")
-        print("  `git checkout -- scripts/.easyeda_cache`. They cannot be")
-        print("  re-downloaded: the EasyEDA API returns HTTP 403.")
+        # one: an incomplete checkout of scripts/.easyeda_cache/ silently
+        # changed this gate's verdict run to run. Exit 2 says "this gate could
+        # not judge", which is a different repair from "the board is wrong".
+        print(f"\n  {noref} part(s) have no EasyEDA reference, so the law could")
+        print("  not be evaluated for them. The references are tracked under")
+        print("  scripts/.easyeda_cache/ — restore them with")
+        print("  `git checkout -- scripts/.easyeda_cache`. Do not re-fetch them")
+        print("  from the API: this gate must judge against the geometry that")
+        print("  was reviewed, not against whatever EasyEDA serves today.")
     if bad:
         return 1
     return 2 if noref else 0

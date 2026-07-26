@@ -6,19 +6,24 @@ here is a plan, a nice-to-have, or a closed finding. Closed work lives in
 `docs/waiver-audit-recovery.md` (Part 1) and `hardware-audit-bugs.md`.
 
 **This file is a snapshot, the gates are the truth.** Measured on
-`ef0d97a` (origin/main), 2026-07-26, macOS + local `kicad-cli`. Before
-acting on any entry, re-derive the current state:
+`2a7a469`, 2026-07-26, macOS + local `kicad-cli`. Before acting on any
+entry, re-derive the current state:
 
 ```bash
 make open-issues     # the 6 gates that guard known-open work (~10 s)
-make verify-all      # the exhaustive suite, 65 checks (~20 s)
+make verify-all      # the exhaustive suite, 66 checks (~20 s)
 ```
 
-At the snapshot commit: `verify-all` is **58/65**, `open-issues` is
+At the snapshot commit: `verify-all` is **61/66**, `open-issues` is
 **5 of 6 gates red**. Every entry below names the gate that proves it, so
 a fixed entry goes green on its own rather than needing this file edited
 to stay honest. If an entry's gate is green and the text still says open,
 **the gate wins** — delete the entry.
+
+Every remaining entry is a real defect. The two gates that used to fail
+for their own reasons — a stale machine-global ERC report, and a rotation
+law whose verdict moved as an untracked cache warmed — were fixed in
+`2a7a469`, so red now means the board, never the tooling.
 
 Reading order is by consequence, not by section: **H2 and H4 are the two
 that can put a wrong board or a wrong part on the desk.**
@@ -106,8 +111,9 @@ the way the BAT+ entries are written. The calculation has to be *done*.
 ### H4. The CPL rotation law disagrees with three placements
 
 **Gate:** `verify_cpl_rotation_law.py` — FAIL
-**Warm-cache result:** OK 10 · FAIL 3 · UNEVALUABLE 1 · total 14
-(cold cache reports far worse and is not trustworthy — see T2)
+**Result:** OK 10 · FAIL 3 · UNEVALUABLE 1 · NOREF 0 · total 14
+(reproducible since `2a7a469` tracked the reference footprints; a missing
+reference now reports NOREF and exits 2 instead of counting as a violation)
 
 | ref | LCSC | package | layer | law wants | CPL emits | gap |
 |---|---|---|---|---|---|---|
@@ -204,80 +210,6 @@ and U3.** If it is wrong here it is suspect there too.
 
 Work in progress on branch `worktree-pin1-analytic-rotation` (`faf61d7`),
 tool `scripts/analyze_pin1_marker.py`.
-
----
-
-## T — Tooling: the verification itself is broken
-
-These two are why `verify-all` reports 7 failures but only 5 of them are
-board defects. A gate that fails for its own reasons is worse than no
-gate: it trains you to skim the red.
-
-### T1. The ERC gate reads a stale, machine-global file
-
-**Gate:** `erc_check.py` — FAIL in `verify-all`, PASS when run by hand
-
-`ERC_JSON = "/tmp/erc-report.json"` (`scripts/erc_check.py:21`). Three
-problems in one line:
-
-1. **`verify-all` runs the script without `--run`**, so on any machine
-   where that file has never been generated the suite fails with "No ERC
-   report found" — nothing to do with the schematic.
-2. **No freshness check.** `main()` only does `os.path.exists()`
-   (`erc_check.py:204`). Once the file exists, the gate reports it
-   forever, including after the schematic changes. It passes by reading
-   yesterday's answer.
-3. **The path is not project-scoped.** Every worktree and every other
-   KiCad project on the machine writes the same `/tmp/erc-report.json`.
-   One project's ERC can sign off another's.
-
-Reproduce: `make verify-all` → FAIL; `python3 scripts/erc_check.py --run`
-→ PASS (0 critical, 13 warnings); `python3 scripts/erc_check.py` → PASS
-from then on, whatever the schematic says.
-
-**Fix:** write the report under the project (e.g.
-`hardware/kicad/.erc-report.json`), invalidate it against the schematic's
-hash the way `pcb_cache.py` does, and have `verify-all` regenerate rather
-than read.
-
-### T2. The rotation-law gate depends on an unversioned cache and degrades silently
-
-**Gates:** `verify_cpl_rotation_law.py`, `test_cpl_rotation_law.py`
-
-`scripts/.easyeda_cache/` is **gitignored** (`.gitignore:65`) and tracked
-by nothing (`git ls-files scripts/.easyeda_cache` → 0 files). The EasyEDA
-API now returns **HTTP 403**, so that cache is the *only* remaining source
-of reference footprints. A fresh clone or worktree therefore starts with a
-partial cache — this worktree began with 30 entries against the 34 in the
-main checkout.
-
-The gate does not fail loudly on a missing reference. It reports `NOREF`
-and folds it into the same bucket as a real violation, so **the result
-changes run to run** as the cache warms. Measured here, same command, same
-directory, four consecutive runs:
-
-```
-OK: 0/14  →  OK: 1/14  →  OK: 7/14  →  OK: 10/14   (then stable)
-```
-
-`test_cpl_rotation_law.py` — the mutation test that is supposed to prove
-the gate discriminates — fails on a cold cache for the same reason:
-
-```
-AssertionError: 0 not greater than or equal to 5 : fewer than 5 components
-  satisfy the law — the law constants or the pad parsing are wrong
-AssertionError: [] is not true : no compliant component to mutate
-```
-
-Both pass once the cache is warm. **A manufacturing gate whose verdict
-depends on undeclared local state is not a gate**, and its own mutation
-test currently can neither confirm nor deny that it works on a clean
-machine.
-
-**Fix:** commit `scripts/.easyeda_cache/` (30 small JSON parts — the API
-that could regenerate it is gone, so it is now source, not cache), and
-separate `NOREF` from `FAIL` in the exit code so a missing reference
-reports as a missing reference.
 
 ---
 
