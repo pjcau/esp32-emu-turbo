@@ -10,23 +10,31 @@ here is a plan, a nice-to-have, or a closed finding. Closed work lives in
 entry, re-derive the current state:
 
 ```bash
-make open-issues     # the 6 gates that guard known-open work (~10 s)
-make verify-all      # the exhaustive suite, 68 checks (~20 s)
+make open-issues     # the gates that guard known-open work (~10 s)
+make verify-all      # the exhaustive suite (~20 s)
 ```
 
-At the snapshot commit: `verify-all` is **68/68** and `open-issues` reports
-**all clear**. Every entry below names the gate that proves it, so a fixed
+**No suite size is written here, on purpose.** This block said "6 gates" and
+"68 checks / 68/68" while the suite had already grown — to 70, then 73, and
+`open-issues` to 7 — because those counts are maintained by hand and the
+suite is not. A number that can only drift is worse than no number: it invites
+the reader to trust the sentence instead of running the command, which is the
+exact failure this file exists to prevent. Both commands print their own
+totals. (Same rule as MEMORY.md, where `make verify-memory` rejects
+hand-written gate state outright.)
+
+Every entry below names the gate that proves it, so a fixed
 entry goes green on its own rather than needing this file edited to stay
 honest. If an entry's gate is green and the text still says open, **the
 gate wins** — delete the entry.
 
 No gate is red right now, and that is not the same as "nothing is open".
-Two of the fourteen parts the rotation law judges now pass as declared
+Four of the fourteen parts the rotation law judges now pass as declared
 `EXCEPTION` rather than `OK`, because **the law is wrong for one of its
 cells** (H4). The remaining entries are unverified claims about an
-already-fabricated board (H6), plus closed records kept because each
-documents a way a gate can be fooled (H1–H5). A green suite means no check
-currently disagrees with the design; it does not mean the design was
+already-fabricated board (H6), the RESPIN list, plus closed records kept
+because each documents a way a gate can be fooled (H1–H5). A green suite means
+no check currently disagrees with the design; it does not mean the design was
 checked against the physical board.
 
 Reading order is by consequence, not by section. **H4 was the entry that
@@ -266,10 +274,21 @@ itself found stale during this work: at `74c196e` the generator emitted
 U4=0° while `release_jlcpcb/cpl.csv` still carried the pre-fix 90°, so the
 fix closed in `1765982` had never reached the files anyone orders from.
 
-### H5. SW_RST and SW_BOOT are floating in the schematic
+### H5. SW_RST and SW_BOOT are floating in the schematic — CLOSED
 
-**Gate:** `verify_schematic_pin_connectivity.py` — FAIL, 4 floating pins
-in `02-mcu.kicad_sch` (339 pins checked repo-wide, 1 documented N.C.)
+**Gate:** `verify_schematic_pin_connectivity.py` — **PASS**, 338 pins
+checked, **0 floating**, 1 documented N.C. Closed by `397c854` (geometry)
+and `916c01c` (the pole mapping); both switches are now in
+`SCH_PIN_TO_PCB_PADS` and reach `verify_netlist_diff` T4.
+
+This entry stayed written as open long after its gate went green, which is
+the thing this file's own header forbids — kept, per the header's rule for
+H1–H3, because the *mechanism* is still worth reading: it is the clearest
+case in the repo of a defect that every gate was structurally unable to see.
+The original text follows.
+
+**Original finding:** FAIL, 4 floating pins in `02-mcu.kicad_sch`
+(339 pins checked repo-wide, 1 documented N.C.)
 
 ```
 SW_RST   pin 1 @ (144.68, 164.98)
@@ -288,6 +307,15 @@ schematic netlist, which is what feeds every schematic-side cross-check.
 
 KiCad's own ERC sees these only as *warnings* ("Pin not connected"), which
 is why they survived until a dedicated gate was written.
+
+**Postscript (R27).** That last sentence understated it. `erc_check.py` did
+not merely down-rank the class — its verdict never read KiCad's `severity`
+field at all, and suppressed `wire_dangling` (an *error*) wholesale as a
+"generator artifact". Re-planting this exact defect on a copy of the
+schematic proved it: detaching SW3's ground pin took `SW3.2` off the GND net
+in the exported netlist, and `erc_check` printed PASS before and after. Fixed
+in the same round — errors now fail unless individually waived, guarded by
+`scripts/test_erc_severity.py`.
 
 ### H6. The LED2 CPL override may itself be the bug
 
