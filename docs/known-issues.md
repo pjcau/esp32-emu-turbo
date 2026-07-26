@@ -383,6 +383,29 @@ and is six releases stale; the tag is the truth.
   to EN and 100 nF from EN to GND, both placed adjacent to module pin 3.**
   The schematic now draws C3 where the board actually has it, so `T4`
   stays honest instead of describing a network that does not exist.
+
+  **The paragraph above is load-bearing: `verify_strapping_pins` greps this
+  file for the sentence "EN has no RC delay network".** Until `93bf286` that
+  gate regex-matched a *justification comment* in the schematic (`"R3 DNP"`,
+  `"WROOM-1 integrates"`) and computed τ from a WROOM-1 internal ~45 kΩ
+  pull-up — the same false claim `74c196e` had already retired from
+  `mcu.py`. The one gate whose job was to check EN was asserting the
+  network's presence *from the prose that excused its absence*, and reported
+  a board with no pull-up and no RC as passing.
+
+  It now reads copper — a pull-up is a resistor bridging `EN`→`+3V3`, the RC
+  cap a capacitor bridging `EN`→`GND` — and this board has neither. It
+  passes anyway, but *only* as a **recorded** deviation: delete or reword
+  the sentence above without fitting the parts and the gate goes red. That
+  coupling is the whole safety of the arrangement, so **do not reword that
+  bullet casually, and never "fix" a red result by restoring a comment or an
+  allowlist** — fit the parts or keep the record honest.
+
+  `scripts/test_strapping_en_rc.py` drives every arm (9 mutation tests):
+  a planted 10 k + 100 nF passes on the parts with the record *absent*;
+  either half alone fails; an unrecorded missing RC fails; the doc anchor
+  is asserted to still exist in this file; and re-planting the old
+  justification comment must change nothing.
 - **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming

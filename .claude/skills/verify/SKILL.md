@@ -6,13 +6,13 @@ disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-# DFM & Design Verification Suite (88 DFM + 9 DFA tests)
+# DFM & Design Verification Suite (122 DFM + 9 DFA tests)
 
 Run all verification scripts and produce a summary report.
 
 ## Steps
 
-### 1. DFM Verification (64 tests)
+### 1. DFM Verification (122 tests)
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
@@ -23,7 +23,9 @@ Tests include:
 - CPL position corrections (J1, SW_PWR, U1, U5)
 - Silkscreen text on Fab layer (not SilkS)
 - Mounting hole text on Fab
-- C1/C2 spacing from U3 (>= 1.5mm gap)
+- SY8089 buck (U3) hot-loop geometry: C2 absent from the CPL, C1 (C_IN) tight
+  to U3, C30 (C_OUT) tight to L2. **C2 no longer exists** — the old "C1/C2
+  spacing" test was replaced when the AMS1117 LDO became the buck
 - gr_text clearance from mounting holes (>= 6mm)
 - Via annular ring (>= 0.075mm, JLCPCB min)
 - Gerber zip file count (>= 12 files)
@@ -112,7 +114,7 @@ Report any failures with details and suggested fixes.
 
 ## Key Files
 
-- `scripts/verify_dfm_v2.py` — DFM verification (64 tests, includes JLCPCB alignment)
+- `scripts/verify_dfm_v2.py` — DFM verification (122 tests, includes JLCPCB alignment)
 - `scripts/verify_dfa.py` — DFA verification (9 tests)
 - `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
 - `scripts/drc_check.py` — Design rule check

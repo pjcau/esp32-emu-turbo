@@ -355,10 +355,15 @@
 **Solution**: Move labels away from holes. Known hole positions: (10,7), (150,7), (10,68), (150,68), (55,37.5), (105,37.5).
 **File**: `board.py` — `_silkscreen_labels()`.
 
-#### Component spacing (C1/C2 vs U3)
-**Problem**: Capacitors C1/C2 too close to AMS1117 (SOT-223).
-**Solution**: Increase Y offset from +/-5mm to +/-7mm from U3 center.
-**Files**: `board.py` (placement), `routing.py` (C1_POS/C2_POS constants).
+#### Buck hot-loop geometry (C1/C30/L2 vs U3)
+**Problem**: U3 is a SY8089AAAC 1 MHz synchronous buck (SOT-23-5), so the
+constraint is loop area, not clearance. C1 (C_IN) must sit as close as the
+land patterns allow to U3's IN/GND pins, C30 (C_OUT) close to L2's output
+pad, and the `BUCK_LX` node must stay small (AN_SY8089/A page 8).
+**Note**: `C2` (22 µF tantalum) **no longer exists** — it was deleted with the
+AMS1117 LDO. `verify_dfm_v2.test_c1_c2_spacing` now asserts C2 is *absent*
+from the CPL; do not reintroduce it.
+**Files**: `board.py` (placement), `routing.py` (C1_POS constant).
 
 #### Via annular ring
 **Problem**: Via annular ring < 0.075mm (JLCPCB absolute minimum).

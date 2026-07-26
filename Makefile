@@ -74,6 +74,7 @@ VERIFY_ALL_SCRIPTS = \
 	spice_power_check \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
+	test_strapping_en_rc \
 	test_issue_dispatch \
 	test_pcb_connectivity \
 	test_power_net_integrity \

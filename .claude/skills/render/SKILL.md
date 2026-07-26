@@ -39,10 +39,27 @@ Output: `website/static/img/schematics/*.svg`
 ### PCB (layout visualization)
 
 ```bash
-# Generate PCB from Python specs
-python3 -m scripts.generate_pcb hardware/kicad
+# Generate + FILL + refresh Net Explorer, then render SVG/PNG/GIF
+make render-pcb
+```
 
-# Render SVG + PNG + animated GIF
+**Use the make target — do not call the renderers directly.**
+`generate_pcb` writes the `.kicad_pcb` with no `filled_polygon` (the fill
+needs the `pcbnew` Python API, which `kicad-cli` does not expose), so a
+render taken straight after a bare generate shows **a board with no copper
+pours** — and those images ship to the website. `render-pcb` depends on
+`pcb-filled` (`generate-pcb` → `scripts/fill-zones.sh` → Net Explorer
+refresh), which is what makes the fill unskippable.
+
+Two other symptoms of the same cause, in case you see them: the zone-fill
+gate going red after a documentation-only action, and the pre-commit DFM
+hook blocking a commit while citing zone fills that have nothing to do with
+the change being committed.
+
+If you must run a renderer by hand, fill first:
+
+```bash
+make pcb-filled
 python3 scripts/render_pcb_svg.py website/static/img/pcb
 python3 scripts/render_pcb_animation.py website/static/img/pcb
 ```

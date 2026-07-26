@@ -120,7 +120,7 @@ kicad-cli pcb render -o "$OUT/pcba-bottom-detail-mcu.png" \
   --light-top 0.85 --light-camera 0.5 --light-side 0.4 \
   "$PCB"
 
-# View 11: Bottom detail — power area (IP5306, AMS1117, PAM8403)
+# View 11: Bottom detail — power area (IP5306, U3 SY8089 buck, PAM8403)
 kicad-cli pcb render -o "$OUT/pcba-bottom-detail-power.png" \
   --width $W --height $H --side bottom --rotate "-40,0,195" \
   --quality high --perspective --background opaque \
@@ -173,7 +173,7 @@ rm -f /tmp/pcba-render.kicad_pcb
 | 8 | Bottom Iso Back | bottom | -45,0,210 | 0.7 | yes | Alternate back angle |
 | 9 | Bottom Low Angle | bottom | -25,0,20 | 0.6 | yes | Dramatic back shot |
 | 10 | Bottom Detail MCU | bottom | -40,0,15 | 2.0 | no | ESP32 + USB-C zoom |
-| 11 | Bottom Detail Power | bottom | -40,0,195 | 2.0 | no | IP5306/AMS1117/PAM8403 zoom |
+| 11 | Bottom Detail Power | bottom | -40,0,195 | 2.0 | no | IP5306/SY8089/PAM8403 zoom |
 
 ## Lighting Presets
 

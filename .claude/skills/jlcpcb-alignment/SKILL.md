@@ -16,7 +16,7 @@ Runs three verification passes on all 7 bottom-side ICs/connectors to ensure the
 |-----|---------|------|----------|
 | U1 | ESP32-S3-WROOM-1 | 41 | +3.62mm Y position correction |
 | U2 | IP5306 ESOP-8 | 9 | Exposed pad, asymmetric |
-| U3 | AMS1117 SOT-223 | 4 | Tab pad, asymmetric |
+| U3 | SY8089AAAC SOT-23-5 | 5 | Matches the `^SOT-23` family rule (+90) |
 | U5 | PAM8403 SOP-16 | 16 | 90deg pre-rotation + override |
 | J1 | USB-C 16-pin | 16 | -1.3mm Y position correction |
 | J4 | FPC 40-pin | 42 | -2.66mm X position correction |

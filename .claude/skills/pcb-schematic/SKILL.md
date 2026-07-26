@@ -32,7 +32,7 @@ cat scripts/generate_schematics/config.py
 
    - **`edit`**: Modify GPIO mapping or component list in `scripts/generate_schematics/config.py`. Individual sheet generators live in `scripts/generate_schematics/sheets/`:
      - `mcu.py` -- ESP32-S3 module connections
-     - `power_supply.py` -- IP5306, AMS1117, USB-C
+     - `power_supply.py` -- IP5306, U3 SY8089 buck (+ L2/C30/R25/R26), USB-C
      - `display.py` -- ILI9488 FPC-40P connections
      - `audio.py` -- I2S DAC, PAM8403
      - `controls.py` -- D-pad, ABXY, Start/Select, L/R buttons

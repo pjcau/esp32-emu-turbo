@@ -41,6 +41,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,7 +57,15 @@ PASS = 0
 FAIL = 0
 
 SCH_PATH = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_sch")
-NETLIST_TMP = "/tmp/esp32_emu_turbo_netlist.xml"
+# Per-process path. scripts/run-verifiers.sh runs the suite in PARALLEL, so a
+# fixed filename here is a race: any other gate that exports the schematic
+# netlist — scripts/vbench/netlist.py does, through this module's
+# export_netlist() — writes the same file at the same time, and both readers
+# get whichever half-written copy they happen to see. That produced an
+# intermittent failure in verify_netlist_diff and in test_vbench, on
+# alternating runs, which is worse than either of them simply being red.
+NETLIST_TMP = os.path.join(
+    tempfile.gettempdir(), f"esp32_emu_turbo_netlist.{os.getpid()}.xml")
 
 # Components excluded from cross-checks (manual assembly / fiducials / DNP)
 EXCLUDED_REFS = {"BT1", "J2", "SPK1", "FID1", "FID2", "FID3", "R14"}

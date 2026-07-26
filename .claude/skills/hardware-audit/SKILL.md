@@ -76,11 +76,11 @@ python3 scripts/verify_copper_clearance.py         # MUST be "0 DANGER"
 python3 scripts/verify_net_connectivity.py         # MUST be "0 failed"
 
 # ── DFM / DFA / JLCPCB manufacturing ─────────────────────────────
-python3 scripts/verify_dfm_v2.py                   # 119 tests (incl zone fill + silk-to-pad)
+python3 scripts/verify_dfm_v2.py                   # 122 tests (incl zone fill + silk-to-pad)
 python3 scripts/verify_dfa.py                      #   9 tests
-python3 scripts/validate_jlcpcb.py                 #  26 tests
-python3 scripts/verify_bom_cpl_pcb.py              #  13 tests (incl field completeness)
-python3 scripts/verify_polarity.py                 #  47 tests
+python3 scripts/validate_jlcpcb.py                 #  24 tests
+python3 scripts/verify_bom_cpl_pcb.py              #  12 checks (incl field completeness)
+python3 scripts/verify_polarity.py                 #  48 tests
 
 # ── JLCPCB official capabilities + stencil + drill ──────────────
 python3 scripts/verify_jlcpcb_capabilities.py      #  12 tests (JLCPCB published limits)
@@ -88,19 +88,19 @@ python3 scripts/verify_stencil_aperture.py         #   6 tests (IPC-7525 stencil
 python3 scripts/verify_drill_standards.py          #   6 tests (ISO metric + drill-to-pad ratio)
 
 # ── Datasheet pinout + physical verification ─────────────────────
-python3 scripts/verify_datasheet_nets.py           # 259 pin→net checks
+python3 scripts/verify_datasheet_nets.py           # 267 pin→net checks
 python3 scripts/verify_datasheet.py                #  29 physical tests
 
 # ── Cross-source consistency (schematic ↔ PCB ↔ firmware) ────────
-python3 scripts/verify_design_intent.py            # 362 checks, T1-T22
+python3 scripts/verify_design_intent.py            # 369 checks, T1-T22
 python3 scripts/verify_schematic_pcb_sync.py       # R4 sync guard
 python3 scripts/verify_netlist_diff.py             # schematic-PCB netlist diff
 python3 scripts/generate_board_config.py --check   # config.py vs board_config.h
 
 # ── Electrical review (power + boot) ─────────────────────────────
 python3 scripts/verify_strapping_pins.py           #  12 tests
-python3 scripts/verify_decoupling_adequacy.py      #  25 tests
-python3 scripts/verify_power_sequence.py           #  26 tests
+python3 scripts/verify_decoupling_adequacy.py      #  23 tests
+python3 scripts/verify_power_sequence.py           #  29 tests
 python3 scripts/verify_power_paths.py              #  19 tests
 
 # ── KiCad native ERC + DRC ───────────────────────────────────────
@@ -120,17 +120,17 @@ Gate summary to report back to the user:
 | Fab shorts (`verify_trace_through_pad`) | 0 overlaps | ? | PASS/FAIL |
 | Trace crossings (`verify_trace_crossings`) | 0 crossings | ? | PASS/FAIL |
 | Copper clearance (`verify_copper_clearance`) | 0 DANGER | ? | PASS/FAIL |
-| DFM (`verify_dfm_v2`) | 115/115 | ? | PASS/FAIL |
+| DFM (`verify_dfm_v2`) | 122/122 | ? | PASS/FAIL |
 | DFA (`verify_dfa`) | 9/9 | ? | PASS/FAIL |
-| Polarity (`verify_polarity`) | 47/47 | ? | PASS/FAIL |
-| Datasheet nets (`verify_datasheet_nets`) | 259/259 | ? | PASS/FAIL |
+| Polarity (`verify_polarity`) | 48/48 | ? | PASS/FAIL |
+| Datasheet nets (`verify_datasheet_nets`) | 267/267 | ? | PASS/FAIL |
 | Datasheet physical (`verify_datasheet`) | 29/29 | ? | PASS/FAIL |
-| Design intent (`verify_design_intent`) | 362/362 | ? | PASS/FAIL |
+| Design intent (`verify_design_intent`) | 369/369 | ? | PASS/FAIL |
 | R4 sync guard (`verify_schematic_pcb_sync`) | PASS | ? | PASS/FAIL |
 | Netlist diff (`verify_netlist_diff`) | 4/4 | ? | PASS/FAIL |
 | Strapping pins (`verify_strapping_pins`) | 12/12 | ? | PASS/FAIL |
-| Decoupling adequacy (`verify_decoupling_adequacy`) | 25/25 | ? | PASS/FAIL |
-| Power sequence (`verify_power_sequence`) | 26/26 | ? | PASS/FAIL |
+| Decoupling adequacy (`verify_decoupling_adequacy`) | 23/23 | ? | PASS/FAIL |
+| Power sequence (`verify_power_sequence`) | 29/29 | ? | PASS/FAIL |
 | Power paths (`verify_power_paths`) | 19/19 | ? | PASS/FAIL |
 | ERC (`erc_check`) | 0 critical | ? | PASS/FAIL |
 | KiCad DRC | 0 shorts, 0 dangling | ? | PASS/FAIL |
@@ -142,21 +142,29 @@ explicitly asks for a prose-only review acknowledging the gate failure.
 
 ## Step 1 — Power chain audit (manual)
 
-Trace: USB-C → IP5306 → +5V → AMS1117 → +3.3V → ESP32
+Trace: USB-C → IP5306 → +5V → **U3 SY8089 buck** → +3.3V → ESP32
 
 Read and cross-check:
-- `scripts/generate_schematics/sheets/power.py` — schematic
+- `scripts/generate_schematics/sheets/power_supply.py` — schematic
 - `scripts/generate_pcb/routing.py` — PCB routing (`_power_traces`)
-- `hardware/datasheet_specs.py` — IP5306, AMS1117 pinouts
-- `hardware/datasheets/U2_IP5306_*.pdf` + `U3_AMS1117_*.pdf`
+- `hardware/datasheet_specs.py` — IP5306, SY8089 pinouts
+- `hardware/datasheets/U2_IP5306_*.pdf` + `U3_SY8089AAAC_C78988.pdf`
 - `software/main/board_config.h` — power management notes
 
 Check:
 - L1 inductor placement and LX trace width (≥ 0.76 mm for 2.1 A boost)
 - VBAT sense resistor divider (if present)
 - Every bypass cap has short path to its pin pair
-- EN RC delay on ESP32 (R3 + C3 → τ ≥ 1 ms)
-- Bulk caps (C19, C2) on correct rail side of regulators
+- **EN on the ESP32 has no RC and no pull-up** — `R3` does not exist (absent
+  from BOM and PCB) and `C3` is a plain +3V3 decoupling cap. `EN` carries
+  exactly two pads: `U1.3` and `SW_RST` pad 1. The WROOM-1 does *not*
+  integrate an EN pull-up; that claim was retired in `74c196e`. RESPIN item,
+  not a finding to re-raise — see `docs/known-issues.md`
+- U3 buck loop: `C1` (C_IN) tight to U3 IN/GND, `C30` (C_OUT) tight to L2's
+  output pad, `BUCK_LX` node kept small. **`C2` no longer exists** — the
+  22 µF tantalum was deleted because a 1 MHz buck needs a low-ESR MLCC
+- Bulk caps (C19 on the IP5306 +5V rail, C30 on the buck output) on the
+  correct rail side of their regulators
 - IP5306 KEY pin (enables boost mode)
 - Thermal relief on regulator pads vs direct connection to inner plane
 
@@ -196,8 +204,19 @@ Cross-check:
 
 Check:
 - LCD_D0-D7 length skew ≤ 20 mm (acceptable for 20 MHz 8080)
-- LCD_WR / LCD_RD / LCD_DC / LCD_CS all on GPIO capable of 40+ MHz
-- Backlight (LED_A/LCD_BL) current path and any PWM series resistor
+- LCD_WR / LCD_DC / LCD_CS all on GPIO capable of 40+ MHz. **`LCD_RD` is not
+  a net and reaches no GPIO** — FPC pin 12 is hard-tied to +3V3 (read strobe
+  disabled, the display is write-only)
+- Backlight: **`LCD_BL` is not a net either.** FPC pin 33 (LED-A) is
+  hard-tied to +3V3 — always-on, **no PWM and no series resistor**. That
+  missing resistor is **open finding R25-HIGH-1**, not a settled choice: the
+  panel datasheet (quoted in `components.md`) specifies that pin as "+3V3
+  *via resistor*, always-on" for 8 chip white LEDs at Vf 2.9–3.3 V, and the
+  string currently sits straight across the rail. Three design-side sources
+  assert the hard tie instead (`datasheet_specs.py:395`, `display.py:55`,
+  `display.c:41`) — treat all three as the same unverified claim. Needs a
+  decision (resistor value or a driver) before any layout work.
+  Both names are retired gaps (ids 18/19) in `primitives.NET_LIST`
 - FPC connector orientation vs enclosure cable routing
 
 ## Step 4 — Audio audit (manual)
@@ -313,9 +332,9 @@ Severity guide:
 ## Key Files
 
 - `scripts/verify_trace_through_pad.py` — fab-short hard gate
-- `scripts/verify_dfm_v2.py` — DFM (115 tests)
-- `scripts/verify_datasheet_nets.py` — pin→net (259 checks)
-- `scripts/verify_design_intent.py` — cross-source (362 checks)
+- `scripts/verify_dfm_v2.py` — DFM (122 tests)
+- `scripts/verify_datasheet_nets.py` — pin→net (267 checks)
+- `scripts/verify_design_intent.py` — cross-source (369 checks)
 - `scripts/verify_schematic_pcb_sync.py` — R4 sync guard
 - `scripts/verify_strapping_pins.py` — ESP32 boot gate
 - `scripts/verify_decoupling_adequacy.py` — per-IC cap check

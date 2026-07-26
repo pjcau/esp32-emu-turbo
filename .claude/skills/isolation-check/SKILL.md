@@ -15,7 +15,7 @@ Answers two questions over the whole board, in about two seconds:
 
 ## Why this exists
 
-The repo has 53 verification scripts and `make verify-all` runs them all. But
+`make verify-all` runs 70 gates (the list is `VERIFY_ALL_SCRIPTS` in the Makefile). But
 before this gate, only five ran automatically when the PCB changed. Every
 check answering *"is anything shorted to anything else?"* sat in the other
 forty-eight — so it ran when somebody remembered, not when the board moved.
@@ -84,5 +84,5 @@ fails on a planted defect before trusting it.
 
 - `/verify` — the full 122-test DFM suite
 - `/drc-audit` — KiCad native DRC
-- `make verify-all` — all 53 scripts
+- `make verify-all` — all 70 gates
 - [+3V3 split plane incident](/docs/rework/incident-3v3-split-plane)

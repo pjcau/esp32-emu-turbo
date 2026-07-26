@@ -3098,3 +3098,137 @@ each was pointing at a real leftover.
 2. **Settle D1/Q1** the same way U2 and J4 were settled — pin-to-pad-to-net
    under each candidate angle — rather than by the "the board works"
    argument that R26-HIGH-3 undermined.
+
+---
+
+## Round 27 Findings (2026-07-26) — Layer 1 clean, two gates looser than the design
+
+Run at `d628270`, macOS + local `kicad-cli`, immediately after the skill-corpus
+merge. Both layers run. No CRIT or HIGH found.
+
+### Step 0 gates — all PASS (hard block cleared)
+
+| Gate | Expected | Actual | Status |
+|------|----------|--------|--------|
+| `verify_trace_through_pad` | 0 overlaps | 1 passed, 0 failed | PASS |
+| `verify_trace_crossings` | 0 crossings | 1 passed, 0 failed | PASS |
+| `verify_copper_clearance` | 0 DANGER | 0 DANGER | PASS |
+| `verify_net_connectivity` | 0 failed | 0 accepted, 0 failed | PASS |
+| `verify_dfm_v2` | 122/122 | 122 passed, 0 failed | PASS |
+| `verify_dfa` | 9/9 | 9 passed, 0 failed | PASS |
+| `validate_jlcpcb` | 24 | 24 passed, 0 failed, 1 warn | PASS |
+| `verify_bom_cpl_pcb` | 12 | 12 PASS / 0 FAIL | PASS |
+| `verify_polarity` | 48/48 | 48 tests passed | PASS |
+| `verify_jlcpcb_capabilities` | 12 | 12 PASS / 0 FAIL | PASS |
+| `verify_stencil_aperture` | — | 5 PASS / 0 FAIL | PASS |
+| `verify_drill_standards` | — | 5 PASS / 0 FAIL / 1 WARN | PASS |
+| `verify_datasheet_nets` | 267 | ALL CHECKS PASSED | PASS |
+| `verify_datasheet` | 29/29 | ALL PASSED | PASS |
+| `verify_design_intent` | 369 | ALL CHECKS PASSED | PASS |
+| `verify_schematic_pcb_sync` | PASS | PASS | PASS |
+| `verify_netlist_diff` | 4/4 | 4/4 passed | PASS |
+| `generate_board_config --check` | match | GPIO defines match | PASS |
+| `verify_strapping_pins` | — | 11 passed, 0 failed | PASS |
+| `verify_decoupling_adequacy` | 23 | 23 passed, 0 failed | PASS |
+| `verify_power_sequence` | 29 | 29 passed, 0 failed | PASS |
+| `verify_power_paths` | — | 9 passed, 0 failed | PASS |
+| `erc_check` | 0 critical | 0 critical, 7 warnings | PASS — **but see R27-LOW-1** |
+| `make verify-all` | — | **71/71** | PASS |
+
+### Domain findings
+
+- **Power chain**: 1 (R27-MED-1)
+- **ESP32 boot**: 0 — PSRAM `CONFIG_SPIRAM_MODE_OCT=y`, `SPIRAM_SPEED_80M`,
+  flash 16 MB QIO. EN has no RC: known RESPIN item, not re-raised.
+- **Display**: 0 new. LCD_D0–D7 skew measured **10.27 mm** (D3 90.95 → D4
+  101.22), inside the 20 mm budget. **R25-HIGH-1 (no backlight current limit)
+  remains open and unfixed** — it is still absent from `docs/known-issues.md`.
+- **Audio**: 0 — `audio.c` uses `i2s_pdm_tx_config_t`, `clk = I2S_GPIO_UNUSED`,
+  single DOUT line, as designed.
+- **SD card**: 0
+- **Buttons**: 0 on copper. All four D-pad nets are structurally identical
+  (`C*.1 + R*.1 + SW*.pole + U1.pin`), and all 15 switches reach GND.
+- **USB**: 0 — chain order verified J1 → U4 (TVS) → R22/R23 (series) → U1,
+  i.e. TVS *before* the series resistors, with both connector orientations
+  bonded (J1.5/7 on D-, J1.6/8 on D+).
+- **Emulator performance**: 0 new
+
+### Bug list
+
+#### R27-MED-1 — LX is routed at 0.60 mm where this design's own constant says 0.76 mm
+
+- **Files**: `scripts/generate_pcb/routing.py:35` (constant), `:1545-1553`
+  (emission), `scripts/verify_net_class_widths.py:8,34` (the floor that hides it)
+- **Problem**: `W_PWR_HIGH = 0.76` is defined as *"High-current power: VBUS,
+  BAT+, LX (>=2.1A, 1oz Cu, 10C rise)"*. The IP5306 boost switch node `LX` is
+  then emitted mostly at `W_PWR` (0.60 mm): measured from copper, **13.73 mm of
+  LX runs at 0.60 mm against 6.20 mm at 0.76 mm** — 69% of its length is below
+  the width the design states it needs.
+- **Why no gate sees it**: `verify_net_class_widths` puts VBUS/BAT+/LX in
+  "Power High" with a **0.50 mm** minimum. 0.60 clears that comfortably, so the
+  gate is green while the board sits below the design's own requirement. The
+  gate enforces a manufacturing floor; nothing enforces the *thermal* intent
+  the constant records. Same shape as the class already recorded in memory: a
+  constant states the intent, a looser check passes, nobody compares the two.
+- **Consequence** (IPC-2221, 1oz external, I = 0.048 x dT^0.44 x A^0.725):
+  0.60 mm carries ~1.63 A at a 10 C rise, so the 2.1 A boost peak implies
+  ~18 C; at 0.76 mm the same 2.1 A is ~12 C. Intermittent boost current on a
+  switch node, so this is thermal and EMI-loop margin, **not** a failure — MED,
+  not HIGH.
+- **Evidence it is not simply deliberate**: of the five 0.60 mm segments, only
+  the last carries a reason (`# 0.60mm — max width within BAT+ corridor`). The
+  other four state no constraint. So a genuine geometric limit and an
+  unreviewed default are currently indistinguishable in the source.
+- **Fix**: decide which number is right and make one of them enforceable.
+  Either widen the four unconstrained segments to `W_PWR_HIGH`, or — if the
+  BAT+ corridor really pins all five — record the clearance budget the way H3
+  records VBUS's, and tighten the Power High minimum so the gate defends the
+  decision instead of a floor 0.10 mm below it.
+
+#### R27-LOW-1 — `erc_check` can report "0 critical" while KiCad reports 10 ERC errors
+
+- **Files**: `scripts/erc_check.py:57-80` (`GENERATOR_ARTIFACTS`,
+  `CRITICAL_TYPES`), `:224-232` (verdict)
+- **Problem**: the verdict is `len(criticals) == 0` where `criticals` are only
+  the three hardcoded types `pin_to_pin`, `different_unit_net`,
+  `bus_entry_no_connect`. **KiCad's own `severity` field is never consulted.**
+  On the current board the raw report holds 6 `wire_dangling`, 2
+  `pin_not_connected` and 2 `power_pin_not_driven` — all at `severity: error` —
+  and the gate prints `PASS  ERC — 0 critical`. `wire_dangling` is additionally
+  in the unconditional-suppression set.
+- **Why that set is the risky one**: `wire_dangling` is the signature of wires
+  landing *beside* pins rather than on them, which is exactly the defect
+  `397c854` found on SW_RST/SW_BOOT — where, in that commit's words, the
+  switches "never reached the netlist at all".
+- **Demonstrated, not asserted.** Planted the defect on a copy of the
+  schematic: moved SW3's (BTN_LEFT) pin-2 wire 2.54 mm aside.
+  - functional consequence: `SW3.2` **drops off the GND net** in the exported
+    netlist (baseline `True` → mutated `False`) — the LEFT button is dead
+  - KiCad ERC: `pin_not_connected` 2 → 3, at `severity: error`
+  - `erc_check.py` verdict: **PASS before and after** ("7 warnings" → "8
+    warnings", 648 → 649 suppressed)
+- **Why LOW and not HIGH**: `verify_schematic_pin_connectivity` catches the
+  same mutation cleanly and by name — `FAIL 06-controls.kicad_sch 114 pins,
+  1 floating / SW3 pin 2 @ (70.08, 199.0) — nothing lands on this pin`. So the
+  suite is not blind to this class; `erc_check` alone is. This is redundant
+  coverage lost, not coverage missing.
+- **Fix**: make the verdict consult `severity` — any KiCad `error` should fail
+  unless its *specific instance* is allowlisted with a reason, rather than its
+  whole type being suppressed. If the 476 `endpoint_off_grid` and 159
+  `lib_symbol_issues` warnings really are generator noise, suppress those two
+  by type and stop suppressing the error-severity classes with them.
+- **Not a finding**: the `/Display/` sheet attribution on the R4
+  `power_pin_not_driven` items looks wrong (R4 exists only in
+  `06-controls.kicad_sch`, and the root sheet map is correct), but the exported
+  netlist is complete and correct, so this is ERC hierarchy bookkeeping with no
+  electrical consequence. Recorded here only so the next round does not re-chase it.
+
+### Still open from earlier rounds
+
+- **R25-HIGH-1** — display backlight has no current-limiting element while the
+  panel datasheet specifies "+3V3 *via resistor*". Still open, still needs a
+  decision (resistor value or driver) before any layout work, and still not
+  listed in `docs/known-issues.md`. Two skills now flag it rather than
+  repeating `routing.py`'s "panels have internal limiting".
+- **H6** — the LED2 CPL override. Unchanged: no gate can settle it, the
+  deciding test is visual on proto #1.
