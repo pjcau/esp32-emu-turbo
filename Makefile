@@ -69,6 +69,7 @@ VERIFY_ALL_SCRIPTS = \
 	simulate_circuit \
 	spice_power_check \
 	test_cpl_rotation_law \
+	test_issue_dispatch \
 	test_pcb_connectivity \
 	test_power_net_integrity \
 	test_verify_memory \
@@ -150,6 +151,12 @@ verify-sch-pins: ## Fail when a schematic symbol pin has no wire/label/junction 
 
 open-issues: ## Which hardware gates are red right now (same report the SessionStart hook injects)
 	@python3 scripts/open_issues_report.py --text
+
+dispatch: ## Turn every red gate into an agent work order in .claude/issues/
+	@$(T) dispatch python3 scripts/issue_dispatch.py
+
+dispatch-fast: ## Same, but only the session-start gate subset
+	@$(T) dispatch-fast python3 scripts/issue_dispatch.py --fast
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py

@@ -94,3 +94,12 @@ software/benchmark/spiffs_data/
 
 # agent worktrees (transient, never committed)
 .claude/worktrees/
+
+# Issue dispatch work orders are derived: `make dispatch` rewrites them from
+# whatever the gates say right now. Committing them would ship a snapshot of
+# gate state that goes stale the moment a gate flips -- the exact failure mode
+# MEMORY.md is gated against. The *.proposal.md analyses are NOT derived
+# (issue_dispatch.py:375) and stay tracked.
+.claude/issues/issues.json
+.claude/issues/*.md
+!.claude/issues/*.proposal.md
