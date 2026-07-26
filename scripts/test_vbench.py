@@ -33,6 +33,10 @@ Covers:
   H. display.py — the panel-side view must survive a neighbouring markdown
      table, and crossing two data lines must be caught even though every pad's
      net stays valid.
+  I. audio.py, sdcard.py — the 8 ohm output power must be DERIVED from the
+     datasheet's 4 ohm rating rather than quoted, a missing BOM value must be
+     fatal, and the SD socket's DAT2 pad must be detected on a strapping pin's
+     net.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -910,6 +914,77 @@ def test_phase3():
           _quiet(disp.main, []) == 0)
 
 
+# ── I. Phase 3: audio and SD ────────────────────────────────────────
+
+def test_phase3_peripherals():
+    print("\nI. audio.py / sdcard.py")
+    from vbench import audio, sdcard
+
+    r_eff, c_block, f_corner, bias, block = audio.input_network()
+    check("the bias network is the two 20k in parallel, from the netlist",
+          sorted(bias) == ["R20", "R21"] and abs(r_eff - 10e3) < 1.0,
+          f"got {bias}, {r_eff}")
+    check("the DC block is C22 = 0.47 uF from the BOM",
+          block == "C22" and abs(c_block - 0.47e-6) < 1e-9)
+    check("the input high-pass corner is 33.9 Hz",
+          abs(f_corner - 33.86) < 0.2, f"got {f_corner}")
+
+    # The 8 ohm figure must be derived from the datasheet's 4 ohm rating, and
+    # must halve — the datasheet gives no 8 ohm number to quote.
+    check("8 ohm output power is half the rated 4 ohm figure at the same rail",
+          abs(audio.output_power(5.0, 8.0) - 1.5) < 1e-9
+          and abs(audio.output_power(5.0, 4.0) - 3.0) < 1e-9,
+          f"got {audio.output_power(5.0, 8.0)}")
+    check("output power scales with the square of the supply",
+          abs(audio.output_power(2.5, 8.0) - 1.5 / 4) < 1e-9)
+
+    # Supply current must include the cited standby draw, not just P/eta/V.
+    i_idle = audio.supply_current(0.0, 5.0)
+    check("at zero output the rail still sees the cited 6.3 mA standby",
+          abs(i_idle - 6.3e-3) < 1e-9, f"got {i_idle}")
+    i_full = audio.supply_current(1.5, 5.0)
+    check("at full output the rail sees about 340 mA",
+          abs(i_full - 0.3396) < 1e-3, f"got {i_full}")
+
+    # A missing BOM value must be fatal, never defaulted.
+    import vbench.rails as _rails
+    values = _rails.load_bom_values()
+    try:
+        audio.input_network(values={k: v for k, v in values.items()
+                                    if k != "C22"})
+        check("a missing DC-block value is fatal", False, "returned a network")
+    except audio.AudioError:
+        check("a missing DC-block value is fatal", True)
+
+    wav = os.path.join(tempfile.mkdtemp(prefix="vbench-wav-"), "spk.wav")
+    v_peak, v_rms = audio.render_wav(wav, 1.5)
+    check("the WAV is written and its amplitude follows P = V^2/R",
+          os.path.getsize(wav) > 1000
+          and abs(v_rms - (1.5 * 8.0) ** 0.5) < 1e-9,
+          f"{v_rms} V rms")
+    shutil.rmtree(os.path.dirname(wav), ignore_errors=True)
+
+    # ── SD ───────────────────────────────────────────────────────────
+    notes, shared, exposure, op, faults = sdcard.survey()
+    check("the four SPI signals land on the socket's own pad roles",
+          faults == [], f"{faults}")
+    check("DAT1 is tied to DAT0/MISO, as the design intends",
+          "8" in shared and shared["8"][0] == "SD_MISO",
+          f"{shared.get('8')}")
+    # The finding: DAT2 shares a net with a strapping pin.
+    check("U6.9 (DAT2) is detected on a strapping pin's net",
+          any(pad == "9" and gpio == "GPIO3"
+              for pad, _role, _net, gpio, _strap in exposure),
+          f"{exposure}")
+    check("and that pin is recorded as having NO internal pull",
+          all(strap["internal"] is None
+              for pad, _r, _n, gpio, strap in exposure if gpio == "GPIO3"))
+    check("the SD protocol is declared unmodelled, not faked",
+          {"init_sequence", "block_read", "timing"} <= set(sdcard.UNMODELLED))
+    check("audio.py and sdcard.py both exit 0 on this board",
+          _quiet(audio.main, []) == 0 and _quiet(sdcard.main, []) == 0)
+
+
 def main():
     print("=" * 72)
     print("  Virtual Bench Phase 0/1/2/3 — mutation tests")
@@ -922,6 +997,7 @@ def main():
     test_transients()
     test_phase2()
     test_phase3()
+    test_phase3_peripherals()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

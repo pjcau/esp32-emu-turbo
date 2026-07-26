@@ -223,6 +223,14 @@ bench-phase2: bench-pins bench-buttons ## Everything Phase 2 delivers
 bench-display: ## T3.1 (part) — the display seen from the PANEL: 40 pins through the 41-N reversal, IM straps, data-bus order
 	@$(T) bench-display python3 scripts/vbench/display.py
 
+bench-audio: ## T3.2 — audio chain: high-pass corner, 8-ohm output power, rail current
+	@$(T) bench-audio python3 scripts/vbench/audio.py
+
+bench-sd: ## T3.3 (part) — SD bus wiring, and the DAT2 pad that shares a net with a strapping pin
+	@$(T) bench-sd python3 scripts/vbench/sdcard.py
+
+bench-phase3: bench-display bench-audio bench-sd ## Everything Phase 3 delivers
+
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
 
