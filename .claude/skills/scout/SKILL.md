@@ -1,6 +1,6 @@
 ---
 name: scout
-model: claude-opus-4-7
+model: claude-opus-5
 description: Search GitHub for new Claude Code skills, agents, patterns and create a PR with findings
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, WebFetch, WebSearch

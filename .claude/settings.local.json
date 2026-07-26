@@ -37,7 +37,11 @@
       "Bash(python3 scripts/erc_check.py)",
       "Bash(echo \"exit=$?\")",
       "Bash(git checkout *)",
-      "mcp__pcbparts__jlc_get_pinout"
+      "mcp__pcbparts__jlc_get_pinout",
+      "Bash(cp /tmp/collision.bak scripts/generate_pcb/collision.py)",
+      "Bash(python3 scripts/test_collision_via_metric.py)",
+      "Bash(make generate-pcb *)",
+      "Skill(pcba-render)"
     ],
     "deny": [
       "Bash(rm -rf /*)",

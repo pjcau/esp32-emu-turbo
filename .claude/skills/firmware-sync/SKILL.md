@@ -1,6 +1,6 @@
 ---
 name: firmware-sync
-model: claude-opus-4-7
+model: claude-opus-5
 description: Verify GPIO pin assignments match between firmware (board_config.h) and schematic (config.py)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Edit

@@ -1,6 +1,6 @@
 ---
 name: electrical-review
-model: claude-opus-4-7
+model: claude-opus-5
 description: Comprehensive electrical verification — strapping pins, decoupling adequacy, power sequencing, SPICE simulation, and 30-question manual checklist
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

@@ -1,6 +1,6 @@
 ---
 name: release-prep
-model: claude-opus-4-7
+model: claude-opus-5
 description: Quick release pipeline — generate, verify, export gerbers, copy to release folder (no git commit)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob

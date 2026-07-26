@@ -1,6 +1,6 @@
 ---
 name: drc-audit
-model: claude-opus-4-7
+model: claude-opus-5
 description: Full KiCad DRC audit — catches net shorts, unconnected pads, dangling vias, and clearance violations that custom scripts miss
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Agent
