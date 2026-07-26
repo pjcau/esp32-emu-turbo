@@ -37,7 +37,10 @@ NET_PATTERNS: dict[str, list[str]] = {
     "uart": [r"UART", r"^TX$", r"^RX$", r"^TXD", r"^RXD"],
     "usb": [r"USB", r"^D[+-]$", r"CC[12]"],
     "lcd_data": [r"LCD_D[0-7]"],
-    "lcd_ctrl": [r"LCD_CS", r"LCD_RST", r"LCD_DC", r"LCD_WR", r"LCD_RD", r"LCD_BL"],
+    # LCD_RD and LCD_BL are absent on purpose: both FPC pins are tied to +3V3
+    # rather than driven, so they carry no net of their own (see
+    # primitives.NET_LIST, where ids 18/19 are retired gaps).
+    "lcd_ctrl": [r"LCD_CS", r"LCD_RST", r"LCD_DC", r"LCD_WR"],
     "button": [r"BTN_"],
     "led": [r"LED"],
 }

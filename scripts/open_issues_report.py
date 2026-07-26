@@ -53,6 +53,12 @@ GATES = [
 
 TIMEOUT_S = 30
 
+# Per-gate cap on reported failing rows. This report is injected into every
+# session's context, so one gate that fails on 200 rows must not crowd out the
+# other five — but the cap ANNOUNCES what it hid (see run_gate), because a
+# silent truncation reads as "that was the whole list".
+MAX_DETAIL_ROWS = 12
+
 
 def run_gate(entry):
     script, meaning = entry
@@ -60,21 +66,29 @@ def run_gate(entry):
     if not os.path.exists(path):
         # A renamed or deleted gate must be loud, not silently skipped —
         # a check that vanished looks exactly like a check that passes.
-        return script, meaning, "MISSING", "script not found"
+        return script, meaning, "MISSING", ["script not found"]
     try:
         p = subprocess.run([sys.executable, path], cwd=PROJECT_DIR,
                            capture_output=True, text=True, timeout=TIMEOUT_S)
     except subprocess.TimeoutExpired:
-        return script, meaning, "TIMEOUT", f"exceeded {TIMEOUT_S}s"
+        return script, meaning, "TIMEOUT", [f"exceeded {TIMEOUT_S}s"]
     if p.returncode == 0:
-        return script, meaning, "PASS", ""
-    # First line that actually names the failure, for a one-line summary.
-    detail = ""
+        return script, meaning, "PASS", []
+    # EVERY line that names a failure, not just the first. Reporting one row
+    # of a multi-row failure is its own way of going stale: verify_cpl_rotation_law
+    # failed on U2 *and* J4 for months while this report named only U2, so the
+    # second one was invisible to every session that read the injected context
+    # and trusted it to be the whole list.
+    detail = []
     for line in (p.stdout or "").splitlines():
         s = line.strip()
         if s.startswith("FAIL") or "  FAIL" in line:
-            detail = s
-            break
+            detail.append(s)
+    if len(detail) > MAX_DETAIL_ROWS:
+        hidden = len(detail) - MAX_DETAIL_ROWS
+        detail = detail[:MAX_DETAIL_ROWS]
+        detail.append(f"... and {hidden} more failing row(s) — run the script "
+                      f"for the full list")
     return script, meaning, "FAIL", detail
 
 
@@ -98,8 +112,8 @@ def main():
         ]
         for script, meaning, status, detail in bad:
             lines.append(f"  [{status}] {script} — {meaning}")
-            if detail:
-                lines.append(f"           {detail[:150]}")
+            for row in detail:
+                lines.append(f"           {row[:150]}")
         lines += [
             "",
             "  Detail: `make verify-all`, or run any script above directly.",

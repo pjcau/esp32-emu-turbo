@@ -60,6 +60,16 @@ _JLCPCB_ROT_CORRECTIONS = [
     # emitted angle by +270 to cpl=0, which is what the law derives.
     # This is the split the regex needed, not a per-part delta.
     (r"^SOT-23-6", 180),
+    # ESOP (exposed-pad SOP) is drawn in the same frame as SOP and needs the
+    # same 270. It needs its OWN rule because "ESOP-8" cannot match "^SOP-" —
+    # the anchor is blocked by the leading E — so U2 (IP5306, C181692) fell
+    # through every rule to _JLCPCB_ROT_DEFAULT (180) and was emitted at
+    # cpl=0. That is 5.014 mm of lead-to-pad offset on 0.6 mm pads: the part
+    # does not touch its copper at all. At 270 the formula yields cpl=90,
+    # which seats it pin-for-pin (0.090 mm). Same one-letter miss that put
+    # U4's SOT-23-6 on the SOT-23-3 rule; the copper is correct either way,
+    # only the pick-and-place angle was wrong.
+    (r"^ESOP-", 270),            # ESOP (exposed pad) — same frame as SOP
     (r"^SOP-(?!18_|4_)", 270),   # SOP packages (except SOP-18, SOP-4)
     (r"^SOIC-", 270),            # SOIC packages
     (r"^TSSOP-", 270),           # TSSOP packages
@@ -108,7 +118,28 @@ _JLCPCB_POS_CORRECTIONS = {
 # dead code that also skewed verify_dfa's effective-rotation comparison by
 # subtracting a compensation that never existed.
 _JLCPCB_ROT_DELTAS = {
-    "J4": 180,   # FPC-40P (C2856812) — JLCPCB 3D: 90° puts pins on wrong side, 270° aligns
+    # "J4" REMOVED. It was the last live entry here, and it carried the exact
+    # defect this table's header warns about: a 180 delta whose only
+    # justification was "JLCPCB 3D: 90 puts pins on wrong side, 270 aligns" —
+    # an eyeballed image overlay (404f31a), no derivation. The same 270 had
+    # ALREADY been removed four days earlier in 2d35646, whose message reads
+    # "remove wrong rotation overrides — J4: would reverse all 40 FPC pins!".
+    # That reading was right and re-adding it was the error.
+    #
+    # Why 90 and not 270, stated so it can be re-checked: J4 is a 40-contact
+    # single-row connector, so a 180 turn maps its pad row onto itself. BOTH
+    # angles solder — they differ by a full contact reversal, contact i
+    # landing on pad i versus pad 41-i. A rigid fit of all 42 pads against the
+    # cached C2856812 reference, numbering preserved, has a unique optimum at
+    # the law's angle (0.004 mm); the 180-away alternative is 16.55 mm, i.e.
+    # the span of the connector. Our pads already carry the 41-N panel mapping
+    # in their NETS (pad 29 = panel pin 12 = RD), so the physical contact i
+    # must meet board pad i — which is what 90 produces.
+    #
+    # Do NOT confuse this with the connector_pad = 41 - panel_pin netlist
+    # mapping in POLARITY_AUDIT.md. That one is correct and must not be
+    # "fixed"; it is a different axis, and applying both a netlist reversal
+    # and a 180 body rotation would cancel to a wrong result.
     # "C2" override REMOVED: C2 (22uF tantalum, AMS1117 output cap) no longer
     # exists. It was the most dangerous polarized part on the board and it
     # destroyed prototype #1 when assembled reversed

@@ -145,7 +145,15 @@ NET_LIST = [
     (10, "LCD_D4"), (11, "LCD_D5"), (12, "LCD_D6"), (13, "LCD_D7"),
     # Display control
     (14, "LCD_CS"), (15, "LCD_RST"), (16, "LCD_DC"),
-    (17, "LCD_WR"), (18, "LCD_RD"), (19, "LCD_BL"),
+    (17, "LCD_WR"),
+    # 18 and 19 are RETIRED, and deliberately left as gaps: renumbering the
+    # nets below them would rewrite every net id in the .kicad_pcb for no gain.
+    #   18 was LCD_RD, 19 was LCD_BL. Both are real FPC signals (pins 12 and
+    #   33) but neither is driven: routing.py ties them to +3V3 (read strobe
+    #   disabled, display is write-only; backlight always on). Their pads
+    #   therefore live on the +3V3 net, and the two names survived only as
+    #   declarations carrying zero pads — which is what made DRC report them
+    #   as nets with no copper.
     # SD card SPI
     (20, "SD_MOSI"), (21, "SD_MISO"), (22, "SD_CLK"), (23, "SD_CS"),
     # I2S audio

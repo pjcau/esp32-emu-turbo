@@ -113,8 +113,16 @@ class DisplaySheet(SchematicSheet):
             ("LCD_RST", -7.62, "GPIO13 / FPC15"),
             ("LCD_DC", -5.08, "GPIO14 / FPC10"),
             ("LCD_WR", -2.54, "GPIO46 / FPC11"),
-            ("LCD_RD", 0, "+3V3 (FPC12, RO)"),
-            ("LCD_BL", 5.08, "+3V3 (FPC33, BL)"),
+            # RD and LED-A are tied to the 3.3 V rail on the board, so the
+            # label has to say "+3V3" — naming them LCD_RD / LCD_BL drew two
+            # nets that exist on no copper, and a schematic net with no PCB
+            # counterpart is exactly what verify_netlist_diff T1 is for. Which
+            # panel pin each one is stays in the annotation text on the right.
+            # Keep these annotations as short as the ones above: the text
+            # column and the global labels share a narrow gap, and a longer
+            # string overlaps the label (verify_schematic_overlaps catches it).
+            ("+3V3", 0, "+3V3 (FPC12, RO)"),
+            ("+3V3", 5.08, "+3V3 (FPC33, BL)"),
         ]
         self.text("Control signals:", dx - 72, dy - 14, 2, True)
         for net, yoff, gpio in ctrl_pins:
@@ -161,8 +169,9 @@ class DisplaySheet(SchematicSheet):
         # the panel's RD pin (panel 12 -> pad 29) and LED-A pin
         # (panel 33 -> pad 8) are hard-tied to the 3.3 V rail — RD
         # because the interface is write-only, LED-A because the
-        # backlight is always on. The DS1 side keeps the LCD_RD /
-        # LCD_BL names as documentation of which panel pin is involved.
+        # backlight is always on. The DS1 side now says "+3V3" too; which
+        # panel pin is involved is documented in the annotation text there
+        # rather than in a net name that no copper carries.
         fpc_nets = [
             "+3V3", "GND", "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
             "+3V3", "+3V3",

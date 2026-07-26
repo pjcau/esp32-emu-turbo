@@ -389,10 +389,13 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "6":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "7":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
-            # Hard-tied to +3V3 (always-on backlight, no GPIO control). The "LCD_BL"
-            # label is retained in firmware/docs as the logical identifier but the
-            # PCB net is +3V3 — see routing.py::_fpc_power_traces DFM v3 fix.
-            "8":  {"net": _any_of("LCD_BL", "+3V3"),  "function": "LED_A — backlight anode, hard-tied to +3V3", "type": "smd"},
+            # Hard-tied to +3V3 (always-on backlight, no GPIO control).
+            # This was _any_of("LCD_BL", "+3V3") while the LCD_BL name still
+            # existed as a zero-pad net declaration; that net is gone (see
+            # primitives.NET_LIST, ids 18/19 retired), so the only net this pad
+            # can carry is +3V3 and the alternative would never match again.
+            # Which panel pin it is stays in "function" below.
+            "8":  {"net": _exact("+3V3"),  "function": "LED_A — backlight anode, hard-tied to +3V3", "type": "smd"},
             "9":  {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "10": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "11": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
@@ -418,9 +421,10 @@ COMPONENT_SPECS = {
             "27": {"net": _unconnected(),     "function": "NC", "type": "smd"},
             "28": {"net": _unconnected(),     "function": "NC", "type": "smd"},
             # Hard-tied to +3V3 (read strobe disabled — display is write-only 8080).
-            # The "LCD_RD" label is retained in firmware/docs as the logical identifier
-            # but the PCB net is +3V3 — see routing.py::_fpc_power_traces DFM v3 fix.
-            "29": {"net": _any_of("LCD_RD", "+3V3"),  "function": "RD — LCD read strobe, hard-tied to +3V3", "type": "smd"},
+            # Was _any_of("LCD_RD", "+3V3"); the LCD_RD net declaration is gone
+            # (primitives.NET_LIST ids 18/19 retired), so +3V3 is the only net
+            # this pad can carry. Which panel pin it is stays in "function".
+            "29": {"net": _exact("+3V3"),  "function": "RD — LCD read strobe, hard-tied to +3V3", "type": "smd"},
             "30": {"net": _exact("LCD_WR"),   "function": "WR — LCD write strobe", "type": "smd"},
             "31": {"net": _exact("LCD_DC"),   "function": "DC — data/command select", "type": "smd"},
             "32": {"net": _exact("LCD_CS"),   "function": "CS — LCD chip select", "type": "smd"},
