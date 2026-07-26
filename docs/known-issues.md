@@ -6,29 +6,32 @@ here is a plan, a nice-to-have, or a closed finding. Closed work lives in
 `docs/waiver-audit-recovery.md` (Part 1) and `hardware-audit-bugs.md`.
 
 **This file is a snapshot, the gates are the truth.** Measured on
-`74c196e`, 2026-07-26, macOS + local `kicad-cli`. Before acting on any
+`35d6454`, 2026-07-26, macOS + local `kicad-cli`. Before acting on any
 entry, re-derive the current state:
 
 ```bash
 make open-issues     # the 6 gates that guard known-open work (~10 s)
-make verify-all      # the exhaustive suite, 66 checks (~20 s)
+make verify-all      # the exhaustive suite, 68 checks (~20 s)
 ```
 
-At the snapshot commit: `verify-all` is **67/68**, `open-issues` is
-**1 of 6 gates red**. Every entry below names the gate that proves it, so
-a fixed entry goes green on its own rather than needing this file edited
-to stay honest. If an entry's gate is green and the text still says open,
-**the gate wins** — delete the entry.
+At the snapshot commit: `verify-all` is **68/68** and `open-issues` reports
+**all clear**. Every entry below names the gate that proves it, so a fixed
+entry goes green on its own rather than needing this file edited to stay
+honest. If an entry's gate is green and the text still says open, **the
+gate wins** — delete the entry.
 
-Every remaining entry is a real defect. The two gates that used to fail
-for their own reasons — a stale machine-global ERC report, and a rotation
-law whose verdict moved as an untracked cache warmed — were fixed in
-`2a7a469`, so red now means the board, never the tooling.
+No gate is red right now. That is not the same as "nothing is open": the
+entries that remain are unverified claims about an already-fabricated
+board (H6), and closed records kept because each documents a way a gate
+can be fooled (H1–H5). A green suite means no check currently disagrees
+with the design — it does not mean the design was checked against the
+physical board.
 
-Reading order is by consequence, not by section: **H4 is the only entry
-left that can put a wrong part on the desk**, and it is the only one whose
-gate is still red. H1, H2 and H3 are kept as closed records because each
-one documents a way a gate can be fooled, not because they are open.
+Reading order is by consequence, not by section. **H4 was the entry that
+could put a wrong part on the desk, and it is now closed**: both of its
+rows were generator bugs and were fixed at the source in `35d6454`, with
+`_LAW_EXCEPTIONS` still an empty dict. H6 is now the only entry that
+depends on evidence no gate can produce.
 
 ---
 

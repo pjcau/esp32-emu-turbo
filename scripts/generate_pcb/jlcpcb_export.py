@@ -60,16 +60,27 @@ _JLCPCB_ROT_CORRECTIONS = [
     # emitted angle by +270 to cpl=0, which is what the law derives.
     # This is the split the regex needed, not a per-part delta.
     (r"^SOT-23-6", 180),
-    # ESOP (exposed-pad SOP) is drawn in the same frame as SOP and needs the
-    # same 270. It needs its OWN rule because "ESOP-8" cannot match "^SOP-" —
-    # the anchor is blocked by the leading E — so U2 (IP5306, C181692) fell
-    # through every rule to _JLCPCB_ROT_DEFAULT (180) and was emitted at
-    # cpl=0. That is 5.014 mm of lead-to-pad offset on 0.6 mm pads: the part
-    # does not touch its copper at all. At 270 the formula yields cpl=90,
-    # which seats it pin-for-pin (0.090 mm). Same one-letter miss that put
-    # U4's SOT-23-6 on the SOT-23-3 rule; the copper is correct either way,
-    # only the pick-and-place angle was wrong.
-    (r"^ESOP-", 270),            # ESOP (exposed pad) — same frame as SOP
+    # ESOP (exposed-pad SOP) needs its OWN rule because "ESOP-8" cannot match
+    # "^SOP-" — the anchor is blocked by the leading E — so U2 (IP5306,
+    # C181692) fell through every rule to _JLCPCB_ROT_DEFAULT (180) and was
+    # emitted at cpl=0. Same one-letter miss that put U4's SOT-23-6 on the
+    # SOT-23-3 rule. The copper is correct; only the pick-and-place angle was.
+    #
+    # cpl=0 does not seat AT ALL: the lead row runs along Y while the pads run
+    # along X, so all 8 leads land on bare soldermask (worst offset 5.012 mm,
+    # 0 of 8 leads touching copper) and the part is held only by EP paste.
+    #
+    # 90 is the OTHER wrong answer and it is the dangerous one, because it
+    # solders. It puts pin i onto pad i+4: VIN onto the KEY pad, BAT+ (an
+    # unfused 4.2 V cell) onto LED1 which is an open-drain indicator sink, LX
+    # onto LED2 — with BAT and VOUT connected to nothing.
+    #
+    # 90 is the value the rotation law derives for this cell, and the law is
+    # wrong here — see _LAW_EXCEPTIONS in verify_cpl_rotation_law.py. At
+    # cpl=270 every pin lands on its own pad (0.090 mm uniform) and every net
+    # is right: VIN->VBUS, KEY->IP5306_KEY, BAT->BAT+, SW->LX, VOUT->+5V,
+    # EP->GND, the three LED pins left open. Exactly one rotation is sane.
+    (r"^ESOP-", 90),             # ESOP-8 (exposed pad) — emits cpl=270
     (r"^SOP-(?!18_|4_)", 270),   # SOP packages (except SOP-18, SOP-4)
     (r"^SOIC-", 270),            # SOIC packages
     (r"^TSSOP-", 270),           # TSSOP packages
@@ -118,28 +129,37 @@ _JLCPCB_POS_CORRECTIONS = {
 # dead code that also skewed verify_dfa's effective-rotation comparison by
 # subtracting a compensation that never existed.
 _JLCPCB_ROT_DELTAS = {
-    # "J4" REMOVED. It was the last live entry here, and it carried the exact
-    # defect this table's header warns about: a 180 delta whose only
-    # justification was "JLCPCB 3D: 90 puts pins on wrong side, 270 aligns" —
-    # an eyeballed image overlay (404f31a), no derivation. The same 270 had
-    # ALREADY been removed four days earlier in 2d35646, whose message reads
-    # "remove wrong rotation overrides — J4: would reverse all 40 FPC pins!".
-    # That reading was right and re-adding it was the error.
+    # J4 (FPC-40P, C2856812) — KEPT, emitted cpl = 270.
     #
-    # Why 90 and not 270, stated so it can be re-checked: J4 is a 40-contact
-    # single-row connector, so a 180 turn maps its pad row onto itself. BOTH
-    # angles solder — they differ by a full contact reversal, contact i
-    # landing on pad i versus pad 41-i. A rigid fit of all 42 pads against the
-    # cached C2856812 reference, numbering preserved, has a unique optimum at
-    # the law's angle (0.004 mm); the 180-away alternative is 16.55 mm, i.e.
-    # the span of the connector. Our pads already carry the 41-N panel mapping
-    # in their NETS (pad 29 = panel pin 12 = RD), so the physical contact i
-    # must meet board pad i — which is what 90 produces.
+    # This entry was briefly deleted on the theory that its justification was
+    # only an eyeballed 3D overlay (404f31a) and that the rotation law's 90
+    # should win. That was wrong, and it is recorded here so the same removal
+    # is not attempted a third time. Two checks that do NOT depend on any
+    # KiCad-to-JLCPCB angle convention:
+    #
+    #   1. Cable side. J4's contacts must face the FPC slot. On the copper the
+    #      signal pads sit at LOWER x than the mount tabs — verify_dfm_v2's
+    #      "J4 signal pads face toward FPC slot" asserts exactly that — and
+    #      board.py puts FPC_SLOT at x 125.5-128.5 with J4's body at
+    #      133.5-136.5, so the slot is on J4's -X side. At cpl=270 the
+    #      contacts land on x=133.712 and the tabs on x=136.288: contacts
+    #      toward the slot. At cpl=90 the two swap, and the ribbon would have
+    #      to enter from +X, off the right board edge.
+    #   2. Seating. Loading the LCSC reference into pcbnew, flipping to B.Cu
+    #      and rotating, the matching orientation has a worst residual of
+    #      0.002 mm across all 42 pads; the 180-away alternative contacts
+    #      0 of 42 (a 2.576 mm contact/tab swap onto 1.0 mm pads).
+    #
+    # The convention that made 90 look right is the disputed one:
+    # CPL_bottom = (180 - O) is what kicad-jlcpcb-tools (fabrication.py) and
+    # KiBot (fil_rot_footprint, mirror_bottom) both implement, and it predicts
+    # J4's 270 and U5's independently confirmed 180. Nothing implements the
+    # CPL = -O that 90 would require.
     #
     # Do NOT confuse this with the connector_pad = 41 - panel_pin netlist
     # mapping in POLARITY_AUDIT.md. That one is correct and must not be
-    # "fixed"; it is a different axis, and applying both a netlist reversal
-    # and a 180 body rotation would cancel to a wrong result.
+    # "fixed"; it is a different axis.
+    "J4": 180,
     # "C2" override REMOVED: C2 (22uF tantalum, AMS1117 output cap) no longer
     # exists. It was the most dangerous polarized part on the board and it
     # destroyed prototype #1 when assembled reversed
