@@ -1,0 +1,18 @@
+{
+  "name": "battery_3v4",
+  "description": "Running on a nearly-flat cell: the rails must still hold",
+  "setup": {"source": "battery", "soc": 0.05},
+  "assert": [
+    {"name": "the cell is near its floor",
+     "quantity": "source.v_open", "op": "between", "value": [3.4, 3.6]},
+    {"name": "the battery model is honest about being uncalibrated",
+     "quantity": "source.calibrated", "op": "==", "value": false,
+     "because": "BT1 has no datasheet in this repo; T5.4 replaces the curve with measurements"},
+    {"name": "+3V3 still holds",
+     "quantity": "rail.+3V3.typ", "op": "between", "value": [3.2, 3.4]},
+    {"name": "VBUS is floating, not zero — there is no cable",
+     "quantity": "net.VBUS", "op": "is_floating", "value": true},
+    {"name": "the board still boots from flash on battery",
+     "quantity": "boot.mode", "op": "==", "value": "SPI Boot"}
+  ]
+}

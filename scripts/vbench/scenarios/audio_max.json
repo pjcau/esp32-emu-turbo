@@ -1,0 +1,17 @@
+{
+  "name": "audio_max",
+  "description": "Speaker driven at full output: power, current and the chain's corner",
+  "setup": {"source": "usb", "soc": 0.5, "audio_level": 1.0},
+  "assert": [
+    {"name": "full output into the 8 ohm speaker is about 1.5 W",
+     "quantity": "audio.p_out_w", "op": "between", "value": [1.4, 1.6],
+     "because": "derived from the rated 3 W into 4 ohm at 5 V; the datasheet gives no 8 ohm figure"},
+    {"name": "the rail current stays inside the IP5306's boost rating",
+     "quantity": "audio.rail_current_a", "op": "<=", "value": 2.1,
+     "because": "2.1 A is the boost rating for this part number, page 3"},
+    {"name": "the input high-pass corner passes bass",
+     "quantity": "audio.hp_corner_hz", "op": "<=", "value": 100.0},
+    {"name": "no part exceeds its thermal margin at the governing ambient",
+     "quantity": "thermal.over_margin", "op": "==", "value": 0}
+  ]
+}

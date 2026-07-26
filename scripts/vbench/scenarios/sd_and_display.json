@@ -1,0 +1,17 @@
+{
+  "name": "sd_and_display",
+  "description": "The two buses that carry a game: SD over SPI and the 8080 panel",
+  "setup": {"source": "usb", "soc": 0.5},
+  "assert": [
+    {"name": "the SD bus lands on the socket's own pad roles",
+     "quantity": "sd.bus_faults", "op": "==", "value": 0},
+    {"name": "the SD socket still shares a pad with a strapping pin",
+     "quantity": "sd.strapping_exposure", "op": "==", "value": 1,
+     "because": "U6.9 (DAT2) sits on BTN_R = GPIO3. Inert only because table 8 leaves GPIO3 ignored at default eFuses — asserted so a change is noticed."},
+    {"name": "the panel is strapped for 8-bit 8080",
+     "quantity": "display.interface_mode", "op": "==", "value": "8080 8-bit parallel"},
+    {"name": "the data bus arrives in order",
+     "quantity": "display.data_bus_faults", "op": "==", "value": 0,
+     "because": "crossing two data lines is invisible to every pad-side gate"}
+  ]
+}

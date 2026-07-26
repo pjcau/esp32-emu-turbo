@@ -1,0 +1,20 @@
+{
+  "name": "press_all_buttons",
+  "description": "Every switch closed at once: rails unmoved, buttons at ground",
+  "setup": {"source": "usb", "soc": 0.5, "buttons_pressed": true},
+  "assert": [
+    {"name": "a pressed button reads as ground",
+     "quantity": "net.BTN_A", "op": "<=", "value": 0.001},
+    {"name": "the battery rail is untouched by the switches",
+     "quantity": "net.BAT+", "op": ">=", "value": 3.5,
+     "because": "SW_PWR's shell tabs carry BTN_SELECT; welding them to BAT+ is the bug this asserts against"},
+    {"name": "+3V3 is unmoved",
+     "quantity": "rail.+3V3.typ", "op": "between", "value": [3.2, 3.4]},
+    {"name": "eleven buttons have a computable debounce RC",
+     "quantity": "buttons.with_rc", "op": "==", "value": 11,
+     "because": "BTN_L is the twelfth and must NOT have one — R14 is DNP because GPIO45 is a strapping pin"},
+    {"name": "the slowest release edge is under 2 ms",
+     "quantity": "buttons.slowest_release_s", "op": "<=", "value": 0.002,
+     "because": "a firmware debounce interval shorter than this reads a release as a second press"}
+  ]
+}

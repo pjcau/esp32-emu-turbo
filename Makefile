@@ -234,6 +234,11 @@ bench-sd: ## T3.3 (part) — SD bus wiring, and the DAT2 pad that shares a net w
 
 bench-phase3: bench-display bench-audio bench-sd ## Everything Phase 3 delivers
 
+bench-ci: ## T4.3 — every scenario, headless, with assertions; non-zero on any failure
+	@$(T) bench-ci python3 scripts/vbench/scenario.py --junit /tmp/vbench-junit.xml
+
+bench-all: bench-test bench-netlist bench-power bench-phase2 bench-phase3 bench-ci ## The whole bench
+
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
 

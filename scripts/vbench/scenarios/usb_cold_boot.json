@@ -1,0 +1,22 @@
+{
+  "name": "usb_cold_boot",
+  "description": "USB-C plugged in, nothing held: the board must come up in SPI Boot",
+  "setup": {"source": "usb", "soc": 0.5},
+  "assert": [
+    {"name": "+3V3 is in range for the ESP32-S3 and the SD card",
+     "quantity": "rail.+3V3.max", "op": "<=", "value": 3.6,
+     "because": "3.6 V is the absolute maximum of both; the worst case here comes from V_REF's own tolerance"},
+    {"name": "+3V3 does not sag below the module's minimum",
+     "quantity": "rail.+3V3.min", "op": ">=", "value": 3.0},
+    {"name": "no cited limit is exceeded at DC",
+     "quantity": "rails.violations", "op": "==", "value": 0},
+    {"name": "the board boots from flash, not into download mode",
+     "quantity": "boot.mode", "op": "==", "value": "SPI Boot"},
+    {"name": "VDD_SPI selects 3.3 V for the N16R8's PSRAM",
+     "quantity": "boot.vdd_spi", "op": "==", "value": 3.3,
+     "because": "table 7, page 15 — GPIO45 low selects 3.3 V; a pull-up there would select 1.8 V"},
+    {"name": "EN has no defined level at reset",
+     "quantity": "net.EN", "op": "is_floating", "value": true,
+     "because": "R25-CRIT-1, an as-built limitation: the datasheet requires an RC at EN and the board has neither part. Asserted so the day it is fixed, this scenario notices."}
+  ]
+}

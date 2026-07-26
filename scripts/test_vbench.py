@@ -1085,9 +1085,94 @@ def test_phase5():
           route and route["severity"] == "blind-spot", f"got {route}")
 
 
+# ── K. Phase 4.3: scenarios ─────────────────────────────────────────
+
+def test_scenarios():
+    print("\nK. scenario.py")
+    from vbench import scenario
+
+    docs = scenario.load_scenarios()
+    names = {d["name"] for d in docs}
+    check("the plan's scenarios are all present",
+          {"usb_cold_boot", "battery_3v4", "press_all_buttons", "switch_off",
+           "audio_max"} <= names, f"got {sorted(names)}")
+    check("every scenario carries at least one assertion",
+          all(d["assert"] for d in docs))
+
+    results = []
+    for doc in docs:
+        results.extend(scenario.run_scenario(doc))
+    failed = [r for r in results if not r.ok]
+    check("every scenario assertion passes on this board",
+          not failed, f"{[(r.scenario, r.name) for r in failed]}")
+    check("there are enough assertions to be worth running",
+          len(results) >= 20, f"only {len(results)}")
+
+    # An assertion naming a quantity the bench does not compute must be a
+    # hard error. A typo that silently skips is the same failure as a gate
+    # nobody runs.
+    try:
+        scenario.run_scenario({
+            "name": "typo", "description": "x", "setup": {},
+            "assert": [{"quantity": "rail.+3V3.tpy", "op": "==",
+                        "value": 3.3}]})
+        check("an unknown quantity is a hard error", False, "ran anyway")
+    except scenario.ScenarioError as exc:
+        check("an unknown quantity is a hard error",
+              "does not compute" in str(exc))
+
+    try:
+        scenario.run_scenario({
+            "name": "badop", "description": "x", "setup": {},
+            "assert": [{"quantity": "rails.violations", "op": "~=",
+                        "value": 0}]})
+        check("an unknown operator is a hard error", False, "ran anyway")
+    except scenario.ScenarioError:
+        check("an unknown operator is a hard error", True)
+
+    # A scenario with no assertions passes vacuously, so loading must refuse.
+    saved = scenario.SCEN_DIR
+    tmp = tempfile.mkdtemp(prefix="vbench-scen-")
+    try:
+        with open(os.path.join(tmp, "empty.json"), "w") as fh:
+            json.dump({"name": "empty", "description": "x", "setup": {},
+                       "assert": []}, fh)
+        scenario.SCEN_DIR = tmp
+        try:
+            scenario.load_scenarios()
+            check("a scenario that asserts nothing is refused", False,
+                  "loaded")
+        except scenario.ScenarioError:
+            check("a scenario that asserts nothing is refused", True)
+    finally:
+        scenario.SCEN_DIR = saved
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    # The assertions must actually discriminate: holding BTN_SELECT has to
+    # break usb_cold_boot's boot-mode assertion.
+    cold = next(d for d in docs if d["name"] == "usb_cold_boot")
+    held = json.loads(json.dumps(cold))
+    held["setup"]["hold"] = ["BTN_SELECT"]
+    broken = [r for r in scenario.run_scenario(held) if not r.ok]
+    check("holding BTN_SELECT breaks the cold-boot scenario",
+          any("boot" in r.detail for r in broken),
+          f"got {[r.name for r in broken]}")
+
+    # JUnit must be well-formed and carry the failures.
+    out = os.path.join(tempfile.mkdtemp(prefix="vbench-junit-"), "j.xml")
+    scenario.junit(results, out)
+    import xml.etree.ElementTree as _ET
+    root = _ET.parse(out).getroot()
+    check("the JUnit output parses and names every scenario",
+          root.tag == "testsuites"
+          and len(root.findall("testsuite")) == len(docs),
+          f"{len(root.findall('testsuite'))} suites")
+    shutil.rmtree(os.path.dirname(out), ignore_errors=True)
+
+
 def main():
     print("=" * 72)
-    print("  Virtual Bench Phase 0/1/2/3/5 — mutation tests")
+    print("  Virtual Bench Phase 0/1/2/3/4/5 — mutation tests")
     print("=" * 72)
     test_schema()
     test_corpus()
@@ -1099,6 +1184,7 @@ def main():
     test_phase3()
     test_phase3_peripherals()
     test_phase5()
+    test_scenarios()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

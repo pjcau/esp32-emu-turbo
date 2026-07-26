@@ -737,7 +737,37 @@ filesystem shim that would prove nothing about this board.
 | T3.2 | I2S → PAM8403 → speaker: sample stream, gain, supply-dependent clipping, output power vs the 5 V rail, and current fed **back** into Phase 1 so audio peaks sag the rail | exports a WAV of what the speaker would emit, and the rail dip it caused |
 | T3.3 | SD over SPI: card model, CMD0/CMD8/ACMD41 init, block read from a host directory, 20 MHz timing, current draw | mounts a host folder and reads a ROM through the modelled bus |
 
-## Phase 4 — Firmware in the loop and the demo app
+## Phase 4 — Firmware in the loop and the demo app — **T4.3 done**
+
+### T4.3 — scenarios, headless, with assertions
+
+`make bench-ci` turns everything the earlier phases compute into **named
+scenarios that say yes or no**, with JUnit output for CI. Six scenarios, 26
+assertions, all against *derived* quantities:
+
+| Scenario | What it pins down |
+|---|---|
+| `usb_cold_boot` | +3V3 inside 3.0–3.6 V, no cited limit exceeded, SPI Boot, VDD_SPI 3.3 V — and **EN asserted floating**, so the day the RC is fitted the scenario notices |
+| `battery_3v4` | a nearly-flat cell still holds the rails, VBUS floating rather than 0 V, and the battery model asserting its own `calibrated == false` |
+| `press_all_buttons` | a pressed button at ground, **BAT+ unmoved** (the SW_PWR shell-tab bug), eleven RCs not twelve |
+| `switch_off` | the v1 invariant reproduced, with the reason derived: no throw pad carries a net |
+| `audio_max` | 1.5 W into 8 Ω, rail current inside the boost's 2.1 A rating, no part over its thermal margin |
+| `sd_and_display` | the SD bus on its socket's pad roles, the DAT2/GPIO3 exposure still exactly 1, the panel strapped for 8-bit 8080, the data bus in order |
+
+The quantity names are **not free text**. Each maps to something a Phase 1–3
+module computes, and a name the bench does not produce is a hard error — an
+assertion nobody evaluates is the same failure as a gate nobody runs. So is a
+scenario with an empty assertion list, which the loader refuses.
+
+The assertions are shown to discriminate: holding `BTN_SELECT` in
+`usb_cold_boot`'s setup breaks its boot-mode assertion.
+
+T4.1 (`vbench_hal`), T4.2 (`demo_app.c`) and T4.4 (the interactive window)
+are not started. `software/sim` already exists with a fake HAL and SDL is
+available, so T4.1 and T4.4 are buildable; T4.2's ESP-IDF half is not, because
+no `idf.py` is installed here.
+
+
 
 | Task | Deliverable | Done when |
 |---|---|---|
