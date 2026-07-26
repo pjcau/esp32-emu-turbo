@@ -503,6 +503,22 @@ it stands. Changing them breaks a working board.
   the wrong answer. The contacts must face the FPC slot on J4's −X side;
   90° swaps contacts and mount tabs and contacts 0 of 42 pads.
 - **USB Zdiff of 130 Ω** — a non-issue. Do not move parts or traces for it.
+- **The twelve `GND on B.Cu width=0.2mm` warnings from `validate-jlcpcb`** —
+  expected, and widening those traces is the wrong fix. They are the debounce
+  caps C5–C16: each one's GND pad runs ~2 mm on B.Cu and drops through a
+  single 0.60/0.20 via into the In1.Cu ground plane. **The layer is the
+  point.** The only inner layer they could otherwise cross is In2.Cu, which
+  carries the +3V3 pour — twelve traces through it would carve the plane into
+  channels, which is how H-class "+3V3 resolved into four isolated groups"
+  happened in the first place. One small via per cap punches a clearance
+  circle the plane flows around instead; `make verify-power-nets` confirms
+  +3V3 stays a single copper group. The 0.2 mm width is separately pinned by
+  the button B.Cu verticals running between the caps (0.175 mm gap), and a
+  wider stub would invite a wider via — a bigger hole in the same plane.
+  These carry a decoupling cap's return current over 2 mm, not a supply rail;
+  the rule that flags them is a blanket power-net width rule that cannot see
+  the difference. Rationale is also at the generation site in
+  `routing.py`, next to `DEBOUNCE_REFS`.
 - **`POWER_HIGH_ALLOWLIST` BAT+ entries** — coordinate-pinned to 0.02 mm
   with an IPC-2221 argument; they cannot drift silently. Keep.
 - **`verify_net_connectivity.ACCEPTED_FRAGMENTATIONS["VBUS"]`** — see RESPIN
