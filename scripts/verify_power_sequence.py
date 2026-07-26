@@ -33,7 +33,15 @@ from pcb_cache import load_cache
 
 PCB_FILE = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_pcb")
 BOARD_CONFIG_H = os.path.join(BASE, "software", "main", "board_config.h")
-ROUTING_PY = os.path.join(BASE, "scripts", "generate_pcb", "routing.py")
+# routing was split into a package 2026-07-26 (byte-identical output);
+# text checks read every module of it, concatenated.
+ROUTING_PKG = os.path.join(BASE, "scripts", "generate_pcb", "routing")
+
+
+def _routing_source() -> str:
+    import glob
+    return "\n".join(open(f).read()
+                     for f in sorted(glob.glob(os.path.join(ROUTING_PKG, "*.py"))))
 SCHEMATIC_DIR = os.path.join(BASE, "hardware", "kicad")
 
 PASS = 0
