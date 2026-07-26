@@ -23,12 +23,12 @@ if [ ! -f "$KICAD_DIR/$PCB_FILE" ]; then
     exit 1
 fi
 
-# Step 1: Zone fill via Docker (pcbnew Python API — no local alternative)
+# Step 1: Zone fill via Docker (pcbnew Python API — no local alternative).
+# Shared with the render targets via scripts/fill-zones.sh so that both
+# consumers of the generated board fill it the same way — see that script for
+# why an unfilled board is not a harmless intermediate state.
 echo "==> Step 1: Filling zones via Docker (pcbnew API)..."
-docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
-    --entrypoint python3 \
-    kicad-pcb \
-    /scripts/kicad_fill_zones.py "/project/$PCB_FILE"
+"$SCRIPT_DIR/fill-zones.sh" "$PCB_FILE"
 
 # Step 2+3: Local kicad-cli (no Docker overhead)
 if command -v kicad-cli &>/dev/null; then

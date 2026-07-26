@@ -234,12 +234,31 @@ This is independent of the geometry and of the `CPL_bottom = (180 − O)`
 convention, and it agrees with both. It also transfers to J4, whose 270°
 comes from the same convention.
 
-**Three more parts are flagged by the same machinery and are NOT verified
-to this depth:** `D1` should be 90° (ships 270°), `Q1` should be 270°
-(ships 90°), and both are SOT-23-3 where 180° puts pin 3 where pins 1–2
-are. Weighed against that, `POLARITY_AUDIT.md` records Q1 as empirically
-validated because boards R4–R8 power up through it. Those two claims cannot
-both be true. **Open question, deliberately not acted on here.**
+**D1 and Q1 were the same bug and are now closed too.** Both are SOT-23-3
+and both hit the generic `^SOT-23` rule, whose −90 was 180° out; SOT-23-5
+and SOT-23-6 match their own rules and were unaffected. Re-derived by the
+same convention-free route, anchored on U2:
+
+| ref | was | seats? | now | seats? | nets at the new angle |
+|---|---|---|---|---|---|
+| D1 | 270° | no — 3.120 mm on bare mask | **90°** | 0.187 mm | anodes → BTN_START / BTN_SELECT, cathode → MENU_K |
+| Q1 | 90° | no — 2.933 mm on bare mask | **270°** | 0.000 mm | G/S/D → RPP_GATE / BAT_IN / BAT+ |
+
+One family constant, not two per-part deltas. There is no
+solderable-but-wrong option here as there was for U2: a 180° error on a
+SOT-23-3 puts the single leg where the pair is, so it does not assemble.
+
+`POLARITY_AUDIT.md` recorded Q1 as empirically validated "because boards
+R4–R8 power up through it". **That argument is retired**, by U2: U2 shipped
+at an angle where 0 of 8 leads touch copper and those same boards charge,
+because the assembler corrected it. "The boards work" describes what JLCPCB
+did, not what our file said.
+
+So the law's blind cell has exactly four members, and now all four are
+accounted for: **it is wrong whenever `(row_board + row_ee) mod 180 ≠ 0`** —
+U2, J4 and Q1 at 90, D1 at 270. Every other part sums to 0 or 180. If that
+exception list ever grows, check the sum before believing it is a new part
+quirk.
 
 **A design-side fix is not done until the CPL is re-uploaded** and the
 uploaded file matches `release_jlcpcb/cpl.csv` at HEAD. That directory was
@@ -373,21 +392,30 @@ and is six releases stale; the tag is the truth.
 
 ## C — Cleanups with a known fix and a known reason they are still open
 
-- **`make render-pcb` leaves the tree in a state that fails `verify-all`.**
-  It depends on `generate-pcb`, which rewrites the `.kicad_pcb` and drops
-  every `filled_polygon`, and nothing re-fills them afterwards. So a render
-  — a read-only-looking, documentation-only action — silently turns the
-  zone-fill gate red and, if the render runs concurrently with a commit,
-  the pre-commit DFM hook blocks the commit for a reason that has nothing
-  to do with what is being committed. **Both happened during Round 26.**
-  Same trap applies to any target that depends on `generate-pcb` without
-  the zone-fill step: check `render-all` too.
-  **Fix:** either make the zone fill part of `generate-pcb` itself, or have
-  the render targets depend on a filled board (as `export-gerbers-fast`
-  effectively does) instead of on the raw generator. Until then, after any
-  render: re-run `make export-gerbers-fast`, or `git checkout --
-  hardware/kicad/esp32-emu-turbo.kicad_pcb website/static/net-explorer-data.json`
-  when the render output is unchanged.
+- ~~**`make render-pcb` leaves the tree in a state that fails
+  `verify-all`**~~ — FIXED. There is now a `pcb-filled` target
+  (`generate-pcb` → `scripts/fill-zones.sh` → Net Explorer refresh) and both
+  `render-pcb` and `export-gerbers-fast` depend on it.
+
+  Worth keeping the shape of it, because it bit three different ways from
+  one cause. `generate_pcb` writes the board with **no** `filled_polygon` —
+  the fill needs the pcbnew Python API, which only exists in the Docker
+  image — so every consumer had to remember to fill, and the render path did
+  not. That meant: the zone-fill gate went red after a documentation-only
+  action; a render running concurrently with a commit made the pre-commit
+  DFM hook block that commit citing zone fills, which had nothing to do with
+  the change; and, least visible and worst, **renders drawn from an unfilled
+  board show a board with no copper pours**.
+
+  Fixing it exposed the same ordering bug one level further in:
+  `generate-pcb` refreshed the Net Explorer data *before* the fill, so the
+  shipped JSON described an unfilled board — which is also why this session
+  kept having to run `make net-explorer` by hand after every gerber export.
+  `pcb-filled` now refreshes it after.
+
+  Two guards, so this cannot come back silently: `fill-zones.sh` fails if
+  the fill produces zero polygons, and `verify_net_explorer_fresh` already
+  catches stale JSON (it is what caught the ordering bug).
 
 - ~~**Phantom nets `LCD_BL` and `LCD_RD`**~~ — DONE in `35d6454`. They were
   declared in `primitives.NET_LIST` with zero pads and were the only two
@@ -403,6 +431,34 @@ and is six releases stale; the tag is the truth.
   T1, `verify_schematic_pcb_sync`, `verify_schematic_overlaps`) and each
   one was pointing at a real leftover. Both FPC pins remain tied to +3V3 on
   the copper, which is what they always were.
+- ~~**`collision.py` reported 31 violations on every generation that no gate
+  agreed with**~~ — FIXED. It now reports **0 violations and 17 margin
+  notes**, and the difference is the point: a report that is always red is a
+  report nobody reads, which is how a real violation gets through.
+
+  Two separate defects, and the split between them is worth keeping:
+
+  1. **14 via-to-via reports were false.** Vias enter the spatial index as
+     their bounding *square*, which is right for indexing and wrong for
+     measuring — for a diagonal pair the square corners face each other and
+     understate the gap (0.200 mm reported against 0.254 mm real). That
+     approximated *ring-to-ring* number was then compared against
+     `CLEARANCE_VIA_VIA`, which is the **drill** rule. The true hole gaps
+     were 0.55–0.67 mm against a 0.25 mm limit. Now measured as circles,
+     against both rules separately.
+  2. **The other 17 were real but mis-labelled.** They are 0.150–0.170 mm
+     against the *house* target of 0.175 mm, and all clear JLCPCB's 0.15 mm
+     minimum. Buildable. They are now listed as margin notes rather than
+     printed under a "violations detected" banner.
+
+  Zero risk to the board, and it was checked rather than assumed: the
+  collision result is only appended to `_GRID.violations`, never acted on —
+  `routing._via_net` places the via either way — and the regenerated
+  `.kicad_pcb` came out with **0 inserted lines**, i.e. byte-identical
+  copper. Guarded by `scripts/test_collision_via_metric.py` (in
+  `verify-all`), which plants both a real breach and the exact historical
+  false positive; reverting the metric makes 3 of its 10 tests fail.
+
 - **`collision.py` is default-open on pad nets.** `_KNOWN_PAD_NETS`
   (`collision.py:215`) has 4 hardcoded entries; every other pad is
   registered with `net=0`, and net=0 pads are *skipped* in collision

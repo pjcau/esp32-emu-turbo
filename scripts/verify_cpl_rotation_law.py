@@ -69,13 +69,26 @@ TOL_DEG = 8.0
 # a reason -- see the note on falsified evidence in
 # verify_easyeda_footprint.py's allowlist.
 _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
-    # U2 and J4 are the ONLY parts in the cell (row_board=90, row_ee=0), and
-    # the law is wrong for that cell. Every other part has
-    # row_board + row_ee in {0, 180}, where the law's bottom form happens to
-    # coincide with the geometry; this cell is the one place it does not, and
-    # it had no passing sibling to expose that. Both residuals are 0, not 180,
-    # and they are 0 for the same reason — this is one law defect showing up
-    # twice, not two independent part quirks.
+    # THE LAW IS WRONG WHENEVER (row_board + row_ee) mod 180 != 0.
+    #
+    # That is the whole defect, stated exactly. Where the sum is 0 or 180 the
+    # bottom form coincides with the geometry, which covers ten of the
+    # fourteen parts and is why the gate looked healthy for so long. The four
+    # parts below are every part where it does not coincide:
+    #
+    #     U2  sum= 90     J4  sum= 90     Q1  sum= 90     D1  sum=270
+    #
+    # All four have residual 0 rather than 180, and they have it for the same
+    # single reason. This is ONE law defect recorded four times, not four
+    # independent part quirks — if this list ever grows, check the sum first.
+    #
+    # The anchor for all four is U2, whose 270 is confirmed on prototypes #1
+    # and #2 (see its entry). Everything else was derived against it by the
+    # same convention-free route: place the physical part at each candidate
+    # angle, see which board pad each pin lands on, and read that pad's net.
+    #
+    # Each entry states a claim about the PHYSICAL part and pins the residual,
+    # so a move in the copper or the placement fails it as stale.
     #
     # Each entry below is a claim about the PHYSICAL part, checkable without
     # trusting any KiCad-to-JLCPCB angle convention. If the copper or the
@@ -103,6 +116,26 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "and would need the ribbon to enter from off the right board "
            "edge. Unrelated to the connector_pad = 41 - panel_pin netlist "
            "mapping, which is correct and untouched."),
+    "D1": (0.0,
+           "BAT54C SOT-23-3 (C37704) at cpl=90, KiCad 180. A 180 error on a "
+           "SOT-23-3 puts the single leg where the pair is, so unlike U2 "
+           "there is no solderable-but-wrong option: the old cpl=270 left "
+           "every lead on bare mask (3.120 mm). At 90 the part seats "
+           "(0.187 mm) and the nets are the diode-OR the schematic draws — "
+           "the two anodes on BTN_START and BTN_SELECT, the common cathode "
+           "on MENU_K. Note the prototypes cannot corroborate this one: D1 "
+           "was relocated for R5-CRIT-6 after they were built, and its "
+           "anodes were unrouted on every board produced so far."),
+    "Q1": (0.0,
+           "SI2301CDS SOT-23-3 (C10487) at cpl=270, KiCad 0. The old cpl=90 "
+           "left every lead on bare mask (2.933 mm); 270 seats exactly "
+           "(0.000 mm) with G/S/D on RPP_GATE / BAT_IN / BAT+, which is the "
+           "reverse-polarity P-MOSFET in series with the cell. "
+           "POLARITY_AUDIT.md's 'boards R4-R8 power up through Q1, so its "
+           "polarity is proven' does NOT contradict this: U2 shipped at an "
+           "angle that cannot seat and those same boards charge, because "
+           "JLCPCB corrected it at assembly — confirmed by eye on protos #1 "
+           "and #2. That argument is retired repo-wide."),
 }
 
 

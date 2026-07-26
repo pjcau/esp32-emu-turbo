@@ -1,4 +1,4 @@
-.PHONY: all docker-build generate-schematic generate-pcb render-schematics \
+.PHONY: all docker-build generate-schematic generate-pcb pcb-filled render-schematics \
        render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        verify-isolation verify-jlcpcb-vias verify-zone-fill test-zone-fill verify-sch-overlaps \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
@@ -38,7 +38,11 @@ render-schematics: docker-build ## Export KiCad schematic to SVG
 render-enclosure: docker-build ## Render OpenSCAD enclosure to PNG
 	@$(T) render-enclosure ./scripts/render-enclosure.sh
 
-render-pcb: generate-pcb ## Render PCB layout to SVG/PNG/GIF
+pcb-filled: generate-pcb ## Generate the PCB, fill its copper zones, refresh Net Explorer (what renders and gerbers actually need)
+	@$(T) fill-zones ./scripts/fill-zones.sh
+	@$(T) net-explorer python3 scripts/generate_net_explorer.py
+
+render-pcb: pcb-filled ## Render PCB layout to SVG/PNG/GIF
 	@$(T) render-pcb sh -c 'python3 scripts/render_pcb_svg.py website/static/img/pcb && python3 scripts/render_pcb_animation.py website/static/img/pcb'
 
 simulate: ## Run electrical circuit simulation/verification
@@ -68,6 +72,7 @@ VERIFY_ALL_SCRIPTS = \
 	short_circuit_analysis \
 	simulate_circuit \
 	spice_power_check \
+	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_issue_dispatch \
 	test_pcb_connectivity \
@@ -289,7 +294,7 @@ firmware-sync-check: ## Verify GPIO sync between firmware and schematic (fail on
 export-gerbers: generate-pcb docker-build ## Export Gerbers with zone fill via kicad-cli Docker
 	@$(T) export-gerbers ./scripts/export-gerbers.sh
 
-export-gerbers-fast: generate-pcb ## Export Gerbers (local kicad-cli + Docker zone fill only)
+export-gerbers-fast: pcb-filled ## Export Gerbers (local kicad-cli + Docker zone fill only)
 	@$(T) export-gerbers-fast ./scripts/export-gerbers-fast.sh
 
 fast-check: ## Full pipeline using local kicad-cli (~5s vs ~20s Docker)
