@@ -109,6 +109,18 @@ ROUTING_LAW = [
     ("dispatch",   "verification tooling",    "software-dev", "/check",
      "blind-spot", "while the dispatcher is wrong, findings are going "
                    "unassigned and nobody can tell which"),
+    # The Virtual Bench measures its own coverage against a corpus of this
+    # board's real historical bugs (docs/virtual-bench-plan.md, T5.1). When
+    # it goes red, either a model has drifted from its datasheet or the
+    # bench has stopped rediscovering a bug it used to catch — and in the
+    # second case every "no problem found" it prints is worth less than it
+    # looks. That is a blind spot, not a degraded board. Placed above the
+    # domain keywords so a bench gate is never claimed by "netlist" or
+    # "thermal" just because its name contains one.
+    ("vbench",     "virtual bench",           "pcb-engineer", "/hardware-audit",
+     "blind-spot", "the bench's own coverage is what makes its silence "
+                   "meaningful; while it is red, a clean bench report proves "
+                   "less than it appears to"),
     ("memory",     "agent context",           "software-dev", "/context-engineering",
      "blind-spot", "the memory preamble is loaded before every question, so a "
                    "wrong claim in it outranks the derived truth for the whole "
