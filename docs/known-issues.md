@@ -234,12 +234,31 @@ This is independent of the geometry and of the `CPL_bottom = (180 − O)`
 convention, and it agrees with both. It also transfers to J4, whose 270°
 comes from the same convention.
 
-**Three more parts are flagged by the same machinery and are NOT verified
-to this depth:** `D1` should be 90° (ships 270°), `Q1` should be 270°
-(ships 90°), and both are SOT-23-3 where 180° puts pin 3 where pins 1–2
-are. Weighed against that, `POLARITY_AUDIT.md` records Q1 as empirically
-validated because boards R4–R8 power up through it. Those two claims cannot
-both be true. **Open question, deliberately not acted on here.**
+**D1 and Q1 were the same bug and are now closed too.** Both are SOT-23-3
+and both hit the generic `^SOT-23` rule, whose −90 was 180° out; SOT-23-5
+and SOT-23-6 match their own rules and were unaffected. Re-derived by the
+same convention-free route, anchored on U2:
+
+| ref | was | seats? | now | seats? | nets at the new angle |
+|---|---|---|---|---|---|
+| D1 | 270° | no — 3.120 mm on bare mask | **90°** | 0.187 mm | anodes → BTN_START / BTN_SELECT, cathode → MENU_K |
+| Q1 | 90° | no — 2.933 mm on bare mask | **270°** | 0.000 mm | G/S/D → RPP_GATE / BAT_IN / BAT+ |
+
+One family constant, not two per-part deltas. There is no
+solderable-but-wrong option here as there was for U2: a 180° error on a
+SOT-23-3 puts the single leg where the pair is, so it does not assemble.
+
+`POLARITY_AUDIT.md` recorded Q1 as empirically validated "because boards
+R4–R8 power up through it". **That argument is retired**, by U2: U2 shipped
+at an angle where 0 of 8 leads touch copper and those same boards charge,
+because the assembler corrected it. "The boards work" describes what JLCPCB
+did, not what our file said.
+
+So the law's blind cell has exactly four members, and now all four are
+accounted for: **it is wrong whenever `(row_board + row_ee) mod 180 ≠ 0`** —
+U2, J4 and Q1 at 90, D1 at 270. Every other part sums to 0 or 180. If that
+exception list ever grows, check the sum before believing it is a new part
+quirk.
 
 **A design-side fix is not done until the CPL is re-uploaded** and the
 uploaded file matches `release_jlcpcb/cpl.csv` at HEAD. That directory was

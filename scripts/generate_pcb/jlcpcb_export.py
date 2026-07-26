@@ -85,7 +85,28 @@ _JLCPCB_ROT_CORRECTIONS = [
     (r"^SOIC-", 270),            # SOIC packages
     (r"^TSSOP-", 270),           # TSSOP packages
     (r"^SSOP-", 270),            # SSOP packages
-    (r"^SOT-23", -90),           # SOT-23 family
+    # SOT-23-3. Was -90, which is 180 out, and it reached only D1 and Q1 —
+    # SOT-23-5 and SOT-23-6 match their own rules above. Derived the same way
+    # U2 was, against the U2 anchor that prototypes #1 and #2 confirm:
+    #
+    #   D1 (BAT54C, C37704) at KiCad 180: -90 emitted 270, which lands every
+    #     lead on bare mask (3.120 mm). At 90 the part seats (0.187 mm) with
+    #     the two anodes on BTN_START / BTN_SELECT and the common cathode on
+    #     MENU_K — which is the diode-OR the schematic draws.
+    #   Q1 (SI2301CDS, C10487) at KiCad 0: -90 emitted 90, also all-on-mask
+    #     (2.933 mm). At 270 it seats exactly (0.000 mm) with G/S/D on
+    #     RPP_GATE / BAT_IN / BAT+.
+    #
+    # Both want the SAME family constant, which is what makes this one
+    # constant rather than two per-part deltas. Unlike U2's case there is no
+    # solderable-but-wrong option here: a 180 error on a SOT-23-3 puts the
+    # single leg where the pair is, so it simply does not assemble.
+    #
+    # "Boards R4-R8 power up through Q1" is NOT evidence against this. U2
+    # shipped at an angle that cannot seat and those boards charge anyway,
+    # because JLCPCB corrected it at assembly — confirmed on protos #1 and #2.
+    # The same correction explains Q1. See H4 in docs/known-issues.md.
+    (r"^SOT-23", 90),            # SOT-23-3 (D1, Q1) — see above
     (r"^LQFP-", 270),            # LQFP packages
     (r"^TQFP-", 270),            # TQFP packages
     (r"^DFN-", 270),             # DFN packages

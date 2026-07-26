@@ -33,10 +33,10 @@
 | **LED1** | C84256 | LED 0805 red | 0° | — | CORRECT |
 | **LED2** | C19171391 | LED 0805 green | 180° | 180° | CORRECT w/ override |
 | **C2** | C1953590 | Tantalum 22µF 16V 1206 (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | 180° | 180° | CORRECT w/ override |
-| **D1** | C37704 | BAT54C SOT-23 | 270° | — (removed 2026-07-25) | CORRECT — KiCad rot 180°, formula-derived; see re-derivation below |
-| **Q1** | C10487 | SI2301CDS SOT-23 | 90° | — | CORRECT (datasheet not on disk — uses Vishay SI2301 industry convention) |
+| **D1** | C37704 | BAT54C SOT-23 | **90°** | — | CORRECTED 2026-07-26 — was 270°, which seated no lead at all (3.120 mm off). See the correction block below |
+| **Q1** | C10487 | SI2301CDS SOT-23 | **270°** | — | CORRECTED 2026-07-26 — was 90°, which seated no lead at all (2.933 mm off). See the correction block below |
 | **U1** | C2913202 | ESP32-S3-WROOM-1 | 0° | — | CORRECT |
-| **U2** | C181692 | IP5306 ESOP-8 | 0° | — | CORRECT |
+| **U2** | C181692 | IP5306 ESOP-8 | **270°** | — | CORRECTED 2026-07-26 — was 0°, which put 0 of 8 leads on copper. **Confirmed on protos #1 and #2**: chip vertical, pin 1 top-left from the back with USB-C on the lower edge = pad 1 (VIN/VBUS) |
 | **U3** | C6186 | AMS1117-3.3 SOT-223 | 0° | — | CORRECT |
 | **U4** | C7519 | USBLC6-2SC6 SOT-23-6 | 90° | — | CORRECT (datasheet not on disk — uses ST USBLC6-2SC6 industry convention) |
 | **U5** | C5122557 | PAM8403 SOP-16 | 180° | 180° | CORRECT w/ override |
@@ -129,6 +129,41 @@ package as C2 but non-polarized — no polarity audit needed).
 - **CPL rotation**: 0° + **180° override** → stripe (anode +) lands on +3V3 pad.
 - **Verdict**: CORRECT with 180° override.
 - **Override location**: `_JLCPCB_ROT_OVERRIDES["C2"] = 180`.
+
+### CORRECTION 2026-07-26 — the D1/Q1 derivation below rests on a retired argument
+
+**Read this before the D1 and Q1 sections.** They are kept for the record;
+their conclusion is superseded. D1 is now **90°** and Q1 is now **270°**.
+
+The chain below is: "Q1 is empirically validated because boards R4–R8 power
+up through it → D1 has identical topology → D1 must carry Q1's angle." The
+first link is broken.
+
+**U2 shipped at `cpl=0`, an angle at which 0 of its 8 leads touch copper,
+and those same boards charge and boost through it anyway.** Prototypes #1
+and #2 show the IP5306 sitting *vertical* — the orientation the copper
+demands, not the one the CPL asked for. JLCPCB corrected it at assembly. So
+"the boards work" says what the assembler did, not what our file said, and
+it cannot validate a CPL angle. That argument is now retired repo-wide.
+
+Re-derived instead by the route that is convention-free — place the physical
+part at each candidate angle, see which board pad each pin lands on, read
+that pad's net — anchored on U2, whose 270° is confirmed by eye:
+
+| ref | old | seats? | new | seats? | nets at the new angle |
+|---|---|---|---|---|---|
+| D1 | 270° | no, 3.120 mm on bare mask | **90°** | yes, 0.187 mm | anodes → BTN_START / BTN_SELECT, common cathode → MENU_K |
+| Q1 | 90° | no, 2.933 mm on bare mask | **270°** | yes, 0.000 mm | G/S/D → RPP_GATE / BAT_IN / BAT+ |
+
+Both wanted the same family constant, so the fix was one value in
+`_JLCPCB_ROT_CORRECTIONS` (`^SOT-23`, −90 → +90), not two per-part deltas.
+Unlike U2 there is no solderable-but-wrong option here: a 180° error on a
+SOT-23-3 puts the single leg where the pair is, so it simply does not
+assemble.
+
+**The "identical topology ⇒ identical angle" reasoning below is still
+sound** — D1 and Q1 do move together. It was the shared anchor that was
+wrong, and it moved both of them by 180°.
 
 ### D1 — BAT54C SOT-23 dual Schottky (C37704)
 - **Datasheet**: `hardware/datasheets/D1_BAT54C-SOT23_C37704.pdf` — Nexperia
