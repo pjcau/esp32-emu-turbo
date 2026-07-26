@@ -392,21 +392,30 @@ and is six releases stale; the tag is the truth.
 
 ## C — Cleanups with a known fix and a known reason they are still open
 
-- **`make render-pcb` leaves the tree in a state that fails `verify-all`.**
-  It depends on `generate-pcb`, which rewrites the `.kicad_pcb` and drops
-  every `filled_polygon`, and nothing re-fills them afterwards. So a render
-  — a read-only-looking, documentation-only action — silently turns the
-  zone-fill gate red and, if the render runs concurrently with a commit,
-  the pre-commit DFM hook blocks the commit for a reason that has nothing
-  to do with what is being committed. **Both happened during Round 26.**
-  Same trap applies to any target that depends on `generate-pcb` without
-  the zone-fill step: check `render-all` too.
-  **Fix:** either make the zone fill part of `generate-pcb` itself, or have
-  the render targets depend on a filled board (as `export-gerbers-fast`
-  effectively does) instead of on the raw generator. Until then, after any
-  render: re-run `make export-gerbers-fast`, or `git checkout --
-  hardware/kicad/esp32-emu-turbo.kicad_pcb website/static/net-explorer-data.json`
-  when the render output is unchanged.
+- ~~**`make render-pcb` leaves the tree in a state that fails
+  `verify-all`**~~ — FIXED. There is now a `pcb-filled` target
+  (`generate-pcb` → `scripts/fill-zones.sh` → Net Explorer refresh) and both
+  `render-pcb` and `export-gerbers-fast` depend on it.
+
+  Worth keeping the shape of it, because it bit three different ways from
+  one cause. `generate_pcb` writes the board with **no** `filled_polygon` —
+  the fill needs the pcbnew Python API, which only exists in the Docker
+  image — so every consumer had to remember to fill, and the render path did
+  not. That meant: the zone-fill gate went red after a documentation-only
+  action; a render running concurrently with a commit made the pre-commit
+  DFM hook block that commit citing zone fills, which had nothing to do with
+  the change; and, least visible and worst, **renders drawn from an unfilled
+  board show a board with no copper pours**.
+
+  Fixing it exposed the same ordering bug one level further in:
+  `generate-pcb` refreshed the Net Explorer data *before* the fill, so the
+  shipped JSON described an unfilled board — which is also why this session
+  kept having to run `make net-explorer` by hand after every gerber export.
+  `pcb-filled` now refreshes it after.
+
+  Two guards, so this cannot come back silently: `fill-zones.sh` fails if
+  the fill produces zero polygons, and `verify_net_explorer_fresh` already
+  catches stale JSON (it is what caught the ordering bug).
 
 - ~~**Phantom nets `LCD_BL` and `LCD_RD`**~~ — DONE in `35d6454`. They were
   declared in `primitives.NET_LIST` with zero pads and were the only two
