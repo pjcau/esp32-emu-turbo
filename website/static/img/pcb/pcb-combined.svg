@@ -48,7 +48,8 @@
 <text x="340.0" y="157.0" text-anchor="middle" font-family="monospace" font-size="8" fill="#334" font-weight="bold">ILI9488 3.95"</text>
 <text x="340.0" y="167.0" text-anchor="middle" font-family="monospace" font-size="6" fill="#334">320 x 480</text>
 <rect x="514.8" y="147.0" width="8" height="30" rx="1" fill="#8b6914" stroke="#a0832a" stroke-width="0.5" opacity="0.7"/>
-<line x1="349.6" y1="264.0" x2="464.0" y2="264.0" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
+<line x1="349.6" y1="264.0" x2="383.8" y2="264.0" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
+<line x1="383.8" y1="264.0" x2="464.0" y2="264.0" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
 <line x1="464.0" y1="264.0" x2="464.0" y2="180.38" stroke="#ff4444" stroke-width="3.6480000000000006" stroke-linecap="round" opacity="0.7"/>
 <line x1="494.0" y1="224.8" x2="486.4" y2="224.8" stroke="#4488ff" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
 <line x1="486.4" y1="224.8" x2="486.4" y2="267.4" stroke="#4488ff" stroke-width="0.8" stroke-linecap="round" opacity="0.7"/>
@@ -991,9 +992,11 @@
 <line x1="191.8" y1="273.6" x2="197.8" y2="273.6" stroke="#ffaa44" stroke-width="0.96" stroke-linecap="round" opacity="0.7"/>
 <line x1="171.39999999999998" y1="273.6" x2="165.8" y2="273.6" stroke="#666666" stroke-width="0.96" stroke-linecap="round" opacity="0.7"/>
 <line x1="336.0" y1="270.0" x2="336.0" y2="256.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
-<line x1="226.0" y1="200.0" x2="226.0" y2="196.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
+<line x1="226.0" y1="200.0" x2="226.0" y2="190.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
 <line x1="220.0" y1="200.0" x2="220.0" y2="190.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
-<line x1="222.8" y1="198.0" x2="222.8" y2="196.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
+<line x1="222.8" y1="198.0" x2="222.8" y2="190.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
+<line x1="226.0" y1="190.0" x2="222.8" y2="190.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
+<line x1="222.8" y1="190.0" x2="220.0" y2="190.0" stroke="#666666" stroke-width="2.304" stroke-linecap="round" opacity="0.7"/>
 <line x1="68.96000000000004" y1="270.296" x2="64.96000000000004" y2="270.296" stroke="#666666" stroke-width="1.536" stroke-linecap="round" opacity="0.7"/>
 <line x1="131.03999999999996" y1="309.104" x2="135.03999999999996" y2="309.104" stroke="#666666" stroke-width="1.536" stroke-linecap="round" opacity="0.7"/>
 <line x1="135.03999999999996" y1="309.104" x2="141.03999999999996" y2="309.104" stroke="#666666" stroke-width="1.536" stroke-linecap="round" opacity="0.7"/>

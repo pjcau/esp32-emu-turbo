@@ -20,18 +20,21 @@ entry goes green on its own rather than needing this file edited to stay
 honest. If an entry's gate is green and the text still says open, **the
 gate wins** — delete the entry.
 
-No gate is red right now. That is not the same as "nothing is open": the
-entries that remain are unverified claims about an already-fabricated
-board (H6), and closed records kept because each documents a way a gate
-can be fooled (H1–H5). A green suite means no check currently disagrees
-with the design — it does not mean the design was checked against the
-physical board.
+No gate is red right now, and that is not the same as "nothing is open".
+Two of the fourteen parts the rotation law judges now pass as declared
+`EXCEPTION` rather than `OK`, because **the law is wrong for one of its
+cells** (H4). The remaining entries are unverified claims about an
+already-fabricated board (H6), plus closed records kept because each
+documents a way a gate can be fooled (H1–H5). A green suite means no check
+currently disagrees with the design; it does not mean the design was
+checked against the physical board.
 
 Reading order is by consequence, not by section. **H4 was the entry that
-could put a wrong part on the desk, and it is now closed**: both of its
-rows were generator bugs and were fixed at the source in `35d6454`, with
-`_LAW_EXCEPTIONS` still an empty dict. H6 is now the only entry that
-depends on evidence no gate can produce.
+could put a wrong part on the desk, and it is now resolved** — but read it
+anyway: it is the clearest worked example in this repo of a gate being
+confidently, narrowly wrong, and of the answer that was 180° from both the
+gate's verdict and the shipped value being the destructive one. H6 remains
+the only entry that depends on evidence no gate can produce.
 
 ---
 
@@ -145,83 +148,84 @@ because the width is derived rather than typed, any change to the
 footprint or the clearance constants moves the coordinates, stops the
 rows matching, and turns the gate red again.
 
-### H4. The CPL rotation law disagrees with two placements
+### H4. The CPL rotation law was wrong for one of its own cells — RESOLVED
 
-**Gate:** `verify_cpl_rotation_law.py` — FAIL
-**Result:** OK 12 · FAIL 2 · UNEVALUABLE 0 · NOREF 0 · total 14
+**Gate:** `verify_cpl_rotation_law.py` — PASS
+**Result:** OK 12 · **EXCEPTION 2** · FAIL 0 · UNEVALUABLE 0 · NOREF 0 · total 14
+**Closed:** `8b24728`, 2026-07-26.
 
-| ref | LCSC | package | layer | law wants | CPL emits | gap | state |
-|---|---|---|---|---|---|---|---|
-| U2 | C181692 | ESOP-8 | bottom | 90° | 0° | 90° | **open** |
-| J4 | C2856812 | FPC-40P | bottom | 90° | 270° | 180° | **open** |
-| U4 | C7519 | SOT-23-6 | bottom | 0° | 0° | — | closed, `1765982` |
-| J1 | C2765186 | USB-C | bottom | 0° | 0° | — | now evaluable, OK |
+| ref | LCSC | package | layer | was emitting | now emits | verdict |
+|---|---|---|---|---|---|---|
+| U2 | C181692 | ESOP-8 | bottom | 0° | **270°** | real bug, fixed |
+| J4 | C2856812 | FPC-40P | bottom | 270° | **270°** | was already correct |
+| U4 | C7519 | SOT-23-6 | bottom | 0° | 0° | closed `1765982` |
+| J1 | C2765186 | USB-C | bottom | 0° | 0° | evaluable, OK |
 
-**U4 is closed and it was the credible bug, as this entry predicted.** The
-fix was splitting the regex, not a per-part delta: `^SOT-23` applied −90°
-to SOT-23-3 and SOT-23-6 alike, but EasyEDA draws the two families 90°
-apart, and the two parts differ by nothing else —
+**The law derived 90° for both parts and 90° was wrong for both.** U2 and
+J4 are the only two members of the cell `(row_board=90, row_ee=0)`; every
+other part on the board sits at `row_board + row_ee ∈ {0, 180}`, where the
+law's bottom form coincides with the geometry. That is why twelve parts
+agreed with it and no passing sibling ever exposed the cell. Both now carry
+a `_LAW_EXCEPTIONS` entry pinning the residual at 0 — **one law defect
+recorded twice, not two part quirks.**
 
-```
-Q1  SOT-23-3  C10487  row_board=180  row_ee=270  cpl=90   OK
-U4  SOT-23-6  C7519   row_board=180  row_ee=  0  cpl=90   FAIL
-```
+**U2 was a real bug, and the interesting part is that it had three wrong
+answers.** `"ESOP-8"` cannot match the `^SOP-` rule in
+`_JLCPCB_ROT_CORRECTIONS` — the anchor is blocked by the leading E — so it
+fell through to `_JLCPCB_ROT_DEFAULT` and shipped at 0°. The same
+one-letter miss that put U4's SOT-23-6 on the SOT-23-3 rule.
 
-U4's cell `(180, 0, bottom)` also holds J1 and SW_PWR, both OK at cpl=0,
-and J1's orientation is confirmed on fabricated hardware. **Consequence:
-the assembled boards carry a USBLC6 placed 90° out.** It survived because
-it is the one part whose misplacement is invisible — shunt ESD diodes, so
-USB enumerates without them.
+| cpl | what actually happens |
+|---|---|
+| 0° (shipped) | lead row runs along Y, pads along X. **0 of 8 leads touch copper**, worst offset 5.012 mm. Held only by EP paste. |
+| 90° (**the law's answer**) | **solders, and that is what makes it the worst option.** Pin *i* lands on pad *i+4*: BAT+, an unfused 4.2 V cell, onto LED1 — an open-drain indicator sink — while BAT and VOUT reach nothing. |
+| 180° | as 0°: does not seat. |
+| **270°** | every pin on its own pad, 0.090 mm uniform, every net right: VIN→VBUS, KEY→IP5306_KEY, BAT→BAT+, SW→LX, VOUT→+5V, EP→GND, LED1‑3 open. |
 
-**What is left, and why it is not guessable.** Both remaining parts sit in
-the law's single cell with no OK sibling, `(row_board=90, row_ee=0)`. That
-cell being untested is *not* an escape route: U2 is off by 90° and J4 by
-180°, so no cell-level correction explains both, and they have to be
-judged individually. On the generator side each has a named, precedented
-bug pattern — U2's `ESOP-8` misses the `^SOP-` regex by one letter, the
-same shape as U4; J4 is the only live entry in `_JLCPCB_ROT_DELTAS`,
-justified by a note with no derivation, which is exactly how D1 carried a
-wrong 270° for months. Neither has a pattern on the law's side.
+**J4's 270° was correct all along**, and it was briefly deleted during this
+work on the theory that its justification was only an eyeballed 3D overlay
+(`404f31a`). Deleting it emits 90°, which is wrong. Two checks that need no
+angle convention at all:
 
-That is a strong case and it is still not proof, so neither has been
-flipped: U2 wrong means a charger that cannot solder, J4 wrong means a
-dead display. **Deciding test: the visual check below.**
+1. **Cable side.** The contacts must face the FPC slot. `board.py` puts
+   `FPC_SLOT` at x 125.5–128.5 with J4's body at 133.5–136.5, so the slot
+   is on J4's −X side, and on the copper the signal pads sit at lower x
+   than the mount tabs (`verify_dfm_v2` asserts exactly this). At 270° the
+   contacts land at x=133.712 and the tabs at 136.288 — contacts toward the
+   slot. At 90° the two swap and the ribbon would enter from off the right
+   board edge.
+2. **Seating.** Loading the LCSC reference into pcbnew, flipping to B.Cu
+   and rotating — so KiCad does the Y-down rotation and the bottom mirror,
+   not a hand-rolled matrix — the matching orientation has a worst residual
+   of **0.002 mm across all 42 pads**; the 180°-away alternative contacts
+   **0 of 42**.
 
-**Highest-stakes item in this file.** Each row is a claim about the
-physical orientation of a part on a board that has been fabricated.
+**What the argument actually turned on.** Not the law's algebra, which is
+sound in form: `cpl + row_board + row_ee` is invariant under the placement
+rotation, while the obvious-looking alternative moves 180° every time you
+rotate a part in the layout, so it cannot be a law. The disputed step was
+the KiCad-orientation → CPL convention. `CPL_bottom = (180 − O)` is what
+both `kicad-jlcpcb-tools` (`fabrication.py`) and KiBot
+(`fil_rot_footprint`, `mirror_bottom`) implement, and it predicts J4's 270°
+and U5's independently confirmed 180°. Nothing implements the `CPL = −O`
+that 90° would require.
 
-- **U2** — the counter-evidence is that boards R4–R8 charge over USB-C and
-  boost to 5 V through the IP5306, and an ESOP-8 rotated 90° could not seat
-  on its pads at all. Weigh that against the generator-side pattern above,
-  and note the counter-evidence has a hole: it assumes the boards were
-  assembled from the CPL the generator emits today.
-- **J4** — this is a *different axis* from the documented
-  `connector_pad = 41 − panel_pin` netlist reversal — do not conflate them
-  (see "Do not fix" below).
+**Do not conflate any of this with `connector_pad = 41 − panel_pin`.** That
+netlist mapping is correct, untouched, and a different axis — see "Do not
+fix" below.
 
-`_LAW_EXCEPTIONS` in the gate is an **empty dict**, so what is known about
-these parts — and it is written down, in `jlcpcb_export.py` comments —
-cannot reach the gate.
+**Three more parts are flagged by the same machinery and are NOT verified
+to this depth:** `D1` should be 90° (ships 270°), `Q1` should be 270°
+(ships 90°), and both are SOT-23-3 where 180° puts pin 3 where pins 1–2
+are. Weighed against that, `POLARITY_AUDIT.md` records Q1 as empirically
+validated because boards R4–R8 power up through it. Those two claims cannot
+both be true. **Open question, deliberately not acted on here.**
 
-**Deciding test, and it is two questions on one board:**
-
-1. Is the IP5306 (U2) sitting square on its footprint, or across it? A 90°
-   error on an ESOP-8 is not subtle and does not solder.
-2. Does the display light and show a correct image with the FPC inserted as
-   designed? That answers J4's 180°.
-
-Either fix the footprint afterwards, or record a `_LAW_EXCEPTIONS` entry
-that states the physical claim and names the residual, so drift re-fails.
-The JLCPCB 3D preview for `C181692` and `C2856812` is the same evidence if
-opening the prototype is not convenient.
-
-**This also settles H6.** The LED2 override question turns on the same
-reasoning pattern — "the board works, therefore the hand-written override
-is right" — so one look validates or destroys the pattern, not just one
-part.
-
-**A design-side fix here is not done until the CPL is re-uploaded** and
-the uploaded file matches `release_jlcpcb/cpl.csv` at HEAD.
+**A design-side fix is not done until the CPL is re-uploaded** and the
+uploaded file matches `release_jlcpcb/cpl.csv` at HEAD. That directory was
+itself found stale during this work: at `74c196e` the generator emitted
+U4=0° while `release_jlcpcb/cpl.csv` still carried the pre-fix 90°, so the
+fix closed in `1765982` had never reached the files anyone orders from.
 
 ### H5. SW_RST and SW_BOOT are floating in the schematic
 
@@ -349,13 +353,20 @@ and is six releases stale; the tag is the truth.
 
 ## C — Cleanups with a known fix and a known reason they are still open
 
-- **Phantom nets `LCD_BL` and `LCD_RD`** are declared in
-  `primitives.NET_LIST` with zero pads (WARN in `verify_netlist_diff` T5).
-  Removing them is two lines, but a PCB regeneration drops every
-  `filled_polygon` — measured at 7695 diff lines — so it needs a zone
-  re-fill and a `release_jlcpcb/` sync. Attempted and deliberately
-  reverted: disproportionate blast radius. **Bundle with H1 or H3**, which
-  regenerate the board anyway. IDs 18/19 can be left as gaps.
+- ~~**Phantom nets `LCD_BL` and `LCD_RD`**~~ — DONE in `35d6454`. They were
+  declared in `primitives.NET_LIST` with zero pads and were the only two
+  `drc_check` warnings; ids 18/19 are now retired gaps, and DRC reports
+  **0 errors, 0 warnings**. The prune really was two lines, and the reason
+  it had been deferred was right: it forced a regeneration, a zone re-fill
+  and a `release_jlcpcb/` sync. What the estimate missed is that it also
+  moved five other files, because the net names were *claims* made in more
+  than one place — the display sheet emitted the global labels,
+  `datasheet_specs.py` accepted them via `_any_of`, `net_classifier.py`
+  listed them as `lcd_ctrl`, and `verify_dfm_v2` swept ids `range(6, 20)`.
+  Three gates went red in sequence during the change (`verify_netlist_diff`
+  T1, `verify_schematic_pcb_sync`, `verify_schematic_overlaps`) and each
+  one was pointing at a real leftover. Both FPC pins remain tied to +3V3 on
+  the copper, which is what they always were.
 - **`collision.py` is default-open on pad nets.** `_KNOWN_PAD_NETS`
   (`collision.py:215`) has 4 hardcoded entries; every other pad is
   registered with `net=0`, and net=0 pads are *skipped* in collision
@@ -371,7 +382,10 @@ and is six releases stale; the tag is the truth.
   papering over a real schematic/BOM inconsistency. Fix the schematic
   symbol value instead.
 - **`verify_easyeda_footprint._GEOMETRIC_MISMATCH_ALLOWLIST`** still holds
-  U2 (90°) and LED2 (180°). Both are tied to H4/H6 — resolve together.
+  U2 (90°) and LED2 (180°). U2's entry is now *explained* rather than
+  merely tolerated — the 90° is the real ESOP-8 frame delta that H4 traced,
+  and the CPL that follows from it is 270° — but the allowlist itself is
+  still a tolerance, not a proof. LED2 remains tied to H6.
 - **`verify_netlist_diff.EXCLUDED_REFS` contains `R14`**, documented as
   DNP but **never independently verified**. Confirm R14 is genuinely
   do-not-populate before trusting the exclusion.
@@ -388,7 +402,14 @@ it stands. Changing them breaks a working board.
 
 - **J4 FPC `41 − N` pin reversal** — panel-side vs connector-side pinout.
   Both files are correct: `connector_pad = 41 − panel_pin`. Distinct from
-  H4's rotation question about the same connector.
+  H4's rotation question about the same connector, and conflating the two
+  is not hypothetical: `2d35646` removed J4's rotation delta reasoning that
+  it "would reverse all 40 FPC pins", which is the netlist axis, not the
+  placement axis.
+- **J4's CPL rotation of 270°** — see H4. It has now been deleted twice on
+  the grounds that its justification looked thin, and both times 90° was
+  the wrong answer. The contacts must face the FPC slot on J4's −X side;
+  90° swaps contacts and mount tabs and contacts 0 of 42 pads.
 - **USB Zdiff of 130 Ω** — a non-issue. Do not move parts or traces for it.
 - **`POWER_HIGH_ALLOWLIST` BAT+ entries** — coordinate-pinned to 0.02 mm
   with an IPC-2221 argument; they cannot drift silently. Keep.

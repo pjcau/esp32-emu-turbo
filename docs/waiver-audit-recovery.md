@@ -23,13 +23,18 @@ python3 scripts/verify_dfm_v2.py  # 122/122
 python3 scripts/drc_native.py --run --no-zone-fill   # 0 violations
 ```
 
-The three expected failures are `verify_cpl_rotation_law`,
-`verify_net_class_widths`, `verify_netlist_diff`. They are **real open
-problems, not waivers** — see Part 2. Everything else is green.
+The three failures this audit expected were `verify_cpl_rotation_law`,
+`verify_net_class_widths` and `verify_netlist_diff`. They were **real open
+problems, not waivers** — see Part 2 — and all three are now closed.
+`verify-all` is 68/68 as of `8b24728`.
 
-`hardware/` was not modified by this audit. The regenerated CPL is
-byte-identical to `release_jlcpcb/cpl.csv`, so **nothing needs re-uploading
-to JLCPCB** as a result of Part 1.
+`hardware/` was not modified by *this audit*, and at the time the
+regenerated CPL was byte-identical to `release_jlcpcb/cpl.csv`. **That is
+no longer true and the statement should not be reused:** closing O1 changed
+U2 from 0° to 270°, and `release_jlcpcb/` was separately found to be
+carrying a stale U4 (90°, from before `1765982`). The CPL **does** need
+re-uploading to JLCPCB — verify the uploaded file matches
+`release_jlcpcb/cpl.csv` at HEAD.
 
 ---
 
@@ -176,36 +181,46 @@ delta, and asserts the table actually changed. 5/5.
 
 ## Part 2 — OPEN
 
-### O1. CPL rotation law: U2, U4, J4 disagree — J1 unevaluable
+### O1. CPL rotation law: U2, U4, J4 disagree — CLOSED (`8b24728`)
 
-`make verify-cpl-law --verbose`. **Highest stakes item here**: each is a
-claim about the physical orientation of a part on a board that has been
-fabricated.
+`make verify-cpl-law --verbose`. This was the highest-stakes item in the
+audit, and the outcome is recorded in full as H4 of `docs/known-issues.md`.
+Summary of how each row landed:
 
-| ref | LCSC | law wants | emitted | gap |
+| ref | LCSC | law wanted | now emits | outcome |
 |---|---|---|---|---|
-| U2 | C181692 ESOP-8 | 90° | 0° | 90° |
-| U4 | C7519 SOT-23-6 | 0° | 90° | 90° |
-| J4 | C2856812 FPC-40P | 90° | 270° | 180° |
-| J1 | C2765186 USB-C | — | 0° | UNEVALUABLE |
+| U2 | C181692 ESOP-8 | 90° | **270°** | real bug; the law's 90° was also wrong |
+| U4 | C7519 SOT-23-6 | 0° | 0° | real bug, regex split, `1765982` |
+| J4 | C2856812 FPC-40P | 90° | **270°** | was already correct; the law was wrong |
+| J1 | C2765186 USB-C | — | 0° | now evaluable, OK |
 
-- **U2** — evidence runs *against* the law. Boards R4–R8 charge over USB-C
-  and boost to 5 V through the IP5306, and an ESOP-8 rotated 90° could not
-  seat on its pads at all. Most likely a law false positive. Next step:
-  record `_LAW_EXCEPTIONS["U2"] = (90.0, <reason>)` stating the physical
-  claim — the entry must name the residual so drift re-fails.
-- **U4** — the credible bug. `^SOT-23` in `_JLCPCB_ROT_CORRECTIONS` applies
-  −90° to both SOT-23-3 and SOT-23-6, but EasyEDA draws the two families in
-  frames 90° apart (`jlcpcb_export.py` says so in its own comment: SOT-23-3
-  has pads 1/2 in a column, SOT-23-6 has 1/2/3 in a row). Q1 (SOT-23-3)
-  satisfies the law; U4 does not. **If the law is right the fix is to split
-  the regex, NOT to add a per-part delta.** Deciding test: JLCPCB 3D preview
-  for C7519.
-- **J4** — 180° delta with no geometric derivation, only "JLCPCB 3D: 90° puts
-  pins on wrong side". Same shape as the D1 bug that was 180° out.
-  Deciding test: JLCPCB 3D preview for C2856812, plus whether the display
-  works on proto #1. Note this is a *different axis* from the documented
+- **U4 was the credible bug and the prediction held.** Splitting the regex
+  was the fix, not a per-part delta.
+- **U2 was a bug too, but not the one predicted.** The guess above — "most
+  likely a law false positive, record `_LAW_EXCEPTIONS["U2"] = (90.0, …)`"
+  — was half right: an exception *was* the right mechanism, but the
+  reasoning behind it was not. The evidence cited against the law ("boards
+  R4–R8 charge, so an ESOP-8 at 90° could not seat") argued for keeping 0°,
+  and 0° does not seat either: 0 of 8 leads touch copper. The correct angle
+  is 270°, which no one had proposed. **The lesson is narrow and worth
+  keeping: "the emitted value must be right because the board works" is not
+  evidence when nobody has confirmed which CPL those boards were built
+  from.**
+- **J4 needed no change and was nearly broken by this audit.** The 180°
+  delta really did lack a derivation, and the inference "no derivation,
+  therefore wrong" was itself wrong. It has now been deleted twice; both
+  times the replacement 90° would have swapped contacts with mount tabs and
+  contacted 0 of 42 pads. Still a *different axis* from the
   `connector_pad = 41 − panel_pin` netlist reversal — do not conflate them.
+- **Root cause, and it was in the law, not the parts.** `row_board +
+  row_ee` is 0 or 180 for every part on this board except U2 and J4, which
+  are both 90 — the one cell where the law's bottom form parts company with
+  the geometry, and the one cell with no passing sibling to expose it. Both
+  now carry a `_LAW_EXCEPTIONS` entry pinning the residual at 0.
+- **Still open, flagged by the same machinery, not verified to this
+  depth:** `D1` should be 90° (ships 270°) and `Q1` should be 270° (ships
+  90°). `POLARITY_AUDIT.md` records Q1 as empirically validated on boards
+  R4–R8. Both claims cannot be true.
 - **J1** — `_row_bearing()` returns `None` because the USB-C footprint has
   duplicate/unnumbered shield pads. Needs a pad-pair selection that skips
   shield tabs, otherwise this connector is permanently outside the law.
@@ -261,14 +276,22 @@ label vs global name. `T2_ALLOW` covers one direction, `T1_ALLOW` does not.
 Fix: emit a global label named `IP5306_KEY` on that wire in the Power Supply
 sheet, then delete the `T2_ALLOW` entry.
 
-### O4. Phantom net declarations
+### O4. Phantom net declarations — CLOSED (`35d6454`)
 
-`LCD_BL` and `LCD_RD` remain declared in `primitives.NET_LIST` with zero
-pads (currently a WARN in T5). Removing them is the real cleanup, but a PCB
-regeneration drops every `filled_polygon` — measured at 7695 diff lines — so
-it needs a zone re-fill and a `release_jlcpcb/` sync. Attempted during this
-audit and deliberately reverted: disproportionate blast radius for two unused
-lines. Bundle it with the next change that already regenerates the board.
+`LCD_BL` and `LCD_RD` were declared in `primitives.NET_LIST` with zero pads
+and were the only two `drc_check` warnings. Ids 18/19 are now retired gaps
+and DRC reports 0 errors, 0 warnings.
+
+The deferral reasoning was sound as far as it went — the prune does force a
+regeneration, a zone re-fill and a `release_jlcpcb/` sync. What it missed is
+that the two names were *claims made in five other places*: the display
+sheet emitted them as global labels, `datasheet_specs.py` accepted them via
+`_any_of`, `net_classifier.py` listed them under `lcd_ctrl`, and
+`verify_dfm_v2` swept net ids `range(6, 20)`. Removing only the two lines
+turned three gates red in sequence — `verify_netlist_diff` T1,
+`verify_schematic_pcb_sync`, `verify_schematic_overlaps` — and each was
+pointing at a genuine leftover rather than at collateral damage. "Two unused
+lines" was an undercount of the work, not of the risk.
 
 IDs 18/19 can be left as gaps; `NET_ID` and `_NET_NAME` are name-keyed dicts
 and the IDs are explicit in the tuples, so nothing downstream renumbers.
