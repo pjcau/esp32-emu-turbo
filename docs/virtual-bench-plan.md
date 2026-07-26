@@ -52,27 +52,42 @@ generator HEAD (so the revision being designed is the one under test). A
 behaviour that differs between the two is the headline output — "this changed
 since the board you are holding".
 
-## Phase -1 — prerequisite: close `verify_netlist_diff`
+## Phase -1 — prerequisite: close `verify_netlist_diff` — **DONE**
 
-The bench may not be built on a netlist that is in dispute. `verify_netlist_diff`
-currently reports 7 pin-level disagreements, and a first pass over the generator
-sources says they are **three distinct problems, not one**:
+The bench may not be built on a netlist that is in dispute. When this plan was
+written `verify_netlist_diff` reported 7 pin-level disagreements, which were
+**three distinct problems, not one**. Items (a)–(c) below were closed by
+`397c854`, item (d) by `74c196e`. `verify_netlist_diff` is now 4/4 PASS and the
+bench has an undisputed netlist to stand on.
+
+Item (d) was closed differently from what an earlier draft of this file said,
+and the difference matters for anyone reading this plan later. It was NOT fixed
+by moving copper: see "(d)" below.
 
 **(a) `U1.3` — EN wired straight to +3V3 in the schematic. Real bug, schematic side.**
-`sheets/mcu.py:56-66` removed R3 from the BOM (correct: the ESP32-S3-WROOM-1
-integrates a 10 kΩ EN pull-up) but replaced it with a *plain wire* from EN to
-+3V3, which is not the same thing. On that drawing, `SW_RST` — wired from the
-same node to GND at `mcu.py:87-93` — shorts the 3.3 V rail every time it is
-pressed. The PCB does not do this: it keeps `EN` as its own net and relies on
-the on-module pull-up, which is correct. **Fix: delete the EN→+3V3 wire in the
-schematic and label the node `EN`.** That also retires the `EN` entry from
-`T2_ALLOW` in `verify_netlist_diff.py`.
+`sheets/mcu.py` dropped R3 from the BOM and replaced it with a *plain wire* from
+EN to +3V3, which is not the same thing. On that drawing, `SW_RST` — wired from
+the same node to GND — shorts the 3.3 V rail every time it is pressed. The PCB
+does not do this: it keeps `EN` as its own net. **Fixed: the EN→+3V3 wire is
+gone and the node carries a global `EN` label.**
 
-This is the Round 25 pattern again: a comment justifying the removal of a part
-(`"EN pull-up on-chip (R3 DNP)"`) shipped alongside a substitution that was never
-equivalent. Note the third belief in circulation — `simulate_circuit.py` still
-budgets `"EN pull-up (R3 10k)"` at 0.33 mA on +3V3, i.e. it thinks R3 is fitted.
-Three files, three stories about R3.
+An earlier draft of this section said the removal of R3 was "correct: the
+ESP32-S3-WROOM-1 integrates a 10 kΩ EN pull-up". **That is false**, and it is
+worth leaving the correction visible here rather than quietly deleting it,
+because this file is *about* that failure mode. The module datasheet says the
+opposite in its own words, page 28, under the peripheral reference schematic:
+an RC delay circuit **must** be added at the EN pin, R = 10 kΩ and C = 1 µF
+typical — and figure 7 draws R7 from VDD33 to EN with C8 from EN to GND. There
+is no on-module pull-up to rely on.
+
+So the Round 25 pattern here is worse than a comment justifying a removal: the
+justification was repeated, believed, and then used to justify the *next*
+removal. Four files, four stories about R3 — `mcu.py` said the module has the
+pull-up, `hardware-audit-bugs.md` said the RC network was "intact",
+`simulate_circuit.py` budgets `"EN pull-up (R3 10k)"` at 0.33 mA as if R3 were
+fitted, and the copper has none of them. The bench must treat a datasheet
+citation as the only admissible evidence for a model field, precisely because
+this is how convincingly the alternative propagates.
 
 **(b) `J3.1` and `Q1.2` — schematic drawing wired to GND instead of BAT_IN.**
 `sheets/power_supply.py:383` states the intent explicitly: *"Q1 Source (pin 2) →
@@ -88,8 +103,46 @@ polarity record in `hardware/datasheets/POLARITY_AUDIT.md` — the fitted
 prototype settles it — but it is a different class from (a) and (b) and must not
 be fixed by the same reflex.
 
-Done when `verify_netlist_diff` is green with `T2_ALLOW["EN"]` removed, and the
-R3 story is consistent across `mcu.py`, the BOM/CPL and `simulate_circuit.py`.
+**(d) `C3.1` — the EN reset cap was wired to the +3V3 rail. Real bug, board side.**
+The last surviving mismatch. C3 is the RC that holds EN low while +3V3 settles;
+the schematic has always drawn it from EN to GND, but the board placed it at
+(69.55, 42.0) with pad 1 on +3V3, 25 mm from any EN copper — so the reset delay
+did not physically exist. `verify_polarity` did not catch it because its
+expectation table said `C3.1 = +3V3`: the gate had been written to describe the
+copper, so it agreed with the defect, and T4 was the only check that disagreed.
+
+Fixed on the SCHEMATIC side, not by moving copper. C3 was rerouted onto EN in
+an earlier attempt (`backup/discarded-c3-pcb-fix`); that attempt was discarded
+because v1 is not being re-fabricated, so changing the board's copper buys
+nothing and the release package would have had to be re-cut to match.
+
+What the board actually has is two decoupling caps and no RC on EN at all —
+R3 is DNP as well. The module datasheet requires that RC (page 28), so the
+absence is recorded as an as-built limitation with a fix specified for the
+next respin, and the schematic now draws C3 where the copper puts it: the
+third cap in the decoupling row, pad 1 on +3V3. T4 is 4/4 PASS because the
+two files finally agree, not because the circuit changed.
+
+`verify_polarity` did not catch any of this: its expectation table said
+`C3.1 = +3V3`, i.e. the gate had been written to describe the copper, so it
+agreed with whatever the copper said. That is the lesson to carry into the
+bench — a gate that restates the artefact it checks cannot disagree with it.
+
+Two more things worth keeping in mind for the bench, from the discarded
+attempt, because both are mistakes the bench itself could repeat:
+
+- A stub landing mid-span on another trace is a **T, and a T is not a node**.
+  Both `verify_dangling_copper` and the union-find in `verify_net_connectivity`
+  judge by shared endpoints, so the EN vertical had to be split at the tap.
+- Occupancy must be measured against segment **bodies**, not endpoints. The
+  first via site was chosen from a search that filtered tracks by endpoint, and
+  it landed exactly on an LCD_D3 trace passing through on F.Cu — 0.0 µm, a
+  short through the barrel. `verify_copper_clearance` caught it.
+
+Still open, and not blocking: the R3 story is inconsistent across the repo.
+`mcu.py` says R3 is DNP (correct — the module has the pull-up), the BOM/CPL
+agree, but `simulate_circuit.py` still budgets `"EN pull-up (R3 10k)"` at
+0.33 mA on +3V3. Phase 1 must not inherit that number.
 
 ## Phase 0 — Foundation and honesty baseline
 

@@ -6,7 +6,7 @@ here is a plan, a nice-to-have, or a closed finding. Closed work lives in
 `docs/waiver-audit-recovery.md` (Part 1) and `hardware-audit-bugs.md`.
 
 **This file is a snapshot, the gates are the truth.** Measured on
-`2a7a469`, 2026-07-26, macOS + local `kicad-cli`. Before acting on any
+`74c196e`, 2026-07-26, macOS + local `kicad-cli`. Before acting on any
 entry, re-derive the current state:
 
 ```bash
@@ -14,8 +14,8 @@ make open-issues     # the 6 gates that guard known-open work (~10 s)
 make verify-all      # the exhaustive suite, 66 checks (~20 s)
 ```
 
-At the snapshot commit: `verify-all` is **61/66**, `open-issues` is
-**5 of 6 gates red**. Every entry below names the gate that proves it, so
+At the snapshot commit: `verify-all` is **67/68**, `open-issues` is
+**1 of 6 gates red**. Every entry below names the gate that proves it, so
 a fixed entry goes green on its own rather than needing this file edited
 to stay honest. If an entry's gate is green and the text still says open,
 **the gate wins** — delete the entry.
@@ -25,18 +25,21 @@ for their own reasons — a stale machine-global ERC report, and a rotation
 law whose verdict moved as an untracked cache warmed — were fixed in
 `2a7a469`, so red now means the board, never the tooling.
 
-Reading order is by consequence, not by section: **H2 and H4 are the two
-that can put a wrong board or a wrong part on the desk.**
+Reading order is by consequence, not by section: **H4 is the only entry
+left that can put a wrong part on the desk**, and it is the only one whose
+gate is still red. H1, H2 and H3 are kept as closed records because each
+one documents a way a gate can be fooled, not because they are open.
 
 ---
 
 ## H — Hardware: the design or the board is wrong
 
-### H1. Three copper stubs end in the air
+### H1. Three copper stubs end in the air — CLOSED
 
-**Gate:** `verify_dangling_copper.py` — FAIL
+**Gate:** `verify_dangling_copper.py` — PASS
 **Introduced:** pre-R24, first visible when the gate was written (no
-earlier gate could see this class).
+earlier gate could see this class). Closed by the routing changes in
+`397c854`.
 
 | net | layer | end point |
 |---|---|---|
@@ -74,7 +77,7 @@ problems and only one of them was a wiring error:
   A wrong entry there still fails T4, exactly as for J1/J4/U5/U6. **This
   does not answer H6** — the CPL override question is untouched.
 - **C3** — the schematic was describing a circuit the board does not
-  have; see the V2 section below.
+  have; see the RESPIN section below.
 
 Also added to the table while closing this: `SW_RST` and `SW_BOOT`, which
 had never been in it because their schematic pins were floating, so no
@@ -139,46 +142,80 @@ because the width is derived rather than typed, any change to the
 footprint or the clearance constants moves the coordinates, stops the
 rows matching, and turns the gate red again.
 
-### H4. The CPL rotation law disagrees with three placements
+### H4. The CPL rotation law disagrees with two placements
 
 **Gate:** `verify_cpl_rotation_law.py` — FAIL
-**Result:** OK 10 · FAIL 3 · UNEVALUABLE 1 · NOREF 0 · total 14
-(reproducible since `2a7a469` tracked the reference footprints; a missing
-reference now reports NOREF and exits 2 instead of counting as a violation)
+**Result:** OK 12 · FAIL 2 · UNEVALUABLE 0 · NOREF 0 · total 14
 
-| ref | LCSC | package | layer | law wants | CPL emits | gap |
-|---|---|---|---|---|---|---|
-| U2 | C181692 | ESOP-8 | bottom | 90° | 0° | 90° |
-| U4 | C7519 | SOT-23-6 | bottom | 0° | 90° | 90° |
-| J4 | C2856812 | FPC-40P | bottom | 90° | 270° | 180° |
-| J1 | C2765186 | USB-C | bottom | — | 0° | UNEVALUABLE |
+| ref | LCSC | package | layer | law wants | CPL emits | gap | state |
+|---|---|---|---|---|---|---|---|
+| U2 | C181692 | ESOP-8 | bottom | 90° | 0° | 90° | **open** |
+| J4 | C2856812 | FPC-40P | bottom | 90° | 270° | 180° | **open** |
+| U4 | C7519 | SOT-23-6 | bottom | 0° | 0° | — | closed, `1765982` |
+| J1 | C2765186 | USB-C | bottom | 0° | 0° | — | now evaluable, OK |
+
+**U4 is closed and it was the credible bug, as this entry predicted.** The
+fix was splitting the regex, not a per-part delta: `^SOT-23` applied −90°
+to SOT-23-3 and SOT-23-6 alike, but EasyEDA draws the two families 90°
+apart, and the two parts differ by nothing else —
+
+```
+Q1  SOT-23-3  C10487  row_board=180  row_ee=270  cpl=90   OK
+U4  SOT-23-6  C7519   row_board=180  row_ee=  0  cpl=90   FAIL
+```
+
+U4's cell `(180, 0, bottom)` also holds J1 and SW_PWR, both OK at cpl=0,
+and J1's orientation is confirmed on fabricated hardware. **Consequence:
+the assembled boards carry a USBLC6 placed 90° out.** It survived because
+it is the one part whose misplacement is invisible — shunt ESD diodes, so
+USB enumerates without them.
+
+**What is left, and why it is not guessable.** Both remaining parts sit in
+the law's single cell with no OK sibling, `(row_board=90, row_ee=0)`. That
+cell being untested is *not* an escape route: U2 is off by 90° and J4 by
+180°, so no cell-level correction explains both, and they have to be
+judged individually. On the generator side each has a named, precedented
+bug pattern — U2's `ESOP-8` misses the `^SOP-` regex by one letter, the
+same shape as U4; J4 is the only live entry in `_JLCPCB_ROT_DELTAS`,
+justified by a note with no derivation, which is exactly how D1 carried a
+wrong 270° for months. Neither has a pattern on the law's side.
+
+That is a strong case and it is still not proof, so neither has been
+flipped: U2 wrong means a charger that cannot solder, J4 wrong means a
+dead display. **Deciding test: the visual check below.**
 
 **Highest-stakes item in this file.** Each row is a claim about the
 physical orientation of a part on a board that has been fabricated.
 
-- **U2** — evidence runs *against* the law. Boards R4–R8 charge over
-  USB-C and boost to 5 V through the IP5306, and an ESOP-8 rotated 90°
-  could not seat on its pads at all. Probably a law false positive.
-- **U4 — the credible bug.** `^SOT-23` in `_JLCPCB_ROT_CORRECTIONS`
-  applies −90° to both SOT-23-3 and SOT-23-6, but EasyEDA draws the two
-  families in frames 90° apart (`jlcpcb_export.py` says so in its own
-  comment). Q1, a SOT-23-3, satisfies the law; U4 does not. **If the law
-  is right the fix is to split the regex, not to add a per-part delta.**
-- **J4** — a 180° delta with no geometric derivation behind it, only the
-  note "JLCPCB 3D: 90° puts pins on wrong side". Same shape as the D1 bug
-  that turned out to be 180° out. This is a *different axis* from the
-  documented `connector_pad = 41 − panel_pin` netlist reversal — do not
-  conflate them (see "Do not fix" below).
-- **J1** — `_row_bearing()` returns `None` because the USB-C footprint
-  has duplicate/unnumbered shield pads, so this connector sits permanently
-  outside the law. Needs pad-pair selection that skips shield tabs.
+- **U2** — the counter-evidence is that boards R4–R8 charge over USB-C and
+  boost to 5 V through the IP5306, and an ESOP-8 rotated 90° could not seat
+  on its pads at all. Weigh that against the generator-side pattern above,
+  and note the counter-evidence has a hole: it assumes the boards were
+  assembled from the CPL the generator emits today.
+- **J4** — this is a *different axis* from the documented
+  `connector_pad = 41 − panel_pin` netlist reversal — do not conflate them
+  (see "Do not fix" below).
 
 `_LAW_EXCEPTIONS` in the gate is an **empty dict**, so what is known about
 these parts — and it is written down, in `jlcpcb_export.py` comments —
-cannot reach the gate. Deciding test for each: the JLCPCB 3D preview for
-that LCSC part, then either fix the footprint or record a
-`_LAW_EXCEPTIONS` entry that states the physical claim and names the
-residual, so drift re-fails.
+cannot reach the gate.
+
+**Deciding test, and it is two questions on one board:**
+
+1. Is the IP5306 (U2) sitting square on its footprint, or across it? A 90°
+   error on an ESOP-8 is not subtle and does not solder.
+2. Does the display light and show a correct image with the FPC inserted as
+   designed? That answers J4's 180°.
+
+Either fix the footprint afterwards, or record a `_LAW_EXCEPTIONS` entry
+that states the physical claim and names the residual, so drift re-fails.
+The JLCPCB 3D preview for `C181692` and `C2856812` is the same evidence if
+opening the prototype is not convenient.
+
+**This also settles H6.** The LED2 override question turns on the same
+reasoning pattern — "the board works, therefore the hand-written override
+is right" — so one look validates or destroys the pattern, not just one
+part.
 
 **A design-side fix here is not done until the CPL is re-uploaded** and
 the uploaded file matches `release_jlcpcb/cpl.csv` at HEAD.
@@ -244,21 +281,34 @@ tool `scripts/analyze_pin1_marker.py`.
 
 ---
 
-## V2 — as-built limitations of the v1 board, not fixable in place
+## RESPIN — as-built limitations of the fabricated board, not fixable in place
 
-Real, confirmed, and deliberately not being fixed on v1. Listed so nobody
-re-discovers them as bugs.
+Real, confirmed, and deliberately not being fixed on the board that exists.
+Listed so nobody re-discovers them as bugs.
+
+**On the numbering.** This section used to be called "V2 — limitations of the
+v1 board", which collided with the release tags: those run `v2.3 … v4.3.1`,
+so "v2" meant the *final product phase* in CLAUDE.md and a *release from
+7 April* in `git tag`. Two scales, one name. Here and below:
+
+- **the fabricated board** = the design at the latest release tag,
+  currently **`v4.3.1`** (2026-04-16) — this is what prototype #1 is
+- **the respin** = the next fabrication, whenever it is cut; that is where
+  everything in this section gets fixed
+
+Note `release_jlcpcb/README.md` still heads its history with "v3.2 (current)"
+and is six releases stale; the tag is the truth.
 
 - **SW_PWR is not in series with the battery.** Only the common pin
   (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins
   1/3 have no net. The path J3 → Q1 → BAT+ → IP5306 pin 6 is continuous
   copper that never passes through the switch, so **the switch cannot
-  power the board down**. True isolation on v1 = unplug J3. v2: route the
+  power the board down**. True isolation on the fabricated board = unplug J3. Respin: route the
   battery through switch pins 1–2.
 - **VBUS is fragmented into 3 components** (J1.9 / J1.11 isolated) — a
   documented, functional single-orientation workaround, allowlisted in
   `verify_net_connectivity.ACCEPTED_FRAGMENTATIONS`. Tracked as R5-CRIT-9
-  for the v2 respin. **Keep the allowlist entry.**
+  for the respin. **Keep the allowlist entry.**
 - **EN has no RC delay network, and no pull-up at all.** The module
   datasheet is not ambiguous about this. Page 28, under the peripheral
   reference schematic: *"To ensure the ESP32-S3 chip's supply is correct
@@ -268,7 +318,7 @@ re-discovers them as bugs.
   power-on reset timing."* Its figure 7 draws R7 from VDD33 to EN and C8
   (0.1 µF) from EN to GND, with the reset button across the cap.
 
-  The v1 board has **neither**: R3 is DNP and C3 is wired as a second
+  The fabricated board has **neither**: R3 is DNP and C3 is wired as a second
   decoupling cap, so EN reaches only `U1.3` and `SW_RST` pad 1. It boots
   today, so this is a margin defect, not a dead board — the failure mode
   is slow supply ramps and brown-outs, i.e. a fraction of units in the
@@ -281,16 +331,16 @@ re-discovers them as bugs.
   places without anyone comparing that sentence to copper. Same class as
   the R25 finding that a justification comment can outrank the datasheet.
 
-  Not patched on v1: the only cap available is 28 mm away, and dragging a
+  Not patched on the fabricated board: the only cap available is 28 mm away, and dragging a
   net that far would trade a missing RC for a long high-impedance antenna
-  on the reset line — worse than leaving it bare. **v2: 10 kΩ from +3V3
+  on the reset line — worse than leaving it bare. **Respin: 10 kΩ from +3V3
   to EN and 100 nF from EN to GND, both placed adjacent to module pin 3.**
   The schematic now draws C3 where the board actually has it, so `T4`
   stays honest instead of describing a network that does not exist.
 - **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming
-  the key across routing/footprints/CPL is a v2 cleanup.
+  the key across routing/footprints/CPL is a respin cleanup.
 
 ---
 
@@ -339,7 +389,7 @@ it stands. Changing them breaks a working board.
 - **USB Zdiff of 130 Ω** — a non-issue. Do not move parts or traces for it.
 - **`POWER_HIGH_ALLOWLIST` BAT+ entries** — coordinate-pinned to 0.02 mm
   with an IPC-2221 argument; they cannot drift silently. Keep.
-- **`verify_net_connectivity.ACCEPTED_FRAGMENTATIONS["VBUS"]`** — see V2
+- **`verify_net_connectivity.ACCEPTED_FRAGMENTATIONS["VBUS"]`** — see RESPIN
   above. Keep.
 - **`verify_stackup.IN2_ALLOWED_NETS` includes VBUS**, which pours 0 mm².
   Harmless and unused.

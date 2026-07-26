@@ -38,7 +38,12 @@ COMPONENTS_3V3 = {
     "ILI9488 display (backlight)":  {"typ": 0.080, "max": 0.100},
     "SD card (SPI read)":           {"typ": 0.020, "max": 0.030},
     "Button pull-ups (14x worst)":  {"typ": 0.000, "max": 0.00462},
-    "EN pull-up (R3 10k)":          {"typ": 0.00033, "max": 0.00033},
+    # R3 is DNP: it is in neither the BOM nor the CPL, so it draws nothing.
+    # This line budgeted 0.33 mA for a resistor that is not fitted — a third
+    # file telling a third story about R3 (see docs/virtual-bench-plan.md,
+    # phase -1(a)). Kept at zero rather than deleted so the entry stays
+    # visible when v2 fits the EN network the datasheet requires.
+    "EN pull-up (R3 10k, DNP)":     {"typ": 0.0, "max": 0.0},
 }
 
 # Component current draw on +5V rail (Amps)
@@ -72,7 +77,8 @@ BATTERY_VOLTAGE = 3.7            # V nominal
 PASSIVES = {
     "R1":  {"value": 5100,   "unit": "ohm", "function": "USB-C CC1 pull-down"},
     "R2":  {"value": 5100,   "unit": "ohm", "function": "USB-C CC2 pull-down"},
-    "R3":  {"value": 10000,  "unit": "ohm", "function": "ESP32 EN pull-up"},
+    "R3":  {"value": 10000,  "unit": "ohm",
+            "function": "ESP32 EN pull-up — DNP on v1, not fitted"},
     "R4":  {"value": 10000,  "unit": "ohm", "function": "BTN pull-up"},
     "R5":  {"value": 10000,  "unit": "ohm", "function": "BTN pull-up"},
     "R6":  {"value": 10000,  "unit": "ohm", "function": "BTN pull-up"},
