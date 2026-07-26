@@ -85,10 +85,11 @@ def _zone(ref, pin_net_pairs):
 # U1: ESP32-S3-WROOM-1-N16R8
 # ============================================================
 # Pad-net injection works for pads whose positions are in _PAD_POS_LOOKUP.
-# Pins 1 (+3V3), 3 (EN), 8 (I2S_BCLK), 9 (I2S_LRCK) get net 0 because:
+# Pins 1 (+3V3), 3 (EN), 8 (GPIO15), 9 (GPIO16) get net 0 because:
 #   - Pin 1: only one +3V3 trace reaches pin 2, not pin 1
 #   - Pin 3: EN pin is not routed (floating/RC reset)
-#   - Pin 8/9: I2S_BCLK/LRCK are not routed to PAM8403 (analog amp, not I2S)
+#   - Pin 8/9: netless since 2026-07-26 — the I2S_BCLK/LRCK reservation was
+#     retired (R10-LOW-2); audio is PDM TX and uses only DOUT
 # Pin 13 (GPIO19): shared between USB_D- and BTN_R; last writer = BTN_R
 # Pin 36 (TX0), 37 (RX0): not GPIO-routed, net 0
 # Pin 38 (GPIO1=BTN_RIGHT): routing uses approach vias, pad may not match
@@ -570,8 +571,8 @@ class PolarityVerificationTest(unittest.TestCase):
     def test_esp32_i2s(self):
         """U1: I2S_DOUT on correct pin (BCLK/LRCK unrouted)."""
         self._check_strict("U1", "10", "I2S_DOUT")
-        # Pins 8 (I2S_BCLK), 9 (I2S_LRCK) not routed to PAM8403
-        # (PAM8403 is analog amp, only needs I2S_DOUT)
+        # Pins 8/9 (GPIO15/16) carry no net: the I2S_BCLK/LRCK
+        # reservation was retired (R10-LOW-2); PDM uses only DOUT.
 
     def test_ip5306_polarity(self):
         """U2 (IP5306): VIN=VBUS, VOUT=+5V, EP=GND."""

@@ -34,7 +34,8 @@ DIGITAL_BBOX = {"xmin": 65, "xmax": 95, "ymin": 18, "ymax": 48}
 MIN_AUDIO_GND_VIAS = 3
 
 # Audio signal nets
-AUDIO_SIGNAL_NETS = {"I2S_BCLK", "I2S_LRCK", "I2S_DOUT", "SPK+", "SPK-"}
+# I2S_BCLK/I2S_LRCK retired 2026-07-26 (R10-LOW-2) — PDM uses only DOUT.
+AUDIO_SIGNAL_NETS = {"I2S_DOUT", "SPK+", "SPK-"}
 
 
 def check(name, condition, detail=""):

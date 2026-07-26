@@ -116,8 +116,10 @@ def test_audio_chain(net_refs, name_to_id, id_to_name):
     # the coupling cap. Verify each half of the chain instead.
     verify_chain("Audio ESP32→C22", "I2S_DOUT", ["U1", "C22"], net_refs, name_to_id, id_to_name)
     verify_chain("Audio C22→PAM", "PAM_IN_AC", ["C22", "U5"], net_refs, name_to_id, id_to_name)
-    verify_chain("Audio", "I2S_BCLK", ["U1"], net_refs, name_to_id, id_to_name)
-    verify_chain("Audio", "I2S_LRCK", ["U1"], net_refs, name_to_id, id_to_name)
+    # I2S_BCLK/I2S_LRCK chains removed 2026-07-26: the nets are retired
+    # (R10-LOW-2). A chain check for a net that must not exist would either
+    # fail forever or need a waiver — the retirement check lives in
+    # verify_design_intent T14 instead.
 
     # Input bias network sits on the amplifier side of the DC-block
     verify_chain("Audio input bias", "PAM_IN_AC", ["R20", "R21"], net_refs, name_to_id, id_to_name)

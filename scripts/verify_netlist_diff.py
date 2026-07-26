@@ -22,7 +22,9 @@ in the table.
 
 Remaining suppressions, all narrow and evidence-backed:
   T1_ALLOW  GPIO35/36/37 — ESP32-S3 on-module Octal PSRAM pins, which
-            must stay externally unconnected.
+            must stay externally unconnected — plus GPIO15/16, unused pins
+            labelled for documentation since the I2S reservation was
+            retired (R10-LOW-2, 2026-07-26).
   T2_ALLOW  five PCB-internal node names the Power Supply / MCU sheets
             still draw as unlabelled wires (KiCad drops unnamed nets
             from the exported netlist, so they cannot be compared).
@@ -271,6 +273,13 @@ SCH_PIN_TO_PCB_PADS["SW_BOOT"] = _TACT_MAP
 # one node; VBUS_SW no longer exists in the generated schematic.
 T1_ALLOW = {
     "GPIO35", "GPIO36", "GPIO37",
+    # GPIO15/16: unused pins, labelled for documentation only, same class
+    # as the PSRAM trio above. They carried the I2S_BCLK/I2S_LRCK net
+    # reservation until 2026-07-26 (R10-LOW-2): one pin each, zero copper,
+    # while the audio path is PDM TX with .clk = I2S_GPIO_UNUSED. The PCB
+    # deliberately leaves the pads netless; the schematic labels the pins
+    # GPIO15/GPIO16 so a reader knows which pins are free for v2.
+    "GPIO15", "GPIO16",
 }
 
 # T2: PCB nets that legitimately have no schematic-side counterpart.

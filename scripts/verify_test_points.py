@@ -29,7 +29,7 @@ REQUIRED_SIGNALS = {
     "Power rails": ["+3V3", "+5V", "VBUS", "BAT+", "GND"],
     "USB": ["USB_D+", "USB_D-"],
     "SPI (SD card)": ["SD_CLK", "SD_MOSI", "SD_MISO", "SD_CS"],
-    "I2S (audio)": ["I2S_DOUT", "I2S_BCLK", "I2S_LRCK"],
+    "I2S (audio)": ["I2S_DOUT"],  # BCLK/LRCK retired 2026-07-26 (R10-LOW-2)
     "Display": ["LCD_WR", "LCD_DC", "LCD_CS"],
 }
 

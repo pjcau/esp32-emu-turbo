@@ -101,6 +101,25 @@ def apply(board, mutation):
         dup.declared_nets.add(target)
         return dup, f"{ref}.{pad} moved from {net} to {target}"
 
+    if kind == "attach_pin":
+        # Attach a currently-NETLESS pad to a brand-new net — the exact
+        # shape of R10-LOW-2, where GPIO15 acquired a one-pin reservation
+        # net. move_pin cannot express this: it requires the pin to already
+        # be somewhere, and a retired pin is deliberately nowhere.
+        ref, pad = mutation["ref"], str(mutation.get("pin", ""))
+        target = mutation["to_net"]
+        existing, _ = _find(dup, ref, pad)
+        if existing is not None:
+            raise MutationError(
+                f"cannot attach {ref}.{pad}: it already carries {existing} — "
+                f"use move_pin for a pin that is somewhere")
+        if ref not in dup.refs:
+            raise MutationError(f"cannot attach {ref}.{pad}: no such ref")
+        pin = nl.PinRef(ref, pad, pad, "?")
+        dup.nets[target] = tuple(dup.nets.get(target, ())) + (pin,)
+        dup.declared_nets.add(target)
+        return dup, f"{ref}.{pad} attached to new net {target}"
+
     if kind == "declare_net":
         name = mutation["net"]
         if mutation.get("pads"):

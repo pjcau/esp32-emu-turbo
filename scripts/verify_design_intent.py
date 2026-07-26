@@ -141,9 +141,10 @@ FUNCTION_REQUIREMENTS = {
     # USB D+/D- are hardwired — MUST be GPIO19/20
     "USB_D+": {"usb", "gpio"},
     "USB_D-": {"usb", "gpio"},
-    # I2S uses GPIO matrix (any GPIO works) — just needs gpio
-    "I2S_BCLK": {"gpio"},
-    "I2S_LRCK": {"gpio"},
+    # I2S uses GPIO matrix (any GPIO works) — just needs gpio.
+    # I2S_BCLK/I2S_LRCK removed 2026-07-26: the nets were retired
+    # (R10-LOW-2, PDM uses only DOUT), so requirements for them would be
+    # requirements for names that exist nowhere.
     "I2S_DOUT": {"gpio"},
     # SPI uses GPIO matrix — any GPIO works
     "SD_MOSI": {"gpio"},
@@ -395,19 +396,17 @@ def test_T4_signal_endpoints(config_py, net_pads):
 
     # Nets that use renamed paths through series components
     # USB_D+/- go through ESD (U4) + series resistors (R22/R23) → USB_DP_MCU/USB_DM_MCU on ESP32
-    # I2S_BCLK/LRCK are directly routed (pad net not assigned, trace-only connection)
     RENAMED_NETS = {
         "USB_D+": "USB_DP_MCU",   # renamed at R22 (series resistor)
         "USB_D-": "USB_DM_MCU",   # renamed at R23 (series resistor)
     }
-    DIRECT_ROUTED = {"I2S_BCLK", "I2S_LRCK"}  # pad unassigned, trace connects
+    # DIRECT_ROUTED is gone (2026-07-26). It held I2S_BCLK/I2S_LRCK and its
+    # own comment was false twice over: nothing was "directly routed" — the
+    # nets had one pad and zero copper — and the info() it printed told the
+    # reader to "verify in layout" a trace that does not exist. The nets are
+    # retired (R10-LOW-2); an allowance for them would greet a regression.
 
     for gpio, net_name in sorted(config_py.items()):
-        if net_name in DIRECT_ROUTED:
-            info("T4", f"{net_name} (GPIO{gpio}) is directly routed (no pad net)",
-                 "trace connects but pad has no net assignment — verify in layout")
-            continue
-
         pads = net_pads.get(net_name, [])
         components = set(ref for ref, _ in pads)
 
@@ -437,20 +436,15 @@ def test_T5_orphan_nets(cache, net_map, net_pads):
 
     # Nets intentionally connected to a single component (by design).
     #
-    # I2S_BCLK / I2S_LRCK: assigned to U1 pads with no target device. The
-    #   audio path is PDM, not I2S: software/main/audio.c configures
-    #   I2S_PDM_TX with `.clk = I2S_GPIO_UNUSED` and drives only I2S_DOUT
-    #   (GPIO17) into C22 -> PAM8403, which is an analog amplifier. So the
-    #   two clock nets genuinely terminate at the MCU. Confirmed: neither
-    #   carries any segment or via, so there is no dangling copper either.
-    #
-    # Entries removed 2026-07-25 — LCD_BL, LCD_RD, BTN_MENU. All three had
-    # ZERO pads on the board by then: LCD_BL/LCD_RD were folded into +3V3
-    # (routing.py hard-ties J4.8 and J4.29, so the nets stopped existing)
-    # and BTN_MENU was deleted in R9-MED-4. A waiver for a net that no
-    # longer exists is not harmless: it stands ready to greet a REGRESSION
-    # that recreates a floating LCD_BL with "single-component (by design)".
-    KNOWN_SINGLE = {"I2S_BCLK", "I2S_LRCK"}
+    # EMPTY since 2026-07-26, and the goal is that it stays empty. Its last
+    # two tenants, I2S_BCLK/I2S_LRCK, were retired outright (R10-LOW-2):
+    # rather than waiving a one-pin net as "by design", the net now does
+    # not exist — U1 pads 8/9 are netless and the pins are labelled plain
+    # GPIO15/GPIO16, like the PSRAM trio. Earlier tenants LCD_BL, LCD_RD,
+    # BTN_MENU were removed 2026-07-25 after their nets stopped existing.
+    # A waiver for a net that no longer exists is not harmless: it stands
+    # ready to greet a REGRESSION that recreates the orphan.
+    KNOWN_SINGLE = set()
 
     # A KNOWN_SINGLE entry naming a net that is not on the board is stale,
     # and staleness is the failure mode this list has already had once.
@@ -819,17 +813,12 @@ def test_T14_audio_chain(net_pads):
           not ({"U1", "U5"} <= dout_refs) and not ({"U1", "U5"} <= pam_in_refs),
           f"I2S_DOUT={sorted(dout_refs)} PAM_IN_AC={sorted(pam_in_refs)}")
 
-    # I2S_BCLK and I2S_LRCK: directly routed (pad net not assigned on U1)
-    # PAM8403 is a Class-D amp, not I2S — only the AC-coupled PDM line feeds it
-    # BCLK/LRCK go to the I2S DAC (if present) or are unused in this design
+    # I2S_BCLK / I2S_LRCK: retired nets (R10-LOW-2, 2026-07-26). They must
+    # NOT exist — reappearing is a regression to the one-pin reservation.
     for net in ["I2S_BCLK", "I2S_LRCK"]:
         refs = set(r for r, _ in net_pads.get(net, []))
-        if not refs:
-            warn("T14", f"{net}: no pad assignment found",
-                 "directly routed — verify trace exists in layout viewer")
-        else:
-            check("T14", f"{net}: has pad connections", len(refs) > 0,
-                  f"connected to: {sorted(refs)}")
+        check("T14", f"{net} stays retired (no pad carries it)", not refs,
+              f"the retired net has reappeared on: {sorted(refs)}")
 
     # Speaker output
     spk_p = set(r for r, _ in net_pads.get("SPK+", []))

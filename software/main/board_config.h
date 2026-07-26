@@ -47,8 +47,11 @@
 
 /* ── Audio: I2S → PAM8403 ────────────────────────────────────────── */
 
-#define I2S_BCLK            GPIO_NUM_15
-#define I2S_LRCK            GPIO_NUM_16
+/* I2S_BCLK / I2S_LRCK removed 2026-07-26 (R10-LOW-2): audio is PDM TX and
+ * uses only DOUT — audio.c sets .clk = I2S_GPIO_UNUSED. GPIO15/16 are
+ * unconnected on the board and free for v2 (ADC2 candidates). The defines
+ * were referenced only by the generated test firmware, which now matches
+ * production. */
 #define I2S_DOUT            GPIO_NUM_17
 #define I2S_NUM             I2S_NUM_0
 #define AUDIO_SAMPLE_RATE   32000     /* 32 kHz */

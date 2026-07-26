@@ -88,8 +88,8 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 
 | GPIO | Function | Notes |
 |---|---|---|
-| GPIO15 | I2S_BCLK | Bit clock |
-| GPIO16 | I2S_LRCK | Left/Right channel clock |
+| GPIO15 | unused | free for v2 — I2S_BCLK reservation retired (PDM needs only DOUT) |
+| GPIO16 | unused | free for v2 — I2S_LRCK reservation retired |
 | GPIO17 | I2S_DOUT | Serial data out |
 
 ### Buttons (GPIO Input, active-low) — 12 GPIOs

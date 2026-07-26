@@ -421,8 +421,12 @@ def test_netlist():
               "no pad without a schematic pin — test is stale")
 
     check("the baseline reports the classes Phase 0 is meant to expose",
-          {"D2", "D5"} <= base_codes,
-          f"got {sorted(base_codes)}")
+          "D5" in base_codes, f"got {sorted(base_codes)}")
+    # D2 must be GONE from the baseline: its last tenants were the I2S
+    # reservation nets, retired 2026-07-26 (R10-LOW-2). If D2 reappears
+    # here, a one-pin net has come back.
+    check("no single-pin net remains on the board (I2S retirement held)",
+          "D2" not in base_codes, f"got {sorted(base_codes)}")
     check("every pad the schematic omits is explained by datasheet_specs",
           all(pad in nl.COMPONENT_SPECS.get(ref, {}).get("pins", {})
               for ref, pad, _ in board.pads_without_pin),

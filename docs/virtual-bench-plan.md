@@ -278,12 +278,14 @@ expectation that accepts two answers cannot disagree with either. Drawing
 LED-A straight onto the rail also puts R25-HIGH-1, the backlight with no
 ballast, into the drawing instead of behind a signal-sounding name.
 
-**The 5 that remain, and why they are not being closed here.** Four are
-`I2S_BCLK`/`I2S_LRCK` reported on both sides — R10-LOW-2, GPIO15/16
-reserved as net names while the firmware uses PDM TX, which needs only
-DOUT. Closing them means deciding whether the reservation should exist as a
-net at all, and it touches the firmware's GPIO documentation. The fifth is
-`C28`, below, which needs an electrical decision, not a bookkeeping one.
+**The 5 that remained, down to 1 (2026-07-26).** Four were `I2S_BCLK`/`I2S_LRCK`
+on both sides — closed by retiring the reservation nets outright (R10-LOW-2):
+NET_LIST ids 24/25 gap-retired, U1 pads 8/9 netless, the schematic labels the
+pins plain `GPIO15`/`GPIO16` (T1_ALLOW, same class as the PSRAM trio), three
+gate allowlists died with them, and the generated test firmware stopped
+driving `.clk` on GPIO15 to match production `audio.c`. The one that remains
+is `C28` (D5): a DNP land whose respin fix is relocation, an electrical
+decision this bench does not make.
 
 Copper is untouched by all of this: the board file's segment list is
 identical, verified segment by segment.

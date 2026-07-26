@@ -341,8 +341,8 @@ pins on the module edge):
 
 | ESP32 pin | net | goes to |
 |-----------|-----|---------|
-| 8 | `I2S_BCLK` | (stays at MCU) |
-| 9 | `I2S_LRCK` | (stays at MCU) |
+| 8 | *(no net — reservation retired)* | nothing: pad is unconnected |
+| 9 | *(no net — reservation retired)* | nothing: pad is unconnected |
 | 10 | `I2S_DOUT` | → RC filter **R20 / R21 / C22** → **PAM8403 (U5) pin 7 & 10** |
 
 Only `I2S_DOUT` is routed to the amplifier (through an RC filter, since the PAM8403 input is

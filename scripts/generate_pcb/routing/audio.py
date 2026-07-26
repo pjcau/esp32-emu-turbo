@@ -47,15 +47,14 @@ def _i2s_traces():
     n_gnd = NET_ID["GND"]
     n_dout = NET_ID["I2S_DOUT"]      # ESP32 side of C22
     n_pam_in = NET_ID["PAM_IN_AC"]   # PAM8403 side of C22 (AC-coupled)
-    n_bclk = NET_ID["I2S_BCLK"]
-    n_lrck = NET_ID["I2S_LRCK"]
     n_spk_p = NET_ID["SPK+"]
     n_spk_m = NET_ID["SPK-"]
 
-    # Assign I2S_BCLK/LRCK nets to U1 pads (GPIO15/16) even though
-    # PAM8403 is analog and doesn't use them — tracks design intent
-    _PAD_NETS[("U1", "8")] = n_bclk   # GPIO15 = I2S_BCLK
-    _PAD_NETS[("U1", "9")] = n_lrck   # GPIO16 = I2S_LRCK
+    # U1 pads 8/9 (GPIO15/16) deliberately carry NO net. They were
+    # assigned I2S_BCLK/I2S_LRCK "to track design intent", but a net whose
+    # only pin is the MCU pad tracks nothing — the audio path is PDM and
+    # uses only DOUT. Retired 2026-07-26 (R10-LOW-2); the pins are free
+    # for v2.
 
     # ── Audio input: ESP32 I2S_DOUT → PAM8403 INR (pin 10) + INL (pin 7)
     epx, epy = _esp_pin(17)  # GPIO 17 = I2S_DOUT

@@ -157,7 +157,14 @@ NET_LIST = [
     # SD card SPI
     (20, "SD_MOSI"), (21, "SD_MISO"), (22, "SD_CLK"), (23, "SD_CS"),
     # I2S audio
-    (24, "I2S_BCLK"), (25, "I2S_LRCK"), (26, "I2S_DOUT"),
+    # Old slots: (24, "I2S_BCLK"), (25, "I2S_LRCK") — retired 2026-07-26
+    # (R10-LOW-2), gap left deliberately like 18/19 and 39. Each net had
+    # exactly ONE pad (U1.8 / U1.9) and zero copper: the audio path is PDM
+    # TX, which uses only DOUT — software/main/audio.c sets
+    # .clk = I2S_GPIO_UNUSED. A one-pin net is a label, not a circuit, and
+    # it cost three gate allowlists (verify_design_intent KNOWN_SINGLE +
+    # DIRECT_ROUTED, drc_check _UNROUTED_OK) to keep green.
+    (26, "I2S_DOUT"),
     # Buttons
     (27, "BTN_UP"), (28, "BTN_DOWN"), (29, "BTN_LEFT"), (30, "BTN_RIGHT"),
     (31, "BTN_A"), (32, "BTN_B"), (33, "BTN_X"), (34, "BTN_Y"),

@@ -74,9 +74,13 @@ def generate_test_file(defines: dict) -> str:
     for key in ["SD_MOSI", "SD_MISO", "SD_CLK", "SD_CS"]:
         sd_pins[key] = gpio_num(defines, key)
 
-    # I2S pins
+    # I2S pins. Only DOUT: the audio path is PDM TX and production audio.c
+    # sets .clk = I2S_GPIO_UNUSED. The generated test used to pass
+    # .clk = I2S_BCLK (GPIO15), which made the VALIDATION firmware disagree
+    # with the PRODUCTION firmware about a strapping-adjacent pin and
+    # depended on defines that were retired with the nets (R10-LOW-2).
     i2s_pins = {}
-    for key in ["I2S_BCLK", "I2S_LRCK", "I2S_DOUT"]:
+    for key in ["I2S_DOUT"]:
         i2s_pins[key] = gpio_num(defines, key)
 
     # USB pins
@@ -282,7 +286,7 @@ def generate_test_file(defines: dict) -> str:
     w("        .clk_cfg  = I2S_PDM_TX_CLK_DEFAULT_CONFIG(AUDIO_SAMPLE_RATE),")
     w("        .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_MONO),")
     w("        .gpio_cfg = {")
-    w(f"            .clk    = I2S_BCLK,")
+    w(f"            .clk    = I2S_GPIO_UNUSED,  /* PDM: matches production audio.c */")
     w(f"            .dout   = I2S_DOUT,")
     w("            .invert_flags = { .clk_inv = false },")
     w("        },")
@@ -705,7 +709,7 @@ def generate_test_file_v2(defines: dict) -> str:
     w("        .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,")
     w("                                                    I2S_SLOT_MODE_MONO),")
     w("        .gpio_cfg = {")
-    w("            .clk  = I2S_BCLK,")
+    w("            .clk  = I2S_GPIO_UNUSED,  /* PDM: matches production audio.c */")
     w("            .dout = I2S_DOUT,")
     w("            .invert_flags = { .clk_inv = false },")
     w("        },")
@@ -1125,7 +1129,7 @@ def generate_final(defines: dict) -> str:
     w("        .slot_cfg = I2S_PDM_TX_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,")
     w("                                                    I2S_SLOT_MODE_MONO),")
     w("        .gpio_cfg = {")
-    w("            .clk  = I2S_BCLK,")
+    w("            .clk  = I2S_GPIO_UNUSED,  /* PDM: matches production audio.c */")
     w("            .dout = I2S_DOUT,")
     w("            .invert_flags = { .clk_inv = false },")
     w("        },")

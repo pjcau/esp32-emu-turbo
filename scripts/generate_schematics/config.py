@@ -8,7 +8,13 @@ GPIO_NETS: dict[int, str] = {
     # LCD_RD: removed from GPIO, tied HIGH (3V3) at FPC connector
     # LCD_BL: removed from GPIO, tied to 3V3 via resistor at FPC connector
     44: "SD_MOSI", 43: "SD_MISO", 38: "SD_CLK", 39: "SD_CS",
-    15: "I2S_BCLK", 16: "I2S_LRCK", 17: "I2S_DOUT",
+    # GPIO15/16 retired 2026-07-26 (R10-LOW-2): they were reserved as
+    # I2S_BCLK/I2S_LRCK, but the audio path is PDM TX — audio.c configures
+    # .clk = I2S_GPIO_UNUSED and drives only I2S_DOUT (GPIO17). A net name
+    # with one pin and no copper is a label, not a circuit; the pins now
+    # fall back to plain GPIO15/GPIO16 labels (mcu.py), same as the PSRAM
+    # pins, and are free for v2 (ADC2 candidates).
+    17: "I2S_DOUT",
     40: "BTN_UP", 41: "BTN_DOWN", 42: "BTN_LEFT", 1: "BTN_RIGHT",
     2: "BTN_A", 48: "BTN_B", 47: "BTN_X", 21: "BTN_Y",
     18: "BTN_START", 0: "BTN_SELECT", 45: "BTN_L", 3: "BTN_R",
@@ -38,7 +44,8 @@ DISPLAY_NETS = [
     "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
     # LCD_RD and LCD_BL are hardwired on PCB (not GPIO-controlled)
 ]
-AUDIO_NETS = ["I2S_BCLK", "I2S_LRCK", "I2S_DOUT"]
+# I2S_BCLK/I2S_LRCK retired with GPIO15/16 above — PDM needs only DOUT.
+AUDIO_NETS = ["I2S_DOUT"]
 SD_NETS = ["SD_MOSI", "SD_MISO", "SD_CLK", "SD_CS"]
 BUTTON_NETS = [
     "BTN_UP", "BTN_DOWN", "BTN_LEFT", "BTN_RIGHT",

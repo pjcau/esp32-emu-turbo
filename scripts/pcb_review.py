@@ -37,7 +37,7 @@ DATA_NETS = {}  # nets 6-13: LCD, 20-23: SPI, 24-26: I2S, 40-41: USB
 for i in range(6, 14):
     DATA_NETS[i] = f"LCD_D{i-6}"
 DATA_NETS.update({20: "SD_MOSI", 21: "SD_MISO", 22: "SD_CLK", 23: "SD_CS"})
-DATA_NETS.update({24: "I2S_BCLK", 25: "I2S_LRCK", 26: "I2S_DOUT"})
+DATA_NETS.update({26: "I2S_DOUT"})  # 24/25 retired 2026-07-26 (R10-LOW-2)
 DATA_NETS.update({40: "USB_D+", 41: "USB_D-"})
 
 # Power component positions (from board.py)

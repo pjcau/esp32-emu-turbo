@@ -256,8 +256,8 @@ Full audit of every ESP32-S3 GPIO connection, verified across four sources: `con
 | — | SPK+ | 42 | 4 | 2 | OK |
 | — | SPK- | 43 | 3 | 2 | OK |
 
-:::info I2S_BCLK and I2S_LRCK — intentionally unrouted
-GPIO15 (I2S_BCLK, net 24) and GPIO16 (I2S_LRCK, net 25) are allocated in the ESP-IDF I2S driver but have **no PCB traces by design**. The PAM8403 is an analog Class-D amplifier — it has no I2S input. Only I2S_DOUT carries the audio signal (PDM/sigma-delta) to the PAM8403 analog inputs (INR/INL).
+:::info GPIO15 / GPIO16 — unused, reservation retired
+The I2S_BCLK / I2S_LRCK net reservation (nets 24/25) was retired on 2026-07-26 (R10-LOW-2): each net had exactly one pin and zero copper. The audio path is PDM TX — `audio.c` sets `.clk = I2S_GPIO_UNUSED` — so only I2S_DOUT carries the signal to the PAM8403 analog inputs (INR/INL). GPIO15/16 are unconnected and free for v2.
 :::
 
 ### Buttons — GPIO Input (12/12 routed)

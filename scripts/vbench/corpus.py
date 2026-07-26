@@ -49,8 +49,9 @@ REQUIRED = ("id", "round", "title", "source", "source_match", "phase",
 # `status`/`caught` are refused, not ignored: see the module docstring.
 FORBIDDEN = ("status", "caught", "fixed", "verified")
 EXPECTS = ("caught", "reproduced")
-MUTATION_KINDS = ("none", "detach_pin", "move_pin", "swap_pins",
-                  "remove_part", "short_nets", "set_param", "declare_net")
+MUTATION_KINDS = ("none", "detach_pin", "move_pin", "attach_pin",
+                  "swap_pins", "remove_part", "short_nets", "set_param",
+                  "declare_net")
 
 
 class CorpusError(ValueError):

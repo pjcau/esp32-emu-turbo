@@ -718,7 +718,9 @@ def check_net_connectivity(data):
             via_count[net] = via_count.get(net, 0) + 1
 
     # Nets declared for future use but intentionally unrouted
-    _UNROUTED_OK = {"I2S_BCLK", "I2S_LRCK"}
+    # Was {"I2S_BCLK", "I2S_LRCK"} — retired 2026-07-26 (R10-LOW-2). An
+    # empty set here means every unrouted net is a finding again.
+    _UNROUTED_OK = set()
 
     net_names = {n["id"]: n["name"] for n in data["nets"]}
     for nid, name in net_names.items():

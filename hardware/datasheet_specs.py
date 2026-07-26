@@ -134,8 +134,11 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("LCD_D1"),     "function": "GPIO5 — LCD data bus D1", "type": "smd"},
             "6":  {"net": _exact("LCD_D2"),     "function": "GPIO6 — LCD data bus D2", "type": "smd"},
             "7":  {"net": _exact("LCD_D3"),     "function": "GPIO7 — LCD data bus D3", "type": "smd"},
-            "8":  {"net": _exact("I2S_BCLK"),   "function": "GPIO15 — I2S bit clock (unused, PAM8403 is analog)", "type": "smd"},
-            "9":  {"net": _exact("I2S_LRCK"),   "function": "GPIO16 — I2S L/R clock (unused, PAM8403 is analog)", "type": "smd"},
+            # GPIO15/16: the I2S_BCLK/I2S_LRCK net reservation was retired
+            # 2026-07-26 (R10-LOW-2) — audio is PDM TX, .clk = I2S_GPIO_UNUSED,
+            # only DOUT is used. Unconnected on the board, free for v2 (ADC2).
+            "8":  {"net": _unconnected(),       "function": "GPIO15 — unused, free for v2 (I2S reservation retired)", "type": "smd"},
+            "9":  {"net": _unconnected(),       "function": "GPIO16 — unused, free for v2 (I2S reservation retired)", "type": "smd"},
             "10": {"net": _exact("I2S_DOUT"),   "function": "GPIO17 — I2S data out", "type": "smd"},
             "11": {"net": _exact("BTN_START"),  "function": "GPIO18 — Start button", "type": "smd"},
             "12": {"net": _exact("LCD_D4"),     "function": "GPIO8 — LCD data bus D4", "type": "smd"},

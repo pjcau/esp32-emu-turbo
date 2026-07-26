@@ -351,8 +351,8 @@ The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom s
 
 | Connection           | v1                    | v2                     |
 | -------------------- | --------------------- | ---------------------- |
-| GPIO 15 (main ESP32) | I2S_BCLK → PAM8403    | SPI_CLK → U7 (MINI-1)  |
-| GPIO 16 (main ESP32) | I2S_LRCLK → PAM8403   | SPI_MOSI → U7 (MINI-1) |
+| GPIO 15 (main ESP32) | unused (I2S_BCLK reservation retired — PDM needs only DOUT) | SPI_CLK → U7 (MINI-1)  |
+| GPIO 16 (main ESP32) | unused (I2S_LRCK reservation retired) | SPI_MOSI → U7 (MINI-1) |
 | GPIO 17 (main ESP32) | I2S_DOUT → PAM8403    | SPI_MISO ← U7 (MINI-1) |
 | GPIO 20 (main ESP32) | USB_D+ (native USB)   | SPI_CS → U7 (MINI-1)   |
 | U7 GPIO 15           | —                     | I2S_BCLK → PAM8403     |

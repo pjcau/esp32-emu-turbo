@@ -462,9 +462,8 @@ GPIO 20 (SPI_CS)           ───────→ GPIO 10 (SPI2_CS)
 
 ESP32-S3-MINI-1 (I2S hardware)    Audio
 ─────────────────────────────      ─────
-GPIO 15 (I2S_BCLK)        ───────→ PAM8403 BCLK
-GPIO 16 (I2S_LRCLK)       ───────→ PAM8403 LRCLK
-GPIO 17 (I2S_DOUT)         ───────→ PAM8403 DIN
+GPIO 17 (I2S_DOUT, PDM)   ───────→ C22 → PAM8403 INR/INL
+(GPIO 15/16 unused: PAM8403 is analog — it has no BCLK/LRCK inputs)
 ```
 
 **Notes:**

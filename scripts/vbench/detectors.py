@@ -143,16 +143,6 @@ def _live_r25_crit_1():
                   f"{sorted(pins_on_en)} — no pull-up, no capacitor")
 
 
-def _live_r10_low_2():
-    """I2S_BCLK and I2S_LRCK must be reported as single-pin nets."""
-    board, sch, _values = _sources()
-    hits = {d.subject for d in nl.crosscheck(board, sch) if d.code == "D2"}
-    want = {"I2S_BCLK", "I2S_LRCK"}
-    if want <= hits:
-        return True, "both reported as D2 (a net with a single pin)"
-    return False, f"D2 reported {sorted(hits)}, missing {sorted(want - hits)}"
-
-
 def _live_r10_low_7():
     """No R and no C on EN, so no RC time constant exists to compute."""
     board = nl.load_board_netlist()
@@ -299,7 +289,6 @@ def _live_r28_high_1():
 LIVE = {
     "R28-HIGH-1": _live_r28_high_1,
     "R25-CRIT-1": _live_r25_crit_1,
-    "R10-LOW-2": _live_r10_low_2,
     "R10-LOW-7": _live_r10_low_7,
     "R25-HIGH-1": _live_r25_high_1,
     "R25-LOW-1": _live_r25_low_1,
