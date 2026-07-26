@@ -1,6 +1,6 @@
 ---
 name: pcb-board
-model: claude-opus-4-7
+model: claude-opus-5
 description: Board setup operations — dimensions, outline, layers, mounting holes, text (KiCAD MCP tools 5-13)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

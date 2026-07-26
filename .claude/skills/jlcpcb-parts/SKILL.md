@@ -1,6 +1,6 @@
 ---
 name: jlcpcb-parts
-model: claude-opus-4-7
+model: claude-opus-5
 description: Search JLCPCB/LCSC parts catalog and check BOM component availability
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, WebFetch, WebSearch

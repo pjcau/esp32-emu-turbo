@@ -1,6 +1,6 @@
 ---
 name: website-dev
-model: claude-opus-4-7
+model: claude-opus-5
 description: Develop, build, and deploy the Docusaurus documentation website
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

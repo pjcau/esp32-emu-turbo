@@ -1,6 +1,6 @@
 ---
 name: pipeline-resume
-model: claude-opus-4-7
+model: claude-opus-5
 description: Resume a failed PCB pipeline from the last successful checkpoint
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob
