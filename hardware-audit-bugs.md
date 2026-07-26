@@ -2759,3 +2759,234 @@ R24-HIGH-1 only fixes this one.
 3. R24-HIGH-2 (UUIDs) — regenerates every sheet file; do it on its own
    commit so the diff is reviewable.
 4. R24-MED-3 — widen or justify, do not leave the gate red.
+
+---
+
+## Round 25 Findings (2026-07-26) — datasheet-vs-design, at `071ec3e`
+
+Layer 1 ran clean apart from the five known-open gates. Every finding
+below came from **Layer 2**, and three of them share one root cause:
+a design decision was written down as a justification comment, the
+comment was wrong, and every gate then verified the board against the
+comment instead of against the datasheet.
+
+### Step 0 gates
+
+| Gate | Result |
+|------|--------|
+| verify_trace_through_pad | PASS — 1/1 |
+| verify_trace_crossings | PASS — 1/1 |
+| verify_copper_clearance | PASS — 0 DANGER, 1 WARN |
+| verify_net_connectivity | PASS — 0 failed |
+| verify_dfm_v2 | PASS — 122/122 |
+| verify_dfa | PASS — 9/9 |
+| validate_jlcpcb | PASS — 24 pass, 1 warn |
+| verify_bom_cpl_pcb | PASS — 12/12 |
+| verify_polarity | PASS — 48/48 |
+| verify_jlcpcb_capabilities | PASS — 12/12 |
+| verify_stencil_aperture | PASS — 5/5 |
+| verify_drill_standards | PASS — 5 pass, 1 warn |
+| verify_datasheet_nets | PASS |
+| verify_datasheet | PASS — 29/29 |
+| verify_design_intent | PASS — 369 pass, 4 warn |
+| verify_schematic_pcb_sync | PASS |
+| verify_netlist_diff | **FAIL — 3/4, 7 T4 mismatches** |
+| generate_board_config --check | PASS |
+| verify_strapping_pins | PASS — 12/12, 1 warn |
+| verify_decoupling_adequacy | PASS — 23/23 |
+| verify_power_sequence | PASS — 29/29 |
+| verify_power_paths | PASS — 9 pass, 11 info |
+| erc_check | PASS — 0 critical, 13 warnings |
+| KiCad DRC | PASS — 0 violations, 0 unconnected, 0 parity |
+
+Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
+`verify_net_class_widths`, `verify_cpl_rotation_law`,
+`verify_schematic_pin_connectivity`. All four are H1/H3/H4/H5 in
+`docs/known-issues.md` and are not re-raised here.
+
+### Domain findings
+
+- **Power chain**: 1 (CRIT)
+- **ESP32 boot**: same finding as above — the EN network is both
+- **Display**: 1 (HIGH)
+- **Audio**: 0 defects, 1 observation — the R20/R21 fix is confirmed good
+- **SD card**: 0
+- **Buttons**: 0
+- **USB**: 0 — ESD topology confirmed correct
+- **Emulator performance**: 2 (HIGH, MED)
+
+---
+
+#### R25-CRIT-1 — the EN RC delay circuit the datasheet requires is absent; EN floats
+
+- **Files**: `scripts/generate_schematics/sheets/mcu.py:55-75`,
+  `release_jlcpcb/bom.csv`, `release_jlcpcb/cpl.csv`
+- **Problem**: on the PCB the `EN` net has exactly **two** pads —
+  `U1.3` (ESP32-S3 EN) and `SW_RST.1`. There is no pull-up to `+3V3`
+  and no capacitor to GND anywhere on that net. Pressing reset pulls
+  EN low correctly, but nothing defines EN at power-on and nothing
+  returns it high afterwards. The schematic disagrees with the board in
+  a different way: it ties `U1.3` straight to `+3V3` (this is the
+  `U1.3: sch='+3V3' pcb='EN'` half of the H2 netlist mismatch, which
+  until now was filed as a bookkeeping difference), while SW_RST's pins
+  float unconnected (H5). So neither source carries the required network.
+- **Root cause**: `mcu.py:56-59` removed R3 from the BOM and CPL on this
+  stated ground — *"the ESP32-S3-WROOM-1 module integrates a 10k EN
+  pull-up on-module (per Espressif reference design), so an external
+  pull-up is redundant."* The module datasheet already in this repo
+  (`hardware/datasheets/U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf`, note to
+  图 7 *外围设计原理图* / Figure 7, peripheral design schematic) says the
+  opposite:
+
+  > 为确保 ESP32-S3 芯片上电时的供电正常，**EN 管脚处需要增加 RC 延迟电路**。
+  > RC 通常建议为 **R = 10 kΩ，C = 1 µF**，但具体数值仍需根据模组电源的上电
+  > 时序和芯片的上电复位时序进行调整。
+
+  ("To ensure correct power-up of the ESP32-S3, **an RC delay circuit
+  must be added at the EN pin**. R = 10 kΩ and C = 1 µF are generally
+  recommended, with the exact values adjusted to the module's power-up
+  sequencing and the chip's power-on-reset timing.") It does not state
+  that the module integrates an EN pull-up. Note also that even the
+  schematic's own intent — `mcu.py:72`, *"EN reset capacitor (100nF to
+  GND)"* — is 10x below the datasheet's 1 µF, and that cap is not on the
+  EN net on the board either.
+- **Consequence**: no power-on reset delay, so the chip can release
+  reset before `+3V3` is stable — and `+3V3` comes from the SY8089 buck
+  into a large output capacitance, i.e. a slow ramp. Combined with a
+  floating EN this is the signature of intermittent or failed boot, the
+  same symptom class recorded in `website/docs/rework/incident-3v3-split-plane.md`.
+- **Fix**: restore the datasheet network — 10 kΩ from EN to `+3V3` and
+  1 µF from EN to GND — in `mcu.py`, the BOM and the CPL, and delete the
+  justification comment at `mcu.py:56-59` rather than editing it, since
+  its premise is what produced the removal. Then re-run
+  `verify_netlist_diff`: the `U1.3` mismatch should disappear as a side
+  effect, because both sources will finally describe the same network.
+- **Not verified**: whether proto #1 boots reliably today. That is the
+  deciding observation and it is a bench test, not a repo query.
+
+#### R25-HIGH-1 — the display backlight has no current-limiting element
+
+- **Files**: `hardware/datasheet_specs.py:392-395`,
+  `scripts/generate_schematics/sheets/display.py:55-56`,
+  `software/main/display.c:41`, `release_jlcpcb/bom.csv`
+- **Problem**: measured from `pcb_cache`, **`J4` pad 8 sits directly on
+  the `+3V3` net**, alongside C3/C4/C26/C28/C29/C30 and U1's own supply
+  pin. No series element of any kind. Panel pin 33 (LED-A, backlight
+  anode) maps to pad 41-33 = 8, and the cathodes (panel 34-36, LED-K)
+  map to pads 7/6/5, all GND — so the backlight string is connected
+  straight across the 3.3 V rail.
+- **Root cause**: `website/docs/design/components.md:96`, quoting the
+  panel datasheet, specifies that pin as **"+3V3 (via resistor,
+  always-on)"** for a backlight of **8 chip white LEDs, Vf 2.9-3.3 V
+  typ 3.1 V**. The resistor is documented and was never placed. All
+  three design-side sources instead assert a hard tie
+  (`datasheet_specs.py:395` "hard-tied to +3V3",
+  `display.py:55` "LED-A -> +3V3 (backlight always on)",
+  `display.c:41` "hardwired to 3V3 on PCB"), so the deviation is
+  consistent across the whole toolchain and reads as intentional.
+- **Consequence**: with the rail at 3.3 V and Vf specified over a
+  2.9-3.3 V spread, the backlight current is set by the difference
+  between the two divided by the LEDs' dynamic resistance — i.e. by
+  part-to-part lottery, with a negative temperature coefficient that
+  raises current as the panel warms. Some units will be dim, others
+  over-driven. The load sits on the same `+3V3` that feeds the
+  ESP32-S3, the PSRAM and the SD card, and the power budget in
+  `website/docs/design/schematics.md:138` (80 mA typ / 120 mA max for
+  "display + backlight") is computed assuming the ballast that is not
+  on the board.
+- **Why no gate caught it**: every gate checks the board against
+  `datasheet_specs.py`, and that file encodes the assumption rather than
+  deriving it from a panel datasheet. The gate compares the design with
+  itself. Note that the **panel is the only component in the design with
+  no datasheet in `hardware/datasheets/`** — all 30 others are there.
+- **Fix**: decide the operating point, then make it real — a series
+  resistor sized from the panel's rated backlight current, or a proper
+  constant-current driver. Add the panel datasheet to
+  `hardware/datasheets/` so the requirement stops living only in a
+  Markdown table.
+
+#### R25-HIGH-2 — the firmware cannot configure from a clean clone
+
+- **Files**: `software/components/{snes9x,gnuboy,smsplus,pce-go}/CMakeLists.txt:5`,
+  `.gitmodules`, `retro-go/`
+- **Problem**: four components under `software/components/` call
+  `rg_setup_compile_options(...)`, a CMake macro **defined nowhere in
+  the checkout**, and declare `COMPONENT_REQUIRES "retro-go"`. The
+  `retro-go` submodule is uninitialized — `git submodule status` reports
+  `-ce2456a9b82d8ec4d352d42a10a97817db9595c3` and the directory is empty.
+- **Consequence**: ESP-IDF registers `<project>/components/*`
+  automatically, so this blocks the build of `software/main/` too — the
+  Phase-1 hardware-validation firmware, which is exactly what Phase 3
+  needs to bring up proto #1. These components also use the pre-v4
+  `register_component()` API that ESP-IDF v5 removed.
+- **Fix**: `git submodule update --init --recursive`, or exclude the
+  emulator components from the validation build via `EXTRA_COMPONENT_DIRS`
+  / `COMPONENTS` so the bring-up firmware does not depend on them.
+- **Not verified**: the build was not executed — ESP-IDF is not
+  installed on this machine and was not installed to find out. The
+  preconditions are confirmed (undefined macro, missing required
+  component, IDF's automatic component discovery); the failure itself
+  needs one `idf.py build`.
+
+#### R25-MED-1 — the docs present an emulator that does not exist
+
+- **Files**: `CLAUDE.md`, `website/docs/software/snes-optimization.md`
+- **Problem**: `software/main/` is 1097 lines across `main.c`,
+  `display.c`, `audio.c`, `input.c`, `power.c`, `sdcard.c`, and `main.c`
+  runs a hardware test sequence (power, colour bars, buttons, SD, 440 Hz
+  tone). There is no emulator integration: nothing in `main/` references
+  snes9x or nofrendo. `software/retro-go-build/` holds five
+  **pre-compiled** `.bin` files (fmsx, gwenesis, launcher, prboom-go,
+  retro-core) — **none of them SNES**. Meanwhile `CLAUDE.md` presents
+  "SNES emulation (primary)" as a project property and
+  `snes-optimization.md` is 33.8 kB of tuning guidance for code that is
+  not wired up.
+- **Also**: `CLAUDE.md`'s documentation paths are stale — it lists
+  `website/docs/components.md`, `schematics.md`, `verification.md` etc.
+  at the top level, but they live under `design/`, `manufacturing/` and
+  `overview/` subdirectories.
+- **Fix**: state the firmware's actual phase in `CLAUDE.md` and mark
+  `snes-optimization.md` as a design target rather than a description of
+  the build. Refresh the doc paths.
+
+#### R25-LOW-1 — R20 and R21 are in parallel, not a divider
+
+- **Files**: `release_jlcpcb/bom.csv`, `scripts/generate_pcb/routing.py`
+- **Observation**, not a defect: both 20 kΩ resistors run `PAM_VREF` ->
+  `PAM_IN_AC`, i.e. 10 kΩ in parallel, and nothing connects
+  `PAM_IN_AC` to GND. That is the correct topology — with C22 blocking
+  DC, the input node sits at VREF, which is mid-supply, exactly what the
+  PAM8403 wants — but it is a leftover shape from the old divider. One
+  10 kΩ resistor would do the same job with one fewer part.
+
+### Verified clean this round (previously open or unconfirmed)
+
+- **R14 is genuinely DNP** — confirmed from three independent sources:
+  absent from `release_jlcpcb/bom.csv`, absent from
+  `release_jlcpcb/cpl.csv`, and on the PCB its pad 2 carries no net at
+  all while pad 1 is `BTN_L`. Even a placed resistor would be a dead
+  end, so GPIO45 cannot be pulled up and VDD_SPI stays at 3.3 V for the
+  Octal PSRAM. This closes the "not independently verified" caveat on
+  `verify_netlist_diff.EXCLUDED_REFS` in `docs/waiver-audit-recovery.md`
+  §O6.
+- **The PAM8403 bias fix (`ee0ec02`) landed correctly** — R20.1 and
+  R21.1 both read `PAM_VREF`, C21 bypasses VREF to GND, C22 AC-couples
+  `I2S_DOUT` into `PAM_IN_AC`, and U5 pins 7 (INL) and 10 (INR) are both
+  on `PAM_IN_AC`. Input at VREF, mid-supply. No residual DC load on the
+  reference.
+- **USB ESD topology is correct** — U4's pins 1/6 and 3/4 sit on
+  `USB_D-`/`USB_D+` on the connector side, with R22/R23 between there
+  and `USB_DP_MCU`/`USB_DM_MCU`. The TVS is ahead of the series
+  resistors, as it must be. R1/R2 CC pull-downs present at 5.1 kΩ.
+
+### Next action
+
+1. **R25-CRIT-1 first.** It is the only finding that can stop the board
+   from booting, and its fix also retires one of the seven H2 netlist
+   mismatches.
+2. **R25-HIGH-1** — needs a decision (resistor value or driver) before
+   any layout work; get the panel datasheet into the repo first.
+3. **R25-HIGH-2** — one `git submodule update --init`, then confirm with
+   a real `idf.py build`.
+4. R25-MED-1 — documentation only, but it is what made an unbuilt
+   emulator look like a shipped feature.
