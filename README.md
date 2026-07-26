@@ -223,6 +223,14 @@ All project documentation lives in `website/docs/` and is published via Docusaur
 - [Enclosure Design](website/docs/enclosure.md)
 - [PCB Design](website/docs/pcb.md)
 
+Engineering notes live in `docs/`:
+
+- [**Known issues**](docs/known-issues.md) — what is still broken and what
+  must not be "fixed". Re-derive the live state with `make open-issues`.
+- [Waiver audit recovery](docs/waiver-audit-recovery.md) — how the
+  suppressions that could hide a dead board were retired.
+- [Repository map](docs/REPO_MAP.md) — generated index of every script.
+
 ## 🤖 Claude Code Integration
 
 This repository is also a **production-grade Claude Code skill suite** for KiCad + JLCPCB PCB design. All 43 skills used to design this PCB are available in `.claude/skills/`, and the 27 PCB-specific ones are packaged as the reusable `kicad-jlcpcb-skills` plugin.

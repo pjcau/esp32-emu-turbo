@@ -103,6 +103,8 @@ def main():
         lines += [
             "",
             "  Detail: `make verify-all`, or run any script above directly.",
+            "  What each one means, and what must NOT be 'fixed': "
+            "docs/known-issues.md.",
             "  Findings and root causes: hardware-audit-bugs.md "
             "(Round 24 section).",
             "  Visual: website/static/net-explorer.html "
