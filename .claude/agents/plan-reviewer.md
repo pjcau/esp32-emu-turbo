@@ -1,6 +1,6 @@
 ---
 name: plan-reviewer
-model: claude-opus-4-7
+model: claude-opus-5
 description: Reviews development plans before implementation to identify issues, missing considerations, and risks. Use before major PCB redesigns, routing changes, component substitutions, or multi-step manufacturing workflows.
 ---
 
