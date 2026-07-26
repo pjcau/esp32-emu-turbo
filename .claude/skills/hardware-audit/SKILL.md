@@ -332,9 +332,9 @@ Severity guide:
 ## Key Files
 
 - `scripts/verify_trace_through_pad.py` — fab-short hard gate
-- `scripts/verify_dfm_v2.py` — DFM (115 tests)
-- `scripts/verify_datasheet_nets.py` — pin→net (259 checks)
-- `scripts/verify_design_intent.py` — cross-source (362 checks)
+- `scripts/verify_dfm_v2.py` — DFM (122 tests)
+- `scripts/verify_datasheet_nets.py` — pin→net (267 checks)
+- `scripts/verify_design_intent.py` — cross-source (369 checks)
 - `scripts/verify_schematic_pcb_sync.py` — R4 sync guard
 - `scripts/verify_strapping_pins.py` — ESP32 boot gate
 - `scripts/verify_decoupling_adequacy.py` — per-IC cap check
