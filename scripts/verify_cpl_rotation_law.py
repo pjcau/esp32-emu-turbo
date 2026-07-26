@@ -81,6 +81,11 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
     # trusting any KiCad-to-JLCPCB angle convention. If the copper or the
     # placement moves, the residual moves off 0 and the entry fails as stale.
     "U2": (0.0,
+           "CONFIRMED ON HARDWARE 2026-07-26 (protos #1 and #2): the IP5306 "
+           "sits vertical — which rules out 0/180 outright — with pin 1 at "
+           "the top-left seen from the bottom side, USB-C on the lower edge. "
+           "U2 is on B.Cu so X mirrors in that view, and pad 1 (VIN/VBUS) is "
+           "exactly that position, so physical pin 1 sits on pad 1. "
            "IP5306 ESOP-8 (C181692) at cpl=270. Convention-free check: at "
            "270 every pin lands on its own pad (0.090 mm uniform) and every "
            "net is correct — VIN->VBUS, KEY->IP5306_KEY, BAT->BAT+, SW->LX, "
