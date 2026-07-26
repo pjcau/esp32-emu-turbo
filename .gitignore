@@ -61,8 +61,20 @@ hardware/kicad/~*.lck
 # External DFM analysis output (KiBot + Tracespace)
 hardware/kicad/external-dfm-output/
 
-# EasyEDA reference footprint cache (verify_easyeda_footprint.py, LCSC-keyed)
-scripts/.easyeda_cache/
+# ERC report + its schematic fingerprint (erc_check.py regenerates on demand)
+hardware/kicad/.erc-report.json
+hardware/kicad/.erc-report.stamp
+
+# EasyEDA reference footprints (verify_easyeda_footprint.py, LCSC-keyed).
+# Tracked, not cached. Three manufacturing gates judge against this geometry
+# (verify_easyeda_footprint, verify_cpl_rotation_law, analyze_pin1_marker), and
+# a gate must judge against the reference that was actually reviewed, not
+# against whatever the API serves today. Re-fetching on a miss also made the
+# rotation law's verdict move run to run as an empty checkout warmed up, and
+# the API rate-limits to HTTP 403 under concurrent agents. The .step models
+# stay ignored: 66 MB, and nothing reads them (inject-3d-models.py uses the
+# KiCad libraries instead).
+scripts/.easyeda_cache/**/*.step
 test-roms/*.sfc
 test-roms/*.smc
 test-roms/*.nes

@@ -7,18 +7,50 @@ by severity, and separates generator artifacts from real electrical issues.
 Usage:
     python3 scripts/erc_check.py [--run]
 
-    --run   Execute kicad-cli ERC first (requires kicad-cli in PATH)
-            Without --run, reads existing /tmp/erc-report.json
+    --run   Force a re-run of kicad-cli ERC even if the report is current.
+
+The report is regenerated automatically whenever it is missing or older than
+the schematic, so this gate always reports on the schematic as it is now.
+
+The report used to live at a machine-global /tmp/erc-report.json with no
+freshness check, which made this gate wrong in three ways at once: it failed
+on any machine that had never generated the file, it kept reporting yesterday's
+answer once the file existed, and every worktree and every other KiCad project
+on the machine wrote the same path — one project's ERC could sign off another's.
+The report is now project-scoped and stamped with a hash of every schematic
+sheet, the way scripts/pcb_cache.py stamps the board.
 """
 
+import glob
+import hashlib
 import json
 import os
 import subprocess
 import sys
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SCH_PATH = os.path.join(PROJECT_DIR, "hardware/kicad/esp32-emu-turbo.kicad_sch")
-ERC_JSON = "/tmp/erc-report.json"
+KICAD_DIR = os.path.join(PROJECT_DIR, "hardware/kicad")
+SCH_PATH = os.path.join(KICAD_DIR, "esp32-emu-turbo.kicad_sch")
+ERC_JSON = os.path.join(KICAD_DIR, ".erc-report.json")
+ERC_STAMP = os.path.join(KICAD_DIR, ".erc-report.stamp")
+
+
+def schematic_fingerprint():
+    """SHA-256 over every sheet, so editing any one of them invalidates."""
+    h = hashlib.sha256()
+    for path in sorted(glob.glob(os.path.join(KICAD_DIR, "*.kicad_sch"))):
+        h.update(os.path.basename(path).encode())
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 16), b""):
+                h.update(chunk)
+    return f"sha256:{h.hexdigest()}"
+
+
+def report_is_current():
+    if not (os.path.exists(ERC_JSON) and os.path.exists(ERC_STAMP)):
+        return False
+    with open(ERC_STAMP) as f:
+        return f.read().strip() == schematic_fingerprint()
 
 # Violations that come from the schematic generator (grid alignment, wiring style)
 # and are NOT real electrical issues. These are suppressed in the report.
@@ -58,10 +90,16 @@ def run_erc():
         "--format", "json",
         "--severity-all",
     ]
+    # Stamp with the fingerprint taken BEFORE the run: if a sheet is edited
+    # while ERC is running, the stamp will not match on the next call and the
+    # report is regenerated rather than trusted.
+    stamp = schematic_fingerprint()
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode not in (0, 1):  # 1 = violations found (expected)
         print(f"ERROR: kicad-cli failed: {result.stderr}")
         sys.exit(2)
+    with open(ERC_STAMP, "w") as f:
+        f.write(stamp + "\n")
     print(f"ERC report saved: {ERC_JSON}")
     return result.returncode
 
@@ -198,13 +236,12 @@ def print_report(result):
 
 
 def main():
-    if "--run" in sys.argv:
+    if "--run" in sys.argv or not report_is_current():
         run_erc()
 
     if not os.path.exists(ERC_JSON):
-        print(f"No ERC report found. Run with --run to generate.")
-        print(f"  python3 scripts/erc_check.py --run")
-        sys.exit(1)
+        print("ERC report missing after the run — is kicad-cli on PATH?")
+        sys.exit(2)
 
     result = parse_report(ERC_JSON)
     passed = print_report(result)

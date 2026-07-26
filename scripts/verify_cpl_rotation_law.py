@@ -197,8 +197,11 @@ def main(argv: list[str]) -> int:
     print(f"{'ref':<8}{'lcsc':<11}{'layer':<8}{'cpl':>5}{'R':>7}  status")
     print("-" * 74)
     bad = 0
+    noref = 0
     for r in records:
-        if r["status"] in ("FAIL", "UNEVALUABLE", "NOREF"):
+        if r["status"] == "NOREF":
+            noref += 1
+        elif r["status"] in ("FAIL", "UNEVALUABLE"):
             bad += 1
         if not verbose and r["status"] == "OK":
             continue
@@ -213,14 +216,27 @@ def main(argv: list[str]) -> int:
     exc = sum(1 for r in records if r["status"] == "EXCEPTION")
     print("-" * 74)
     print(f"  OK: {ok}   EXCEPTION: {exc}   "
-          f"FAIL/UNEVALUABLE/NOREF: {bad}   total: {len(records)}")
+          f"FAIL/UNEVALUABLE: {bad}   NOREF: {noref}   total: {len(records)}")
     if bad:
         print("\n  A violation means the emitted CPL angle disagrees with the")
         print("  angle every other part on that layer implies. Resolve it by")
         print("  checking the JLCPCB 3D preview for that LCSC part — then")
         print("  either fix the footprint or declare a _LAW_EXCEPTIONS entry")
         print("  stating what is physically non-standard about the part.")
-    return 1 if bad else 0
+    if noref:
+        # A missing reference is not a violation and must not be reported as
+        # one: an incomplete checkout of scripts/.easyeda_cache/ silently
+        # changed this gate's verdict run to run. Exit 2 says "this gate could
+        # not judge", which is a different repair from "the board is wrong".
+        print(f"\n  {noref} part(s) have no EasyEDA reference, so the law could")
+        print("  not be evaluated for them. The references are tracked under")
+        print("  scripts/.easyeda_cache/ — restore them with")
+        print("  `git checkout -- scripts/.easyeda_cache`. Do not re-fetch them")
+        print("  from the API: this gate must judge against the geometry that")
+        print("  was reviewed, not against whatever EasyEDA serves today.")
+    if bad:
+        return 1
+    return 2 if noref else 0
 
 
 if __name__ == "__main__":
