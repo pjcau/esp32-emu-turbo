@@ -1,0 +1,79 @@
+{
+  "corpus": "Round 5 — electrical connectivity audit (2026-04-10)",
+  "why": "Every R5 finding was a pad with the right net assignment sitting on an isolated copper island. Six gates said PASS because they checked pad-net assignments rather than continuity. A bench that solves the netlist as a circuit cannot make that mistake -- an island has no current path -- so R5 is the cheapest proof that Phase 1 works at all.",
+  "entries": [
+    {
+      "id": "R5-CRIT-1",
+      "round": 5,
+      "title": "boost inductor L1 isolated on its BAT+ side",
+      "source": "hardware-audit-bugs.md:200",
+      "source_match": "R5-CRIT-1",
+      "phase": 1,
+      "classes": ["netlist-island", "dead-board-on-battery"],
+      "mutation": {"kind": "detach_pin", "ref": "L1", "pin": "1"},
+      "must_report": "no current path from BAT+ through L1 to the IP5306 switching node, therefore no +5V on battery power while USB still works -- the asymmetry is the signature",
+      "expect": "caught"
+    },
+    {
+      "id": "R5-CRIT-2",
+      "round": 5,
+      "title": "IP5306 BAT+ bulk cap C18 isolated",
+      "source": "hardware-audit-bugs.md:220",
+      "source_match": "R5-CRIT-2",
+      "phase": 1,
+      "classes": ["netlist-island", "decoupling-absent"],
+      "mutation": {"kind": "detach_pin", "ref": "C18", "pin": "1"},
+      "must_report": "C18 contributes zero capacitance to BAT+, so the BAT+ transient response is that of an undecoupled input",
+      "expect": "caught"
+    },
+    {
+      "id": "R5-CRIT-3",
+      "round": 5,
+      "title": "IP5306 VBUS decoupling cap C17 isolated",
+      "source": "hardware-audit-bugs.md:232",
+      "source_match": "R5-CRIT-3",
+      "phase": 1,
+      "classes": ["netlist-island", "decoupling-absent"],
+      "mutation": {"kind": "detach_pin", "ref": "C17", "pin": "1"},
+      "must_report": "C17 contributes zero capacitance to VBUS",
+      "expect": "caught"
+    },
+    {
+      "id": "R5-CRIT-4",
+      "round": 5,
+      "title": "every button's pull-up and debounce cap on a floating island",
+      "source": "hardware-audit-bugs.md:240",
+      "source_match": "R5-CRIT-4",
+      "phase": 2,
+      "classes": ["netlist-island", "gpio-fabric"],
+      "mutation": {"kind": "detach_pin", "ref": "R8", "pin": "1"},
+      "must_report": "BTN_A has no external pull-up in the circuit: the pin's idle level depends entirely on the ESP32 internal pull, and the debounce RC time constant is zero",
+      "expect": "caught",
+      "note": "The board is functionally operable this way because the firmware enables internal pull-ups, which is exactly why this survived. The bench must report the electrical fact and must NOT report a broken button."
+    },
+    {
+      "id": "R5-CRIT-5",
+      "round": 5,
+      "title": "SW_BOOT not connected to the BTN_SELECT network",
+      "source": "hardware-audit-bugs.md:261",
+      "source_match": "R5-CRIT-5",
+      "phase": 2,
+      "classes": ["netlist-island", "boot-mode"],
+      "mutation": {"kind": "detach_pin", "ref": "SW_BOOT", "pin": "1"},
+      "must_report": "holding SW_BOOT across reset does not pull GPIO0 low, so the download-mode strapping sequence cannot be entered from the buttons",
+      "expect": "caught"
+    },
+    {
+      "id": "R5-CRIT-6",
+      "round": 5,
+      "title": "menu combo diode D1 isolated from BTN_START and BTN_SELECT",
+      "source": "hardware-audit-bugs.md:269",
+      "source_match": "R5-CRIT-6",
+      "phase": 2,
+      "classes": ["netlist-island", "input-combo"],
+      "mutation": {"kind": "detach_pin", "ref": "D1", "pin": "1"},
+      "must_report": "pressing SW13 pulls neither BTN_START nor BTN_SELECT low, so the one-button menu combo does nothing",
+      "expect": "caught"
+    }
+  ]
+}

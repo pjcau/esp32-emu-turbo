@@ -1,0 +1,48 @@
+{
+  "corpus": "Rounds 9 and 10 — dead nodes and labels that are not circuits (2026-04-11)",
+  "why": "These are the findings a name-based check cannot make: a net that exists, is spelled the same on both sides, and has nowhere for current to go. netlist.py's D1 and D2 classes already report the surviving instances, so this file is where Phase 0 gets to be measured rather than trusted.",
+  "entries": [
+    {
+      "id": "R9-MED-4",
+      "round": 9,
+      "title": "R19 and C20 attached to a dead net, disconnected from MENU_K",
+      "source": "hardware-audit-bugs.md:671",
+      "source_match": "R9-MED-4",
+      "phase": 1,
+      "classes": ["dead-node", "netlist-island"],
+      "mutation": {"kind": "move_pin", "ref": "R16", "pin": "1",
+                   "to_net": "BTN_MENU_DEAD"},
+      "must_report": "R16 pin 1 is on a net with no other pin, so it carries no current and its value has no effect on any node voltage",
+      "expect": "caught",
+      "note": "R19/C20 were deleted from the design after this finding, so the historical part cannot be re-detached. The mutation reproduces the same electrical shape on R16, which is the surviving resistor of that network."
+    },
+    {
+      "id": "R10-LOW-2",
+      "round": 10,
+      "title": "I2S_BCLK and I2S_LRCK allocated as nets but never used",
+      "source": "hardware-audit-bugs.md:856",
+      "source_match": "R10-LOW-2",
+      "phase": 0,
+      "classes": ["dead-node", "single-pin-net"],
+      "mutation": {"kind": "none"},
+      "present_now": true,
+      "must_report": "I2S_BCLK and I2S_LRCK each have exactly one pin (U1.8 and U1.9) and zero copper, on both the board and the schematic",
+      "expect": "caught",
+      "note": "Present in the design today. netlist.py reports both as D2, which is why this entry is the corpus's own smoke test: if a Phase 0 run ever stops naming these two, the detector has regressed."
+    },
+    {
+      "id": "R10-LOW-7",
+      "round": 10,
+      "title": "the strapping-pin gate's RC maths assumes an external R3 that is not fitted",
+      "source": "hardware-audit-bugs.md:980",
+      "source_match": "R10-LOW-7",
+      "phase": 2,
+      "classes": ["gate-agrees-with-design", "model-vs-bom"],
+      "mutation": {"kind": "none"},
+      "present_now": true,
+      "must_report": "the EN node has no resistor and no capacitor on it, so no RC time constant exists to compute; any boot-delay figure derived from R3 = 10k and C3 = 100nF describes a network the board does not have",
+      "expect": "caught",
+      "note": "Still live in scripts/simulate_circuit.py, which prints an EN reset delay from EN_PULLUP_R * EN_RESET_C and passes a 'delay long enough for stable boot' check on it. The 0.33 mA current-budget line for the same non-existent resistor was zeroed in 68bb20e; the timing calculation was not. Phase 1 must not inherit either."
+    }
+  ]
+}

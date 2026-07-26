@@ -158,6 +158,33 @@ dispatch: ## Turn every red gate into an agent work order in .claude/issues/
 dispatch-fast: ## Same, but only the session-start gate subset
 	@$(T) dispatch-fast python3 scripts/issue_dispatch.py --fast
 
+# ── Virtual Bench (docs/virtual-bench-plan.md) ───────────────────────
+#
+# Phase 0 only: extract the netlist, cross-check the two sources, define
+# what a component model must cite, and write down the bugs the bench will
+# have to rediscover. Nothing electrical is modelled yet.
+#
+# NONE of these are in VERIFY_ALL_SCRIPTS, deliberately. bench-netlist and
+# bench-retro are *designed* to exit non-zero at this phase — the plan's own
+# done-when for T0.3 is "corpus written and failing" — and parking two
+# permanent reds in the suite is how the whole suite stops being read.
+# Registration is T5.3, which also has to give the gate an owner in
+# issue_dispatch.py: an unowned failing gate is a hard error (exit 2) here.
+
+bench-netlist: ## T0.1 — extracted netlist + the dispute list that blocks the bench
+	@$(T) bench-netlist python3 scripts/vbench/netlist.py
+
+bench-delta: ## T0.1 — what changed electrically since the board on the desk (v4.3.1)
+	@$(T) bench-delta python3 scripts/vbench/netlist.py --delta
+
+bench-retro: ## T0.3 — historical bugs the bench must rediscover, and how many it does
+	@$(T) bench-retro python3 scripts/vbench/corpus.py
+
+bench-test: ## Phase 0 mutation tests — break the schema/corpus/netlist checks on purpose
+	@$(T) bench-test python3 scripts/test_vbench.py
+
+bench-phase0: bench-test bench-netlist bench-retro ## Everything Phase 0 delivers, in order
+
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
 

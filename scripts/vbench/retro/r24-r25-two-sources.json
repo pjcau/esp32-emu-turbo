@@ -1,0 +1,90 @@
+{
+  "corpus": "Rounds 24 and 25 — two generators telling two stories, and a datasheet nobody opened",
+  "why": "R24 is what happens when a fix lands in one of two independent generators: the schematic was corrected, the copper was not, and the board was fabricated with the bug. R25 is worse -- the design agreed with itself across four files and disagreed with the datasheet. The bench's only defence against the second kind is that every model field must cite a page, which is what _schema.py enforces.",
+  "entries": [
+    {
+      "id": "R24-HIGH-1",
+      "round": 24,
+      "title": "PAM8403 input bias tied to GND instead of VREF on the PCB",
+      "source": "hardware-audit-bugs.md:2514",
+      "source_match": "R24-HIGH-1",
+      "phase": 1,
+      "classes": ["dc-operating-point", "two-source-drift"],
+      "mutation": {"kind": "move_pin", "ref": "R20", "pin": "1",
+                   "to_net": "GND"},
+      "must_report": "with R20 from the amplifier input node to GND instead of to PAM_VREF, a DC current of about VREF/20k flows through the input network, offsetting the speaker output and clipping it asymmetrically",
+      "expect": "caught",
+      "note": "Fixed on the board after v4.3.1; prototype #1 still has it. netlist.py --delta v4.3.1 shows the fix as R20.1/R21.1 moving GND -> PAM_VREF, so any audio measurement on proto #1 must be interpreted with the bug present."
+    },
+    {
+      "id": "R24-HIGH-3",
+      "round": 24,
+      "title": "SW_RST and SW_BOOT have all four pins floating in the schematic",
+      "source": "hardware-audit-bugs.md:2580",
+      "source_match": "R24-HIGH-3",
+      "phase": 0,
+      "classes": ["schematic-hole", "two-source-drift"],
+      "mutation": {"kind": "detach_pin", "ref": "SW_RST", "pin": "1",
+                   "side": "schematic"},
+      "must_report": "RESET and BOOT are absent from the schematic netlist, so the cross-check has nothing to compare the board's reset and boot buttons against",
+      "expect": "caught",
+      "note": "The board was always correct here; the wires were drawn 5.08 mm from the pins they appeared to touch. A rendered sheet that looks right to a human reader is the hazard."
+    },
+    {
+      "id": "R25-CRIT-1",
+      "round": 25,
+      "title": "the EN RC delay circuit the module datasheet requires is absent; EN floats",
+      "source": "hardware-audit-bugs.md:2820",
+      "source_match": "R25-CRIT-1",
+      "phase": 1,
+      "classes": ["model-vs-datasheet", "power-on-reset"],
+      "mutation": {"kind": "none"},
+      "present_now": true,
+      "must_report": "the EN net has exactly two pins (U1.3 and SW_RST.1), no resistor to +3V3 and no capacitor to GND, so EN has no defined level at power-on and no reset delay -- against U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf page 28, which requires an RC of R = 10k and C = 1uF at EN",
+      "expect": "caught",
+      "note": "The single most instructive entry in the corpus. The removal of R3 was justified by a comment claiming the module integrates the pull-up; the datasheet says the opposite in its own words. The claim was then repeated in three more files. See docs/virtual-bench-plan.md phase -1(a) and (d)."
+    },
+    {
+      "id": "R25-HIGH-1",
+      "round": 25,
+      "title": "the display backlight has no current-limiting element",
+      "source": "hardware-audit-bugs.md:2867",
+      "source_match": "R25-HIGH-1",
+      "phase": 1,
+      "classes": ["model-vs-datasheet", "unbounded-current"],
+      "mutation": {"kind": "none"},
+      "present_now": true,
+      "must_report": "J4 pad 8 (panel pin 33, LED-A) sits directly on +3V3 with the cathodes on GND and no series element, so the backlight current is set by the difference between the rail and the LED string's Vf spread divided by its dynamic resistance -- unbounded by design",
+      "expect": "caught",
+      "note": "The panel is the only part in this design with no datasheet in hardware/datasheets/. _schema.py therefore refuses to validate a panel model at all, on purpose: the requirement currently lives only in a Markdown table, which is how it was lost."
+    },
+    {
+      "id": "R25-LOW-1",
+      "round": 25,
+      "title": "R20 and R21 are in parallel, not a divider",
+      "source": "hardware-audit-bugs.md:2952",
+      "source_match": "R25-LOW-1",
+      "phase": 1,
+      "classes": ["topology-recognition"],
+      "mutation": {"kind": "none"},
+      "present_now": true,
+      "must_report": "R20 and R21 both run PAM_VREF to PAM_IN_AC, i.e. 10k in parallel, and nothing connects PAM_IN_AC to GND -- the correct topology, but one resistor short of minimal",
+      "expect": "caught",
+      "note": "An observation, not a defect. It is in the corpus because a bench that reports it as a broken divider is reading the topology from the part count instead of from the netlist."
+    },
+    {
+      "id": "VB-C28-DNP",
+      "round": 26,
+      "title": "the ESP32 +3V3 bulk cap counted by a gate is not assembled",
+      "source": "scripts/verify_decoupling_adequacy.py:59",
+      "source_match": "\"C28\": 10.0",
+      "phase": 1,
+      "classes": ["gate-agrees-with-design", "model-vs-bom"],
+      "mutation": {"kind": "none"},
+      "present_now": true,
+      "must_report": "C28 has pads on +3V3 and GND but is DNP -- absent from the BOM, the CPL and the schematic, removed from assembly because it sits under the module body -- so the 10 uF it contributes to the ESP32 supply exists in no physical board",
+      "expect": "caught",
+      "note": "Found by netlist.py's D5 class while building Phase 0, not by an audit round. Same shape as R25-CRIT-1: a budget computed from a part that is not fitted, in a gate whose comment says its values come from the BOM. jlcpcb_export.py:420 records the removal; verify_decoupling_adequacy.py:59 was never told."
+    }
+  ]
+}

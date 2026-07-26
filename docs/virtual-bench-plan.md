@@ -139,12 +139,32 @@ attempt, because both are mistakes the bench itself could repeat:
   it landed exactly on an LCD_D3 trace passing through on F.Cu — 0.0 µm, a
   short through the barrel. `verify_copper_clearance` caught it.
 
-Still open, and not blocking: the R3 story is inconsistent across the repo.
-`mcu.py` says R3 is DNP (correct — the module has the pull-up), the BOM/CPL
-agree, but `simulate_circuit.py` still budgets `"EN pull-up (R3 10k)"` at
-0.33 mA on +3V3. Phase 1 must not inherit that number.
+Still open, and not blocking — but read the correction below before
+believing this paragraph's earlier version. It used to say:
 
-## Phase 0 — Foundation and honesty baseline
+> `mcu.py` says R3 is DNP (correct — the module has the pull-up), the
+> BOM/CPL agree, but `simulate_circuit.py` still budgets
+> `"EN pull-up (R3 10k)"` at 0.33 mA on +3V3.
+
+Both halves were wrong, in the two different ways this file is about.
+The parenthesis repeated the false premise that section (a) above spends a
+paragraph demolishing — **the module has no EN pull-up**, the datasheet
+requires an external RC — so the plan for the bench was itself carrying the
+bug it was written to prevent. And the 0.33 mA figure had already been
+zeroed by `68bb20e`; the sentence outlived its subject.
+
+What is actually still inconsistent is the *timing*, not the current.
+`simulate_circuit.py:412-420` computes `en_tau = EN_PULLUP_R * EN_RESET_C`
+from R3 = 10 kΩ and C3 = 100 nF, prints an EN reset delay, and passes a
+check that the delay is long enough for stable boot. Neither part is
+fitted: R3 is DNP and C3 sits across +3V3/GND. So the one gate that speaks
+about power-on reset timing is describing a network that exists in no
+board, and reporting PASS. Phase 1 (T1.4) must derive that time constant
+from the extracted netlist, where it is undefined, and say so.
+
+`make bench-retro` carries this as corpus entry `R10-LOW-7`.
+
+## Phase 0 — Foundation and honesty baseline — **DONE**
 
 Nothing electrical is modelled yet. This phase decides whether the rest can be
 trusted.
@@ -153,8 +173,57 @@ trusted.
 |---|---|---|
 | T0.1 | `scripts/vbench/netlist.py` — build `{net: [(ref, pin, pad, layer)]}` from `.kicad_pcb` via `pcb_cache.load_cache()`; cross-check against the schematic netlist | every net in the board resolves to a pin list; disagreements are reported and block |
 | T0.2 | Model schema: `scripts/vbench/models/_schema.py` — pins, electrical parameters, `datasheet_ref` (doc + rev + page/table) mandatory and non-empty | a model missing a citation fails schema validation |
-| T0.3 | Retro corpus: `scripts/vbench/retro/*.yaml` — known past bugs from `hardware-audit-bugs.md` expressed as netlist/model mutations the bench must catch | corpus written and failing (no bench yet), each entry naming the round it came from |
+| T0.3 | Retro corpus: `scripts/vbench/retro/*.json` — known past bugs from `hardware-audit-bugs.md` expressed as netlist/model mutations the bench must catch | corpus written and failing (no bench yet), each entry naming the round it came from |
 | T0.4 | `make bench-netlist` — prints the extracted netlist summary and the dispute list | target exists, exits non-zero while disputes remain |
+
+Targets: `make bench-netlist`, `make bench-delta`, `make bench-retro`,
+`make bench-test`, `make bench-phase0`. None is in `VERIFY_ALL_SCRIPTS`:
+two of them are *designed* to exit non-zero at this phase, and parking
+permanent reds in that suite is how the suite stops being read.
+Registration is T5.3, which also has to give the gate an owner in
+`issue_dispatch.py`.
+
+**Corpus format: JSON, not YAML.** PyYAML is not importable on the
+development machine (PEP 668 externally-managed interpreter) and all 95
+scripts in this repo are stdlib-only. A YAML corpus would make the gate
+un-runnable, and an un-runnable gate is a gate nobody reads. The same
+applies to the Phase 4 scenario files (T4.3).
+
+### What Phase 0 measured
+
+`make bench-netlist` reports **29 disputes at HEAD, none of them D4** — the
+two sources no longer disagree about any pin they both describe, which is
+what `verify_netlist_diff` going 4/4 already told us. The value is in the
+classes that gate structurally cannot see:
+
+| Class | Count | What it is |
+|---|---|---|
+| D1 | 2 | `LCD_BL`, `LCD_RD` — net names in the board with no pad on them. Both files declare the name, so T1/T2 match; T4 iterates schematic pins, of which these have none. A net with no pin is a label. |
+| D2 | 9 | nets with a single pin. The board's `I2S_BCLK`/`I2S_LRCK` (R10-LOW-2), and on the schematic side `BAT+` (one node: `SW_PWR.1`) and `VBUS` (one node: `U4.5`) — the two supply rails of the design, drawn as stubs. |
+| D3 | 17 | pads carrying a net that no schematic pin maps to, so nothing compares them. Six are signal nets: `J1.5`/`J1.8` (the USB pair's second orientation, which `_J1_MAP` calls "SBU / unused, no net"), `U5.8` (`PAM_VREF` — the exact node R24-HIGH-1 was about), `U6.9` (card-detect, sitting on `BTN_R` = GPIO3, a strapping pin), and `SW_PWR` tabs 4b/4d on `BTN_SELECT`. |
+| D5 | 1 | `C28` — see below. |
+
+`make bench-delta` answers "what changed since the board you are holding":
+**30 electrical differences between `v4.3.1` and HEAD**, dominated by the
+regulator swap (`U3` pins 1-4 all move, `L2`/`R25`/`R26`/`C29`/`C30`
+appear, `BUCK_FB`/`BUCK_LX` are new) and by the R24-HIGH-1 fix
+(`R20.1`/`R21.1` move `GND` → `PAM_VREF`). Prototype #1 therefore has a
+linear regulator and the audio bias bug; no bench result on HEAD's netlist
+describes it. Run at `--rev v4.3.1` the netlist is far more in dispute — 67,
+including 38 D4 — which is R24's schematic↔PCB drift, since closed.
+
+**One new finding, same shape as the R3 story.** `C28` has pads on `+3V3`
+and `GND` and is DNP: absent from the BOM, the CPL and the schematic,
+removed from assembly because it sits under the module body
+(`jlcpcb_export.py:420`). But `verify_decoupling_adequacy.py:59` lists
+`"C28": 10.0` as the ESP32's `+3V3` bulk capacitance, under a comment
+saying its values come from the BOM — where C28 has never been. A gate is
+crediting the supply with 10 µF that exists on no physical board.
+`verify_bom_cpl_pcb` cannot see it, because "footprint on the board, not in
+the BOM" is its definition of DNP; `verify_netlist_diff` T3 only checks the
+other direction. Corpus entry `VB-C28-DNP`. Not fixed here: whether the
+missing 10 µF matters is a Phase 1 question, and the buck's own output
+capacitor is on the same rail.
 
 ## Phase 1 — Analog: rails, operating point, shorts, thermal
 
