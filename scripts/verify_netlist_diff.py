@@ -58,24 +58,25 @@ PASS = 0
 FAIL = 0
 
 SCH_PATH = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_sch")
-
-# Per-process path, NOT a fixed /tmp name.
+# Per-process path. scripts/run-verifiers.sh runs the suite in PARALLEL, so a
+# fixed filename here is a race: any other gate that exports the schematic
+# netlist — scripts/vbench/netlist.py does, through this module's
+# export_netlist() — writes the same file at the same time, and both readers
+# get whichever half-written copy they happen to see. That produced an
+# intermittent failure in verify_netlist_diff and in test_vbench, on
+# alternating runs, which is worse than either of them simply being red.
 #
-# This was "/tmp/esp32_emu_turbo_netlist.xml", shared by every checkout on the
-# machine. This repo routinely has several worktrees open at once, and
-# verify-all runs its gates in parallel, so two concurrent runs exported to the
-# same file and one read what the other was still writing:
+# The same race also crosses checkouts: this repo usually has several worktrees
+# open, and the old fixed "/tmp/esp32_emu_turbo_netlist.xml" was shared by all
+# of them, surfacing as
 #
 #     xml.etree.ElementTree.ParseError: junk after document element
 #
-# The gate then fails for a reason that has nothing to do with the board, which
-# is the fastest way to teach everyone that a red gate means nothing. Keyed by
-# PID and by the checkout it belongs to, so concurrent runs cannot collide and
-# two worktrees never share a file.
+# A gate that fails for a reason unrelated to the board is the fastest way to
+# teach everyone that red means nothing. PID is unique machine-wide, so it
+# closes both variants at once.
 NETLIST_TMP = os.path.join(
-    tempfile.gettempdir(),
-    f"esp32_emu_turbo_netlist_{abs(hash(BASE)) & 0xFFFFFF:06x}_{os.getpid()}.xml",
-)
+    tempfile.gettempdir(), f"esp32_emu_turbo_netlist.{os.getpid()}.xml")
 
 
 @atexit.register

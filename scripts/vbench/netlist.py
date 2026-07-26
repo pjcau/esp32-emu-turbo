@@ -45,6 +45,7 @@ import collections
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import tarfile
@@ -444,7 +445,36 @@ def crosscheck(board, sch):
             "D5", ref, "sch", "pcb generator",
             "schematic symbol with no footprint on the board", 0))
 
-    order = {"D1": 0, "D3": 1, "D4": 2, "D5": 3, "D2": 4}
+    # D6 — a two-terminal part with fewer than two pins on any net. It is
+    # placed, it is in the BOM, and it is not in the circuit.
+    #
+    # This is the whole Round 5 class: L1's inductor pin, C17 and C18's
+    # decoupling pins, every button's pull-up and debounce cap, SW_BOOT and
+    # the menu diode were all physically present with a terminal on an
+    # isolated island, and six gates said PASS because every pad still had
+    # the *right net name*. A net name is not a connection.
+    #
+    # The one exception on this board is derived, not listed: R14 has a
+    # single pin on a net and is DNP — no BOM value, so it is not fitted, so
+    # half-connected is what it should be. Any other part in that state is a
+    # finding.
+    two_terminal = collections.defaultdict(set)
+    for net, pins in board.nets.items():
+        for p in pins:
+            if re.match(r"^(R|C|L|D|LED)\d", p.ref):
+                two_terminal[p.ref].add((p.pad, net))
+    for ref, seen in sorted(two_terminal.items()):
+        if len({net for _pad, net in seen}) >= 2:
+            continue
+        if ref in dnp:
+            continue
+        disputes.append(Dispute(
+            "D6", ref, "pcb", "routing",
+            f"only {len(seen)} pin(s) on a net "
+            f"({', '.join(f'{p}->{n}' for p, n in sorted(seen)) or 'none'}) — "
+            f"placed and in the BOM, but not in the circuit", 0))
+
+    order = {"D1": 0, "D6": 1, "D3": 2, "D4": 3, "D5": 4, "D2": 5}
     return sorted(disputes,
                   key=lambda d: (order[d.code], d.rank, d.subject, d.side))
 
@@ -502,6 +532,7 @@ _CODE_MEANING = {
     "D3": "pad or pin that no source accounts for",
     "D4": "schematic and board disagree about a pin's net",
     "D5": "part present in only one source",
+    "D6": "a two-terminal part with a terminal on no net",
 }
 
 # Printed once per class, not once per finding: the explanation is a
@@ -521,6 +552,9 @@ _CODE_NOTE = {
           "verify_netlist_diff T4, through the same table.",
     "D5": "A DNP land still has pads with nets, so a solver that trusts the "
           "netlist will model a part the board does not carry.",
+    "D6": "It is placed, it is in the BOM, and it is not in the circuit. This "
+          "is the Round 5 class: every pad kept the right net NAME while a "
+          "terminal sat on an isolated island.",
 }
 
 

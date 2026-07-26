@@ -37,6 +37,11 @@ Covers:
      datasheet's 4 ohm rating rather than quoted, a missing BOM value must be
      fatal, and the SD socket's DAT2 pad must be detected on a strapping pin's
      net.
+  J. corpus coverage — every corpus entry must be caught, blinding one of the
+     bench's checks must LOWER that count (a coverage number that survives a
+     blinded bench measures nothing), an unapplicable mutation must raise
+     rather than read as uncatchable, and the gate must be both registered in
+     VERIFY_ALL_SCRIPTS and owned in issue_dispatch.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -290,12 +295,26 @@ def test_corpus():
     check("an empty corpus is caught rather than passing vacuously",
           _with_mutated_corpus(empty_dir) is not None)
 
-    # Phase 0 must report zero caught. A future phase changing this is
-    # expected; a future phase changing it *without* writing detectors is
-    # what this guards.
-    caught = [ok for _, ok, _ in corpus.evaluate(entries) if ok]
-    check("Phase 0 claims no coverage", len(caught) == 0,
-          f"{len(caught)} entries claim to be caught with no detector")
+    # The coverage count must come from RUNNING detectors, never from the
+    # corpus files. This test used to assert "Phase 0 claims no coverage",
+    # which was true while no detector existed and became false the moment
+    # T5.1 landed — so it now asserts the invariant that outlives the phase:
+    # take the detectors away and the count must fall to zero.
+    from vbench import detectors
+    saved = dict(detectors.LIVE)
+    saved_mut = detectors.detect_mutation
+    try:
+        detectors.LIVE.clear()
+        detectors.detect_mutation = lambda e: (False, "detector removed")
+        detectors._CACHE.clear()
+        with_none = [ok for _, ok, _ in corpus.evaluate(entries) if ok]
+    finally:
+        detectors.LIVE.update(saved)
+        detectors.detect_mutation = saved_mut
+        detectors._CACHE.clear()
+    check("with the detectors removed, coverage falls to zero — the count is "
+          "computed, not stored", len(with_none) == 0,
+          f"{len(with_none)} entries still claim to be caught")
 
 
 # ── C. Netlist and disputes ─────────────────────────────────────────
@@ -985,9 +1004,90 @@ def test_phase3_peripherals():
           _quiet(audio.main, []) == 0 and _quiet(sdcard.main, []) == 0)
 
 
+# ── J. Phase 5: does the corpus measure anything? ───────────────────
+
+def test_phase5():
+    print("\nJ. corpus coverage / detectors.py / mutate.py")
+    from vbench import corpus, detectors, mutate
+    from vbench import netlist as _nl
+
+    entries = corpus.load_corpus()
+    results = corpus.evaluate(entries)
+    caught = [e for e, ok, _ in results if ok]
+    missed = [(e.id, why) for e, ok, why in results if not ok]
+    check("the bench rediscovers every corpus entry (T5.1)",
+          len(caught) == len(entries),
+          f"{len(caught)}/{len(entries)}; missed {missed}")
+
+    # The count has to be worth something. Blind one of the bench's checks
+    # and the coverage must DROP — otherwise the detectors are passing on
+    # something other than the bench's findings.
+    saved = _nl.crosscheck
+    try:
+        _nl.crosscheck = lambda *a, **k: []
+        detectors._CACHE.clear()
+        blinded = sum(1 for _e, ok, _d in corpus.evaluate(entries) if ok)
+    finally:
+        _nl.crosscheck = saved
+        detectors._CACHE.clear()
+    restored = sum(1 for _e, ok, _d in corpus.evaluate(entries) if ok)
+    check("blinding the netlist checks lowers the coverage count",
+          blinded < len(entries), f"still {blinded}/{len(entries)} blinded")
+    check("and restoring them brings it back",
+          restored == len(entries), f"{restored}/{len(entries)}")
+
+    # A mutation that cannot be applied must say so, not report the entry as
+    # uncatchable — those are different failures with different fixes.
+    board = _nl.load_board_netlist()
+    try:
+        mutate.apply(board, {"kind": "teleport", "ref": "R8"})
+        check("an unimplemented mutation kind raises", False, "returned")
+    except mutate.MutationError as exc:
+        check("an unimplemented mutation kind raises",
+              "not implemented" in str(exc))
+    try:
+        mutate.apply(board, {"kind": "detach_pin", "ref": "R8", "pin": "99"})
+        check("detaching a pin that is on no net raises", False, "returned")
+    except mutate.MutationError:
+        check("detaching a pin that is on no net raises", True)
+    try:
+        mutate.apply(board, {"kind": "none"})
+        check("kind 'none' cannot be injected", False, "returned")
+    except mutate.MutationError:
+        check("kind 'none' cannot be injected", True)
+
+    # D6 — the Round 5 class. It must be silent on the real board and fire
+    # the moment a passive loses a terminal.
+    sch = _nl.load_schematic_netlist()
+    base_codes = {d.code for d in _nl.crosscheck(board, sch)}
+    check("D6 is silent on the board as it stands", "D6" not in base_codes,
+          f"got {sorted(base_codes)}")
+    detached, _what = mutate.apply(
+        board, {"kind": "detach_pin", "ref": "C18", "pin": "1"})
+    d6 = [d for d in _nl.crosscheck(detached, sch)
+          if d.code == "D6" and d.subject == "C18"]
+    check("D6 fires when a decoupling cap loses a terminal (R5-CRIT-2)",
+          len(d6) == 1, f"got {[d.subject for d in _nl.crosscheck(detached, sch) if d.code == 'D6']}")
+    check("R14 does not trip D6, because it is DNP and derived to be so",
+          not [d for d in _nl.crosscheck(board, sch) if d.subject == "R14"])
+
+    # T5.3: the gate has to be registered AND owned.
+    makefile = open(os.path.join(BASE, "Makefile")).read()
+    check("test_vbench is registered in VERIFY_ALL_SCRIPTS (T5.3)",
+          "\ttest_vbench \\" in makefile)
+    sys.path.insert(0, os.path.join(BASE, "scripts"))
+    import issue_dispatch
+    route = issue_dispatch.route("test_vbench")
+    check("issue_dispatch gives the bench gate an owner (T5.3)",
+          route is not None and route["agent"] == "pcb-engineer",
+          f"got {route}")
+    check("and rates it a blind-spot, above a dead board",
+          route and route["severity"] == "blind-spot", f"got {route}")
+
+
 def main():
     print("=" * 72)
-    print("  Virtual Bench Phase 0/1/2/3 — mutation tests")
+    print("  Virtual Bench Phase 0/1/2/3/5 — mutation tests")
     print("=" * 72)
     test_schema()
     test_corpus()
@@ -998,6 +1098,7 @@ def main():
     test_phase2()
     test_phase3()
     test_phase3_peripherals()
+    test_phase5()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

@@ -13,12 +13,12 @@ corpus (it reads as coverage while proving nothing):
   moved, the loader finds it and tells you the new line number; if the text
   is gone from the file entirely, the entry fails. An entry whose evidence
   cannot be located is not a finding, it is a memory.
-* **Status is derived, never written.** No entry carries a `status` field.
-  Whether the bench catches an entry is decided by running detectors, and
-  in Phase 0 there are none, so everything is `NOT-CAUGHT`. That is the
-  intended Phase 0 result (T0.3: "corpus written and failing"), and it is
-  also why this file refuses a status field outright — a hand-written
-  "caught: true" is exactly the sign-off a gate cannot check.
+* **Status is derived, never written.** No entry carries a `status` field,
+  and the loader refuses one. Whether the bench catches an entry is decided
+  by running `detectors.py` against the real design — which is why Phase 0
+  reported 0/21 with no detectors written, and why the count moved on its
+  own as the phases landed rather than because anybody edited a file. A
+  hand-written "caught: true" is exactly the sign-off a gate cannot check.
 
 The format is JSON, not the YAML the plan names. PyYAML is not importable
 on this machine (PEP 668 externally-managed interpreter) and all 95 scripts
@@ -39,6 +39,10 @@ import sys
 
 BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 RETRO_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "retro")
+# Needed so `python3 scripts/vbench/corpus.py` can import its siblings when
+# evaluate() reaches for the detectors.
+sys.path.insert(0, BASE)
+sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 REQUIRED = ("id", "round", "title", "source", "source_match", "phase",
             "classes", "mutation", "must_report", "expect")
@@ -159,15 +163,21 @@ def load_corpus(check_provenance=True):
 
 # ── Detectors ───────────────────────────────────────────────────────
 #
-# Phase 5 (T5.1) wires each entry to the bench run that must catch it.
-# Until Phase 1 exists there is nothing to ask, so the result is NOT-CAUGHT
-# for every entry — and it is computed that way rather than asserted, so
-# the day a detector lands the count moves on its own.
+# T5.1. Each entry is answered by detectors.py: a mutation entry is injected
+# and must produce a NEW finding naming the mutated part; a live entry is
+# asked its own question of the derived data. Nothing is asserted here.
 
 def evaluate(entries):
-    """Return (entry, caught, detail) for each entry. Phase 0: none caught."""
-    return [(e, False, "no detector — Phase 1+ not implemented")
-            for e in entries]
+    """Return (entry, caught, detail) for each entry, by RUNNING the bench.
+
+    The verdict is computed, never read: `detectors.py` either injects the
+    entry's mutation and requires a new finding that names the mutated part,
+    or — for an entry that describes the design as it stands — asks the bench
+    the entry's own question. Which is why the corpus format refuses a
+    `status` field.
+    """
+    from vbench import detectors
+    return [(e, *detectors.evaluate(e)) for e in entries]
 
 
 def reanchor():
@@ -278,6 +288,14 @@ def main(argv=None):
     print(f"  Must reproduce : "
           f"{sum(1 for e in entries if e.expect == 'reproduced')}")
     print(f"  Caught         : {len(caught)} / {len(entries)}")
+    print(f"  What 'caught' means: the bench NOTICED the defect and NAMED the")
+    print(f"    part — for a mutation entry, injecting it produced a finding")
+    print(f"    that mentions the mutated reference; for a live entry, the")
+    print(f"    bench answers that entry's own question from derived data.")
+    print(f"    It does NOT mean the bench reproduced the consequence in")
+    print(f"    `must_report`. Nothing checks that text, and a count that")
+    print(f"    implied otherwise would be the overclaim this corpus exists")
+    print(f"    to prevent.")
     print(f"  Provenance     : all {len(entries)} citations resolve")
     print()
     if len(caught) != len(entries):

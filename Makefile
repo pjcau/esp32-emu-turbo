@@ -79,6 +79,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_issue_dispatch \
 	test_pcb_connectivity \
 	test_power_net_integrity \
+	test_vbench \
 	test_verify_memory \
 	validate_jlcpcb \
 	verify_antenna_keepout \
