@@ -30,6 +30,9 @@ Covers:
      the strapping tables, a button held at reset must force download mode and
      FAIL, BTN_L's missing pull-up must be derived to be REQUIRED rather than
      reported as a defect, and switch_off must reproduce the v1 invariant.
+  H. display.py — the panel-side view must survive a neighbouring markdown
+     table, and crossing two data lines must be caught even though every pad's
+     net stays valid.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -827,9 +830,89 @@ def test_phase2():
           detail["recorded"])
 
 
+# ── H. Phase 3: the display, seen from the panel ────────────────────
+
+def test_phase3():
+    print("\nH. display.py")
+    from vbench import display as disp
+
+    rows = disp.read_pinout()
+    check("all 40 panel pins are covered by the parsed pinout",
+          sorted(rows) == list(range(1, 41)), f"got {len(rows)} pins")
+    # The parse must anchor on the pinout table's header. components.md holds
+    # a second five-column table right below it (IM2:IM1:IM0), whose rows
+    # start with 0 and 1 — reading every five-column row in the file let them
+    # overwrite panel pin 1, which then came out named "1".
+    check("panel pin 1 is XL, not a row from the interface-mode table",
+          rows[1][0] == "XL", f"got {rows[1]}")
+    check("the data bus expands to DB0..DB7 from a single '17-24' row",
+          [rows[p][0] for p in range(17, 25)]
+          == [f"DB{n}" for n in range(8)],
+          f"got {[rows[p][0] for p in range(17, 25)]}")
+
+    check("the ribbon reversal is pad = 41 - pin",
+          disp.pad_of(17) == "24" and disp.pad_of(40) == "1"
+          and disp.pad_of(1) == "40")
+
+    view, v_rail = disp.panel_view()
+    ok, mode, detail = disp.check_interface_mode(view)
+    check("the IM straps derive to 8080 8-bit from the copper", ok,
+          f"{mode}: {detail}")
+    check("DB0..DB7 land on LCD_D0..LCD_D7 in order",
+          disp.check_data_bus(view) == [],
+          f"{disp.check_data_bus(view)}")
+
+    # Cross two data lines and require the panel-side check to notice. This is
+    # the failure the pad-side gates cannot express: swapping LCD_D0 and
+    # LCD_D1 keeps every pad's net valid and every net's pad count identical.
+    crossed = []
+    for p in view:
+        if p.symbol == "DB0":
+            crossed.append(p._replace(net="LCD_D1"))
+        elif p.symbol == "DB1":
+            crossed.append(p._replace(net="LCD_D0"))
+        else:
+            crossed.append(p)
+    faults = disp.check_data_bus(crossed)
+    check("crossing two data lines is caught, with both pins named",
+          len(faults) == 2 and "panel pin 17" in faults[0]
+          and "panel pin 18" in faults[1], f"got {faults}")
+
+    # A 16-bit-mode line that acquires a net must be caught too.
+    with_db8 = [p._replace(net="LCD_D0") if p.symbol == "DB8" else p
+                for p in view]
+    check("a DB8-DB15 line carrying a net in 8-bit mode is caught",
+          any("16-bit-mode line" in f
+              for f in disp.check_data_bus(with_db8)))
+
+    # An interface mode other than 8-bit 8080 must fail, not be excused.
+    flipped = [p._replace(level=1) if p.symbol == "IM2" else p for p in view]
+    ok2, mode2, _ = disp.check_interface_mode(flipped)
+    check("flipping IM2 stops the mode being 8080 8-bit",
+          not ok2 and mode2 != "8080 8-bit parallel", f"got {mode2}")
+
+    # A truncated pinout must be fatal, never filled in.
+    saved = disp.PINOUT_DOC
+    try:
+        disp.PINOUT_DOC = os.path.join(BASE, "README.md")
+        try:
+            disp.read_pinout(disp.PINOUT_DOC)
+            check("a document with no pinout table is fatal", False,
+                  "returned a pinout")
+        except disp.PinoutError:
+            check("a document with no pinout table is fatal", True)
+    finally:
+        disp.PINOUT_DOC = saved
+
+    check("the controller's command set and timing are declared unmodelled",
+          {"command_set", "pixel_format", "timing"} <= set(disp.UNMODELLED))
+    check("display.py exits 0 on this board",
+          _quiet(disp.main, []) == 0)
+
+
 def main():
     print("=" * 72)
-    print("  Virtual Bench Phase 0/1/2 — mutation tests")
+    print("  Virtual Bench Phase 0/1/2/3 — mutation tests")
     print("=" * 72)
     test_schema()
     test_corpus()
@@ -838,6 +921,7 @@ def main():
     test_thermal()
     test_transients()
     test_phase2()
+    test_phase3()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

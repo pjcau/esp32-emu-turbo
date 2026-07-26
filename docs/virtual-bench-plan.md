@@ -626,7 +626,59 @@ RC, the check switches to verifying the parts are there.
 | T2.3 | SW_PWR switch model — including the known fact that it is **not** in series. The bench must *reproduce* "switch off, board still powered" as expected behaviour, not report it as a bench bug | scenario `switch_off` asserts the board stays powered, citing the v1 invariant |
 | T2.4 | Boot-mode model: sample strapping pins at reset → resulting boot mode | a button held at reset that forces download mode is a FAIL with the pin named |
 
-## Phase 3 — Peripherals: LCD, audio, SD
+## Phase 3 — Peripherals: LCD, audio, SD — **T3.1 partial**
+
+### T3.1 — the display, seen from the panel
+
+`make bench-display` builds the view no existing gate has. Every gate checks
+J4 **by pad**: `datasheet_specs` declares 42 pads, `verify_datasheet_nets`
+compares their nets, `verify_dfm_v2` checks the 41−N reversal is applied.
+Nothing checks what the **panel** sees — and those are not the same question,
+because the ribbon reverses the numbering.
+
+The panel is a **40-pin FPC** and `pin N contacts pad 41−N`, so the bench walks
+all forty pins to the net each one actually touches and the DC level T1.1
+computes for it:
+
+```
+  17 DB0   -> pad 24  LCD_D0        38 IM0  -> pad 3  +3V3  3.327 V  1
+  ...                                39 IM1  -> pad 2  +3V3  3.327 V  1
+  24 DB7   -> pad 17  LCD_D7        40 IM2  -> pad 1  GND   0.000 V  0
+```
+
+Two checks only that view can express:
+
+* **The interface mode is derived from the copper**, not read off a table:
+  IM2=0, IM1=1, IM0=1 → 8080 8-bit parallel, which is what the firmware
+  drives. Flip IM2 and the check stops agreeing.
+* **DB0..DB7 must land on LCD_D0..LCD_D7 in order.** Crossing two data lines
+  is invisible to every pad-side gate — each pad still carries a valid net and
+  every net still has the right pad count — but it is a dead display. The
+  mutation test crosses `LCD_D0`/`LCD_D1` and requires both panel pins to be
+  named.
+
+The pinout is **parsed** from `website/docs/design/components.md` §"FPC 40-Pin
+Pinout", the file the repo names as the source of truth, so there is one table
+rather than two. Parsing it needed care: components.md holds a second
+five-column table immediately below — the IM2:IM1:IM0 mode table — and reading
+every five-column row in the file let its rows overwrite panel pin 1, which
+came out named "1". The parser now anchors on the pinout table's own header.
+
+**The panel still cannot be a `Model`.** `models/_schema.py` requires a
+document in `hardware/datasheets/`, and the panel is the one part that has
+none — which is exactly how its missing backlight ballast survived (R25-HIGH-1).
+It is handled the way `sources.py` handles the LiPo: declared, with its
+provenance stated, and flagged.
+
+So T3.1's other halves stay unbuilt and say so: the ILI9488 **controller**
+command set, MADCTL and rotation, pixel format, and the setup/hold windows a
+20 MHz pclk must satisfy all need the controller datasheet, which this repo
+does not hold. No frame is rendered and no timing verdict is given, because
+either would look like proof.
+
+T3.2 (audio) and T3.3 (SD) are not started.
+
+
 
 | Task | Deliverable | Done when |
 |---|---|---|

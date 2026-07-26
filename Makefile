@@ -220,6 +220,9 @@ bench-buttons: ## T2.2 + T2.3 — debounce RC per button, and the switch_off sce
 
 bench-phase2: bench-pins bench-buttons ## Everything Phase 2 delivers
 
+bench-display: ## T3.1 (part) — the display seen from the PANEL: 40 pins through the 41-N reversal, IM straps, data-bus order
+	@$(T) bench-display python3 scripts/vbench/display.py
+
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
 
