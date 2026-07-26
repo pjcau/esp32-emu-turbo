@@ -208,6 +208,13 @@ for _n in range(1, 14):
     SCH_PIN_TO_PCB_PADS[f"SW{_n}"] = _TACT_MAP
 SCH_PIN_TO_PCB_PADS["SW11"] = _TACT_MAP_REVERSED
 SCH_PIN_TO_PCB_PADS["SW12"] = _TACT_MAP_REVERSED
+# SW_RST / SW_BOOT are the same part on the same footprint as SW1..SW13
+# (SW-SMD-5.1x5.1, one row each in cpl.csv) wired the same way round:
+# routing.py puts the signal on the 1/2 terminal and GND on 3/4. They were
+# missing from this table only because their schematic pins were floating,
+# so no pin of theirs ever reached the comparison to expose the gap.
+SCH_PIN_TO_PCB_PADS["SW_RST"] = _TACT_MAP
+SCH_PIN_TO_PCB_PADS["SW_BOOT"] = _TACT_MAP
 
 
 # T1: schematic nets intentionally absent from the PCB.

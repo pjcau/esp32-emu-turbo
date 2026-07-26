@@ -120,10 +120,23 @@ class MCUSheet(SchematicSheet):
         # headers, which live at y ~ MCU_Y - 35 .. MCU_Y + 12.
         sw_boot_x = c_en_x - 30
         sw_boot_y = c_en_y + 55
-        # Same fix as SW_RST. angle=90 puts pin 2 (PCB pad 2 = net
-        # BTN_SELECT) at the TOP, where the BTN_SELECT glabel stub is.
+        # Same fix as SW_RST, and the SAME angle — 270, not 90.
+        #
+        # A tact switch has two POLES, not four terminals: pads 1+2 are one
+        # pole, pads 3+4 the other, and pressing shorts pole to pole. The
+        # symbol has one pin per pole (_TACT_MAP: pin 1 -> pads 1,2 and
+        # pin 2 -> pads 3,4). routing.py drives BTN_SELECT onto pad 2 and
+        # GND onto pads 3 and 4, so the signal pole is pads 1/2 = symbol
+        # pin 1 — exactly as on SW_RST.
+        #
+        # angle=90 was chosen by reading "pad 2 = BTN_SELECT" and reaching
+        # for pin 2, which confuses the pad number with the pin number. It
+        # put GND on the signal pole and BTN_SELECT on the ground pole:
+        # harmless on the bench, because the part is symmetric and the
+        # button still shorts GPIO0 to ground, but it is the schematic
+        # disagreeing with the board, and T4 says so.
         self.sym("SW_Push", "SW_BOOT", "BOOT", sw_boot_x, sw_boot_y,
-                 ["1", "2"], angle=90)
+                 ["1", "2"], angle=270)
         self.glabel("BTN_SELECT", sw_boot_x, sw_boot_y - 8, 0, "bidirectional")
         self.wire(sw_boot_x, sw_boot_y - 5.08, sw_boot_x, sw_boot_y - 8)
         self.gnd(sw_boot_x, sw_boot_y + 8)
