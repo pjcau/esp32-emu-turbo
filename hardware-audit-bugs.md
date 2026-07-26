@@ -3367,3 +3367,24 @@ run. No CRIT, no HIGH; two LOW, both fixed in-round.
   or DGND". Respin item: tie J4 pad 28 to +3V3 alongside pad 29 (RDX).
 - **R25-HIGH-1** — backlight current limit; bench measurement pending.
 - RESPIN list unchanged (EN RC, SW_PWR series, VBUS fragmentation).
+
+### R29 addendum — R28-HIGH-1 FIXED in the design
+
+Panel pin 13 (SPI SDI) is no longer floating: `routing/display.py` now runs
+one same-net vertical stub from J4 pad 28 (y=39.25) to pad 29 (RDX, y=39.75,
+already +3V3 through the via at x=131.0) — the exact pin-38→39 pattern, no
+new via, no new crossing. `datasheet_specs.py::J4.28` carries the datasheet
+sentence ("If not used, please fix this pin at VDDI or DGND level").
+
+The bench keeps its teeth: the corpus entry converted live → `detach_pin
+J4/28` mutation (T5.1 must rediscover the float when re-injected),
+`test_vbench` re-injects the float in memory and requires the report, and
+the `sd_and_display` scenario is pinned at **0** disobedient pins so any new
+one fails it. `display.py` exits 0 now — the finding is closed, not
+suppressed.
+
+**As-built:** every board fabricated before 2026-07-26 has pin 13 floating.
+Datasheet-required, but empirically tolerated (the panels drive in 8080 mode
+on protos): margin/EMI exposure on an unused CMOS input, not a dead display.
+
+Gerbers re-exported, `release_jlcpcb/` synced, verify-all 74/74.

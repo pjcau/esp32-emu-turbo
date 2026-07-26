@@ -468,6 +468,17 @@ and is six releases stale; the tag is the truth.
   `verify_bom_cpl_pcb.DNP_REFS`) and passes only while this entry records the
   deviation. Respin: **relocate** C28 beside the module — fitting it where it
   is remains impossible.
+- **Panel pin 13 (SPI SDI) floats on every board fabricated before
+  2026-07-26** (R28-HIGH-1 — found by R28, FIXED in the design by R29's
+  follow-up). The panel's pin table: *"If not used, please fix this pin at
+  VDDI or DGND level"* — it is an input, unlike pin 14 (SDO) which the same
+  table says to leave open. The design now ties J4 pad 28 to pad 29's +3V3
+  with one same-net stub (`routing/display.py`, the pin-38→39 pattern);
+  `datasheet_specs.py::J4.28` carries the datasheet sentence, and the
+  vbench keeps the old float as a `detach_pin` mutation entry so the bench
+  must still rediscover it. On the fabricated boards this is margin/EMI
+  exposure on an unused CMOS input — the protos drive the panel fine — not
+  a dead display. Nothing to rework in place; the next fabrication gets it.
 - **The display backlight has no current-limiting element at all** (R25-HIGH-1,
   raised 2026-07-26, previously recorded only in `hardware-audit-bugs.md`).
   `J4` pad 8 — panel pin 33, LED-A — sits **directly on `+3V3`**, and the

@@ -955,9 +955,16 @@ def test_phase3():
     # OUTPUTS (leave them open), pin by pin. No summary in this repo carried
     # that distinction until the datasheet images were read.
     unused = disp.check_unused_pins(view)
-    check("panel pin 13 is reported floating against the datasheet "
-          "(R28-HIGH-1)",
-          any("pin 13" in f for f in unused), f"got {unused}")
+    # R28-HIGH-1 was FIXED 2026-07-26: J4 pad 28 (panel pin 13, SPI SDI) now
+    # stubs to pad 29's +3V3, so a clean board reports NOTHING. The rule must
+    # still discriminate, so the float is re-injected in memory below —
+    # same pattern as the pin-14 mutation — and the corpus carries the fix
+    # as a detach_pin mutation entry (T5.1 rediscovery).
+    check("panel pin 13 (SPI SDI), now tied to +3V3, is not reported",
+          not any("pin 13" in f for f in unused), f"got {unused}")
+    floated_sdi = [p._replace(net=None) if p.pin == 13 else p for p in view]
+    check("re-injecting the pin 13 float IS caught (rule still discriminates)",
+          any("pin 13" in f for f in disp.check_unused_pins(floated_sdi)))
     check("panel pin 12 (RDX), which IS tied, is not reported",
           not any("pin 12" in f for f in unused), f"got {unused}")
     check("panel pin 14 (SDO) being open is correct, not a fault",
@@ -968,8 +975,8 @@ def test_phase3():
     check("tying pin 14 shut is caught too",
           any("pin 14" in f for f in disp.check_unused_pins(tied_sdo)))
 
-    check("display.py exits 1 while pin 13 floats — a real finding, not a "
-          "clean run", _quiet(disp.main, []) == 1)
+    check("display.py exits 0 now that pin 13 is tied — the finding is closed",
+          _quiet(disp.main, []) == 0)
 
 
 # ── I. Phase 3: audio and SD ────────────────────────────────────────

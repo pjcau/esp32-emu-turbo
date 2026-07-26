@@ -509,9 +509,12 @@ def _display_traces():
     # OPEN defect, not a design choice.
     #
     # "Most ILI9488 bare panels have internal LED current limiting" was the
-    # claim here and it is unverified: there is no panel datasheet in
-    # hardware/datasheets/, and components.md — quoting the panel — specifies
-    # this pin as "+3V3 VIA RESISTOR". 8 parallel white LEDs at Vf 2.9-3.3 V
+    # claim here and it is unverified. R28/R29 sharpened the sourcing: the
+    # panel's own pin table IS in the repo (website/static/img/
+    # ili9488-fpc40-pinout.png — pin 33: "Anode of Backlight, 2.9V-3.3V
+    # Typical 3.1V", no resistor mention, no current rating), and the old
+    # "components.md, quoting the panel, says VIA RESISTOR" line was our own
+    # design note wearing quote marks. 8 parallel white LEDs at Vf 2.9-3.3 V
     # across a measured 3.327 V rail leaves 0.227 V at typical Vf, dropped
     # across nothing but the LEDs' own dynamic resistance, with a -2 mV/°C
     # tempco pushing current UP as the panel warms.
@@ -565,6 +568,22 @@ def _display_traces():
         parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
         parts.append(_via_net(via_x, py, n_3v3,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # ── +3V3 for SPI SDI (panel pin 13, pad 28) — R28-HIGH-1 fix ──
+    # The panel's pin table (ili9488-fpc40-pinout.png, pin 13 "SPI SDI/SDA"):
+    # "If not used, please fix this pin at VDDI or DGND level." It is an
+    # INPUT — unlike pin 14 (SDO), which the same table says to leave open —
+    # and it floated on every board fabricated so far (as-built note in
+    # docs/known-issues.md). Tied to VDDI (+3V3), matching the RDX choice.
+    #
+    # Geometry: pad 28 (y=39.25) sits 0.5 mm below pad 29 (RDX, y=39.75),
+    # which already carries +3V3 through the via at x=131.0. One vertical
+    # same-net stub joins them — the exact pattern of the pin 38 -> 39 stub
+    # at the top of the connector. No new via, no new crossing.
+    pos_sdi = _fpc_display_pin(13)  # SPI SDI at pad 28 (y≈39.25)
+    if pos_sdi and pos_rd:
+        parts.append(_seg(pos_sdi[0], pos_sdi[1], pos_rd[0], pos_rd[1],
+                          "B.Cu", W_FPC_PWR, n_3v3))
 
     if pos_bl:
         px, py = pos_bl[0], pos_bl[1]

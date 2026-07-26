@@ -433,7 +433,7 @@ COMPONENT_SPECS = {
             "25": {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "26": {"net": _exact("LCD_RST"),  "function": "RST — LCD reset", "type": "smd"},
             "27": {"net": _unconnected(),     "function": "NC", "type": "smd"},
-            "28": {"net": _unconnected(),     "function": "NC", "type": "smd"},
+            "28": {"net": _exact("+3V3"),    "function": "SPI SDI (panel pin 13) — unused input, tied HIGH per the panel pin table: 'If not used, please fix this pin at VDDI or DGND level' (R28-HIGH-1 fix; floated on boards fabricated before 2026-07-26)", "type": "smd"},
             # Hard-tied to +3V3 (read strobe disabled — display is write-only 8080).
             # Was _any_of("LCD_RD", "+3V3"); the LCD_RD net declaration is gone
             # (primitives.NET_LIST ids 18/19 retired), so +3V3 is the only net

@@ -17,7 +17,7 @@
       "quantity": "sd.strapping_exposure",
       "op": "==",
       "value": 1,
-      "because": "U6.9 (DAT2) sits on BTN_R = GPIO3. Inert only because table 8 leaves GPIO3 ignored at default eFuses — asserted so a change is noticed."
+      "because": "U6.9 (DAT2) sits on BTN_R = GPIO3. Inert only because table 8 leaves GPIO3 ignored at default eFuses \u2014 asserted so a change is noticed."
     },
     {
       "name": "the panel is strapped for 8-bit 8080",
@@ -33,11 +33,11 @@
       "because": "crossing two data lines is invisible to every pad-side gate"
     },
     {
-      "name": "the panel's unused pins still obey the datasheet, except the one that does not",
+      "name": "the panel's unused pins all obey the datasheet",
       "quantity": "display.unused_pin_faults",
       "op": "==",
-      "value": 1,
-      "because": "R28-HIGH-1: panel pin 13 (SPI SDI) floats where the datasheet says to fix it at VDDI or DGND. Pinned at exactly 1 so that fixing it, or breaking another, both fail this scenario."
+      "value": 0,
+      "because": "R28-HIGH-1 FIXED 2026-07-26: J4 pad 28 (panel pin 13, SPI SDI) now stubs to pad 29's +3V3 per the pin table's 'fix at VDDI or DGND'. Pinned at exactly 0 so any NEW disobedient pin fails this scenario; the old float is preserved as a detach_pin mutation entry (T5.1) so the bench must still rediscover it. Boards fabricated before the fix have pin 13 floating \u2014 as-built note in docs/known-issues.md."
     }
   ]
 }

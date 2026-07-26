@@ -274,20 +274,7 @@ def _live_sd_strapping():
                   f"{strap['internal'] or 'NONE'}")
 
 
-def _live_r28_high_1():
-    """Panel pin 13 must be reported as floating against the datasheet."""
-    view, _ = display.panel_view()
-    faults = display.check_unused_pins(view)
-    hit = [f for f in faults if "pin 13" in f]
-    if not hit:
-        by_pin = {p.pin: p for p in view}
-        return False, (f"pin 13 is no longer reported; it now carries "
-                       f"{by_pin[13].net!r}")
-    return True, hit[0]
-
-
 LIVE = {
-    "R28-HIGH-1": _live_r28_high_1,
     "R25-CRIT-1": _live_r25_crit_1,
     "R10-LOW-7": _live_r10_low_7,
     "R25-HIGH-1": _live_r25_high_1,
