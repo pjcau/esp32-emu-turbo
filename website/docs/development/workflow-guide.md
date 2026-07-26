@@ -19,7 +19,7 @@ graph TB
     TL["TEAM-LEAD<br/><i>sonnet - orchestrator</i>"]
     PCB["PCB-ENGINEER<br/><i>opus - 27 skills</i>"]
     SW["SOFTWARE-DEV<br/><i>opus - 5 skills</i>"]
-    CAD["CAD-ENGINEER<br/><i>haiku - 3 skills</i>"]
+    CAD["CAD-ENGINEER<br/><i>sonnet - 3 skills</i>"]
     PR["PLAN-REVIEWER<br/><i>opus - review only</i>"]
     SC["SCOUT<br/><i>opus - weekly auto</i>"]
 

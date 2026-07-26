@@ -1,6 +1,6 @@
 ---
 name: enclosure-export
-model: claude-haiku-4-5
+model: claude-sonnet-5
 description: Export OpenSCAD enclosure parts to STL files for 3D printing
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob
