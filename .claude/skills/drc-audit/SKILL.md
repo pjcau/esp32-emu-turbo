@@ -167,7 +167,7 @@ audit after every `generate_pcb` and before every `/release`.
 ## Files
 
 - `hardware/kicad/esp32-emu-turbo.kicad_pcb` — PCB file to audit
-- `scripts/generate_pcb/routing.py` — `_init_pads()` and `_PAD_NETS` (pad-net assignment)
+- `scripts/generate_pcb/routing/` — `_init_pads()` and `_PAD_NETS` (pad-net assignment)
 - `scripts/generate_pcb/board.py` — `_inject_pad_net()` (net injection into KiCad file)
 - `scripts/verify_dfm_v2.py` — Custom DFM (122 tests, misses electrical shorts)
 - `scripts/verify_dfa.py` — Custom DFA (9 tests, misses electrical shorts)

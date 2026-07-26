@@ -93,7 +93,7 @@ Portrait (native)          Landscape (gaming mode)
 | 16 | GND | — | Ground | GND |
 | 17-24 | DB0-DB7 | I/O | 8-bit parallel data bus | GPIO4-11 |
 | 25-32 | DB8-DB15 | I/O | 16-bit extension | NC (8-bit mode) |
-| 33 | LED-A | — | Backlight anode (2.9–3.3V typ 3.1V) | **+3V3** (via resistor, always-on) |
+| 33 | LED-A | — | Backlight anode (2.9–3.3V typ 3.1V) | **+3V3** (hard-tied, always-on — R25-HIGH-1: no current-limiting element; "via resistor" was OUR design note, the panel table gives only the voltage range) |
 | 34-36 | LED-K | — | Backlight cathode (8 chip white LED) | **GND** |
 | 37 | GND | — | Ground | GND |
 | 38 | IM0 | Input | Interface mode select | **+3V3** (HIGH) |

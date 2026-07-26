@@ -43,7 +43,7 @@ Based on the report, edit the routing or board layout:
 
 ```bash
 # Edit routing traces
-$EDITOR scripts/generate_pcb/routing.py
+$EDITOR scripts/generate_pcb/routing/
 
 # Edit component placement
 $EDITOR scripts/generate_pcb/board.py
@@ -74,7 +74,7 @@ After running the analysis, present results as:
 ## Key Files
 
 - `scripts/pcb_optimize.py` -- PCB layout optimization analyzer
-- `scripts/generate_pcb/routing.py` -- Trace routing definitions
+- `scripts/generate_pcb/routing/` -- Trace routing definitions
 - `scripts/generate_pcb/board.py` -- Component placement and board generation
 - `scripts/generate_pcb/primitives.py` -- Net IDs and PCB element helpers
 - `scripts/drc_check.py` -- DRC check (complementary, manufacturing rules)

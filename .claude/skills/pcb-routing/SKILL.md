@@ -13,7 +13,7 @@ Map KiCAD MCP routing tools to our project's programmatic trace routing infrastr
 
 ## Overview
 
-All routing is generated in `scripts/generate_pcb/routing.py`. Traces use **Manhattan (orthogonal) routing only** -- horizontal and vertical segments with L-shaped or Z-shaped paths. No diagonal lines.
+All routing is generated in `scripts/generate_pcb/routing/`. Traces use **Manhattan (orthogonal) routing only** -- horizontal and vertical segments with L-shaped or Z-shaped paths. No diagonal lines.
 
 ### Trace Width Classes
 
@@ -35,7 +35,7 @@ All routing is generated in `scripts/generate_pcb/routing.py`. Traces use **Manh
 1. Read current routing:
 
 ```bash
-cat /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo/scripts/generate_pcb/routing.py
+cat /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo/scripts/generate_pcb/routing/
 ```
 
 2. Depending on the argument:
@@ -44,7 +44,7 @@ cat /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo/scripts/generate_pcb/r
      ```bash
      cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo && python3 -c "
      import re
-     with open('scripts/generate_pcb/routing.py') as f:
+     with open('scripts/generate_pcb/routing/') as f:
          code = f.read()
      segs = len(re.findall(r'P\.segment\(', code))
      vias = len(re.findall(r'P\.via\(', code))
@@ -91,7 +91,7 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo && python3 scripts/test
 
 | File | Purpose |
 |------|---------|
-| `scripts/generate_pcb/routing.py` | All trace routing, vias, zones (main routing file) |
+| `scripts/generate_pcb/routing/` | All trace routing, vias, zones (main routing file) |
 | `scripts/generate_pcb/primitives.py` | `segment()`, `via()`, `zone_fill()` S-expression generators + NET_LIST/NET_ID |
 | `scripts/generate_pcb/pad_positions.py` | Pad position computation: `get_all_pad_positions()`, `get_pad()`, `esp32_gpio_pos()`, `fpc_pin_pos()` |
 | `scripts/generate_pcb/board.py` | Component positions (needed for routing endpoints) |

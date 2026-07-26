@@ -60,7 +60,7 @@ Read and parse all four truth sources to build a complete diff table:
 | `scripts/generate_schematics/config.py` | `GPIO_NETS` dict -- GPIO# -> signal name |
 | `software/main/board_config.h` | All `#define XXX GPIO_NUM_YY` lines |
 | `hardware/datasheet_specs.py` | U1 (ESP32) pin specs -> net assignments |
-| `scripts/generate_pcb/routing.py` | Button GPIO assignments in `front_btns` list (~line 2774) |
+| `scripts/generate_pcb/routing/` | Button GPIO assignments in `front_btns` list (~line 2774) |
 
 ### 3. Build Mismatch Report
 
@@ -199,7 +199,7 @@ python3 scripts/verify_dfa.py 2>&1 | grep Results
 1. `scripts/generate_schematics/config.py` -- **MASTER** GPIO mapping
 2. `software/main/board_config.h` -- Firmware GPIO defines
 3. `hardware/datasheet_specs.py` -- Component pin-to-net specs
-4. `scripts/generate_pcb/routing.py` -- PCB routing GPIO refs (lines 2774, 3640)
+4. `scripts/generate_pcb/routing/` -- PCB routing GPIO refs (lines 2774, 3640)
 
 ### Verification Scripts
 - `scripts/verify_design_intent.py` -- 18-test cross-source adversary

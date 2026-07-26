@@ -103,7 +103,7 @@ Report results as a summary table (43 DFM + 9 DFA tests).
 
 - Pipeline entry: `scripts/generate_pcb/__init__.py` → calls `generate_board()` + `export_cpl()`
 - Board layout: `scripts/generate_pcb/board.py`
-- Routing: `scripts/generate_pcb/routing.py`
+- Routing: `scripts/generate_pcb/routing/`
 - Footprints: `scripts/generate_pcb/footprints.py`
 - JLCPCB export: `scripts/generate_pcb/jlcpcb_export.py`
 - Zone fill: `scripts/fill-zones.sh` (shared wrapper) → `scripts/kicad_fill_zones.py`

@@ -111,7 +111,7 @@ Some tests use baselines for inherent violations in dense areas:
 ## Key Files
 
 - `scripts/verify_dfm_v2.py` — Test suite (source of truth)
-- `scripts/generate_pcb/routing.py` — Trace routing (most DFM issues originate here)
+- `scripts/generate_pcb/routing/` — Trace routing (most DFM issues originate here)
 - `scripts/generate_pcb/footprints.py` — Footprint pad/mask definitions
 - `scripts/generate_pcb/board.py` — Component placement, silkscreen
 - `scripts/generate_pcb/jlcpcb_export.py` — CPL rotation/position corrections

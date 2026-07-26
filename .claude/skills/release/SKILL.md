@@ -82,7 +82,7 @@ python3 scripts/spice_power_check.py
 
 **Hard gate**: if `verify_trace_through_pad.py` reports any failure, STOP
 and fix the underlying `_PAD_NETS` assignment in
-`scripts/generate_pcb/routing.py`. Never copy gerbers to `release_jlcpcb/`
+`scripts/generate_pcb/routing/`. Never copy gerbers to `release_jlcpcb/`
 with trace-through-pad overlaps — they are real shorts on the fabricated
 board regardless of DFM/DFA passing.
 

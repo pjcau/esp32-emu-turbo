@@ -68,7 +68,7 @@ zone. The nets are connected elsewhere, so DRC and the connectivity gates
 stay green — that is exactly why this needed its own gate. A stub is
 still a routing mistake: it is unterminated copper on a finished board.
 
-**Fix:** delete the segments in `scripts/generate_pcb/routing.py`, or
+**Fix:** delete the segments in `scripts/generate_pcb/routing/`, or
 terminate them where they were meant to land. Regenerating the PCB drops
 every `filled_polygon`, so this needs a zone re-fill and a
 `release_jlcpcb/` sync — bundle it with H3, which touches the same area.
@@ -139,7 +139,7 @@ is rotation-proof and can therefore only ever exempt less than it should.
 The other two are the escape diagonals, and 0.50 mm is unreachable there
 by any routing. Both features that pin the gap belong to J1 itself — the
 moulded peg hole and the corner of land 10 — so nothing on the board can
-move to open it. `routing.py:3596-3660` solves the width from the
+move to open it. `routing/_shared.py` (POWER_HIGH_ALLOWLIST derivation) solves the width from the
 connector's datasheet dimensions instead of typing one in (0.293 mm
 budget), and a maximin-clearance path search over an exact B.Cu clearance
 field agrees to 5 µm: 0.2888 mm, pinch at (77.795, 69.485). The
@@ -472,9 +472,17 @@ and is six releases stale; the tag is the truth.
   raised 2026-07-26, previously recorded only in `hardware-audit-bugs.md`).
   `J4` pad 8 — panel pin 33, LED-A — sits **directly on `+3V3`**, and the
   cathodes (panel 34–36 → pads 7/6/5) sit on `GND`. No resistor, no driver,
-  no PWM. `components.md:96`, quoting the panel, specifies that pin as
-  "**+3V3 (via resistor, always-on)**". The resistor was documented and never
-  placed.
+  no PWM.
+
+  **Citation corrected (R29).** This entry used to say `components.md`,
+  "quoting the panel", specified "+3V3 *via resistor*". R29 read the panel's
+  own pin table (`website/static/img/ili9488-fpc40-pinout.png`, surfaced by
+  R28): pin 33 says only *"Anode of Backlight (2.9V–3.3V Typical: 3.1V)"* —
+  **no resistor mention, no current rating**. The "via resistor" was our
+  design note wearing quote marks — the same invented-citation class as
+  R25's justification comments. The finding itself is unchanged and rests
+  on physics, not on any quote: parallel white LEDs across a 3.327 V rail
+  with 0.13–0.23 V of headroom have no defined operating point.
 
   **Why this is worse than a missing part.** The panel is 8 chip white LEDs at
   Vf 2.9–3.3 V, typ 3.1 V. Eight in series would need ~24.8 V, so they are

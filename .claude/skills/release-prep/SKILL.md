@@ -33,7 +33,7 @@ If any test FAILS, stop and report. Do NOT continue to gerber export with failin
 class: a netted trace physically running through an unnetted pad creates
 a real short on the fabricated board that DFM and DRC do not both catch
 when pad net assignments are missing. Any failure here means a missing
-entry in `scripts/generate_pcb/routing.py::_PAD_NETS`.
+entry in `scripts/generate_pcb/routing/_shared.py::_PAD_NETS`.
 
 ### 3. Export gerbers (local kicad-cli + Docker zone fill)
 

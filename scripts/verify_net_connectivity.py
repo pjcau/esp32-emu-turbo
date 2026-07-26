@@ -86,7 +86,7 @@ PCB_FILE = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_pcb")
 # NOT an exemption list — these nets are checked, just by a zone-aware code
 # path. --skip-zones is the debugging escape hatch, not a pass condition.
 #
-# If you add a new pour zone in routing.py::_power_zones(), add the net name
+# If you add a new pour zone in routing/power.py::_power_zones(), add the net name
 # here so its fill is taken into account.
 ZONE_FILLED_NETS = {"GND", "+3V3", "+5V"}
 
@@ -616,7 +616,7 @@ def main():
     print("  - A route was partially deleted during refactoring")
     print("  - Pull-up/debounce passives placed but not wired into the signal line")
     print()
-    print("  Fix by adding the missing traces in scripts/generate_pcb/routing.py,")
+    print("  Fix by adding the missing traces in scripts/generate_pcb/routing/,")
     print("  then re-run this script until it reports 0 fragmented nets.")
     return 1
 

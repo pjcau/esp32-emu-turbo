@@ -83,7 +83,7 @@ POWER_SINKS = {
     ],
 }
 
-# Zones that provide plane connections (from generate_pcb/routing.py)
+# Zones that provide plane connections (from generate_pcb/routing/power.py::_power_zones)
 POWER_ZONES = {
     "GND": ["In1.Cu", "F.Cu", "B.Cu"],
     "+3V3": ["In2.Cu"],

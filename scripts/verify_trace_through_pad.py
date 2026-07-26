@@ -241,7 +241,7 @@ def main():
         print()
         print(
             "        Root cause pattern: missing entry in "
-            "scripts/generate_pcb/routing.py::_PAD_NETS, or "
+            "scripts/generate_pcb/routing/_shared.py::_PAD_NETS, or "
             "_inject_pad_net() not covering a rotated/mirrored footprint."
         )
         print(

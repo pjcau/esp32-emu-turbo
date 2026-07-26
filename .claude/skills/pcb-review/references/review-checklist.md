@@ -210,7 +210,7 @@ has an automated guard script — never rely on manual review alone.
 ### R4 (2026-04-10): Schematic ↔ PCB/datasheet_specs divergence
 
 - The schematic generator (`scripts/generate_schematics/sheets/*.py`)
-  and the PCB generator (`scripts/generate_pcb/routing.py` +
+  and the PCB generator (`scripts/generate_pcb/routing/` +
   `hardware/datasheet_specs.py`) are two independent code paths. They
   will drift silently. Audits that read only one side will miss a full
   class of bugs.

@@ -41,7 +41,7 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 |------|-----------|-----------------|
 | GPIO pins | `scripts/generate_schematics/config.py` | GPIO_NETS dict (all 35 assignments) |
 | Firmware pins | `software/main/board_config.h` | All `#define` GPIO numbers |
-| Trace widths | `scripts/generate_pcb/routing.py` lines 32-36 | W_PWR, W_SIG, W_DATA, W_AUDIO |
+| Trace widths | `scripts/generate_pcb/routing/` lines 32-36 | W_PWR, W_SIG, W_DATA, W_AUDIO |
 | Board dims | `scripts/generate_pcb/config.py` | BOARD_W, BOARD_H |
 | BOM | `hardware/kicad/jlcpcb/bom.csv` | Component count, refs |
 | CPL | `hardware/kicad/jlcpcb/cpl.csv` | Placement count |
@@ -135,7 +135,7 @@ cd website && npm run build 2>&1 | tail -5
 - `scripts/generate_schematics/` — Schematic generator (regenerate with `python3 -m scripts.generate_schematics hardware/kicad`)
 - `scripts/generate_schematics/config.py` — GPIO assignments
 - `software/main/board_config.h` — Firmware GPIO defines
-- `scripts/generate_pcb/routing.py` — Trace widths, via sizes
+- `scripts/generate_pcb/routing/` — Trace widths, via sizes
 - `scripts/generate_pcb/config.py` — Board dimensions
 - `scripts/generate_pcb/collision.py` — Collision suppressions
 - `hardware/kicad/jlcpcb/bom.csv` — BOM components

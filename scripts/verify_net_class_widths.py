@@ -68,7 +68,7 @@ SKIP_NETS = {""}
 # constrains the top). Widening requires a v2 re-layout that relaxes
 # the GND/KEY neighbors.
 # See:
-#   scripts/generate_pcb/routing.py:1126-1189 (corridor math)
+#   scripts/generate_pcb/routing/power.py (BAT+ corridor math, W_BAT_CORRIDOR)
 #   memory/project_r8_remaining_todo.md ("BAT+ corridor" section)
 #
 # Current-carrying check: 0.30mm x 35µm 1oz Cu external → ~1.0A at
@@ -96,7 +96,7 @@ POWER_HIGH_ALLOWLIST = [
     #
     # Both features that pin the gap belong to J1 itself — the moulded peg
     # hole and the corner of land 10 — so nothing on the board can move to
-    # open it. routing.py:3596-3646 solves the budget from the connector's
+    # open it. routing/_shared.py (POWER_HIGH_ALLOWLIST derivation) solves the budget from the connector's
     # own datasheet dimensions rather than typing a width in:
     #     |peg centre -> land 10 corner|      1.1183 mm
     #   - 0.325 peg hole radius

@@ -205,7 +205,7 @@ Severity guide:
 - `scripts/verify_power_paths.py` — copper path tracing
 - `scripts/erc_check.py` — KiCad native ERC
 - `scripts/generate_schematics/sheets/` — schematic generator (all sheets)
-- `scripts/generate_pcb/routing.py` — PCB trace routing
+- `scripts/generate_pcb/routing/` — PCB trace routing
 - `hardware/datasheet_specs.py` — component pin→net single source of truth
 - `software/main/board_config.h` — firmware GPIO config
 - `hardware/datasheets/` — component datasheets
