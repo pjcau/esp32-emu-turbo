@@ -382,13 +382,134 @@ def test_netlist():
               True)
 
 
+# ── D. Phase 1: models, rails, conflicts ────────────────────────────
+
+def test_phase1():
+    print("\nD. rails.py / conflicts.py / the cited models")
+    from vbench import conflicts, rails, sources
+    from vbench.models.u2_ip5306 import U2
+    from vbench.models.u3_sy8089 import U3, v_out, v_out_spread
+
+    for model in (U2, U3):
+        try:
+            validate_model(model)
+            check(f"{model.ref} ({model.part}) satisfies the citation schema",
+                  True)
+        except ModelSchemaError as exc:
+            check(f"{model.ref} ({model.part}) satisfies the citation schema",
+                  False, str(exc))
+
+    # T1.2's done-when: each model reproduces its datasheet's own worked
+    # example. Figure 1 on page 1 draws R1=200k, R2=100k and labels the
+    # output 1.8 V.
+    check("SY8089 reproduces its datasheet's worked example (200k/100k -> "
+          "1.8 V)", abs(v_out(200e3, 100e3) - 1.8) < 1e-9,
+          f"got {v_out(200e3, 100e3)}")
+
+    board = nl.load_board_netlist()
+    values = rails.load_bom_values()
+    div = rails.find_feedback_divider(board, values)
+    check("the feedback divider is found by walking the netlist, not named",
+          (div.r_top, div.r_bottom) == ("R25", "R26")
+          and div.out_net == "+3V3" and div.fb_net == "BUCK_FB",
+          f"got {div}")
+    check("the divider's resistor values come from the BOM",
+          (div.r_top_ohm, div.r_bottom_ohm) == (100e3, 22e3),
+          f"got {div.r_top_ohm}, {div.r_bottom_ohm}")
+
+    lo, typ, hi = v_out_spread(div.r_top_ohm, div.r_bottom_ohm)
+    check("+3V3 is 3.327 V, not 3.300 — derived from the real divider",
+          abs(typ - 3.3273) < 1e-3, f"got {typ}")
+    check("the +3V3 spread comes from V_REF's own tolerance",
+          abs(lo - 3.2607) < 1e-3 and abs(hi - 3.3939) < 1e-3,
+          f"got {lo}..{hi}")
+
+    op = rails.operating_point()
+    # An independent consistency check: the solver knows nothing about
+    # V_REF, it only sees two resistors between +3V3 and GND. If FB does not
+    # land on 0.600 V then the divider was mis-identified.
+    check("the solver puts FB at V_REF without being told (0.600 V)",
+          op.voltages["BUCK_FB"] is not None
+          and abs(op.voltages["BUCK_FB"] - 0.600) < 1e-3,
+          f"got {op.voltages['BUCK_FB']}")
+
+    # R25-CRIT-1, reached from the physics rather than from a comment.
+    check("EN has no defined DC level (R25-CRIT-1, no pull-up, no RC)",
+          op.voltages.get("EN", "missing") is rails.UNDEFINED,
+          f"got {op.voltages.get('EN')}")
+    # R14 is DNP, so BTN_L has no external pull-up either.
+    check("BTN_L has no defined DC level (R14 is DNP)",
+          op.voltages.get("BTN_L", "missing") is rails.UNDEFINED,
+          f"got {op.voltages.get('BTN_L')}")
+    check("an idle button sits at the +3V3 rail through its pull-up",
+          op.voltages["BTN_A"] is not None
+          and abs(op.voltages["BTN_A"] - 3.3273) < 1e-3,
+          f"got {op.voltages['BTN_A']}")
+
+    pressed = rails.operating_point(buttons_pressed=True)
+    check("a pressed button is pulled to 0 V",
+          abs(pressed.voltages["BTN_A"]) < 1e-9,
+          f"got {pressed.voltages['BTN_A']}")
+    # The regression that mattered: SW_PWR's shell tabs carry BTN_SELECT, so
+    # closing "every net the switch touches" welded BAT+ to the buttons and
+    # put 3.83 V on all of them.
+    check("closing the switches does NOT weld BAT+ to BTN_SELECT via "
+          "SW_PWR's shell tabs",
+          abs(pressed.voltages["BAT+"] - op.voltages["BAT+"]) < 1e-9
+          and abs(pressed.voltages["BTN_SELECT"]) < 1e-9,
+          f"BAT+={pressed.voltages['BAT+']}, "
+          f"BTN_SELECT={pressed.voltages['BTN_SELECT']}")
+
+    # The battery scenario must leave VBUS floating, not at 0 V.
+    batt = rails.operating_point(on_battery=True, soc=0.05)
+    check("on battery, VBUS is floating rather than 0 V",
+          batt.voltages.get("VBUS", "missing") is rails.UNDEFINED)
+    check("a low cell drops BAT+ to its OCV, not to a default",
+          abs(batt.voltages["BAT+"] - sources.lipo_ocv(0.05)) < 1e-9)
+    check("the LiPo model reports itself uncalibrated",
+          sources.lipo(0.5).calibrated is False
+          and sources.CALIBRATION == "no")
+
+    # A divider resistor with no BOM value must be fatal, not defaulted.
+    try:
+        rails.find_feedback_divider(board, {k: v for k, v in values.items()
+                                            if k != "R26"})
+        check("a divider resistor missing from the BOM is fatal", False,
+              "returned a divider")
+    except rails.RailError:
+        check("a divider resistor missing from the BOM is fatal", True)
+
+    # T1.3 must fire on an injected conflict and fall silent afterwards.
+    base = conflicts.find_conflicts(board, values)
+    check("no electrical conflict on the board as it stands",
+          not base, f"got {[c.code + ':' + c.net for c in base]}")
+
+    from vbench.models._schema import Pin
+    saved = U3.pins
+    try:
+        # Declare U3's IN pin an output: now two power outputs (U2.VOUT and
+        # U3.IN) hold +5V.
+        object.__setattr__(U3, "pins", tuple(
+            Pin(p.number, p.name, "power_out", p.locator) if p.number == "4"
+            else p for p in saved))
+        after = conflicts.find_conflicts(board, values)
+        check("C1/C2 fires when a second driver is declared on the +5V rail",
+              any(c.net == "+5V" for c in after),
+              f"got {[c.code + ':' + c.net for c in after]}")
+    finally:
+        object.__setattr__(U3, "pins", saved)
+    check("the conflict detector falls silent once the injection is undone",
+          conflicts.find_conflicts(board, values) == base)
+
+
 def main():
     print("=" * 72)
-    print("  Virtual Bench Phase 0 — mutation tests")
+    print("  Virtual Bench Phase 0/1 — mutation tests")
     print("=" * 72)
     test_schema()
     test_corpus()
     test_netlist()
+    test_phase1()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

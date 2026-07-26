@@ -359,6 +359,72 @@ handheld enclosure the air around U2/U3 is warmer, which is why the existing
 gate assumed 40 °C. Both are reported; the 40 °C figure is the one that governs
 pass/fail until the enclosure rise is measured on the prototype.
 
+### Phase 1 status — T1.1 and T1.3 done, T1.2 partial, T1.4/T1.5 not started
+
+| Task | State | Where |
+|---|---|---|
+| T1.1 DC solver | **done** | `scripts/vbench/rails.py`, `sources.py` · `make bench-rails` |
+| T1.2 cited models | **partial** — U3 complete, U2 incomplete and says so, Q1 and U5 not written | `scripts/vbench/models/u3_sy8089.py`, `u2_ip5306.py` |
+| T1.3 conflict detector | **done**, at 4% pin coverage and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
+| T1.4 transients (ngspice) | not started | — |
+| T1.5 thermal | not started; θJA already collected (U3 170 °C/W, U2 40 °C/W) | — |
+| T1.6 `make bench-power` | **partial** — rails + conflicts, no thermal table | Makefile |
+
+**The headline number: +3V3 is 3.327 V, not 3.300 V.** It is derived, not
+declared. `rails.py` walks the netlist from `U3.5` (FB) to the two resistors
+on that node, decides which is which by asking which one reaches GND, reads
+their values from the BOM, and applies the SY8089's own formula from page 2
+of its application note — `Vout = 0.6 × (1 + R1/R2)` — with V_REF's
+0.588/0.600/0.612 V from page 4:
+
+```
+0.600 × (1 + 100k/22k) = 3.327 V typ,  3.261 … 3.394 V from V_REF alone
+```
+
+Resistor tolerance is **not** in that spread, because the BOM does not state
+it. A ±1% assumption would have widened it to roughly 3.20–3.46 V and looked
+more rigorous while resting on nothing. The worst case as stated, 3.394 V, is
+inside the 3.6 V limit of the ESP32-S3 and the SD card, so no violation is
+raised — but the panel's own supply limit is unknown, because the panel is
+still the one part with no datasheet in the repo (R25-HIGH-1).
+
+An independent check falls out for free: the solver knows nothing about
+V_REF, it only sees two resistors between `+3V3` and `GND`, and it puts
+`BUCK_FB` at 0.600 V. If the divider had been mis-identified that number
+would be wrong.
+
+**Floating is reported, never defaulted.** 30 nets have no resistive path to
+any source at DC. Two of them matter:
+
+- `EN` — pins `U1.3` and `SW_RST.1`, switch open, no pull-up. This is
+  R25-CRIT-1 reached from the physics instead of from reading a comment.
+- `BTN_L` — R14 is DNP, so unlike the other eleven buttons it has no
+  external pull-up and depends entirely on the ESP32's internal one.
+
+A solver that assigned 0 V to those would have produced a complete, plausible
+table with two lies in it.
+
+**A scenario found a bug in the bench itself.** With `--buttons-pressed`,
+every button read 3.83 V. Cause: closing a switch by shorting *every net the
+reference touches* welded `BAT+` to `BTN_SELECT`, because `SW_PWR`'s four
+shell tabs carry `BTN_SELECT` — the deliberate same-net fixup at
+`routing.py:6055-6085`, whose own comment says it is harmless only because
+the shell is isolated inside the component body. The bench now reads the
+terminal-versus-mechanical split from `datasheet_specs`, where it is
+declared. `test_vbench.py` holds the regression.
+
+**Calibration: `no`, and every report says so.** The 105080 cell has no
+datasheet in this repo, so `sources.py` refuses to make it a `Model` —
+a `Model` would have to carry a page locator, and inventing one is the exact
+failure the schema exists to catch. The OCV curve is declared as a generic
+single-cell Li-polymer shape with `calibrated = False`. T5.4 replaces it with
+two measurements from prototype #1.
+
+**What T1.3 does not cover, in its own words.** Only U2 and U3 carry a cited
+pin table, which is 11 of 271 pin instances. The tool prints "covers 4% of
+the board's pins and no more" rather than "no conflicts found", because those
+two sentences are not the same claim.
+
 ## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch
 
 | Task | Deliverable | Done when |

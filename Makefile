@@ -189,6 +189,19 @@ bench-test: ## Phase 0 mutation tests — break the schema/corpus/netlist checks
 
 bench-phase0: bench-test bench-netlist bench-retro ## Everything Phase 0 delivers, in order
 
+bench-rails: ## T1.1 — DC operating point: every net's voltage, derived from the netlist and the datasheets
+	@$(T) bench-rails python3 scripts/vbench/rails.py
+
+bench-conflicts: ## T1.3 — electrical conflicts (two drivers on a node); geometry stays with verify_isolation
+	@$(T) bench-conflicts python3 scripts/vbench/conflicts.py
+
+# T1.6 asks for "rail table + thermal table, non-zero exit on any out-of-spec
+# value". The rail half is here; the thermal half is T1.5 and is NOT written
+# yet, so this target does not print one. A blank space where a thermal table
+# should be reads as "nothing to report" — bench-rails says so explicitly in
+# its own output instead.
+bench-power: bench-rails bench-conflicts ## T1.6 (partial) — rails + conflicts; thermal is T1.5, not yet written
+
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
 
