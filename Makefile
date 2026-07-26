@@ -3,6 +3,7 @@
        verify-isolation verify-jlcpcb-vias verify-zone-fill test-zone-fill verify-sch-overlaps \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad open-issues \
+       verify-memory test-memory \
        firmware-build firmware-flash firmware-monitor firmware-clean \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help stats
@@ -70,6 +71,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_cpl_rotation_law \
 	test_pcb_connectivity \
 	test_power_net_integrity \
+	test_verify_memory \
 	validate_jlcpcb \
 	verify_antenna_keepout \
 	verify_battery_protection \
@@ -95,6 +97,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_isolation \
 	verify_jlcpcb_capabilities \
 	verify_jlcpcb_via_rules \
+	verify_memory \
 	verify_net_class_widths \
 	verify_net_explorer_fresh \
 	verify_net_connectivity \
@@ -209,6 +212,12 @@ verify-power-nets: ## Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must e
 
 test-power-nets: ## Regression tests for the power-net integrity detector
 	@$(T) test-power-nets python3 scripts/test_power_net_integrity.py
+
+verify-memory: ## Memory/preamble integrity — frontmatter, links, orphans, no hand-written gate state
+	@$(T) verify-memory python3 scripts/verify_memory.py
+
+test-memory: ## Mutation tests proving each memory check discriminates
+	@$(T) test-memory python3 scripts/test_verify_memory.py
 
 verify-intent: ## Design intent adversary (18 tests, 300+ cross-source consistency checks)
 	@$(T) verify-intent python3 scripts/verify_design_intent.py
