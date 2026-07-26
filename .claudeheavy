@@ -73,3 +73,19 @@ website/static/net-explorer-data.json
 # spends a third of the cost the cache exists to avoid. Never hand-edit: it is
 # rebuilt from the board whenever the hash changes.
 hardware/kicad/.pcb_cache.json
+
+# ── Generated reports ───────────────────────────────────────────────
+# ~103k tokens. Canonical access: `python3 scripts/erc_check.py` prints the
+# classified summary; `--run` regenerates. Grep for a specific violation.
+hardware/kicad/.erc-report.json
+
+# ── Vendored emulator cores (third-party) ───────────────────────────
+# snes9x / smsplus / nofrendo sources, 25-36k tokens per file. Not ours:
+# upstream is the reference. Canonical access: grep for the symbol you
+# need; edits are rare and go through Bash heredoc/sed.
+software/components/
+
+# ── Audit log ───────────────────────────────────────────────────────
+# ~47k tokens of append-only history. Canonical access: grep a finding id
+# (R25-CRIT-1) or a round header; append new rounds with Bash heredoc.
+hardware-audit-bugs.md

@@ -65,9 +65,10 @@ The test suite covers 43 DFM tests + 9 DFA tests:
 
 If you just fixed a DFM issue, add a regression guard test to `scripts/verify_dfm_v2.py`:
 
-1. **Read the test file**:
+1. **Find the right spot — do NOT read the whole file** (~38k tokens):
    ```bash
-   cat scripts/verify_dfm_v2.py
+   grep -n "^def test_" scripts/verify_dfm_v2.py   # index of tests
+   # then Read with offset/limit around the neighbour you'll imitate
    ```
 
 2. **Add a new test function** following the existing pattern:

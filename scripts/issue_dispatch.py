@@ -121,6 +121,9 @@ ROUTING_LAW = [
      "blind-spot", "the bench's own coverage is what makes its silence "
                    "meaningful; while it is red, a clean bench report proves "
                    "less than it appears to"),
+    ("context",    "agent context",           "software-dev", "/context-engineering",
+     "blind-spot", "a bloated preamble or an exposed token landmine degrades "
+                   "every session before its first question"),
     ("memory",     "agent context",           "software-dev", "/context-engineering",
      "blind-spot", "the memory preamble is loaded before every question, so a "
                    "wrong claim in it outranks the derived truth for the whole "

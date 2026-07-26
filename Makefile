@@ -89,6 +89,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_component_connectivity \
 	verify_copper_balance \
 	verify_copper_clearance \
+	verify_context_budget \
 	verify_cpl_rotation_law \
 	verify_datasheet \
 	verify_datasheet_nets \

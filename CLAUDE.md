@@ -50,37 +50,11 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 
 ## Documentation
 
-- `website/docs/feasibility.md` — feasibility analysis
-- `website/docs/snes-hardware.md` — SNES hardware specification + GPIO mapping
-- `website/docs/components.md` — BOM with AliExpress links
-- `website/docs/schematics.md` — electrical schematic documentation
-- `website/docs/prototyping.md` — breadboard wiring guide
-- `website/docs/enclosure.md` — 3D enclosure design + renderings
-- `website/docs/manufacturing.md` — JLCPCB PCBA ordering + cost analysis
-- `website/docs/verification.md` — pre-production DRC/simulation/consistency checks
-- `website/docs/software.md` — software architecture, SNES optimization, audio profiles
+All docs live under `website/docs/` (Docusaurus, single source of truth).
+Navigate from `website/sidebars.ts` — do not maintain a copy of the tree here,
+it drifted twice.
 
 ## Agents & Skills Architecture
-
-### Agents (5)
-
-```
-team-lead (sonnet) ──── orchestrator, 0 skills
-  ├── pcb-engineer (opus) ───── 27 skills
-  ├── software-dev (opus) ───── 4 skills
-  └── cad-engineer (sonnet) ─── 3 skills
-
-plan-reviewer (opus) ── pre-implementation plan review (PCB/routing/BOM changes)
-scout (opus) ────────── /scout (GitHub pattern discovery, weekly via GitHub Action)
-```
-
-### Cross-Agent Dependencies
-
-```
-PCB ↔ SW:  config.py ↔ board_config.h  (GPIO pins sync)
-PCB ↔ CAD: board.py 160×75mm ↔ enclosure.scad  (dimensions sync)
-SW  ↔ CAD: website/docs/  (renders + documentation)
-```
 
 ### Skills, agents & architecture
 
@@ -148,43 +122,28 @@ list) and requires it to notice.
 
 ### Makefile Quick Targets
 
+The full list is `make help`; only the high-traffic ones here.
+
 | Target | Description |
 |--------|-------------|
 | `make fast-check` | Full pipeline with local kicad-cli (~5s) |
-| `make verify-fast` | Quick DFM check only (43 tests, 1.4s) |
+| `make verify-fast` | Quick DFM check only (~1.4s; prints its own test count) |
 | `make verify-dfa` | Quick DFA check (9 assembly tests) |
 | `make verify-power-nets` | Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must each be ONE piece of copper (catches split-plane dead boards; no allowlist) |
-| `make test-power-nets` | Regression tests for the power-net integrity detector |
 | `make validate-jlcpcb` | JLCPCB manufacturing validation (drill, edge, copper, gerbers) |
 | `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |
 | `make release-prep` | Full pipeline: generate → gerbers → verify → render |
 | `make firmware-sync-check` | Verify GPIO sync, fail on mismatch |
 | `make open-issues` | Which hardware gates are red right now (same report injected at session start) |
 | `make dispatch` | Turn every red gate into an agent work order in `.claude/issues/` — owner, skill, severity, evidence, reproduction command |
-| `make dispatch-fast` | Same, over the session-start gate subset only |
-| `make net-explorer` | Regenerate the PCB Net Explorer data (auto-run by `make generate-pcb`) |
-| `make verify-sch-pins` | Fail on a schematic symbol pin with no wire/label/junction on it |
 | `make verify-all` | Full verification suite (DFM + DFA + DRC + sim + consistency) |
 
-### Performance Optimizations
+### Performance
 
-**Container runtime: OrbStack** (replaces Docker Desktop)
-- Drop-in replacement: same `docker` / `docker compose` commands, zero code changes
-- Container startup: **0.2s** (was 3.2s with Docker Desktop) — **16x faster**
-- Idle RAM: ~180 MB (was 2+ GB) — **11x less memory**
-- Idle CPU: ~0.1% (was ~5%)
-
-**Hybrid local+Docker pipeline** (`fast-check.sh`, `export-gerbers-fast.sh`)
-- Local `kicad-cli` for DRC, gerber export, drill export (no container overhead)
-- Docker only for zone fill (pcbnew Python API not available in kicad-cli)
-- Full check pipeline: **~5s** (was ~15-20s with all-Docker)
-
-| Operation | All-Docker (old) | Hybrid (new) | Speedup |
-|-----------|-----------------|--------------|---------|
-| Container startup | 3.2s | 0.2s | 16x |
-| Gerber export (3 steps) | 4.7s | 4.0s | 1.2x |
-| Full check pipeline | 15-20s | ~5s | 3-4x |
-| DFM quick check | 1.4s | 1.4s | (no Docker) |
+OrbStack as container runtime; hybrid pipeline = local `kicad-cli` for
+DRC/gerbers/drill + Docker only for zone fill (`pcbnew` API). Full check ~5 s
+(`make fast-check`), DFM quick check 1.4 s. The old before/after benchmark
+tables are in git history (`edfe707^`).
 
 ## Reference Software
 
