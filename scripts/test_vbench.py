@@ -1,4 +1,4 @@
-"""Mutation tests for the Virtual Bench Phase 0 foundation.
+"""Mutation tests for the Virtual Bench (Phase 0 foundation, Phase 1 physics).
 
 Written in the style of `scripts/test_issue_dispatch.py`: break each
 mechanism on purpose and require it to notice. The repo's own lesson is
@@ -14,6 +14,14 @@ Covers:
      line that moved, or reuses an id must fail to load.
   C. netlist.py        — each dispute class must fire when its condition is
      injected, and must not fire otherwise.
+  D. rails.py, conflicts.py — the rails must be DERIVED (the divider found by
+     walking the netlist, +3V3 at 3.327 V not 3.300), a floating node must
+     stay floating rather than default to 0 V, and the conflict detector must
+     fire on an injected driver and fall silent when it is removed.
+  E. thermal.py, models Q1/U5 — an on-resistance must come from a table row
+     rather than an interpolation, a dissipation that cannot be derived must
+     stay unreported, and the margin check must actually fire at a hot
+     ambient.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -502,6 +510,103 @@ def test_phase1():
           conflicts.find_conflicts(board, values) == base)
 
 
+# ── E. Phase 1.5: thermal, and the models it rests on ───────────────
+
+def test_thermal():
+    print("\nE. thermal.py / Q1 and U5 models")
+    from vbench import thermal
+    from vbench.models.q1_si2301 import Q1, r_ds_on
+    from vbench.models.u5_pam8403 import U5
+
+    for model in (Q1, U5):
+        try:
+            validate_model(model)
+            check(f"{model.ref} ({model.part}) satisfies the citation schema",
+                  True)
+        except ModelSchemaError as exc:
+            check(f"{model.ref} ({model.part}) satisfies the citation schema",
+                  False, str(exc))
+
+    # Q1's on-resistance must come from a table row, never from interpolation
+    # between two rows.
+    check("Q1 uses the -4.5 V row only when the gate drive reaches it",
+          r_ds_on(-4.5) == 0.112 and r_ds_on(-5.0) == 0.112,
+          f"got {r_ds_on(-4.5)}, {r_ds_on(-5.0)}")
+    check("Q1 falls back to the conservative -2.5 V row in between",
+          r_ds_on(-3.83) == 0.142, f"got {r_ds_on(-3.83)}")
+    try:
+        r_ds_on(-0.5)
+        check("Q1 refuses an on-resistance below its threshold", False,
+              "returned a value")
+    except ValueError:
+        check("Q1 refuses an on-resistance below its threshold", True)
+    try:
+        r_ds_on(3.3)
+        check("Q1 rejects a positive V_GS on a P-channel part", False,
+              "returned a value")
+    except ValueError:
+        check("Q1 rejects a positive V_GS on a P-channel part", True)
+
+    # The steady-state figure, not the <=5 s one. A handheld is steady state.
+    check("Q1's thermal figure is the steady-state 175 degC/W, not 120/145",
+          Q1.params["theta_ja_steady_state"].value == 175.0
+          and Q1.params["theta_ja_5s"].value == (0.0, 120.0, 145.0))
+
+    # The duty cycle must come from the derived rail, not from 3.3/5.
+    d, v_out, v_in = thermal.duty_cycle()
+    check("the buck duty cycle uses the DERIVED 3.327 V, not a nominal 3.3",
+          abs(v_out - 3.3273) < 1e-3 and abs(d - 0.6655) < 1e-3,
+          f"got Vout={v_out}, D={d}")
+
+    # U2 must be reported as not computable, never filled in.
+    results = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[1], 40.0)}
+    check("U2's dissipation is reported NOT COMPUTABLE, not assumed",
+          results["U2"].p_watts is None
+          and "NOT COMPUTABLE" in results["U2"].basis)
+    check("U5 gets a power figure but no Tj, because theta_JA is uncited",
+          results["U5"].p_watts is not None and results["U5"].tj is None)
+    check("U3's figure is labelled a lower bound (no switching loss)",
+          "LOWER BOUND" in results["U3"].basis)
+    check("U3 and Q1 do get a junction temperature",
+          results["U3"].tj is not None and results["Q1"].tj is not None)
+
+    # Charge-and-play must not put battery current through Q1.
+    cap = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[2], 40.0)}
+    check("in charge-and-play Q1 carries no battery current",
+          cap["Q1"].p_watts == 0.0, f"got {cap['Q1'].p_watts}")
+
+    # Both ambients must be present, and 40 must govern.
+    check("30 degC external and 40 degC in-enclosure are both defined, and "
+          "40 governs",
+          thermal.AMBIENT_EXTERNAL == 30.0
+          and thermal.AMBIENT_IN_ENCLOSURE == 40.0
+          and thermal.GOVERNING_AMBIENT == 40.0)
+
+    # A hot ambient must actually fail, or the margin check proves nothing.
+    hot = thermal.evaluate(thermal.SCENARIOS[1], 200.0)
+    check("an absurd ambient drives the margin check to FAIL",
+          any(r.ok is False for r in hot),
+          "nothing failed at 200 degC — the margin check never fires")
+
+    # The existing gate's ambient must be overridable and default to 40.
+    sys.path.insert(0, os.path.join(BASE, "scripts"))
+    import importlib
+    saved = os.environ.pop("VBENCH_AMBIENT_C", None)
+    try:
+        vtb = importlib.import_module("verify_thermal_budget")
+        importlib.reload(vtb)
+        check("verify_thermal_budget still defaults to 40 degC",
+              vtb.T_AMBIENT == 40.0, f"got {vtb.T_AMBIENT}")
+        os.environ["VBENCH_AMBIENT_C"] = "55"
+        importlib.reload(vtb)
+        check("verify_thermal_budget's ambient is overridable (T1.5)",
+              vtb.T_AMBIENT == 55.0, f"got {vtb.T_AMBIENT}")
+    finally:
+        os.environ.pop("VBENCH_AMBIENT_C", None)
+        if saved is not None:
+            os.environ["VBENCH_AMBIENT_C"] = saved
+
+
 def main():
     print("=" * 72)
     print("  Virtual Bench Phase 0/1 — mutation tests")
@@ -510,6 +615,7 @@ def main():
     test_corpus()
     test_netlist()
     test_phase1()
+    test_thermal()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

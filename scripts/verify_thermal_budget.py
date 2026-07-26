@@ -23,8 +23,27 @@ ICS = {
     "U2_IP5306": {
         "ref": "U2",
         "package": "ESOP-8",
-        "Rth_ja": 80,    # C/W
-        "Tj_max": 150,   # C
+        # NOT the datasheet figure. U2_IP5306_C181692.pdf page 4, "Absolute
+        # maximum ratings", states theta_JA = 40 C/W. The 80 here is double
+        # that, with no recorded reason — and the header above this dict says
+        # "from datasheets".
+        #
+        # Left at 80 deliberately. Doubling theta_JA raises the computed Tj,
+        # so 80 is the conservative direction, and replacing it with the
+        # datasheet's 40 would halve every temperature rise this gate reports
+        # and make it more permissive on no evidence at all. An ESOP-8's
+        # 40 C/W assumes its exposed pad is soldered to a copper area the
+        # datasheet does not describe on that page, which is a plausible
+        # reason someone derated it — but plausible is not recorded.
+        #
+        # To close this properly: read the IP5306's thermal section for the
+        # pad/copper condition behind 40 C/W, measure the copper actually
+        # under U2's EP on this board, and either restore 40 with a stated
+        # copper correction or document why 80 stands.
+        # scripts/vbench/thermal.py reports U2 as NOT COMPUTABLE rather than
+        # inheriting either number.
+        "Rth_ja": 80,    # C/W — see the note above; datasheet says 40
+        "Tj_max": 150,   # C (page 4, absolute maximum ratings)
     },
     "U3_SY8089": {
         "ref": "U3",
@@ -73,7 +92,18 @@ SCENARIOS = {
     },
 }
 
-T_AMBIENT = 40  # C (worst case)
+# Ambient is a parameter, not a constant (plan T1.5). 40 C is the
+# in-enclosure worst case and stays the DEFAULT, so this gate's verdict is
+# unchanged unless someone asks for another figure: inside a closed handheld
+# the air around U2 and U3 is warmer than the room, and pass/fail must keep
+# being decided at the temperature the parts actually see.
+#
+# 30 C is the external-air figure. Both are reported side by side by
+# scripts/vbench/thermal.py; here, --ambient (or VBENCH_AMBIENT_C) overrides
+# it for a what-if run.
+T_AMBIENT_DEFAULT = 40  # C (worst case, in-enclosure)
+T_AMBIENT_EXTERNAL = 30  # C (external air, reported by vbench/thermal.py)
+T_AMBIENT = float(os.environ.get("VBENCH_AMBIENT_C", T_AMBIENT_DEFAULT))
 SAFE_MARGIN = 25  # C below Tj_max
 
 # Voltage rails

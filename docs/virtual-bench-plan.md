@@ -364,11 +364,11 @@ pass/fail until the enclosure rise is measured on the prototype.
 | Task | State | Where |
 |---|---|---|
 | T1.1 DC solver | **done** | `scripts/vbench/rails.py`, `sources.py` · `make bench-rails` |
-| T1.2 cited models | **partial** — U3 complete, U2 incomplete and says so, Q1 and U5 not written | `scripts/vbench/models/u3_sy8089.py`, `u2_ip5306.py` |
-| T1.3 conflict detector | **done**, at 4% pin coverage and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
+| T1.2 cited models | **U3, Q1, U5 complete; U2 incomplete and says so** | `scripts/vbench/models/` |
+| T1.3 conflict detector | **done**, at 10% pin coverage (27 of 271) and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
 | T1.4 transients (ngspice) | not started | — |
-| T1.5 thermal | not started; θJA already collected (U3 170 °C/W, U2 40 °C/W) | — |
-| T1.6 `make bench-power` | **partial** — rails + conflicts, no thermal table | Makefile |
+| T1.5 thermal | **done** | `scripts/vbench/thermal.py` · `make bench-thermal` |
+| T1.6 `make bench-power` | **done** — rails + conflicts + thermal | Makefile |
 
 **The headline number: +3V3 is 3.327 V, not 3.300 V.** It is derived, not
 declared. `rails.py` walks the netlist from `U3.5` (FB) to the two resistors
@@ -420,10 +420,62 @@ failure the schema exists to catch. The OCV curve is declared as a generic
 single-cell Li-polymer shape with `calibrated = False`. T5.4 replaces it with
 two measurements from prototype #1.
 
-**What T1.3 does not cover, in its own words.** Only U2 and U3 carry a cited
-pin table, which is 11 of 271 pin instances. The tool prints "covers 4% of
-the board's pins and no more" rather than "no conflicts found", because those
-two sentences are not the same claim.
+**What T1.3 does not cover, in its own words.** Four parts now carry a cited
+pin table — U2, U3, Q1, U5 — which is 27 of 271 pin instances. The tool
+prints "covers 10% of the board's pins and no more" rather than "no conflicts
+found", because those two sentences are not the same claim.
+
+**T1.3 found a bug in T1.1.** With Q1 added it flagged `Q1.3 (D, power_out)`
+as a second driver on `BAT+`. Q1 is not a second driver — it is what
+*delivers* BAT+ from the cell — but the finding was real all the same, just
+about the model rather than the board: `rails.py` was holding `BAT+` at the
+cell voltage directly, as if it were a source, instead of deriving it through
+the FET. Two things changed. The exemption is now a **derived rule** — a
+driver on a rail is not in conflict if the same part draws power from a
+different net, which makes it a converter or pass element, and which U2, U3
+and Q1 all satisfy without anyone maintaining a list of pin names. And
+`rails.py` now records that BAT+ equals BAT_IN only because a DC solve with
+high-impedance loads carries no current; Q1's cited on-resistance is worth
+about 70 mV at the gaming current, and T1.4 has to add it.
+
+### T1.5 — junction temperatures, and which figures are honest
+
+`make bench-thermal` prints Tj at both 30 °C external and 40 °C
+in-enclosure, for idle / gaming / charge-and-play, with **40 °C governing
+pass/fail** until the enclosure rise is measured. The arithmetic is the same
+`Tj = T_amb + P·θJA` the existing gate uses; what is different is that every
+dissipation figure is either derived from a cited parameter or declared not
+computable:
+
+| Part | Basis | Gaming at 40 °C |
+|---|---|---|
+| U3 SY8089 | conduction only, from the two cited R<sub>DS(on)</sub> and the derived duty D = 3.327/5 = 0.665. Switching loss **excluded** — no gate charge or efficiency curve at this operating point on the pages read, so this is a **lower bound** | 18.5 mW → 43.1 °C, margin +56.9 |
+| Q1 Si2301CDS | I²·R<sub>DS(on)</sub>, cited. Uses the **steady-state 175 °C/W** from note d, not the 120/145 pair the table qualifies as "≤ 5 s" — a handheld is steady state | 24.5 mW → 44.3 °C, margin +80.7 |
+| U5 PAM8403 | cited 90 % efficiency plus cited 6.3 mA standby → power only. **No Tj**, because no θJA appears on the pages read | 53.7 mW, Tj not computed |
+| U2 IP5306 | **not computable.** Pages 2–4 give θJA and the absolute maxima but no boost efficiency | — |
+
+θJA is the datasheet's own figure and the datasheets say what board they
+measured on — 2″×2″ FR-4 with 2 oz copper and thermal vias for the SY8089
+(page 4 note 2), 1″×1″ for the Si2301 (page 1 note b). This board gives both
+parts less copper, so the real θJA is worse and these temperatures are
+optimistic. No correction factor is applied: one chosen without measuring the
+board's actual copper would be a number with no source. Measuring it from the
+PCB is the next refinement.
+
+**A discrepancy in the existing gate, left standing on purpose.**
+`verify_thermal_budget.py` uses θJA = 80 °C/W for the IP5306 under a header
+reading "from datasheets"; page 4 of that datasheet says **40 °C/W**. The 80
+is not corrected, because doubling θJA raises the computed Tj — it is the
+conservative direction, and restoring 40 would halve every temperature rise
+that gate reports and make it more permissive on no evidence. A plausible
+reason exists (an ESOP-8's 40 °C/W assumes an exposed-pad copper area the
+page does not describe) but plausible is not recorded. The file now carries
+the citation, the discrepancy and what closing it requires; `thermal.py`
+reports U2 as not computable rather than inheriting either number.
+
+T1.5's other ask is done: the ambient is a parameter, not a constant.
+`T_AMBIENT` defaults to 40 °C so the gate's verdict is unchanged, and
+`VBENCH_AMBIENT_C` overrides it for a what-if run.
 
 ## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch
 

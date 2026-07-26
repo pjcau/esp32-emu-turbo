@@ -195,12 +195,10 @@ bench-rails: ## T1.1 — DC operating point: every net's voltage, derived from t
 bench-conflicts: ## T1.3 — electrical conflicts (two drivers on a node); geometry stays with verify_isolation
 	@$(T) bench-conflicts python3 scripts/vbench/conflicts.py
 
-# T1.6 asks for "rail table + thermal table, non-zero exit on any out-of-spec
-# value". The rail half is here; the thermal half is T1.5 and is NOT written
-# yet, so this target does not print one. A blank space where a thermal table
-# should be reads as "nothing to report" — bench-rails says so explicitly in
-# its own output instead.
-bench-power: bench-rails bench-conflicts ## T1.6 (partial) — rails + conflicts; thermal is T1.5, not yet written
+bench-thermal: ## T1.5 — junction temperatures at 30 C external and 40 C in-enclosure, from cited theta_JA
+	@$(T) bench-thermal python3 scripts/vbench/thermal.py
+
+bench-power: bench-rails bench-conflicts bench-thermal ## T1.6 — rail table + thermal table, non-zero on any out-of-spec value
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py
