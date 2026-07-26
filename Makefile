@@ -72,6 +72,7 @@ VERIFY_ALL_SCRIPTS = \
 	short_circuit_analysis \
 	simulate_circuit \
 	spice_power_check \
+	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_issue_dispatch \
 	test_pcb_connectivity \

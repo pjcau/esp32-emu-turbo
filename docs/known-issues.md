@@ -431,6 +431,34 @@ and is six releases stale; the tag is the truth.
   T1, `verify_schematic_pcb_sync`, `verify_schematic_overlaps`) and each
   one was pointing at a real leftover. Both FPC pins remain tied to +3V3 on
   the copper, which is what they always were.
+- ~~**`collision.py` reported 31 violations on every generation that no gate
+  agreed with**~~ — FIXED. It now reports **0 violations and 17 margin
+  notes**, and the difference is the point: a report that is always red is a
+  report nobody reads, which is how a real violation gets through.
+
+  Two separate defects, and the split between them is worth keeping:
+
+  1. **14 via-to-via reports were false.** Vias enter the spatial index as
+     their bounding *square*, which is right for indexing and wrong for
+     measuring — for a diagonal pair the square corners face each other and
+     understate the gap (0.200 mm reported against 0.254 mm real). That
+     approximated *ring-to-ring* number was then compared against
+     `CLEARANCE_VIA_VIA`, which is the **drill** rule. The true hole gaps
+     were 0.55–0.67 mm against a 0.25 mm limit. Now measured as circles,
+     against both rules separately.
+  2. **The other 17 were real but mis-labelled.** They are 0.150–0.170 mm
+     against the *house* target of 0.175 mm, and all clear JLCPCB's 0.15 mm
+     minimum. Buildable. They are now listed as margin notes rather than
+     printed under a "violations detected" banner.
+
+  Zero risk to the board, and it was checked rather than assumed: the
+  collision result is only appended to `_GRID.violations`, never acted on —
+  `routing._via_net` places the via either way — and the regenerated
+  `.kicad_pcb` came out with **0 inserted lines**, i.e. byte-identical
+  copper. Guarded by `scripts/test_collision_via_metric.py` (in
+  `verify-all`), which plants both a real breach and the exact historical
+  false positive; reverting the metric makes 3 of its 10 tests fail.
+
 - **`collision.py` is default-open on pad nets.** `_KNOWN_PAD_NETS`
   (`collision.py:215`) has 4 hardcoded entries; every other pad is
   registered with `net=0`, and net=0 pads are *skipped* in collision
