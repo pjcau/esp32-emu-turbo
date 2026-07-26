@@ -1521,13 +1521,49 @@ def _power_traces():
     # (107→105.5). Also KEY horiz at y=44.41 spans x=107..114.05; x=106 is inside.
     # Fix: lx_col_x = ip_sw[0] - 2.0 = 105 (left of both BAT+ end 105.5 and KEY 107).
     #
-    # LX column clearance analysis (BAT+ side is still the binding constraint):
-    #   BAT+ via at (105.5,46.1) sz=0.9 → left edge 105.05.
-    #   LX at x=104.55, w=0.60: right edge=104.85.
-    #   BAT+ vert gap: 105.12-104.85 = 0.27mm ≥ 0.25mm ✓
-    #   BAT+ via gap:  105.05-104.85 = 0.20mm ≥ 0.10mm ✓
-    # At 0.60mm / 1oz Cu: ~1.4A capacity (10°C rise), adequate for pulsed LX.
-    lx_col_x = ip_sw[0] - 2.45   # x=104.55
+    # LX column clearance analysis.
+    #
+    # R27-MED-1 (2026-07-26): the whole node now runs at W_PWR_HIGH. It used
+    # to be 0.60 (W_PWR) on five of its seven segments, justified by the note
+    # that replaced this one: "At 0.60mm / 1oz Cu: ~1.4A capacity (10°C rise),
+    # adequate for pulsed LX". That sentence contradicted W_PWR_HIGH's own
+    # definition three lines up — ">=2.1A, 1oz Cu, 10°C rise" — and the
+    # contradiction survived because verify_net_class_widths floors Power High
+    # at 0.50mm, so neither number was ever compared to the copper.
+    #
+    # The constraint it cited was also stale. It predates R9-MED-4, which
+    # deleted R19/C20 and freed this corridor, and it measured the BAT+ via at
+    # (105.5,46.1) against the x=104.55 column — but the jog moved to x=103.00
+    # for exactly that span (y 44.5..51.5), so that via no longer bounds LX at
+    # all.
+    #
+    # Solved rather than eyeballed: for each segment, grow the trace until the
+    # house clearance (0.175mm to any different-net copper on the same layer)
+    # breaks. Binary search over the merged obstacle union, per layer:
+    #
+    #   (104.55,41.87)->(104.55,44.50)   max 0.79   <- the binding one
+    #   (104.55,44.50)->(103.00,44.50)   max 1.19
+    #   (103.00,44.50)->(103.00,51.50)   max 1.19   (the freed corridor)
+    #   (103.00,51.50)->(104.55,51.50)   max 1.19
+    #   (104.55,51.50)->(104.55,52.50)   max 1.19
+    #
+    # That search used the 0.175mm house clearance, which is NOT the rule for
+    # this pair: verify_dfm_v2's "LX vs BAT+ Trace Spacing Test" demands
+    # 0.25mm between these two verticals specifically. Only the first segment
+    # is affected — BAT+ runs x=105.50, y 43.13..46.13, and of the two LX
+    # verticals at this column only y 41.87..44.50 overlaps that span.
+    #
+    # At the old x=104.55 the 0.25mm rule caps LX at
+    #   0.95 (centre gap) - 0.38 (BAT+ half) - 0.25 = 0.32 half-width = 0.64mm
+    # so the column is moved 0.15mm further left instead of narrowing one
+    # segment. The corridor to its left is the one R9-MED-4 freed, and the
+    # binary search above shows >=0.46mm of slack there at 0.76mm wide, so
+    # nothing else moves:
+    #   centre gap 1.10 - 0.38 - 0.38 = 0.34mm >= 0.25mm  ✓
+    #
+    # At 2.1A the IPC-2221 rise goes from ~18°C (0.60) to ~12°C (0.76), and
+    # the switch-node loop area drops with it.
+    lx_col_x = ip_sw[0] - 2.60   # x=104.40 (was 104.55; see the 0.25mm rule above)
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
     # Legacy jog at x=103.00 (preserved).
@@ -1542,15 +1578,15 @@ def _power_traces():
     _lx_jog_y_bot = 44.5  # below ex-R19 placement row
     _lx_jog_y_top = 51.5  # above ex-C20 placement row
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, _lx_jog_y_bot,
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", W_PWR_HIGH, n_lx))   # max 0.79 — the binding segment
     parts.append(_seg(lx_col_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_bot,
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(_lx_jog_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_top,
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(_lx_jog_x, _lx_jog_y_top, lx_col_x, _lx_jog_y_top,
-                       "B.Cu", W_PWR, n_lx))
+                       "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(lx_col_x, _lx_jog_y_top, lx_col_x, l1_2[1],
-                       "B.Cu", W_PWR, n_lx))  # 0.60mm — max width within BAT+ corridor
+                       "B.Cu", W_PWR_HIGH, n_lx))
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
                        "B.Cu", W_PWR_HIGH, n_lx))
 
@@ -2363,9 +2399,25 @@ def _display_traces():
     # LCD_RD tied HIGH (read strobe disabled — display is write-only).
     # LCD_BL (LED-A) tied to +3V3 (always-on backlight, per ILI9488 datasheet:
     #   pin 33 LED-A = backlight anode 2.9-3.3V, pins 34-36 LED-K = cathodes to GND).
-    # NOTE: No series current-limiting resistor. Most ILI9488 bare panels have
-    # internal LED current limiting (typ. 20mA/string). Verify with specific panel
-    # datasheet. If panel draws >120mA on backlight, add 1-10ohm series resistor.
+    # NOTE: No series current-limiting resistor — and this is R25-HIGH-1, an
+    # OPEN defect, not a design choice.
+    #
+    # "Most ILI9488 bare panels have internal LED current limiting" was the
+    # claim here and it is unverified: there is no panel datasheet in
+    # hardware/datasheets/, and components.md — quoting the panel — specifies
+    # this pin as "+3V3 VIA RESISTOR". 8 parallel white LEDs at Vf 2.9-3.3 V
+    # across a measured 3.327 V rail leaves 0.227 V at typical Vf, dropped
+    # across nothing but the LEDs' own dynamic resistance, with a -2 mV/°C
+    # tempco pushing current UP as the panel warms.
+    #
+    # The "1-10 ohm" figure below follows from that headroom (0.227/I_BL), not
+    # from any rated current, so it is arithmetic on a guess. Do not fit a part
+    # on the strength of it: the respin fix is to drive LED-A from +5V, where
+    # 1.9 V of headroom lets a resistor actually set the current (~32 ohm at
+    # 60 mA), or to use a constant-current driver.
+    #
+    # Full analysis and what is blocking the value: RESPIN section of
+    # docs/known-issues.md.
     #
     # DFM v3 FIX (2026-04-10): previously used separate LCD_RD/LCD_BL nets for
     # the segment and via. Since both pins are hard-tied to +3V3 (no ESP32 GPIO

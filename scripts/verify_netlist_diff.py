@@ -37,10 +37,12 @@ Usage:
     python3 scripts/verify_netlist_diff.py
 """
 
+import atexit
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -56,7 +58,33 @@ PASS = 0
 FAIL = 0
 
 SCH_PATH = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_sch")
-NETLIST_TMP = "/tmp/esp32_emu_turbo_netlist.xml"
+
+# Per-process path, NOT a fixed /tmp name.
+#
+# This was "/tmp/esp32_emu_turbo_netlist.xml", shared by every checkout on the
+# machine. This repo routinely has several worktrees open at once, and
+# verify-all runs its gates in parallel, so two concurrent runs exported to the
+# same file and one read what the other was still writing:
+#
+#     xml.etree.ElementTree.ParseError: junk after document element
+#
+# The gate then fails for a reason that has nothing to do with the board, which
+# is the fastest way to teach everyone that a red gate means nothing. Keyed by
+# PID and by the checkout it belongs to, so concurrent runs cannot collide and
+# two worktrees never share a file.
+NETLIST_TMP = os.path.join(
+    tempfile.gettempdir(),
+    f"esp32_emu_turbo_netlist_{abs(hash(BASE)) & 0xFFFFFF:06x}_{os.getpid()}.xml",
+)
+
+
+@atexit.register
+def _cleanup_netlist_tmp():
+    """Do not leave one file per run behind in the temp directory."""
+    try:
+        os.unlink(NETLIST_TMP)
+    except OSError:
+        pass
 
 # Components excluded from cross-checks (manual assembly / fiducials / DNP)
 EXCLUDED_REFS = {"BT1", "J2", "SPK1", "FID1", "FID2", "FID3", "R14"}

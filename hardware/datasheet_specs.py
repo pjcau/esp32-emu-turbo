@@ -395,7 +395,18 @@ COMPONENT_SPECS = {
             # primitives.NET_LIST, ids 18/19 retired), so the only net this pad
             # can carry is +3V3 and the alternative would never match again.
             # Which panel pin it is stays in "function" below.
-            "8":  {"net": _exact("+3V3"),  "function": "LED_A — backlight anode, hard-tied to +3V3", "type": "smd"},
+            #
+            # THIS ENTRY RECORDS THE BOARD, NOT THE INTENT. R25-HIGH-1: the
+            # panel specifies this pin as "+3V3 VIA RESISTOR" and no resistor
+            # was ever placed, so 8 parallel white LEDs (Vf 2.9-3.3 V) sit
+            # across a 3.327 V rail with 0.227 V of headroom and no defined
+            # operating point. `_exact("+3V3")` therefore makes
+            # verify_datasheet_nets agree with a deviation rather than catch
+            # it -- do not read a green gate here as "the backlight is right".
+            # Analysis and the respin fix (drive LED-A from +5V): RESPIN
+            # section of docs/known-issues.md. Blocked on the panel datasheet,
+            # which is not in hardware/datasheets/.
+            "8":  {"net": _exact("+3V3"),  "function": "LED_A — backlight anode, hard-tied to +3V3 (R25-HIGH-1: should be via a resistor)", "type": "smd"},
             "9":  {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "10": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "11": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},

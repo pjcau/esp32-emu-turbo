@@ -13,14 +13,33 @@ Usage:
     python3 scripts/spice_power_check.py
 """
 
+import atexit
 import os
 import subprocess
 import sys
 import re
+import tempfile
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-NETLIST = "/tmp/esp32-emu-power.cir"
-OUTPUT = "/tmp/spice-results.txt"
+
+# Per-process paths, NOT fixed /tmp names — same fix as verify_netlist_diff and
+# erc_check. Several worktrees of this repo are usually open at once and
+# verify-all runs its gates in parallel, so a machine-global name means two
+# runs write the same deck and one simulates what the other was still writing.
+# A gate that fails for reasons unrelated to the board is how a red gate stops
+# being read.
+_RUN_KEY = f"{abs(hash(PROJECT_DIR)) & 0xFFFFFF:06x}_{os.getpid()}"
+NETLIST = os.path.join(tempfile.gettempdir(), f"esp32-emu-power_{_RUN_KEY}.cir")
+OUTPUT = os.path.join(tempfile.gettempdir(), f"spice-results_{_RUN_KEY}.txt")
+
+
+@atexit.register
+def _cleanup_spice_tmp():
+    for _p in (NETLIST, OUTPUT):
+        try:
+            os.unlink(_p)
+        except OSError:
+            pass
 
 
 def generate_netlist():

@@ -1141,6 +1141,53 @@ def test_lx_bat_trace_spacing():
     )
 
 
+def test_lx_switch_node_width():
+    """R27-MED-1 guard: the whole LX switch node runs at W_PWR_HIGH.
+
+    Not a restatement of the generator's output. The expected width is
+    IMPORTED from routing.W_PWR_HIGH — the constant that defines what a
+    >=2.1A / 1oz / 10C-rise power trace is on this board — so:
+
+      * routing LX at W_PWR (0.60) again fails, which is the regression
+        this guards. Five of LX's seven segments sat at 0.60 until
+        2026-07-26, justified by a comment claiming "~1.4A capacity ...
+        adequate for pulsed LX" that contradicted W_PWR_HIGH three lines
+        above it;
+      * changing W_PWR_HIGH moves the requirement with it, instead of
+        pinning a number that then has to be maintained in two places.
+
+    verify_net_class_widths cannot cover this: its Power High minimum is
+    0.50mm, a JLCPCB manufacturing floor rather than a thermal budget, so
+    0.60 cleared it and nothing compared the copper to the design's intent.
+    """
+    print("\n── LX Switch-Node Width Test ──")
+    # Import the constant rather than restate it. Reached via the repo root so
+    # this works both as `python3 scripts/verify_dfm_v2.py` and as a module.
+    import importlib
+    _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if _root not in sys.path:
+        sys.path.insert(0, _root)
+    routing = importlib.import_module("scripts.generate_pcb.routing")
+    required = routing.W_PWR_HIGH
+
+    segs = _cached_segments()
+    n_lx = 46   # NET_ID["LX"]
+    lx = [s for s in segs if s["net"] == n_lx]
+
+    check("LX has routed segments", len(lx) > 0, "no LX copper found")
+
+    narrow = [s for s in lx if s["w"] < required - 1e-6]
+    total = sum(math.dist((s["x1"], s["y1"]), (s["x2"], s["y2"])) for s in lx)
+    thin = sum(math.dist((s["x1"], s["y1"]), (s["x2"], s["y2"])) for s in narrow)
+    check(
+        f"LX entirely at W_PWR_HIGH ({required}mm) — {total:.1f}mm of copper",
+        not narrow,
+        f"{len(narrow)} segment(s), {thin:.2f}mm below {required}mm: "
+        + ", ".join(f"w={s['w']:.2f}@({s['x1']:.2f},{s['y1']:.2f})"
+                    for s in narrow[:3]),
+    )
+
+
 def test_button_vx_spacing():
     """Test 29: Button B.Cu vertical columns have edge gap >= 0.15mm.
 
@@ -3919,6 +3966,7 @@ if __name__ == "__main__":
     test_bat_plus_via_vbus_clearance()
     test_mounting_holes_npth()
     test_lx_bat_trace_spacing()
+    test_lx_switch_node_width()
     test_button_vx_spacing()
     test_gnd_lcd_d7_spacing()
     test_lcd_sd_approach_spacing()

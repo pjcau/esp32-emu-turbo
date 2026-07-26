@@ -71,6 +71,67 @@ CRITICAL_TYPES = {
     "bus_entry_no_connect",  # Bus entry not connected
 }
 
+# ── Error-severity waivers (R27-LOW-1) ───────────────────────────────────
+#
+# Until 2026-07-26 the verdict was `len(criticals) == 0` over CRITICAL_TYPES
+# alone, and KiCad's own `severity` field was never read. Every type in
+# GENERATOR_ARTIFACTS was dropped wholesale — including `wire_dangling`, which
+# KiCad raises at severity=error. The gate therefore printed
+# "PASS — 0 critical" while the raw report held a dozen errors, and it kept
+# printing it when a D-pad button's ground pin was deliberately detached: the
+# planted defect took SW3.2 off GND in the netlist and the verdict did not move.
+#
+# Now: any error-severity violation fails unless its exact identity is waived
+# here, so a NEW error can never hide behind an old one's type.
+#
+# Each key is (type, sheet, item description) verbatim from the report. That is
+# deliberately brittle — the same reasoning as POWER_HIGH_ALLOWLIST's
+# coordinate pinning. If the generator's output shifts, the key stops matching,
+# the gate goes red, and somebody looks at it again.
+ERROR_WAIVERS = {
+    # KiCad's hierarchy bookkeeping on a programmatically generated schematic,
+    # not board defects. The evidence that these are artifacts, not findings:
+    #
+    #   * the items describe geometry that does not exist. There are 317 wires
+    #     across the seven sheets and NONE is shorter than 0.3 mm, yet these
+    #     report wires of 0.0508 mm and 0.0038 mm;
+    #   * the sheet attribution is wrong. These are filed under "/" — the root
+    #     sheet, which contains zero wires and zero symbols — and the R4 items
+    #     under "/Display/" when R4 exists only in 06-controls.kicad_sch;
+    #   * all twelve button columns are emitted by the same four lines
+    #     (controls.py:77-101), and only this one is flagged;
+    #   * the netlist those sheets actually export is complete and correct:
+    #     verify_netlist_diff T1-T4 pass, verify_schematic_pin_connectivity
+    #     reports 338 pins with 0 floating, and all 15 switches reach GND.
+    #
+    # So the drawing is sound where it can be measured, and these are removed
+    # from the verdict rather than from the report — they still print.
+    ("wire_dangling", "/", "Symbol SW4 [SW_Push]"): "generated-hierarchy artifact",
+    ("wire_dangling", "/", "Symbol SW4 Pin 2 [2, Passive, Line]"): "generated-hierarchy artifact",
+    ("wire_dangling", "/", "Horizontal Wire, length 0.0508 mm"): "phantom geometry — no wire this short exists",
+    ("wire_dangling", "/", "Symbol #PWR013 [+3V3]"): "generated-hierarchy artifact",
+    ("wire_dangling", "/", "Symbol #PWR013 Pin 1 [+3V3, Power input, Line]"): "generated-hierarchy artifact",
+    ("wire_dangling", "/", "Horizontal Wire, length 0.1800 mm"): "phantom geometry — no wire this short exists",
+    ("wire_dangling", "/", "Vertical Wire, length 0.0038 mm"): "phantom geometry — no wire this short exists",
+    ("wire_dangling", "/", "Symbol R7 [R]"): "generated-hierarchy artifact",
+    ("pin_not_connected", "/Power Supply/", "Symbol #PWR030 [GND]"):
+        "power-flag symbol; GND is a plane and every GND pin is on it",
+    ("pin_not_connected", "/Mcu/", "Global Label 'BTN_LEFT'"):
+        "BTN_LEFT is complete on both sides — C7.1 + R6.1 + SW3 + U1.35 on "
+        "copper, and present in the exported netlist",
+    ("power_pin_not_driven", "/Display/", "Symbol R4 Pin 1 [Passive, Line]"):
+        "R4 is a passive pull-up in 06-controls, not a power input, and not "
+        "in the Display sheet at all",
+    ("power_pin_not_driven", "/Display/", "Symbol R4 Pin 2 [Passive, Line]"):
+        "R4 is a passive pull-up in 06-controls, not a power input, and not "
+        "in the Display sheet at all",
+}
+
+
+def waiver_for(vtype, sheet, item):
+    """Reason this exact error-severity item is waived, or None."""
+    return ERROR_WAIVERS.get((vtype, sheet, item))
+
 # Issues to review but not necessarily fix
 WARNING_TYPES = {
     "pin_not_connected",     # Unconnected IC pin (may be intentional NC)
@@ -113,6 +174,8 @@ def parse_report(path):
     by_type = {}
     by_sheet = {}
     real_issues = []
+    errors_waived = []
+    errors_unwaived = []
 
     for sheet in data.get("sheets", []):
         sheet_path = sheet.get("path", "/")
@@ -135,6 +198,19 @@ def parse_report(path):
 
             by_type[vtype] = by_type.get(vtype, 0) + 1
             by_sheet[sheet_path] = by_sheet.get(sheet_path, 0) + 1
+
+            # Severity-driven pass, independent of the type classification
+            # below. This is what makes a NEW error impossible to hide behind
+            # a suppressed type — see ERROR_WAIVERS.
+            if v.get("severity") == "error":
+                for item in v.get("items", []):
+                    desc = item.get("description", "?")
+                    row = {"type": vtype, "sheet": sheet_path, "item": desc}
+                    reason = waiver_for(vtype, sheet_path, desc)
+                    if reason:
+                        errors_waived.append({**row, "reason": reason})
+                    else:
+                        errors_unwaived.append(row)
 
             # Suppress pin_to_pin between passive component and power symbol
             # (KiCad ERC false positive: cap pad to GND symbol is not output↔output)
@@ -166,6 +242,11 @@ def parse_report(path):
         "generator_artifacts": sum(
             by_type.get(t, 0) for t in GENERATOR_ARTIFACTS
         ),
+        # Every error-severity item KiCad reported, split by whether this repo
+        # has an explicit waiver for that exact item. Collected independently of
+        # GENERATOR_ARTIFACTS so a suppressed TYPE can no longer hide an error.
+        "errors_waived": errors_waived,
+        "errors_unwaived": errors_unwaived,
     }
 
 
@@ -221,18 +302,42 @@ def print_report(result):
     else:
         print(f"\n  ✓ No real electrical issues found")
 
+    # ── Error-severity accounting (R27-LOW-1) ────────────────────────────
+    # Printed every run, waived or not: a waiver removes an item from the
+    # verdict, never from the report.
+    waived = result.get("errors_waived", [])
+    unwaived = result.get("errors_unwaived", [])
+
+    if waived:
+        print(f"\n── KiCad error-severity, waived ({len(waived)}) ──")
+        for e in waived:
+            print(f"    [{e['type']}] {e['sheet']} {e['item']}")
+            print(f"        waived: {e['reason']}")
+
+    if unwaived:
+        print(f"\n── KiCad error-severity, NOT waived ({len(unwaived)}) ──")
+        for e in unwaived:
+            print(f"    [{e['type']}] {e['sheet']} {e['item']}")
+
     # Verdict
     criticals = [i for i in result["real_issues"]
                  if i["type"] in CRITICAL_TYPES]
     print(f"\n{'=' * 60}")
-    if criticals:
-        print(f"  FAIL  {len(criticals)} critical ERC violations")
+    if criticals or unwaived:
+        if criticals:
+            print(f"  FAIL  {len(criticals)} critical ERC violations")
+        if unwaived:
+            print(f"  FAIL  {len(unwaived)} KiCad error-severity violation(s) "
+                  f"with no waiver in ERROR_WAIVERS")
+            print("        Fix the schematic, or add the exact "
+                  "(type, sheet, item) with a reason.")
     else:
         print(f"  PASS  ERC — 0 critical, {real} warnings "
-              f"({gen} generator artifacts suppressed)")
+              f"({gen} generator artifacts suppressed, "
+              f"{len(waived)} error-severity waived)")
     print(f"{'=' * 60}")
 
-    return len(criticals) == 0
+    return not criticals and not unwaived
 
 
 def main():

@@ -406,6 +406,48 @@ and is six releases stale; the tag is the truth.
   either half alone fails; an unrecorded missing RC fails; the doc anchor
   is asserted to still exist in this file; and re-planting the old
   justification comment must change nothing.
+- **The display backlight has no current-limiting element at all** (R25-HIGH-1,
+  raised 2026-07-26, previously recorded only in `hardware-audit-bugs.md`).
+  `J4` pad 8 — panel pin 33, LED-A — sits **directly on `+3V3`**, and the
+  cathodes (panel 34–36 → pads 7/6/5) sit on `GND`. No resistor, no driver,
+  no PWM. `components.md:96`, quoting the panel, specifies that pin as
+  "**+3V3 (via resistor, always-on)**". The resistor was documented and never
+  placed.
+
+  **Why this is worse than a missing part.** The panel is 8 chip white LEDs at
+  Vf 2.9–3.3 V, typ 3.1 V. Eight in series would need ~24.8 V, so they are
+  parallel strings, and the whole array sits across the rail. `+3V3` measures
+  **3.327 V** (vbench Phase 1), so at typical Vf the headroom is
+  `3.327 − 3.1 = 0.227 V`, dropped across nothing but the LEDs' own dynamic
+  resistance. Over the datasheet's own Vf spread that operating point is not
+  defined at all: a 2.9 V part sees 0.427 V of overdrive, a 3.3 V part sees
+  0.027 V and barely lights. White-LED Vf also falls roughly −2 mV/°C, so
+  current *rises* as the panel warms — the wrong sign for stability.
+
+  **A series resistor on +3V3 is the documented fix but a poor one.** With
+  0.227 V of headroom, `R = 0.227 / I_BL` — about 3.8 Ω at 60 mA or 1.9 Ω at
+  120 mA, which is why `routing.py` guesses "1–10 Ω". A resistor that drops
+  0.2 V cannot regulate against a ±0.4 V Vf spread; it mostly limits the
+  worst case rather than setting a current.
+
+  **Respin: drive LED-A from `+5V`, not `+3V3`.** `5.0 − 3.1 = 1.9 V` of
+  headroom makes the resistor dominant and the current actually defined
+  (~32 Ω at 60 mA), or fit a constant-current LED driver. Either is a routing
+  change at `J4` pad 8 plus one part in BOM/CPL.
+
+  **Blocked on evidence, deliberately.** The exact resistor cannot be chosen
+  here because **there is no panel datasheet in `hardware/datasheets/`** — the
+  only source for the backlight rating is `components.md`, which is our own
+  secondary note. R25 already recorded that a part with no datasheet is the
+  repo's blind spot, and this is the part. Get the panel datasheet, read the
+  rated backlight current, then size it. Any value picked before that is a
+  guess wearing an engineering face.
+
+  **As-built risk:** prototypes light up, so the array survives whatever it
+  draws today; the defect is that nobody knows what that is, and it varies
+  per unit and with temperature. No gate can catch this — `verify_datasheet_nets`
+  checks pad 8 against `datasheet_specs.py`, and that file *records the hard
+  tie as correct*, which is the R25 pattern exactly.
 - **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming
