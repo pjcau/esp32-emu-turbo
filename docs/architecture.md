@@ -47,7 +47,7 @@ graph TB
     TL["TEAM-LEAD<br/><i>sonnet • orchestrator</i>"]
     PCB["PCB-ENGINEER<br/><i>opus • 27 skills</i>"]
     SW["SOFTWARE-DEV<br/><i>opus • 4 skills</i>"]
-    CAD["CAD-ENGINEER<br/><i>haiku • 3 skills</i>"]
+    CAD["CAD-ENGINEER<br/><i>sonnet • 3 skills</i>"]
 
     TL -->|coordinates| PCB
     TL -->|coordinates| SW

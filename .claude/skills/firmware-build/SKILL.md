@@ -1,6 +1,6 @@
 ---
 name: firmware-build
-model: claude-opus-4-7
+model: claude-opus-5
 description: Build, flash, and test ESP-IDF firmware for ESP32-S3 (via Docker or native)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

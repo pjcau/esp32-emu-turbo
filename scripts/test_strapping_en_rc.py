@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
-"""Mutation tests for the EN RC-delay check in verify_strapping_pins.py.
+"""Mutation tests for the EN check in verify_strapping_pins.test_en_rc_delay.
 
 Why this file exists
 --------------------
 The EN check used to pass by regex-matching a JUSTIFICATION COMMENT in the
-schematic text ("R3 DNP", "WROOM-1 integrates") and then computing tau from a
-WROOM-1 internal ~45 kOhm pull-up that the module does not have. It therefore
-reported green on a fabricated board carrying neither a pull-up nor an RC cap
--- the gate asserted a network that exists only in prose.
+schematic text ("R3 DNP", "WROOM-1 integrates") and computing tau from a
+WROOM-1 internal ~45 kOhm pull-up the module does not have. It reported green
+on a board carrying neither a pull-up nor an RC cap. `93bf286` rewrote it to
+read copper instead.
 
-It now judges pad membership on copper, and it FAILS on the board as built.
-That is the correct verdict, but a check that can only ever fail is no more
-evidence than one that can only ever pass. These tests drive it BOTH ways:
+The rewrite is a **documented-deviation** gate, not a strict one: with no RC
+on the board it still passes, provided `docs/known-issues.md` records the
+limitation. That is a deliberate trade (a permanently-red gate stops being
+read), but it means the gate's entire safety rests on one property:
 
-  * plant a real EN pull-up + RC cap  -> the check must go GREEN
-  * take either half away            -> the check must go RED, naming which
-  * restore the old prose            -> the check must STAY red
+    no RC on copper AND no record in known-issues.md  ->  MUST FAIL
 
-The last one is the regression that matters. If someone re-adds a comment
-like "WROOM-1 integrates a 10k EN pull-up" to a schematic or a generator, the
-gate must not notice, because copper is the only thing it reads.
+Nothing tested that. A documented-deviation gate whose "is it documented?"
+arm never fires is just a gate that always passes. These tests drive every
+arm, including that one.
 
 Usage:
     python3 scripts/test_strapping_en_rc.py
@@ -28,7 +27,9 @@ Usage:
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import sys
 import unittest
 from pathlib import Path
@@ -47,12 +48,14 @@ def _load(name: str, rel: str):
 
 STRAP = _load("_strap", "scripts/verify_strapping_pins.py")
 
+# The exact sentence the gate looks for in docs/known-issues.md. Kept here so
+# that renaming it in the doc without updating the gate fails loudly, rather
+# than silently turning the deviation arm into an unconditional pass.
+RECORD_ANCHOR = "EN has no RC delay network"
+
 
 # ---------------------------------------------------------------------------
-# A minimal synthetic board. Only the fields the EN check reads are present:
-# nets by id->name, and pads carrying (ref, net). Everything else the real
-# cache holds is irrelevant here, and leaving it out keeps the fixture honest
-# about what the check actually depends on.
+# A minimal synthetic board: only the fields the EN check reads.
 # ---------------------------------------------------------------------------
 _NETS = [
     {"id": 0, "name": ""},
@@ -61,46 +64,62 @@ _NETS = [
     {"id": 53, "name": "EN"},
 ]
 
-# The board as fabricated: EN reaches only the module and the reset button.
+# The board as fabricated: EN reaches only the module and the reset button,
+# and C3 is a +3V3 decoupling cap that must NOT be miscredited as the EN RC.
 _AS_BUILT = [
-    {"ref": "U1", "net": 53},
-    {"ref": "SW_RST", "net": 53},
-    {"ref": "SW_RST", "net": 1},
-    {"ref": "C3", "net": 4},      # decoupling cap, NOT on EN
-    {"ref": "C3", "net": 1},
+    {"ref": "U1", "num": "3", "net": 53},
+    {"ref": "SW_RST", "num": "1", "net": 53},
+    {"ref": "SW_RST", "num": "3", "net": 1},
+    {"ref": "C3", "num": "1", "net": 4},
+    {"ref": "C3", "num": "2", "net": 1},
 ]
 
 # The respin: 10k from +3V3 to EN, 100nF from EN to GND.
-_PULLUP = [{"ref": "R3", "net": 53}, {"ref": "R3", "net": 4}]
-_RC_CAP = [{"ref": "C31", "net": 53}, {"ref": "C31", "net": 1}]
+_PULLUP = [{"ref": "R3", "num": "1", "net": 53}, {"ref": "R3", "num": "2", "net": 4}]
+_RC_CAP = [{"ref": "C31", "num": "1", "net": 53}, {"ref": "C31", "num": "2", "net": 1}]
 
 
 class FakeBoard:
-    """Swap in a synthetic cache and BOM for the duration of a test."""
+    """Swap in a synthetic cache, and a synthetic known-issues doc."""
 
-    def __init__(self, pads, values=None):
+    def __init__(self, pads, recorded=True):
         self.pads = pads
-        self.values = values or {}
+        self.recorded = recorded
 
     def __enter__(self):
         self._load = STRAP.load_cache
-        self._bom = STRAP._bom_value
         STRAP.load_cache = lambda *a, **k: {"nets": _NETS, "pads": self.pads}
-        STRAP._bom_value = lambda ref: self.values.get(ref)
+
+        # The gate opens docs/known-issues.md directly, so shadow `open` in
+        # its module namespace rather than writing to the real file.
+        self._had_open = "open" in STRAP.__dict__
+        self._prev_open = STRAP.__dict__.get("open")
+        real_open = open
+        recorded, anchor = self.recorded, RECORD_ANCHOR
+
+        def fake_open(path, *a, **k):
+            if "known-issues" in str(path):
+                text = (f"- **{anchor}, and no pull-up at all.** ...respin..."
+                        if recorded else
+                        "- nothing about the EN pin is recorded here.")
+                return io.StringIO(text)
+            return real_open(path, *a, **k)
+
+        STRAP.open = fake_open
         return self
 
     def __exit__(self, *exc):
         STRAP.load_cache = self._load
-        STRAP._bom_value = self._bom
+        if self._had_open:
+            STRAP.open = self._prev_open
+        else:
+            del STRAP.open
         return False
 
 
-def _run_en_check(pads, values=None):
+def _run(pads, recorded=True):
     """Run only the EN block; return (passed, failed, output)."""
-    import io
-    import contextlib
-
-    with FakeBoard(pads, values):
+    with FakeBoard(pads, recorded):
         STRAP.PASS = STRAP.FAIL = STRAP.WARN = 0
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
@@ -110,93 +129,94 @@ def _run_en_check(pads, values=None):
 
 class TestEnRcGate(unittest.TestCase):
 
+    # -- the property the whole design rests on ---------------------------
+
+    def test_undocumented_missing_rc_fails(self):
+        """No RC on copper and no record in the doc -> MUST fail.
+
+        This is the arm that makes a documented-deviation gate safe. If it
+        cannot fire, the gate passes unconditionally and the EN defect is
+        invisible again -- which is exactly the state 93bf286 fixed.
+        """
+        _, failed, out = _run(_AS_BUILT, recorded=False)
+        self.assertEqual(failed, 1, f"an UNRECORDED missing RC passed:\n{out}")
+
+    def test_documented_missing_rc_passes(self):
+        """No RC on copper but recorded in known-issues.md -> passes."""
+        _, failed, out = _run(_AS_BUILT, recorded=True)
+        self.assertEqual(failed, 0, f"the recorded deviation was rejected:\n{out}")
+        self.assertIn("RECORDED as-built limitation", out)
+
+    def test_the_doc_anchor_still_exists_in_the_real_file(self):
+        """The real known-issues.md must contain the sentence the gate greps.
+
+        Without this, someone rewording that section turns the deviation arm
+        red for the wrong reason -- or, if the gate's string is ever loosened,
+        turns it green for no reason.
+        """
+        doc = (BASE / "docs" / "known-issues.md").read_text(errors="replace")
+        self.assertIn(RECORD_ANCHOR, doc,
+                      "docs/known-issues.md no longer records the EN "
+                      "limitation in the words verify_strapping_pins greps for")
+
     # -- the board as it exists -------------------------------------------
 
-    def test_as_built_board_fails(self):
-        """No pull-up and no RC cap on EN -> the check must fail."""
-        _, failed, out = _run_en_check(_AS_BUILT)
-        self.assertEqual(failed, 2, f"expected both halves to fail:\n{out}")
-        self.assertIn("pull-up resistor to +3V3", out)
-        self.assertIn("RC delay capacitor to GND", out)
+    def test_reports_what_is_actually_on_en(self):
+        _, _, out = _run(_AS_BUILT)
+        self.assertIn("U1.3", out)
+        self.assertIn("SW_RST.1", out)
+        self.assertIn("pull-up from EN to +3V3: NONE", out)
+        self.assertIn("capacitor from EN to GND: NONE", out)
 
-    def test_failure_names_the_pads_actually_on_en(self):
-        """The report must show what IS on EN, not just what is missing."""
-        _, _, out = _run_en_check(_AS_BUILT)
-        self.assertIn("SW_RST", out)
-        self.assertIn("U1", out)
+    def test_decoupling_cap_on_3v3_is_not_credited_as_the_rc(self):
+        """C3 bridges +3V3->GND, not EN->GND.
 
-    def test_decoupling_cap_on_3v3_does_not_count_as_the_rc(self):
-        """C3 bridges +3V3->GND, not EN->GND. It must not satisfy the check.
-
-        This is the exact substitution the old prose-matching version made:
-        it found a '100nF C3' in the schematic and accepted it as the EN RC.
+        The old prose-matching version found a '100nF C3' in the schematic and
+        accepted it as the EN RC. Pad membership must not repeat that.
         """
-        _, failed, out = _run_en_check(_AS_BUILT)
-        self.assertEqual(failed, 2, f"C3 was miscredited as the EN RC:\n{out}")
+        _, _, out = _run(_AS_BUILT)
+        self.assertIn("capacitor from EN to GND: NONE", out)
 
     # -- the respin, and each half of it ----------------------------------
 
-    def test_full_rc_network_passes(self):
-        """Plant a real 10k + 100nF on EN -> the check must go green."""
-        pads = _AS_BUILT + _PULLUP + _RC_CAP
-        values = {"R3": "10k 0805", "C31": "100nF 0805"}
-        passed, failed, out = _run_en_check(pads, values)
-        self.assertEqual(failed, 0, f"a correct EN network was rejected:\n{out}")
-        self.assertGreaterEqual(passed, 3, out)
-        self.assertIn("RC margin", out)
+    def test_full_rc_network_passes_on_the_parts(self):
+        """A real 10k + 100nF on EN passes without consulting the doc.
 
-    def test_pullup_without_cap_fails(self):
-        passed, failed, out = _run_en_check(_AS_BUILT + _PULLUP,
-                                            {"R3": "10k 0805"})
-        self.assertEqual(failed, 1, out)
-        self.assertIn("RC delay capacitor to GND", out)
-
-    def test_cap_without_pullup_fails(self):
-        passed, failed, out = _run_en_check(_AS_BUILT + _RC_CAP,
-                                            {"C31": "100nF 0805"})
-        self.assertEqual(failed, 1, out)
-        self.assertIn("pull-up resistor to +3V3", out)
-
-    # -- the margin must be computed, not asserted ------------------------
-
-    def test_absurdly_slow_rc_fails_on_margin(self):
-        """A 10M + 10uF network solders fine but samples far too late.
-
-        Proves the margin arm can fail, rather than being decorative once the
-        two parts are present.
+        Checked with the record ABSENT, so a pass here can only come from the
+        copper -- otherwise this would silently be re-testing the doc arm.
         """
-        pads = _AS_BUILT + _PULLUP + _RC_CAP
-        values = {"R3": "10M 0805", "C31": "10uF 0805"}
-        _, failed, out = _run_en_check(pads, values)
-        self.assertEqual(failed, 1, f"3*tau >> 50ms should fail:\n{out}")
-        self.assertIn("RC margin", out)
+        _, failed, out = _run(_AS_BUILT + _PULLUP + _RC_CAP, recorded=False)
+        self.assertEqual(failed, 0, f"a correct EN network was rejected:\n{out}")
+        self.assertIn("RC delay network the datasheet requires", out)
+        self.assertIn("R3", out)
+        self.assertIn("C31", out)
 
-    def test_margin_uses_the_planted_values(self):
-        """tau must track the BOM values, not a hardcoded constant."""
-        pads = _AS_BUILT + _PULLUP + _RC_CAP
-        _, _, out = _run_en_check(pads, {"R3": "10k 0805", "C31": "100nF 0805"})
-        self.assertIn("tau=1.0ms", out)      # 10k * 100nF = 1 ms
-        _, _, out2 = _run_en_check(pads, {"R3": "20k 0805", "C31": "100nF 0805"})
-        self.assertIn("tau=2.0ms", out2)     # doubling R must double tau
+    def test_pullup_without_cap_is_not_an_rc(self):
+        _, failed, out = _run(_AS_BUILT + _PULLUP, recorded=False)
+        self.assertEqual(failed, 1, f"half a network counted as whole:\n{out}")
+
+    def test_cap_without_pullup_is_not_an_rc(self):
+        _, failed, out = _run(_AS_BUILT + _RC_CAP, recorded=False)
+        self.assertEqual(failed, 1, f"half a network counted as whole:\n{out}")
 
     # -- the regression that motivated the rewrite ------------------------
 
     def test_prose_cannot_resurrect_a_pass(self):
-        """Re-adding the old justification comment must NOT turn it green.
+        """Re-planting the old justification comment must change nothing.
 
         The previous implementation passed on exactly these strings. The check
-        no longer reads schematic text at all, so planting them changes
-        nothing -- which is the property being locked in.
+        no longer reads schematic text at all; this locks that in, so the
+        comment cannot come back as evidence.
         """
         original = STRAP._read_schematics
         STRAP._read_schematics = lambda: (
-            '"R3" "10k" "C3" "100nF" R3 DNP -- WROOM-1 integrates a 10k '
-            'EN pull-up on-module, internal to WROOM-1, so external is redundant'
+            '"R3" "10k" "C3" "100nF" R3 DNP -- WROOM-1 integrates a 10k EN '
+            'pull-up on-module, internal to WROOM-1, so external is redundant'
         )
         try:
-            _, failed, out = _run_en_check(_AS_BUILT)
+            _, failed, out = _run(_AS_BUILT, recorded=False)
             self.assertEqual(
-                failed, 2,
+                failed, 1,
                 f"a comment revived the false green -- the check is reading "
                 f"prose again:\n{out}")
         finally:

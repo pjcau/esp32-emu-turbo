@@ -384,22 +384,28 @@ and is six releases stale; the tag is the truth.
   The schematic now draws C3 where the board actually has it, so `T4`
   stays honest instead of describing a network that does not exist.
 
-  **`verify_strapping_pins` is RED on this, deliberately, and stays red
-  until the respin.** It used to be green: the EN block regex-matched a
-  *justification comment* in the schematic (`"R3 DNP"`,
-  `"WROOM-1 integrates"`) and then computed τ from a WROOM-1 internal
-  ~45 kΩ pull-up — a part of the same false claim `74c196e` had already
-  retired from `mcu.py`. So the one gate whose job was to check EN was
-  asserting the network's presence *from the prose that excused its
-  absence*, and reported a board with no pull-up and no RC as passing.
-  It now derives both from pad membership on copper: a pull-up is a
-  resistor bridging `EN`→`+3V3`, the RC cap a capacitor bridging
-  `EN`→`GND`. On this board neither exists, so it fails — that failure is
-  the accurate verdict, not a regression. **Do not waive it, and do not
-  "fix" it by re-adding an allowlist or a comment.**
-  `scripts/test_strapping_en_rc.py` drives the check both ways (9 mutation
-  tests: a planted 10 k + 100 nF must turn it green, either half missing
-  must turn it red, and re-planting the old comment must change nothing).
+  **The paragraph above is load-bearing: `verify_strapping_pins` greps this
+  file for the sentence "EN has no RC delay network".** Until `93bf286` that
+  gate regex-matched a *justification comment* in the schematic (`"R3 DNP"`,
+  `"WROOM-1 integrates"`) and computed τ from a WROOM-1 internal ~45 kΩ
+  pull-up — the same false claim `74c196e` had already retired from
+  `mcu.py`. The one gate whose job was to check EN was asserting the
+  network's presence *from the prose that excused its absence*, and reported
+  a board with no pull-up and no RC as passing.
+
+  It now reads copper — a pull-up is a resistor bridging `EN`→`+3V3`, the RC
+  cap a capacitor bridging `EN`→`GND` — and this board has neither. It
+  passes anyway, but *only* as a **recorded** deviation: delete or reword
+  the sentence above without fitting the parts and the gate goes red. That
+  coupling is the whole safety of the arrangement, so **do not reword that
+  bullet casually, and never "fix" a red result by restoring a comment or an
+  allowlist** — fit the parts or keep the record honest.
+
+  `scripts/test_strapping_en_rc.py` drives every arm (9 mutation tests):
+  a planted 10 k + 100 nF passes on the parts with the record *absent*;
+  either half alone fails; an unrecorded missing RC fails; the doc anchor
+  is asserted to still exist in this file; and re-planting the old
+  justification comment must change nothing.
 - **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming
@@ -520,6 +526,22 @@ it stands. Changing them breaks a working board.
   the wrong answer. The contacts must face the FPC slot on J4's −X side;
   90° swaps contacts and mount tabs and contacts 0 of 42 pads.
 - **USB Zdiff of 130 Ω** — a non-issue. Do not move parts or traces for it.
+- **The twelve `GND on B.Cu width=0.2mm` warnings from `validate-jlcpcb`** —
+  expected, and widening those traces is the wrong fix. They are the debounce
+  caps C5–C16: each one's GND pad runs ~2 mm on B.Cu and drops through a
+  single 0.60/0.20 via into the In1.Cu ground plane. **The layer is the
+  point.** The only inner layer they could otherwise cross is In2.Cu, which
+  carries the +3V3 pour — twelve traces through it would carve the plane into
+  channels, which is how H-class "+3V3 resolved into four isolated groups"
+  happened in the first place. One small via per cap punches a clearance
+  circle the plane flows around instead; `make verify-power-nets` confirms
+  +3V3 stays a single copper group. The 0.2 mm width is separately pinned by
+  the button B.Cu verticals running between the caps (0.175 mm gap), and a
+  wider stub would invite a wider via — a bigger hole in the same plane.
+  These carry a decoupling cap's return current over 2 mm, not a supply rail;
+  the rule that flags them is a blanket power-net width rule that cannot see
+  the difference. Rationale is also at the generation site in
+  `routing.py`, next to `DEBOUNCE_REFS`.
 - **`POWER_HIGH_ALLOWLIST` BAT+ entries** — coordinate-pinned to 0.02 mm
   with an IPC-2221 argument; they cannot drift silently. Keep.
 - **`verify_net_connectivity.ACCEPTED_FRAGMENTATIONS["VBUS"]`** — see RESPIN

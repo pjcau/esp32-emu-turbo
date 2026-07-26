@@ -170,9 +170,11 @@ dispatch-fast: ## Same, but only the session-start gate subset
 
 # ── Virtual Bench (docs/virtual-bench-plan.md) ───────────────────────
 #
-# Phase 0 only: extract the netlist, cross-check the two sources, define
-# what a component model must cite, and write down the bugs the bench will
-# have to rediscover. Nothing electrical is modelled yet.
+# Phase 0: extract the netlist, cross-check the two sources, define what a
+# component model must cite, and write down the bugs the bench must
+# rediscover. Phase 1: the physics — DC operating point, cited component
+# models, electrical conflicts, junction temperatures. Transients (T1.4) are
+# the one Phase 1 task still open.
 #
 # NONE of these are in VERIFY_ALL_SCRIPTS, deliberately. bench-netlist and
 # bench-retro are *designed* to exit non-zero at this phase — the plan's own
@@ -201,12 +203,26 @@ bench-rails: ## T1.1 — DC operating point: every net's voltage, derived from t
 bench-conflicts: ## T1.3 — electrical conflicts (two drivers on a node); geometry stays with verify_isolation
 	@$(T) bench-conflicts python3 scripts/vbench/conflicts.py
 
-# T1.6 asks for "rail table + thermal table, non-zero exit on any out-of-spec
-# value". The rail half is here; the thermal half is T1.5 and is NOT written
-# yet, so this target does not print one. A blank space where a thermal table
-# should be reads as "nothing to report" — bench-rails says so explicitly in
-# its own output instead.
-bench-power: bench-rails bench-conflicts ## T1.6 (partial) — rails + conflicts; thermal is T1.5, not yet written
+bench-thermal: ## T1.5 — junction temperatures at 30 C external and 40 C in-enclosure, from cited theta_JA
+	@$(T) bench-thermal python3 scripts/vbench/thermal.py
+
+bench-transients: ## T1.4 — cold start, inrush, load step, sag (ngspice; exits 2 if it is missing)
+	@$(T) bench-transients python3 scripts/vbench/transients.py
+
+bench-power: bench-rails bench-conflicts bench-thermal bench-transients ## T1.6 — rails + conflicts + thermal + transients, non-zero on any out-of-spec value
+
+bench-phase1: bench-power ## Everything Phase 1 delivers
+
+bench-pins: ## T2.1 + T2.4 — every ESP32 pin with net/level/role, and the boot mode the copper produces
+	@$(T) bench-pins python3 scripts/vbench/pins.py
+
+bench-buttons: ## T2.2 + T2.3 — debounce RC per button, and the switch_off scenario
+	@$(T) bench-buttons python3 scripts/vbench/buttons.py
+
+bench-phase2: bench-pins bench-buttons ## Everything Phase 2 delivers
+
+bench-display: ## T3.1 (part) — the display seen from the PANEL: 40 pins through the 41-N reversal, IM straps, data-bus order
+	@$(T) bench-display python3 scripts/vbench/display.py
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py

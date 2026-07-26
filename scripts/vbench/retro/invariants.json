@@ -6,7 +6,7 @@
       "id": "INV-SW-PWR",
       "round": 0,
       "title": "SW_PWR is not in series with the battery",
-      "source": "docs/known-issues.md:309",
+      "source": "docs/known-issues.md:348",
       "source_match": "SW_PWR is not in series",
       "phase": 2,
       "classes": [
@@ -78,7 +78,7 @@
       "id": "INV-VBUS-FRAGMENTS",
       "round": 0,
       "title": "VBUS is three copper components on the fabricated board",
-      "source": "docs/known-issues.md:315",
+      "source": "docs/known-issues.md:354",
       "source_match": "VBUS is fragmented into 3 components",
       "phase": 1,
       "classes": [

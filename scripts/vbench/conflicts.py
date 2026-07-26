@@ -32,13 +32,15 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 from vbench import netlist as nl                             # noqa: E402
 from vbench import rails                                     # noqa: E402
+from vbench.models.q1_si2301 import Q1                       # noqa: E402
 from vbench.models.u2_ip5306 import U2                       # noqa: E402
 from vbench.models.u3_sy8089 import U3                       # noqa: E402
+from vbench.models.u5_pam8403 import U5                      # noqa: E402
 
 # Models that declare pin directions. A ref absent from here contributes no
 # direction claims, and the report counts how much of the board that is —
 # an unstated coverage figure would read as "no conflicts found".
-MODELS = {m.ref: m for m in (U2, U3)}
+MODELS = {m.ref: m for m in (Q1, U2, U3, U5)}
 
 DRIVING = frozenset({"out", "power_out", "analog_out", "open_drain"})
 
@@ -63,6 +65,25 @@ def _pin_direction(ref, pad):
         return model.pin(pad).direction
     except KeyError:
         return None
+
+
+def _feeds_from_another_rail(model, board, rail_net):
+    """True if this part draws power from a net other than `rail_net`.
+
+    That makes it a converter or a pass element, so its output pin is the
+    source of `rail_net` rather than a second driver fighting over it.
+    """
+    ref_nets = {p.pad: net for net, pins in board.nets.items()
+                for p in pins if p.ref == model.ref}
+    for pad, net in ref_nets.items():
+        if net == rail_net:
+            continue
+        try:
+            if model.pin(pad).direction == "power_in":
+                return True
+        except KeyError:
+            continue
+    return False
 
 
 def find_conflicts(board=None, values=None):
@@ -92,9 +113,20 @@ def find_conflicts(board=None, values=None):
             direction = _pin_direction(p.ref, p.pad)
             if direction not in DRIVING:
                 continue
-            # The regulator that MAKES the rail is not in conflict with it.
+            # A part that MAKES the rail is not in conflict with it. Decided
+            # by a derived rule rather than a list of pin names: a converter
+            # or pass element has a power_in pin on some OTHER net, so its
+            # output is where this rail comes from. U2 (VBUS -> +5V), U3
+            # (+5V -> BUCK_LX) and Q1 (BAT_IN -> BAT+) all satisfy it, and a
+            # part added later satisfies it without anyone editing a list.
+            #
+            # This rule was written after the name list ("VOUT", "LX") flagged
+            # Q1.3 driving BAT+ — which was a real finding, just not about
+            # the board: rails.py was holding BAT+ at the cell voltage
+            # directly while Q1 is what actually delivers it. See the note in
+            # rails.py.
             model = MODELS[p.ref]
-            if model.pin(p.pad).name in ("VOUT", "LX"):
+            if _feeds_from_another_rail(model, board, net):
                 continue
             out.append(Conflict(
                 "C2", net,

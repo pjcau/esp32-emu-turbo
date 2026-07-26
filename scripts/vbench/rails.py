@@ -364,6 +364,19 @@ def operating_point(on_battery=False, soc=0.5, buttons_pressed=False):
     notes.append(
         f"BAT+ held at {cell.v_open:.3f} V by the cell at SoC {soc:.2f} "
         f"(charge-and-play: the battery is present on USB too)")
+    # BAT+ is really BAT_IN *through Q1*, not a second source. Holding both
+    # at the cell voltage is exact only at zero load current, which is what
+    # this DC solve has: every consumer is a high-impedance pin, so no
+    # current flows and Q1's I*Rds_on drop is zero. It stops being exact the
+    # moment load currents enter the model, which is T1.4's job — Q1's
+    # on-resistance is already cited in models/q1_si2301.py, and at the
+    # gaming current it is worth about 70 mV. conflicts.py found this by
+    # flagging Q1.3 as a second driver on BAT+, which it is not; the model
+    # was wrong, not the board.
+    notes.append(
+        "BAT+ = BAT_IN through Q1; the drop is zero here ONLY because a DC "
+        "solve with high-impedance loads carries no current. Load currents "
+        "(T1.4) must add I x Rds_on — about 70 mV at the gaming current.")
     fixed = {n: v for n, v in fixed.items() if n in board.nets}
 
     voltages = solve_dc(board, values, fixed, buttons_pressed)

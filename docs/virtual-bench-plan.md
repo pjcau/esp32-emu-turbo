@@ -359,16 +359,22 @@ handheld enclosure the air around U2/U3 is warmer, which is why the existing
 gate assumed 40 °C. Both are reported; the 40 °C figure is the one that governs
 pass/fail until the enclosure rise is measured on the prototype.
 
-### Phase 1 status — T1.1 and T1.3 done, T1.2 partial, T1.4/T1.5 not started
+### Phase 1 status — **DONE**, with two holes it names itself
 
 | Task | State | Where |
 |---|---|---|
 | T1.1 DC solver | **done** | `scripts/vbench/rails.py`, `sources.py` · `make bench-rails` |
-| T1.2 cited models | **partial** — U3 complete, U2 incomplete and says so, Q1 and U5 not written | `scripts/vbench/models/u3_sy8089.py`, `u2_ip5306.py` |
-| T1.3 conflict detector | **done**, at 4% pin coverage and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
-| T1.4 transients (ngspice) | not started | — |
-| T1.5 thermal | not started; θJA already collected (U3 170 °C/W, U2 40 °C/W) | — |
-| T1.6 `make bench-power` | **partial** — rails + conflicts, no thermal table | Makefile |
+| T1.2 cited models | **U3, Q1, U5 complete; U2 incomplete and says so** | `scripts/vbench/models/` |
+| T1.3 conflict detector | **done**, at 10% pin coverage (27 of 271) and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
+| T1.4 transients | **done** (ngspice) | `scripts/vbench/transients.py` · `make bench-transients` |
+| T1.5 thermal | **done** | `scripts/vbench/thermal.py` · `make bench-thermal` |
+| T1.6 `make bench-power` | **done** — rails + conflicts + thermal + transients | Makefile |
+
+The two holes, both named in the tools' own output rather than left to be
+inferred: the **IP5306's boost efficiency and brownout threshold** are not in
+the pages this repo holds, so U2's dissipation is reported NOT COMPUTABLE and
+the brownout point is unresolved; and the **SY8089's control loop** is not in
+them either, so every transient here is open-loop.
 
 **The headline number: +3V3 is 3.327 V, not 3.300 V.** It is derived, not
 declared. `rails.py` walks the netlist from `U3.5` (FB) to the two resistors
@@ -420,12 +426,198 @@ failure the schema exists to catch. The OCV curve is declared as a generic
 single-cell Li-polymer shape with `calibrated = False`. T5.4 replaces it with
 two measurements from prototype #1.
 
-**What T1.3 does not cover, in its own words.** Only U2 and U3 carry a cited
-pin table, which is 11 of 271 pin instances. The tool prints "covers 4% of
-the board's pins and no more" rather than "no conflicts found", because those
-two sentences are not the same claim.
+**What T1.3 does not cover, in its own words.** Four parts now carry a cited
+pin table — U2, U3, Q1, U5 — which is 27 of 271 pin instances. The tool
+prints "covers 10% of the board's pins and no more" rather than "no conflicts
+found", because those two sentences are not the same claim.
 
-## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch
+**T1.3 found a bug in T1.1.** With Q1 added it flagged `Q1.3 (D, power_out)`
+as a second driver on `BAT+`. Q1 is not a second driver — it is what
+*delivers* BAT+ from the cell — but the finding was real all the same, just
+about the model rather than the board: `rails.py` was holding `BAT+` at the
+cell voltage directly, as if it were a source, instead of deriving it through
+the FET. Two things changed. The exemption is now a **derived rule** — a
+driver on a rail is not in conflict if the same part draws power from a
+different net, which makes it a converter or pass element, and which U2, U3
+and Q1 all satisfy without anyone maintaining a list of pin names. And
+`rails.py` now records that BAT+ equals BAT_IN only because a DC solve with
+high-impedance loads carries no current; Q1's cited on-resistance is worth
+about 70 mV at the gaming current, and T1.4 has to add it.
+
+### T1.5 — junction temperatures, and which figures are honest
+
+`make bench-thermal` prints Tj at both 30 °C external and 40 °C
+in-enclosure, for idle / gaming / charge-and-play, with **40 °C governing
+pass/fail** until the enclosure rise is measured. The arithmetic is the same
+`Tj = T_amb + P·θJA` the existing gate uses; what is different is that every
+dissipation figure is either derived from a cited parameter or declared not
+computable:
+
+| Part | Basis | Gaming at 40 °C |
+|---|---|---|
+| U3 SY8089 | conduction only, from the two cited R<sub>DS(on)</sub> and the derived duty D = 3.327/5 = 0.665. Switching loss **excluded** — no gate charge or efficiency curve at this operating point on the pages read, so this is a **lower bound** | 18.5 mW → 43.1 °C, margin +56.9 |
+| Q1 Si2301CDS | I²·R<sub>DS(on)</sub>, cited. Uses the **steady-state 175 °C/W** from note d, not the 120/145 pair the table qualifies as "≤ 5 s" — a handheld is steady state | 24.5 mW → 44.3 °C, margin +80.7 |
+| U5 PAM8403 | cited 90 % efficiency plus cited 6.3 mA standby → power only. **No Tj**, because no θJA appears on the pages read | 53.7 mW, Tj not computed |
+| U2 IP5306 | **not computable.** Pages 2–4 give θJA and the absolute maxima but no boost efficiency | — |
+
+θJA is the datasheet's own figure and the datasheets say what board they
+measured on — 2″×2″ FR-4 with 2 oz copper and thermal vias for the SY8089
+(page 4 note 2), 1″×1″ for the Si2301 (page 1 note b). This board gives both
+parts less copper, so the real θJA is worse and these temperatures are
+optimistic. No correction factor is applied: one chosen without measuring the
+board's actual copper would be a number with no source. Measuring it from the
+PCB is the next refinement.
+
+**A discrepancy in the existing gate, left standing on purpose.**
+`verify_thermal_budget.py` uses θJA = 80 °C/W for the IP5306 under a header
+reading "from datasheets"; page 4 of that datasheet says **40 °C/W**. The 80
+is not corrected, because doubling θJA raises the computed Tj — it is the
+conservative direction, and restoring 40 would halve every temperature rise
+that gate reports and make it more permissive on no evidence. A plausible
+reason exists (an ESOP-8's 40 °C/W assumes an exposed-pad copper area the
+page does not describe) but plausible is not recorded. The file now carries
+the citation, the discrepancy and what closing it requires; `thermal.py`
+reports U2 as not computable rather than inheriting either number.
+
+T1.5's other ask is done: the ambient is a parameter, not a constant.
+`T_AMBIENT` defaults to 40 °C so the gate's verdict is unchanged, and
+`VBENCH_AMBIENT_C` overrides it for a what-if run.
+
+### T1.4 — transients, and the ripple that agrees with itself
+
+`make bench-transients` builds SPICE decks from the extracted netlist, the
+BOM's real L and C values and the cited model parameters, runs them on
+ngspice, and emits `t_3v3_valid`, `V_min` and ripple per scenario. It exits 2
+if ngspice is missing: "no transient violations found" from a run that never
+simulated anything is the worst output this bench could produce.
+
+| Scenario | Result |
+|---|---|
+| +3V3 ripple at 430 mA | **2.860 mV pk-pk simulated** vs **2.836 mV closed-form** — 0.8 % apart |
+| USB cold start | `t_3v3_valid` = **1.218 ms**, against the cited 1.2 ms soft-start; settles at 3.285 V |
+| Bulk inrush | deck peak 84 A is an **upper bound, not a prediction**; a 3 A limited supply charges the 57 µF in C·V/I = **95 µs** |
+| +3V3 load step, +100 mA | droop **1.8 mV**, V_min 3.279 V |
+| Battery sag | at SoC 0.00: 3.000 V OCV − 38 mV cell (**uncalibrated**) − 68 mV Q1 (**cited**) = 2.894 V |
+
+The ripple line is the one worth keeping. The switching node is driven at the
+cited 1 MHz with the derived duty 0.665, through the BOM's 2.2 µH into the
+BOM's 22.3 µF — and the closed-form buck result, ΔI = (V_in−V_out)·D/(L·f_sw)
+then ΔV = ΔI/(8·C·f_sw), lands within 0.8 % of it. Two independent routes to
+one number, neither of which was tuned to match the other.
+
+**C28 contributes nothing to that 22.3 µF, and that is correct.** It is DNP,
+so it has no BOM value, so it is absent from the deck. A reader adding the
+schematic up would get 32.3 µF — which is the same gap
+`verify_decoupling_adequacy.py` still has, and the reason
+`make bench-transients` prints "C28 contribute nothing (DNP: no BOM value, so
+no capacitor)" on every run.
+
+**Three bugs in the decks, all mine, all found by running them.** They are
+recorded because each was a plausible-looking model that produced a confident
+wrong answer:
+
+1. The first ripple run reported **6062 mV pk-pk**. The open-loop LC rings at
+   f₀ ≈ 22 kHz with Q ≈ 25, and the measurement window opened 20 µs in, long
+   before it decayed. The real regulator's feedback damps that ring; the loop
+   is not modelled, so the ring is an artefact of the deck. Ripple is now
+   measured in a late window and the test asserts the mean sits near the
+   derived rail, which is what catches the window slipping again.
+2. `v_out / i_limit` = 0.95 Ω was used as a stand-in for the current limit —
+   in two different decks. A current limit clamps during startup; it is not a
+   resistance the circuit contains. It put a permanent 0.36–0.50 V droop on
+   the rail and made cold start settle at **2.963 V**, i.e. it invented a
+   brownout. Both decks now use the buck's own cited conduction resistance,
+   `D·R_DS(p) + (1−D)·R_DS(n)` = 0.100 Ω, and `r_conduction()` is the only
+   series resistance either is allowed to use.
+3. The unlimited inrush peak was reported as a **board failure**. It is a
+   property of the deck: an ideal 5 V step into a discharged capacitor
+   through 50 mΩ is V/R. It is now labelled an upper bound and paired with
+   the current-limited charge time, which is the number an engineer can use.
+
+## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch — **DONE**
+
+| Task | State | Where |
+|---|---|---|
+| T2.1 GPIO fabric | **done** | `scripts/vbench/pins.py` · `make bench-pins` |
+| T2.2 button model | **done** | `scripts/vbench/buttons.py` · `make bench-buttons` |
+| T2.3 SW_PWR `switch_off` | **done** — reproduces, does not report | `scripts/vbench/buttons.py` |
+| T2.4 boot-mode model | **done** | `scripts/vbench/pins.py` |
+
+`models/u1_esp32s3.py` carries the strapping tables from the module datasheet
+(技术规格书 v1.3): table 4 page 13 for the internal pulls and their defaults,
+table 5 for the timing, table 6 page 14 for the boot mode, table 7 page 15 for
+VDD_SPI. It deliberately does **not** duplicate the 41-pin table, which lives
+in `datasheet_specs.py::U1` and is already checked by `verify_datasheet_nets`.
+
+**The boot mode is derived, end to end.** `pins.py` joins three things that had
+never been joined: the netlist says what is attached to each U1 pad, T1.1's
+resistive solve says what voltage that produces at reset, and the strapping
+tables say what the chip does with it.
+
+```
+GPIO0  = 1   BTN_SELECT at 3.327 V from the board      -> boot mode, with GPIO46
+GPIO3  = 1   BTN_R at 3.327 V from the board           -> JTAG source
+GPIO45 = 0   BTN_L floats; internal pull-down decides  -> VDD_SPI 3.3 V
+GPIO46 = 0   LCD_WR floats; internal pull-down decides -> boot mode, ROM log
+
+BOOT MODE : SPI Boot        VDD_SPI : 3.3 V
+```
+
+Two things fall out that were previously only asserted:
+
+* **Why R14 must stay DNP now has a page behind it.** GPIO45 selects VDD_SPI
+  (table 7): 0 → 3.3 V, 1 → 1.8 V. An external pull-up would select 1.8 V and
+  starve the N16R8's 3.3 V PSRAM. The bench derives this rather than being
+  told, and `buttons.py` uses the same derivation to report BTN_L's missing
+  pull-up as **required by design** rather than as a defect — the rule being
+  "a strapping pin whose datasheet default is 0 must not carry an external
+  pull-up", which needs no per-part list.
+* **GPIO3 has no internal pull at all** (§3.3.4, page 15: "该管脚没有内部上下拉
+  电阻"). Its strapping value must come from external circuitry that is not
+  high-impedance. This board's pull-up on BTN_R satisfies that — but the
+  requirement was nowhere in the repo, and a hand-written pull table would
+  have flattened GPIO3 into "pull-down like the others".
+
+T2.4's done-when, verbatim: `make bench-pins --hold BTN_SELECT` reports
+`FAIL — the board enters Joint Download Boot instead of SPI Boot because
+BTN_SELECT is held at reset — GPIO0=0, GPIO46=0`.
+
+**T2.2** finds each button's pull-up and debounce cap in the netlist, reads
+their values from the BOM, and computes the release edge: eleven buttons at
+**τ = 1.000 ms** (10 k × 100 nF), rising to 70 % of the rail in **1.204 ms**.
+That is the number a firmware debounce interval has to clear — shorter, and a
+release reads as a second press.
+
+**T2.3** is the opposite kind of assertion. `switch_off` must *reproduce* the
+v1 invariant, and it does, with the reason derived from the copper rather than
+quoted: SW_PWR's common pad sits on BAT+ and **its throw pads carry no net at
+all**, so there is nothing to switch between. BAT+ and +3V3 are unchanged with
+the switch operated. The scenario fails only if a rail moves — which would
+mean the copper changed under a recorded limitation — or if the invariant
+stops being recorded in `docs/known-issues.md`.
+
+### A gate that computed a margin for a network that is not there
+
+`verify_strapping_pins.py::test_en_rc_delay` reported an "EN RC margin =
+36.5 ms" and passed. Every input to that number was wrong:
+
+* It used **R = 45 kΩ** for a "WROOM-1 internal EN pull-up". The module
+  datasheet says the opposite in its own words — page 28, note to figure 7: an
+  RC delay circuit **must** be added at EN, R = 10 kΩ and C = 1 µF
+  recommended. There is no on-module pull-up.
+* It used **C = 100 nF** for "C3 on EN". C3 is not on EN; its pads are on
+  +3V3 and GND (phase -1(d)).
+* Its evidence that any of this held was a **grep of the schematic for the
+  string `"R3 DNP"`**. A gate whose verdict depends on a comment existing
+  cannot disagree with the comment. That is
+  `feedback_comment_outranked_datasheet` implemented as a pass condition.
+
+Rewritten to read the EN net out of the copper: it reports the two pads EN
+actually has (`U1.3`, `SW_RST.1`), that there is **no** resistor to +3V3 and
+**no** capacitor to GND, cites the datasheet requirement, and passes only
+while that deviation is recorded in `docs/known-issues.md`'s RESPIN section.
+It computes a time constant only from parts that exist. If the respin fits the
+RC, the check switches to verifying the parts are there.
 
 | Task | Deliverable | Done when |
 |---|---|---|
@@ -434,7 +626,59 @@ two sentences are not the same claim.
 | T2.3 | SW_PWR switch model — including the known fact that it is **not** in series. The bench must *reproduce* "switch off, board still powered" as expected behaviour, not report it as a bench bug | scenario `switch_off` asserts the board stays powered, citing the v1 invariant |
 | T2.4 | Boot-mode model: sample strapping pins at reset → resulting boot mode | a button held at reset that forces download mode is a FAIL with the pin named |
 
-## Phase 3 — Peripherals: LCD, audio, SD
+## Phase 3 — Peripherals: LCD, audio, SD — **T3.1 partial**
+
+### T3.1 — the display, seen from the panel
+
+`make bench-display` builds the view no existing gate has. Every gate checks
+J4 **by pad**: `datasheet_specs` declares 42 pads, `verify_datasheet_nets`
+compares their nets, `verify_dfm_v2` checks the 41−N reversal is applied.
+Nothing checks what the **panel** sees — and those are not the same question,
+because the ribbon reverses the numbering.
+
+The panel is a **40-pin FPC** and `pin N contacts pad 41−N`, so the bench walks
+all forty pins to the net each one actually touches and the DC level T1.1
+computes for it:
+
+```
+  17 DB0   -> pad 24  LCD_D0        38 IM0  -> pad 3  +3V3  3.327 V  1
+  ...                                39 IM1  -> pad 2  +3V3  3.327 V  1
+  24 DB7   -> pad 17  LCD_D7        40 IM2  -> pad 1  GND   0.000 V  0
+```
+
+Two checks only that view can express:
+
+* **The interface mode is derived from the copper**, not read off a table:
+  IM2=0, IM1=1, IM0=1 → 8080 8-bit parallel, which is what the firmware
+  drives. Flip IM2 and the check stops agreeing.
+* **DB0..DB7 must land on LCD_D0..LCD_D7 in order.** Crossing two data lines
+  is invisible to every pad-side gate — each pad still carries a valid net and
+  every net still has the right pad count — but it is a dead display. The
+  mutation test crosses `LCD_D0`/`LCD_D1` and requires both panel pins to be
+  named.
+
+The pinout is **parsed** from `website/docs/design/components.md` §"FPC 40-Pin
+Pinout", the file the repo names as the source of truth, so there is one table
+rather than two. Parsing it needed care: components.md holds a second
+five-column table immediately below — the IM2:IM1:IM0 mode table — and reading
+every five-column row in the file let its rows overwrite panel pin 1, which
+came out named "1". The parser now anchors on the pinout table's own header.
+
+**The panel still cannot be a `Model`.** `models/_schema.py` requires a
+document in `hardware/datasheets/`, and the panel is the one part that has
+none — which is exactly how its missing backlight ballast survived (R25-HIGH-1).
+It is handled the way `sources.py` handles the LiPo: declared, with its
+provenance stated, and flagged.
+
+So T3.1's other halves stay unbuilt and say so: the ILI9488 **controller**
+command set, MADCTL and rotation, pixel format, and the setup/hold windows a
+20 MHz pclk must satisfy all need the controller datasheet, which this repo
+does not hold. No frame is rendered and no timing verdict is given, because
+either would look like proof.
+
+T3.2 (audio) and T3.3 (SD) are not started.
+
+
 
 | Task | Deliverable | Done when |
 |---|---|---|

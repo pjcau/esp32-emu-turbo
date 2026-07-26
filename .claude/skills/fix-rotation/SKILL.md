@@ -1,6 +1,6 @@
 ---
 name: fix-rotation
-model: claude-opus-4-7
+model: claude-opus-5
 description: Investigate and fix a JLCPCB CPL rotation by pin→pad→net geometry, against the one-law-per-layer gate
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob, Write, Edit

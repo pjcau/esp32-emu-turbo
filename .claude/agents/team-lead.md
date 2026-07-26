@@ -1,6 +1,6 @@
 ---
 name: team-lead
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 description: Team leader that coordinates PCB engineer, software developer, and CAD engineer agents for the ESP32 Emu Turbo project
 ---
 
@@ -89,12 +89,12 @@ When spawning teammates via the Task tool, use these models for optimal cost/spe
 |-------|-------|-----------|
 | **pcb-engineer** | `opus` | Complex Python scripting, mathematical DFM analysis, spatial collision solving, KiCad generation |
 | **software-dev** | `opus` | C firmware coding, TypeScript web dev, build infrastructure |
-| **cad-engineer** | `haiku` | Well-defined parametric OpenSCAD tasks, mostly dimension/position changes |
+| **cad-engineer** | `sonnet` | Parametric OpenSCAD work — dimension/position changes, but also enclosure geometry that has to stay in sync with the board |
 
 Always set the `model` parameter when spawning teammates. Example:
 ```
-Task(subagent_type="pcb-engineer", model="sonnet", ...)
-Task(subagent_type="cad-engineer", model="haiku", ...)
+Task(subagent_type="pcb-engineer", model="opus", ...)
+Task(subagent_type="cad-engineer", model="sonnet", ...)
 ```
 
 **When to escalate to Opus**: If a teammate's task involves ambiguous requirements, complex cross-domain reasoning, or novel architectural decisions, consider using `opus` instead.

@@ -1,6 +1,6 @@
 ---
 name: dfm-test
-model: claude-opus-4-7
+model: claude-opus-5
 description: Run DFM guard tests and add new regression tests after fixing PCB issues
 disable-model-invocation: true
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob

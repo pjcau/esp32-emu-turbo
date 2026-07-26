@@ -1,4 +1,5 @@
-"""Mutation tests for the Virtual Bench Phase 0 foundation.
+"""Mutation tests for the Virtual Bench (Phase 0 foundation, Phase 1 physics,
+Phase 2 digital fabric).
 
 Written in the style of `scripts/test_issue_dispatch.py`: break each
 mechanism on purpose and require it to notice. The repo's own lesson is
@@ -14,6 +15,24 @@ Covers:
      line that moved, or reuses an id must fail to load.
   C. netlist.py        — each dispute class must fire when its condition is
      injected, and must not fire otherwise.
+  D. rails.py, conflicts.py — the rails must be DERIVED (the divider found by
+     walking the netlist, +3V3 at 3.327 V not 3.300), a floating node must
+     stay floating rather than default to 0 V, and the conflict detector must
+     fire on an injected driver and fall silent when it is removed.
+  E. thermal.py, models Q1/U5 — an on-resistance must come from a table row
+     rather than an interpolation, a dissipation that cannot be derived must
+     stay unreported, and the margin check must actually fire at a hot
+     ambient.
+  F. transients.py — a current limit must not be used as a series resistance,
+     the decks must carry the BOM's real values, the simulated ripple must
+     agree with the closed form, and a missing simulator must raise.
+  G. pins.py, buttons.py — the boot mode must be derived from the copper and
+     the strapping tables, a button held at reset must force download mode and
+     FAIL, BTN_L's missing pull-up must be derived to be REQUIRED rather than
+     reported as a defect, and switch_off must reproduce the v1 invariant.
+  H. display.py — the panel-side view must survive a neighbouring markdown
+     table, and crossing two data lines must be caught even though every pad's
+     net stays valid.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -49,6 +68,15 @@ def check(name, condition, detail=""):
     else:
         FAIL += 1
         print(f"  FAIL  {name}  {detail}")
+
+
+def _quiet(fn, *args):
+    """Call a gate's main() without letting its whole report into the suite."""
+    import contextlib
+    import io
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        return fn(*args)
 
 
 def rejects(name, build):
@@ -502,14 +530,398 @@ def test_phase1():
           conflicts.find_conflicts(board, values) == base)
 
 
+# ── E. Phase 1.5: thermal, and the models it rests on ───────────────
+
+def test_thermal():
+    print("\nE. thermal.py / Q1 and U5 models")
+    from vbench import thermal
+    from vbench.models.q1_si2301 import Q1, r_ds_on
+    from vbench.models.u5_pam8403 import U5
+
+    for model in (Q1, U5):
+        try:
+            validate_model(model)
+            check(f"{model.ref} ({model.part}) satisfies the citation schema",
+                  True)
+        except ModelSchemaError as exc:
+            check(f"{model.ref} ({model.part}) satisfies the citation schema",
+                  False, str(exc))
+
+    # Q1's on-resistance must come from a table row, never from interpolation
+    # between two rows.
+    check("Q1 uses the -4.5 V row only when the gate drive reaches it",
+          r_ds_on(-4.5) == 0.112 and r_ds_on(-5.0) == 0.112,
+          f"got {r_ds_on(-4.5)}, {r_ds_on(-5.0)}")
+    check("Q1 falls back to the conservative -2.5 V row in between",
+          r_ds_on(-3.83) == 0.142, f"got {r_ds_on(-3.83)}")
+    try:
+        r_ds_on(-0.5)
+        check("Q1 refuses an on-resistance below its threshold", False,
+              "returned a value")
+    except ValueError:
+        check("Q1 refuses an on-resistance below its threshold", True)
+    try:
+        r_ds_on(3.3)
+        check("Q1 rejects a positive V_GS on a P-channel part", False,
+              "returned a value")
+    except ValueError:
+        check("Q1 rejects a positive V_GS on a P-channel part", True)
+
+    # The steady-state figure, not the <=5 s one. A handheld is steady state.
+    check("Q1's thermal figure is the steady-state 175 degC/W, not 120/145",
+          Q1.params["theta_ja_steady_state"].value == 175.0
+          and Q1.params["theta_ja_5s"].value == (0.0, 120.0, 145.0))
+
+    # The duty cycle must come from the derived rail, not from 3.3/5.
+    d, v_out, v_in = thermal.duty_cycle()
+    check("the buck duty cycle uses the DERIVED 3.327 V, not a nominal 3.3",
+          abs(v_out - 3.3273) < 1e-3 and abs(d - 0.6655) < 1e-3,
+          f"got Vout={v_out}, D={d}")
+
+    # U2 must be reported as not computable, never filled in.
+    results = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[1], 40.0)}
+    check("U2's dissipation is reported NOT COMPUTABLE, not assumed",
+          results["U2"].p_watts is None
+          and "NOT COMPUTABLE" in results["U2"].basis)
+    check("U5 gets a power figure but no Tj, because theta_JA is uncited",
+          results["U5"].p_watts is not None and results["U5"].tj is None)
+    check("U3's figure is labelled a lower bound (no switching loss)",
+          "LOWER BOUND" in results["U3"].basis)
+    check("U3 and Q1 do get a junction temperature",
+          results["U3"].tj is not None and results["Q1"].tj is not None)
+
+    # Charge-and-play must not put battery current through Q1.
+    cap = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[2], 40.0)}
+    check("in charge-and-play Q1 carries no battery current",
+          cap["Q1"].p_watts == 0.0, f"got {cap['Q1'].p_watts}")
+
+    # Both ambients must be present, and 40 must govern.
+    check("30 degC external and 40 degC in-enclosure are both defined, and "
+          "40 governs",
+          thermal.AMBIENT_EXTERNAL == 30.0
+          and thermal.AMBIENT_IN_ENCLOSURE == 40.0
+          and thermal.GOVERNING_AMBIENT == 40.0)
+
+    # A hot ambient must actually fail, or the margin check proves nothing.
+    hot = thermal.evaluate(thermal.SCENARIOS[1], 200.0)
+    check("an absurd ambient drives the margin check to FAIL",
+          any(r.ok is False for r in hot),
+          "nothing failed at 200 degC — the margin check never fires")
+
+    # The existing gate's ambient must be overridable and default to 40.
+    sys.path.insert(0, os.path.join(BASE, "scripts"))
+    import importlib
+    saved = os.environ.pop("VBENCH_AMBIENT_C", None)
+    try:
+        vtb = importlib.import_module("verify_thermal_budget")
+        importlib.reload(vtb)
+        check("verify_thermal_budget still defaults to 40 degC",
+              vtb.T_AMBIENT == 40.0, f"got {vtb.T_AMBIENT}")
+        os.environ["VBENCH_AMBIENT_C"] = "55"
+        importlib.reload(vtb)
+        check("verify_thermal_budget's ambient is overridable (T1.5)",
+              vtb.T_AMBIENT == 55.0, f"got {vtb.T_AMBIENT}")
+    finally:
+        os.environ.pop("VBENCH_AMBIENT_C", None)
+        if saved is not None:
+            os.environ["VBENCH_AMBIENT_C"] = saved
+
+
+# ── F. Phase 1.4: transients ────────────────────────────────────────
+
+def test_transients():
+    print("\nF. transients.py")
+    from vbench import transients as tr
+
+    # The regression that mattered twice: a current limit is not a series
+    # resistance. v_out/i_limit is 0.95 ohm and invented a 0.36-0.50 V droop
+    # in two different decks, once making +3V3 look like it browned out.
+    r = tr.r_conduction()
+    check("the decks' series resistance is the cited conduction resistance",
+          abs(r - 0.100) < 0.005, f"got {r}")
+    check("it is NOT v_out/i_limit, the invented 0.95 ohm",
+          abs(r - 3.327 / 3.5) > 0.5, f"got {r}")
+
+    # A current-limited supply charges a bulk capacitance in C*V/I.
+    t = tr.cap_charge_time(57e-6, 5.0, 3.0)
+    check("bulk charge time is C*V/I (57 uF, 5 V, 3 A -> 95 us)",
+          abs(t - 95e-6) < 1e-6, f"got {t}")
+
+    caps, l_buck = tr.board_values()
+    c_3v3, absent = caps["+3V3"]
+    check("the +3V3 bulk is read from the BOM (22.3 uF), not the schematic",
+          abs(c_3v3 - 22.3e-6) < 0.1e-6, f"got {c_3v3}")
+    check("C28 is excluded because it is DNP and has no BOM value",
+          "C28" in absent, f"absent = {absent}")
+    check("the buck inductor comes from the BOM (2.2 uH)",
+          abs(l_buck - 2.2e-6) < 1e-9, f"got {l_buck}")
+
+    from vbench.thermal import duty_cycle
+    duty, v_out, v_in = duty_cycle()
+    dv, di = tr.ripple_closed_form(c_3v3, l_buck, duty, v_in, v_out)
+    check("the closed-form ripple is about 2.8 mV pk-pk",
+          2.0e-3 < dv < 4.0e-3, f"got {dv}")
+
+    # The decks must carry the real values, not round numbers.
+    # Parse the deck rather than string-matching it: what matters is that the
+    # numbers in the netlist ARE the BOM's and the datasheet's, whatever
+    # formatting %g chooses for them.
+    deck = tr.deck_ripple(c_3v3, l_buck, duty, v_in, 0.430)
+    import re as _re
+    def _val(pattern):
+        m = _re.search(pattern, deck)
+        return float(m.group(1)) if m else None
+    deck_l = _val(r"(?m)^L2 \S+ \S+ (\S+)")
+    deck_c = _val(r"(?m)^Cout \S+ \S+ (\S+)")
+    deck_period = _val(r"PULSE\([^)]*\s(\S+)\)")
+    check("the ripple deck carries the BOM's inductor value",
+          deck_l is not None and abs(deck_l - l_buck) < 1e-12,
+          f"deck L2 = {deck_l}, BOM = {l_buck}")
+    check("the ripple deck carries the BOM's output capacitance",
+          deck_c is not None and abs(deck_c - c_3v3) < 1e-12,
+          f"deck Cout = {deck_c}, BOM = {c_3v3}")
+    check("the ripple deck switches at the cited 1 MHz, not a round guess",
+          deck_period is not None and abs(deck_period - 1e-6) < 1e-15,
+          f"deck period = {deck_period}")
+
+    if shutil.which("ngspice") is None:
+        # Not a skip. A transient gate whose simulator is missing has no
+        # verdict to give, and saying nothing would read as a pass.
+        check("ngspice is installed (required, not optional)", False,
+              "install with `brew install ngspice` — transients.py exits 2 "
+              "without it and this suite will not pretend otherwise")
+        return
+
+    check("ngspice is installed (required, not optional)", True)
+
+    import tempfile as _tf
+    work = _tf.mkdtemp(prefix="vbench-test-tran-")
+    try:
+        vals, _ = tr.run_ngspice(deck, work)
+        sim = vals["v_max"] - vals["v_min"]
+        check("simulated ripple agrees with the closed form within 2x",
+              abs(sim - dv) <= 0.5 * max(sim, dv),
+              f"sim {sim*1e3:.3f} mV vs closed form {dv*1e3:.3f} mV")
+        check("the ripple is measured after the open-loop LC ring decays",
+              abs(vals["v_avg"] - v_out) < 0.05,
+              f"mean {vals['v_avg']} is not near the derived {v_out} — the "
+              f"measurement window is too early again")
+
+        cold = tr.deck_cold_start(caps["+5V"][0], c_3v3, 0.430, 5.0, 0.05)
+        vals, _ = tr.run_ngspice(cold, work)
+        t_ss = 1.2e-3
+        check("t_3v3_valid lands near the cited 1.2 ms soft-start time",
+              vals.get("t_3v3_valid") is not None
+              and t_ss <= vals["t_3v3_valid"] <= 2 * t_ss,
+              f"got {vals.get('t_3v3_valid')}")
+        check("+3V3 settles above the 3.0 V the ESP32-S3 needs",
+              vals["v_final"] > 3.0, f"got {vals['v_final']}")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+    # A missing simulator must raise, never return a partial result.
+    saved = shutil.which
+    try:
+        shutil.which = lambda *a, **k: None
+        try:
+            tr.run_ngspice("* empty\n.end\n", work)
+            check("a missing simulator raises instead of returning nothing",
+                  False, "returned normally")
+        except tr.SimulatorMissing:
+            check("a missing simulator raises instead of returning nothing",
+                  True)
+    finally:
+        shutil.which = saved
+
+
+# ── G. Phase 2: pin fabric, boot mode, buttons, the switch ──────────
+
+def test_phase2():
+    print("\nG. pins.py / buttons.py")
+    from vbench import buttons, pins
+    from vbench.models.u1_esp32s3 import (
+        STRAPPING_DEFAULTS, U1, boot_mode, vdd_spi_voltage)
+
+    try:
+        validate_model(U1)
+        check("U1's strapping model satisfies the citation schema", True)
+    except ModelSchemaError as exc:
+        check("U1's strapping model satisfies the citation schema", False,
+              str(exc))
+
+    # Table 6, page 14, reproduced exactly — including the row that says
+    # GPIO46 is ignored when GPIO0 is high.
+    check("GPIO0=1 is SPI Boot whatever GPIO46 does (table 6)",
+          boot_mode(1, 0)[0] == "SPI Boot"
+          and boot_mode(1, 1)[0] == "SPI Boot")
+    check("GPIO0=0 with GPIO46=0 is Joint Download Boot (table 6)",
+          boot_mode(0, 0)[0] == "Joint Download Boot")
+    check("an undefined GPIO0 gives an UNDEFINED boot mode, not a guess",
+          boot_mode(None, 0)[0] == "UNDEFINED")
+
+    # Table 7, page 15.
+    check("GPIO45=0 selects the 3.3 V VDD_SPI the N16R8's PSRAM needs",
+          vdd_spi_voltage(0)[0] == 3.3)
+    check("GPIO45=1 selects 1.8 V, which is why R14 must stay DNP",
+          vdd_spi_voltage(1)[0] == 1.8)
+
+    # The GPIO3 exception is the one a hand-written table would flatten.
+    check("GPIO3 is recorded as having NO internal pull (p.15 3.3.4)",
+          STRAPPING_DEFAULTS["GPIO3"]["internal"] is None
+          and STRAPPING_DEFAULTS["GPIO3"]["default"] is None)
+    check("GPIO0 pulls up and GPIO45/46 pull down (table 4)",
+          STRAPPING_DEFAULTS["GPIO0"]["default"] == 1
+          and STRAPPING_DEFAULTS["GPIO45"]["default"] == 0
+          and STRAPPING_DEFAULTS["GPIO46"]["default"] == 0)
+
+    # The board, derived end to end.
+    fabric, op, v_rail = pins.fabric()
+    state = pins.strapping_state(fabric)
+    check("this board boots SPI Boot, derived from the copper",
+          boot_mode(state["GPIO0"][0], state["GPIO46"][0])[0] == "SPI Boot",
+          f"GPIO0={state['GPIO0']}, GPIO46={state['GPIO46']}")
+    check("VDD_SPI comes out at 3.3 V because BTN_L floats onto the internal "
+          "pull-down",
+          vdd_spi_voltage(state["GPIO45"][0])[0] == 3.3,
+          f"GPIO45={state['GPIO45']}")
+    check("no octal-PSRAM pin is attached externally",
+          not [p for p in fabric if p.gpio in pins.RESERVED])
+
+    # T2.4's done-when: a button held at reset that forces download mode must
+    # be a FAIL naming the pin.
+    held, _, _ = pins.fabric(hold_nets=("BTN_SELECT",))
+    held_state = pins.strapping_state(held)
+    mode, _ = boot_mode(held_state["GPIO0"][0], held_state["GPIO46"][0])
+    check("holding BTN_SELECT at reset forces Joint Download Boot",
+          mode == "Joint Download Boot", f"got {mode}")
+    check("the pins gate exits non-zero for that scenario",
+          _quiet(pins.main, ["--hold", "BTN_SELECT"]) == 1)
+
+    # T2.2: the debounce RC must come from the netlist and the BOM.
+    survey = buttons.survey()
+    with_rc = [b for b in survey if b.tau_s]
+    check("eleven buttons have a 1.000 ms debounce RC from 10k x 100nF",
+          len(with_rc) == 11
+          and all(abs(b.tau_s - 1e-3) < 1e-9 for b in with_rc),
+          f"{len(with_rc)} with RC: "
+          f"{[(b.net, b.tau_s) for b in with_rc][:3]}")
+    check("the release edge to 70% of rail is 1.204 ms",
+          all(abs(b.t_rise_s - 1.2040e-3) < 1e-6 for b in with_rc),
+          f"got {[b.t_rise_s for b in with_rc][:2]}")
+
+    # BTN_L must be reported as correct-by-design, not as a defect.
+    btn_l = next(b for b in survey if b.net == "BTN_L")
+    check("BTN_L's missing pull-up is derived to be REQUIRED, not a defect",
+          btn_l.pullup_forbidden is not None
+          and btn_l.pullup_forbidden[0] == "GPIO45"
+          and btn_l.r_ohm is None,
+          f"got {btn_l.pullup_forbidden}")
+    check("buttons.py exits 0 despite BTN_L having no RC",
+          _quiet(buttons.main, []) == 0)
+
+    # T2.3: switch_off must reproduce, not report.
+    ok, detail = buttons.switch_off_scenario()
+    check("switch_off leaves the board powered (SW_PWR is not in series)", ok,
+          f"{detail}")
+    check("the reason is derived: SW_PWR's throw pads carry no net",
+          detail["routed_throws"] == [] and detail["common_net"] == "BAT+",
+          f"{detail}")
+    check("the invariant is still recorded in docs/known-issues.md",
+          detail["recorded"])
+
+
+# ── H. Phase 3: the display, seen from the panel ────────────────────
+
+def test_phase3():
+    print("\nH. display.py")
+    from vbench import display as disp
+
+    rows = disp.read_pinout()
+    check("all 40 panel pins are covered by the parsed pinout",
+          sorted(rows) == list(range(1, 41)), f"got {len(rows)} pins")
+    # The parse must anchor on the pinout table's header. components.md holds
+    # a second five-column table right below it (IM2:IM1:IM0), whose rows
+    # start with 0 and 1 — reading every five-column row in the file let them
+    # overwrite panel pin 1, which then came out named "1".
+    check("panel pin 1 is XL, not a row from the interface-mode table",
+          rows[1][0] == "XL", f"got {rows[1]}")
+    check("the data bus expands to DB0..DB7 from a single '17-24' row",
+          [rows[p][0] for p in range(17, 25)]
+          == [f"DB{n}" for n in range(8)],
+          f"got {[rows[p][0] for p in range(17, 25)]}")
+
+    check("the ribbon reversal is pad = 41 - pin",
+          disp.pad_of(17) == "24" and disp.pad_of(40) == "1"
+          and disp.pad_of(1) == "40")
+
+    view, v_rail = disp.panel_view()
+    ok, mode, detail = disp.check_interface_mode(view)
+    check("the IM straps derive to 8080 8-bit from the copper", ok,
+          f"{mode}: {detail}")
+    check("DB0..DB7 land on LCD_D0..LCD_D7 in order",
+          disp.check_data_bus(view) == [],
+          f"{disp.check_data_bus(view)}")
+
+    # Cross two data lines and require the panel-side check to notice. This is
+    # the failure the pad-side gates cannot express: swapping LCD_D0 and
+    # LCD_D1 keeps every pad's net valid and every net's pad count identical.
+    crossed = []
+    for p in view:
+        if p.symbol == "DB0":
+            crossed.append(p._replace(net="LCD_D1"))
+        elif p.symbol == "DB1":
+            crossed.append(p._replace(net="LCD_D0"))
+        else:
+            crossed.append(p)
+    faults = disp.check_data_bus(crossed)
+    check("crossing two data lines is caught, with both pins named",
+          len(faults) == 2 and "panel pin 17" in faults[0]
+          and "panel pin 18" in faults[1], f"got {faults}")
+
+    # A 16-bit-mode line that acquires a net must be caught too.
+    with_db8 = [p._replace(net="LCD_D0") if p.symbol == "DB8" else p
+                for p in view]
+    check("a DB8-DB15 line carrying a net in 8-bit mode is caught",
+          any("16-bit-mode line" in f
+              for f in disp.check_data_bus(with_db8)))
+
+    # An interface mode other than 8-bit 8080 must fail, not be excused.
+    flipped = [p._replace(level=1) if p.symbol == "IM2" else p for p in view]
+    ok2, mode2, _ = disp.check_interface_mode(flipped)
+    check("flipping IM2 stops the mode being 8080 8-bit",
+          not ok2 and mode2 != "8080 8-bit parallel", f"got {mode2}")
+
+    # A truncated pinout must be fatal, never filled in.
+    saved = disp.PINOUT_DOC
+    try:
+        disp.PINOUT_DOC = os.path.join(BASE, "README.md")
+        try:
+            disp.read_pinout(disp.PINOUT_DOC)
+            check("a document with no pinout table is fatal", False,
+                  "returned a pinout")
+        except disp.PinoutError:
+            check("a document with no pinout table is fatal", True)
+    finally:
+        disp.PINOUT_DOC = saved
+
+    check("the controller's command set and timing are declared unmodelled",
+          {"command_set", "pixel_format", "timing"} <= set(disp.UNMODELLED))
+    check("display.py exits 0 on this board",
+          _quiet(disp.main, []) == 0)
+
+
 def main():
     print("=" * 72)
-    print("  Virtual Bench Phase 0/1 — mutation tests")
+    print("  Virtual Bench Phase 0/1/2/3 — mutation tests")
     print("=" * 72)
     test_schema()
     test_corpus()
     test_netlist()
     test_phase1()
+    test_thermal()
+    test_transients()
+    test_phase2()
+    test_phase3()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")

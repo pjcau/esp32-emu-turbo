@@ -5110,6 +5110,30 @@ def _passive_traces():
         parts.append(_via_net(via_x, via_y_pu, n_3v3, size=_pu_via_sz, drill=_pu_via_dr))
 
     # Debounce caps: GND via at cap pad
+    #
+    # WHY THIS IS A THIN B.Cu STUB — do not "fix" the DFM warning it produces.
+    # `validate_jlcpcb` reports twelve times, once per cap, that a POWER net
+    # (GND) runs at 0.2mm on B.Cu. That is expected. Two independent
+    # constraints pin it there:
+    #
+    #   1. The LAYER is B.Cu on purpose. GND's plane is In1.Cu, but the only
+    #      inner layer these caps could otherwise route across is In2.Cu,
+    #      which carries the +3V3 pour. Twelve traces through that pour would
+    #      carve it into channels — the same failure mode as the +5V-priority
+    #      bug documented at the zone definitions further down, where +3V3
+    #      resolved into four isolated groups and no v1 board ever saw 3.3 V.
+    #      Instead each cap runs ~2mm on B.Cu and drops through ONE 0.60/0.20
+    #      via, punching a single small clearance circle the plane flows
+    #      around. `make verify-power-nets` confirms +3V3 stays one group.
+    #   2. The WIDTH is what fits. W_DATA(0.2) leaves 0.175mm to the button
+    #      B.Cu verticals running between these caps — see the per-index
+    #      via_x nudges below, each dodging a specific vertical. Widening the
+    #      stub eats that gap, and a wider stub invites a larger via, i.e. a
+    #      larger hole in the +3V3 plane, which is constraint 1 again.
+    #
+    # These stubs carry a decoupling cap's return current over ~2mm, not a
+    # supply rail, so 0.2mm is electrically fine. The rule that flags them is
+    # a blanket power-net width rule that cannot see that distinction.
     for i, ref in enumerate(DEBOUNCE_REFS):
         cx = 43 + i * 5
         cy = 50

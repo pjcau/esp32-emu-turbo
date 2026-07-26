@@ -1,6 +1,6 @@
 ---
 name: pad-analysis
-model: claude-opus-4-7
+model: claude-opus-5
 description: Analyze pad-to-pad distances to detect spacing violations before DFM upload
 disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob
