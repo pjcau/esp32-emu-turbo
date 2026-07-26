@@ -205,7 +205,12 @@ bench-conflicts: ## T1.3 — electrical conflicts (two drivers on a node); geome
 bench-thermal: ## T1.5 — junction temperatures at 30 C external and 40 C in-enclosure, from cited theta_JA
 	@$(T) bench-thermal python3 scripts/vbench/thermal.py
 
-bench-power: bench-rails bench-conflicts bench-thermal ## T1.6 — rail table + thermal table, non-zero on any out-of-spec value
+bench-transients: ## T1.4 — cold start, inrush, load step, sag (ngspice; exits 2 if it is missing)
+	@$(T) bench-transients python3 scripts/vbench/transients.py
+
+bench-power: bench-rails bench-conflicts bench-thermal bench-transients ## T1.6 — rails + conflicts + thermal + transients, non-zero on any out-of-spec value
+
+bench-phase1: bench-power ## Everything Phase 1 delivers
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py

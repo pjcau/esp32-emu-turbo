@@ -359,16 +359,22 @@ handheld enclosure the air around U2/U3 is warmer, which is why the existing
 gate assumed 40 °C. Both are reported; the 40 °C figure is the one that governs
 pass/fail until the enclosure rise is measured on the prototype.
 
-### Phase 1 status — T1.1 and T1.3 done, T1.2 partial, T1.4/T1.5 not started
+### Phase 1 status — **DONE**, with two holes it names itself
 
 | Task | State | Where |
 |---|---|---|
 | T1.1 DC solver | **done** | `scripts/vbench/rails.py`, `sources.py` · `make bench-rails` |
 | T1.2 cited models | **U3, Q1, U5 complete; U2 incomplete and says so** | `scripts/vbench/models/` |
 | T1.3 conflict detector | **done**, at 10% pin coverage (27 of 271) and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
-| T1.4 transients (ngspice) | not started | — |
+| T1.4 transients | **done** (ngspice) | `scripts/vbench/transients.py` · `make bench-transients` |
 | T1.5 thermal | **done** | `scripts/vbench/thermal.py` · `make bench-thermal` |
-| T1.6 `make bench-power` | **done** — rails + conflicts + thermal | Makefile |
+| T1.6 `make bench-power` | **done** — rails + conflicts + thermal + transients | Makefile |
+
+The two holes, both named in the tools' own output rather than left to be
+inferred: the **IP5306's boost efficiency and brownout threshold** are not in
+the pages this repo holds, so U2's dissipation is reported NOT COMPUTABLE and
+the brownout point is unresolved; and the **SY8089's control loop** is not in
+them either, so every transient here is open-loop.
 
 **The headline number: +3V3 is 3.327 V, not 3.300 V.** It is derived, not
 declared. `rails.py` walks the netlist from `U3.5` (FB) to the two resistors
@@ -476,6 +482,57 @@ reports U2 as not computable rather than inheriting either number.
 T1.5's other ask is done: the ambient is a parameter, not a constant.
 `T_AMBIENT` defaults to 40 °C so the gate's verdict is unchanged, and
 `VBENCH_AMBIENT_C` overrides it for a what-if run.
+
+### T1.4 — transients, and the ripple that agrees with itself
+
+`make bench-transients` builds SPICE decks from the extracted netlist, the
+BOM's real L and C values and the cited model parameters, runs them on
+ngspice, and emits `t_3v3_valid`, `V_min` and ripple per scenario. It exits 2
+if ngspice is missing: "no transient violations found" from a run that never
+simulated anything is the worst output this bench could produce.
+
+| Scenario | Result |
+|---|---|
+| +3V3 ripple at 430 mA | **2.860 mV pk-pk simulated** vs **2.836 mV closed-form** — 0.8 % apart |
+| USB cold start | `t_3v3_valid` = **1.218 ms**, against the cited 1.2 ms soft-start; settles at 3.285 V |
+| Bulk inrush | deck peak 84 A is an **upper bound, not a prediction**; a 3 A limited supply charges the 57 µF in C·V/I = **95 µs** |
+| +3V3 load step, +100 mA | droop **1.8 mV**, V_min 3.279 V |
+| Battery sag | at SoC 0.00: 3.000 V OCV − 38 mV cell (**uncalibrated**) − 68 mV Q1 (**cited**) = 2.894 V |
+
+The ripple line is the one worth keeping. The switching node is driven at the
+cited 1 MHz with the derived duty 0.665, through the BOM's 2.2 µH into the
+BOM's 22.3 µF — and the closed-form buck result, ΔI = (V_in−V_out)·D/(L·f_sw)
+then ΔV = ΔI/(8·C·f_sw), lands within 0.8 % of it. Two independent routes to
+one number, neither of which was tuned to match the other.
+
+**C28 contributes nothing to that 22.3 µF, and that is correct.** It is DNP,
+so it has no BOM value, so it is absent from the deck. A reader adding the
+schematic up would get 32.3 µF — which is the same gap
+`verify_decoupling_adequacy.py` still has, and the reason
+`make bench-transients` prints "C28 contribute nothing (DNP: no BOM value, so
+no capacitor)" on every run.
+
+**Three bugs in the decks, all mine, all found by running them.** They are
+recorded because each was a plausible-looking model that produced a confident
+wrong answer:
+
+1. The first ripple run reported **6062 mV pk-pk**. The open-loop LC rings at
+   f₀ ≈ 22 kHz with Q ≈ 25, and the measurement window opened 20 µs in, long
+   before it decayed. The real regulator's feedback damps that ring; the loop
+   is not modelled, so the ring is an artefact of the deck. Ripple is now
+   measured in a late window and the test asserts the mean sits near the
+   derived rail, which is what catches the window slipping again.
+2. `v_out / i_limit` = 0.95 Ω was used as a stand-in for the current limit —
+   in two different decks. A current limit clamps during startup; it is not a
+   resistance the circuit contains. It put a permanent 0.36–0.50 V droop on
+   the rail and made cold start settle at **2.963 V**, i.e. it invented a
+   brownout. Both decks now use the buck's own cited conduction resistance,
+   `D·R_DS(p) + (1−D)·R_DS(n)` = 0.100 Ω, and `r_conduction()` is the only
+   series resistance either is allowed to use.
+3. The unlimited inrush peak was reported as a **board failure**. It is a
+   property of the deck: an ideal 5 V step into a discharged capacitor
+   through 50 mΩ is V/R. It is now labelled an upper bound and paired with
+   the current-limited charge time, which is the number an engineer can use.
 
 ## Phase 2 — Digital fabric: every ESP32 pin, every button, the switch
 

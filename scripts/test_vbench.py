@@ -22,6 +22,9 @@ Covers:
      rather than an interpolation, a dissipation that cannot be derived must
      stay unreported, and the margin check must actually fire at a hot
      ambient.
+  F. transients.py — a current limit must not be used as a series resistance,
+     the decks must carry the BOM's real values, the simulated ripple must
+     agree with the closed form, and a missing simulator must raise.
 
 Usage:
     python3 scripts/test_vbench.py
@@ -607,6 +610,113 @@ def test_thermal():
             os.environ["VBENCH_AMBIENT_C"] = saved
 
 
+# ── F. Phase 1.4: transients ────────────────────────────────────────
+
+def test_transients():
+    print("\nF. transients.py")
+    from vbench import transients as tr
+
+    # The regression that mattered twice: a current limit is not a series
+    # resistance. v_out/i_limit is 0.95 ohm and invented a 0.36-0.50 V droop
+    # in two different decks, once making +3V3 look like it browned out.
+    r = tr.r_conduction()
+    check("the decks' series resistance is the cited conduction resistance",
+          abs(r - 0.100) < 0.005, f"got {r}")
+    check("it is NOT v_out/i_limit, the invented 0.95 ohm",
+          abs(r - 3.327 / 3.5) > 0.5, f"got {r}")
+
+    # A current-limited supply charges a bulk capacitance in C*V/I.
+    t = tr.cap_charge_time(57e-6, 5.0, 3.0)
+    check("bulk charge time is C*V/I (57 uF, 5 V, 3 A -> 95 us)",
+          abs(t - 95e-6) < 1e-6, f"got {t}")
+
+    caps, l_buck = tr.board_values()
+    c_3v3, absent = caps["+3V3"]
+    check("the +3V3 bulk is read from the BOM (22.3 uF), not the schematic",
+          abs(c_3v3 - 22.3e-6) < 0.1e-6, f"got {c_3v3}")
+    check("C28 is excluded because it is DNP and has no BOM value",
+          "C28" in absent, f"absent = {absent}")
+    check("the buck inductor comes from the BOM (2.2 uH)",
+          abs(l_buck - 2.2e-6) < 1e-9, f"got {l_buck}")
+
+    from vbench.thermal import duty_cycle
+    duty, v_out, v_in = duty_cycle()
+    dv, di = tr.ripple_closed_form(c_3v3, l_buck, duty, v_in, v_out)
+    check("the closed-form ripple is about 2.8 mV pk-pk",
+          2.0e-3 < dv < 4.0e-3, f"got {dv}")
+
+    # The decks must carry the real values, not round numbers.
+    # Parse the deck rather than string-matching it: what matters is that the
+    # numbers in the netlist ARE the BOM's and the datasheet's, whatever
+    # formatting %g chooses for them.
+    deck = tr.deck_ripple(c_3v3, l_buck, duty, v_in, 0.430)
+    import re as _re
+    def _val(pattern):
+        m = _re.search(pattern, deck)
+        return float(m.group(1)) if m else None
+    deck_l = _val(r"(?m)^L2 \S+ \S+ (\S+)")
+    deck_c = _val(r"(?m)^Cout \S+ \S+ (\S+)")
+    deck_period = _val(r"PULSE\([^)]*\s(\S+)\)")
+    check("the ripple deck carries the BOM's inductor value",
+          deck_l is not None and abs(deck_l - l_buck) < 1e-12,
+          f"deck L2 = {deck_l}, BOM = {l_buck}")
+    check("the ripple deck carries the BOM's output capacitance",
+          deck_c is not None and abs(deck_c - c_3v3) < 1e-12,
+          f"deck Cout = {deck_c}, BOM = {c_3v3}")
+    check("the ripple deck switches at the cited 1 MHz, not a round guess",
+          deck_period is not None and abs(deck_period - 1e-6) < 1e-15,
+          f"deck period = {deck_period}")
+
+    if shutil.which("ngspice") is None:
+        # Not a skip. A transient gate whose simulator is missing has no
+        # verdict to give, and saying nothing would read as a pass.
+        check("ngspice is installed (required, not optional)", False,
+              "install with `brew install ngspice` — transients.py exits 2 "
+              "without it and this suite will not pretend otherwise")
+        return
+
+    check("ngspice is installed (required, not optional)", True)
+
+    import tempfile as _tf
+    work = _tf.mkdtemp(prefix="vbench-test-tran-")
+    try:
+        vals, _ = tr.run_ngspice(deck, work)
+        sim = vals["v_max"] - vals["v_min"]
+        check("simulated ripple agrees with the closed form within 2x",
+              abs(sim - dv) <= 0.5 * max(sim, dv),
+              f"sim {sim*1e3:.3f} mV vs closed form {dv*1e3:.3f} mV")
+        check("the ripple is measured after the open-loop LC ring decays",
+              abs(vals["v_avg"] - v_out) < 0.05,
+              f"mean {vals['v_avg']} is not near the derived {v_out} — the "
+              f"measurement window is too early again")
+
+        cold = tr.deck_cold_start(caps["+5V"][0], c_3v3, 0.430, 5.0, 0.05)
+        vals, _ = tr.run_ngspice(cold, work)
+        t_ss = 1.2e-3
+        check("t_3v3_valid lands near the cited 1.2 ms soft-start time",
+              vals.get("t_3v3_valid") is not None
+              and t_ss <= vals["t_3v3_valid"] <= 2 * t_ss,
+              f"got {vals.get('t_3v3_valid')}")
+        check("+3V3 settles above the 3.0 V the ESP32-S3 needs",
+              vals["v_final"] > 3.0, f"got {vals['v_final']}")
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+
+    # A missing simulator must raise, never return a partial result.
+    saved = shutil.which
+    try:
+        shutil.which = lambda *a, **k: None
+        try:
+            tr.run_ngspice("* empty\n.end\n", work)
+            check("a missing simulator raises instead of returning nothing",
+                  False, "returned normally")
+        except tr.SimulatorMissing:
+            check("a missing simulator raises instead of returning nothing",
+                  True)
+    finally:
+        shutil.which = saved
+
+
 def main():
     print("=" * 72)
     print("  Virtual Bench Phase 0/1 — mutation tests")
@@ -616,6 +726,7 @@ def main():
     test_netlist()
     test_phase1()
     test_thermal()
+    test_transients()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")
