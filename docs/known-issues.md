@@ -54,9 +54,34 @@ terminate them where they were meant to land. Regenerating the PCB drops
 every `filled_polygon`, so this needs a zone re-fill and a
 `release_jlcpcb/` sync — bundle it with H3, which touches the same area.
 
-### H2. Schematic and PCB disagree on 7 pin↔net assignments
+### H2. Schematic and PCB disagree on 7 pin↔net assignments — CLOSED
 
-**Gate:** `verify_netlist_diff.py` [T4] — FAIL, 7 mismatches
+**Gate:** `verify_netlist_diff.py` [T4] — PASS, 0 mismatches
+
+Resolved in three different ways, because they were three different
+problems and only one of them was a wiring error:
+
+- **J3.1 / Q1.2** — fixed in `power_supply.py`; the schematic had the
+  battery path drawn on the wrong side of the protection FET.
+- **U1.3** — fixed in `mcu.py`; EN is now its own net with a global label
+  matching the PCB net name. The schematic had it tied to +3V3, which
+  also meant SW_RST was drawn shorting the rail to ground on every press.
+- **LED1 / LED2** — *not* rewired. A pin-vs-pad numbering translation in
+  `SCH_PIN_TO_PCB_PADS` (`_LED_MAP`), with each side checked
+  independently: on the PCB pad 2 carries `LED{n}_RA` through R17/R18 to
+  +3V3 and pad 1 carries GND; in the schematic pin 1 (A) carries
+  `LED{n}_RA` and pin 2 (K) carries GND. Same circuit, different numbers.
+  A wrong entry there still fails T4, exactly as for J1/J4/U5/U6. **This
+  does not answer H6** — the CPL override question is untouched.
+- **C3** — the schematic was describing a circuit the board does not
+  have; see the V2 section below.
+
+Also added to the table while closing this: `SW_RST` and `SW_BOOT`, which
+had never been in it because their schematic pins were floating, so no
+pin of theirs ever reached the comparison. Adding them immediately caught
+`SW_BOOT` drawn on the wrong pole.
+
+Historical record of the original 7:
 
 ```
 J3.1    sch='GND'       pcb='BAT_IN'
@@ -67,23 +92,6 @@ LED1.2  sch='GND'       pcb='LED1_RA'
 LED2.1  sch='LED2_RA'   pcb='GND'
 LED2.2  sch='GND'       pcb='LED2_RA'
 ```
-
-Three distinct problems, not one:
-
-- **J3.1 / Q1.2 — the battery path.** J3 is the battery connector and Q1
-  is the reverse-polarity FET. The schematic says these pins are GND; the
-  board says they are `BAT_IN`. This is not a pin-number cosmetic flip —
-  the two files disagree about which side of the protection FET is
-  battery and which is ground. Resolve against
-  `hardware/datasheets/POLARITY_AUDIT.md`, which is the source of truth
-  for polarity; do **not** re-derive it.
-- **U1.3 — `+3V3` vs `EN`.** One of the two files has the regulator
-  enable pin tied to the rail it is supposed to gate.
-- **LED1 / LED2 — pads 1 and 2 swapped on both.** Same shape on both
-  parts, and it is the *same fact* the LED2 rotation question turns on
-  (see H6). Fixing the schematic pin numbering and flipping the CPL
-  override are two ways to produce a reversed LED; do not do both, and do
-  not do either before H6's visual check.
 
 Note the R20/R21 PAM8403 bias mismatch documented in
 `docs/waiver-audit-recovery.md` §O3 is **closed** upstream (`ee0ec02`) —
@@ -251,6 +259,34 @@ re-discovers them as bugs.
   documented, functional single-orientation workaround, allowlisted in
   `verify_net_connectivity.ACCEPTED_FRAGMENTATIONS`. Tracked as R5-CRIT-9
   for the v2 respin. **Keep the allowlist entry.**
+- **EN has no RC delay network, and no pull-up at all.** The module
+  datasheet is not ambiguous about this. Page 28, under the peripheral
+  reference schematic: *"To ensure the ESP32-S3 chip's supply is correct
+  at power-up, an RC delay circuit **must** be added at the EN pin.
+  R = 10 kΩ and C = 1 µF are the usual recommendation, but the values
+  should be adjusted to the module's power-up timing and the chip's
+  power-on reset timing."* Its figure 7 draws R7 from VDD33 to EN and C8
+  (0.1 µF) from EN to GND, with the reset button across the cap.
+
+  The v1 board has **neither**: R3 is DNP and C3 is wired as a second
+  decoupling cap, so EN reaches only `U1.3` and `SW_RST` pad 1. It boots
+  today, so this is a margin defect, not a dead board — the failure mode
+  is slow supply ramps and brown-outs, i.e. a fraction of units in the
+  field rather than anything reproducible on the bench.
+
+  How it survived: `mcu.py` carried the comment *"the module integrates a
+  10k EN pull-up on-module (per Espressif reference design), so an
+  external pull-up is redundant"*, which is false, and
+  `hardware-audit-bugs.md` asserts "EN RC delay (R3+C3) intact" in two
+  places without anyone comparing that sentence to copper. Same class as
+  the R25 finding that a justification comment can outrank the datasheet.
+
+  Not patched on v1: the only cap available is 28 mm away, and dragging a
+  net that far would trade a missing RC for a long high-impedance antenna
+  on the reset line — worse than leaving it bare. **v2: 10 kΩ from +3V3
+  to EN and 100 nF from EN to GND, both placed adjacent to module pin 3.**
+  The schematic now draws C3 where the board actually has it, so `T4`
+  stays honest instead of describing a network that does not exist.
 - **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming

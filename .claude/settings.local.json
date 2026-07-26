@@ -29,7 +29,15 @@
       "Bash(cp hardware/kicad/jlcpcb/bom.csv release_jlcpcb/jlcpcb/bom.csv)",
       "Bash(cp hardware/kicad/jlcpcb/cpl.csv release_jlcpcb/jlcpcb/cpl.csv)",
       "Bash(cp -r hardware/kicad/gerbers release_jlcpcb/jlcpcb/gerbers)",
-      "Bash(cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/jlcpcb/gerbers.zip)"
+      "Bash(cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/jlcpcb/gerbers.zip)",
+      "Skill(hardware-audit)",
+      "Bash(cp /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo/scripts/verify_memory.py /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo/.claude/worktrees/worktree-memory-gate/scripts/verify_memory.py)",
+      "Bash(rtk ls *)",
+      "mcp__pcbparts__jlc_get_part",
+      "Bash(python3 scripts/erc_check.py)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(git checkout *)",
+      "mcp__pcbparts__jlc_get_pinout"
     ],
     "deny": [
       "Bash(rm -rf /*)",
@@ -39,6 +47,10 @@
       "Bash(rm -rf /home/pjonny/Documents/myProjects/*)"
     ]
   },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "ltspice"
+  ],
   "hooks": {
     "PostToolUse": [
       {
