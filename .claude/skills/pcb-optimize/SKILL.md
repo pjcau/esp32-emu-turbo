@@ -33,7 +33,7 @@ The script produces a report with five modules, each scored 0-20 (total 100):
 |--------|---------------|-----------|
 | Trace Length | Total length per net, single segment length | >80mm net, >40mm segment |
 | Copper Balance | F.Cu vs B.Cu trace distribution | >50% difference |
-| Thermal Vias | GND vias near power ICs (IP5306, AMS1117, PAM8403) | min 3 vias within 5mm |
+| Thermal Vias | GND vias near power ICs (IP5306, U3 SY8089 buck, PAM8403) | min 3 vias within 5mm |
 | Via Optimization | Vias per net count | >4 vias/net |
 | Parallel Traces | Crosstalk risk between data signals | gap < 3x trace width |
 

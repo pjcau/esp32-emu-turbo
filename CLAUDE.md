@@ -21,7 +21,8 @@ Handheld retro gaming console based on ESP32-S3 with color TFT/LCD display (3.5"
 - **Display:** ILI9488 3.95" 320x480, 8-bit 8080 parallel, bare panel 40P FPC 0.5mm
 - **Power:** LiPo 3.7V 5000mAh (105080, 50x80x10mm)
 - **Charging:** USB-C via IP5306 (charge-and-play)
-- **Regulator:** AMS1117 5V->3.3V
+- **Regulator:** U3 SY8089AAAC 2A synchronous buck (SOT-23-5, C78988), 5V->3.327V
+  — Vout = 0.6 x (1 + R25/R26); replaced the AMS1117 LDO. C2 is deleted.
 - **Audio:** I2S DAC -> PAM8403 -> 28mm speaker
 - **Storage:** Micro SD card via SPI (for ROMs)
 - **Emulation targets:** SNES (primary), NES (secondary)

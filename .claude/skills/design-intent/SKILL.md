@@ -19,7 +19,7 @@ Acts as a "devil's advocate" — maps every GPIO, device, net, and connection, t
 | T3 | Duplicate GPIO | Same GPIO# assigned to multiple signals |
 | T4 | Signal endpoints | GPIO signal doesn't reach its destination component |
 | T5 | Orphan nets | Nets connected to 0-1 pads (lost connections) |
-| T6 | Power chain | VBUS→IP5306→+5V→AMS1117→+3V3→all VDD pins |
+| T6 | Power chain | VBUS→IP5306→+5V→U3 (SY8089 buck)→+3V3→all VDD pins |
 | T7 | GND completeness | Component missing ground connection |
 | T8 | Button circuits | Button GPIO missing switch or ESP32 connection |
 | T9 | Pin capability | GPIO used for unsupported function (reserved for PSRAM, etc.) |

@@ -86,13 +86,37 @@ def analyze_esd_protection():
 
     has_tvs_in_sch = bool(ESD_KEYWORDS.search(all_sch))
 
-    # Check USB CC pull-downs (5.1k)
-    has_cc_pulldown = bool(re.search(r"5\.1k|5k1|CC[12]", all_sch))
-
     # --- PCB net analysis ---
     cache = load_cache(PCB_FILE)
     nets = {n["id"]: n["name"] for n in cache["nets"]}
     pads = cache["pads"]
+
+    # Check USB CC pull-downs (5.1k) — from COPPER, not from schematic text.
+    #
+    # This used to be `re.search(r"5\.1k|5k1|CC[12]", all_sch)`. The `CC[12]`
+    # alternation matches the NET NAME "USB_CC1" wherever it appears in the
+    # schematic, so merely naming the net satisfied the check: deleting R1/R2
+    # entirely would still have printed
+    # "PASS  USB CC1/CC2 have 5.1k pull-downs (R1, R2)".
+    # That is the same defect that let verify_strapping_pins assert an EN RC
+    # network the board does not have — a check reading our prose instead of
+    # the board. The parts are genuinely present, so this stays green; it is
+    # the reasoning that was unearned.
+    #
+    # A CC pull-down is a resistor with one pad on the CC net and one on GND.
+    cc_pulldowns = {}
+    for cc in ("USB_CC1", "USB_CC2"):
+        cc_id = next((nid for nid, n in nets.items() if n == cc), None)
+        if cc_id is None:
+            continue
+        for ref in {p["ref"] for p in pads if p["net"] == cc_id}:
+            if not ref.startswith("R"):
+                continue
+            ref_nets = {nets.get(p["net"]) for p in pads if p["ref"] == ref}
+            if "GND" in ref_nets:
+                cc_pulldowns[cc] = ref
+                break
+    has_cc_pulldown = len(cc_pulldowns) == 2
 
     # Find components on USB_D+, USB_D- nets (besides J1 and U1)
     usb_dp_net = None
@@ -159,13 +183,16 @@ def analyze_esd_protection():
 
     # 3. USB CC pull-downs
     if has_cc_pulldown:
-        cc_refs = [r for r in sorted(vbus_refs | usb_dp_refs | usb_dm_refs)
-                   if r.startswith("R")]
-        # R1, R2 are the CC pull-downs from BOM
-        findings.append(("PASS", "USB CC1/CC2 have 5.1k pull-downs (R1, R2) "
+        # Name the parts actually found on copper rather than the hardcoded
+        # "(R1, R2)" this used to print regardless of what was on the board.
+        found = ", ".join(f"{cc}={ref}" for cc, ref in sorted(cc_pulldowns.items()))
+        findings.append(("PASS", f"USB CC pull-downs to GND present ({found}) "
                          "-- OK for device mode"))
     else:
-        findings.append(("WARN", "No USB CC pull-down resistors found"))
+        missing = [cc for cc in ("USB_CC1", "USB_CC2") if cc not in cc_pulldowns]
+        findings.append(("WARN", "No USB CC pull-down resistor to GND on "
+                         f"{', '.join(missing)} -- USB-C device role is not "
+                         "advertised without 5.1k on each CC line"))
         warns += 1
 
     # 4. VBUS protection

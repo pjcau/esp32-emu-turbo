@@ -383,6 +383,23 @@ and is six releases stale; the tag is the truth.
   to EN and 100 nF from EN to GND, both placed adjacent to module pin 3.**
   The schematic now draws C3 where the board actually has it, so `T4`
   stays honest instead of describing a network that does not exist.
+
+  **`verify_strapping_pins` is RED on this, deliberately, and stays red
+  until the respin.** It used to be green: the EN block regex-matched a
+  *justification comment* in the schematic (`"R3 DNP"`,
+  `"WROOM-1 integrates"`) and then computed τ from a WROOM-1 internal
+  ~45 kΩ pull-up — a part of the same false claim `74c196e` had already
+  retired from `mcu.py`. So the one gate whose job was to check EN was
+  asserting the network's presence *from the prose that excused its
+  absence*, and reported a board with no pull-up and no RC as passing.
+  It now derives both from pad membership on copper: a pull-up is a
+  resistor bridging `EN`→`+3V3`, the RC cap a capacitor bridging
+  `EN`→`GND`. On this board neither exists, so it fails — that failure is
+  the accurate verdict, not a regression. **Do not waive it, and do not
+  "fix" it by re-adding an allowlist or a comment.**
+  `scripts/test_strapping_en_rc.py` drives the check both ways (9 mutation
+  tests: a planted 10 k + 100 nF must turn it green, either half missing
+  must turn it red, and re-planting the old comment must change nothing).
 - **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming

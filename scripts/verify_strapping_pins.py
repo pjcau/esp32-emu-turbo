@@ -86,6 +86,51 @@ PULLUP_INDEX_TO_GPIO = {
 }
 
 
+def _bom_value(ref):
+    """Return the BOM 'Comment' string for a refdes, or None.
+
+    Values come from the shipped BOM rather than the schematic so that a part
+    which is not actually assembled cannot contribute a value -- the failure
+    mode that let the EN RC check pass on a board carrying neither part.
+    """
+    import csv
+    bom = os.path.join(BASE, "release_jlcpcb", "bom.csv")
+    if not os.path.exists(bom):
+        return None
+    with open(bom, encoding="utf-8") as fh:
+        for row in csv.DictReader(fh):
+            refs = [d.strip() for d in row["Designator"].split(",")]
+            if ref in refs:
+                return row["Comment"]
+    return None
+
+
+_SI = {"p": 1e-12, "n": 1e-9, "u": 1e-6, "m": 1e-3,
+       "k": 1e3, "K": 1e3, "M": 1e6, "R": 1.0}
+
+
+def _resistor_ohms(ref):
+    """Parse a resistance in ohms from the BOM value (e.g. '10k 0805')."""
+    val = _bom_value(ref)
+    if not val:
+        return None
+    m = re.match(r"([\d.]+)\s*([kKMR]?)", val.strip())
+    if not m:
+        return None
+    return float(m.group(1)) * _SI.get(m.group(2) or "R", 1.0)
+
+
+def _capacitor_farads(ref):
+    """Parse a capacitance in farads from the BOM value (e.g. '100nF 0805')."""
+    val = _bom_value(ref)
+    if not val:
+        return None
+    m = re.match(r"([\d.]+)\s*([pnum]?)F", val.strip(), re.IGNORECASE)
+    if not m:
+        return None
+    return float(m.group(1)) * _SI.get(m.group(2).lower() or "R", 1.0)
+
+
 def _read_schematics():
     """Read all schematic files as combined text."""
     parts = []
@@ -267,61 +312,77 @@ def test_gpio0_boot_mode():
 def test_en_rc_delay():
     """Test 8-10: EN pin has proper RC delay for reliable boot."""
     print("\n-- EN Pin RC Delay --")
-    sch_text = _read_schematics()
 
-    # EN pull-up: either external R3 10k OR the ESP32-S3-WROOM-1 module's
-    # integrated EN pull-up (R3 is DNP on this design — see
-    # scripts/generate_schematics/sheets/mcu.py which documents the
-    # WROOM-1 internal pull-up is sufficient together with the RC below).
-    has_r3 = bool(re.search(r'"R3".*"10k"', sch_text))
-    has_wroom_note = ("R3 DNP" in sch_text
-                      or "internal to WROOM-1" in sch_text
-                      or "WROOM-1 integrates" in sch_text)
-    check("EN: R3 10k pull-up to +3V3 (or WROOM-1 internal)",
-          has_r3 or has_wroom_note,
-          "no R3 and no WROOM-1 integrated pull-up note in schematic")
-
-    # C3 = 100nF on EN (RC delay)
-    has_c3 = bool(re.search(r'"C3".*"100nF"', sch_text))
-    check("EN: C3 100nF decoupling", has_c3,
-          "C3 not found in schematic")
-
-    # RC time constant computation — R10-LOW-7 fix:
+    # This block used to pass by regex-matching a JUSTIFICATION COMMENT in the
+    # schematic text ("R3 DNP", "WROOM-1 integrates") and then computing tau
+    # from a WROOM-1 internal ~45 kOhm pull-up. Both premises are false:
     #
-    # The original math assumed R = 10 kΩ (external R3). After R4
-    # closed R3 as DNP (WROOM-1 integrates an internal EN pull-up),
-    # the effective R is the module's internal ~45 kΩ. Both cases
-    # still boot reliably because the ESP32-S3 boot ROM waits
-    # ~50 ms between EN rise and strapping-pin sample (not 5 ms;
-    # the 5 ms figure in the original code was Espressif's minimum
-    # EN-valid-to-sample window, not the typical).
+    #   * The module does NOT integrate an EN pull-up. That claim was removed
+    #     from mcu.py in 74c196e after being checked against the datasheet.
+    #     Module datasheet p.28: "an RC delay circuit MUST be added at the EN
+    #     pin", R = 10k and C = 1uF typical, figure 7 draws R7 VDD33->EN and
+    #     C8 0.1uF EN->GND.
+    #   * R3 is absent from the BOM and from the PCB, and C3 sits on +3V3/GND
+    #     as a plain decoupling cap (twin of C4). On copper, EN reaches exactly
+    #     two pads: U1.3 and SW_RST pad 1.
     #
-    # Pick R based on whether R3 is actually populated.
-    R_EXT_R3_OHM   = 10_000
-    R_WROOM_INTERNAL_OHM = 45_000
-    C_EN_F         = 100e-9
-    SAMPLE_WINDOW_MS = 50.0  # ESP32-S3 boot ROM EN-to-sample (typ)
+    # So the gate asserted a network the board does not have, and it is the
+    # reason a fabricated board with no EN pull-up and no RC reported green.
+    # Same class as the R25 finding that a justification comment can outrank
+    # the datasheet -- and a gate that reads prose cannot catch it.
+    #
+    # It now judges COPPER. This is expected to FAIL on the fabricated board;
+    # that failure is the accurate verdict and is tracked as a RESPIN item in
+    # docs/known-issues.md, not something to waive here.
+    cache = load_cache(PCB_FILE)
+    net_name = {n["id"]: n["name"] for n in cache["nets"]}
+    en_pads = [p for p in cache["pads"] if net_name.get(p.get("net")) == "EN"]
+    en_refs = sorted({p["ref"] for p in en_pads if p.get("ref")})
 
-    if has_r3 and has_c3:
-        R = R_EXT_R3_OHM
-        source = "external R3 10kΩ"
-    elif has_wroom_note and has_c3:
-        R = R_WROOM_INTERNAL_OHM
-        source = "WROOM-1 internal ~45kΩ"
-    else:
-        R = None
+    # A pull-up is a resistor with one pad on EN and one on +3V3; the RC cap is
+    # a capacitor with one pad on EN and one on GND. Derive both from pad
+    # membership so no comment, value string or DNP flag can influence it.
+    def _bridges(ref, other_net):
+        nets = {net_name.get(p.get("net")) for p in cache["pads"]
+                if p.get("ref") == ref}
+        return "EN" in nets and other_net in nets
 
-    if R is not None:
-        tau_ms = R * C_EN_F * 1000
-        three_tau_ms = 3 * tau_ms
-        margin_ms = SAMPLE_WINDOW_MS - three_tau_ms
-        check(
-            f"EN: RC margin = {margin_ms:.1f}ms "
-            f"(tau={tau_ms:.1f}ms via {source}, sample@{SAMPLE_WINDOW_MS:.0f}ms)",
-            margin_ms > 0,
-            f"tau={tau_ms:.1f}ms, 3*tau={three_tau_ms:.1f}ms, "
-            f"sample@{SAMPLE_WINDOW_MS:.0f}ms",
-        )
+    pullups = [r for r in en_refs if r.startswith("R") and _bridges(r, "+3V3")]
+    rc_caps = [r for r in en_refs if r.startswith("C") and _bridges(r, "GND")]
+
+    check("EN: pull-up resistor to +3V3 present on copper",
+          bool(pullups),
+          f"no resistor bridges EN to +3V3 -- EN pads on the board: {en_refs}. "
+          "Module datasheet p.28 requires an RC delay at EN (R=10k typ). "
+          "RESPIN: 10k from +3V3 to EN adjacent to module pin 3")
+
+    check("EN: RC delay capacitor to GND present on copper",
+          bool(rc_caps),
+          f"no capacitor bridges EN to GND -- EN pads on the board: {en_refs}. "
+          "C3 is wired as a +3V3 decoupling cap, not as the EN RC. "
+          "RESPIN: 100nF from EN to GND adjacent to module pin 3")
+
+    # Only meaningful once both parts exist; computing a margin from parts the
+    # board does not carry is what produced the old false green.
+    if pullups and rc_caps:
+        SAMPLE_WINDOW_MS = 50.0  # ESP32-S3 boot ROM EN-to-sample (typ)
+        r_ohm = _resistor_ohms(pullups[0])
+        c_farad = _capacitor_farads(rc_caps[0])
+        if r_ohm and c_farad:
+            tau_ms = r_ohm * c_farad * 1000
+            three_tau_ms = 3 * tau_ms
+            margin_ms = SAMPLE_WINDOW_MS - three_tau_ms
+            check(
+                f"EN: RC margin = {margin_ms:.1f}ms "
+                f"(tau={tau_ms:.1f}ms via {pullups[0]}+{rc_caps[0]}, "
+                f"sample@{SAMPLE_WINDOW_MS:.0f}ms)",
+                margin_ms > 0,
+                f"tau={tau_ms:.1f}ms, 3*tau={three_tau_ms:.1f}ms, "
+                f"sample@{SAMPLE_WINDOW_MS:.0f}ms",
+            )
+        else:
+            check(f"EN: RC values readable from BOM ({pullups[0]}, {rc_caps[0]})",
+                  False, "could not parse R/C values from release_jlcpcb/bom.csv")
 
 
 def test_firmware_internal_pullup():

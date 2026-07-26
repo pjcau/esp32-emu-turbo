@@ -24,13 +24,27 @@ This generates:
 - `hardware/kicad/jlcpcb/bom.csv` (Bill of Materials)
 - `hardware/kicad/jlcpcb/cpl.csv` (Component Placement List)
 
-### 2. Fill zones via Docker (KiCad Python API)
+### 2. Fill zones (and refresh the Net Explorer)
+
+```bash
+make pcb-filled     # generate-pcb → scripts/fill-zones.sh → Net Explorer refresh
+```
+
+This fills copper zones (In1.Cu=GND plane, In2.Cu=3V3/5V planes) and preserves
+orphan nets (USB_CC1/CC2).
+
+**Prefer `make pcb-filled` over calling the fill directly.** The fill lives in
+a shared script (`scripts/fill-zones.sh`) so that renders and gerbers cannot
+drift apart, and the target sequences two things that were previously wrong:
+the fill runs *before* the Net Explorer refresh (it used to run after, so the
+shipped JSON described an unfilled board), and `fill-zones.sh` exits non-zero
+if the fill yields zero polygons.
+
+If you need the raw call, it is:
 
 ```bash
 docker compose run --rm --entrypoint python3 kicad-pcb /scripts/kicad_fill_zones.py "/project/esp32-emu-turbo.kicad_pcb"
 ```
-
-This fills copper zones (In1.Cu=GND plane, In2.Cu=3V3/5V planes) and preserves orphan nets (USB_CC1/CC2).
 
 ### 3. Export Gerbers + drill files via Docker
 
@@ -78,7 +92,10 @@ Report results as a summary table (43 DFM + 9 DFA tests).
 ## Important Notes
 
 - Always run from the project root: `/Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo`
-- Zone fill MUST run before gerber export (internal copper planes would be empty otherwise)
+- Zone fill MUST run before gerber export **and before any render** (internal
+  copper planes would be empty otherwise, and an unfilled render ships images
+  of a board with no copper pours). `make render-pcb` and
+  `make export-gerbers-fast` both depend on `pcb-filled`, so use the targets.
 - The kicad_fill_zones.py preserves orphan nets (USB_CC1, USB_CC2) that pcbnew would normally strip
 - If Docker is not running, start it first with `docker compose build`
 
@@ -89,7 +106,7 @@ Report results as a summary table (43 DFM + 9 DFA tests).
 - Routing: `scripts/generate_pcb/routing.py`
 - Footprints: `scripts/generate_pcb/footprints.py`
 - JLCPCB export: `scripts/generate_pcb/jlcpcb_export.py`
-- Zone fill: `scripts/kicad_fill_zones.py`
+- Zone fill: `scripts/fill-zones.sh` (shared wrapper) → `scripts/kicad_fill_zones.py`
 - Gerber export (fast): `scripts/export-gerbers-fast.sh`
 - Gerber export (Docker): `scripts/export-gerbers.sh`
 - DFA verification: `scripts/verify_dfa.py`

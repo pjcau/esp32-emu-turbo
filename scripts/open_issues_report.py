@@ -49,6 +49,9 @@ GATES = [
      "CPL angle disagrees with the rotation law for that layer"),
     ("verify_netlist_vs_kicad",
      "our parser disagrees with KiCad's own IPC-D-356 netlist"),
+    ("verify_strapping_pins",
+     "a strapping pin is forced to the wrong boot state, or EN has no "
+     "pull-up / RC delay on copper"),
 ]
 
 TIMEOUT_S = 30

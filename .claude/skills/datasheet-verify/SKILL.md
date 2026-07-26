@@ -93,7 +93,7 @@ Loads the PCB cache and compares actual pad-net assignments against the spec fil
 | J4 | FPC 40-Pin Display | 42 (40 + 2 shell) |
 | U1 | ESP32-S3-WROOM-1-N16R8 | 41 |
 | U2 | IP5306 Power Bank SoC | 9 (8 + EP) |
-| U3 | AMS1117-3.3 LDO | 4 (3 + tab) |
+| U3 | SY8089AAAC 2A Buck (SOT-23-5) | 5 |
 | U5 | PAM8403 Audio Amp | 16 |
 | U6 | TF-01A MicroSD Slot | 13 + NPTH |
 | SW1-SW12 | Tact Switches (buttons) | 4 each |

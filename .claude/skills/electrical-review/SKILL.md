@@ -20,10 +20,10 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
 # 1a. Strapping pin verification (12 tests)
 python3 scripts/verify_strapping_pins.py
 
-# 1b. Decoupling capacitor adequacy (25 tests)
+# 1b. Decoupling capacitor adequacy (23 tests)
 python3 scripts/verify_decoupling_adequacy.py
 
-# 1c. Power sequencing verification (26 tests)
+# 1c. Power sequencing verification (29 tests)
 python3 scripts/verify_power_sequence.py
 
 # 1d. SPICE power supply simulation (requires ngspice)
@@ -32,12 +32,12 @@ python3 scripts/spice_power_check.py
 
 | Script | Tests | What it catches |
 |--------|-------|-----------------|
-| `verify_strapping_pins.py` | 12 | Wrong boot state, GPIO45 VDD_SPI conflict, EN RC timing |
-| `verify_decoupling_adequacy.py` | 25 | Insufficient capacitance per IC datasheet, missing HF bypass |
-| `verify_power_sequence.py` | 26 | Power chain topology, upstream/downstream ordering, GND continuity |
-| `spice_power_check.py` | 5 | Ripple on +5V/+3V3 rails, transient response, decoupling effectiveness |
+| `verify_strapping_pins.py` | 12 | Wrong boot state, GPIO45 VDD_SPI conflict. **Its "EN RC delay" block is not evidence** — it matches a comment string in the schematic and computes τ from a WROOM-1 internal pull-up that does not exist (see B3) |
+| `verify_decoupling_adequacy.py` | 23 | Insufficient capacitance per IC datasheet, missing HF bypass |
+| `verify_power_sequence.py` | 29 | Power chain topology, upstream/downstream ordering, GND continuity |
+| `spice_power_check.py` | — | Ripple on +5V/+3V3 rails, transient response, decoupling effectiveness |
 | `verify_component_connectivity.py` | 2 | BOM components with zero electrical connections (phantom parts) |
-| `verify_signal_chain_complete.py` | 53 | Nets that only connect to one endpoint (broken signal chains) |
+| `verify_signal_chain_complete.py` | 57 | Nets that only connect to one endpoint (broken signal chains) |
 
 ```bash
 # 1e. Component connectivity + signal chain completeness
@@ -54,7 +54,7 @@ Walk through each question. For each, read the relevant source files, check the 
 | # | Question | What to check |
 |---|----------|---------------|
 | A1 | Are all power rails isolated from each other (no shorts)? | Run `python3 scripts/verify_power_paths.py`, check net isolation |
-| A2 | Is the power switch between battery and IP5306? | Check SW_PWR pads in PCB cache, verify BAT+ net routing |
+| A2 | Is the power switch between battery and IP5306? | **No, and this is a known as-built limitation — do not re-raise it as a new bug.** Only SW_PWR's common pin (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins 1/3 carry no net. J3 → Q1 → BAT+ → IP5306 pin 6 is continuous copper that never passes through the switch, so **the switch cannot power the board down**; true isolation = unplug J3. Respin: route the battery through switch pins 1–2. See RESPIN in `docs/known-issues.md` |
 | A3 | Are USB CC1/CC2 pull-downs correct (5.1k to GND)? | Check R1, R2 values (5.1k) and nets (USB_CC1/CC2 to GND) |
 | A4 | Is reverse polarity protection adequate? | Check BAT54C diode D1, JST connector polarity |
 
@@ -63,8 +63,8 @@ Walk through each question. For each, read the relevant source files, check the 
 | # | Question | What to check |
 |---|----------|---------------|
 | B1 | Does IP5306 boost start cleanly from 3.7V battery? | Check C17 (VIN), L1 (inductor), C19/C27 (VOUT) values |
-| B2 | Is AMS1117 dropout voltage met? (+5V - 3.3V = 1.7V > 1.3V dropout) | AMS1117 datasheet: dropout 1.3V max, margin = 0.4V |
-| B3 | Does EN pin RC delay allow supply to stabilize? | R3=10k, C3=100nF, tau=1ms, 3*tau=3ms < 5ms sample window |
+| B2 | Does the U3 buck regulate correctly? | **U3 is a SY8089AAAC 2A synchronous buck (SOT-23-5, C78988) — not an LDO, so there is no dropout budget.** Vout = 0.6 × (1 + R25/R26) = 0.6 × (1 + 100k/22k) = **3.327 V** (measured 3.327 V, vbench Phase 1). EN (pin 1) is hard-tied to +5V; abs-max is Vin + 0.6 V, so the tie is in spec. Check the divider R25=100k / R26=22k and the C29 feed-forward |
+| B3 | Does EN have an RC delay? | **No — and that is the as-built answer, not a finding to re-raise.** The board has no pull-up and no cap on EN: `R3` is absent from the BOM and the PCB, and `C3` is a plain +3V3 decoupling cap (twin of C4). `EN` carries exactly two pads, `U1.3` and `SW_RST` pad 1. The WROOM-1 does **not** integrate an EN pull-up — that claim was retired from `mcu.py` in `74c196e`. Datasheet p.28 requires the RC; this is a RESPIN item (10 kΩ +3V3→EN, 100 nF EN→GND). Margin defect, not a dead board. See RESPIN in `docs/known-issues.md` |
 | B4 | Is IP5306 KEY pin properly configured? | R16=100k pull-down, check KEY net routing |
 | B5 | Can charge-and-play work? (USB + battery simultaneously) | IP5306 supports charge-and-play natively |
 
@@ -83,15 +83,15 @@ Walk through each question. For each, read the relevant source files, check the 
 
 | # | Question | What to check |
 |---|----------|---------------|
-| D1 | Can ESP32 source enough current for all peripherals? | Total: ~350mA max (WiFi burst), AMS1117 rated 1A |
-| D2 | Is display bus functional? (8-bit 8080 parallel) | Check LCD_D0-D7, CS, RST, DC, WR traces; LCD_RD tied HIGH; LCD_BL via resistor |
+| D1 | Can the +3V3 rail source enough current for all peripherals? | Total: ~350mA max (WiFi burst); U3 (SY8089) is rated 2A |
+| D2 | Is display bus functional? (8-bit 8080 parallel) | Check LCD_D0-D7, CS, RST, DC, WR traces. **`LCD_RD` and `LCD_BL` are not nets** — ids 18/19 are retired gaps in `primitives.NET_LIST`. FPC pin 12 (RD, read strobe disabled — write-only) and pin 33 (LED-A backlight) are hard-tied to +3V3, so their pads live on the +3V3 net. **The backlight has no current-limiting element at all, and that is OPEN finding R25-HIGH-1** — `J4` pad 8 (panel pin 33, LED-A) sits directly on +3V3 while the cathodes (pads 7/6/5) are GND, so 8 chip white LEDs (Vf 2.9–3.3 V) sit straight across the 3.3 V rail. `components.md` quotes the panel datasheet as "+3V3 (**via resistor**, always-on)"; the resistor was documented and never placed. Do not accept `routing.py`'s "panels have internal limiting" as settled — it is an unverified justification comment, which is the exact pattern that produced R25-CRIT-1 |
 | D3 | Is SD card SPI functional? | Check SD_MOSI, SD_MISO, SD_CLK, SD_CS routing to TF-01A |
 | D4 | Is I2S audio path clean? | Check I2S_BCLK, I2S_LRCK, I2S_DOUT to PAM8403; DC-blocking cap C22 |
 | D5 | Are all buttons readable? | 12 buttons + menu combo via BAT54C D1 |
 | D6 | Is USB data path functional? | D+/D- through USBLC6-2SC6 (U4), 22ohm series (R22/R23), to ESP32 |
 | D7 | Is speaker output adequate? | PAM8403 3W per channel, SPK+/SPK- to 28mm speaker |
 | D8 | Are LEDs functional? | LED1/LED2 through R17/R18 (1k), connected to IP5306 LED outputs |
-| D9 | Is thermal dissipation adequate? | AMS1117: P=(5-3.3)*0.35=0.6W, SOT-223 can handle ~1.5W with thermal pad |
+| D9 | Is thermal dissipation adequate? | **The LDO thermal problem is gone** — a switching buck at ~90% efficiency dissipates ~0.04 W at 350 mA where the AMS1117 burned 1.7 V × I as heat (0.85 W at 500 mA). What matters instead is the 1 MHz hot loop: C1 (C_IN) tight to U3 IN/GND, C30 (C_OUT) tight to L2's output pad, LX node kept small. Checked by `verify_dfm_v2.test_c1_c2_spacing` |
 
 #### E. Edge Cases (6 questions)
 

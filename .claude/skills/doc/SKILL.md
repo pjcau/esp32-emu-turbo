@@ -77,7 +77,9 @@ Cross-reference extracted values against these docs:
 - DFA test count (should be 9)
 - Trace width table (should match routing.py)
 - Via drill/pad/annular ring specs
-- Connectivity test results (44/44 nets)
+- Connectivity test results — take the number from `test_pcb_connectivity.py`
+  at the time of writing rather than copying one forward (the board carries 56
+  named nets today; a frozen "44/44" outlived the board by a wide margin)
 - Via counts per signal
 
 #### 2e. `website/docs/pcb.md`

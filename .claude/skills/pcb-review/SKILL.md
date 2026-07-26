@@ -34,7 +34,7 @@ python3 scripts/verify_stencil_aperture.py
 python3 scripts/verify_drill_standards.py
 ```
 
-**BOM/CPL/PCB cross-check** (`verify_bom_cpl_pcb.py`, 13 checks):
+**BOM/CPL/PCB cross-check** (`verify_bom_cpl_pcb.py`, 12 checks):
 Verifies all designators match across BOM, CPL, and PCB. Checks footprint names
 are JLCPCB-compatible, CPL rotations valid, positions match (with known correction
 allowances), all LCSC part numbers present, and schematic field completeness.
@@ -76,7 +76,7 @@ python3 scripts/verify_test_points.py
 | `verify_antenna_keepout.py` | 5 | Copper/traces in ESP32 antenna zone (kills WiFi/BLE) |
 | `verify_stackup.py` | 5 | Wrong nets on inner plane layers |
 | `verify_net_class_widths.py` | 5 | Power traces too narrow (fuse risk) |
-| `verify_bom_values.py` | 75 | Schematic value vs BOM mismatch (wrong part assembled) |
+| `verify_bom_values.py` | 80 | Schematic value vs BOM mismatch (wrong part assembled) |
 | `verify_power_paths.py` | 19 | Missing copper path from source to IC VDD pin |
 | `verify_copper_balance.py` | 3 | Layer imbalance causing PCB warping |
 | `verify_decoupling_paths.py` | 11 | Cap too far or poorly routed to IC |
@@ -98,7 +98,7 @@ python3 scripts/verify_datasheet_nets.py
 python3 scripts/verify_datasheet.py
 ```
 
-**Datasheet net verification** (`verify_datasheet_nets.py`, 246 checks):
+**Datasheet net verification** (`verify_datasheet_nets.py`, 267 checks):
 Compares EVERY pad of EVERY component against the expected net from the datasheet.
 Uses `hardware/datasheet_specs.py` as single source of truth (pin→net mapping).
 - Catches: unconnected pads that should be connected, wrong net on a pad
@@ -119,7 +119,7 @@ Compares PCB footprint dimensions against datasheet mechanical drawings.
 python3 scripts/verify_design_intent.py
 ```
 
-**Design intent verification** (`verify_design_intent.py`, 362 checks):
+**Design intent verification** (`verify_design_intent.py`, 369 checks):
 Cross-checks GPIO assignments, net connections, and signal paths across ALL sources:
 firmware (`board_config.h`), schematic config (`config.py`), datasheet specs, and actual PCB layout.
 
@@ -180,9 +180,10 @@ python3 scripts/spice_power_check.py
 
 Requires: `ngspice` (`brew install ngspice`)
 
-Simulates IP5306 boost → AMS1117 LDO → ESP32 load:
+Simulates IP5306 boost → **SY8089 buck (U3)** → L2 → C30 → ESP32 load:
 - +5V rail ripple at 500kHz switching (must be < 150mV)
-- +3V3 rail ripple under load steps (must be < 50mV)
+- +3V3 rail ripple under load steps (must be < 50mV). Note the buck is an
+  *averaged closed-loop* model, so 1 MHz switching ripple is NOT represented
 - Decoupling cap effectiveness (C17, C27, C1, C19)
 - ESP32 WiFi burst response (200mA → 350mA in 10µs)
 
@@ -192,10 +193,10 @@ Simulates IP5306 boost → AMS1117 LDO → ESP32 load:
 # Strapping pin verification (12 tests)
 python3 scripts/verify_strapping_pins.py
 
-# Decoupling capacitor adequacy (25 tests)
+# Decoupling capacitor adequacy (23 tests)
 python3 scripts/verify_decoupling_adequacy.py
 
-# Power sequencing verification (26 tests)
+# Power sequencing verification (29 tests)
 python3 scripts/verify_power_sequence.py
 ```
 
@@ -211,7 +212,7 @@ python3 scripts/verify_power_sequence.py
 # Component connectivity — catches phantom BOM components (2 tests)
 python3 scripts/verify_component_connectivity.py
 
-# Signal chain completeness — catches broken copper paths (53 tests)
+# Signal chain completeness — catches broken copper paths (57 tests)
 python3 scripts/verify_signal_chain_complete.py
 ```
 
@@ -243,10 +244,20 @@ python3 scripts/verify_netlist_diff.py
 
 **Netlist cross-check** (`verify_netlist_diff.py`, 4 checks):
 Exports schematic XML netlist via `kicad-cli`, compares against PCB cache:
-- Missing routes (schematic net not in PCB)
-- Orphan PCB nets (PCB net not in schematic)
-- Missing footprints (component in schematic but not PCB)
-- Pin-to-net mismatches between schematic and PCB
+- [T1] Missing routes (schematic net not in PCB)
+- [T2] Orphan PCB nets (PCB net not in schematic)
+- [T3] Missing footprints (component in schematic but not PCB)
+- [T4] Pin-to-net mismatches between schematic and PCB
+
+**T4 only sees pins that reach the netlist.** `SW_RST` and `SW_BOOT` were
+absent from `SCH_PIN_TO_PCB_PADS` for a long time because their schematic
+pins were floating — `SW_Push` pins are *horizontal* (x ± 5.08), not
+vertical like the R/C symbols, so the generator's wires landed beside the
+pins. No pin of theirs ever reached the comparison, so the gate could not
+have caught anything about them. Both are now wired and mapped. When adding
+a part to that table, remember a tact switch has **two poles, not four
+terminals**: pads 1+2 are one pole, 3+4 the other, and the symbol has one
+pin per pole (`_TACT_MAP`) — pad 2 belongs to symbol **pin 1**.
 
 ### 1m2. Run schematic↔PCB/datasheet_specs sync guard (R4 class)
 
@@ -422,18 +433,18 @@ python3 scripts/validate_jlcpcb.py
 - `.claude/skills/pcb-review/review-checklist.md` — Full scoring criteria + JLCPCB rules reference
 - `hardware/datasheets/` — Component datasheets for pin verification
 - `scripts/pcb_review.py` — Automated review script
-- `scripts/verify_dfm_v2.py` — DFM verification (115 tests)
+- `scripts/verify_dfm_v2.py` — DFM verification (122 tests)
 - `scripts/verify_polarity.py` — Polarity/pin assignment tests
 - `scripts/verify_dfa.py` — Assembly verification (9 tests)
-- `scripts/verify_bom_cpl_pcb.py` — BOM/CPL/PCB cross-check (10 tests)
+- `scripts/verify_bom_cpl_pcb.py` — BOM/CPL/PCB cross-check (12 checks)
 - `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
-- `scripts/verify_datasheet_nets.py` — Datasheet vs PCB net/pinout verification (259 checks)
-- `hardware/datasheet_specs.py` — Single source of truth: pin→net mapping for all 30 components
-- `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (26 tests)
+- `scripts/verify_datasheet_nets.py` — Datasheet vs PCB net/pinout verification (267 checks)
+- `hardware/datasheet_specs.py` — Single source of truth: pin→net mapping (37 components)
+- `scripts/validate_jlcpcb.py` — JLCPCB manufacturing validation (24 tests)
 - `scripts/verify_antenna_keepout.py` — ESP32 antenna zone clearance (5 checks)
 - `scripts/verify_stackup.py` — 4-layer stackup net verification (5 checks)
 - `scripts/verify_net_class_widths.py` — Power/signal trace width enforcement (5 checks)
-- `scripts/verify_bom_values.py` — BOM vs schematic value cross-check (75 checks)
+- `scripts/verify_bom_values.py` — BOM vs schematic value cross-check (80 checks)
 - `scripts/verify_power_paths.py` — Power delivery path tracing (19 checks)
 - `scripts/verify_copper_balance.py` — Layer copper distribution (3 checks)
 - `scripts/verify_decoupling_paths.py` — Cap-to-IC path quality (11 checks)

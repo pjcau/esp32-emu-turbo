@@ -106,7 +106,7 @@
 
 | Check | Points | Criteria |
 |-------|--------|----------|
-| Thermal vias per IC | -2 per IC | U2 (IP5306), U3 (AMS1117), U5 (PAM8403) need ≥3 GND vias within 5mm |
+| Thermal vias per IC | -2 per IC | U2 (IP5306), U3 (SY8089 buck), U5 (PAM8403) need ≥3 GND vias within 5mm |
 | Exposed pad thermal vias | -2 | EP pads (U2 ESOP-8) need thermal vias to inner GND |
 | Total GND vias | -1 | Board should have ≥15 total GND stitching vias |
 | Power IC copper area | -1 | ≥25mm² copper pour around each power IC |
@@ -230,9 +230,11 @@ has an automated guard script — never rely on manual review alone.
 - **R4-MED-1** — SD card U6 VCC had no local decoupling cap in
   `sd_card.py` (deferred to v2 respin — schematic notes it).
 - **R4 false positive** — the earlier R2-HIGH-2 "AMS1117 output cap
-  ESR" was wrong: C2 is already tantalum (C7171) and C19 is on the
-  IP5306 5V rail, not the AMS1117 output. Always trace capacitor refs
-  through the full schematic before flagging ESR issues.
+  ESR" was wrong: C2 was tantalum (C7171) and C19 is on the IP5306 5V
+  rail, not the regulator output. Always trace capacitor refs through
+  the full schematic before flagging ESR issues. *Both parts in that
+  finding are now gone:* U3 is a SY8089 buck, and C2 was deleted with
+  the LDO because a 1 MHz switcher needs a low-ESR MLCC (C30) instead.
 
 **Guards**:
 
