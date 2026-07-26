@@ -209,6 +209,16 @@ bench-conflicts: ## T1.3 — electrical conflicts (two drivers on a node); geome
 bench-thermal: ## T1.5 — junction temperatures at 30 C external and 40 C in-enclosure, from cited theta_JA
 	@$(T) bench-thermal python3 scripts/vbench/thermal.py
 
+bench-header: ## T4.1 — regenerate software/sim/vbench_board.h from the derived board model
+	@$(T) bench-header python3 scripts/vbench/export_header.py
+
+bench-build: ## T4.1 — build the model-backed simulator (emu-turbo-bench)
+	@$(T) bench-header python3 scripts/vbench/export_header.py
+	@$(T) bench-build $(MAKE) -C software/sim bench
+
+bench: bench-build ## T4.4 — open the Virtual Bench window: LCD through the i80 model + live instruments
+	cd software/sim && ./emu-turbo-bench ../../test-roms
+
 bench-transients: ## T1.4 — cold start, inrush, load step, sag (ngspice; exits 2 if it is missing)
 	@$(T) bench-transients python3 scripts/vbench/transients.py
 

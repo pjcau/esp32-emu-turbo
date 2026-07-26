@@ -768,7 +768,47 @@ filesystem shim that would prove nothing about this board.
 | T3.2 | I2S → PAM8403 → speaker: sample stream, gain, supply-dependent clipping, output power vs the 5 V rail, and current fed **back** into Phase 1 so audio peaks sag the rail | exports a WAV of what the speaker would emit, and the rail dip it caused |
 | T3.3 | SD over SPI: card model, CMD0/CMD8/ACMD41 init, block read from a host directory, 20 MHz timing, current draw | mounts a host folder and reads a ROM through the modelled bus |
 
-## Phase 4 — Firmware in the loop and the demo app — **T4.3 done**
+## Phase 4 — Firmware in the loop and the demo app — **T4.1, T4.3, T4.4 done**
+
+### T4.1 + T4.4 — the simulator runs on the board model, with instruments
+
+`make bench` builds and opens the Virtual Bench window: the existing SDL
+simulator (all six emulator cores), recompiled with `vbench_hal.c` in place of
+the fake HAL, plus a live instrument strip under the LCD. The bridge is
+`software/sim/vbench_board.h`, **generated** by `make bench-header` from the
+derived model — the C contains no electrical constant of its own, and a test
+enforces that.
+
+What "running on the model" buys, concretely:
+
+* **Pixels travel through the i80 model.** Every byte crosses the bus through
+  `VB_LCD_BUS_MAP` — the DBn ← LCD_Dm mapping derived from the netlist through
+  the 41−N ribbon reversal. Identity today, so the picture is untouched; cross
+  two data lines in the design and the simulator's picture visibly scrambles.
+  If the IM straps stop selecting 8-bit 8080, the LCD shows no picture at all.
+* **Buttons pass through the RC network.** A press shorts the node (instant);
+  a release rises through 10 k × 100 nF and reads HIGH only after the derived
+  1.204 ms. BTN_L, whose R14 is DNP because GPIO45 is a strapping pin, has no
+  external RC and releases instantly — from `VB_BTN_RC_MASK`, not a special
+  case in C.
+* **Reset (F5) samples the strapping pins at that instant.** SELECT held means
+  GPIO0 = 0: the app stops and the screen says JOINT DOWNLOAD BOOT, exactly
+  like table 6 says the chip behaves.
+* **SW_PWR (P) reproduces the v1 invariant**: operating it does NOT cut power,
+  and the instrument line says so instead of pretending the board turned off.
+* **The instruments are the bench test**: per-rail voltmeters (with the +3V3
+  band from V_REF's own tolerance), an ammeter fed by the audio RMS through
+  the derived efficiency, Tj for U3 and Q1 from the cited θJA, boot mode,
+  EN FLOATING (R25-CRIT-1), and `CALIBRATION: no` — which stays there until
+  prototype #1 measurements land (T5.4).
+* Scenario keys: F1 USB/battery, F2/F3 SoC (battery sag uses the uncalibrated
+  OCV table plus Q1's cited R_DS(on)).
+
+The header is deterministic (no timestamps) and carries the `.kicad_pcb`
+fingerprint; `export_header.py --check` fails when it is stale, and the test
+suite proves the check discriminates by doctoring a rail value.
+
+### T4.3 — scenarios (done earlier)
 
 ### T4.3 — scenarios, headless, with assertions
 
@@ -793,10 +833,9 @@ scenario with an empty assertion list, which the loader refuses.
 The assertions are shown to discriminate: holding `BTN_SELECT` in
 `usb_cold_boot`'s setup breaks its boot-mode assertion.
 
-T4.1 (`vbench_hal`), T4.2 (`demo_app.c`) and T4.4 (the interactive window)
-are not started. `software/sim` already exists with a fake HAL and SDL is
-available, so T4.1 and T4.4 are buildable; T4.2's ESP-IDF half is not, because
-no `idf.py` is installed here.
+T4.2 (`demo_app.c`) remains: its bench half is now trivial on top of
+`vbench_hal`, but the "identical binary behaviour in both builds" clause
+needs ESP-IDF, and no `idf.py` is installed here.
 
 
 

@@ -1209,6 +1209,63 @@ def test_scenarios():
     shutil.rmtree(os.path.dirname(out), ignore_errors=True)
 
 
+# ── L. Phase 4.1/4.4: the exported board header ─────────────────────
+
+def test_header():
+    print("\nL. export_header.py / vbench_board.h")
+    from vbench import export_header as eh
+
+    d = eh.derive()
+    check("the i80 bus map derives to the identity on this board",
+          d["bus"] == list(range(8)), f"got {d['bus']}")
+    check("the RC mask covers eleven buttons and NOT BTN_L (bit 10)",
+          d["rc_mask"] == 0xBFF, f"got {hex(d['rc_mask'])}")
+    check("boot mode and VDD_SPI carry the derived answers",
+          d["boot_mode"] == "SPI Boot" and d["vdd_spi"] == 3.3)
+    check("EN is exported as floating (R25-CRIT-1 rides into the window)",
+          d["en_floating"] is True)
+    check("the switch-not-in-series invariant is exported",
+          d["switch_not_in_series"] is True)
+    check("the header admits it is uncalibrated",
+          d["calibrated"] == "no")
+
+    text = eh.render(d)
+    check("rendering is deterministic (same input, same bytes)",
+          text == eh.render(d))
+    check("the header carries the PCB fingerprint and no timestamp",
+          "VB_PCB_HASH" in text and "20" + "26-" not in text.split("sha256")[0])
+    check("the bus map is emitted as data, not prose",
+          "VB_LCD_BUS_MAP[8] = { 0, 1, 2, 3, 4, 5, 6, 7 }" in text)
+
+    # Freshness: the file on disk must match a regeneration.
+    check("the committed header is current (make bench-header)",
+          _quiet(eh.main, ["--check"]) == 0)
+
+    # And the check must actually discriminate: a doctored header fails it.
+    with open(eh.HEADER) as fh:
+        saved = fh.read()
+    try:
+        with open(eh.HEADER, "w") as fh:
+            fh.write(saved.replace("VB_RAIL_3V3_TYP_MV 3327",
+                                   "VB_RAIL_3V3_TYP_MV 3300"))
+        check("a doctored rail value makes --check fail",
+              _quiet(eh.main, ["--check"]) == 1)
+    finally:
+        with open(eh.HEADER, "w") as fh:
+            fh.write(saved)
+
+    # The C build exists and links the model-backed HAL (built by
+    # `make bench-build`; here we only require the source contract).
+    hal = open(os.path.join(BASE, "software", "sim", "vbench_hal.c")).read()
+    check("vbench_hal contains no electrical constant of its own",
+          "3.327" not in hal and "1204" not in hal and "0xBFF" not in hal,
+          "a derived number is hardcoded in the C — it belongs in the header")
+    check("the HAL routes pixels through the derived bus map",
+          "VB_LCD_BUS_MAP" in hal and "vb_bus_px" in hal)
+    check("the HAL reproduces the switch invariant rather than cutting power",
+          "VB_SWITCH_NOT_IN_SERIES" in hal)
+
+
 def main():
     print("=" * 72)
     print("  Virtual Bench Phase 0/1/2/3/4/5 — mutation tests")
@@ -1224,6 +1281,7 @@ def main():
     test_phase3_peripherals()
     test_phase5()
     test_scenarios()
+    test_header()
     print()
     print("=" * 72)
     print(f"  {PASS} passed, {FAIL} failed")
