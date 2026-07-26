@@ -68,7 +68,37 @@ TOL_DEG = 8.0
 # JLCPCB 3D preview or the manufacturer drawing. "It seemed to work" is not
 # a reason -- see the note on falsified evidence in
 # verify_easyeda_footprint.py's allowlist.
-_LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {}
+_LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
+    # U2 and J4 are the ONLY parts in the cell (row_board=90, row_ee=0), and
+    # the law is wrong for that cell. Every other part has
+    # row_board + row_ee in {0, 180}, where the law's bottom form happens to
+    # coincide with the geometry; this cell is the one place it does not, and
+    # it had no passing sibling to expose that. Both residuals are 0, not 180,
+    # and they are 0 for the same reason — this is one law defect showing up
+    # twice, not two independent part quirks.
+    #
+    # Each entry below is a claim about the PHYSICAL part, checkable without
+    # trusting any KiCad-to-JLCPCB angle convention. If the copper or the
+    # placement moves, the residual moves off 0 and the entry fails as stale.
+    "U2": (0.0,
+           "IP5306 ESOP-8 (C181692) at cpl=270. Convention-free check: at "
+           "270 every pin lands on its own pad (0.090 mm uniform) and every "
+           "net is correct — VIN->VBUS, KEY->IP5306_KEY, BAT->BAT+, SW->LX, "
+           "VOUT->+5V, EP->GND, LED1-3 open. The law's 90 solders the part "
+           "with pin i on pad i+4: BAT+ onto the LED1 indicator sink, with "
+           "BAT and VOUT unconnected. The old cpl=0 did not seat at all "
+           "(5.012 mm, 0 of 8 leads on copper)."),
+    "J4": (0.0,
+           "FPC-40P (C2856812) at cpl=270. Convention-free check: the "
+           "contacts must face the FPC slot, which board.py places at "
+           "x 125.5-128.5 with J4's body at 133.5-136.5, i.e. on J4's -X "
+           "side. At 270 contacts land at x=133.712 and mount tabs at "
+           "136.288 (contacts toward the slot, 0.002 mm worst residual over "
+           "all 42 pads); the law's 90 swaps them, contacts 0 of 42 pads, "
+           "and would need the ribbon to enter from off the right board "
+           "edge. Unrelated to the connector_pad = 41 - panel_pin netlist "
+           "mapping, which is correct and untouched."),
+}
 
 
 def _load(name: str, path: str):

@@ -472,13 +472,13 @@ def test_T5_orphan_nets(cache, net_map, net_pads):
     #                  anything; it is a generator leftover. WARN, and it is
     #                  named so it stays visible instead of being filtered.
     #
-    # Currently LCD_RD and LCD_BL: routing.py hard-ties both FPC pins to +3V3
-    # (J4.29 and J4.8 are on the +3V3 net and verified connected by
-    # verify_power_net_integrity), so the two names survive only as
-    # declarations. Removing them from NET_LIST is the real cleanup, but it
-    # forces a full PCB regeneration that drops every filled_polygon and so
-    # needs a zone re-fill and a release re-sync — deliberately not bundled
-    # into a verification-side change.
+    # This used to name LCD_RD and LCD_BL. Both were pruned from
+    # primitives.NET_LIST (ids 18/19 are now retired gaps) together with the
+    # PCB regeneration, zone re-fill and release re-sync that the prune
+    # forces, so the warning has nothing left to report. routing.py still
+    # hard-ties both FPC pins to +3V3 — J4.29 and J4.8 sit on the +3V3 net and
+    # verify_power_net_integrity confirms they are connected. The branch below
+    # stays because the NEXT generator leftover must be just as visible.
     orphans = []
     undeclared = []
     for net_name in sorted(all_net_names):

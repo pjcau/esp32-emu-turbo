@@ -2990,3 +2990,111 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
    a real `idf.py build`.
 4. R25-MED-1 — documentation only, but it is what made an unbuilt
    emulator look like a shipped feature.
+
+---
+
+## Round 26 Findings (2026-07-26) — the rotation law, at `74c196e` → `8b24728`
+
+Started as "close the last two red rows and the two DRC warnings". The two
+red rows were `verify_cpl_rotation_law` on U2 and J4. Both are now green,
+neither for the reason the gate gave.
+
+### R26-CRIT-1 — U2 (IP5306) shipped at a CPL angle that cannot seat
+
+- **Problem**: `"ESOP-8"` cannot match the `^SOP-` rule in
+  `_JLCPCB_ROT_CORRECTIONS` — the `^` anchor is blocked by the leading E —
+  so U2 fell through every rule to `_JLCPCB_ROT_DEFAULT` and was emitted at
+  `cpl=0`. At 0° the lead row runs along Y while the pads run along X:
+  **0 of 8 leads touch copper**, worst offset 5.012 mm, the part held only
+  by exposed-pad paste.
+- **Why verification missed it**: the gate *did* fire, for years. What kept
+  it open was that the gate's own proposed answer (90°) was also wrong, and
+  the counter-argument on record — "boards R4–R8 charge, so an ESOP-8 at
+  90° could not seat" — argued for keeping 0°, which does not seat either.
+  Nobody had checked which CPL those boards were actually assembled from.
+- **Fix**: `(r"^ESOP-", 90)` → emits `cpl=270`. Every pin lands on its own
+  pad (0.090 mm uniform) and every net is right: VIN→VBUS, KEY→IP5306_KEY,
+  BAT→BAT+, SW→LX, VOUT→+5V, EP→GND, LED1‑3 open.
+- **Impact**: **CRITICAL**. Same one-letter class as the U4 SOT-23-6 bug.
+
+### R26-CRIT-2 — the law's 90° would have been worse than the bug
+
+- **Problem**: 90° is the value `verify_cpl_rotation_law` derives for U2,
+  and it is the one angle that **solders while being wrong**. It puts pin
+  *i* on pad *i+4*: BAT+, an unfused 4.2 V cell, onto LED1 — an open-drain
+  indicator sink — with BAT and VOUT connected to nothing.
+- **Why it matters beyond U2**: a gate that is wrong in a *seatable*
+  direction is more dangerous than the defect it reports. 0° fails visibly
+  at assembly; 90° ships.
+
+### R26-HIGH-1 — the law is wrong for one cell, and that cell has exactly two members
+
+- **Problem**: `row_board + row_ee` is 0 or 180 for every polarized part on
+  this board except U2 and J4, which are both 90. That is the one cell
+  where the bottom law parts company with the geometry, and it had no
+  passing sibling to expose it — so twelve parts "confirmed" a law that was
+  wrong wherever it was actually load-bearing.
+- **Fix**: `_LAW_EXCEPTIONS` entries for U2 and J4, each pinning the
+  residual at 0 and stating a convention-free physical claim, so drift in
+  the copper or the placement fails them as stale. **One law defect
+  recorded twice, not two part quirks.**
+
+### R26-HIGH-2 — J4 was correct and was nearly broken by the audit
+
+- **Problem**: J4's `_JLCPCB_ROT_DELTAS` entry genuinely lacked a
+  derivation, and "no derivation, therefore wrong" was itself wrong. It has
+  now been deleted twice (`2d35646`, and once during this round); both
+  times the replacement 90° swaps the contacts with the mount tabs and
+  contacts **0 of 42 pads**, and would need the ribbon to enter from off
+  the right board edge.
+- **Deciding checks, neither needing an angle convention**: the contacts
+  must face the FPC slot, which `board.py` puts on J4's −X side; and a
+  pcbnew flip-and-rotate of the LCSC reference matches at 0.002 mm worst
+  residual across all 42 pads.
+
+### R26-HIGH-3 — `release_jlcpcb/` was carrying a stale U4
+
+- **Problem**: at `74c196e` the generator emitted `U4=0°` but
+  `release_jlcpcb/cpl.csv` still carried the pre-fix `90°`. The U4 fix
+  closed in `1765982` had never reached the directory anyone orders from.
+- **Why verification missed it**: every gate compares the *generator* to
+  the *board*. Nothing compared `release_jlcpcb/` to the generator, so a
+  fix could be "closed" and still not shipped.
+- **Impact**: **HIGH**, and it retroactively weakens every "the boards work,
+  therefore the value is right" argument in this file.
+
+### R26-MED-1 — the session-start report hid half of a failure
+
+- **Problem**: `open_issues_report.py` kept only the *first* `FAIL` line per
+  gate. `verify_cpl_rotation_law` had been failing on U2 **and** J4 for
+  months while the injected context named only U2.
+- **Fix**: emit every failing row, capped at 12 and *announcing* what it
+  hid.
+
+### R26-LOW-1 — phantom nets `LCD_RD` / `LCD_BL` removed
+
+Ids 18/19 are now retired gaps; DRC goes to 0 errors, 0 warnings. The prune
+touched six files, because the two names were claims made in five places
+besides `NET_LIST`. Three gates went red in sequence during the change and
+each was pointing at a real leftover.
+
+### Still open
+
+- **D1 and Q1** are flagged by the same machinery and are **not** verified
+  to this depth: D1 should be 90° (ships 270°), Q1 should be 270° (ships
+  90°). Both are SOT-23-3, where 180° puts pin 3 where pins 1–2 are.
+  `POLARITY_AUDIT.md` records Q1 as empirically validated because boards
+  R4–R8 power up through it. Both claims cannot be true, and R26-HIGH-3 is
+  a reason to distrust the empirical one.
+- **`POLARITY_AUDIT.md` U2 section has a Y-sign error** — it calls
+  `y = +2.91` the "TOP row"; KiCad Y points down, so that is the bottom
+  row.
+
+### Next action
+
+1. **Re-upload the CPL.** U2 changed 0°→270° and U4 was stale in the
+   release directory. A design-side fix is not done until the uploaded file
+   matches `release_jlcpcb/cpl.csv` at HEAD.
+2. **Settle D1/Q1** the same way U2 and J4 were settled — pin-to-pad-to-net
+   under each candidate angle — rather than by the "the board works"
+   argument that R26-HIGH-3 undermined.

@@ -43,6 +43,19 @@
       "must_report": "the EN node has no resistor and no capacitor on it, so no RC time constant exists to compute; any boot-delay figure derived from R3 = 10k and C3 = 100nF describes a network the board does not have",
       "expect": "caught",
       "note": "Still live in scripts/simulate_circuit.py, which prints an EN reset delay from EN_PULLUP_R * EN_RESET_C and passes a 'delay long enough for stable boot' check on it. The 0.33 mA current-budget line for the same non-existent resistor was zeroed in 68bb20e; the timing calculation was not. Phase 1 must not inherit either."
+    },
+    {
+      "id": "R26-LOW-1",
+      "round": 26,
+      "title": "phantom nets LCD_RD / LCD_BL — declared in both files, zero pads in either",
+      "source": "hardware-audit-bugs.md:3074",
+      "source_match": "R26-LOW-1",
+      "phase": 0,
+      "classes": ["dead-node", "phantom-net"],
+      "mutation": {"kind": "declare_net", "net": "LCD_BL", "pads": []},
+      "must_report": "a net declared in the board's net table that no pad carries; it is not a connection, it is a name, and no existing check can see it — T1/T2 compare names, which matched because both files declared it, and T4 iterates schematic pins, of which it had none",
+      "expect": "caught",
+      "note": "Fixed on main and in this branch independently and identically on 2026-07-26 — net ids 18/19 retired with a documented gap, the DS1 stubs relabelled +3V3, and datasheet_specs J4 pads 8/29 tightened from _any_of to _exact. Kept as a corpus entry because netlist.py's D1 class is what found it, and a detector that has nothing to rediscover is a detector nobody can measure."
     }
   ]
 }

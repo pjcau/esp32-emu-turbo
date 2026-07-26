@@ -46,7 +46,7 @@ REQUIRED = ("id", "round", "title", "source", "source_match", "phase",
 FORBIDDEN = ("status", "caught", "fixed", "verified")
 EXPECTS = ("caught", "reproduced")
 MUTATION_KINDS = ("none", "detach_pin", "move_pin", "swap_pins",
-                  "remove_part", "short_nets", "set_param")
+                  "remove_part", "short_nets", "set_param", "declare_net")
 
 
 class CorpusError(ValueError):

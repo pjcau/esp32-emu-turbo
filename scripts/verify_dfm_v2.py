@@ -11,6 +11,27 @@ import subprocess
 import sys
 import zipfile
 
+_ROTATION_LAW = None
+
+
+def _load_rotation_law():
+    """Import verify_cpl_rotation_law as a module (cached).
+
+    Loaded lazily and by path rather than imported at module scope: this file
+    is executed directly from several working directories, and evaluate() is
+    only needed by the J4 check.
+    """
+    global _ROTATION_LAW
+    if _ROTATION_LAW is None:
+        import importlib.util
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "verify_cpl_rotation_law.py")
+        spec = importlib.util.spec_from_file_location("_cpl_law", path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _ROTATION_LAW = mod
+    return _ROTATION_LAW
+
 
 def _capsule_rect_gap(x1, y1, x2, y2, hw, bx1, by1, bx2, by2):
     """Exact edge-to-edge gap between a trace capsule and an AABB.
@@ -1204,7 +1225,7 @@ def test_lcd_sd_approach_spacing():
     print("\n── LCD Approach vs SD Trace Spacing Test ──")
     segs = _cached_segments()
 
-    lcd_nets = set(range(6, 20))  # LCD_D0(6)..LCD_BL(19)
+    lcd_nets = set(range(6, 18))  # LCD_D0(6)..LCD_WR(17)
     sd_nets = {20, 21, 22, 23}   # SD_MOSI, SD_MISO, SD_CLK, SD_CS
     min_edge_gap = 0.15
 
@@ -1915,14 +1936,25 @@ def test_j4_fpc_orientation():
         f"gap={avg_sig_x - slot_right_x:.1f}mm",
     )
 
-    # CPL test: rotation must produce correct pick-and-place orientation
-    # JLCPCB 3D verification: 90° puts pins on wrong side, 270° aligns correctly
+    # CPL test: the pick-and-place angle must obey the per-layer rotation law.
+    #
+    # This used to assert `j4_rot == 270` against a hand-written comment. That
+    # is a tautology, not a test: it restated the number the generator already
+    # emitted, so it could only ever fail if someone changed the generator —
+    # and when the 270 turned out to be wrong (an eyeballed 3D overlay, see
+    # jlcpcb_export._JLCPCB_ROT_DELTAS) this assertion defended the bug instead
+    # of catching it. Deriving the expected angle instead means this check
+    # tracks the law, and a future placement change moves both together.
     cpl = read_cpl()
-    j4_rot = int(cpl["J4"]["Rotation"])
+    j4_rot = int(cpl["J4"]["Rotation"]) % 360
+    law = _load_rotation_law()
+    j4_law = next((r for r in law.evaluate() if r["ref"] == "J4"), None)
     check(
-        "J4 CPL rotation = 270° (JLCPCB 3D model alignment)",
-        j4_rot == 270,
-        f"got {j4_rot}°",
+        "J4 CPL rotation obeys the bottom-layer rotation law",
+        j4_law is not None and j4_law["status"] in ("OK", "EXCEPTION"),
+        (f"got {j4_rot}deg, law wants "
+         f"{j4_law['law_cpl']:.0f}deg" if j4_law and j4_law.get("law_cpl") is not None
+         else f"got {j4_rot}deg, J4 not evaluable by the law"),
     )
 
 

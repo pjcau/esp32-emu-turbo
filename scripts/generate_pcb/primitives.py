@@ -146,20 +146,14 @@ NET_LIST = [
     # Display control
     (14, "LCD_CS"), (15, "LCD_RST"), (16, "LCD_DC"),
     (17, "LCD_WR"),
-    # Old slots: (18, "LCD_RD"), (19, "LCD_BL") — removed 2026-07-26, gap
-    # left deliberately, same as BTN_MENU below (KiCad tolerates
-    # non-contiguous net IDs, and renumbering would rewrite every net in
-    # the board file for a cosmetic change).
-    #
-    # Both names had ZERO pads and ZERO copper. The DFM v3 fix of
-    # 2026-04-10 (routing.py:2362-2372) put panel pin 12 (RD) and panel
-    # pin 33 (LED-A) directly on +3V3 — RD tied high because the display
-    # is write-only, LED-A because the backlight is always on — but left
-    # the two net names declared here. A declared net with no pad is
-    # invisible to every existing check: verify_netlist_diff T1/T2 compare
-    # names, and the schematic declared them too, so the names matched;
-    # T4 iterates schematic pins, and these had none on the board side.
-    # Found by scripts/vbench/netlist.py (dispute class D1).
+    # 18 and 19 are RETIRED, and deliberately left as gaps: renumbering the
+    # nets below them would rewrite every net id in the .kicad_pcb for no gain.
+    #   18 was LCD_RD, 19 was LCD_BL. Both are real FPC signals (pins 12 and
+    #   33) but neither is driven: routing.py ties them to +3V3 (read strobe
+    #   disabled, display is write-only; backlight always on). Their pads
+    #   therefore live on the +3V3 net, and the two names survived only as
+    #   declarations carrying zero pads — which is what made DRC report them
+    #   as nets with no copper.
     # SD card SPI
     (20, "SD_MOSI"), (21, "SD_MISO"), (22, "SD_CLK"), (23, "SD_CS"),
     # I2S audio

@@ -255,7 +255,17 @@ declaring net names that connect nothing. Captions are now `text()`.
 Registered in `VERIFY_ALL_SCRIPTS` (`make verify-sch-labels`); the routing
 law in `issue_dispatch.py` gives it an owner via `law:schematic`.
 
-**The phantom nets are gone from both sources.** `LCD_BL` and `LCD_RD` had
+**The phantom nets are gone from both sources — twice over.** A parallel
+session reached the identical conclusion on the same day and landed it on
+`main` as R26-LOW-1: net ids 18/19 retired with a documented gap, the DS1
+stubs relabelled `+3V3`, `datasheet_specs.py::J4` pads 8 and 29 tightened
+from `_any_of` to `_exact`. Same three files, same reasoning, arrived at
+independently. `main`'s wording is the one that survives the merge; this
+branch keeps the finding as corpus entry `R26-LOW-1`, because a detector
+with nothing to rediscover cannot be measured. What follows is the
+reasoning, which both sessions share:
+
+`LCD_BL` and `LCD_RD` had
 zero pads and zero copper: the DFM v3 fix of 2026-04-10 put panel pins 12
 (RD) and 33 (LED-A) directly on `+3V3` but left the names declared in
 `primitives.py::NET_LIST`, and `display.py` kept using them as global
@@ -276,9 +286,23 @@ net at all, and it touches the firmware's GPIO documentation. The fifth is
 `C28`, below, which needs an electrical decision, not a bookkeeping one.
 
 Copper is untouched by all of this: the board file's segment list is
-identical to HEAD's, verified segment by segment. `verify-all` has one
-failure, `verify_cpl_rotation_law` (U2 and J4), which fails identically at
-HEAD.
+identical, verified segment by segment.
+
+**`verify-all` is 69/69 after merging `main`.** The one red this branch
+carried, `verify_cpl_rotation_law` on U2 and J4, was closed on `main` by the
+Round 26 work — and note R26-MED-1 there, "the session-start report hid half
+of a failure", which is the same observation this branch made from the other
+end: the hook printed U2 only, so J4 had to be found by running the gate
+directly. Two release-package problems this branch reported and did not
+touch are also closed on `main`: the stale U4 rotation in
+`release_jlcpcb/cpl.csv` (R26-HIGH-3) and the three GND stitching segments
+its board file was missing.
+
+Deliberately NOT carried into the corpus: R26-CRIT-1, R26-CRIT-2 and
+R26-HIGH-1/2 are all CPL rotation findings, and the boundary table at the
+top of this file puts CPL rotation outside the bench. It has its own gate.
+A corpus entry for a failure class the bench cannot detect would be a
+coverage claim with nothing behind it.
 
 ### What Phase 0 measured
 

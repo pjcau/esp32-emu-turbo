@@ -6,11 +6,16 @@
       "id": "INV-SW-PWR",
       "round": 0,
       "title": "SW_PWR is not in series with the battery",
-      "source": "docs/known-issues.md:302",
+      "source": "docs/known-issues.md:309",
       "source_match": "SW_PWR is not in series",
       "phase": 2,
-      "classes": ["invariant", "as-built"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "invariant",
+        "as-built"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "in the switch_off scenario the board stays powered: only SW_PWR pad 2 is routed, as a stub tap on BAT+, and the J3 -> Q1 -> BAT+ -> U2.6 path never passes through the switch. True isolation is unplugging J3.",
       "expect": "reproduced"
@@ -22,8 +27,13 @@
       "source": "scripts/generate_schematics/sheets/display.py:14",
       "source_match": "connector_pad = 41 - panel_pin",
       "phase": 3,
-      "classes": ["invariant", "pin-mapping"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "invariant",
+        "pin-mapping"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "the ILI9488 model must address the panel by panel pin and reach the board through pad = 41 - panel_pin. Both files are correct; a bench that 'fixes' either side has broken the display.",
       "expect": "reproduced"
@@ -35,8 +45,13 @@
       "source": "scripts/generate_schematics/sheets/display.py:27",
       "source_match": "panel_pin 38 (IM0)",
       "phase": 3,
-      "classes": ["invariant", "strapping"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "invariant",
+        "strapping"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "J4 pads 1 and 3 (panel pins 40 and 38, IM2 and IM0) are tied to GND and +3V3 to select the 8-bit 8080 interface. The bench must model them as mode inputs that select that mode, so a change to either strap changes the modelled bus width rather than reading as an unconnected supply pad.",
       "expect": "reproduced"
@@ -45,11 +60,16 @@
       "id": "INV-LED-PIN-NUMBERING",
       "round": 0,
       "title": "the LED symbol numbers its pins opposite to the footprint",
-      "source": "docs/known-issues.md:72",
+      "source": "docs/known-issues.md:78",
       "source_match": "numbering translation",
       "phase": 1,
-      "classes": ["invariant", "pin-mapping"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "invariant",
+        "pin-mapping"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "LED1/LED2 pin 1 is the anode in this repo's symbol and pad 1 is the cathode in the footprint. The circuit is the same on both sides: anode through R17/R18 to +3V3, cathode to GND. The bench must get the current direction from the footprint, not the symbol.",
       "expect": "reproduced"
@@ -58,11 +78,17 @@
       "id": "INV-VBUS-FRAGMENTS",
       "round": 0,
       "title": "VBUS is three copper components on the fabricated board",
-      "source": "docs/known-issues.md:308",
+      "source": "docs/known-issues.md:315",
       "source_match": "VBUS is fragmented into 3 components",
       "phase": 1,
-      "classes": ["invariant", "as-built", "single-orientation"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "invariant",
+        "as-built",
+        "single-orientation"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "J1.9 and J1.11 are isolated from the main VBUS copper, so the receptacle delivers VBUS in one plug orientation only. Functional and documented. The bench must state the orientation dependence and must not report a missing supply.",
       "expect": "reproduced"
