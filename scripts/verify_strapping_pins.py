@@ -199,9 +199,12 @@ def test_gpio45_pullup_skip():
     Without this, GPIO45 gets pulled HIGH at boot -> VDD_SPI=1.8V -> PSRAM fails.
     """
     print("\n-- GPIO45 Pull-Up Skip (routing.py) --")
-    routing_path = os.path.join(BASE, "scripts", "generate_pcb", "routing.py")
-    with open(routing_path) as f:
-        routing_src = f.read()
+    # routing is a package since 2026-07-26 — read every module of it.
+    import glob
+    routing_dir = os.path.join(BASE, "scripts", "generate_pcb", "routing")
+    routing_src = "\n".join(
+        open(f).read()
+        for f in sorted(glob.glob(os.path.join(routing_dir, "*.py"))))
 
     # Check for the i==10 skip in the pull-up loop
     has_skip = bool(re.search(
