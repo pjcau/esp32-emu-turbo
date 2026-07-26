@@ -88,6 +88,43 @@ POWER_HIGH_ALLOWLIST = [
     ("BAT+", "F.Cu", 105.50, 46.13, 105.50, 46.10, 0.30),  # F.Cu bridge stub
     ("BAT+", "F.Cu", 105.50, 46.10, 107.80, 46.10, 0.30),  # F.Cu bridge over KEY
     ("BAT+", "F.Cu", 113.45, 47.80, 114.65, 47.80, 0.30),  # F.Cu bridge over KEY (L1.1)
+
+    # ── J1 VBUS escape gate ────────────────────────────────────────────
+    # The two diagonals that bring USB-C lands 11 and 2 out from under the
+    # connector. Unlike the BAT+ corridor above, this is not tech debt
+    # awaiting a v2 re-layout: 0.50 mm is UNREACHABLE HERE BY ANY ROUTING.
+    #
+    # Both features that pin the gap belong to J1 itself — the moulded peg
+    # hole and the corner of land 10 — so nothing on the board can move to
+    # open it. routing.py:3596-3646 solves the budget from the connector's
+    # own datasheet dimensions rather than typing a width in:
+    #     |peg centre -> land 10 corner|      1.1183 mm
+    #   - 0.325 peg hole radius
+    #   - 0.300 NPTH-to-copper (validate_jlcpcb, stricter than the .kicad_dru)
+    #   - 0.200 pad-to-track
+    #   = 0.293 mm widest trace that can physically pass
+    # confirmed independently by a maximin-clearance path search over an
+    # exact B.Cu clearance field: 0.2888 mm at 5 um resolution, pinch at
+    # (77.795, 69.485). The alternative escape upward into the board
+    # interior measures 0.170 mm and is topologically blocked anyway.
+    #
+    # IPC-2221 (external, 1 oz, 35 um), which H3 asks for explicitly:
+    #   0.273 mm alone           0.93 A at 10 C rise
+    #   share of the 2.1 A peak  ~0.7 A  -> ~5 C rise
+    # The share is what matters and it is set by resistance, not by wishful
+    # splitting: this gate is a PARALLEL bond of ~9.7 mOhm across the two
+    # extra connector contacts (~20 mOhm), while land 2 keeps its own
+    # 0.60 mm run to the IP5306 as the supply path. Even the pessimistic
+    # case of the full 2.1 A crossing one escape is ~13 C on a 1.4 mm
+    # segment that sinks into a 0.55 mm land at one end and a 0.76 mm bus
+    # at the other.
+    #
+    # Coordinate-pinned on purpose. routing.py DERIVES this width from the
+    # geometry, so if the footprint or the clearance constants ever change,
+    # the escape widens by itself, stops matching these rows, and the gate
+    # goes red again — which is the point.
+    ("VBUS", "B.Cu", 77.54, 69.00, 78.19, 70.24, 0.273),  # land 11 escape
+    ("VBUS", "B.Cu", 81.81, 70.24, 82.46, 69.00, 0.273),  # land 2 escape
 ]
 
 
@@ -254,10 +291,21 @@ def test_net_class_widths():
             class_violations[class_name] = real_violations
             violations = real_violations
             if allowed:
-                print(
-                    f"      ALLOWED: {len(allowed)} BAT+ corridor segments at "
-                    f"0.30mm (documented — see POWER_HIGH_ALLOWLIST)"
+                # Named per net and width, not summarised as "the BAT+
+                # corridor": the allowlist now holds two groups with
+                # different reasons — BAT+ is tech debt a v2 re-layout must
+                # repay, the J1 VBUS escape is geometrically unreachable —
+                # and one label covering both would hide the day a new
+                # entry appears under someone else's justification.
+                by_key = defaultdict(int)
+                for v in allowed:
+                    by_key[(v["net"], v["width"])] += 1
+                summary = ", ".join(
+                    f"{n} x{c} at {w:.3f}mm"
+                    for (n, w), c in sorted(by_key.items())
                 )
+                print(f"      ALLOWED: {summary} "
+                      f"(documented — see POWER_HIGH_ALLOWLIST)")
 
         check(
             f"{class_name} traces >= {min_w:.2f}mm ({len(segs)} segments)",

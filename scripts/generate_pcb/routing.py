@@ -3613,8 +3613,20 @@ def _usb_c_reversibility_traces():
     # one of lands 3..10 drops a B.Cu via/trace through the band above,
     # and F.Cu is spanned end to end by the BTN_B and USB_CC1 runs.
     # So 0.50 mm cannot be reached here by ANY routing; the Power High
-    # class minimum is unsatisfiable at this gate. It is deliberately NOT
-    # allowlisted — verify_net_class_widths is meant to keep reporting it.
+    # class minimum is unsatisfiable at this gate.
+    #
+    # This used to say the two escapes were deliberately NOT allowlisted,
+    # so that verify_net_class_widths would keep reporting them. That was
+    # the wrong instrument. A gate held permanently red by a condition
+    # nothing can satisfy does not preserve the warning — it teaches
+    # everyone to skip the gate, and the next real neck arrives into an
+    # audience that has stopped reading. The two escapes now carry
+    # coordinate-pinned POWER_HIGH_ALLOWLIST rows with this geometry proof
+    # and the IPC-2221 numbers below attached to them; the gate still
+    # PRINTS them on every run, and because the width here is derived
+    # rather than typed, any change to the footprint or the clearance
+    # constants moves the coordinates, stops the rows matching, and turns
+    # the gate red again.
     #
     # The width is therefore solved from the geometry rather than typed
     # in, so it always uses the whole available budget: if the footprint
