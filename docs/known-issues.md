@@ -353,6 +353,22 @@ and is six releases stale; the tag is the truth.
 
 ## C — Cleanups with a known fix and a known reason they are still open
 
+- **`make render-pcb` leaves the tree in a state that fails `verify-all`.**
+  It depends on `generate-pcb`, which rewrites the `.kicad_pcb` and drops
+  every `filled_polygon`, and nothing re-fills them afterwards. So a render
+  — a read-only-looking, documentation-only action — silently turns the
+  zone-fill gate red and, if the render runs concurrently with a commit,
+  the pre-commit DFM hook blocks the commit for a reason that has nothing
+  to do with what is being committed. **Both happened during Round 26.**
+  Same trap applies to any target that depends on `generate-pcb` without
+  the zone-fill step: check `render-all` too.
+  **Fix:** either make the zone fill part of `generate-pcb` itself, or have
+  the render targets depend on a filled board (as `export-gerbers-fast`
+  effectively does) instead of on the raw generator. Until then, after any
+  render: re-run `make export-gerbers-fast`, or `git checkout --
+  hardware/kicad/esp32-emu-turbo.kicad_pcb website/static/net-explorer-data.json`
+  when the render output is unchanged.
+
 - ~~**Phantom nets `LCD_BL` and `LCD_RD`**~~ — DONE in `35d6454`. They were
   declared in `primitives.NET_LIST` with zero pads and were the only two
   `drc_check` warnings; ids 18/19 are now retired gaps, and DRC reports
