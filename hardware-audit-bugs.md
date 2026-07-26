@@ -3232,3 +3232,55 @@ merge. Both layers run. No CRIT or HIGH found.
   repeating `routing.py`'s "panels have internal limiting".
 - **H6** — the LED2 CPL override. Unchanged: no gate can settle it, the
   deciding test is visual on proto #1.
+
+## Round 28 Findings (2026-07-26) — the panel datasheet was in the repo all along
+
+The Virtual Bench's panel-side view (T3.1, `scripts/vbench/display.py`) said
+the ILI9488 controller could not be modelled because "the panel is the only
+component in the design with no datasheet in `hardware/datasheets/`". That is
+true of that directory and false of the repo: **two pages of the panel
+datasheet are checked in as images**, at
+`website/static/img/ili9488-fpc40-pinout.png` and
+`ili9488-datasheet-specs.png`, and `website/docs/design/components.md` has
+referenced them since it was written.
+
+Reading them produced one finding.
+
+### R28-HIGH-1 — panel pin 13 (SPI SDI) is left floating where the datasheet requires it tied
+
+- **Evidence**: the datasheet's own pin table, pin 13 "SPI SDI/SDA": *"SPI
+  interface input pin. The data is latched on the rising edge of the SCL
+  signal. **If not used, please fix this pin at VDDI or DGND level.**"*
+  (`website/static/img/ili9488-fpc40-pinout.png`)
+- **The board**: panel pin 13 maps to J4 pad 28 (41 − 13), and pad 28 carries
+  no net. `datasheet_specs.py::J4` declares it `_unconnected()` with the
+  function text "NC". So the pin floats.
+- **Why this is not the same as the other NC pins.** The datasheet
+  distinguishes them pin by pin, and no summary in this repo had carried the
+  distinction:
+  - pin 12 RDX — *"If not used, please fix this pin at VDDI or GND"* → the
+    board ties it to +3V3. **Correct, and now citable.**
+  - pin 13 SPI SDI — *"fix this pin at VDDI or DGND"* → **floating. This
+    finding.**
+  - pin 14 SPI SDO — *"If not used, let this pin open"* → open. Correct.
+  - pin 8 FMARK/TE — *不用时悬空* (leave floating when unused) → open.
+    Correct.
+  An input left floating is not the same as an output left open. SDI is an
+  input buffer with no internal pull the datasheet mentions; floating, it can
+  sit near threshold, oscillate, and draw shoot-through current in the panel's
+  controller.
+- **Severity**: unquantified. The panel is powered and in 8-bit 8080 mode
+  where SDI is unused, and prototype #1 evidently drives a display, so this is
+  not a dead-board defect. It is a datasheet requirement the design does not
+  meet, with no measurement behind either the risk or the dismissal.
+- **Not fixable in place**: pad 28 is unrouted on a fabricated board. Respin:
+  route J4 pad 28 to GND, which is the nearer of the two the datasheet allows
+  and is already adjacent (pads 25, 27 region carries GND).
+- **Why no gate caught it**: every gate compares the board against
+  `datasheet_specs.py`, which encodes pad 28 as `_unconnected()` — the
+  expectation *describes the copper*, so it agrees with it. Same shape as
+  R25-HIGH-1 (the missing backlight ballast) and as the C3/EN case: the
+  requirement lived in a document nobody had read into a checkable form.
+- **Caught by**: `make bench-display`, which now checks unused panel pins
+  against the datasheet's tie/open instruction pin by pin.
+

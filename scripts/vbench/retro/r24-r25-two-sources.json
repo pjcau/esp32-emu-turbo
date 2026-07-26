@@ -9,9 +9,16 @@
       "source": "hardware-audit-bugs.md:2514",
       "source_match": "R24-HIGH-1",
       "phase": 1,
-      "classes": ["dc-operating-point", "two-source-drift"],
-      "mutation": {"kind": "move_pin", "ref": "R20", "pin": "1",
-                   "to_net": "GND"},
+      "classes": [
+        "dc-operating-point",
+        "two-source-drift"
+      ],
+      "mutation": {
+        "kind": "move_pin",
+        "ref": "R20",
+        "pin": "1",
+        "to_net": "GND"
+      },
       "must_report": "with R20 from the amplifier input node to GND instead of to PAM_VREF, a DC current of about VREF/20k flows through the input network, offsetting the speaker output and clipping it asymmetrically",
       "expect": "caught",
       "note": "Fixed on the board after v4.3.1; prototype #1 still has it. netlist.py --delta v4.3.1 shows the fix as R20.1/R21.1 moving GND -> PAM_VREF, so any audio measurement on proto #1 must be interpreted with the bug present."
@@ -23,9 +30,16 @@
       "source": "hardware-audit-bugs.md:2580",
       "source_match": "R24-HIGH-3",
       "phase": 0,
-      "classes": ["schematic-hole", "two-source-drift"],
-      "mutation": {"kind": "detach_pin", "ref": "SW_RST", "pin": "1",
-                   "side": "schematic"},
+      "classes": [
+        "schematic-hole",
+        "two-source-drift"
+      ],
+      "mutation": {
+        "kind": "detach_pin",
+        "ref": "SW_RST",
+        "pin": "1",
+        "side": "schematic"
+      },
       "must_report": "RESET and BOOT are absent from the schematic netlist, so the cross-check has nothing to compare the board's reset and boot buttons against",
       "expect": "caught",
       "note": "The board was always correct here; the wires were drawn 5.08 mm from the pins they appeared to touch. A rendered sheet that looks right to a human reader is the hazard."
@@ -37,8 +51,13 @@
       "source": "hardware-audit-bugs.md:2820",
       "source_match": "R25-CRIT-1",
       "phase": 1,
-      "classes": ["model-vs-datasheet", "power-on-reset"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "model-vs-datasheet",
+        "power-on-reset"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "the EN net has exactly two pins (U1.3 and SW_RST.1), no resistor to +3V3 and no capacitor to GND, so EN has no defined level at power-on and no reset delay -- against U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf page 28, which requires an RC of R = 10k and C = 1uF at EN",
       "expect": "caught",
@@ -51,12 +70,17 @@
       "source": "hardware-audit-bugs.md:2867",
       "source_match": "R25-HIGH-1",
       "phase": 1,
-      "classes": ["model-vs-datasheet", "unbounded-current"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "model-vs-datasheet",
+        "unbounded-current"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "J4 pad 8 (panel pin 33, LED-A) sits directly on +3V3 with the cathodes on GND and no series element, so the backlight current is set by the difference between the rail and the LED string's Vf spread divided by its dynamic resistance -- unbounded by design",
       "expect": "caught",
-      "note": "The panel is the only part in this design with no datasheet in hardware/datasheets/. _schema.py therefore refuses to validate a panel model at all, on purpose: the requirement currently lives only in a Markdown table, which is how it was lost."
+      "note": "Corrected 2026-07-26: this note used to say the panel had no datasheet in this repo and that its backlight requirement 'lives only in a Markdown table'. Two pages of the panel datasheet are checked in as images at website/static/img/ili9488-*.png and have been referenced from components.md all along. What is true is narrower: there is no PDF in hardware/datasheets/, which is the only place models/_schema.py will accept a citation from — so a panel Model still cannot validate, and the fix is to put those pages there. R28-HIGH-1 is what reading them produced."
     },
     {
       "id": "R25-LOW-1",
@@ -65,8 +89,12 @@
       "source": "hardware-audit-bugs.md:2952",
       "source_match": "R25-LOW-1",
       "phase": 1,
-      "classes": ["topology-recognition"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "topology-recognition"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "R20 and R21 both run PAM_VREF to PAM_IN_AC, i.e. 10k in parallel, and nothing connects PAM_IN_AC to GND -- the correct topology, but one resistor short of minimal",
       "expect": "caught",
@@ -79,12 +107,36 @@
       "source": "scripts/verify_decoupling_adequacy.py:59",
       "source_match": "\"C28\": 10.0",
       "phase": 1,
-      "classes": ["gate-agrees-with-design", "model-vs-bom"],
-      "mutation": {"kind": "none"},
+      "classes": [
+        "gate-agrees-with-design",
+        "model-vs-bom"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
       "present_now": true,
       "must_report": "C28 has pads on +3V3 and GND but is DNP -- absent from the BOM, the CPL and the schematic, removed from assembly because it sits under the module body -- so the 10 uF it contributes to the ESP32 supply exists in no physical board",
       "expect": "caught",
       "note": "Found by netlist.py's D5 class while building Phase 0, not by an audit round. Same shape as R25-CRIT-1: a budget computed from a part that is not fitted, in a gate whose comment says its values come from the BOM. jlcpcb_export.py:420 records the removal; verify_decoupling_adequacy.py:59 was never told."
+    },
+    {
+      "id": "R28-HIGH-1",
+      "round": 28,
+      "title": "panel pin 13 (SPI SDI) floats where the datasheet requires it tied",
+      "source": "hardware-audit-bugs.md:3249",
+      "source_match": "R28-HIGH-1",
+      "phase": 3,
+      "classes": [
+        "model-vs-datasheet",
+        "floating-input"
+      ],
+      "mutation": {
+        "kind": "none"
+      },
+      "present_now": true,
+      "must_report": "panel pin 13 maps to J4 pad 28 and that pad carries no net, while the panel datasheet's pin table says 'If not used, please fix this pin at VDDI or DGND level' — an input, unlike pin 14 (SDO) which the same table says to leave open",
+      "expect": "caught",
+      "note": "Found only because the panel datasheet's own pages are checked into the repo as images (website/static/img/ili9488-fpc40-pinout.png). The bench had been saying the panel had no datasheet here, which was true of hardware/datasheets/ and false of the repo."
     }
   ]
 }

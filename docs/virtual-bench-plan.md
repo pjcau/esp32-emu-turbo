@@ -664,11 +664,40 @@ five-column table immediately below — the IM2:IM1:IM0 mode table — and readi
 every five-column row in the file let its rows overwrite panel pin 1, which
 came out named "1". The parser now anchors on the pinout table's own header.
 
-**The panel still cannot be a `Model`.** `models/_schema.py` requires a
-document in `hardware/datasheets/`, and the panel is the one part that has
-none — which is exactly how its missing backlight ballast survived (R25-HIGH-1).
-It is handled the way `sources.py` handles the LiPo: declared, with its
-provenance stated, and flagged.
+**Correction: the panel's datasheet IS in this repo.** Two of its pages are
+checked in as images — `website/static/img/ili9488-fpc40-pinout.png` and
+`ili9488-datasheet-specs.png` — and `components.md` has referenced them since
+it was written. This plan and three modules said otherwise, which was true of
+`hardware/datasheets/` and false of the repo. The difference is not academic:
+reading those pages produced **R28-HIGH-1**.
+
+The datasheet's pin table distinguishes unused pins **one from another**, and
+no summary in this repo had carried the distinction:
+
+| Panel pin | Datasheet says | Board does | |
+|---|---|---|---|
+| 12 RDX | "If not used, please fix this pin at VDDI or GND" | tied to +3V3 | correct, now citable |
+| 13 SPI SDI | "If not used, please fix this pin at VDDI or DGND level" | **floating** (pad 28, no net) | **R28-HIGH-1** |
+| 14 SPI SDO | "If not used, let this pin open" | open | correct |
+| 8 FMARK/TE | 不用时悬空 — leave floating when unused | open | correct |
+
+An unused **input** left floating is not the same as an unused **output** left
+open. SDI is an input buffer with no internal pull the datasheet mentions;
+floating, it can sit near threshold and draw shoot-through current in the
+panel's controller. Severity is unquantified — the panel works on prototype #1
+— but it is a datasheet requirement the design does not meet, and no gate
+encoded it because `datasheet_specs.py` declares pad 28 `_unconnected()`: the
+expectation *describes the copper*, so it agrees with it. Same shape as
+R25-HIGH-1 and as C3/EN.
+
+Not fixable in place: pad 28 is unrouted on a fabricated board. Respin: route
+it to GND. `make bench-display` exits 1 on it, and `sd_and_display` pins the
+fault count at exactly 1 so that fixing it fails the scenario just as loudly
+as breaking another would.
+
+What remains true is narrower: `models/_schema.py` accepts a citation only
+from `hardware/datasheets/`, so a panel `Model` still cannot validate. Putting
+those two pages there is what would change that.
 
 So T3.1's other halves stay unbuilt and say so: the ILI9488 **controller**
 command set, MADCTL and rotation, pixel format, and the setup/hold windows a

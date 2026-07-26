@@ -181,10 +181,13 @@ def test_schema():
     rejects("a model with no parameters is rejected",
             lambda: good_model(params={}))
 
-    # The structural consequence of R25-HIGH-1: the display panel has no
-    # datasheet in this repo, so no panel model can validate until one is
-    # added. If this test ever fails, someone has weakened rule 2 — or the
-    # panel datasheet finally arrived, in which case delete the test.
+    # The structural consequence of R25-HIGH-1, stated precisely: two pages
+    # of the panel datasheet ARE in this repo, as images under
+    # website/static/img/. What is absent is a PDF in hardware/datasheets/,
+    # which is the only place _schema.py accepts a citation from — so no
+    # panel model can validate until those pages are put there. If this test
+    # fails, either rule 2 was weakened or the pages arrived, and the second
+    # case is a good day.
     panel_docs = [f for f in os.listdir(
         os.path.join(BASE, "hardware", "datasheets"))
         if "ILI9488" in f or "panel" in f.lower()]
@@ -929,8 +932,26 @@ def test_phase3():
 
     check("the controller's command set and timing are declared unmodelled",
           {"command_set", "pixel_format", "timing"} <= set(disp.UNMODELLED))
-    check("display.py exits 0 on this board",
-          _quiet(disp.main, []) == 0)
+
+    # The datasheet distinguishes unused INPUTS (tie them) from unused
+    # OUTPUTS (leave them open), pin by pin. No summary in this repo carried
+    # that distinction until the datasheet images were read.
+    unused = disp.check_unused_pins(view)
+    check("panel pin 13 is reported floating against the datasheet "
+          "(R28-HIGH-1)",
+          any("pin 13" in f for f in unused), f"got {unused}")
+    check("panel pin 12 (RDX), which IS tied, is not reported",
+          not any("pin 12" in f for f in unused), f"got {unused}")
+    check("panel pin 14 (SDO) being open is correct, not a fault",
+          not any("pin 14" in f for f in unused), f"got {unused}")
+    # Tying an output the datasheet says to leave open must also be caught,
+    # or the rule is only half a rule.
+    tied_sdo = [p._replace(net="+3V3") if p.pin == 14 else p for p in view]
+    check("tying pin 14 shut is caught too",
+          any("pin 14" in f for f in disp.check_unused_pins(tied_sdo)))
+
+    check("display.py exits 1 while pin 13 floats — a real finding, not a "
+          "clean run", _quiet(disp.main, []) == 1)
 
 
 # ── I. Phase 3: audio and SD ────────────────────────────────────────

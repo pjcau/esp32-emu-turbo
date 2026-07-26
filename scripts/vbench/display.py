@@ -20,12 +20,18 @@ which states it was verified against the panel datasheet shipped by the
 seller, with the datasheet images embedded. It is parsed rather than copied so
 there is one table, not two.
 
-That document is not a PDF in `hardware/datasheets/`, so the panel **cannot**
-be a `models._schema.Model` — the schema requires a document the repo holds,
-and it refuses this one on purpose (R25-HIGH-1: the panel is the one part with
-no datasheet here, and that is exactly how its missing backlight ballast went
-unnoticed). The panel is therefore handled the way `sources.py` handles the
-LiPo: declared for what it is, with its provenance stated, and flagged.
+**The panel's datasheet IS in this repo** — two of its pages, as images, at
+`website/static/img/ili9488-fpc40-pinout.png` and `ili9488-datasheet-specs.png`,
+referenced from components.md since it was written. An earlier version of this
+module said the opposite, which was true of `hardware/datasheets/` and false
+of the repo, and the difference is not academic: reading those pages is what
+produced R28-HIGH-1 below.
+
+What remains true is narrower. `models/_schema.py` accepts a citation only
+from `hardware/datasheets/`, so a panel `Model` still cannot validate and the
+panel is handled the way `sources.py` handles the LiPo: declared, provenance
+stated, flagged. Putting those two pages in `hardware/datasheets/` is what
+would change that.
 
 ## What cannot be modelled yet
 
@@ -67,15 +73,46 @@ PanelPin = collections.namedtuple(
     "PanelPin", "pin symbol description expected pad net volts level")
 
 PROVENANCE = (
-    "website/docs/design/components.md, section 'FPC 40-Pin Pinout', which "
-    "states it was verified against the panel datasheet shipped by the seller "
-    "and warns against generic ILI9488 pinout tables. The panel has NO "
-    "datasheet in hardware/datasheets/, so models/_schema.py refuses to make "
-    "it a Model — see R25-HIGH-1.")
+    "website/docs/design/components.md, section 'FPC 40-Pin Pinout', parsed. "
+    "It is transcribed from the panel datasheet's own pages, which are in "
+    "this repo as images (website/static/img/ili9488-*.png) — that is where "
+    "the unused-pin rules below come from. There is still no PDF in "
+    "hardware/datasheets/, which is the only place _schema.py accepts a "
+    "citation from, so a panel Model cannot validate yet.")
+
+# What the panel datasheet says to do with the pins this design does not use.
+# Source: website/static/img/ili9488-fpc40-pinout.png — the datasheet's own
+# pin table, embedded in the repo and referenced from
+# website/docs/design/components.md. It draws a distinction no summary in this
+# repo had carried: two unused pins must be TIED, and two must be LEFT OPEN.
+#
+#   pin 12 RDX      "Read enable in MCU parallel interface. If not used,
+#                    please fix this pin at VDDI or GND."
+#   pin 13 SPI SDI  "SPI interface input pin. If not used, please fix this
+#                    pin at VDDI or DGND level."
+#   pin 14 SPI SDO  "SPI interface output pin. If not used, let this pin
+#                    open."
+#   pin  8 FMARK/TE "Tearing effect signal ... (不用时悬空)" — leave floating
+#                    when unused.
+#
+# An input left floating is not the same as an output left open, and the
+# datasheet says so pin by pin. This is the check that distinction buys.
+TIE_IF_UNUSED = {
+    12: "VDDI or GND",
+    13: "VDDI or DGND",
+}
+LEAVE_OPEN_IF_UNUSED = {
+    8: "tearing-effect output, unused",
+    14: "SPI data output, unused",
+}
+PIN_RULE_SRC = ("website/static/img/ili9488-fpc40-pinout.png — the panel "
+                "datasheet's own pin table")
 
 UNMODELLED = {
     "command_set": "ILI9488 command set, MADCTL and rotation need the "
-                   "controller datasheet, which this repo does not hold",
+                   "CONTROLLER datasheet. The two panel pages this repo holds "
+                   "are the module's pinout and mechanical specification, not "
+                   "the controller's register set.",
     "pixel_format": "RGB565 vs RGB666 selection is a controller register, "
                     "same gap",
     "timing": "setup/hold against the 20 MHz pclk needs the controller's AC "
@@ -205,6 +242,31 @@ def check_interface_mode(view):
     return mode == "8080 8-bit parallel", mode, detail
 
 
+def check_unused_pins(view):
+    """Unused panel pins must be tied or open exactly as the datasheet says."""
+    by_pin = {p.pin: p for p in view}
+    faults = []
+    for pin, where in sorted(TIE_IF_UNUSED.items()):
+        p = by_pin.get(pin)
+        if p is None:
+            faults.append(f"panel pin {pin} is missing from the pinout")
+            continue
+        if p.net is None:
+            faults.append(
+                f"panel pin {pin} ({p.symbol}) is FLOATING on pad {p.pad}; the "
+                f"panel datasheet says to fix it at {where} when unused. A "
+                f"floating input sits near threshold and can oscillate — this "
+                f"is an input, not an output, and the datasheet distinguishes "
+                f"the two pin by pin.")
+    for pin, why in sorted(LEAVE_OPEN_IF_UNUSED.items()):
+        p = by_pin.get(pin)
+        if p is not None and p.net is not None:
+            faults.append(
+                f"panel pin {pin} ({p.symbol}, {why}) carries {p.net!r}; the "
+                f"datasheet says to leave this one open")
+    return faults
+
+
 def check_data_bus(view):
     """DB0..DB7 must land on LCD_D0..LCD_D7 in order. Returns list of faults."""
     faults = []
@@ -275,6 +337,19 @@ def main(argv=None):
     for f in faults:
         print(f"    {f}")
     problems.extend(faults)
+
+    unused = check_unused_pins(view)
+    print()
+    print(f"  Unused pins, per {PIN_RULE_SRC}:")
+    print(f"    tie when unused : "
+          f"{', '.join(f'pin {p} -> {w}' for p, w in sorted(TIE_IF_UNUSED.items()))}")
+    print(f"    leave open      : "
+          f"{', '.join(f'pin {p}' for p in sorted(LEAVE_OPEN_IF_UNUSED))}")
+    if not unused:
+        print("    all of them obey it")
+    for f in unused:
+        print(f"    {f}")
+    problems.extend(unused)
 
     print()
     print("-" * 72)

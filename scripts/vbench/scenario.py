@@ -92,6 +92,7 @@ def _quantities(setup):
     ok_mode, mode, _detail = display.check_interface_mode(view)
     q["display.interface_mode"] = mode
     q["display.data_bus_faults"] = len(display.check_data_bus(view))
+    q["display.unused_pin_faults"] = len(display.check_unused_pins(view))
 
     v5 = op.voltages.get("+5V")
     if v5 is not None:
