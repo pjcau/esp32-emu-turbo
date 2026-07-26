@@ -214,6 +214,26 @@ that 90° would require.
 netlist mapping is correct, untouched, and a different axis — see "Do not
 fix" below.
 
+**Confirmed on hardware, 2026-07-26.** The deciding test this entry used to
+ask for has now been done, on prototypes #1 and #2:
+
+- **The IP5306 sits vertical on both boards.** The copper demands a vertical
+  body — the two pad columns are 6 mm apart in X with the 1.27 mm pitch
+  running along Y — so this rules out 0° and 180° outright, and confirms the
+  shipped `cpl=0` is not what those boards were built with. JLCPCB corrected
+  it at assembly. **That is why the boards charge despite the CPL, and it
+  retires the "boards R4–R8 charge, therefore 0° is fine" argument for
+  good.**
+- **Pin 1 is at the top-left**, viewed from the bottom side with the USB-C
+  on the lower edge. U2 is on B.Cu, so X mirrors in that view, and pad 1
+  (VIN, on VBUS) is exactly the top-left position — pad 8 (VOUT) is
+  top-right, pad 5 (KEY) bottom-right. So the physical pin 1 sits on pad 1:
+  the identity mapping, which is `cpl=270`.
+
+This is independent of the geometry and of the `CPL_bottom = (180 − O)`
+convention, and it agrees with both. It also transfers to J4, whose 270°
+comes from the same convention.
+
 **Three more parts are flagged by the same machinery and are NOT verified
 to this depth:** `D1` should be 90° (ships 270°), `Q1` should be 270°
 (ships 90°), and both are SOT-23-3 where 180° puts pin 3 where pins 1–2
