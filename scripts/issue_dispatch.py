@@ -411,6 +411,33 @@ def main():
         else:
             print("\nNothing to dispatch — every gate is green.")
 
+        # Proposals whose gate has since gone green.
+        #
+        # These are deliberately NOT deleted (see the note above: an agent's
+        # analysis is the expensive half of this loop and re-running nothing
+        # reproduces it). But a directory whose whole purpose is "what needs
+        # working on" was left holding five detailed write-ups of problems that
+        # had all been fixed — verify_cpl_rotation_law, verify_dangling_copper,
+        # verify_net_class_widths, verify_netlist_diff and
+        # verify_schematic_pin_connectivity, every one describing a gate that now
+        # passes. Anyone opening the directory reads five open problems. Keeping
+        # them silently is how a closed finding gets re-investigated; saying so
+        # costs one line.
+        failing = {f["gate"] for f in findings}
+        resolved = sorted(
+            old[: -len(PROPOSAL_SUFFIX)]
+            for old in os.listdir(OUT_DIR)
+            if old.endswith(PROPOSAL_SUFFIX)
+            and old[: -len(PROPOSAL_SUFFIX)] not in failing
+        )
+        if resolved:
+            print(f"\n{len(resolved)} proposal(s) kept for gates that now PASS "
+                  f"— analysis, not open work:")
+            for gate in resolved:
+                print(f"  {rel}/{gate}{PROPOSAL_SUFFIX}")
+            print("  Delete each once its reasoning is recorded in "
+                  "docs/known-issues.md or hardware-audit-bugs.md.")
+
     if unrouted:
         print(f"\nUNROUTED ({len(unrouted)}): "
               f"{' '.join(unrouted)}", file=sys.stderr)
