@@ -170,10 +170,69 @@ def evaluate(entries):
             for e in entries]
 
 
+def reanchor():
+    """Update line numbers whose cited text has moved. Returns a report.
+
+    The provenance check stays exactly as strict — this only moves a line
+    number when the cited text is found at exactly ONE other line. If the
+    text is gone, or appears more than once, nothing is written and the
+    entry is listed for a human: those are the two cases where a guess would
+    be indistinguishable from a fix.
+
+    It exists because docs/known-issues.md has been rewritten three times by
+    parallel work on this repo, and the same mechanical edit was made by hand
+    each time. A recurring manual step is a step that eventually gets skipped.
+    """
+    moved, stuck = [], []
+    for name in sorted(f for f in os.listdir(RETRO_DIR) if f.endswith(".json")):
+        path = os.path.join(RETRO_DIR, name)
+        with open(path) as fh:
+            doc = json.load(fh)
+        changed = False
+        for entry in doc["entries"]:
+            rel, _, lineno = entry["source"].rpartition(":")
+            full = os.path.join(BASE, rel)
+            if not os.path.exists(full):
+                stuck.append((entry["id"], f"{rel} does not exist"))
+                continue
+            with open(full, errors="replace") as fh:
+                lines = fh.readlines()
+            want, needle = int(lineno), entry["source_match"]
+            if 1 <= want <= len(lines) and needle in lines[want - 1]:
+                continue
+            found = [i for i, line in enumerate(lines, 1) if needle in line]
+            if len(found) == 1:
+                entry["source"] = f"{rel}:{found[0]}"
+                moved.append((entry["id"], rel, want, found[0]))
+                changed = True
+            else:
+                stuck.append((entry["id"],
+                              f"{needle!r} found at {found or 'nowhere'} in "
+                              f"{rel} — not a unique line, so not touched"))
+        if changed:
+            with open(path, "w") as fh:
+                json.dump(doc, fh, indent=2, ensure_ascii=False)
+                fh.write("\n")
+    return moved, stuck
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--reanchor", action="store_true",
+                    help="rewrite citation line numbers whose text moved to "
+                         "exactly one other line; refuses ambiguous cases")
     args = ap.parse_args(argv)
+
+    if args.reanchor:
+        moved, stuck = reanchor()
+        for eid, rel, old, new in moved:
+            print(f"  moved   {eid:22} {rel}: {old} -> {new}")
+        for eid, why in stuck:
+            print(f"  STUCK   {eid:22} {why}")
+        if not moved and not stuck:
+            print("  every citation already resolves — nothing to do")
+        return 2 if stuck else 0
 
     try:
         entries = load_corpus()
