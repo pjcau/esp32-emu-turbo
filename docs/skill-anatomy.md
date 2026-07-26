@@ -42,7 +42,7 @@ Three conventions for supporting files:
 
 1. **None** — most skills have only `SKILL.md` (this is the default).
 2. **`references/` subdirectory** — for multiple reference docs loaded on demand (see `verify/`).
-3. **Flat adjacent files** — for one supporting doc (see `pcb-review/review-checklist.md`).
+3. **Flat adjacent files** — for one supporting doc (see `pcb-review/references/review-checklist.md`).
 
 Use whichever fits. Don't mix styles inside the same skill.
 

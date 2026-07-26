@@ -63,7 +63,7 @@ pcb-check: ## Run PCB short circuit / zone fill analysis
 #   pcb_optimize      layout optimisation report, always exits 0
 #   violation_matrix  cross-tabulates other tools' output, always exits 0
 #   generate_*, render_*, inject-3d-models, kicad_fill_zones,
-#   update_component, jlcpcb_parts, net_classifier, pcb_cache
+#   update_component, jlcpcb_parts, net_classifier, pcb_cache, pcb_query
 #                     generators/helpers, not checks
 VERIFY_ALL_SCRIPTS = \
 	analyze_pad_distances \
