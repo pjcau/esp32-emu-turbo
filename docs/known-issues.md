@@ -89,9 +89,9 @@ Note the R20/R21 PAM8403 bias mismatch documented in
 `docs/waiver-audit-recovery.md` §O3 is **closed** upstream (`ee0ec02`) —
 that document is stale on this point, this list is current.
 
-### H3. Four VBUS segments are below their net-class minimum
+### H3. Four VBUS segments below their net-class minimum — CLOSED
 
-**Gate:** `verify_net_class_widths.py` — FAIL, "Power High traces >= 0.50mm"
+**Gate:** `verify_net_class_widths.py` — PASS
 
 Four B.Cu segments at **0.273 mm** against the 0.50 mm Power High
 minimum, all at the J1 (USB-C) fan-out:
@@ -100,13 +100,36 @@ minimum, all at the J1 (USB-C) fan-out:
 (77.6, 68.8)   (82.4, 68.8)   (77.5, 69.0)   (81.8, 70.2)
 ```
 
-VBUS carries USB charging current, so this is a current-density question,
-not a style question. `POWER_HIGH_ALLOWLIST` covers only the BAT+
-corridor and does not reach these.
+This entry used to offer "two honest options, no third: widen the
+segments, or add coordinate-pinned allowlist entries with an IPC-2221
+calculation". Widening turned out not to be one of them.
 
-**Fix — two honest options, no third:** widen the segments, or add
-coordinate-pinned allowlist entries with an IPC-2221 calculation, written
-the way the BAT+ entries are written. The calculation has to be *done*.
+The first two are **inside their own land**: the copper there is the
+0.55 mm pad, not the 0.273 mm line, so there is no neck to widen.
+`_buried_in_own_pad` exempts them on the pad's *inscribed circle*, which
+is rotation-proof and can therefore only ever exempt less than it should.
+
+The other two are the escape diagonals, and 0.50 mm is unreachable there
+by any routing. Both features that pin the gap belong to J1 itself — the
+moulded peg hole and the corner of land 10 — so nothing on the board can
+move to open it. `routing.py:3596-3660` solves the width from the
+connector's datasheet dimensions instead of typing one in (0.293 mm
+budget), and a maximin-clearance path search over an exact B.Cu clearance
+field agrees to 5 µm: 0.2888 mm, pinch at (77.795, 69.485). The
+alternative escape upward measures 0.170 mm and is blocked anyway.
+
+So only the second option existed, and the calculation is now done and
+attached to the rows in `POWER_HIGH_ALLOWLIST`: 0.273 mm carries 0.93 A
+alone at a 10 °C rise; this gate is a ~9.7 mΩ parallel bond across two
+extra connector contacts (~20 mΩ) while land 2 keeps its own 0.60 mm run
+as the supply path, so its share of the 2.1 A peak is ~0.7 A → ~5 °C.
+Even the whole 2.1 A through one escape is ~13 °C on a 1.4 mm segment
+that sinks into a land at one end and a 0.76 mm bus at the other.
+
+Not a suppression: the gate still prints both rows on every run, and
+because the width is derived rather than typed, any change to the
+footprint or the clearance constants moves the coordinates, stops the
+rows matching, and turns the gate red again.
 
 ### H4. The CPL rotation law disagrees with three placements
 

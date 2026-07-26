@@ -1228,8 +1228,20 @@ def _power_traces():
                        "B.Cu", W_PWR, n_vbus))
     # 3. via to F.Cu at (82.0, 61.0)
     parts.append(_via_net(vbus_fcu_start_x, vbus_fcu_y, n_vbus))
-    # 4. F.Cu horizontal to IP5306 approach column
-    parts.append(_seg(vbus_fcu_start_x, vbus_fcu_y, ip_vbus_via_x, vbus_fcu_y,
+    # 4. F.Cu horizontal to IP5306 approach column, SPLIT at the U4 tap.
+    #    The U4 TVS VBUS stub (emitted in _usb_traces) ends at
+    #    (90.95, 61.0), which was the MIDDLE of this single 28.6mm run.
+    #    The copper overlaps, so the board is fabricated connected — but
+    #    a mid-segment T has no shared endpoint, so verify_dangling_copper
+    #    read the TVS stub as copper ending in air. Splitting here makes
+    #    the tap a real endpoint: electrically identical, and the
+    #    junction becomes visible to the checker and to anyone opening
+    #    the board in KiCad. Not a waiver — the geometry now says what
+    #    the copper always did.
+    _u4_vbus_tap_x = 90.95
+    parts.append(_seg(vbus_fcu_start_x, vbus_fcu_y, _u4_vbus_tap_x, vbus_fcu_y,
+                       "F.Cu", W_PWR_HIGH, n_vbus))
+    parts.append(_seg(_u4_vbus_tap_x, vbus_fcu_y, ip_vbus_via_x, vbus_fcu_y,
                        "F.Cu", W_PWR_HIGH, n_vbus))
     # 5. F.Cu vertical down to IP5306 pin level
     parts.append(_seg(ip_vbus_via_x, vbus_fcu_y, ip_vbus_via_x, ip_vbus_via_y,
@@ -1400,20 +1412,39 @@ def _power_traces():
         #   dx=0.8, dy=0.5 → 0.94mm center distance, gap=0.34mm ✓
         (ip_ep[0] - 0.7,  ip_ep[1] + 2.0),  # (109.3, 44.5) — R6 moved north
     ]
-    # Connect each thermal via to EP pad via a single vertical B.Cu stub.
-    # Each stub goes straight down into the EP pad area (all inside pad bounds).
-    # R9-HIGH-3 FIX (2026-04-11): the center thermal via at (110, 45) has its
-    # stub extended all the way to the EP centre (110, 42.5) so that the
-    # segment endpoint matches the EP pad centre in _PAD_POS_LOOKUP and the
-    # registrar tags EP as GND. Other thermal vias stop at y=ip_ep[1]+1.5 as
-    # before.
+    # Connect each thermal via to the EP pad with a vertical B.Cu stub
+    # that lands ON the EP pad centre. ONE rule for all three vias.
+    #
+    # The previous split — centre via to ip_ep[1], the other two to
+    # ip_ep[1] + 1.5 — stopped the side stubs at y = 44.0, and the EP
+    # pad's bottom edge is y = 43.9 (centre 42.5, height 2.8). So both
+    # side stubs ended 0.1mm OUTSIDE the pad: copper reaching nothing on
+    # the layer it was drawn on, and no B.Cu thermal bond between those
+    # two vias and the EP they exist to cool. The block's own comment
+    # above ("Place inside EP pad bounds to avoid dead-end issues") is
+    # the intent; +1.5 missed it by a tenth of a millimetre.
+    # Caught by verify_dangling_copper.py.
+    #
+    # Shape matters as much as reach, and three gates each police a
+    # different part of it:
+    #   - stopping at (tvx, ip_ep[1]) is inside the pad, so
+    #     verify_dangling_copper passes, but the JLCDFM dead-end rule in
+    #     verify_dfm_v2 recognises a termination only at a registered pad
+    #     position, a via, or another segment endpoint — the two side
+    #     stubs read as dead ends at x = 108.5 / 109.3;
+    #   - running each stub diagonally to ip_ep fixes that, but three
+    #     diagonals meeting at one point make a 31 deg wedge, and the
+    #     JLCDFM sharp-corner rule calls that an acid trap.
+    # So: drop each via vertically onto the EP centre line, then chain
+    # the drops together along that line into the pad centre. Every
+    # corner is 90 deg, every endpoint is shared with the next segment,
+    # and no two segments overlap.
     for tvx, tvy in _ip5306_therm_vias:
         parts.append(_via_net(tvx, tvy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
-        # Center via (tvx = ip_ep[0]) goes all the way to EP centre (ip_ep[1]).
-        if abs(tvx - ip_ep[0]) < 0.01:
-            parts.append(_seg(tvx, tvy, tvx, ip_ep[1], "B.Cu", W_PWR, n_gnd))
-        else:
-            parts.append(_seg(tvx, tvy, tvx, ip_ep[1] + 1.5, "B.Cu", W_PWR, n_gnd))
+        parts.append(_seg(tvx, tvy, tvx, ip_ep[1], "B.Cu", W_PWR, n_gnd))
+    _therm_xs = sorted({tvx for tvx, _ in _ip5306_therm_vias} | {ip_ep[0]})
+    for _xa, _xb in zip(_therm_xs, _therm_xs[1:]):
+        parts.append(_seg(_xa, ip_ep[1], _xb, ip_ep[1], "B.Cu", W_PWR, n_gnd))
 
     # ── SD card (U6, TF-01A) power connections ───────────────────
     # Pin 4 = VDD (+3V3), Pin 6 = VSS (GND), Shield pins 10-13 = GND.
@@ -3582,8 +3613,20 @@ def _usb_c_reversibility_traces():
     # one of lands 3..10 drops a B.Cu via/trace through the band above,
     # and F.Cu is spanned end to end by the BTN_B and USB_CC1 runs.
     # So 0.50 mm cannot be reached here by ANY routing; the Power High
-    # class minimum is unsatisfiable at this gate. It is deliberately NOT
-    # allowlisted — verify_net_class_widths is meant to keep reporting it.
+    # class minimum is unsatisfiable at this gate.
+    #
+    # This used to say the two escapes were deliberately NOT allowlisted,
+    # so that verify_net_class_widths would keep reporting them. That was
+    # the wrong instrument. A gate held permanently red by a condition
+    # nothing can satisfy does not preserve the warning — it teaches
+    # everyone to skip the gate, and the next real neck arrives into an
+    # audience that has stopped reading. The two escapes now carry
+    # coordinate-pinned POWER_HIGH_ALLOWLIST rows with this geometry proof
+    # and the IPC-2221 numbers below attached to them; the gate still
+    # PRINTS them on every run, and because the width here is derived
+    # rather than typed, any change to the footprint or the clearance
+    # constants moves the coordinates, stops the rows matching, and turns
+    # the gate red again.
     #
     # The width is therefore solved from the geometry rather than typed
     # in, so it always uses the whole available budget: if the footprint

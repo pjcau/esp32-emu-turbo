@@ -130,8 +130,11 @@ def evaluate() -> list[dict]:
             continue
         if fp is None:
             rec["status"] = "NOREF"
-            rec["detail"] = (f"no cached EasyEDA reference for {bom['lcsc']} "
-                             f"(API returns 403; cache is the only source)")
+            rec["detail"] = (
+                f"no cached EasyEDA reference for {bom['lcsc']} — restore it "
+                f"with `git checkout -- scripts/.easyeda_cache`. Do not "
+                f"re-fetch: this gate must judge against the geometry that "
+                f"was reviewed, not whatever the API serves today.")
             out.append(rec)
             continue
 

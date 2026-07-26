@@ -45,6 +45,21 @@ _JLCPCB_ROT_CORRECTIONS = [
     # frames match, so the default correction (180, cancels the bottom-side
     # mirror) is the correct one here.
     (r"^SOT-23-5", 180),
+    # SOT-23-6 MUST also come before the generic "^SOT-23" rule below, and
+    # for the reason that rule's own comment already gives further down:
+    # EasyEDA draws SOT-23-3 with pads 1/2 in a COLUMN and SOT-23-6 with
+    # them in a ROW, an inconsistency internal to its library. The -90
+    # below is the compensation for the column frame, so applying it to
+    # SOT-23-6 as well subtracts a rotation that was never there.
+    #
+    # Measured, not argued — the two parts differ only in this term:
+    #     Q1  SOT-23-3  C10487  row_board=180  row_ee=270  cpl=90  OK
+    #     U4  SOT-23-6  C7519   row_board=180  row_ee=  0  cpl=90  FAIL
+    # Same row_board, row_ee exactly 90 apart, so one blanket correction
+    # cannot be right for both. Dropping to the default 180 moves U4's
+    # emitted angle by +270 to cpl=0, which is what the law derives.
+    # This is the split the regex needed, not a per-part delta.
+    (r"^SOT-23-6", 180),
     (r"^SOP-(?!18_|4_)", 270),   # SOP packages (except SOP-18, SOP-4)
     (r"^SOIC-", 270),            # SOIC packages
     (r"^TSSOP-", 270),           # TSSOP packages
