@@ -61,8 +61,19 @@ hardware/kicad/~*.lck
 # External DFM analysis output (KiBot + Tracespace)
 hardware/kicad/external-dfm-output/
 
-# EasyEDA reference footprint cache (verify_easyeda_footprint.py, LCSC-keyed)
-scripts/.easyeda_cache/
+# ERC report + its schematic fingerprint (erc_check.py regenerates on demand)
+hardware/kicad/.erc-report.json
+hardware/kicad/.erc-report.stamp
+
+# EasyEDA reference footprints (verify_easyeda_footprint.py, LCSC-keyed).
+# NOT a cache any more: the EasyEDA API returns HTTP 403, so these files are
+# the only remaining source of reference geometry and three gates read them
+# (verify_easyeda_footprint, verify_cpl_rotation_law, analyze_pin1_marker).
+# An incomplete checkout used to change the rotation law's verdict run to run,
+# so the footprints, symbols and 3D meshes are tracked. The .step models are
+# not: 66 MB, and nothing reads them (inject-3d-models.py uses the KiCad
+# libraries instead).
+scripts/.easyeda_cache/**/*.step
 test-roms/*.sfc
 test-roms/*.smc
 test-roms/*.nes
