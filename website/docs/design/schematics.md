@@ -121,8 +121,8 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC synchr
 | Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
 | R24 | Resistor | 100 kΩ | Q1 gate pull-down (MOSFET ON for correct polarity) | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
-| LED1 | Red LED | 0805 | Charging indicator (IP5306) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
-| LED2 | Green LED | 0805 | Fully charged indicator (IP5306) | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
+| LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
+| LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
 | SW_PWR | Slide switch | MSK12C02 | Power on/off — **⚠ v1 as-built: not in series, see warning below** | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
 | C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C2 | Capacitor | 22 µF tantalum 16V (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω) | LDO output stability | [PDF](/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf) |
@@ -227,7 +227,7 @@ switch, so sliding it changes nothing. Consequences on v1:
 **Charge-and-play:**
 1. Connect USB-C with SW_PWR ON
 2. System runs normally while battery charges
-3. LED1 (red) = charging, LED2 (green) = fully charged
+3. LED1 and LED2: both red, both plain +3V3 power indicators. The old "LED1 = charging, LED2 (green) = fully charged" description was aspirational — the IP5306's LED pins (2–4) are NC on the fabricated board, and C19171391 is a red part despite its BOM label. Respin: route U2 pins 2/4 to the LEDs if charge indication is wanted
 
 ### Backfeed Protection Analysis
 

@@ -102,7 +102,7 @@ MENU_ENC = (62, -24.2)
 
 # Charging LEDs (front side, bottom-left)
 LED_CHARGE_ENC = (-55, -30)    # Red LED — charging
-LED_FULL_ENC = (-48, -30)      # Green LED — fully charged
+LED_FULL_ENC = (-48, -30)      # LED2 (red, C19171391) — second power indicator; U2 LED pins are NC
 
 # ── BOTTOM side (B.Cu): everything else ───────────────────────────
 

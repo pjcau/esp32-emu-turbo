@@ -197,7 +197,7 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
     # completely different part.
     "LED2": (
         180,
-        "Green LED 0805 C19171391. Analytical determination (no physical "
+        "Red LED 0805 C19171391 (was mislabelled green). Analytical determination (no physical "
         "board needed): EasyEDA footprint "
         "scripts/.easyeda_cache/C19171391/fp.pretty/LED0805-R-RD_RED."
         "kicad_mod lines 23-24 place pad 1 at x=+1.05 and pad 2 at "
@@ -206,7 +206,7 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
         "NOT pad 1. Compare LED1 C84256 (same skill, lines 26-27): "
         "pad 1 at x=-1.10 IS co-located with its cathode silk notch "
         "(lines 17-23, x=-1.75..-2.10). Datasheet "
-        "hardware/datasheets/LED2_Green-LED-0805_C19171391.pdf page 1 "
+        "hardware/datasheets/LED2_Red-LED-0805_C19171391.pdf page 1 "
         "'Package Profile' diagram shows pin ① = cathode (diode symbol "
         "triangle points to pin 1). Conclusion: EasyEDA author swapped "
         "pad numbering on C19171391 (footprint author error, not a "

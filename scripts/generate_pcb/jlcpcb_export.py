@@ -242,10 +242,30 @@ _JLCPCB_ROT_DELTAS = {
     #   (EasyEDA could not be re-fetched live: the API returns HTTP 403 for
     #   every LCSC id, so scripts/.easyeda_cache/ cannot be repopulated —
     #   POLARITY_AUDIT.md is the archived copy of that reference.)
-    "LED2": 180, # Green LED 0805 (C19171391) — EasyEDA footprint has pad 1 on cathode-silk-OPPOSITE
-                 # side (pad 1 x=+1.05, cathode silk notch at x=-0.34..-2.22), inverted vs LED1
-                 # C84256 (pad 1 x=-1.10 co-located with cathode silk). Datasheet page 1 confirms
-                 # pin 1 = cathode. 180° rotation aligns physical cathode onto our GND pad 1.
+    "LED2": 180, # RED LED 0805 (C19171391, YONGYUTAI YLED0805R — sold as "green" in this
+                 # BOM for months; the part is red, 615-630 nm, and so is its datasheet).
+                 #
+                 # H6 CLOSED 2026-07-26 by both manufacturer datasheets, now in
+                 # hardware/datasheets/. Nothing about this footprint is "inverted":
+                 # the two LED vendors simply NUMBER their pins oppositely.
+                 #   LED1 C84256  (NationStar NCD0805R1): mark = cathode = pin 1.
+                 #     Cache: pad 1 x=-1.10, silk feature mean x=-0.57 — same end.
+                 #   LED2 C19171391 (YONGYUTAI YLED0805R): datasheet p.1 draws pin 1
+                 #     with a "+" (ANODE); green mark at pin 2 = cathode. Cache: pad 1
+                 #     x=+1.05, silk feature mean x=-0.38 — opposite ends, as the
+                 #     manufacturer intends.
+                 # Board copper (both LEDs, identical): pad 1 = GND -> needs cathode;
+                 # pad 2 = LED_RA -> R -> +3V3 -> needs anode. Identical placements
+                 # (rot 0, Top), so the opposite pin-1 conventions force a 180° CPL
+                 # delta: LED1 = 0°, LED2 = 180°. This override IS that delta.
+                 # The "aligns by 3D model" alternative collapses: within C19171391's
+                 # own EasyEDA part, the model colour patch (142.7°) and the silk
+                 # (178.3°) both sit at the pad-2/cathode end — the frames agree.
+                 # The pad-number frame itself is hardware-anchored by U2 (protos
+                 # #1/#2). Prediction for proto #1 (built from the pre-fix CPL,
+                 # LED2 at 0°): LED2 is reversed and stays dark — and it is NOT
+                 # confounded by battery state, because U2's LED pins are NC and
+                 # both LEDs are plain +3V3 power indicators.
 }
 
 
@@ -327,7 +347,7 @@ def _build_placements():
     p.append(("LED1", "Red",
               "LED_0805", x, y, 0, "top"))
     x, y = enc_to_pcb(*LED_FULL_ENC)
-    p.append(("LED2", "Green",
+    p.append(("LED2", "Red",  # C19171391 is red (YLED0805R); "Green" was a BOM-label error
               "LED_0805", x, y, 0, "top"))
 
     # ══════════════════════════════════════════════════════════════

@@ -704,9 +704,9 @@ COMPONENT_SPECS["LED1"] = {
 }
 
 COMPONENT_SPECS["LED2"] = {
-    "component": "Green LED 0805",
+    "component": "Red LED 0805 (C19171391 YLED0805R; BOM said green for months — the part and its datasheet are red)",
     "lcsc": "C19171391",
-    "datasheet": "LED2_Green-LED-0805_C19171391.pdf",
+    "datasheet": "LED2_Red-LED-0805_C19171391.pdf",
     "datasheet_page": 1,
     "pins": {
         "1": {"net": _exact("GND"),     "function": "Cathode — ground", "type": "smd"},

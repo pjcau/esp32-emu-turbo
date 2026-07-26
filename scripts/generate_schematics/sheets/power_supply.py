@@ -671,7 +671,7 @@ class PowerSupplySheet(SchematicSheet):
         # LED2 (Green - fully charged)
         led2_y = led_y + 18
         self.sym("R", "R18", "1k", led_x - 15, led2_y, ["1", "2"], angle=180)
-        self.sym("LED", "LED2", "Green", led_x, led2_y, ["1", "2"])
+        self.sym("LED", "LED2", "Red", led_x, led2_y, ["1", "2"])  # C19171391 = YLED0805R, red
         self.v33(led_x - 15, led2_y - 8)
         self.wire(led_x - 15, led2_y - 8, led_x - 15, led2_y - 3.81)
         self.wire(led_x - 15, led2_y + 3.81, led_x - 3.81, led2_y)

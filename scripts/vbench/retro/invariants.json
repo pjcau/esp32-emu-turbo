@@ -6,7 +6,7 @@
       "id": "INV-SW-PWR",
       "round": 0,
       "title": "SW_PWR is not in series with the battery",
-      "source": "docs/known-issues.md:376",
+      "source": "docs/known-issues.md:393",
       "source_match": "SW_PWR is not in series",
       "phase": 2,
       "classes": [
@@ -60,7 +60,7 @@
       "id": "INV-LED-PIN-NUMBERING",
       "round": 0,
       "title": "the LED symbol numbers its pins opposite to the footprint",
-      "source": "docs/known-issues.md:86",
+      "source": "docs/known-issues.md:88",
       "source_match": "numbering translation",
       "phase": 1,
       "classes": [
@@ -78,7 +78,7 @@
       "id": "INV-VBUS-FRAGMENTS",
       "round": 0,
       "title": "VBUS is three copper components on the fabricated board",
-      "source": "docs/known-issues.md:382",
+      "source": "docs/known-issues.md:399",
       "source_match": "VBUS is fragmented into 3 components",
       "phase": 1,
       "classes": [

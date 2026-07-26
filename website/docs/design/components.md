@@ -269,7 +269,7 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | U6 | Micro SD Card Slot | `TF-01A` | [C91145](https://www.lcsc.com/product-detail/C91145.html) | 1 | microSD slot (TF-01A) — ROM storage | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
 | J3 | JST PH 2-pin SMD | `JST-PH-2P-SMD` | [C295747](https://www.lcsc.com/product-detail/C295747.html) | 1 | JST PH battery connector | — |
 | LED1 | Red LED 0805 | `LED_0805` | [C84256](https://www.lcsc.com/product-detail/C84256.html) | 1 | red LED — charging indicator | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
-| LED2 | Green LED 0805 | `LED_0805` | [C19171391](https://www.lcsc.com/product-detail/C19171391.html) | 1 | green LED — fully-charged indicator | [PDF](/datasheets/LED2_Green-LED-0805_C19171391.pdf) |
+| LED2 | Red LED 0805 | `LED_0805` | [C19171391](https://www.lcsc.com/product-detail/C19171391.html) | 1 | green LED — fully-charged indicator | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
 | L1 | 1uH 4.5A Inductor | `SMD-4x4x2mm` | [C280579](https://www.lcsc.com/product-detail/C280579.html) | 1 | L1 — IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | L2 | 2.2uH 2.95A Inductor | `IND-SMD-4.0x4.0` | [C36409](https://www.lcsc.com/product-detail/C36409.html) | 1 | L2 — SY8089 buck output inductor | — |
 | R1,R2 | 5.1k 0805 | `R_0805` | [C27834](https://www.lcsc.com/product-detail/C27834.html) | 2 | CC1/CC2 pull-downs — USB-C UFP detection | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |

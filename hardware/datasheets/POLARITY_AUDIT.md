@@ -31,7 +31,7 @@
 | Ref | LCSC | Package | CPL rot | Override | Verdict |
 |-----|------|---------|---------|----------|---------|
 | **LED1** | C84256 | LED 0805 red | 0° | — | CORRECT |
-| **LED2** | C19171391 | LED 0805 green | 180° | 180° | CORRECT w/ override |
+| **LED2** | C19171391 | LED 0805 **red** (was mislabelled green) | 180° | 180° | CORRECT w/ override — **reconfirmed 2026-07-26** from both LED datasheets; the original derivation's "pin 1 = cathode standard" premise was wrong (YONGYUTAI numbers pin 1 = anode), see the correction block below |
 | **C2** | C1953590 | Tantalum 22µF 16V 1206 (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | 180° | 180° | CORRECT w/ override |
 | **D1** | C37704 | BAT54C SOT-23 | **90°** | — | CORRECTED 2026-07-26 — was 270°, which seated no lead at all (3.120 mm off). See the correction block below |
 | **Q1** | C10487 | SI2301CDS SOT-23 | **270°** | — | CORRECTED 2026-07-26 — was 90°, which seated no lead at all (2.933 mm off). See the correction block below |
@@ -65,9 +65,40 @@ package as C2 but non-polarized — no polarity audit needed).
 - **Final orientation**: cathode LEFT → GND, anode RIGHT → R17. Forward biased.
 - **Verdict**: CORRECT.
 
-### LED2 — Green LED 0805 (C19171391) ⚠ EasyEDA pad numbering reversed
-- **Datasheet**: `hardware/datasheets/LED2_Green-LED-0805_C19171391.pdf` p.1 —
-  pin 1 = cathode (standard LED convention; triangle apex side).
+### LED2 — Red LED 0805 (C19171391) — verdict CONFIRMED 2026-07-26, derivation corrected
+
+> **CORRECTION (2026-07-26).** The 180° override below is **correct and
+> unchanged**, but three claims in the original chain were wrong, and H6
+> in `docs/known-issues.md` stayed open for months on the doubt they
+> created:
+>
+> 1. *"pin 1 = cathode (standard LED convention)"* — there is no such
+>    standard. The YLED0805R datasheet p.1 draws **pin ① with a "+"
+>    (ANODE)** and puts the green mark at pin ② = cathode. NationStar
+>    (LED1) numbers the opposite way. Per-manufacturer convention, not law.
+> 2. *"EasyEDA community-footprint author convention error"* — no error:
+>    the footprint follows YONGYUTAI's own numbering exactly (pad 1 =
+>    anode end, silk mark at the pad-2/cathode end).
+> 3. *"Without override … physical cathode on our pad 1 (GND) →
+>    reverse-biased"* — terminal swapped mid-sentence: cathode on GND
+>    would be *forward*. Without the override it is the **anode** that
+>    lands on pad 1 (GND), which is what reverse-biases the LED. The
+>    conclusion (dark) was right; the terminal named was not.
+>
+> Also: the part is **red** (615–630 nm), not green — "Green" was a label
+> error that reached BOM, CPL, schematic, docs and this file's own
+> heading. And both LEDs are plain +3V3 power indicators: U2's LED pins
+> (2–4) are NC on this board, so "does it light when powered" IS a valid
+> bench check, not confounded by charge state.
+>
+> Evidence: both manufacturer datasheets in this directory; cache
+> geometry re-read independently (pads + silk from `fp.pretty`); board
+> nets from `pcb_cache`. See H6 (CLOSED) in `docs/known-issues.md`.
+
+Original chain, kept for the record:
+
+- **Datasheet**: `hardware/datasheets/LED2_Red-LED-0805_C19171391.pdf` p.1 —
+  pin 1 = cathode (standard LED convention; triangle apex side). ← WRONG, see correction
 - **EasyEDA**: `scripts/.easyeda_cache/C19171391/fp.pretty/LED0805-R-RD_RED.kicad_mod`
   - pad 1 at `(+1.05, 0)` line 24 — **RIGHT**
   - silk cathode notch lines 16-20 (x = -0.34..-2.22) — LEFT

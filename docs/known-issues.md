@@ -31,9 +31,8 @@ gate wins** — delete the entry.
 No gate is red right now, and that is not the same as "nothing is open".
 Four of the fourteen parts the rotation law judges now pass as declared
 `EXCEPTION` rather than `OK`, because **the law is wrong for one of its
-cells** (H4). The remaining entries are unverified claims about an
-already-fabricated board (H6), the RESPIN list, plus closed records kept
-because each documents a way a gate can be fooled (H1–H5). A green suite means
+cells** (H4). The remaining entries are the RESPIN list, plus closed records kept
+because each documents a way a gate can be fooled (H1–H6). A green suite means
 no check currently disagrees with the design; it does not mean the design was
 checked against the physical board.
 
@@ -41,8 +40,11 @@ Reading order is by consequence, not by section. **H4 was the entry that
 could put a wrong part on the desk, and it is now resolved** — but read it
 anyway: it is the clearest worked example in this repo of a gate being
 confidently, narrowly wrong, and of the answer that was 180° from both the
-gate's verdict and the shipped value being the destructive one. H6 remains
-the only entry that depends on evidence no gate can produce.
+gate's verdict and the shipped value being the destructive one. H6 — long the
+only entry that depended on evidence no gate could produce — is now closed
+by the two LED manufacturers' datasheets: the "inverted pad numbering" was
+an artifact of assuming pin 1 = cathode universally, when the two vendors
+simply number their pins oppositely.
 
 ---
 
@@ -317,41 +319,56 @@ in the exported netlist, and `erc_check` printed PASS before and after. Fixed
 in the same round — errors now fail unless individually waived, guarded by
 `scripts/test_erc_severity.py`.
 
-### H6. The LED2 CPL override may itself be the bug
+### H6. The LED2 CPL override may itself be the bug — CLOSED
 
-**No gate can settle this.** `verify_cpl_rotation_law` reports LED2 `OK`
-with residual 0.0°, identical to LED1 — which is easy to misread as a
-resolution. It is not.
+**Closed 2026-07-26 by the manufacturer datasheets, not by a gate.** The
+entry's premise — "C19171391's pad numbering is inverted relative to its
+physical cathode mark" — turned out to be an artifact of an assumption
+baked into the extractors: that **pin 1 = cathode for every LED**. That is
+a per-manufacturer convention, not a law, and the two vendors here chose
+opposite ones:
 
-Two independent geometric extractors (F.SilkS mirror-asymmetry, and an
-off-centre colour patch in the manufacturer `.wrl`) agree that
-**C19171391's pad numbering is inverted** relative to its physical cathode
-mark, while C84256 (LED1) is aligned:
+| part | vendor | datasheet says | cache geometry agrees |
+|---|---|---|---|
+| LED1 `C84256` | NationStar NCD0805R1 | mark = **cathode = pin 1** | pad 1 x=−1.10, silk feature mean x=−0.57 — same end |
+| LED2 `C19171391` | YONGYUTAI YLED0805R | p.1 draws **pin 1 with a "+" (ANODE)**; green mark at pin 2 = cathode | pad 1 x=+1.05, silk feature mean x=−0.38 — opposite ends |
 
-```
-C84256    (LED1)  pad1=180.0  silk=176.8  mesh=180.3  delta=  0.3  aligned
-C19171391 (LED2)  pad1=  0.0  silk=178.3  mesh=142.7  delta=142.7  OPPOSITE
-```
+Both datasheets are now in `hardware/datasheets/` (`LED1_Red-LED-0805_C84256.pdf`,
+`LED2_Red-LED-0805_C19171391.pdf`). Nothing is inverted: the mark sits at
+the cathode on both parts, and the cathode is pin 1 on one and pin 2 on
+the other. The extractors' `OPPOSITE` verdict for C19171391 was the
+correct geometry read through the wrong universal assumption.
 
-Both readings of the evidence agree the numbering is inverted; they differ
-only on **which frame the pick-and-place follows**. The law derives its
-reference from the EasyEDA pad 1 → pad 2 bearing, i.e. it assumes the
-machine aligns by pad *numbers* — that is one of the two competing
-readings, so the gate cannot arbitrate between them. If the machine
-instead orients by the 3D model, then `_JLCPCB_ROT_OVERRIDES["LED2"] = 180`
-rotates a correct placement into a reversed one.
+With that resolved, the override follows analytically:
 
-**Deciding test, 30 seconds, the board is on the desk:** proto #1 was
-assembled from the PRE-fix CPL (LED2 at 0°). Look at LED2 under
-magnification and compare its cathode mark against which pad goes to GND.
-Do **not** use "does it light up" — LED2 is the IP5306 *fully-charged*
-indicator, so a dark LED is confounded by battery state.
+- **Board requirement (copper, both LEDs identical):** pad 1 = `GND` →
+  needs the cathode; pad 2 = `LED_RA` → R17/R18 → `+3V3` → needs the anode.
+- **Identical placements** (rot 0, Top), opposite pin-1 conventions ⇒ the
+  two CPL angles must differ by exactly 180°. Shipped CPL: LED1 = 0°,
+  LED2 = 180°. The `"LED2": 180` delta **is** that difference.
+- **The "machine aligns by the 3D model" alternative collapses:** within
+  C19171391's own EasyEDA part, the model colour patch (142.7°) and the
+  silk (178.3°) sit at the same pad-2/cathode end — the two frames agree
+  about physical reality and only disagreed about labels. The pad-number
+  frame itself is hardware-anchored by U2 (protos #1 and #2).
 
-This matters beyond LED2: **the same reasoning pattern signs off Q1, U2
-and U3.** If it is wrong here it is suspect there too.
+**What hardware can still add (optional cross-check, not blocking):**
+proto #1 was assembled from the PRE-fix CPL (LED2 at 0°), so the
+prediction is that its LED2 is reversed and stays dark. Note the old
+advice here — "do not use 'does it light up', it is confounded by battery
+state" — was itself wrong: **U2's LED pins (2–4) are NC on this board**,
+so both LEDs are plain +3V3 power indicators and LED2 should be lit
+whenever the board is powered. If proto #1's LED2 *is* lit, that means
+JLCPCB hand-corrected the reversed part at assembly, exactly as they did
+U2 — not that 0° was right.
 
-Work in progress on branch `worktree-pin1-analytic-rotation` (`faf61d7`),
-tool `scripts/analyze_pin1_marker.py`.
+**Collateral finding:** C19171391 is a **red** LED (YLED0805R, 615–630 nm),
+not green. The BOM, CPL, schematic value, docs and even the datasheet
+*filename* said green for months — the file `LED2_Green-LED-0805_C19171391.pdf`
+was byte-identical to the red YLED0805R datasheet fetched from LCSC. All
+renamed/corrected 2026-07-26. If a green fully-charged indicator is still
+wanted, that is a respin decision: pick an actual green part AND route
+U2 pins 2/4 to the LEDs, which are currently NC.
 
 ---
 
@@ -463,13 +480,30 @@ and is six releases stale; the tag is the truth.
   (~32 Ω at 60 mA), or fit a constant-current LED driver. Either is a routing
   change at `J4` pad 8 plus one part in BOM/CPL.
 
-  **Blocked on evidence, deliberately.** The exact resistor cannot be chosen
-  here because **there is no panel datasheet in `hardware/datasheets/`** — the
-  only source for the backlight rating is `components.md`, which is our own
-  secondary note. R25 already recorded that a part with no datasheet is the
-  repo's blind spot, and this is the part. Get the panel datasheet, read the
-  rated backlight current, then size it. Any value picked before that is a
-  guess wearing an engineering face.
+  **Evidence found 2026-07-26 — the family rating, not yet the exact panel.**
+  The exact 3.95" 40-pin bare panel is a generic AliExpress product
+  (item `1005009422879126`) with no published spec, but a same-family
+  panel — Focus LCDs `E35RG73248LW6M250-R`: ILI9488, 320×480, white-LED
+  backlight, common anode + per-string cathodes — publishes the class
+  rating, and its datasheet is now in the repo
+  (`hardware/datasheets/DISPLAY-FAMILY_E35RG73248LW6M250-R_FocusLCDs.pdf`,
+  outline drawing note 7):
+
+  > **BACK LIGHT: LED WHITE, 6 LED, 90mA, 3.2V±0.3V**
+
+  i.e. 6 parallel strings at 15 mA each, and — the number that matters —
+  **backlight Vf = 3.2 V ± 0.3 V**. Against our measured 3.327 V rail that
+  is 0.127 V of typical headroom, and a Vf-max (3.5 V) string never reaches
+  rated current at all. This *sharpens* the analysis above: the family
+  datasheet puts typical Vf 0.1 V higher than `components.md`'s 3.1 V.
+
+  **Sizing from the family numbers, once LED-A moves to +5 V:**
+  `R = (5.0 − 3.2) / 0.090 ≈ 20 Ω` for the 6-LED/90 mA class
+  (P = 0.16 W → 1206 or two 0805 in parallel); an 8-LED variant at
+  15 mA/string is 120 mA → ≈ 15 Ω, 0.22 W. **Final value still needs one
+  bench measurement on the actual panel** (drive LED-A from a bench supply
+  at 3.2 V, read the current) — that one number replaces the remaining
+  guess, and it is a 2-minute measurement on proto #1, not a purchase.
 
   **As-built risk:** prototypes light up, so the array survives whatever it
   draws today; the defect is that nobody knows what that is, and it varies

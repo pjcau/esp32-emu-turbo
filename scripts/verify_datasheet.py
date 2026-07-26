@@ -189,8 +189,8 @@ DATASHEET_SPECS = {
         "tht_drill_mm": None,
     },
     "LED2": {
-        "name": "Green LED 0805",
-        "datasheet": "LED2_Green-LED-0805_C19171391.pdf",
+        "name": "Red LED 0805",
+        "datasheet": "LED2_Red-LED-0805_C19171391.pdf",
         "footprint": "LED_0805",
         "signal_pins": 2,
         "pitch_mm": 1.9,
