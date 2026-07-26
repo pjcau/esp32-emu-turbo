@@ -93,19 +93,19 @@ ZONE_CLEARANCE_PATTERN = "zone clearance"
 REAL_ISSUES = {
     "isolated_copper": {
         "severity": "CRITICAL",
-        "source": "scripts/generate_pcb/routing.py + zone priorities",
+        "source": "scripts/generate_pcb/routing/ + zone priorities",
         "fix": "A fill island isolated from its net is an OPEN, not swarf. "
                "Run verify_power_net_integrity.py to see which net split.",
     },
     "via_dangling": {
         "severity": "CRITICAL",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Post-fill dangling via = the via never reached the zone. "
                "Check the zone actually pours around it (verify_zone_connectivity.py).",
     },
     "track_dangling": {
         "severity": "CRITICAL",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Post-fill dangling track = an open segment. Trace it with "
                "verify_net_connectivity.py.",
     },
@@ -117,7 +117,7 @@ REAL_ISSUES = {
     },
     "clearance_borderline": {
         "severity": "HIGH",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Below the JLCPCB 4-layer minimum enforced elsewhere in this "
                "repo. Widen the gap to >=0.15mm.",
     },
@@ -135,12 +135,12 @@ REAL_ISSUES = {
     },
     "clearance_trace": {
         "severity": "HIGH",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Increase trace spacing or move traces apart. Check segment coordinates.",
     },
     "copper_edge_clearance": {
         "severity": "HIGH",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Move traces away from board edge or FPC slot. Check _crosses_slot() logic.",
     },
     "silk_over_copper": {
@@ -160,7 +160,7 @@ REAL_ISSUES = {
     },
     "track_width": {
         "severity": "HIGH",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Increase trace width. Check W_PWR/W_SIG/W_DATA constants.",
     },
     "via_annular_ring": {
@@ -170,12 +170,12 @@ REAL_ISSUES = {
     },
     "unconnected_items": {
         "severity": "CRITICAL",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Add missing trace connection. Check routing functions for the affected net.",
     },
     "min_copper_clearance": {
         "severity": "HIGH",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Increase clearance between copper elements.",
     },
     # R9-MED-3 (2026-04-11): tracks_crossing must be CRITICAL.
@@ -186,7 +186,7 @@ REAL_ISSUES = {
     # (BTN_START crossing LCD_CS/DC/WR) ship past R7/R8 verification.
     "tracks_crossing": {
         "severity": "CRITICAL",
-        "source": "scripts/generate_pcb/routing.py",
+        "source": "scripts/generate_pcb/routing/",
         "fix": "Reroute one of the two crossing segments. Move it to the opposite copper layer (F.Cu↔B.Cu) or find an alternate corridor.",
     },
     # lib_footprint_issues: missing library entries. Not a fab issue but

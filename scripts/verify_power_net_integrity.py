@@ -195,7 +195,7 @@ def main():
     print()
     print("  Most common cause: a higher-priority pour zone on an inner layer")
     print("  carves the lower-priority zone into islands. Fix in")
-    print("  scripts/generate_pcb/routing.py::_power_zones() by raising the")
+    print("  scripts/generate_pcb/routing/power.py::_power_zones() by raising the")
     print("  starved net's zone priority, reshaping the overlapping zone so it")
     print("  does not enclose the source, or routing explicit copper from the")
     print("  source to the load instead of relying on the plane.")

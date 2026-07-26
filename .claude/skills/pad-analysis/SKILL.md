@@ -59,7 +59,7 @@ For each real violation, identify the fix location:
 | Issue Type | Fix File | Fix Action |
 |------------|----------|------------|
 | Pad-to-pad too close | `scripts/generate_pcb/board.py` | Move component in `_component_placeholders()` |
-| Via-to-pad too close | `scripts/generate_pcb/routing.py` | Move via position |
+| Via-to-pad too close | `scripts/generate_pcb/routing/` | Move via position |
 | Mounting hole clearance | `scripts/generate_pcb/board.py` | Increase hole-to-component gap |
 
 ### 5. Summary
@@ -75,4 +75,4 @@ Print a summary:
 
 - `scripts/analyze_pad_distances.py` — Main analysis script
 - `scripts/generate_pcb/board.py` — Component placement (fix positions here)
-- `scripts/generate_pcb/routing.py` — Via/trace positions (fix routing here)
+- `scripts/generate_pcb/routing/` — Via/trace positions (fix routing here)

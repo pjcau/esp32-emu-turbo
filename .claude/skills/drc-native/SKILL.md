@@ -42,15 +42,15 @@ For each real issue, the script maps it to the source file that controls it:
 
 | Violation Type | Source File | Suggested Fix |
 |---|---|---|
-| `clearance` | `scripts/generate_pcb/routing.py` | Increase trace spacing or move traces apart |
-| `copper_edge_clearance` | `scripts/generate_pcb/routing.py` | Move traces away from board edge or FPC slot |
+| `clearance` | `scripts/generate_pcb/routing/` | Increase trace spacing or move traces apart |
+| `copper_edge_clearance` | `scripts/generate_pcb/routing/` | Move traces away from board edge or FPC slot |
 | `silk_over_copper` | `scripts/generate_pcb/board.py` | Move silkscreen text to Fab layer |
 | `silk_overlap` | `scripts/generate_pcb/board.py` | Reduce text size or reposition labels |
 | `silk_edge_clearance` | `scripts/generate_pcb/board.py` | Move silkscreen text away from board edge |
-| `track_width` | `scripts/generate_pcb/routing.py` | Increase trace width constants |
+| `track_width` | `scripts/generate_pcb/routing/` | Increase trace width constants |
 | `via_annular_ring` | `scripts/generate_pcb/primitives.py` | Increase via size or reduce drill diameter |
-| `unconnected_items` | `scripts/generate_pcb/routing.py` | Add missing trace connection |
-| `min_copper_clearance` | `scripts/generate_pcb/routing.py` | Increase clearance between copper elements |
+| `unconnected_items` | `scripts/generate_pcb/routing/` | Add missing trace connection |
+| `min_copper_clearance` | `scripts/generate_pcb/routing/` | Increase clearance between copper elements |
 
 ## Step 5: Update Baseline (optional)
 

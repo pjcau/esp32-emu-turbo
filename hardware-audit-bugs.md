@@ -3284,3 +3284,86 @@ Reading them produced one finding.
 - **Caught by**: `make bench-display`, which now checks unused panel pins
   against the datasheet's tie/open instruction pin by pin.
 
+
+---
+
+## Round 29 Findings (2026-07-26) — the split's paper trail, and a quote nobody wrote
+
+Run at `ee1ce77` after: the routing package split (board byte-identical),
+R28 (parallel session — panel datasheet images found in-repo, pin 13
+floating), and the I2S_BCLK/LRCK net retirement (`19761d5`). Both layers
+run. No CRIT, no HIGH; two LOW, both fixed in-round.
+
+### Step 0 gates — all PASS
+
+| Gate | Result |
+|------|--------|
+| `make verify-all` | **74/74** |
+| KiCad native DRC (`--severity-all --all-track-errors`) | **0 violations of any type** |
+
+### Domain findings
+
+- **Power chain**: 0 new — LX at 0.76 end-to-end (R27-MED-1 holds)
+- **ESP32 boot**: 0 — Octal PSRAM 80 MHz confirmed in sdkconfig
+- **Display**: 0 new + **one positive verification recorded**: interface-mode
+  straps checked against the panel's own table for the first time —
+  (IM2,IM1,IM0) = (GND,+3V3,+3V3) = (0,1,1) = **8080 8-bit parallel**, exactly
+  the mode the firmware drives (pads J4.1/2/3 read from copper via
+  `pcb_query`). RDX tie to +3V3 also now citable (pin 12: "fix at VDDI or
+  GND"). **R28-HIGH-1 still open**: pad 28 (panel 13, SPI SDI) carries no net.
+- **Audio**: 0 — the I2S retirement is clean end-to-end: only `I2S_DOUT`
+  remains on copper (C22.1 + U1.10), firmware documents the removal at
+  `board_config.h:50`, `primitives.NET_LIST` keeps ids 24/25 as retired gaps.
+- **SD card**: 0 — U6.4 on +3V3 confirmed
+- **Buttons**: 0
+- **USB**: 0
+- **Emulator performance**: 0 — `display.c` uses `esp_lcd` i80 panel IO
+
+### Bug list
+
+#### R29-LOW-1 — the routing split left 25 files pointing at a dead path
+
+- **Files**: 6 gate scripts, 16 skills, `docs/known-issues.md`,
+  `docs/lifecycle.md`
+- **Problem**: `scripts/generate_pcb/routing.py` no longer exists (it is a
+  package), but every "fix it here" error message, skill table and doc
+  reference still named the file — including line-number citations
+  (`routing.py:3596-3660`) that now anchor to nothing. Gates all pass, so
+  none of this was caught by a gate: the rot lives in the REMEDIATION text
+  a red gate would print.
+- **Root cause**: the split updated the two gates that *read* the source as
+  text, but not the ones that merely *name* it — exactly the
+  `feedback_deleting_list_entries_leaves_doc_rot` class: grep the list
+  name, not just the consumers you remember.
+- **Fix**: applied in-round, with a member map rather than a blind rename —
+  `_power_zones` → `routing/power.py`, `_PAD_NETS`/`_init_pads`/`_via_net` →
+  `routing/_shared.py`, `_lcd_traces` (a name that had ALSO drifted — the
+  function is `_display_traces`) → `routing/display.py`; dead line-number
+  citations replaced with name anchors (`POWER_HIGH_ALLOWLIST derivation`).
+
+#### R29-LOW-2 — "via resistor" was a quote nobody wrote
+
+- **Files**: `website/docs/design/components.md`, `docs/known-issues.md`
+- **Problem**: the R25-HIGH-1 record said `components.md`, "quoting the
+  panel", specified LED-A as "+3V3 **via resistor**, always-on". The panel's
+  own pin table (`ili9488-fpc40-pinout.png`, surfaced by R28) says only
+  *"Anode of Backlight (2.9V–3.3V Typical: 3.1V)"* — no resistor, no
+  current rating. The "via resistor" was our design note wearing quote
+  marks: an invented citation, the same class as R25's justification
+  comments, one step more camouflaged.
+- **Consequence**: none on the finding itself — R25-HIGH-1 rests on
+  physics (0.13–0.23 V headroom across parallel white LEDs = undefined
+  operating point), and the datasheet's Vf row (2.9–3.3 typ 3.1) matches
+  what the analysis assumed. But a future reader chasing the "datasheet
+  requirement" would not have found it, and would have been right to doubt
+  the rest of the entry.
+- **Fix**: both files now attribute the note to us and cite the real table.
+  The backlight **current** rating remains unpublished anywhere — the bench
+  measurement on proto #1 is still the only way to close the value.
+
+### Still open
+
+- **R28-HIGH-1** — panel pin 13 (SPI SDI) floating; datasheet: "fix at VDDI
+  or DGND". Respin item: tie J4 pad 28 to +3V3 alongside pad 29 (RDX).
+- **R25-HIGH-1** — backlight current limit; bench measurement pending.
+- RESPIN list unchanged (EN RC, SW_PWR series, VBUS fragmentation).

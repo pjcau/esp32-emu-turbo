@@ -76,5 +76,5 @@ Using board_pos (not CPL pos) for translation isolates the rotation check from p
 - `scripts/verify_dfm_v2.py` — `test_batch_pin_alignment()` and `test_batch_pin_net_assignment()`
 - `scripts/generate_pcb/jlcpcb_export.py` — rotation/position corrections
 - `scripts/generate_pcb/footprints.py` — pad definitions (ground truth model)
-- `scripts/generate_pcb/routing.py` — `_compute_pads()` (PCB file convention)
+- `scripts/generate_pcb/routing/` — `_compute_pads()` (PCB file convention)
 - `release_jlcpcb/cpl.csv` — CPL data sent to JLCPCB

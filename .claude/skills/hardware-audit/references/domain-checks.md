@@ -9,7 +9,7 @@ Trace: USB-C → IP5306 → +5V → **U3 SY8089 buck** → +3.3V → ESP32
 
 Read and cross-check:
 - `scripts/generate_schematics/sheets/power_supply.py` — schematic
-- `scripts/generate_pcb/routing.py` — PCB routing (`_power_traces`)
+- `scripts/generate_pcb/routing/` — PCB routing (`_power_traces`)
 - `hardware/datasheet_specs.py` — IP5306, SY8089 pinouts
 - `hardware/datasheets/U2_IP5306_*.pdf` + `U3_SY8089AAAC_C78988.pdf`
 - `software/main/board_config.h` — power management notes
@@ -62,7 +62,7 @@ against this reversal; do not re-raise it.
 Cross-check:
 - `scripts/generate_schematics/sheets/display.py` (docstring uses panel-side)
 - `hardware/datasheet_specs.py::J4` (PCB uses connector-side)
-- `scripts/generate_pcb/routing.py::_lcd_traces` (B.Cu routing)
+- `scripts/generate_pcb/routing/display.py::_display_traces` (B.Cu routing)
 - `hardware/datasheets/U1_ESP32-S3-WROOM-1_*.pdf` (GPIO → LCD pins)
 
 Check:

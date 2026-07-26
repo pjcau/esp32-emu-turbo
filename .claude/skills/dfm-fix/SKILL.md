@@ -50,8 +50,8 @@ For each issue, identify which source file controls it:
 | Mounting hole text | `scripts/generate_pcb/primitives.py` | `mounting_hole()` |
 | Component positions | `scripts/generate_pcb/board.py` | `_component_placeholders()` |
 | Component spacing | `scripts/generate_pcb/board.py` | placement coordinates |
-| Trace clearance | `scripts/generate_pcb/routing.py` | trace segments |
-| Via sizes | `scripts/generate_pcb/routing.py` | `_via_net()` calls |
+| Trace clearance | `scripts/generate_pcb/routing/` | trace segments |
+| Via sizes | `scripts/generate_pcb/routing/` | `_via_net()` calls |
 | Soldermask | `scripts/generate_pcb/footprints.py` | pad definitions |
 | CPL rotation | `scripts/generate_pcb/jlcpcb_export.py` | `_JLCPCB_ROT_OVERRIDES` |
 | CPL position | `scripts/generate_pcb/jlcpcb_export.py` | `_JLCPCB_POS_CORRECTIONS` |
@@ -95,7 +95,7 @@ See `dfm-reference.md` in this skill directory for known issue patterns and thei
 ## Key Files
 
 - `scripts/generate_pcb/board.py` — Component placement, silkscreen labels, text layers
-- `scripts/generate_pcb/routing.py` — Trace routing, via sizes
+- `scripts/generate_pcb/routing/` — Trace routing, via sizes
 - `scripts/generate_pcb/footprints.py` — Footprint pad/mask definitions
 - `scripts/generate_pcb/primitives.py` — Mounting holes, board elements
 - `scripts/generate_pcb/jlcpcb_export.py` — CPL rotation/position corrections

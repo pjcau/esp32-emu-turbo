@@ -88,7 +88,7 @@ cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo && python3 scripts/drc_
 |------|---------|
 | `scripts/generate_pcb/board.py` | Board outline (`_board_outline`, line 117), mounting holes (`MOUNT_HOLES_ENC`, line 39), text labels (`_silkscreen_labels`, line 167), component placements |
 | `scripts/generate_pcb/primitives.py` | Layer stack (`layers_4layer`, line 33), board setup (`setup_4layer`, line 62), header, S-expression generators |
-| `scripts/generate_pcb/routing.py` | References board geometry: `BOARD_W`, `BOARD_H`, FPC slot zone |
+| `scripts/generate_pcb/routing/` | References board geometry: `BOARD_W`, `BOARD_H`, FPC slot zone |
 | `scripts/drc_check.py` | Design rule check |
 | `scripts/verify_dfm_v2.py` | DFM verification |
 | `hardware/kicad/esp32-emu-turbo.kicad_pcb` | Generated PCB output |

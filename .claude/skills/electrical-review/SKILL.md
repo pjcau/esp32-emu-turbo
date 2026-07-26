@@ -99,6 +99,6 @@ do not re-raise those as new findings.
 | `scripts/verify_power_sequence.py` | Power chain and sequencing (26 tests) |
 | `scripts/spice_power_check.py` | SPICE simulation of power rails |
 | `scripts/generate_schematics/config.py` | GPIO mapping (source of truth) |
-| `scripts/generate_pcb/routing.py` | PULL_UP_REFS, NET_ID, pad nets |
+| `scripts/generate_pcb/routing/` | PULL_UP_REFS, NET_ID, pad nets |
 | `software/main/board_config.h` | Firmware pin definitions |
 | `hardware/datasheet_specs.py` | Component pin-to-net specs |

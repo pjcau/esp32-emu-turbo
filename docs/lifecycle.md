@@ -32,7 +32,7 @@ Python source files that drive KiCad emission.
 | `/pcb-routing` | Route all traces + vias with collision grid |
 
 **Inputs**: `scripts/generate_schematics/config.py`, `scripts/generate_pcb/board.py`,
-`scripts/generate_pcb/routing.py`, `scripts/generate_pcb/footprints.py`
+`scripts/generate_pcb/routing/`, `scripts/generate_pcb/footprints.py`
 
 **Outputs**: none yet — only edits Python sources
 
@@ -100,7 +100,7 @@ Apply targeted fixes when verification fails. Always loop back through Generate 
 
 **Inputs**: Verification failures from Phase 3
 
-**Outputs**: Updates to `scripts/generate_pcb/routing.py`, `hardware/kicad/jlcpcb/bom.csv`,
+**Outputs**: Updates to `scripts/generate_pcb/routing/`, `hardware/kicad/jlcpcb/bom.csv`,
 `hardware/kicad/jlcpcb/cpl.csv`
 
 **Exit criteria**: Fix is applied, Phase 2 + Phase 3 both re-run clean.
