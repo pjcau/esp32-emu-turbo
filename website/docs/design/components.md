@@ -284,9 +284,9 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | C23,C24,C25 | 1uF 0805 | `C_0805` | [C28323](https://www.lcsc.com/product-detail/C28323.html) | 3 | PAM8403 VDD/PVDD decoupling | — |
 | C17,C18,C27 | 10uF 0805 | `C_0805` | [C15850](https://www.lcsc.com/product-detail/C15850.html) | 3 | bulk decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C1,C19,C30 | 22uF 1206 MLCC | `C_1206` | [C12891](https://www.lcsc.com/product-detail/C12891.html) | 3 | C1 buck input, C19 boost output, C30 buck output | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
-| SW1,SW2,SW3,SW4,SW5,SW6,SW7,SW8,SW9,SW10,SW11,SW12,SW13,SW_RST,SW_BOOT | SMT Tact Switch 5.1x5.1mm | `SW-SMD-5.1x5.1` | [C318884](https://www.lcsc.com/product-detail/C318884.html) | 15 | tact switches — D-pad, ABXY, Start/Select, L/R, Menu, RST, BOOT | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
+| SW1,SW2,SW3,SW4,SW5,SW6,SW7,SW8,SW9,SW10,SW11,SW12,SW13,SW15,SW14 | SMT Tact Switch 5.1x5.1mm | `SW-SMD-5.1x5.1` | [C318884](https://www.lcsc.com/product-detail/C318884.html) | 15 | tact switches — D-pad, ABXY, Start/Select, L/R, Menu, RST, BOOT | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | J4 | FPC 40-pin 0.5mm Bottom Contact | `FPC-40P-0.5mm` | [C2856812](https://www.lcsc.com/product-detail/C2856812.html) | 1 | FPC 40-pin 0.5 mm — ILI9488 display | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
-| SW_PWR | Slide Switch SS-12D00G3 | `SS-12D00G3` | [C431540](https://www.lcsc.com/product-detail/C431540.html) | 1 | SS-12D00G3 slide switch (SW_PWR) | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
+| SW16 | Slide Switch SS-12D00G3 | `SS-12D00G3` | [C431540](https://www.lcsc.com/product-detail/C431540.html) | 1 | SS-12D00G3 slide switch (SW16) | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
 | U4 | USBLC6-2SC6 USB ESD TVS | `SOT-23-6` | [C7519](https://www.lcsc.com/product-detail/C7519.html) | 1 | USBLC6-2SC6 — USB ESD/TVS protection | — |
 | R22,R23 | 22R 0402 | `R_0402` | [C25092](https://www.lcsc.com/product-detail/C25092.html) | 2 | USB D+/D- series termination | — |
 | D1 | BAT54C Dual Schottky Diode | `SOT-23` | [C37704](https://www.lcsc.com/product-detail/C37704.html) | 1 | BAT54C — dual Schottky, menu-combo diode OR | — |

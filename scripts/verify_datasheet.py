@@ -153,9 +153,9 @@ DATASHEET_SPECS = {
         "npth_count": 0,
         "tht_drill_mm": None,
     },
-    "SW_PWR": {
+    "SW16": {
         "name": "MSK12C02 Slide Switch",
-        "datasheet": "SW_PWR_Slide-Switch_C431540.pdf",
+        "datasheet": "SW16_Slide-Switch_C431540.pdf",
         "footprint": "SS-12D00G3",
         "signal_pins": 3,        # 3 SPDT pins
         "total_pads": 7,         # 3 signal + 4 shell
@@ -372,13 +372,13 @@ class TestDatasheetCompliance(unittest.TestCase):
                          f"J4 ({spec['name']}): expected {expected} "
                          f"total pads, got {len(pads)}")
 
-    def test_pin_count_SW_PWR(self):
-        """SW_PWR: 7 total pads (3 signal + 4 shell)"""
-        spec = DATASHEET_SPECS["SW_PWR"]
-        pads = _unique_pads(_signal_pads(self.pad_groups.get("SW_PWR", [])))
+    def test_pin_count_SW16(self):
+        """SW16: 7 total pads (3 signal + 4 shell)"""
+        spec = DATASHEET_SPECS["SW16"]
+        pads = _unique_pads(_signal_pads(self.pad_groups.get("SW16", [])))
         expected = spec.get("total_pads", spec["signal_pins"])
         self.assertEqual(len(pads), expected,
-                         f"SW_PWR ({spec['name']}): expected {expected} "
+                         f"SW16 ({spec['name']}): expected {expected} "
                          f"total pads, got {len(pads)}")
 
     # ── NPTH positioning hole tests ──────────────────────────────
@@ -413,19 +413,19 @@ class TestDatasheetCompliance(unittest.TestCase):
                                    msg=f"J1 NPTH drill: expected {spec['npth_drill_mm']}mm, "
                                    f"got {np['drill']}mm")
 
-    def test_npth_SW_PWR_count(self):
-        """SW_PWR: 2 NPTH holes x 0.9mm drill"""
-        spec = DATASHEET_SPECS["SW_PWR"]
-        nps = _npth_pads(self.pad_groups.get("SW_PWR", []))
+    def test_npth_SW16_count(self):
+        """SW16: 2 NPTH holes x 0.9mm drill"""
+        spec = DATASHEET_SPECS["SW16"]
+        nps = _npth_pads(self.pad_groups.get("SW16", []))
         self.assertEqual(len(nps), spec["npth_count"],
-                         f"SW_PWR: expected {spec['npth_count']} NPTH, got {len(nps)}")
+                         f"SW16: expected {spec['npth_count']} NPTH, got {len(nps)}")
 
-    def test_npth_SW_PWR_drill(self):
-        """SW_PWR NPTH drill = 0.9mm"""
-        spec = DATASHEET_SPECS["SW_PWR"]
-        for np in _npth_pads(self.pad_groups.get("SW_PWR", [])):
+    def test_npth_SW16_drill(self):
+        """SW16 NPTH drill = 0.9mm"""
+        spec = DATASHEET_SPECS["SW16"]
+        for np in _npth_pads(self.pad_groups.get("SW16", [])):
             self.assertAlmostEqual(np["drill"], spec["npth_drill_mm"], delta=0.05,
-                                   msg=f"SW_PWR NPTH drill: expected {spec['npth_drill_mm']}mm, "
+                                   msg=f"SW16 NPTH drill: expected {spec['npth_drill_mm']}mm, "
                                    f"got {np['drill']}mm")
 
     # ── THT drill size tests ────────────────────────────────────

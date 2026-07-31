@@ -332,7 +332,7 @@ Positioning holes (NPTH) must match the component peg diameter with adequate cle
 |-----|-----------|-------|-----------|----------------|--------------|-----------|--------|
 | J1 | USB-C 16P (C2765186) | 2x NPTH | 0.65 mm | ø0.65(2X) | ø0.50 mm | 0.15 mm | **PASS** |
 | U6 | TF-01A SD slot (C91145) | 2x NPTH | 1.00 mm | 2-∅1.00 | ø0.80 mm | 0.20 mm | **PASS** |
-| SW_PWR | MSK12C02 slide switch (C431540) | 2x NPTH | 0.90 mm | ø0.75 pegs | ø0.75 mm | 0.15 mm | **PASS** |
+| SW16 | MSK12C02 slide switch (C431540) | 2x NPTH | 0.90 mm | ø0.75 pegs | ø0.75 mm | 0.15 mm | **PASS** |
 | J3 | JST PH 2-pin THT (C173752) | 2x THT | 0.85 mm | ø0.64 pins | ø0.64 mm | 0.21 mm | **PASS** |
 
 ### Mounting Holes (6x NPTH, 2.5 mm)

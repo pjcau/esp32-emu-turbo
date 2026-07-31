@@ -142,20 +142,20 @@ def _button_traces():
         elif i <= 7:
             # Channels 6-7 (BTN_X, BTN_Y): jump over J1 front pads.
             # R9-HIGH-4 FIX (2026-04-11): reverted ch6 from 70.65 back to 70.80.
-            # The old 70.65 position was a compromise for SW_PWR.4b clearance
-            # (SW_PWR.4b at (36.40, 71.40), BTN_X approach via at (36.55, 70.65)
+            # The old 70.65 position was a compromise for SW16.4b clearance
+            # (SW16.4b at (36.40, 71.40), BTN_X approach via at (36.55, 70.65)
             #  had only 0.15 mm gap). But 70.65 was 0.15 mm from J1 front pad
             # bottom (70.375), also failing the 0.20 mm rule.
-            # Proper fix: move the BTN_X approach column (ax) WEST of SW_PWR
-            # entirely (override below) so the SW_PWR constraint no longer
+            # Proper fix: move the BTN_X approach column (ax) WEST of SW16
+            # entirely (override below) so the SW16 constraint no longer
             # forces a low chan_y. With ax=34.30, via (34.30, 70.80) is
-            # 2.10 mm west of SW_PWR.4b center → clears by 1.35 mm ✓.
+            # 2.10 mm west of SW16.4b center → clears by 1.35 mm ✓.
             # Gap to J1 front pad bottom (70.375): 70.80-0.125-70.375=0.30 mm ✓.
             # Gap to ch7 (71.55): 0.625 mm ✓.
             k = i - 6  # 0, 1
             b["chan_y"] = _J1_FRONT_PAD_BOTTOM + 0.125 + 0.30 + k * 0.75  # 70.80, 71.55
         elif i == 8:
-            # Channel 8 (BTN_START): ABOVE SW_PWR NPTH zone AND shoulder GND/BTN_L vias.
+            # Channel 8 (BTN_START): ABOVE SW16 NPTH zone AND shoulder GND/BTN_L vias.
             # DFM FIX: moved from 74.06 to 73.955 to allow ch9 above with edge clearance.
             # ch8 at 73.955: gap to BTN_L via(73.43,r=0.25) = 73.955-0.125-73.43-0.25=0.15mm ✓
             # gap to NPTH(38.5,72.55,r=0.45): trace bottom=73.83, NPTH top=73.00 → 0.83mm ✓
@@ -256,20 +256,20 @@ def _button_traces():
         used_approach_xs.add(round(ax, 2))
         b["approach_x"] = round(ax, 2)
 
-    # R9-HIGH-4 FIX (2026-04-11): force BTN_X approach column WEST of SW_PWR.
+    # R9-HIGH-4 FIX (2026-04-11): force BTN_X approach column WEST of SW16.
     #
     # Problem: the default allocator placed BTN_X (SW7, i=6) at ax=36.55 —
-    # inside the SW_PWR footprint body (x=35.8..44.2). BTN_X F.Cu channel
-    # trace at y=70.80 crosses the B.Cu SW_PWR.4b (BTN_SELECT) pad at
+    # inside the SW16 footprint body (x=35.8..44.2). BTN_X F.Cu channel
+    # trace at y=70.80 crosses the B.Cu SW16.4b (BTN_SELECT) pad at
     # (36.40, 71.40) on a different layer — no F.Cu conflict there, but the
     # approach via at (36.55, 70.80) has BOTH F.Cu and B.Cu annuli, and the
-    # B.Cu side was 0.15 mm from SW_PWR.4b. Also the 93.28 mm BTN_X F.Cu
+    # B.Cu side was 0.15 mm from SW16.4b. Also the 93.28 mm BTN_X F.Cu
     # horizontal from vx=129.83 west to ax=36.55 crossed J1 shield front
     # pads J1.13/14 at y=69.375 with only 0.15 mm clearance.
     #
-    # Fix: override BTN_X ax to 34.30 — west of SW_PWR body left edge
+    # Fix: override BTN_X ax to 34.30 — west of SW16 body left edge
     # (35.80) by 1.50 mm. The B.Cu approach-column vertical at x=34.30 is
-    # clear of SW_PWR pad 3 (37.75), pad 2 (39.25), and all 4x pads.
+    # clear of SW16 pad 3 (37.75), pad 2 (39.25), and all 4x pads.
     #
     # This does not change the F.Cu 93.28 mm horizontal length noticeably
     # (34.30 vs 36.55 is 2.25 mm) but removes the via conflict and lets
@@ -1331,12 +1331,12 @@ def _button_traces():
 def _reset_boot_traces():
     """Reset and Boot button traces (B.Cu, dev kit style).
 
-    SW_RST: EN pin to GND (hardware reset)
+    SW15: EN pin to GND (hardware reset)
       - GND pads (3,4) connect via GND plane (In1.Cu) through vias
       - Signal pads (1,2) connect to EN net via stub + via
         then B.Cu route to U1 pin 3 (EN)
 
-    SW_BOOT: GPIO0 to GND (download mode when held during reset)
+    SW14: GPIO0 to GND (download mode when held during reset)
       - GND pads (3,4) connect via GND plane (In1.Cu) through vias
       - Signal pads (1,2) connect to BTN_SELECT net (GPIO0)
         Simple GND via — the button just shorts GPIO0 to GND when pressed
@@ -1350,12 +1350,12 @@ def _reset_boot_traces():
     n_en = NET_ID["EN"]
     n_sel = NET_ID["BTN_SELECT"]
 
-    # ── SW_RST (Reset) ──
+    # ── SW15 (Reset) ──
     # Pads after B.Cu mirroring: p1=(98,63.65) p2=(92,63.65) p3=(98,67.35) p4=(92,67.35)
-    rst_p1 = _pad("SW_RST", "1")
-    rst_p2 = _pad("SW_RST", "2")
-    rst_p3 = _pad("SW_RST", "3")
-    rst_p4 = _pad("SW_RST", "4")
+    rst_p1 = _pad("SW15", "1")
+    rst_p2 = _pad("SW15", "2")
+    rst_p3 = _pad("SW15", "3")
+    rst_p4 = _pad("SW15", "4")
 
     if rst_p3:
         # GND: pad 3 → short stub down → via to In1.Cu GND plane
@@ -1396,12 +1396,12 @@ def _reset_boot_traces():
             parts.append(_seg(rst_p1[0], en_y, en_x, en_y,
                               "B.Cu", W_SIG, n_en))
 
-    # ── SW_BOOT (Boot/Download mode) ──
+    # ── SW14 (Boot/Download mode) ──
     # Pads after B.Cu mirroring: p1=(108,63.65) p2=(102,63.65) p3=(108,67.35) p4=(102,67.35)
-    boot_p1 = _pad("SW_BOOT", "1")
-    boot_p2 = _pad("SW_BOOT", "2")
-    boot_p3 = _pad("SW_BOOT", "3")
-    boot_p4 = _pad("SW_BOOT", "4")
+    boot_p1 = _pad("SW14", "1")
+    boot_p2 = _pad("SW14", "2")
+    boot_p3 = _pad("SW14", "3")
+    boot_p4 = _pad("SW14", "4")
 
     if boot_p3:
         # GND: pad 3 → stub down → via
@@ -1485,7 +1485,7 @@ def _menu_diode_traces():
       via (101.225, 62.400) size 0.60 (AABB x=[100.925,101.525])
         vs BTN_START  vert                           gap 0.350 mm
         vs BTN_SELECT vert                           gap 0.350 mm
-        vs SW_BOOT.2 pad (x=[101.5,102.5] y=[63.3,64.0])
+        vs SW14.2 pad (x=[101.5,102.5] y=[63.3,64.0])
                                                      gap 0.600 mm
         vs VBUS F.Cu y=61.0 (bottom edge 61.38)      gap 0.720 mm
       F.Cu y=62.400, x=101.225..137.0, w=0.25 (edges 62.275/62.525)
@@ -1494,7 +1494,7 @@ def _menu_diode_traces():
         vs GND via (128.30, 61.00) r=0.30            gap 0.725 mm
         vs GND via (135.00, 63.55) r=0.30            gap 0.725 mm
         vs GND vias (123.50, 64.50) / (128.30, 64.00) gap >= 1.175 mm
-        C2 / U3 / U6 / SW_BOOT pads and the BTN_A/BTN_X/BTN_Y verticals
+        C2 / U3 / U6 / SW14 pads and the BTN_A/BTN_X/BTN_Y verticals
         crossing this band are all B.Cu, so they do not share the layer.
       F.Cu vertical x=137.0, y=59.85..62.40
         vs BTN_R F.Cu jog at x=137, y=64.40..65.39   gap 2.000 mm
@@ -1810,7 +1810,7 @@ def _button_pullup_bridges():
     _bridge_south(parts, 43.95, 67.83, 57.0, NET_ID["BTN_UP"])      # east 23.9mm
 
     # BTN_SELECT: B.Cu stub from R13/C14 junction south to meet the
-    # SW_BOOT bridge F.Cu at y=58. Tap as a T-junction via mid-F.Cu.
+    # SW14 bridge F.Cu at y=58. Tap as a T-junction via mid-F.Cu.
     # Same net same layer after the via transition → connected.
     # R12 JLCDFM fix: via shrunk to 0.46 mm for 0.17 mm clearance to
     # BTN_L F.Cu at y=57.50 (row pitch 0.5 mm − via r 0.23 − trace hw 0.10).
@@ -1832,8 +1832,8 @@ def _button_pullup_bridges():
     # Allowlisted. SW13 menu-combo button is usable by pressing START+SELECT
     # separately as a workaround.
 
-    # ── SW_BOOT.2 → BTN_SELECT main chain ──
-    # The existing SW_BOOT → (102, 60) dangling via + short B.Cu stub
+    # ── SW14.2 → BTN_SELECT main chain ──
+    # The existing SW14 → (102, 60) dangling via + short B.Cu stub
     # (102, 63.65)→(102, 60) is already on BTN_SELECT net. Extend from
     # (102, 60) via F.Cu to BTN_SELECT main B.Cu vertical at x=60.45.
     # Route: F.Cu (102, 60) → (102, 58) short stub north (clear of EN

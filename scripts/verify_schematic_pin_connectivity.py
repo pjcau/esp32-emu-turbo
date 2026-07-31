@@ -19,7 +19,7 @@ hid it for four audit rounds:
   2. Every sheet file reuses the same low-numbered UUIDs, so KiCad
      attributes the violation to whichever symbol elsewhere in the
      hierarchy shares the colliding UUID. The R24 report showed SW3
-     (a Controls-sheet button) blamed for SW_RST/SW_BOOT floating in
+     (a Controls-sheet button) blamed for SW15/SW14 floating in
      the Mcu sheet — chasing SW3 found nothing wrong, and the finding
      was dismissed.
 
@@ -46,14 +46,14 @@ SCH_GLOB = os.path.join(PROJECT_DIR, "hardware/kicad/*.kicad_sch")
 # An entry here is a claim that the open circuit is the design. Anything
 # not listed is a failure.
 ALLOWED = {
-    ("SW_PWR", "1"): (
+    ("SW16", "1"): (
         "v1 as-built: the slide switch is NOT in series with the battery. "
         "Only the common pin (2) taps BAT+; the throw pins are unrouted. "
-        "See power_supply.py and hardware/datasheet_specs.py::SW_PWR. "
+        "See power_supply.py and hardware/datasheet_specs.py::SW16. "
         "v2 respin wires pins 1-2 in series."
     ),
-    ("SW_PWR", "2"): (
-        "Same as SW_PWR.1 — v1 leaves the throw side open. The wired "
+    ("SW16", "2"): (
+        "Same as SW16.1 — v1 leaves the throw side open. The wired "
         "terminal is the one carrying the BAT+ glabel."
     ),
 }

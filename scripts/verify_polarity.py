@@ -246,9 +246,9 @@ _zone("J4", [
 ])
 
 # ============================================================
-# SW_PWR: Power slide switch
+# SW16: Power slide switch
 # ============================================================
-_strict("SW_PWR", [("2", "BAT+")])
+_strict("SW16", [("2", "BAT+")])
 
 # ============================================================
 # SPK1: Speaker
@@ -300,13 +300,13 @@ _strict("SW12", [("3", "BTN_R")])
 _zone("SW12", [("2", "GND")])
 
 # ============================================================
-# SW_RST: Reset button (EN pin to GND)
-# SW_BOOT: Boot button (GPIO0/BTN_SELECT to GND)
+# SW15: Reset button (EN pin to GND)
+# SW14: Boot button (GPIO0/BTN_SELECT to GND)
 # ============================================================
-_strict("SW_RST", [("1", "EN")])
-_zone("SW_RST", [("3", "GND"), ("4", "GND")])
-_strict("SW_BOOT", [("2", "BTN_SELECT")])
-_zone("SW_BOOT", [("3", "GND"), ("4", "GND")])
+_strict("SW15", [("1", "EN")])
+_zone("SW15", [("3", "GND"), ("4", "GND")])
+_strict("SW14", [("2", "BTN_SELECT")])
+_zone("SW14", [("3", "GND"), ("4", "GND")])
 
 # ============================================================
 # R1, R2: USB CC pull-down resistors (5.1k)
@@ -672,8 +672,8 @@ class PolarityVerificationTest(unittest.TestCase):
             self._check_zone_ok("J4", pin, "+3V3")
 
     def test_power_switch(self):
-        """SW_PWR: common pin connected to BAT+."""
-        self._check_strict("SW_PWR", "2", "BAT+")
+        """SW16: common pin connected to BAT+."""
+        self._check_strict("SW16", "2", "BAT+")
 
     def test_speaker(self):
         """SPK1: SPK+/SPK- polarity correct."""
@@ -746,13 +746,13 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_zone_ok("SW12", "2", "GND")
 
     def test_reset_boot_buttons(self):
-        """SW_RST/SW_BOOT: reset and boot buttons on correct nets."""
-        self._check_strict("SW_RST", "1", "EN")
-        self._check_zone_ok("SW_RST", "3", "GND")
-        self._check_zone_ok("SW_RST", "4", "GND")
-        self._check_strict("SW_BOOT", "2", "BTN_SELECT")
-        self._check_zone_ok("SW_BOOT", "3", "GND")
-        self._check_zone_ok("SW_BOOT", "4", "GND")
+        """SW15/SW14: reset and boot buttons on correct nets."""
+        self._check_strict("SW15", "1", "EN")
+        self._check_zone_ok("SW15", "3", "GND")
+        self._check_zone_ok("SW15", "4", "GND")
+        self._check_strict("SW14", "2", "BTN_SELECT")
+        self._check_zone_ok("SW14", "3", "GND")
+        self._check_zone_ok("SW14", "4", "GND")
 
     def test_pullup_resistors(self):
         """R4-R15: pull-up pads (zone-connected, may be net 0)."""

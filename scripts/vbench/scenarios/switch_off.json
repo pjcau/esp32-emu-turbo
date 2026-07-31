@@ -1,11 +1,11 @@
 {
   "name": "switch_off",
-  "description": "SW_PWR operated: the board must STAY powered (v1 invariant)",
+  "description": "SW16 operated: the board must STAY powered (v1 invariant)",
   "setup": {"source": "battery", "soc": 0.5, "buttons_pressed": true},
   "assert": [
     {"name": "the board stays powered with the switch operated",
      "quantity": "switch_off.stays_powered", "op": "==", "value": true,
-     "because": "docs/known-issues.md RESPIN: only SW_PWR's common pad is routed, so the battery path never passes through the switch. This is reproduced, not reported as a defect."},
+     "because": "docs/known-issues.md RESPIN: only SW16's common pad is routed, so the battery path never passes through the switch. This is reproduced, not reported as a defect."},
     {"name": "and the reason is derived: no throw pad carries a net",
      "quantity": "switch_off.throws_routed", "op": "==", "value": 0}
   ]

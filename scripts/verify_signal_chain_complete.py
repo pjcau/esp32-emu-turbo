@@ -96,14 +96,14 @@ def verify_chain(
 
 
 def test_en_reset_chain(net_refs, name_to_id, id_to_name):
-    """1. EN reset chain: SW_RST -> EN net -> ESP32 pin 3 (EN)."""
+    """1. EN reset chain: SW15 -> EN net -> ESP32 pin 3 (EN)."""
     print("\n── EN Reset Chain ──")
 
-    # Full chain check: EN net must connect BOTH SW_RST and U1.
-    # Currently FAILS because SW_RST→U1 route is incomplete (no trace from
+    # Full chain check: EN net must connect BOTH SW15 and U1.
+    # Currently FAILS because SW15→U1 route is incomplete (no trace from
     # via at 98,60 to U1 pin 3 at 88.75,24.78 — F.Cu path crosses 16+ traces).
     # ESP32 boots via internal pull-up, but reset button does not work.
-    verify_chain("EN reset", "EN", ["SW_RST", "U1"], net_refs, name_to_id, id_to_name)
+    verify_chain("EN reset", "EN", ["SW15", "U1"], net_refs, name_to_id, id_to_name)
 
 
 def test_audio_chain(net_refs, name_to_id, id_to_name):
@@ -130,14 +130,14 @@ def test_audio_chain(net_refs, name_to_id, id_to_name):
 
 
 def test_power_chain(net_refs, name_to_id, id_to_name):
-    """3. Power chain: BAT+ -> SW_PWR -> IP5306 -> AMS1117 -> 3V3."""
+    """3. Power chain: BAT+ -> SW16 -> IP5306 -> AMS1117 -> 3V3."""
     print("\n── Power Chain ──")
 
     # Battery to Q1 MOSFET (reverse polarity protection) via BAT_IN
     # v4.0: J3.1 is on BAT_IN net, Q1 bridges BAT_IN → BAT+
     verify_chain("Battery input", "BAT_IN", ["J3", "Q1"], net_refs, name_to_id, id_to_name)
     # Q1 drain to switch to IP5306 via BAT+
-    verify_chain("Battery power", "BAT+", ["Q1", "SW_PWR", "U2"], net_refs, name_to_id, id_to_name)
+    verify_chain("Battery power", "BAT+", ["Q1", "SW16", "U2"], net_refs, name_to_id, id_to_name)
 
     # IP5306 inductor
     verify_chain("Boost", "LX", ["L1", "U2"], net_refs, name_to_id, id_to_name)

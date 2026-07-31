@@ -76,8 +76,8 @@ The comment says the module's internal 10 k EN pull-up removes the need
 for R3, then draws a direct wire from a `+3V3` power symbol to the EN
 net with no series resistor. The schematic net exported for U1.3 is
 therefore `+3V3` (`net code="1" name="+3V3"` in the netlist), while the
-PCB has EN as its own separate copper (SW_RST bridges EN→GND when
-pressed). SW_RST on a schematic where EN is literally tied to +3V3
+PCB has EN as its own separate copper (SW15 bridges EN→GND when
+pressed). SW15 on a schematic where EN is literally tied to +3V3
 would short the rail to ground on every press — the drawing is
 electrically wrong.
 
@@ -115,7 +115,7 @@ footprint) — this project's private symbol is the outlier.
   the PCB `J3.1` carries BAT_IN, `Q1.2` carries BAT_IN, `J3.2` carries
   GND — three copper regions the schematic no longer distinguishes.
   Same for `U1.3` — the EN pull-up path on the module cannot be
-  represented by a hard schematic short to +3V3 (SW_RST would
+  represented by a hard schematic short to +3V3 (SW15 would
   short-circuit the rail). These are exactly the "the two sides
   describe different circuits" bug class the `_T4_STRUCTURAL_EXCEPTIONS`
   docstring warns against re-suppressing.
@@ -159,11 +159,11 @@ exported netlist:
 ```python
 en_y = MCU_Y - 33.02  # EN pin level
 # EN pull-up: internal to ESP32-S3-WROOM-1 (R3 = DNP). No external
-# +3V3 tie — that would short 3V3 to GND every time SW_RST is pressed.
+# +3V3 tie — that would short 3V3 to GND every time SW15 is pressed.
 self.glabel("EN", px_l - 5, en_y, 180)
 self.wire(px_l - 5, en_y, px_l, en_y)
 # (drop `r_en_x`, `r_en_y`, and the "EN pull-up on-chip" annotation
-# from that block; keep C3 and SW_RST wiring further down.)
+# from that block; keep C3 and SW15 wiring further down.)
 ```
 
 Then remove `"EN"` from `T2_ALLOW` in `verify_netlist_diff.py:217-223`

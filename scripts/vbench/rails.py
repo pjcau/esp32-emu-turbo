@@ -16,7 +16,7 @@ is not a measurement.
 **A net with no resistive path to a source is UNDEFINED, and that is
 reported, not defaulted.** A solver that quietly assigns 0 V to a floating
 node produces a plausible table with a lie in it. This is what makes the
-EN net visible: its only pins are U1.3 and SW_RST.1, the switch is open at
+EN net visible: its only pins are U1.3 and SW15.1, the switch is open at
 DC, and there is no pull-up — so EN has no defined level, which is
 R25-CRIT-1 arrived at from the physics instead of from reading a comment.
 
@@ -102,7 +102,7 @@ def _is_switch_terminal(ref, pad):
     """True if this pad is an electrical pole of the switch, not a solder tab.
 
     Decided by datasheet_specs' own `function` text, which says
-    "Shell/anchor (mechanical)" for SW_PWR's four tabs. A pad the spec does
+    "Shell/anchor (mechanical)" for SW16's four tabs. A pad the spec does
     not describe is treated as a terminal, so an undeclared pad fails loudly
     in the scenario rather than being silently ignored.
     """
@@ -257,7 +257,7 @@ def solve_dc(board, values, fixed, buttons_pressed=False):
         if _kind(ref) == "inductor" and len(set(nets)) == 2:
             union(*sorted(set(nets)))
         if _kind(ref) == "switch" and buttons_pressed:
-            # Only the pads that are electrical terminals. SW_PWR's four
+            # Only the pads that are electrical terminals. SW16's four
             # shell tabs carry BTN_SELECT on this board — a deliberate
             # same-net fixup for a trace that grazes them
             # (routing.py:6055-6085) — and they are mechanically isolated

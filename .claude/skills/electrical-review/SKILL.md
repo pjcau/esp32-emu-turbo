@@ -52,7 +52,7 @@ Walk through each question. For each, read the relevant source files, check the 
 Work through `references/checklist.md` one domain at a time
 (A pre-power, B power-up, C boot, D runtime): for each row, read the
 named sources, check the PCB cache or routing, give a VERDICT
-(OK / CONCERN / RISK). The rows carry as-built warnings — A2 (SW_PWR
+(OK / CONCERN / RISK). The rows carry as-built warnings — A2 (SW16
 not in series), B3 (EN has no RC), D2 (backlight, open R25-HIGH-1) —
 do not re-raise those as new findings.
 

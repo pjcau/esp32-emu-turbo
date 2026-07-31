@@ -9,7 +9,7 @@
 #pragma once
 
 /* Fingerprint of the .kicad_pcb this was derived from. */
-#define VB_PCB_HASH "sha256:f0e0b45ba252eaadcdc5f6e7b4b50ec0a243cbe764e6bb9e0616ff05faff845c"
+#define VB_PCB_HASH "sha256:19baf621aaea96d4d8b70a0e05209846dec12f6614b4a02d10117566a86b75c5"
 
 /* Rails — rails.py: +3V3 = V_REF*(1+R25/R26) from the real divider;
  * spread is V_REF's own tolerance (SY8089 AN p.4). +5V is the
@@ -78,7 +78,7 @@ static const unsigned char VB_LCD_BUS_MAP[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 #define VB_SPEAKER_OHM 8f
 
 /* Invariants the simulator must REPRODUCE, not report:
- * SW_PWR is not in series — operating it must NOT cut power. */
+ * SW16 is not in series — operating it must NOT cut power. */
 #define VB_SWITCH_NOT_IN_SERIES 1
 
 #define VB_CALIBRATION "no" /* dc / dc+transient / no — T5.4 */

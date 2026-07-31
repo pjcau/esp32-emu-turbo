@@ -212,11 +212,11 @@ _TACT_MAP = {"1": ("1", "2"), "2": ("3", "4")}
 # wrong — but the pin numbers do differ and the map has to say so.
 _TACT_MAP_REVERSED = {"1": ("3", "4"), "2": ("1", "2")}
 
-# SW_PWR — SW_Push 2-pin symbol -> MSK12C02 slide switch.
+# SW16 — SW_Push 2-pin symbol -> MSK12C02 slide switch.
 # Pad 2 is the common terminal, pads 1 and 3 the two throws. On v1 only
 # the common is routed (see sheets/power_supply.py and
-# hardware/datasheet_specs.py::SW_PWR).
-_SW_PWR_MAP = {"1": ("2",), "2": ("1", "3")}
+# hardware/datasheet_specs.py::SW16).
+_SW16_MAP = {"1": ("2",), "2": ("1", "3")}
 
 # LED1 / LED2 — this repo's private LED symbol numbers its pins
 # pin 1 = A (anode), pin 2 = K (cathode) (lib_symbols.py:320-321).
@@ -243,7 +243,7 @@ SCH_PIN_TO_PCB_PADS = {
     "J4": _J4_MAP,
     "U5": _U5_MAP,
     "U6": _U6_MAP,
-    "SW_PWR": _SW_PWR_MAP,
+    "SW16": _SW16_MAP,
     "LED1": _LED_MAP,
     "LED2": _LED_MAP,
 }
@@ -251,13 +251,13 @@ for _n in range(1, 14):
     SCH_PIN_TO_PCB_PADS[f"SW{_n}"] = _TACT_MAP
 SCH_PIN_TO_PCB_PADS["SW11"] = _TACT_MAP_REVERSED
 SCH_PIN_TO_PCB_PADS["SW12"] = _TACT_MAP_REVERSED
-# SW_RST / SW_BOOT are the same part on the same footprint as SW1..SW13
+# SW15 / SW14 are the same part on the same footprint as SW1..SW13
 # (SW-SMD-5.1x5.1, one row each in cpl.csv) wired the same way round:
 # routing.py puts the signal on the 1/2 terminal and GND on 3/4. They were
 # missing from this table only because their schematic pins were floating,
 # so no pin of theirs ever reached the comparison to expose the gap.
-SCH_PIN_TO_PCB_PADS["SW_RST"] = _TACT_MAP
-SCH_PIN_TO_PCB_PADS["SW_BOOT"] = _TACT_MAP
+SCH_PIN_TO_PCB_PADS["SW15"] = _TACT_MAP
+SCH_PIN_TO_PCB_PADS["SW14"] = _TACT_MAP
 
 
 # T1: schematic nets intentionally absent from the PCB.

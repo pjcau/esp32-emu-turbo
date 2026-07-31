@@ -180,7 +180,7 @@ U3 is now an SY8089AAAC buck in SOT-23-5 ([C78988](https://www.lcsc.com/product-
 | Component | LCSC | Notes |
 |-----------|------|-------|
 | FPC 40-pin (J4) | C2856812 | 40 pads, 0.5mm pitch, 0.3x1.5mm — all match |
-| Slide Switch (SW_PWR) | C431540 | Pin spacing, NPTH holes, pad layout correct. Minor 0.05mm pin 2-3 spacing deviation. |
+| Slide Switch (SW16) | C431540 | Pin spacing, NPTH holes, pad layout correct. Minor 0.05mm pin 2-3 spacing deviation. |
 | Red LED (LED1) | C84256 | Standard 0805, correct |
 | Green LED (LED2) | C19171391 | Standard 0805, correct |
 | Resistors 0805 (R1-R21) | C27834/C17414/C149504/C17513/C4328 | Standard 0805, correct |

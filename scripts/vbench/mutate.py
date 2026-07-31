@@ -147,7 +147,7 @@ def apply(board, mutation):
 def apply_schematic(sch, mutation):
     """Apply a schematic-side mutation to a copy of the schematic netlist.
 
-    Only detach_pin, which is what R24-HIGH-3 was: SW_RST and SW_BOOT drawn
+    Only detach_pin, which is what R24-HIGH-3 was: SW15 and SW14 drawn
     with wires that missed their pins, so the pins left the exported netlist
     entirely rather than appearing with a wrong net.
     """

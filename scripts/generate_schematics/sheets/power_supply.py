@@ -58,7 +58,7 @@ class PowerSupplySheet(SchematicSheet):
         # instantiated so the schematic matches the CPL.
         #
         # RELOCATED (2026-07-24): the previous position (45, 160) sat
-        # directly on top of SW_PWR, C1, U3 (AMS1117) and C2 which all
+        # directly on top of SW16, C1, U3 (AMS1117) and C2 which all
         # live at y=160 in the VOLTAGE REGULATOR / POWER SWITCH row.
         # Now placed on its own dedicated USB-DATA row (y=140) tucked
         # underneath the USB-C connector on the A3-landscape sheet,
@@ -421,7 +421,7 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(q1x, bat_y, q1x, q1y - 5)
         # Mid-span on the horizontal rail. At (q1x + 2, bat_y - 2) it was
         # 2 mm off the horizontal and 2 mm off the vertical, i.e. on neither
-        # — so BAT+ came out of the netlist with one node (SW_PWR.1, from
+        # — so BAT+ came out of the netlist with one node (SW16.1, from
         # its own global label) while L1.1, C18.1, Q1.3 and U2.6 were
         # absent. The battery rail was undrawn as far as any gate could see.
         self.label("BAT+", q1x - 10, bat_y)
@@ -626,11 +626,11 @@ class PowerSupplySheet(SchematicSheet):
         # name); the actual part is MSK12C02 (LCSC C431540) — noted as text
         # below. Renaming the footprint key across routing/footprints/CPL is
         # a v2 cleanup item.
-        self.sym("SW_Push", "SW_PWR", "SS-12D00G3", sw_x, sw_y, ["1", "2"])
+        self.sym("SW_Push", "SW16", "SS-12D00G3", sw_x, sw_y, ["1", "2"])
         self.text("Actual part: MSK12C02 (LCSC C431540)", sw_x - 5, sw_y + 14, 1.5)
         # v1 AS-BUILT: only the switch COMMON pin (pad 2) is routed — it taps
         # the BAT+ net as a stub. Throw pins 1/3 are unrouted (see
-        # hardware/datasheet_specs.py::SW_PWR), so the slide switch does NOT
+        # hardware/datasheet_specs.py::SW16), so the slide switch does NOT
         # break the battery path: J3 -> Q1 -> BAT+ -> IP5306 pin 6 is
         # continuous copper. Power on/off relies on the IP5306 KEY logic
         # (SW13/MENU via R16) and its automatic light-load standby.

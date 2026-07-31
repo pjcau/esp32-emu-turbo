@@ -25,7 +25,7 @@
  *            means GPIO0 low, which is Joint Download Boot — the app stops
  *            and the splash says so, exactly like the real chip.
  *
- *   SW_PWR   (P) reproduces the v1 invariant: the switch is NOT in series,
+ *   SW16   (P) reproduces the v1 invariant: the switch is NOT in series,
  *            so operating it must NOT cut power. The instrument line says
  *            what happened instead of pretending the board turned off.
  *
@@ -226,9 +226,9 @@ static void vb_draw_instruments(void) {
 
     if (!g_sw_pwr_on && VB_SWITCH_NOT_IN_SERIES)
         snprintf(line, sizeof line,
-                 "SW_PWR OFF - BOARD STILL POWERED (switch not in series, v1)");
+                 "SW16 OFF - BOARD STILL POWERED (switch not in series, v1)");
     else
-        snprintf(line, sizeof line, "SW_PWR %s", g_sw_pwr_on ? "ON" : "OFF");
+        snprintf(line, sizeof line, "SW16 %s", g_sw_pwr_on ? "ON" : "OFF");
     vb_text(8, ty, line, g_sw_pwr_on ? COL_TXT : COL_WARN); ty += 11;
 
     snprintf(line, sizeof line, "CALIBRATION: %s (model, not measurement - T5.4)",

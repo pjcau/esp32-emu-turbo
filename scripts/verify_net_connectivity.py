@@ -131,14 +131,14 @@ ACCEPTED_FRAGMENTATIONS = {
     #
     # Accepted components per button: 2 (main signal + isolated R/C junction).
     # BTN_SELECT/START/L/R have additional components from D1 menu diode
-    # and SW_BOOT that ARE fixed in R6 — their acceptance count stays at 2
+    # and SW14 that ARE fixed in R6 — their acceptance count stays at 2
     # after those fixes (only the R/C junction remains isolated).
     # BTN_B, BTN_X, BTN_Y, BTN_R: R7 FIXED by _button_pullup_bridges() in
     # routing.py (commit 259868d). Pull-up/debounce junctions now properly
     # connected to main signal paths — removed from allowlist.
     # R8 session: all 11 remaining button R/C bridges fixed via south-highway
     # F.Cu routes (BTN_A/LEFT/DOWN/RIGHT/UP at y=55-57, BTN_L at y=57.5,
-    # BTN_SELECT via SW_BOOT F.Cu y=58, BTN_START at y=43 via R7 bridge).
+    # BTN_SELECT via SW14 F.Cu y=58, BTN_START at y=43 via R7 bridge).
     # All 12 button nets are now connected, D1 menu-diode anodes included.
 
     # BTN_START / BTN_SELECT: FIXED (2026-07-25, R5-CRIT-6). D1 was moved
@@ -188,20 +188,20 @@ COPPER_LAYERS = ("F.Cu", "B.Cu")
 #
 # Format: {ref_prefix: [(pad_a, pad_b), ...]}
 #
-# The ref matches by prefix. SW_PWR is explicitly excluded because its
+# The ref matches by prefix. SW16 is explicitly excluded because its
 # slide-switch internal bridging depends on position (not static).
 INTERNAL_PAD_BRIDGES = {
     # 4-pin tact switches (SW_PUSH_6mm family): pads 1-2 are one terminal,
     # 3-4 the other; pressing shorts {1,2} to {3,4}. With no external copper
     # between same-terminal pads, the switch body still bridges them.
-    # Applies to SW1..SW13, SW_RST, SW_BOOT. Does NOT apply to SW_PWR.
+    # Applies to SW1..SW13, SW15, SW14. Does NOT apply to SW16.
     "SW":      [("1", "2"), ("3", "4")],
-    "SW_RST":  [("1", "2"), ("3", "4")],
-    "SW_BOOT": [("1", "2"), ("3", "4")],
+    "SW15":  [("1", "2"), ("3", "4")],
+    "SW14": [("1", "2"), ("3", "4")],
 }
 # Explicit exclusions: these refs match a bridging prefix but must NOT
 # have internal bridging applied.
-INTERNAL_BRIDGE_EXCLUDE = {"SW_PWR"}
+INTERNAL_BRIDGE_EXCLUDE = {"SW16"}
 
 
 def _ref_bridges(ref):

@@ -103,9 +103,9 @@ def test_cpl_positions():
     check("J1 Mid Y = 71.15mm (DFM: shield pads clear board edge)", abs(j1_y - 71.15) < 0.01,
           f"got {j1_y}")
 
-    # SW_PWR: footprint now matches JLCPCB C431540 exactly, no correction needed
-    sw_y = float(cpl["SW_PWR"]["Mid Y"].replace("mm", ""))
-    check("SW_PWR Mid Y = 72.00mm (no correction, footprint matches JLCPCB)", abs(sw_y - 72.00) < 0.01,
+    # SW16: footprint now matches JLCPCB C431540 exactly, no correction needed
+    sw_y = float(cpl["SW16"]["Mid Y"].replace("mm", ""))
+    check("SW16 Mid Y = 72.00mm (no correction, footprint matches JLCPCB)", abs(sw_y - 72.00) < 0.01,
           f"got {sw_y}")
 
     # U1: ESP32 correction +3.62 still applied
@@ -769,7 +769,7 @@ def test_esop8_ep_pad_clearance():
 
 
 def test_msk12c02_unique_sh_pads():
-    """Test 20: MSK12C02 (SW_PWR) shell pads have unique names 4a-4d.
+    """Test 20: MSK12C02 (SW16) shell pads have unique names 4a-4d.
 
     JLCPCB's DFM checker groups same-named pads and can report 0mm spacing
     between them.  All four shell/mounting pads must have distinct names.
@@ -2272,8 +2272,8 @@ def test_trace_through_ic_pad():
         ("U3", "2"),
         # SD card module (U6): pins 8, 9 are unused (card detect / write protect)
         ("U6", "8"), ("U6", "9"),
-        # MSK12C02 power switch (SW_PWR): shell/mounting pads, no internal connection
-        ("SW_PWR", "4a"), ("SW_PWR", "4b"), ("SW_PWR", "4c"), ("SW_PWR", "4d"),
+        # MSK12C02 power switch (SW16): shell/mounting pads, no internal connection
+        ("SW16", "4a"), ("SW16", "4b"), ("SW16", "4c"), ("SW16", "4d"),
     }
 
     # Index pads by layer

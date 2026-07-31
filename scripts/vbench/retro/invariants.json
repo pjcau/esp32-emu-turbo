@@ -5,9 +5,9 @@
     {
       "id": "INV-SW-PWR",
       "round": 0,
-      "title": "SW_PWR is not in series with the battery",
+      "title": "SW16 is not in series with the battery",
       "source": "docs/known-issues.md:393",
-      "source_match": "SW_PWR is not in series",
+      "source_match": "SW16 is not in series",
       "phase": 2,
       "classes": [
         "invariant",
@@ -17,7 +17,7 @@
         "kind": "none"
       },
       "present_now": true,
-      "must_report": "in the switch_off scenario the board stays powered: only SW_PWR pad 2 is routed, as a stub tap on BAT+, and the J3 -> Q1 -> BAT+ -> U2.6 path never passes through the switch. True isolation is unplugging J3.",
+      "must_report": "in the switch_off scenario the board stays powered: only SW16 pad 2 is routed, as a stub tap on BAT+, and the J3 -> Q1 -> BAT+ -> U2.6 path never passes through the switch. True isolation is unplugging J3.",
       "expect": "reproduced"
     },
     {

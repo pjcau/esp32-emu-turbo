@@ -20,7 +20,7 @@ Check:
 - Every bypass cap has short path to its pin pair
 - **EN on the ESP32 has no RC and no pull-up** — `R3` does not exist (absent
   from BOM and PCB) and `C3` is a plain +3V3 decoupling cap. `EN` carries
-  exactly two pads: `U1.3` and `SW_RST` pad 1. The WROOM-1 does *not*
+  exactly two pads: `U1.3` and `SW15` pad 1. The WROOM-1 does *not*
   integrate an EN pull-up; that claim was retired in `74c196e`. RESPIN item,
   not a finding to re-raise — see `docs/known-issues.md`
 - U3 buck loop: `C1` (C_IN) tight to U3 IN/GND, `C30` (C_OUT) tight to L2's
@@ -115,11 +115,11 @@ Check:
 
 ## Step 6 — Button audit (manual)
 
-12 buttons + 1 menu combo diode D1 (BAT54C) + power switch SW_PWR.
+12 buttons + 1 menu combo diode D1 (BAT54C) + power switch SW16.
 
 Check:
 - Each button has pull-up + debounce cap (except BTN_L GPIO45: internal)
-- Reset / Boot buttons (SW_RST, SW_BOOT) on EN and GPIO0
+- Reset / Boot buttons (SW15, SW14) on EN and GPIO0
 - Menu combo (SW13 + D1) → MENU_K net → GPIO with internal pull-up
 - No two buttons share a GPIO by accident (`verify_design_intent` T1-T3)
 - Shoulder buttons (SW11, SW12) far enough from USB-C / FPC to clear

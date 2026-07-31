@@ -193,12 +193,12 @@ def fig_plane_split(zones, vias, segs, fps, grps):
 
 # ── figure 2: rework jumpers, bottom view ───────────────────────────
 LANDMARKS = ["U1", "U2", "U3", "U5", "U6", "J1", "J3", "J4", "L1", "C2",
-             "C4", "C3", "SW_PWR"]
+             "C4", "C3", "SW16"]
 LABEL_BELOW = {"C2", "U6", "C4", "C3"}
 NICE = {"U1": "U1 ESP32-S3", "U2": "U2 IP5306", "U3": "U3 SY8089",
         "U5": "U5 PAM8403", "U6": "U6 microSD", "J1": "J1 USB-C",
         "J3": "J3 batt", "J4": "J4 FPC display", "L1": "L1",
-        "C2": "C2", "C4": "C4", "C3": "C3", "SW_PWR": "SW_PWR"}
+        "C2": "C2", "C4": "C4", "C3": "C3", "SW16": "SW16"}
 
 
 def fig_jumpers(zones, vias, segs, fps, grps):

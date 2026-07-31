@@ -28,7 +28,7 @@ segments for every net and asserts single connected component. Catches
 the R5-CRIT class of bugs where pad-net labels are correct but copper
 is fragmented — L1.1 BAT+ inductor isolated (board can't boot on
 battery), C17/C18 decoupling caps floating, button pull-ups never
-connected, SW_BOOT non-functional, D1 menu diode anodes dangling,
+connected, SW14 non-functional, D1 menu diode anodes dangling,
 BTN_L missing F.Cu→B.Cu via-in-pad at U1.26 (L shoulder button never
 worked on v3.3). Run with `--strict` to bail on technical-debt
 accepted fragmentations.
@@ -38,7 +38,7 @@ accepted fragmentations.
 copper with an unnetted (or differently-netted) pad — a real short on the
 manufactured board. Checks F.Cu **and** B.Cu. Catches issues that DRC
 misses when pads have no net assignment (the v3.3 regression from commit
-`775e9fd`, where `_PAD_NETS` entries for U2.3/4, U6.8/9, SW_PWR.4b/4d
+`775e9fd`, where `_PAD_NETS` entries for U2.3/4, U6.8/9, SW16.4b/4d
 were removed and left BTN_SELECT/GND/SD_MISO/BTN_R traces crossing
 unnetted pads). Integrated into:
 - `make release-prep` (blocking dependency of release)
@@ -93,7 +93,7 @@ Exports schematic XML netlist via `kicad-cli`, compares against PCB cache:
 - [T3] Missing footprints (component in schematic but not PCB)
 - [T4] Pin-to-net mismatches between schematic and PCB
 
-**T4 only sees pins that reach the netlist.** `SW_RST` and `SW_BOOT` were
+**T4 only sees pins that reach the netlist.** `SW15` and `SW14` were
 absent from `SCH_PIN_TO_PCB_PADS` for a long time because their schematic
 pins were floating — `SW_Push` pins are *horizontal* (x ± 5.08), not
 vertical like the R/C symbols, so the generator's wires landed beside the

@@ -110,7 +110,7 @@ COMPONENTS_BOTTOM = [
     ("J1", "USB-C", "USB-C", 80.0, 72.0, 9, 7),
     ("U6", "SD Card", "TF-01A", 140.0, 67.0, 14, 15),
     # Power switch (back side, bottom edge, horizontal with toggle toward board edge)
-    ("SW_PWR", "PWR", "SLIDE_SW", 40.0, 72.0, 8, 4),
+    ("SW16", "PWR", "SLIDE_SW", 40.0, 72.0, 8, 4),
     # Speaker (back side, 22mm)
     ("SPK1", "Speaker", "Speaker", 30.0, 52.5, 22, 22),
     # ICs (IP5306/L1 moved left to avoid slot)

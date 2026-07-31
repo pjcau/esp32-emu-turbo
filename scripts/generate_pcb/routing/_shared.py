@@ -451,8 +451,8 @@ _MENU_K_RISER_X = 137.000         # F.Cu riser up to the SW13 terminal row
 SHOULDER_L = ("SW11", enc(-65, 32))
 SHOULDER_R = ("SW12", enc(65, 32))
 # Reset and Boot buttons on B.Cu (right of USB-C, dev kit style)
-RESET_BTN = ("SW_RST", enc(15, -28))   # EN to GND
-BOOT_BTN = ("SW_BOOT", enc(25, -28))   # GPIO0 to GND
+RESET_BTN = ("SW15", enc(15, -28))   # EN to GND
+BOOT_BTN = ("SW14", enc(25, -28))   # GPIO0 to GND
 
 # LED positions (F.Cu)
 LED1 = enc(-55, -30)   # (25.0, 67.5) Red - charging
@@ -643,7 +643,7 @@ def _init_pads():
         ("L2", "IND-SMD-4.0x4.0", *L2_POS, 0, "B"),
         ("J3", "JST-PH-2P-SMD", *JST, 180, "B"),
         ("SPK1", "Speaker-22mm", *SPEAKER, 0, "B"),
-        ("SW_PWR", "SS-12D00G3", *PWR_SW, 0, "B"),
+        ("SW16", "SS-12D00G3", *PWR_SW, 0, "B"),
     ]
     for ref, fp_name, cx, cy, rot, lc in components:
         _PADS[ref] = _compute_pads(fp_name, cx, cy, rot, lc)

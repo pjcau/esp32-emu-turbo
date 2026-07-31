@@ -8,7 +8,7 @@ one domain at a time; each row says what to check and against what.
 | # | Question | What to check |
 |---|----------|---------------|
 | A1 | Are all power rails isolated from each other (no shorts)? | Run `python3 scripts/verify_power_paths.py`, check net isolation |
-| A2 | Is the power switch between battery and IP5306? | **No, and this is a known as-built limitation — do not re-raise it as a new bug.** Only SW_PWR's common pin (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins 1/3 carry no net. J3 → Q1 → BAT+ → IP5306 pin 6 is continuous copper that never passes through the switch, so **the switch cannot power the board down**; true isolation = unplug J3. Respin: route the battery through switch pins 1–2. See RESPIN in `docs/known-issues.md` |
+| A2 | Is the power switch between battery and IP5306? | **No, and this is a known as-built limitation — do not re-raise it as a new bug.** Only SW16's common pin (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins 1/3 carry no net. J3 → Q1 → BAT+ → IP5306 pin 6 is continuous copper that never passes through the switch, so **the switch cannot power the board down**; true isolation = unplug J3. Respin: route the battery through switch pins 1–2. See RESPIN in `docs/known-issues.md` |
 | A3 | Are USB CC1/CC2 pull-downs correct (5.1k to GND)? | Check R1, R2 values (5.1k) and nets (USB_CC1/CC2 to GND) |
 | A4 | Is reverse polarity protection adequate? | Check BAT54C diode D1, JST connector polarity |
 
@@ -18,7 +18,7 @@ one domain at a time; each row says what to check and against what.
 |---|----------|---------------|
 | B1 | Does IP5306 boost start cleanly from 3.7V battery? | Check C17 (VIN), L1 (inductor), C19/C27 (VOUT) values |
 | B2 | Does the U3 buck regulate correctly? | **U3 is a SY8089AAAC 2A synchronous buck (SOT-23-5, C78988) — not an LDO, so there is no dropout budget.** Vout = 0.6 × (1 + R25/R26) = 0.6 × (1 + 100k/22k) = **3.327 V** (measured 3.327 V, vbench Phase 1). EN (pin 1) is hard-tied to +5V; abs-max is Vin + 0.6 V, so the tie is in spec. Check the divider R25=100k / R26=22k and the C29 feed-forward |
-| B3 | Does EN have an RC delay? | **No — and that is the as-built answer, not a finding to re-raise.** The board has no pull-up and no cap on EN: `R3` is absent from the BOM and the PCB, and `C3` is a plain +3V3 decoupling cap (twin of C4). `EN` carries exactly two pads, `U1.3` and `SW_RST` pad 1. The WROOM-1 does **not** integrate an EN pull-up — that claim was retired from `mcu.py` in `74c196e`. Datasheet p.28 requires the RC; this is a RESPIN item (10 kΩ +3V3→EN, 100 nF EN→GND). Margin defect, not a dead board. See RESPIN in `docs/known-issues.md` |
+| B3 | Does EN have an RC delay? | **No — and that is the as-built answer, not a finding to re-raise.** The board has no pull-up and no cap on EN: `R3` is absent from the BOM and the PCB, and `C3` is a plain +3V3 decoupling cap (twin of C4). `EN` carries exactly two pads, `U1.3` and `SW15` pad 1. The WROOM-1 does **not** integrate an EN pull-up — that claim was retired from `mcu.py` in `74c196e`. Datasheet p.28 requires the RC; this is a RESPIN item (10 kΩ +3V3→EN, 100 nF EN→GND). Margin defect, not a dead board. See RESPIN in `docs/known-issues.md` |
 | B4 | Is IP5306 KEY pin properly configured? | R16=100k pull-down, check KEY net routing |
 | B5 | Can charge-and-play work? (USB + battery simultaneously) | IP5306 supports charge-and-play natively |
 

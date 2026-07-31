@@ -31,38 +31,26 @@ mkdir -p "$OUTPUT_DIR"
 ########################################
 # 1. KiBot DRC + ERC + Design Report
 ########################################
-# Two phases because KiBot (>= 1.6.5, upstream issue #604) refuses any
-# schematic whose references are not PREFIX+NUMBER (IPC). Ours has
-# SW_PWR / SW_BOOT / SW_RST, so the schematic phase fails until they are
-# renamed. The board phase must not be held hostage by that: it runs in
-# an isolated copy of the .kicad_pcb (KiBot auto-loads a sibling
-# .kicad_sch even for board-only outputs, so isolation is required).
 section "KiBot Analysis (DRC + ERC + Design Report)"
 
 echo "  Running KiBot (may take 1-2 min under emulation)..."
 KIBOT_LOG="$OUTPUT_DIR/kibot.log"
 
-# Phase 1a — board only (DRC + design reports), isolated from the schematic
-docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm \
-    --entrypoint bash \
-    kibot \
-    -c "mkdir -p /work \
-        && cp /project/esp32-emu-turbo.kicad_pcb /project/esp32-emu-turbo.kicad_dru /project/external-dfm.kibot.yaml /work/ \
-        && cd /work \
-        && kibot -b esp32-emu-turbo.kicad_pcb -c external-dfm.kibot.yaml -s erc design_report drc_report" \
-    > "$KIBOT_LOG" 2>&1 || true
-
-# Phase 1b — schematic (ERC + BOM). Known-blocked: non-IPC references.
+# Run KiBot with the config file
 docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm \
     kibot \
     -b /project/esp32-emu-turbo.kicad_pcb \
     -e /project/esp32-emu-turbo.kicad_sch \
     -c /project/external-dfm.kibot.yaml \
-    -s drc bom_check \
-    >> "$KIBOT_LOG" 2>&1 || true
+    -v \
+    > "$KIBOT_LOG" 2>&1 || true
 
+# Regression guard: KiBot (>= 1.6.5, upstream #604) hard-rejects any
+# schematic reference that is not PREFIX+NUMBER. All refs were made IPC
+# in July 2026 (SW_PWR/SW_BOOT/SW_RST -> SW16/SW14/SW15); a new non-IPC
+# ref would silently kill ERC + BOM again, so fail loudly here.
 if grep -q "Malformed component reference" "$KIBOT_LOG"; then
-    fail "KiBot schematic phase (ERC + BOM) blocked: non-IPC references $(grep -o 'Malformed component reference \`[^\`]*\`' "$KIBOT_LOG" | sort -u | sed 's/.*\`\(.*\)\`/\1/' | tr '\n' ' ')— KiBot requires PREFIX+NUMBER refs (upstream #604). Fix: rename SW_PWR/SW_BOOT/SW_RST in the generator."
+    fail "KiBot rejected a non-IPC reference: $(grep -o 'Malformed component reference \`[^\`]*\`' "$KIBOT_LOG" | sort -u | sed 's/.*\`\(.*\)\`/\1/' | tr '\n' ' ')— references must be PREFIX+NUMBER (upstream #604)."
 fi
 
 # Check what was generated
@@ -118,11 +106,16 @@ fi
 # Parse ERC results
 ERC_JSON=$(find "$OUTPUT_DIR" -name "*erc*.json" 2>/dev/null | head -1)
 if [ -n "$ERC_JSON" ] && [ -f "$ERC_JSON" ]; then
+    # NB: the KiCad ERC report nests violations under sheets[], unlike the
+    # DRC report's top-level violations[]. Reading only the top level
+    # produced a false "0 errors" while KiBot's own log said 4.
     ERC_RESULT=$(python3 -c "
 import json
 with open('$ERC_JSON') as f:
     data = json.load(f)
-violations = data.get('violations', [])
+violations = list(data.get('violations', []))
+for sheet in data.get('sheets', []):
+    violations += sheet.get('violations', [])
 errors = [v for v in violations if v.get('severity', '') == 'error']
 warnings = [v for v in violations if v.get('severity', '') == 'warning']
 print(f'ERC: {len(errors)} errors, {len(warnings)} warnings ({len(violations)} total)')
@@ -132,6 +125,9 @@ for v in violations:
     types[t] = types.get(t, 0) + 1
 for t, c in sorted(types.items(), key=lambda x: -x[1])[:20]:
     print(f'  {c:4d}x {t}')
+for v in errors[:10]:
+    items = ' | '.join(i.get('description', '')[:60] for i in v.get('items', [])[:2])
+    print(f'  ERROR [{v.get(\"type\")}] {v.get(\"description\", \"\")[:70]} :: {items}')
 " 2>/dev/null) || ERC_RESULT="(could not parse ERC JSON)"
     echo -e "  ${YELLOW}$ERC_RESULT${NC}"
 
@@ -139,8 +135,10 @@ for t, c in sorted(types.items(), key=lambda x: -x[1])[:20]:
 import json
 with open('$ERC_JSON') as f:
     data = json.load(f)
-errors = [v for v in data.get('violations', []) if v.get('severity') == 'error']
-print(len(errors))
+violations = list(data.get('violations', []))
+for sheet in data.get('sheets', []):
+    violations += sheet.get('violations', [])
+print(len([v for v in violations if v.get('severity') == 'error']))
 " 2>/dev/null || echo "0")
     if [ "$ERC_ERRORS" = "0" ]; then
         pass "KiBot ERC — no errors"
@@ -229,8 +227,9 @@ for f in sorted(files):
 print()
 print(f'  Total: {len(files)} files, {errors} errors, {warnings} warnings')
 sys.exit(1 if errors > 0 else 0)
-" 2>/dev/null
-    if [ $? -eq 0 ]; then
+" 2>/dev/null && GERBER_OK=1 || GERBER_OK=0
+    # NB: a bare failing command here would kill the script under set -e
+    if [ "$GERBER_OK" -eq 1 ]; then
         pass "Gerber files structurally valid"
     else
         fail "Gerber structural issues found"
@@ -249,7 +248,13 @@ KIBOT_BOM=$(find "$OUTPUT_DIR" -name "bom*.csv" 2>/dev/null | head -1)
 
 if [ -n "$KIBOT_BOM" ] && [ -f "$KIBOT_BOM" ] && [ -f "$JLCPCB_BOM" ]; then
     python3 -c "
-import csv, sys
+import csv, re, sys
+
+# KiBot >= 1.9 separates refs with spaces and appends a statistics block
+# ('Project info:', 'Component Count:', ...) to the CSV; split on both
+# separators and keep only PREFIX+NUMBER designators so the stats rows
+# and grouped-ref strings never pollute the comparison.
+REF_RE = re.compile(r'^[A-Za-z]+[0-9]+$')
 
 def read_refs(path, ref_cols):
     refs = set()
@@ -257,10 +262,10 @@ def read_refs(path, ref_cols):
         reader = csv.DictReader(f)
         for row in reader:
             for col in ref_cols:
-                if col in row:
-                    for r in row[col].replace(' ', '').split(','):
+                if col in row and row[col]:
+                    for r in re.split(r'[,\s]+', row[col]):
                         r = r.strip()
-                        if r:
+                        if r and REF_RE.match(r):
                             refs.add(r)
                     break
     return refs
@@ -281,11 +286,12 @@ if only_j:
 if not only_k and not only_j:
     print('  MATCH')
 sys.exit(1 if (only_k or only_j) else 0)
-" 2>/dev/null
-    if [ $? -eq 0 ]; then
+" 2>/dev/null && BOM_OK=1 || BOM_OK=0
+    # NB: a bare failing command here would kill the script under set -e
+    if [ "$BOM_OK" -eq 1 ]; then
         pass "BOM cross-reference matches"
     else
-        warn "BOM differences found (may be expected for mounting holes, fiducials)"
+        warn "BOM differences found (expected: schematic-only parts — battery, display, speaker — are not JLCPCB-assembled)"
     fi
 else
     if [ ! -f "$JLCPCB_BOM" ]; then
@@ -306,16 +312,18 @@ if [ -f "$KIBOT_LOG" ]; then
     LOG_WARNINGS=$(grep -ciE "^WARNING|^\[WARNING" "$KIBOT_LOG" 2>/dev/null || echo "0")
     echo -e "  KiBot log: ${RED}$LOG_ERRORS errors${NC}, ${YELLOW}$LOG_WARNINGS warnings${NC}"
 
-    # Show unique error types
+    # Show unique error types. The trailing `|| true` matters: when head
+    # truncates, grep dies of SIGPIPE (141) and pipefail+set -e would
+    # kill the whole script mid-report.
     if [ "$LOG_ERRORS" -gt 0 ]; then
         echo -e "  ${RED}Errors:${NC}"
-        grep -iE "^ERROR|^\[ERROR" "$KIBOT_LOG" 2>/dev/null | sort -u | head -15 | sed 's/^/    /'
+        { grep -iE "^ERROR|^\[ERROR" "$KIBOT_LOG" 2>/dev/null | sort -u | head -15 | sed 's/^/    /'; } || true
     fi
 
     # Show unique warning types (first 10)
     if [ "$LOG_WARNINGS" -gt 0 ]; then
         echo -e "  ${YELLOW}Warnings (unique, first 10):${NC}"
-        grep -iE "^WARNING|^\[WARNING" "$KIBOT_LOG" 2>/dev/null | sort -u | head -10 | sed 's/^/    /'
+        { grep -iE "^WARNING|^\[WARNING" "$KIBOT_LOG" 2>/dev/null | sort -u | head -10 | sed 's/^/    /'; } || true
     fi
 fi
 

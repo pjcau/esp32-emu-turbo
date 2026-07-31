@@ -457,17 +457,17 @@ COMPONENT_SPECS = {
     },
 
     # ======================================================================
-    # SW_PWR — MSK12C02 Slide Switch (C431540)
-    # Datasheet: SW_PWR_Slide-Switch_C431540.pdf, page 1
+    # SW16 — MSK12C02 Slide Switch (C431540)
+    # Datasheet: SW16_Slide-Switch_C431540.pdf, page 1
     # 3 signal pins + 2 shell NPTHs
     # Circuit diagram: pin 2 is common, connects to 1 or 3 based on position
     # In our design: pin 2 = BAT+ (battery), pin 1 or 3 = switched output
     # Shell pads (4a-4d) are mechanical anchors
     # ======================================================================
-    "SW_PWR": {
+    "SW16": {
         "component": "MSK12C02 Slide Switch",
         "lcsc": "C431540",
-        "datasheet": "SW_PWR_Slide-Switch_C431540.pdf",
+        "datasheet": "SW16_Slide-Switch_C431540.pdf",
         "datasheet_page": 1,
         "pins": {
             "1":  {"net": _unconnected(),  "function": "Position 1 (OFF)", "type": "smd"},
@@ -487,12 +487,12 @@ COMPONENT_SPECS = {
     },
 
     # ======================================================================
-    # SW_RST — Tact Switch for Reset (C318884)
+    # SW15 — Tact Switch for Reset (C318884)
     # 4-pin tact switch: pins 1+2 shorted, pins 3+4 shorted
     # In our design: one side = EN (chip enable), other side = GND
     # Pressing pulls EN low -> reset
     # ======================================================================
-    "SW_RST": {
+    "SW15": {
         "component": "Tact Switch (Reset)",
         "lcsc": "C318884",
         "datasheet": "SW1-SW13_Tact-Switch_C318884.pdf",
@@ -506,10 +506,10 @@ COMPONENT_SPECS = {
     },
 
     # ======================================================================
-    # SW_BOOT — Tact Switch for Boot/Select (C318884)
+    # SW14 — Tact Switch for Boot/Select (C318884)
     # Dual purpose: GPIO0/BTN_SELECT during runtime, BOOT during programming
     # ======================================================================
-    "SW_BOOT": {
+    "SW14": {
         "component": "Tact Switch (Boot/Select)",
         "lcsc": "C318884",
         "datasheet": "SW1-SW13_Tact-Switch_C318884.pdf",

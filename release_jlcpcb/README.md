@@ -212,7 +212,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 - **ESOP-8 EP pad reduced** (IP5306, U2) — exposed pad height 3.4 -> 2.8mm so
   corner signal pad gap increases from 0.095mm to 0.205mm (above 0.10mm danger
   threshold). Eliminates 4 pad-spacing-danger flags in JLCPCB DFM report.
-- **MSK12C02 shell pad unique names** (SW_PWR) — four mounting pads renamed from
+- **MSK12C02 shell pad unique names** (SW16) — four mounting pads renamed from
   shared "SH" to unique "SH1"-"SH4". Prevents JLCPCB DFM checker from grouping
   them and reporting spurious 0mm pad-spacing violations.
 - **BTN_R (SW12 shoulder-right) routed** — the right shoulder button had no traces
@@ -309,5 +309,5 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 - J4 (FPC-40P 0.5mm) LCSC part number: C2856812
 - Battery (BT1), display panel, speaker, and joystick are manual assembly
-- Power switch (SW_PWR) is through-hole, verify orientation
+- Power switch (SW16) is through-hole, verify orientation
 - Inner layer Gerber files contain full copper pour data (zone fill applied via kicad-cli 9.0.7)

@@ -307,7 +307,7 @@ def _power_traces():
     l1_2 = _pad("L1", "2")
 
     # Power switch
-    sw_com = _pad("SW_PWR", "2")   # Common pin
+    sw_com = _pad("SW16", "2")   # Common pin
 
     # ESP32 GND (exposed pad)
     esp_gnd = _pad("U1", "41")

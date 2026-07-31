@@ -493,7 +493,7 @@ def _component_placeholders():
     placements.append(("U6", "TF-01A", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
-    placements.append(("SW_PWR", "SS-12D00G3", px, py, 0, "B.Cu"))
+    placements.append(("SW16", "SS-12D00G3", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*SPEAKER_ENC)
     placements.append(("SPK1", "Speaker-22mm", px, py, 0, "B.Cu"))
@@ -517,9 +517,9 @@ def _component_placeholders():
 
     # Reset and Boot buttons (B.Cu, right of USB-C — dev kit style)
     px, py = enc_to_pcb(*RESET_ENC)
-    placements.append(("SW_RST", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
+    placements.append(("SW15", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
     px, py = enc_to_pcb(*BOOT_ENC)
-    placements.append(("SW_BOOT", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
+    placements.append(("SW14", "SW-SMD-5.1x5.1", px, py, 0, "B.Cu"))
 
     # BAT54C dual Schottky diode — menu combo (START+SELECT)
     placements.append(("D1", "SOT-23-3", *routing.D1_POS, routing.D1_ROT, "B.Cu"))

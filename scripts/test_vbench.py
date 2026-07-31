@@ -522,11 +522,11 @@ def test_phase1():
     check("a pressed button is pulled to 0 V",
           abs(pressed.voltages["BTN_A"]) < 1e-9,
           f"got {pressed.voltages['BTN_A']}")
-    # The regression that mattered: SW_PWR's shell tabs carry BTN_SELECT, so
+    # The regression that mattered: SW16's shell tabs carry BTN_SELECT, so
     # closing "every net the switch touches" welded BAT+ to the buttons and
     # put 3.83 V on all of them.
     check("closing the switches does NOT weld BAT+ to BTN_SELECT via "
-          "SW_PWR's shell tabs",
+          "SW16's shell tabs",
           abs(pressed.voltages["BAT+"] - op.voltages["BAT+"]) < 1e-9
           and abs(pressed.voltages["BTN_SELECT"]) < 1e-9,
           f"BAT+={pressed.voltages['BAT+']}, "
@@ -865,9 +865,9 @@ def test_phase2():
 
     # T2.3: switch_off must reproduce, not report.
     ok, detail = buttons.switch_off_scenario()
-    check("switch_off leaves the board powered (SW_PWR is not in series)", ok,
+    check("switch_off leaves the board powered (SW16 is not in series)", ok,
           f"{detail}")
-    check("the reason is derived: SW_PWR's throw pads carry no net",
+    check("the reason is derived: SW16's throw pads carry no net",
           detail["routed_throws"] == [] and detail["common_net"] == "BAT+",
           f"{detail}")
     check("the invariant is still recorded in docs/known-issues.md",

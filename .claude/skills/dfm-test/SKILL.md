@@ -39,7 +39,7 @@ The test suite covers 43 DFM tests + 9 DFA tests:
 
 | # | Category | Tests | What it checks |
 |---|----------|-------|----------------|
-| 1-4 | CPL positions | 4 | J1, SW_PWR, U1, U5 position/rotation in JLCPCB CPL |
+| 1-4 | CPL positions | 4 | J1, SW16, U1, U5 position/rotation in JLCPCB CPL |
 | 5-6 | Silkscreen | 2 | Reference/Value on Fab layer, mounting holes on Fab |
 | 7-8 | Spacing | 2 | SY8089 buck loop (C2 absent, C1→U3, C30→L2), gr_text >= 6mm from holes |
 | 9 | Via ring | 1 | Annular ring >= 0.075mm on all vias |

@@ -45,7 +45,7 @@ def _datasheet_expectations(board):
 
     Reuses the expectation table `verify_datasheet_nets` already owns rather
     than restating it. It is what catches a detached pin on a part with more
-    than two terminals — D1's anode, SW_BOOT's signal pad — where "fewer than
+    than two terminals — D1's anode, SW14's signal pad — where "fewer than
     two pins on a net" says nothing because the other terminals are fine.
     """
     from hardware.datasheet_specs import COMPONENT_SPECS
@@ -215,7 +215,7 @@ def _inv_sw_pwr():
     if not ok:
         return False, f"operating the switch changed a rail: {detail}"
     return True, (f"switch_off leaves BAT+ at {detail['bat_after']:.3f} V and "
-                  f"+3V3 at {detail['rail_after']:.3f} V; SW_PWR's throw pads "
+                  f"+3V3 at {detail['rail_after']:.3f} V; SW16's throw pads "
                   f"carry {detail['routed_throws'] or 'no net'}")
 
 

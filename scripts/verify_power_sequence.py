@@ -9,7 +9,7 @@ Verifies that the power-up sequence is safe and meets timing requirements:
   5. Power path: BAT+ -> IP5306 -> +5V -> SY8089 -> +3V3 -> ESP32
 
 Power-up sequence (expected):
-  T0:  Battery connects (BAT+ via SW_PWR)
+  T0:  Battery connects (BAT+ via SW16)
   T1:  IP5306 boots, boost converter starts (+5V ramps)
   T2:  +5V stable -> SY8089 regulates (+3V3 ramps)
   T3:  +3V3 stable -> EN pin rises through RC (R3/C3, tau=1ms)
@@ -163,7 +163,7 @@ def test_en_rc_timing():
 
     ESP32-S3-WROOM-1 module has internal 10k pull-up + 0.1uF on EN.
     External R3 was removed (unrouted, no electrical function).
-    EN is now directly routed from SW_RST via B.Cu to U1 pin 3.
+    EN is now directly routed from SW15 via B.Cu to U1 pin 3.
     C3 (100nF decoupling) remains near ESP32 for power stability.
     """
     print("\n-- EN Pin Routing --")
@@ -176,7 +176,7 @@ def test_en_rc_timing():
             en_net_id = n["id"]
             break
 
-    # EN pin (U1:3) should have EN net assigned (routed from SW_RST)
+    # EN pin (U1:3) should have EN net assigned (routed from SW15)
     en_pin = _get_pad(cache, "U1", "3")
     check("U1 pin 3 (EN) exists in PCB", en_pin is not None,
           "U1 pad 3 not found")
@@ -272,15 +272,15 @@ def test_power_switch_position():
     cache = load_cache(PCB_FILE)
     net_map = {n["name"]: n["id"] for n in cache["nets"]}
 
-    # SW_PWR should switch BAT+ to IP5306
+    # SW16 should switch BAT+ to IP5306
     # Common pin connects to one rail, switched pin to the other
-    sw_pads = [p for p in cache["pads"] if p["ref"] == "SW_PWR"]
+    sw_pads = [p for p in cache["pads"] if p["ref"] == "SW16"]
     if sw_pads:
         sw_nets = set(p["net"] for p in sw_pads if p["net"] != 0)
         bat_id = net_map.get("BAT+", -1)
         vbus_id = net_map.get("VBUS", -1)
 
-        # SW_PWR connects BAT+ to VBUS (or to IP5306 VIN)
+        # SW16 connects BAT+ to VBUS (or to IP5306 VIN)
         has_bat = bat_id in sw_nets
         has_vbus = vbus_id in sw_nets
         check("Power switch connects BAT+ rail",
@@ -371,7 +371,7 @@ def test_power_sequence_summary():
     """Test 19: Power sequence summary."""
     print("\n-- Power Sequence Summary --")
     info("Expected boot sequence",
-         "BAT+ -> SW_PWR -> IP5306(boost) -> +5V -> SY8089(buck) -> +3V3 -> "
+         "BAT+ -> SW16 -> IP5306(boost) -> +5V -> SY8089(buck) -> +3V3 -> "
          "R3/C3(RC delay) -> EN rises -> ESP32 boot")
     check("Power topology verified (upstream -> downstream ordering)", True)
 

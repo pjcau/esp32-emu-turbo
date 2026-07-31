@@ -123,7 +123,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC synchr
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
-| SW_PWR | Slide switch | MSK12C02 | Power on/off — **⚠ v1 as-built: not in series, see warning below** | [PDF](/datasheets/SW_PWR_Slide-Switch_C431540.pdf) |
+| SW16 | Slide switch | MSK12C02 | Power on/off — **⚠ v1 as-built: not in series, see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
 | C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C2 | Capacitor | 22 µF tantalum 16V (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω) | LDO output stability | [PDF](/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf) |
 | C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
@@ -170,23 +170,23 @@ more runtime as well as ~7x less heat.
                           └──────┬──────┘
                                 GND
 
-  SW_PWR (slide switch): common pin tapped on BAT+ — throws unrouted on v1 (see warning)
+  SW16 (slide switch): common pin tapped on BAT+ — throws unrouted on v1 (see warning)
 ```
 
 **Key design points:**
 - **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail: for a correctly-inserted battery the gate (pulled low by R24) keeps it ON; a reversed battery is blocked by the body diode.
-- **SW_PWR** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional on the v1 board** (see warning below). It does NOT control USB VBUS.
+- **SW16** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional on the v1 board** (see warning below). It does NOT control USB VBUS.
 - **VBUS** goes directly to IP5306 pin 1 (VIN) — always available when USB is plugged in.
 - **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
 - **No backfeed diode needed:** IP5306 charger is internally regulated (CC/CV), boost is unidirectional.
 
-:::caution SW_PWR does not switch anything on the v1 board as built
+:::caution SW16 does not switch anything on the v1 board as built
 PCB routing connects only the switch **common pin (2)** to BAT+ as a stub; throw pins 1/3
 are unrouted (`hardware/datasheet_specs.py` declares them unconnected). The battery path
 **J3 → Q1 → BAT+ → IP5306 pin 6** is continuous copper that never passes through the
 switch, so sliding it changes nothing. Consequences on v1:
 
-- Power-state rows with *SW_PWR = OFF* describe **design intent**, not actual v1 behavior.
+- Power-state rows with *SW16 = OFF* describe **design intent**, not actual v1 behavior.
 - To truly isolate the battery (e.g. for flashing), **unplug the J3 battery connector**.
 - System on/off relies on the IP5306 KEY logic (SW13/MENU via R16) and its automatic
   light-load standby.
@@ -195,7 +195,7 @@ switch, so sliding it changes nothing. Consequences on v1:
 
 ### Power States & Debug
 
-| # | USB | SW_PWR | Reset | Boot | +3V3 | ESP32 | Charging | Serial | Flash |
+| # | USB | SW16 | Reset | Boot | +3V3 | ESP32 | Charging | Serial | Flash |
 |---|-----|--------|-------|------|------|-------|----------|--------|-------|
 | 1 | No | OFF | — | — | OFF | OFF | No | No | No |
 | 2 | No | ON | — | — | ON | Run | No | No | No |
@@ -214,18 +214,18 @@ switch, so sliding it changes nothing. Consequences on v1:
 
 **Flash firmware (recommended: switch OFF):**
 1. Connect USB-C cable
-2. Set SW_PWR to OFF (⚠ v1 as-built: ineffective — unplug J3 for true battery isolation)
-3. Hold **SW_BOOT**, press+release **SW_RST**, release **SW_BOOT**
+2. Set SW16 to OFF (⚠ v1 as-built: ineffective — unplug J3 for true battery isolation)
+3. Hold **SW14**, press+release **SW15**, release **SW14**
 4. Run `idf.py flash` — ESP32 enters download mode
-5. Press **SW_RST** to reboot into normal mode
+5. Press **SW15** to reboot into normal mode
 
 **Serial debug monitor:**
-1. Connect USB-C cable (SW_PWR ON or OFF — both work)
+1. Connect USB-C cable (SW16 ON or OFF — both work)
 2. Run `idf.py monitor` (115200 baud via USB CDC on GPIO19/20)
-3. Press **SW_RST** to restart — monitor auto-reconnects
+3. Press **SW15** to restart — monitor auto-reconnects
 
 **Charge-and-play:**
-1. Connect USB-C with SW_PWR ON
+1. Connect USB-C with SW16 ON
 2. System runs normally while battery charges
 3. LED1 and LED2: both red, both plain +3V3 power indicators. The old "LED1 = charging, LED2 (green) = fully charged" description was aspirational — the IP5306's LED pins (2–4) are NC on the fabricated board, and C19171391 is a red part despite its BOM label. Respin: route U2 pins 2/4 to the LEDs if charge indication is wanted
 
@@ -235,7 +235,7 @@ switch, so sliding it changes nothing. Consequences on v1:
 |------|-----------|-----------|
 | VBUS → BAT+ | IP5306 internal charger | CC/CV regulated, max 1A |
 | BAT+ → VBUS | Boost unidirectional | IP5306 boost only drives BAT→VOUT |
-| USB + switch OFF | Physical isolation | SW_PWR disconnects battery from IP5306 pin 6 |
+| USB + switch OFF | Physical isolation | SW16 disconnects battery from IP5306 pin 6 |
 | USB + switch ON | Charge-and-play | IP5306 manages both paths internally |
 | Reversed battery | Q1 P-MOSFET RPP | Body diode blocks; gate pull-down R24 keeps Q1 ON only with correct polarity |
 
@@ -260,8 +260,8 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 | C3 | Capacitor | 100 nF | EN reset delay (RC ≈ 4.5 ms via WROOM-1 internal ~45 kΩ pull-up) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C4 | Capacitor | 100 nF | 3V3 decoupling | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C26 | Capacitor | 100 nF | 3V3 VDD bypass (within 3.6 mm of module pin 2) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
-| SW_RST | Tact switch | — | EN reset (pulls EN low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
-| SW_BOOT | Tact switch | — | Boot mode (pulls GPIO0 low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
+| SW15 | Tact switch | — | EN reset (pulls EN low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
+| SW14 | Tact switch | — | Boot mode (pulls GPIO0 low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 
 ### GPIO Assignment
 
@@ -360,7 +360,7 @@ SPI bus up to 20MHz. The SD module has a built-in level shifter (3.3V safe). On 
 
 ## Sheet 6 — Controls
 
-13 tact switches (SNES layout + MENU) with individual 10kΩ pull-up + 100nF debounce per button. Plus SW_RST (reset) and SW_BOOT (boot mode) on Sheet 2. Tact switch datasheet: [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf).
+13 tact switches (SNES layout + MENU) with individual 10kΩ pull-up + 100nF debounce per button. Plus SW15 (reset) and SW14 (boot mode) on Sheet 2. Tact switch datasheet: [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf).
 
 <div className="schematic-container">
 

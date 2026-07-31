@@ -22,7 +22,7 @@
 | ID | Domain | Issue |
 |----|--------|-------|
 | BUG-L1 | power | IP5306 KEY pull-up bootstraps from VOUT (0V at start) — POR handles it |
-| BUG-L2 | power | Power switch (SW_PWR) non-functional — only common pin routed |
+| BUG-L2 | power | Power switch (SW16) non-functional — only common pin routed |
 | BUG-L3 | display | LCD write clock 20MHz > ILI9488 spec 15MHz — common overclock, works in practice |
 | BUG-L4 | sd | SD SPI at 40MHz above standard spec — ESP-IDF negotiates down |
 | BUG-L5 | buttons | 1ms RC debounce < switch bounce 5-20ms — mitigated by 60fps polling |
@@ -210,7 +210,7 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 - **Impact**: **CRITICAL**. IP5306 boost topology: `BAT+ → L1 → LX (switching) → internal diode → VOUT`. With L1.1 disconnected, no battery current flows through the inductor, the boost converter cannot switch, +5V is not generated on battery power.
   - On **USB-C**: boots normally. IP5306 VBUS → internal path → VOUT delivers +5V without using L1.
   - On **battery only**: **does not boot**. No +5V → no +3V3 → dead ESP32.
-- **Why verification missed it**: `verify_datasheet_nets.py` says L1.1 has net BAT+ (which matches the expected `_exact("BAT+")` in `datasheet_specs.py::L1`). `verify_power_paths.py` confirms the BAT+ source pad exists and one destination is reachable (J3/SW_PWR/U2.6) — it doesn't walk per-destination connectivity. No script checks that the BAT+ **copper is a single connected component**.
+- **Why verification missed it**: `verify_datasheet_nets.py` says L1.1 has net BAT+ (which matches the expected `_exact("BAT+")` in `datasheet_specs.py::L1`). `verify_power_paths.py` confirms the BAT+ source pad exists and one destination is reachable (J3/SW16/U2.6) — it doesn't walk per-destination connectivity. No script checks that the BAT+ **copper is a single connected component**.
 - **Fix plan** (deferred, needs layout work):
   1. Add a B.Cu BAT+ trace from (105.5, 46.135) via east to connect L1.1.
   2. Must thread the narrow corridor between the Fix 1a GND horizontal (y=45.3) and the IP5306_KEY horizontal (y=46.61) — usable corridor ~0.885mm wide → trace ≤ 0.4mm width (not the typical 0.76mm `W_PWR`).
@@ -258,13 +258,13 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 - **Why verification missed it**: same class as R5-CRIT-1 — every pad has the "right" net assignment, and the pull-up/debounce junction is internally consistent (R and C share a 4mm trace), so polarity/datasheet checks pass. Nothing walks the full net graph asking *"is every component electrically reachable from every other component on this net?"*.
 - **Fix plan**: for each button, add a B.Cu or F.Cu segment from the R/C junction to the main button signal path (near the ESP32-side via). ~12 segments total. Low risk per button, high tedium.
 
-### R5-CRIT-5 — SW_BOOT not connected to BTN_SELECT network
+### R5-CRIT-5 — SW14 not connected to BTN_SELECT network
 
 - **Files**: `scripts/generate_pcb/routing.py:4346-4355`, cache
-- **Evidence**: SW_BOOT.2 (102, 63.65) → short B.Cu stub to (102, 60) → dangling via. No connection to the main BTN_SELECT path (which runs on the LEFT side of the board via SW10 → ESP32 GPIO0).
-- **Problem**: pressing SW_BOOT shorts pad 2 to GND (pad 3/4), but pad 2 is on an isolated net fragment. Reset-with-boot-held (the download mode entry sequence) doesn't pull GPIO0 low → firmware can't enter flashing mode via the buttons.
-- **Impact**: **HIGH functional**. Download mode currently requires either the USB-JTAG path or manually shorting GPIO0 to GND. SW_BOOT as a physical button is decorative.
-- **Fix plan**: route a B.Cu/F.Cu trace from SW_BOOT.2 to the nearest BTN_SELECT copper (probably the R13/C14 junction at x=88.95 after R5-CRIT-4 is fixed, or directly to the SW10→ESP32 trace).
+- **Evidence**: SW14.2 (102, 63.65) → short B.Cu stub to (102, 60) → dangling via. No connection to the main BTN_SELECT path (which runs on the LEFT side of the board via SW10 → ESP32 GPIO0).
+- **Problem**: pressing SW14 shorts pad 2 to GND (pad 3/4), but pad 2 is on an isolated net fragment. Reset-with-boot-held (the download mode entry sequence) doesn't pull GPIO0 low → firmware can't enter flashing mode via the buttons.
+- **Impact**: **HIGH functional**. Download mode currently requires either the USB-JTAG path or manually shorting GPIO0 to GND. SW14 as a physical button is decorative.
+- **Fix plan**: route a B.Cu/F.Cu trace from SW14.2 to the nearest BTN_SELECT copper (probably the R13/C14 junction at x=88.95 after R5-CRIT-4 is fixed, or directly to the SW10→ESP32 trace).
 
 ### R5-CRIT-6 — Menu combo diode D1 not connected to BTN_START/BTN_SELECT — **FIXED 2026-07-25**
 
@@ -288,11 +288,11 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 | 1 | (112.4, 49.5)   | BAT+        | L1.1 inductor orphan | R5-CRIT-1 |
 | 2 | (116.95, 47.5)  | BAT+        | C18 decoupling orphan | R5-CRIT-2 |
 | 3 | (110.95, 33.65) | VBUS        | C17 decoupling orphan | R5-CRIT-3 |
-| 4 | (39.25, 68.3)   | BAT+        | Single-layer superfluous (SW_PWR junction) | cleanup |
+| 4 | (39.25, 68.3)   | BAT+        | Single-layer superfluous (SW16 junction) | cleanup |
 | 5 | (86.0, 69.0)    | GND         | Orphan stitching (no F.Cu/B.Cu trace) | cleanup |
 | 6 | (88.0, 69.0)    | GND         | Orphan stitching | cleanup |
-| 7 | (98.0, 60.0)    | EN          | Single-layer superfluous (SW_RST → U1.3 path) | cleanup |
-| 8 | (102.0, 60.0)   | BTN_SELECT  | SW_BOOT.2 orphan | R5-CRIT-5 |
+| 7 | (98.0, 60.0)    | EN          | Single-layer superfluous (SW15 → U1.3 path) | cleanup |
+| 8 | (102.0, 60.0)   | BTN_SELECT  | SW14.2 orphan | R5-CRIT-5 |
 | 9 | (156.95, 56.1)  | BTN_START   | D1.1 menu diode orphan | R5-CRIT-6 |
 | 10| (155.05, 51.1)  | BTN_SELECT  | D1.2 menu diode orphan | R5-CRIT-6 |
 
@@ -316,7 +316,7 @@ This gate would have caught R5-CRIT-1 through R5-CRIT-6 all at once. It should b
 - ✅ 6 trace-through-pad fab shorts eliminated (Fix 1a/1b/1c)
 - ✅ J4.37 GND via clearance shifted 0.3mm (DRC shorting_items: 8 → 0)
 - ✅ LCD_RD / LCD_BL merged to +3V3 (2 dangling vias eliminated, pads now correctly at +3V3 net)
-- ✅ datasheet_specs.py updated to document the U6.8/9 + SW_PWR.4b/4d + J4.8/29 same-net relationships
+- ✅ datasheet_specs.py updated to document the U6.8/9 + SW16.4b/4d + J4.8/29 same-net relationships
 - ✅ `verify_polarity.py` updated for the J4.8/29 net changes
 
 ### What is NOT fixed (needs a dedicated R6 session)
@@ -448,11 +448,11 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
     Track [BTN_X] F.Cu 93.28mm × PTH pad 13 [GND] of J1 @ (84.325, 69.375)
     Track [BTN_X] F.Cu 93.28mm × PTH pad 14 [GND] of J1 @ (75.675, 69.375)
   clearance 0.1500 mm:
-    Via [BTN_X] F.Cu-B.Cu @ (36.55, 70.65) × Pad 4b [BTN_SELECT] of SW_PWR @ (36.40, 71.40)
+    Via [BTN_X] F.Cu-B.Cu @ (36.55, 70.65) × Pad 4b [BTN_SELECT] of SW16 @ (36.40, 71.40)
   ```
-- **Problem**: A 93.28 mm single BTN_X segment on F.Cu is crossing the entire board — nearly full length. It violates clearance to two J1 USB-C shield GND pins AND to a SW_PWR pad that carries BTN_SELECT. The last one is the scariest: **BTN_X via 0.15 mm from a BTN_SELECT pad** — one tolerance excursion and pressing X = pressing SELECT.
+- **Problem**: A 93.28 mm single BTN_X segment on F.Cu is crossing the entire board — nearly full length. It violates clearance to two J1 USB-C shield GND pins AND to a SW16 pad that carries BTN_SELECT. The last one is the scariest: **BTN_X via 0.15 mm from a BTN_SELECT pad** — one tolerance excursion and pressing X = pressing SELECT.
 - **Impact**: HIGH. USB shield short risk + two-button ghost press risk.
-- **Fix**: Break the 93 mm BTN_X segment into shorter pieces, route through inner layers or around J1; move the BTN_X via at (36.55, 70.65) away from SW_PWR.4b.
+- **Fix**: Break the 93 mm BTN_X segment into shorter pieces, route through inner layers or around J1; move the BTN_X via at (36.55, 70.65) away from SW16.4b.
 
 #### R9-HIGH-5 — BTN_START short tracks breach J1 GND shield clearance (0.17 mm, ×2)
 
@@ -561,12 +561,12 @@ All R9 CRIT / HIGH items from Layer 1 fixed in the same session.
 | **R9-HIGH-1** BAT+ via × R11 (BTN_Y) | ✅ FIXED | BAT+ approach via (80.01, 46.135) downsized from VIA_STD (r=0.45) to VIA_MIN (r=0.25). Gap 0.11 → 0.31 mm. |
 | **R9-HIGH-2** BAT+ via × C18 GND | ✅ FIXED | L1.1 BAT+ bridge y shifted 48.00 → 47.80. `POWER_HIGH_ALLOWLIST` coordinates in `verify_net_class_widths.py` updated to match. |
 | **R9-HIGH-3** GND via × U2.4 (IP5306 NC) | ✅ FIXED | Redundant east-side GND stitching via removed entirely — IP5306 EP already grounded by 3 thermal vias + In1.Cu zone. Extended central thermal via stub to EP centre so the pad-net registrar tags EP as GND. |
-| **R9-HIGH-4** 93 mm BTN_X + via × SW_PWR.4b | ✅ FIXED | (a) BTN_X channel y 70.65 → 70.80 (gap to J1.13/14 GND: 0.15 → 0.30 mm). (b) BTN_X `approach_x` forced to 34.30 (1.5 mm west of SW_PWR body). Via to SW_PWR.4b gap: 0.15 → 2.10 mm. |
+| **R9-HIGH-4** 93 mm BTN_X + via × SW16.4b | ✅ FIXED | (a) BTN_X channel y 70.65 → 70.80 (gap to J1.13/14 GND: 0.15 → 0.30 mm). (b) BTN_X `approach_x` forced to 34.30 (1.5 mm west of SW16 body). Via to SW16.4b gap: 0.15 → 2.10 mm. |
 | **R9-HIGH-5** BTN_START stubs × J1 rear shield | ✅ FIXED | `_bypass_y` 72.38 → 72.30. Gap to J1.13b/14b: 0.17 → 0.25 mm. |
 | **R9-HIGH-6** LCD_D1..D4 vias × J4.42 | ✅ FIXED | `_J4_42_Y2`: 25.50 → 25.52, `_J4_42_Y1`: 22.50 → 22.48. Gap: 0.19 → 0.21 mm (≥ 0.20 mm rule). |
 | **R9-BONUS** GND F.Cu × SW7.3 (found during fix pass) | ✅ FIXED | SW7.3 is internally shorted to SW7.4 (GND) but carries no explicit net. Added a north-jog dog-leg to the FPC GND F.Cu stub around SW7.3 at x=137.80..139.90, passing 0.20 mm south of the pad. |
 | **R9-MED-1** `verify_strapping_pins.py` R3 expectation | ✅ FIXED | `test_en_rc_delay()` now accepts the WROOM-1 internal EN pull-up (check passes if schematic contains the R3-DNP note). 11/11 PASS. |
-| **R9-MED-2** `verify_netlist_diff.py` 4/4 failing | ✅ FIXED | Added `T1_ALLOW` (GPIO35-37, VBUS_SW, VREF), `T2_ALLOW` (USB_DM/DP_MCU, SPK±, BTN_MENU, EN, IP5306_KEY, LX, PAM_VREF, LED1/2_RA, VBUS), `T3_ALLOW` (DS1 R4-HIGH-2 rename), `T4_SKIP_REFS` (J1/J4/U1/U5/U6/SW_PWR/R19-21/C20-21 mixed-pin-numbering symbols) and `_t4_is_allowed` for U3.3/button pullup/debounce/C24 drift. **4/4 PASS**. |
+| **R9-MED-2** `verify_netlist_diff.py` 4/4 failing | ✅ FIXED | Added `T1_ALLOW` (GPIO35-37, VBUS_SW, VREF), `T2_ALLOW` (USB_DM/DP_MCU, SPK±, BTN_MENU, EN, IP5306_KEY, LX, PAM_VREF, LED1/2_RA, VBUS), `T3_ALLOW` (DS1 R4-HIGH-2 rename), `T4_SKIP_REFS` (J1/J4/U1/U5/U6/SW16/R19-21/C20-21 mixed-pin-numbering symbols) and `_t4_is_allowed` for U3.3/button pullup/debounce/C24 drift. **4/4 PASS**. |
 | **R9-MED-3** `drc_native.py` classification | ✅ FIXED | `tracks_crossing` → CRITICAL, `lib_footprint_issues` → LOW, new `unconnected_accepted` bucket for the 4 `verify_net_connectivity` tech-debt fragmentations (BTN_SELECT / BTN_START / I2S_DOUT / MENU_K). `drc_baseline.json` regenerated (756 → 25, −731). Uncategorized: 0. |
 | **New gate** `verify_trace_crossings.py` | ✅ ADDED | Layer-1 check for different-net capsule overlap on the same copper layer. Wired into `Makefile verify-fast` fan-out, `verify-trace-crossings` target, and `.claude/skills/hardware-audit/SKILL.md` Step 0. |
 
@@ -1042,17 +1042,17 @@ has the R6/R7/R8/R9 copper-connectivity + clearance fixes all verified.
   (Green "Full") light up any time +3V3 is alive — neither one
   actually reports charger status. This matches R1 BUG-L1 cosmetic
   note. Not re-raising.
-- SW_PWR power switch: `power_supply.py:357-364` routes `BAT+` through
-  SW_PWR and emits an output label `VBUS_SW` that **no other sheet
+- SW16 power switch: `power_supply.py:357-364` routes `BAT+` through
+  SW16 and emits an output label `VBUS_SW` that **no other sheet
   consumes** → switch is decorative (R1 BUG-L2: "Power switch
   non-functional — only common pin routed"). Still open as LOW.
 - EN RC network: C3 100nF present, R3 external DNP, WROOM-1 internal
   pull-up in use (see R10-LOW-7).
 
 **ESP32 boot (Step 2)** — verified:
-- GPIO0 (BTN_SELECT): external 10k pull-up to +3V3 + SW10 + SW_BOOT.
+- GPIO0 (BTN_SELECT): external 10k pull-up to +3V3 + SW10 + SW14.
   BOOT button grounds GPIO0 to enter download mode — works because
-  R5-CRIT-5 SW_BOOT routing was fixed in R6/R7/R8.
+  R5-CRIT-5 SW14 routing was fixed in R6/R7/R8.
 - GPIO45 (BTN_L): **external R14 DNP**, GPIO45 uses ESP32 internal
   pull-up. `verify_strapping_pins.py` checks the `if i == 10: continue`
   skip in `routing.py`. `input.c:45-49` enables `GPIO_PULLUP_ENABLE`
@@ -1113,14 +1113,14 @@ has the R6/R7/R8/R9 copper-connectivity + clearance fixes all verified.
 - **Notes**: R10-LOW-3 and R10-LOW-4 (both doc drift) apply.
 
 **Buttons (Step 6)** — verified:
-- 12 tact switches (`SW1–SW12`) + reset (`SW_RST`) + boot (`SW_BOOT`)
+- 12 tact switches (`SW1–SW12`) + reset (`SW15`) + boot (`SW14`)
   + menu (`SW13`).
 - Each of the 12 main buttons has an external 10k pull-up + 100 nF
   debounce cap. After R5-CRIT-4 + R6/R7/R8 bridges, `verify_net_connectivity`
   confirms each button net is a single connected component.
 - BTN_L (GPIO45) uses internal pull-up only — R14 DNP on BOM, routing
   skips the +3V3 stub (`routing.py if i == 10: continue`).
-- SW_BOOT grounds GPIO0 via the BTN_SELECT net — R5-CRIT-5 fixed in
+- SW14 grounds GPIO0 via the BTN_SELECT net — R5-CRIT-5 fixed in
   R6/R7/R8.
 - Menu combo via SW13 → D1 (BAT54C) dual-Schottky with common cathode
   on MENU_K. D1.1 anode → BTN_START, D1.2 anode → BTN_SELECT.
@@ -1194,7 +1194,7 @@ Remaining v2-respin tech debt (unchanged from R5/R6/R7/R8/R9):
 - R9-LOW-1 (MountingHole library not in fp-lib-table, 6 DRC warnings)
 - R9-LOW-2 (2 silkscreen labels clipped by mask)
 - BUG-L1 (IP5306 KEY bootstrap from VOUT)
-- BUG-L2 (SW_PWR non-functional — only common pin routed)
+- BUG-L2 (SW16 non-functional — only common pin routed)
 - BUG-L3 (LCD 20 MHz > 15 MHz spec, common overclock)
 - BUG-L5 (no firmware button debounce; mitigated by 60 fps polling)
 - BUG-L7 (no battery voltage monitoring — R10-LOW-2 freed GPIOs are
@@ -1535,7 +1535,7 @@ now closed on the JLCPCB side too.
   I2S_DOUT C22 AC-coupling, VBUS J1.9/11 USB-C reversible
 - R9-LOW-1: MountingHole library missing from fp-lib-table (6 DRC warn)
 - R9-LOW-2: 2 silkscreen labels clipped by solder mask
-- BUG-L1..L8 (R1): battery monitoring, SW_PWR cosmetic, LCD 20MHz
+- BUG-L1..L8 (R1): battery monitoring, SW16 cosmetic, LCD 20MHz
   overclock, SD 40MHz cap, button RC debounce, GPIO0 download mode,
   no battery ADC, no SD card detect — all accepted for v1
 
@@ -1829,7 +1829,7 @@ All 6 found by the new `scripts/verify_copper_clearance.py` gate:
 | 3 | R13-LOW-3 | B.Cu | 0.125mm | VBUS | GND (U2.EP) | (111.00, 40.98) vs (111.00, 41.10) | ✅ FIXED |
 | 4 | R13-LOW-4 | B.Cu | 0.125mm | +3V3 (C3.1) | BTN_SELECT | (71.00, 42.65) vs (71.12, 42.65) | ✅ FIXED |
 | 5 | R13-LOW-5 | B.Cu | 0.145mm | GND (C3.2) | BTN_UP | (68.10, 41.35) vs (67.95, 41.35) | ✅ FIXED |
-| 6 | R13-LOW-6 | F.Cu | 0.150mm | BTN_START | BTN_SELECT (SW_PWR.4b) | (35.95, 74.08) vs (35.95, 74.23) | ✅ FIXED |
+| 6 | R13-LOW-6 | F.Cu | 0.150mm | BTN_START | BTN_SELECT (SW16.4b) | (35.95, 74.08) vs (35.95, 74.23) | ✅ FIXED |
 
 ### Fix strategy — narrow trace widths locally
 
@@ -1846,7 +1846,7 @@ component moves, no net connectivity changes, no new vias.
   narrowed to 0.18mm (from W_SIG 0.25) in the contested y-bands
   near C3.1/C3.2 pads.
 - **R13-LOW-6**: BTN_START F.Cu west horizontal narrowed from W_SIG
-  to W_DATA (0.20mm). Fresh top edge clears both SW_PWR.4b approach
+  to W_DATA (0.20mm). Fresh top edge clears both SW16.4b approach
   vias by 0.175mm.
 
 ### New Layer 1 gate (R13)
@@ -2071,7 +2071,7 @@ verify_drill_standards) and one routing fix (LCD_D2/D3 via stagger).
 
 ### Domain findings (Layer 2 review)
 
-- **Power chain**: 0 new findings. Known: IP5306 KEY bootstraps from VOUT (POR handles), SW_PWR non-functional (v2). Q1 P-MOSFET battery protection correct.
+- **Power chain**: 0 new findings. Known: IP5306 KEY bootstraps from VOUT (POR handles), SW16 non-functional (v2). Q1 P-MOSFET battery protection correct.
 - **ESP32 boot**: 0 new findings. GPIO45/R14 DNP confirmed. All strapping pins correct.
 - **Display**: 0 new findings. FPC 41-N reversal verified. LCD_D0-D7 contiguous GPIO4-11. IM[2:0]=011 for 8080 8-bit parallel.
 - **Audio**: 0 new findings. PDM TX mode, DOUT-only, PAM_VREF cap correct.
@@ -2500,7 +2500,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
 ### Domain findings
 
 - **Power chain**: 1 (VBUS trace width)
-- **ESP32 boot**: 0 electrical; 2 floating schematic pins (SW_RST, SW_BOOT)
+- **ESP32 boot**: 0 electrical; 2 floating schematic pins (SW15, SW14)
 - **Display**: 0
 - **Audio**: 1 CRITICAL-adjacent (input bias)
 - **SD card**: 0
@@ -2563,7 +2563,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   `SW3 Pin 1 / Pin 2 — Pin not connected` **under sheet `/Mcu/`**. SW3 is
   the LEFT D-pad button and lives in `06-controls.kicad_sch`; an
   independent geometric check proves every pin in the Controls sheet is
-  properly wired. The real floating pins are SW_RST and SW_BOOT in
+  properly wired. The real floating pins are SW15 and SW14 in
   `02-mcu.kicad_sch` (R24-HIGH-3) — they were reported under a colliding
   UUID's reference. **Anyone chasing "SW3" finds nothing wrong and closes
   the finding.** This is the mechanism that let a genuine ERC error be
@@ -2577,7 +2577,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   makes every ERC report untrustworthy, which is worse than a bug that
   merely exists.
 
-### R24-HIGH-3 — SW_RST and SW_BOOT have all four pins floating in the schematic
+### R24-HIGH-3 — SW15 and SW14 have all four pins floating in the schematic
 
 - **File**: `scripts/generate_schematics/sheets/mcu.py:84-102`
 - **Problem**: `SW_Push` has **horizontal** pins — library coordinates
@@ -2585,7 +2585,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   **vertically**:
 
   ```python
-  self.sym("SW_Push", "SW_RST", "RESET", sw_rst_x, sw_rst_y, ["1", "2"])
+  self.sym("SW_Push", "SW15", "RESET", sw_rst_x, sw_rst_y, ["1", "2"])
   self.wire(sw_rst_x, sw_rst_y - 3.81, sw_rst_x, c_en_y + 3.81)   # misses pin
   self.wire(sw_rst_x, sw_rst_y + 3.81, sw_rst_x, sw_rst_y + 8)    # misses pin
   ```
@@ -2600,7 +2600,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   The rendered sheet looks correct to a human reader — the wires are
   drawn, just not attached.
 - **PCB is unaffected**: `routing.py` is an independent generator and
-  routes them correctly — SW_RST pad 1 → net 53 (EN), SW_BOOT pad 2 →
+  routes them correctly — SW15 pad 1 → net 53 (EN), SW14 pad 2 →
   net 36 (BTN_SELECT/GPIO0), both with pads 3/4 on GND. **The physical
   board's reset and boot buttons work.** This is a schematic/documentation
   defect, and a hole in the netlist that any future schematic-driven
@@ -2679,12 +2679,12 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   temperature rise as justification**, the way the 8 BAT+ corridor
   segments already are.
 
-### R24-LOW-1 — SW_PWR unterminated pins have no `no_connect` marker
+### R24-LOW-1 — SW16 unterminated pins have no `no_connect` marker
 
 - **File**: `scripts/generate_schematics/sheets/power_supply.py:548-561`
 - **Problem**: the v1 as-built state (slide switch not in series, throw
   pins unrouted) is correct and thoroughly documented in the comments and
-  in `datasheet_specs.py::SW_PWR`. But the schematic places no
+  in `datasheet_specs.py::SW16`. But the schematic places no
   `no_connect` flag, so ERC reports it as an unconnected pin — indis-
   tinguishable from R24-HIGH-3's genuine bug.
 - **Fix**: `self.nc(...)` on the open terminal. `sheet_base.py` already
@@ -2707,10 +2707,10 @@ what KiCad's own ERC misattributed:
 
 ```
 FAIL  02-mcu.kicad_sch               59 pins, 4 floating
-        SW_RST     pin 1    @ (144.68, 164.98) — nothing lands on this pin
-        SW_RST     pin 2    @ (154.84, 164.98) — nothing lands on this pin
-        SW_BOOT    pin 1    @ (114.68, 201.98) — nothing lands on this pin
-        SW_BOOT    pin 2    @ (124.84, 201.98) — nothing lands on this pin
+        SW15     pin 1    @ (144.68, 164.98) — nothing lands on this pin
+        SW15     pin 2    @ (154.84, 164.98) — nothing lands on this pin
+        SW14    pin 1    @ (114.68, 201.98) — nothing lands on this pin
+        SW14    pin 2    @ (124.84, 201.98) — nothing lands on this pin
 Results: 339 pins checked, 4 floating, 1 documented N.C.
 ```
 
@@ -2726,10 +2726,10 @@ Wired into `VERIFY_ALL_SCRIPTS` and exposed as `make verify-sch-pins`.
 - CRIT: 0
 - HIGH: 3 — R24-HIGH-1 (audio bias, **affects the fabricated board**),
   R24-HIGH-2 (UUID collisions, corrupts ERC attribution),
-  R24-HIGH-3 (SW_RST/SW_BOOT floating in schematic)
+  R24-HIGH-3 (SW15/SW14 floating in schematic)
 - MED : 3 — R24-MED-1 (ERC severity classing), R24-MED-2 (netlist_diff
   noise), R24-MED-3 (VBUS width)
-- LOW : 1 — R24-LOW-1 (SW_PWR no_connect marker)
+- LOW : 1 — R24-LOW-1 (SW16 no_connect marker)
 
 ### Why this recurred — the honest answer
 
@@ -2822,13 +2822,13 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
 - **Files**: `scripts/generate_schematics/sheets/mcu.py:55-75`,
   `release_jlcpcb/bom.csv`, `release_jlcpcb/cpl.csv`
 - **Problem**: on the PCB the `EN` net has exactly **two** pads —
-  `U1.3` (ESP32-S3 EN) and `SW_RST.1`. There is no pull-up to `+3V3`
+  `U1.3` (ESP32-S3 EN) and `SW15.1`. There is no pull-up to `+3V3`
   and no capacitor to GND anywhere on that net. Pressing reset pulls
   EN low correctly, but nothing defines EN at power-on and nothing
   returns it high afterwards. The schematic disagrees with the board in
   a different way: it ties `U1.3` straight to `+3V3` (this is the
   `U1.3: sch='+3V3' pcb='EN'` half of the H2 netlist mismatch, which
-  until now was filed as a bookkeeping difference), while SW_RST's pins
+  until now was filed as a bookkeeping difference), while SW15's pins
   float unconnected (H5). So neither source carries the required network.
 - **Root cause**: `mcu.py:56-59` removed R3 from the BOM and CPL on this
   stated ground — *"the ESP32-S3-WROOM-1 module integrates a 10k EN
@@ -3198,7 +3198,7 @@ merge. Both layers run. No CRIT or HIGH found.
   in the unconditional-suppression set.
 - **Why that set is the risky one**: `wire_dangling` is the signature of wires
   landing *beside* pins rather than on them, which is exactly the defect
-  `397c854` found on SW_RST/SW_BOOT — where, in that commit's words, the
+  `397c854` found on SW15/SW14 — where, in that commit's words, the
   switches "never reached the netlist at all".
 - **Demonstrated, not asserted.** Planted the defect on a copy of the
   schematic: moved SW3's (BTN_LEFT) pin-2 wire 2.54 mm aside.
@@ -3366,7 +3366,7 @@ run. No CRIT, no HIGH; two LOW, both fixed in-round.
 - **R28-HIGH-1** — panel pin 13 (SPI SDI) floating; datasheet: "fix at VDDI
   or DGND". Respin item: tie J4 pad 28 to +3V3 alongside pad 29 (RDX).
 - **R25-HIGH-1** — backlight current limit; bench measurement pending.
-- RESPIN list unchanged (EN RC, SW_PWR series, VBUS fragmentation).
+- RESPIN list unchanged (EN RC, SW16 series, VBUS fragmentation).
 
 ### R29 addendum — R28-HIGH-1 FIXED in the design
 

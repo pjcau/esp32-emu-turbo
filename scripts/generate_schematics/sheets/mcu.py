@@ -71,7 +71,7 @@ class MCUSheet(SchematicSheet):
         #
         # On the v1 board EN has NEITHER. R3 is DNP and C3 is wired as a
         # second decoupling cap (see below), so EN reaches only U1.3 and
-        # SW_RST pad 1. hardware-audit-bugs.md asserts "EN RC delay
+        # SW15 pad 1. hardware-audit-bugs.md asserts "EN RC delay
         # (R3+C3) intact" in two places; nobody had compared that sentence
         # to the copper.
         #
@@ -85,7 +85,7 @@ class MCUSheet(SchematicSheet):
         r_en_x = px_l - 25
         r_en_y = MCU_Y - 45  # (legacy position kept for layout spacing)
         # No +3V3 tie: a hard wire from EN to the rail made EN and +3V3 the
-        # same schematic net, so SW_RST — which bridges EN to GND — was
+        # same schematic net, so SW15 — which bridges EN to GND — was
         # drawn shorting 3V3 straight to ground on every press. The PCB
         # always had EN as its own copper; only the drawing was wrong.
         # c_en_x stays the anchor the reset/boot columns are placed from.
@@ -109,7 +109,7 @@ class MCUSheet(SchematicSheet):
         # the upper stub ran to c_en_y + 3.81, which is C3's BOTTOM pin
         # (GND), so the schematic drew the reset button bridging GND to
         # GND and never touching EN. The PCB always had it right
-        # (SW_RST pad 1 = EN, pads 3/4 = GND).
+        # (SW15 pad 1 = EN, pads 3/4 = GND).
         sw_rst_x = c_en_x - 12
         sw_rst_y = c_en_y + 18
         # SW_Push pins are HORIZONTAL at x +/- 5.08 (lib_symbols.py:133).
@@ -117,7 +117,7 @@ class MCUSheet(SchematicSheet):
         # y +/- 3.81 — so they landed ~5mm off both pins and the switch
         # was drawn connected to nothing at all. angle=270 puts pin 1
         # (PCB pad 1 = net EN) at the TOP, facing the EN line.
-        self.sym("SW_Push", "SW_RST", "RESET", sw_rst_x, sw_rst_y,
+        self.sym("SW_Push", "SW15", "RESET", sw_rst_x, sw_rst_y,
                  ["1", "2"], angle=270)
         # Upper terminal -> the EN horizontal. The rail used to stop at
         # c_en_x because C3 tapped it there; with C3 moved to the
@@ -135,14 +135,14 @@ class MCUSheet(SchematicSheet):
         # headers, which live at y ~ MCU_Y - 35 .. MCU_Y + 12.
         sw_boot_x = c_en_x - 30
         sw_boot_y = c_en_y + 55
-        # Same fix as SW_RST, and the SAME angle — 270, not 90.
+        # Same fix as SW15, and the SAME angle — 270, not 90.
         #
         # A tact switch has two POLES, not four terminals: pads 1+2 are one
         # pole, pads 3+4 the other, and pressing shorts pole to pole. The
         # symbol has one pin per pole (_TACT_MAP: pin 1 -> pads 1,2 and
         # pin 2 -> pads 3,4). routing.py drives BTN_SELECT onto pad 2 and
         # GND onto pads 3 and 4, so the signal pole is pads 1/2 = symbol
-        # pin 1 — exactly as on SW_RST.
+        # pin 1 — exactly as on SW15.
         #
         # angle=90 was chosen by reading "pad 2 = BTN_SELECT" and reaching
         # for pin 2, which confuses the pad number with the pin number. It
@@ -150,7 +150,7 @@ class MCUSheet(SchematicSheet):
         # harmless on the bench, because the part is symmetric and the
         # button still shorts GPIO0 to ground, but it is the schematic
         # disagreeing with the board, and T4 says so.
-        self.sym("SW_Push", "SW_BOOT", "BOOT", sw_boot_x, sw_boot_y,
+        self.sym("SW_Push", "SW14", "BOOT", sw_boot_x, sw_boot_y,
                  ["1", "2"], angle=270)
         self.glabel("BTN_SELECT", sw_boot_x, sw_boot_y - 8, 0, "bidirectional")
         self.wire(sw_boot_x, sw_boot_y - 5.08, sw_boot_x, sw_boot_y - 8)

@@ -7,7 +7,7 @@ the time constant that matters is the rise after release, and it is the one a
 firmware debounce interval has to clear.
 
 T2.3 is the opposite kind of test: `switch_off` must **reproduce** a known
-property of this board rather than report it. SW_PWR is not in series with the
+property of this board rather than report it. SW16 is not in series with the
 battery — only its common pad is routed, as a stub tap on BAT+ — so the switch
 cannot power the board down. The bench asserts that the board stays powered,
 cites the invariant, and fails if the board ever starts behaving like the
@@ -40,7 +40,7 @@ from vbench.models.u1_esp32s3 import STRAPPING_DEFAULTS       # noqa: E402
 V_IH_FRACTION = 0.70
 
 INVARIANT_DOC = os.path.join(BASE, "docs", "known-issues.md")
-INVARIANT_TEXT = "SW_PWR is not in series"
+INVARIANT_TEXT = "SW16 is not in series"
 
 Button = collections.namedtuple(
     "Button", "net switch pullup r_ohm cap c_farad tau_s t_rise_s note "
@@ -127,7 +127,7 @@ def survey(board=None, values=None):
 
 
 def switch_off_scenario():
-    """T2.3 — closing SW_PWR must NOT remove power. Returns (ok, detail)."""
+    """T2.3 — closing SW16 must NOT remove power. Returns (ok, detail)."""
     board = nl.load_board_netlist()
     values = rails.load_bom_values()
     powered = rails.operating_point(buttons_pressed=False)
@@ -138,11 +138,11 @@ def switch_off_scenario():
     rail_before = powered.voltages.get("+3V3")
     rail_after = switched.voltages.get("+3V3")
 
-    # The physical reason, read from the copper rather than quoted: SW_PWR's
+    # The physical reason, read from the copper rather than quoted: SW16's
     # throw pads carry no net, so there is nothing for the common to switch
     # between.
     pads = {p.pad: net for net, pins in board.nets.items()
-            for p in pins if p.ref == "SW_PWR"}
+            for p in pins if p.ref == "SW16"}
     throws = [p for p in ("1", "3") if p in pads]
 
     try:
@@ -215,7 +215,7 @@ def main(argv=None):
     print("=" * 72)
     print("  Virtual Bench T2.3 — scenario switch_off")
     print("=" * 72)
-    print(f"  SW_PWR common (pad 2) is on : {d['common_net']}")
+    print(f"  SW16 common (pad 2) is on : {d['common_net']}")
     print(f"  Throw pads carrying a net    : "
           f"{d['routed_throws'] or 'NONE — nothing to switch between'}")
     print(f"  BAT+  before / after         : {d['bat_before']:.3f} V / "
@@ -227,7 +227,7 @@ def main(argv=None):
         print("  EXPECTED: the board stays powered with the switch operated.")
         print("  This is not a bench failure and must never be reported as "
               "one — only")
-        print("  SW_PWR's common pad is routed, as a stub tap on BAT+, so the "
+        print("  SW16's common pad is routed, as a stub tap on BAT+, so the "
               "battery")
         print("  path J3 -> Q1 -> BAT+ -> U2.6 never passes through the "
               "switch. True")
@@ -236,7 +236,7 @@ def main(argv=None):
               f"{'yes' if d['recorded'] else 'NO'}")
     else:
         problems.append(
-            "operating SW_PWR changed a rail: the copper no longer matches "
+            "operating SW16 changed a rail: the copper no longer matches "
             "the recorded invariant that the switch is not in series")
     if not d["recorded"]:
         problems.append(

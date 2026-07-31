@@ -50,7 +50,7 @@ _ROLES = {
     "C7519": "USBLC6-2SC6 — USB ESD/TVS protection",
     "C37704": "BAT54C — dual Schottky, menu-combo diode OR",
     "C10487": "SI2301CDS — P-MOSFET reverse-battery protection",
-    "C431540": "SS-12D00G3 slide switch (SW_PWR)",
+    "C431540": "SS-12D00G3 slide switch (SW16)",
     "C318884": "tact switches — D-pad, ABXY, Start/Select, L/R, Menu, RST, BOOT",
     "C84256": "red LED — charging indicator",
     "C19171391": "green LED — fully-charged indicator",

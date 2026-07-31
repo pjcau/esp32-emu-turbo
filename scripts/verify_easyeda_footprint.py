@@ -56,7 +56,7 @@ CACHE_DIR = SCRIPTS / ".easyeda_cache"
 # informational (a rotation mismatch on a 0805 resistor has no functional
 # consequence, but the check is still valuable for future parts).
 
-_POLARIZED_PREFIXES = ("D", "LED", "Q", "U", "J", "SW_PWR")
+_POLARIZED_PREFIXES = ("D", "LED", "Q", "U", "J", "SW16")
 
 
 # ── Pad-name alias tables (our pad name -> EasyEDA pad name) ─────────
@@ -282,7 +282,7 @@ def _is_polarized(ref: str, footprint: str, comment: str) -> bool:
     # Any IC (multi-pin) or MOSFET or Diode or LED
     if ref.startswith(("D", "LED", "Q", "U")):
         return True
-    if ref == "SW_PWR":
+    if ref == "SW16":
         return True
     return False
 

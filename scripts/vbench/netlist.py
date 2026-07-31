@@ -360,7 +360,7 @@ def crosscheck(board, sch):
     # visible: all 17 such pads on this board are declared in
     # `hardware/datasheet_specs.py`, where verify_datasheet_nets compares
     # each one's net against an expected value. The four most suspicious —
-    # U6.8/U6.9 on the SD data lines and SW_PWR.4b/4d on BTN_SELECT — turn
+    # U6.8/U6.9 on the SD data lines and SW16.4b/4d on BTN_SELECT — turn
     # out to be deliberate same-net fixups with a written safety analysis
     # (routing.py:6055-6085) that a hard gate protects.
     #
@@ -449,7 +449,7 @@ def crosscheck(board, sch):
     # placed, it is in the BOM, and it is not in the circuit.
     #
     # This is the whole Round 5 class: L1's inductor pin, C17 and C18's
-    # decoupling pins, every button's pull-up and debounce cap, SW_BOOT and
+    # decoupling pins, every button's pull-up and debounce cap, SW14 and
     # the menu diode were all physically present with a terminal on an
     # isolated island, and six gates said PASS because every pad still had
     # the *right net name*. A net name is not a connection.

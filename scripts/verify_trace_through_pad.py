@@ -14,7 +14,7 @@ Rules:
   - Different-net overlap (both netted, different): FAIL — real short
   - Netted trace crossing unnetted pad (pad.net=0): FAIL — real short
         This is the class that caused the v3.3 regression: commit 775e9fd
-        removed _PAD_NETS assignments for U2.3/4, U6.8/9, SW_PWR.4b/4d
+        removed _PAD_NETS assignments for U2.3/4, U6.8/9, SW16.4b/4d
         while BTN_SELECT/GND/SD_MISO/BTN_R tracks still routed through
         those pad positions.
 
@@ -247,7 +247,7 @@ def main():
         print(
             "        Historical reference: commit 775e9fd "
             "(2026-04-09 23:50) removed assignments for U2.3/4, "
-            "U6.8/9, SW_PWR.4b/4d thinking they were NC pads — those "
+            "U6.8/9, SW16.4b/4d thinking they were NC pads — those "
             "assignments were the same-net trick keeping DRC clean."
         )
         print()

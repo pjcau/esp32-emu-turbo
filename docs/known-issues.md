@@ -84,7 +84,7 @@ problems and only one of them was a wiring error:
   battery path drawn on the wrong side of the protection FET.
 - **U1.3** — fixed in `mcu.py`; EN is now its own net with a global label
   matching the PCB net name. The schematic had it tied to +3V3, which
-  also meant SW_RST was drawn shorting the rail to ground on every press.
+  also meant SW15 was drawn shorting the rail to ground on every press.
 - **LED1 / LED2** — *not* rewired. A pin-vs-pad numbering translation in
   `SCH_PIN_TO_PCB_PADS` (`_LED_MAP`), with each side checked
   independently: on the PCB pad 2 carries `LED{n}_RA` through R17/R18 to
@@ -95,10 +95,10 @@ problems and only one of them was a wiring error:
 - **C3** — the schematic was describing a circuit the board does not
   have; see the RESPIN section below.
 
-Also added to the table while closing this: `SW_RST` and `SW_BOOT`, which
+Also added to the table while closing this: `SW15` and `SW14`, which
 had never been in it because their schematic pins were floating, so no
 pin of theirs ever reached the comparison. Adding them immediately caught
-`SW_BOOT` drawn on the wrong pole.
+`SW14` drawn on the wrong pole.
 
 Historical record of the original 7:
 
@@ -276,7 +276,7 @@ itself found stale during this work: at `74c196e` the generator emitted
 U4=0° while `release_jlcpcb/cpl.csv` still carried the pre-fix 90°, so the
 fix closed in `1765982` had never reached the files anyone orders from.
 
-### H5. SW_RST and SW_BOOT are floating in the schematic — CLOSED
+### H5. SW15 and SW14 are floating in the schematic — CLOSED
 
 **Gate:** `verify_schematic_pin_connectivity.py` — **PASS**, 338 pins
 checked, **0 floating**, 1 documented N.C. Closed by `397c854` (geometry)
@@ -293,10 +293,10 @@ The original text follows.
 (339 pins checked repo-wide, 1 documented N.C.)
 
 ```
-SW_RST   pin 1 @ (144.68, 164.98)
-SW_RST   pin 2 @ (154.84, 164.98)
-SW_BOOT  pin 1 @ (114.68, 201.98)
-SW_BOOT  pin 2 @ (124.84, 201.98)
+SW15   pin 1 @ (144.68, 164.98)
+SW15   pin 2 @ (154.84, 164.98)
+SW14  pin 1 @ (114.68, 201.98)
+SW14  pin 2 @ (124.84, 201.98)
 ```
 
 `scripts/generate_schematics/sheets/mcu.py` wires `SW_Push` vertically at
@@ -390,7 +390,7 @@ so "v2" meant the *final product phase* in CLAUDE.md and a *release from
 Note `release_jlcpcb/README.md` still heads its history with "v3.2 (current)"
 and is six releases stale; the tag is the truth.
 
-- **SW_PWR is not in series with the battery.** Only the common pin
+- **SW16 is not in series with the battery.** Only the common pin
   (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins
   1/3 have no net. The path J3 → Q1 → BAT+ → IP5306 pin 6 is continuous
   copper that never passes through the switch, so **the switch cannot
@@ -410,7 +410,7 @@ and is six releases stale; the tag is the truth.
   (0.1 µF) from EN to GND, with the reset button across the cap.
 
   The fabricated board has **neither**: R3 is DNP and C3 is wired as a second
-  decoupling cap, so EN reaches only `U1.3` and `SW_RST` pad 1. It boots
+  decoupling cap, so EN reaches only `U1.3` and `SW15` pad 1. It boots
   today, so this is a margin defect, not a dead board — the failure mode
   is slow supply ramps and brown-outs, i.e. a fraction of units in the
   field rather than anything reproducible on the bench.
@@ -546,7 +546,7 @@ and is six releases stale; the tag is the truth.
   per unit and with temperature. No gate can catch this — `verify_datasheet_nets`
   checks pad 8 against `datasheet_specs.py`, and that file *records the hard
   tie as correct*, which is the R25 pattern exactly.
-- **`SW_PWR` carries the legacy footprint key `SS-12D00G3`** everywhere in
+- **`SW16` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming
   the key across routing/footprints/CPL is a respin cleanup.

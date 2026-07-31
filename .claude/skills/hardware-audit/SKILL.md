@@ -71,7 +71,7 @@ python3 scripts/verify_copper_clearance.py         # MUST be "0 DANGER"
 # single connected component. Catches R5-CRIT-1..9 bugs where
 # pad-net labels are correct but copper is fragmented (BAT+ L1.1
 # isolated, VBUS decoupling floating, button pull-ups disconnected,
-# SW_BOOT non-functional, etc). Missing this gate caused R5 bugs
+# SW14 non-functional, etc). Missing this gate caused R5 bugs
 # to ship undetected in v3.3.
 python3 scripts/verify_net_connectivity.py         # MUST be "0 failed"
 
@@ -148,7 +148,7 @@ USB, emulator performance) live in
 `references/domain-checks.md` — read one domain at a time while
 working it, then move to the next. Each list names the sources to
 cross-check and the as-built limitations that must NOT be re-raised
-(EN without RC, SW_PWR not in series, backlight R25-HIGH-1,
+(EN without RC, SW16 not in series, backlight R25-HIGH-1,
 J4's 41−N pin reversal).
 
 ## Report format

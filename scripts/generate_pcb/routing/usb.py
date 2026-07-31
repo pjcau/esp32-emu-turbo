@@ -152,7 +152,7 @@ def _usb_traces():
     # (USB 2.0 FS tolerance is ~25mm mismatch at 12MHz).
     # Straight F.Cu horizontal from D- via to dm_col_x.
     parts.append(_seg(usb_dm[0], dm_via_y, dm_col_x, dm_via_y, "F.Cu", W_DATA, n_dm))
-    # DFM FIX: SW_RST[2] (GND, tact switch terminal B) at (92.00, 63.65)
+    # DFM FIX: SW15[2] (GND, tact switch terminal B) at (92.00, 63.65)
     # size 1.00x0.70 → x=[91.50, 92.50], y=[63.30, 64.00].
     # B.Cu vert at x=91.65 (dm_col_x) passes through this pad → short to GND.
     # Extend F.Cu vertical past the pad before transitioning to B.Cu.

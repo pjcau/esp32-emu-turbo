@@ -386,7 +386,7 @@ from the CPL; do not reintroduce it.
 **File**: `jlcpcb_export.py`.
 - U1 (ESP32): +(0, 3.62) — asymmetric pin layout
 - J1 (USB-C): NO correction — symmetric body
-- SW_PWR: NO correction — symmetric body
+- SW16: NO correction — symmetric body
 
 #### CPL rotation corrections
 **Problem**: JLCPCB 3D model default orientation doesn't match KiCad footprint.

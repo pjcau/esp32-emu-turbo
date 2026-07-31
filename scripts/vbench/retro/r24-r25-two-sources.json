@@ -26,7 +26,7 @@
     {
       "id": "R24-HIGH-3",
       "round": 24,
-      "title": "SW_RST and SW_BOOT have all four pins floating in the schematic",
+      "title": "SW15 and SW14 have all four pins floating in the schematic",
       "source": "hardware-audit-bugs.md:2580",
       "source_match": "R24-HIGH-3",
       "phase": 0,
@@ -36,7 +36,7 @@
       ],
       "mutation": {
         "kind": "detach_pin",
-        "ref": "SW_RST",
+        "ref": "SW15",
         "pin": "1",
         "side": "schematic"
       },
@@ -59,7 +59,7 @@
         "kind": "none"
       },
       "present_now": true,
-      "must_report": "the EN net has exactly two pins (U1.3 and SW_RST.1), no resistor to +3V3 and no capacitor to GND, so EN has no defined level at power-on and no reset delay -- against U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf page 28, which requires an RC of R = 10k and C = 1uF at EN",
+      "must_report": "the EN net has exactly two pins (U1.3 and SW15.1), no resistor to +3V3 and no capacitor to GND, so EN has no defined level at power-on and no reset delay -- against U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf page 28, which requires an RC of R = 10k and C = 1uF at EN",
       "expect": "caught",
       "note": "The single most instructive entry in the corpus. The removal of R3 was justified by a comment claiming the module integrates the pull-up; the datasheet says the opposite in its own words. The claim was then repeated in three more files. See docs/virtual-bench-plan.md phase -1(a) and (d)."
     },

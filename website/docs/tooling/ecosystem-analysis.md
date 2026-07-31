@@ -144,15 +144,14 @@ All three short-term items were integrated within hours of this analysis being p
 | **InteractiveHtmlBom refresh** | ✅ Regenerated | `ibom.html` regenerated with upstream v2.11.2 (May 2026 release). |
 | **`.claude-plugin/` packaging** (was long-term §4) | ✅ Shipped | `kicad-jlcpcb-skills` v1.0.0 (`.claude-plugin/plugin.json` + `marketplace.json`, commit `dd3d0d6`). |
 
-:::warning Known blocker — non-IPC references
-KiBot (≥ 1.6.5, [upstream #604](https://github.com/INTI-CMNB/KiBot/issues/604) — wontfix) rejects any schematic reference that is not `PREFIX+NUMBER`. Ours has **`SW_PWR`, `SW_BOOT`, `SW_RST`**, so the KiBot **schematic phase (ERC + BOM cross-check) is blocked** until they are renamed in the generator (e.g. `SW13`–`SW15` with descriptive `Value` fields). `scripts/external-dfm.sh` runs the board phase in isolation (works: DRC 0 errors) and reports this blocker as an explicit FAIL. Renaming touches schematic, PCB, BOM, CPL and docs — a deliberate design decision, not a quick fix.
+:::info Resolved — non-IPC references renamed (2026-07-31)
+KiBot (≥ 1.6.5, [upstream #604](https://github.com/INTI-CMNB/KiBot/issues/604) — wontfix) rejects any schematic reference that is not `PREFIX+NUMBER`, which blocked its schematic phase (ERC + BOM cross-check) on our `SW_PWR`, `SW_BOOT`, `SW_RST`. Those are now **`SW16`, `SW14`, `SW15`** across schematic, PCB, BOM, CPL, firmware sim and docs, so the full KiBot run (DRC + ERC + BOM) is live both locally (`scripts/external-dfm.sh`) and in CI. A regression guard in both fails loudly if a non-IPC reference is ever reintroduced.
 :::
 
 ### Next up — Medium-term (next release cycle)
 
-1. **Rename `SW_PWR`/`SW_BOOT`/`SW_RST` to IPC references** — unlocks KiBot ERC + BOM cross-check in `external-dfm.sh` and lets the CI workflow add `-e` (see blocker above).
-2. **kicad-diff-visualizer** — Add visual PCB diffs to PR reviews. *Deprioritized: upstream inactive since Aug 2025.*
-3. **Seeed-Studio MCP server study** — Evaluate pcbnew API for an optional interactive editing mode alongside the generator pipeline (repo active, 70 stars as of July 2026).
+1. **kicad-diff-visualizer** — Add visual PCB diffs to PR reviews. *Deprioritized: upstream inactive since Aug 2025.*
+2. **Seeed-Studio MCP server study** — Evaluate pcbnew API for an optional interactive editing mode alongside the generator pipeline (repo active, 70 stars as of July 2026).
 
 ### Long-term (v2 planning)
 

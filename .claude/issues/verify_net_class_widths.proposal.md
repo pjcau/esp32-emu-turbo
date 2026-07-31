@@ -169,7 +169,7 @@ so real regressions on Power High are visible again.
   `website/docs/verification.md` if that file enumerates the gates.
 - `make verify-all` goes from 66-check red → 66-check green on this
   gate; the other current reds (`verify_netlist_diff`,
-  `verify_dangling_copper`, floating SW_RST/SW_BOOT) are unaffected.
+  `verify_dangling_copper`, floating SW15/SW14) are unaffected.
 
 ## Proof-of-fix command
 

@@ -20,7 +20,7 @@ python3 scripts/verify_dfm_v2.py
 ```
 
 Tests include:
-- CPL position corrections (J1, SW_PWR, U1, U5)
+- CPL position corrections (J1, SW16, U1, U5)
 - Silkscreen text on Fab layer (not SilkS)
 - Mounting hole text on Fab
 - SY8089 buck (U3) hot-loop geometry: C2 absent from the CPL, C1 (C_IN) tight

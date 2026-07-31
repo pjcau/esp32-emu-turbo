@@ -66,7 +66,7 @@ by moving copper: see "(d)" below.
 
 **(a) `U1.3` — EN wired straight to +3V3 in the schematic. Real bug, schematic side.**
 `sheets/mcu.py` dropped R3 from the BOM and replaced it with a *plain wire* from
-EN to +3V3, which is not the same thing. On that drawing, `SW_RST` — wired from
+EN to +3V3, which is not the same thing. On that drawing, `SW15` — wired from
 the same node to GND — shorts the 3.3 V rail every time it is pressed. The PCB
 does not do this: it keeps `EN` as its own net. **Fixed: the EN→+3V3 wire is
 gone and the node carries a global `EN` label.**
@@ -201,7 +201,7 @@ pad the schematic translation table does not list and called them "compared
 by nothing". All seventeen are declared in `hardware/datasheet_specs.py`,
 where `verify_datasheet_nets` compares each one against an expected net —
 267 checks, all passing. The four most suspicious readings dissolved on
-inspection: `U6.8`/`U6.9` on the SD data lines and `SW_PWR.4b`/`4d` on
+inspection: `U6.8`/`U6.9` on the SD data lines and `SW16.4b`/`4d` on
 `BTN_SELECT` are deliberate same-net assignments with a written safety
 analysis at `routing.py:6055-6085`, protecting against real
 trace-through-pad shorts and guarded by a hard gate. A check that fires on
@@ -218,7 +218,7 @@ citing USB-C r2.1 §4.2. Two of the four data pads were therefore compared
 by nothing. Fixed; T4 now compares all four.
 
 **The two supply-rail stubs were the serious find.** `BAT+` had one node on
-the schematic (`SW_PWR.1`) and `VBUS` had one (`U4.5`), because three local
+the schematic (`SW16.1`) and `VBUS` had one (`U4.5`), because three local
 labels in the Power Supply sheet sat 1.5–2 mm off the wires they name:
 `VBUS` at `vbus_y - 2`, `BAT+` at `bat_y - 2`, `BAT_IN` at
 `jst_plus_y - 1.5`. A label that misses its wire leaves the wire unnamed,
@@ -316,8 +316,8 @@ classes that gate structurally cannot see:
 | Class | Count | What it is |
 |---|---|---|
 | D1 | 2 | `LCD_BL`, `LCD_RD` — net names in the board with no pad on them. Both files declare the name, so T1/T2 match; T4 iterates schematic pins, of which these have none. A net with no pin is a label. |
-| D2 | 9 | nets with a single pin. The board's `I2S_BCLK`/`I2S_LRCK` (R10-LOW-2), and on the schematic side `BAT+` (one node: `SW_PWR.1`) and `VBUS` (one node: `U4.5`) — the two supply rails of the design, drawn as stubs. |
-| D3 | 17 | pads carrying a net that no schematic pin maps to, so nothing compares them. Six are signal nets: `J1.5`/`J1.8` (the USB pair's second orientation, which `_J1_MAP` calls "SBU / unused, no net"), `U5.8` (`PAM_VREF` — the exact node R24-HIGH-1 was about), `U6.9` (card-detect, sitting on `BTN_R` = GPIO3, a strapping pin), and `SW_PWR` tabs 4b/4d on `BTN_SELECT`. |
+| D2 | 9 | nets with a single pin. The board's `I2S_BCLK`/`I2S_LRCK` (R10-LOW-2), and on the schematic side `BAT+` (one node: `SW16.1`) and `VBUS` (one node: `U4.5`) — the two supply rails of the design, drawn as stubs. |
+| D3 | 17 | pads carrying a net that no schematic pin maps to, so nothing compares them. Six are signal nets: `J1.5`/`J1.8` (the USB pair's second orientation, which `_J1_MAP` calls "SBU / unused, no net"), `U5.8` (`PAM_VREF` — the exact node R24-HIGH-1 was about), `U6.9` (card-detect, sitting on `BTN_R` = GPIO3, a strapping pin), and `SW16` tabs 4b/4d on `BTN_SELECT`. |
 | D5 | 1 | `C28` — see below. |
 
 `make bench-delta` answers "what changed since the board you are holding":
@@ -404,7 +404,7 @@ would be wrong.
 **Floating is reported, never defaulted.** 30 nets have no resistive path to
 any source at DC. Two of them matter:
 
-- `EN` — pins `U1.3` and `SW_RST.1`, switch open, no pull-up. This is
+- `EN` — pins `U1.3` and `SW15.1`, switch open, no pull-up. This is
   R25-CRIT-1 reached from the physics instead of from reading a comment.
 - `BTN_L` — R14 is DNP, so unlike the other eleven buttons it has no
   external pull-up and depends entirely on the ESP32's internal one.
@@ -414,7 +414,7 @@ table with two lies in it.
 
 **A scenario found a bug in the bench itself.** With `--buttons-pressed`,
 every button read 3.83 V. Cause: closing a switch by shorting *every net the
-reference touches* welded `BAT+` to `BTN_SELECT`, because `SW_PWR`'s four
+reference touches* welded `BAT+` to `BTN_SELECT`, because `SW16`'s four
 shell tabs carry `BTN_SELECT` — the deliberate same-net fixup at
 `routing.py:6055-6085`, whose own comment says it is harmless only because
 the shell is isolated inside the component body. The bench now reads the
@@ -542,7 +542,7 @@ wrong answer:
 |---|---|---|
 | T2.1 GPIO fabric | **done** | `scripts/vbench/pins.py` · `make bench-pins` |
 | T2.2 button model | **done** | `scripts/vbench/buttons.py` · `make bench-buttons` |
-| T2.3 SW_PWR `switch_off` | **done** — reproduces, does not report | `scripts/vbench/buttons.py` |
+| T2.3 SW16 `switch_off` | **done** — reproduces, does not report | `scripts/vbench/buttons.py` |
 | T2.4 boot-mode model | **done** | `scripts/vbench/pins.py` |
 
 `models/u1_esp32s3.py` carries the strapping tables from the module datasheet
@@ -592,7 +592,7 @@ release reads as a second press.
 
 **T2.3** is the opposite kind of assertion. `switch_off` must *reproduce* the
 v1 invariant, and it does, with the reason derived from the copper rather than
-quoted: SW_PWR's common pad sits on BAT+ and **its throw pads carry no net at
+quoted: SW16's common pad sits on BAT+ and **its throw pads carry no net at
 all**, so there is nothing to switch between. BAT+ and +3V3 are unchanged with
 the switch operated. The scenario fails only if a rail moves — which would
 mean the copper changed under a recorded limitation — or if the invariant
@@ -615,7 +615,7 @@ stops being recorded in `docs/known-issues.md`.
   `feedback_comment_outranked_datasheet` implemented as a pass condition.
 
 Rewritten to read the EN net out of the copper: it reports the two pads EN
-actually has (`U1.3`, `SW_RST.1`), that there is **no** resistor to +3V3 and
+actually has (`U1.3`, `SW15.1`), that there is **no** resistor to +3V3 and
 **no** capacitor to GND, cites the datasheet requirement, and passes only
 while that deviation is recorded in `docs/known-issues.md`'s RESPIN section.
 It computes a time constant only from parts that exist. If the respin fits the
@@ -625,7 +625,7 @@ RC, the check switches to verifying the parts are there.
 |---|---|---|
 | T2.1 | GPIO fabric model: all ESP32-S3 pins — direction, internal pull, drive strength, what the netlist attaches, and the reserved set (flash/PSRAM) | `make bench-pins` prints every pin with net, role, load and boot-time level |
 | T2.2 | Button model: 12 buttons, external pull-up or DNP (BTN_L / R14 needs the internal pull), RC debounce with the real time constant, press/release as timed events | a press produces a level transition with the computed RC delay |
-| T2.3 | SW_PWR switch model — including the known fact that it is **not** in series. The bench must *reproduce* "switch off, board still powered" as expected behaviour, not report it as a bench bug | scenario `switch_off` asserts the board stays powered, citing the v1 invariant |
+| T2.3 | SW16 switch model — including the known fact that it is **not** in series. The bench must *reproduce* "switch off, board still powered" as expected behaviour, not report it as a bench bug | scenario `switch_off` asserts the board stays powered, citing the v1 invariant |
 | T2.4 | Boot-mode model: sample strapping pins at reset → resulting boot mode | a button held at reset that forces download mode is a FAIL with the pin named |
 
 ## Phase 3 — Peripherals: LCD, audio, SD — **partial: what the datasheets allow**
@@ -794,7 +794,7 @@ What "running on the model" buys, concretely:
 * **Reset (F5) samples the strapping pins at that instant.** SELECT held means
   GPIO0 = 0: the app stops and the screen says JOINT DOWNLOAD BOOT, exactly
   like table 6 says the chip behaves.
-* **SW_PWR (P) reproduces the v1 invariant**: operating it does NOT cut power,
+* **SW16 (P) reproduces the v1 invariant**: operating it does NOT cut power,
   and the instrument line says so instead of pretending the board turned off.
 * **The instruments are the bench test**: per-rail voltmeters (with the +3V3
   band from V_REF's own tolerance), an ammeter fed by the audio RMS through
@@ -820,7 +820,7 @@ assertions, all against *derived* quantities:
 |---|---|
 | `usb_cold_boot` | +3V3 inside 3.0–3.6 V, no cited limit exceeded, SPI Boot, VDD_SPI 3.3 V — and **EN asserted floating**, so the day the RC is fitted the scenario notices |
 | `battery_3v4` | a nearly-flat cell still holds the rails, VBUS floating rather than 0 V, and the battery model asserting its own `calibrated == false` |
-| `press_all_buttons` | a pressed button at ground, **BAT+ unmoved** (the SW_PWR shell-tab bug), eleven RCs not twelve |
+| `press_all_buttons` | a pressed button at ground, **BAT+ unmoved** (the SW16 shell-tab bug), eleven RCs not twelve |
 | `switch_off` | the v1 invariant reproduced, with the reason derived: no throw pad carries a net |
 | `audio_max` | 1.5 W into 8 Ω, rail current inside the boost's 2.1 A rating, no part over its thermal margin |
 | `sd_and_display` | the SD bus on its socket's pad roles, the DAT2/GPIO3 exposure still exactly 1, the panel strapped for 8-bit 8080, the data bus in order |

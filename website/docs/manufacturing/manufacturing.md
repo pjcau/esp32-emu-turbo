@@ -62,7 +62,7 @@ The bottom side hosts the main circuitry:
 | **J3**         | JST-PH 2-pin SMD (battery)  | C295747       | JST-PH-2P-SMD |
 | **J4**         | FPC 40-pin 0.5mm (display)  | C2856812      | FPC-40P   |
 | **L1**         | 1uH 5A inductor             | C280579       | SMD-4x    |
-| **SW_PWR**     | Slide switch (power)        | C431540       | SS-12D0   |
+| **SW16**     | Slide switch (power)        | C431540       | SS-12D0   |
 | **SW11, SW12** | SMT tactile (L, R shoulder) | C318884       | SW-SMD    |
 | R1, R2         | 5.1k (USB-C CC)             | C27834        | R_0805    |
 | R4–R13,R15     | 10k (pull-ups)              | C17414        | R_0805    |

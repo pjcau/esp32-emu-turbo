@@ -320,7 +320,7 @@ wrong, and it moved both of them by 180°.
   hand-maintained δ_row sign-off, so the allowlist entry had become dead
   code. Q1 now reports `[OK]`, not `[ALLOW]`.
 - **Empirical evidence (preserved here, was the allowlist rationale)**:
-  boards R4-R8 (8+ prototypes) power up through slide switch SW_PWR, which
+  boards R4-R8 (8+ prototypes) power up through slide switch SW16, which
   requires Q1 to conduct — physical polarity validated on hardware. This is
   the anchor for the whole SOT-23-3 family, including D1.
 - **Verdict**: CORRECT.

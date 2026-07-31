@@ -17,7 +17,7 @@ wrong, not KiCad.
 
 Format note: the record is fixed-width — [0:3] type, [3:20] net name,
 [20:26] refdes, [26] '-', [27:31] pin. The refdes field is six columns,
-so `SW_BOOT` is written `SW_BOO`; that truncation is the format's, not a
+so `SW14` is written `SW_BOO`; that truncation is the format's, not a
 discrepancy, and this check truncates our side to match rather than
 special-casing the parts that happen to be affected.
 """

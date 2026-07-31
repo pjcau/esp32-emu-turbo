@@ -121,7 +121,7 @@ _JLCPCB_POS_CORRECTIONS = {
     "U1": (0, 3.62),      # ESP32: body center → pin center (confirmed working)
     "J1": (0, 0),         # USB-C: footprint now matches JLCPCB C2765186 exactly
     "J4": (0, 0),         # FPC: footprint now matches JLCPCB C2856812 exactly
-    "SW_PWR": (0, 0),     # MSK12C02: footprint now matches JLCPCB C431540 exactly
+    "SW16": (0, 0),     # MSK12C02: footprint now matches JLCPCB C431540 exactly
     "J3": (0, -3.5),     # JST PH 2P: model origin offset from pad center at 180° rotation
 }
 
@@ -384,7 +384,7 @@ def _build_placements():
 
     # Power slide switch (back side, horizontal — toggle faces toward board edge)
     x, y = enc_to_pcb(*PWR_SWITCH_ENC)
-    p.append(("SW_PWR", "SS-12D00G3",
+    p.append(("SW16", "SS-12D00G3",
               "SS-12D00G3", x, y, 0, "bottom"))
 
     # Speaker (SPK1) — manual assembly, not in BOM, excluded from CPL
@@ -423,10 +423,10 @@ def _build_placements():
     # Reset and Boot buttons (back side, right of USB-C)
     from scripts.generate_pcb.board import RESET_ENC, BOOT_ENC
     x, y = enc_to_pcb(*RESET_ENC)
-    p.append(("SW_RST", "SW_Push",
+    p.append(("SW15", "SW_Push",
               "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
     x, y = enc_to_pcb(*BOOT_ENC)
-    p.append(("SW_BOOT", "SW_Push",
+    p.append(("SW14", "SW_Push",
               "SW-SMD-5.1x5.1", x, y, 0, "bottom"))
 
     # BAT54C dual Schottky diode — menu combo (START+SELECT).

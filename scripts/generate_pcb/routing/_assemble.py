@@ -43,7 +43,7 @@ def generate_all_traces():
     # would rebind _assemble's OWN binding, forking the state: the domains
     # and the final explicit assignments below would write to one dict
     # while board._inject_pad_net reads another. That exact fork silently
-    # dropped U1.3=EN, U6.8/9 and SW_PWR.4b/4d from the CPL pipeline when
+    # dropped U1.3=EN, U6.8/9 and SW16.4b/4d from the CPL pipeline when
     # routing.py was first split — caught by verify_trace_through_pad.
     _GRID.reset()
     _PADS.clear()
@@ -83,7 +83,7 @@ def generate_all_traces():
     # override "U3.2 = +3V3" belonged to the AMS1117 SOT-223 (pin 2 = VOUT).
     # On the SY8089 SOT-23-5, pin 2 is GND; keeping the override would have
     # shorted the buck GND pin onto the +3V3 plane.
-    _PAD_NETS[("U1", "3")] = NET_ID["EN"]  # EN pin, routed from SW_RST via B.Cu
+    _PAD_NETS[("U1", "3")] = NET_ID["EN"]  # EN pin, routed from SW15 via B.Cu
 
     # ── Trace-through-pad same-net fixups (restore commit 9709bea logic) ──
     # These assignments were ADDED in 9709bea to silence DRC shorts where a
@@ -98,9 +98,9 @@ def generate_all_traces():
     #   same-net. SAFE as long as firmware stays in SPI mode (which it
     #   does — see software/main/sd.c sdspi_host_do_transaction).
     #
-    # SW_PWR.4b/4d (shell anchor pads): mechanical retention tabs for the
+    # SW16.4b/4d (shell anchor pads): mechanical retention tabs for the
     #   slide switch body, not electrical slide positions. Per
-    #   datasheet_specs.py::SW_PWR these are _unconnected() with function
+    #   datasheet_specs.py::SW16 these are _unconnected() with function
     #   "Shell/anchor (mechanical)". The shell metal is internally isolated
     #   from the slide signal terminals (1/2/3). BTN_SELECT vertical track
     #   at x=35.95 grazes pads 4b (36.4, 71.4) and 4d (36.4, 73.7) on the
@@ -113,7 +113,7 @@ def generate_all_traces():
     # release-prep if these overlaps reappear.
     _PAD_NETS[("U6", "8")] = NET_ID["SD_MISO"]
     _PAD_NETS[("U6", "9")] = NET_ID["BTN_R"]
-    _PAD_NETS[("SW_PWR", "4b")] = NET_ID["BTN_SELECT"]
-    _PAD_NETS[("SW_PWR", "4d")] = NET_ID["BTN_SELECT"]
+    _PAD_NETS[("SW16", "4b")] = NET_ID["BTN_SELECT"]
+    _PAD_NETS[("SW16", "4d")] = NET_ID["BTN_SELECT"]
 
     return "".join(all_parts)

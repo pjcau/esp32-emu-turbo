@@ -50,7 +50,7 @@ make verify-gate-coverage  # MUST be 9/9 caught
 # ── BLOCKING: fab-short gate ─────────────────────────────────────
 # Catches netted traces physically crossing unnetted pads.
 # Missing this check caused the v3.3 regression (commit 775e9fd)
-# where _PAD_NETS assignments for U2/U6/SW_PWR were removed,
+# where _PAD_NETS assignments for U2/U6/SW16 were removed,
 # leaving 6 real shorts in the fabricated board.
 python3 scripts/verify_trace_through_pad.py  # MUST be 0 failures
 
@@ -59,7 +59,7 @@ python3 scripts/verify_trace_through_pad.py  # MUST be 0 failures
 # asserts every net forms a single connected component. Missing
 # this check left R5-CRIT-1..6 bugs shipped in v3.3 — BAT+ inductor
 # isolated (no battery boot), VBUS decoupling floating, buttons
-# with disconnected pull-ups, SW_BOOT non-functional, etc.
+# with disconnected pull-ups, SW14 non-functional, etc.
 python3 scripts/verify_net_connectivity.py  # MUST be 0 failures
 
 # Manufacturing (must all pass)

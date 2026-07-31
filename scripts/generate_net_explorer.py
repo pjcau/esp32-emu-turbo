@@ -85,7 +85,7 @@ SECTION_LAW = [
 REF_SECTION_OVERRIDES = {
     "U1": "mcu",        # ESP32 module touches every subsystem; it IS the MCU
     "J1": "power",      # USB-C receptacle: its primary role here is charge input
-    "SW_PWR": "power",  # bridges BAT+ to BTN_SELECT, but it is the power switch
+    "SW16": "power",  # bridges BAT+ to BTN_SELECT, but it is the power switch
 }
 
 NO_SECTION_REF = re.compile(r"^FID\d+$")   # fiducials carry no copper

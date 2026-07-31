@@ -98,7 +98,7 @@ Symmetric packages need an extra argument, because both angles solder:
 - **Tact switches**: pads 1+2 are one pole and 3+4 the other, and the symbol
   has one pin per pole (`_TACT_MAP`). Pad 2 belongs to the pole that is
   symbol **pin 1** — reading "routing drives BTN_SELECT onto pad 2" and
-  reaching for pin 2 is how SW_BOOT ended up 90° out.
+  reaching for pin 2 is how SW14 ended up 90° out.
 
 ### 4. Check the law's blind cell first
 

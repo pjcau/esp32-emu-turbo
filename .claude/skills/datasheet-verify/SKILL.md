@@ -98,9 +98,9 @@ Loads the PCB cache and compares actual pad-net assignments against the spec fil
 | U6 | TF-01A MicroSD Slot | 13 + NPTH |
 | SW1-SW12 | Tact Switches (buttons) | 4 each |
 | SW13 | Menu Button (placeholder) | 4 |
-| SW_PWR | Slide Switch | 7 |
-| SW_RST | Reset Switch | 4 |
-| SW_BOOT | Boot/Select Switch | 4 |
+| SW16 | Slide Switch | 7 |
+| SW15 | Reset Switch | 4 |
+| SW14 | Boot/Select Switch | 4 |
 | R1, R2 | CC Pull-Down Resistors | 2 each |
 | L1 | Power Inductor | 2 |
 | LED1, LED2 | Status LEDs | 2 each |

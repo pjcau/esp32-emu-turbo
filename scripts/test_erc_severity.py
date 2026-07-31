@@ -14,7 +14,7 @@ Every type in GENERATOR_ARTIFACTS was dropped wholesale -- including
 "PASS - 0 critical" while the report held a dozen errors.
 
 That was demonstrated, not theorised. Detaching SW3's (BTN_LEFT) ground pin by
-2.54 mm -- the same defect 397c854 found on SW_RST/SW_BOOT -- took SW3.2 off
+2.54 mm -- the same defect 397c854 found on SW15/SW14 -- took SW3.2 off
 the GND net in the exported netlist, and the verdict did not move: PASS before,
 PASS after.
 

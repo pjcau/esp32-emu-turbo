@@ -82,7 +82,7 @@
     {
       "id": "R5-CRIT-5",
       "round": 5,
-      "title": "SW_BOOT not connected to the BTN_SELECT network",
+      "title": "SW14 not connected to the BTN_SELECT network",
       "source": "hardware-audit-bugs.md:261",
       "source_match": "R5-CRIT-5",
       "phase": 2,
@@ -92,12 +92,12 @@
       ],
       "mutation": {
         "kind": "detach_pin",
-        "ref": "SW_BOOT",
+        "ref": "SW14",
         "pin": "2"
       },
-      "must_report": "holding SW_BOOT across reset does not pull GPIO0 low, so the download-mode strapping sequence cannot be entered from the buttons",
+      "must_report": "holding SW14 across reset does not pull GPIO0 low, so the download-mode strapping sequence cannot be entered from the buttons",
       "expect": "caught",
-      "note": "Mutation targets pad 2: datasheet_specs declares SW_BOOT pad 1 unconnected and the board puts the signal terminal on pad 2, so detaching pad 1 would be a no-op and the entry would look uncatchable when it had never been applied."
+      "note": "Mutation targets pad 2: datasheet_specs declares SW14 pad 1 unconnected and the board puts the signal terminal on pad 2, so detaching pad 1 would be a no-op and the entry would look uncatchable when it had never been applied."
     },
     {
       "id": "R5-CRIT-6",

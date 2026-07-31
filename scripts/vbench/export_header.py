@@ -193,7 +193,7 @@ def render(d):
     w(f"#define VB_SPEAKER_OHM {d['speaker_ohm']:.0f}f\n\n")
 
     w("/* Invariants the simulator must REPRODUCE, not report:\n")
-    w(" * SW_PWR is not in series — operating it must NOT cut power. */\n")
+    w(" * SW16 is not in series — operating it must NOT cut power. */\n")
     w(f"#define VB_SWITCH_NOT_IN_SERIES "
       f"{1 if d['switch_not_in_series'] else 0}\n\n")
     w(f'#define VB_CALIBRATION "{d["calibrated"]}" '

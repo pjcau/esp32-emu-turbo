@@ -68,8 +68,8 @@ _NETS = [
 # and C3 is a +3V3 decoupling cap that must NOT be miscredited as the EN RC.
 _AS_BUILT = [
     {"ref": "U1", "num": "3", "net": 53},
-    {"ref": "SW_RST", "num": "1", "net": 53},
-    {"ref": "SW_RST", "num": "3", "net": 1},
+    {"ref": "SW15", "num": "1", "net": 53},
+    {"ref": "SW15", "num": "3", "net": 1},
     {"ref": "C3", "num": "1", "net": 4},
     {"ref": "C3", "num": "2", "net": 1},
 ]
@@ -164,7 +164,7 @@ class TestEnRcGate(unittest.TestCase):
     def test_reports_what_is_actually_on_en(self):
         _, _, out = _run(_AS_BUILT)
         self.assertIn("U1.3", out)
-        self.assertIn("SW_RST.1", out)
+        self.assertIn("SW15.1", out)
         self.assertIn("pull-up from EN to +3V3: NONE", out)
         self.assertIn("capacitor from EN to GND: NONE", out)
 

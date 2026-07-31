@@ -516,7 +516,7 @@ def test_T6_power_chain(net_pads, ref_pads):
     check("T6", "VBUS reaches IP5306 (U2)", "U2" in vbus_comps,
           f"VBUS components: {sorted(vbus_comps)}")
 
-    # BAT+ must reach: Q1 (P-MOSFET drain), L1 (inductor), SW_PWR
+    # BAT+ must reach: Q1 (P-MOSFET drain), L1 (inductor), SW16
     # v4.0: J3.1 is on BAT_IN net (via Q1 RPP), BAT+ reaches Q1 drain
     batp_comps = set(r for r, _ in net_pads.get("BAT+", []))
     check("T6", "BAT+ reaches P-MOSFET (Q1)", "Q1" in batp_comps,
@@ -766,7 +766,7 @@ def test_T12_cross_component_nets(net_pads, specs):
         ("SPK+", {"U5", "SPK1"}),
         ("SPK-", {"U5", "SPK1"}),
         ("IP5306_KEY", {"U2"}),
-        ("EN", {"SW_RST"}),
+        ("EN", {"SW15"}),
     ]
 
     for net_name, must_refs in expected:

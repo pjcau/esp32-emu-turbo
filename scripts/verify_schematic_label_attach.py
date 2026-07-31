@@ -12,7 +12,7 @@ compared against nothing and the gate goes green.
 This has happened three times in this design, each time discovered by
 accident:
 
-1. R24-HIGH-3 — SW_RST/SW_BOOT wired on the wrong axis, so all four pins
+1. R24-HIGH-3 — SW15/SW14 wired on the wrong axis, so all four pins
    were absent from the netlist while the sheet looked correct.
 2. `BAT_IN` at `q1y - 0.5`, recorded in power_supply.py as floating "1.77mm
    off every wire", fixed to `jst_plus_y - 1.5` — which was still 1.5 mm
