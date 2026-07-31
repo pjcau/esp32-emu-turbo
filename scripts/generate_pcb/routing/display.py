@@ -404,6 +404,17 @@ def _display_traces():
         px34, py34 = pos34[0], pos34[1]
         parts.append(_seg(px34, py34, px35, py35, "B.Cu", W_FPC_PWR, n_gnd))
 
+    # Bridge the two GND groups. The 37+36 chain and the 35+34 chain ended
+    # 0.12 mm apart at x=133.60 (chain-A stub cap vs chain-B via annulus) —
+    # verify_copper_clearance's only WARN, a dry-film risk for the fab.
+    # Pins 36 and 35 are adjacent same-net pads, so one segment down the pad
+    # column merges the copper into a single pour. Same x as the existing
+    # 36→37 and 34→35 stubs, so every clearance already proven for those
+    # (approach column at x=134.10: 0.163 mm) holds unchanged.
+    if pos36 and pos35:
+        parts.append(_seg(pos36[0], pos36[1], pos35[0], pos35[1],
+                          "B.Cu", W_FPC_PWR, n_gnd))
+
     # ── GND pins at BOTTOM (5, 16) ──
     # Pin 5: y=43.25, BELOW approach zone (ends at y=41.25). Route DOWN freely.
     # Pin 16: y=37.75, INSIDE approach zone. Use via-in-pad.
