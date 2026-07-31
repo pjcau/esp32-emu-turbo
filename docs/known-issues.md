@@ -576,6 +576,16 @@ and is six releases stale; the tag is the truth.
   the fabricated board; the deciding test is a **RDDID (0x04) read on a
   proto** — then make CLAUDE.md, memory, `datasheet_specs.py` and the
   losing firmware agree.
+- **VBUS has no fuse — R3-HIGH-4 was never actioned** (rediscovered by the
+  R30 full-history re-verification, 2026-07-31). The R3 audit prescribed a
+  PTC (MF-PSMF050X class) on VBUS; no fuse ref ever entered the BOM. What
+  stands between a downstream short and the USB source today: the source's
+  own current limit (a compliant charger/host folds back) and the IP5306's
+  internal output protections — plausible for a prototype, but it is an
+  engineering waiver nobody wrote down until now, not a decision. Respin
+  decision needed: fit a PTC on VBUS between J1 and the IP5306/buck input,
+  or record the waiver as final. No gate can see a missing part that no
+  rule requires; the deciding artifact is this entry plus the respin BOM.
 - **R22/R23 22 Ω in series on the FS USB pair** (R30-LOW-4). Espressif S3
   reference designs connect D+/D− through the TVS only — the PHY provides
   the driver impedance. Protos enumerate fine, so this is respin guidance

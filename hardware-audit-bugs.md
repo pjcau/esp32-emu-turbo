@@ -3564,3 +3564,44 @@ names `board_config.h` as its source of truth. Until a gate diffs
 submodule update can silently reintroduce all of them. That gate, wired
 into `VERIFY_ALL_SCRIPTS` (so `issue_dispatch` owns it), is the one
 deliverable that closes the class rather than the instances.
+
+### R30 addendum — full-history CRIT/HIGH re-verification (2026-07-31)
+
+Every CRIT/HIGH from R1-R27 re-checked against the CURRENT tree (not the
+markers written when they were closed — many releases sit in between).
+Evidence column = what proves it TODAY (all cited gates ran green today,
+suite 81/81).
+
+| ID | Verdict today | Evidence (today) |
+|---|---|---|
+| R1 C1/C2/H1/H2 | gone | audio.c is PDM TX, input.c enables BTN_L pull-up, GPIO table synced (`generate_board_config --check`), display ties documented |
+| R2-CRIT-1 (R14 in BOM/CPL) | gone | `grep R14 release_jlcpcb/{bom,cpl}.csv` → 0/0 |
+| R2-HIGH-1 (driver vs header) | morphed | display.c is ILI9488 now; the residual controller-identity question is tracked open as R30-MED-4 |
+| R2-HIGH-2 (AMS1117 C2 ESR) | obsolete | AMS1117 and C2 no longer exist (SY8089 buck; C2 deleted) |
+| R3-CRIT-1 (wrong lcd component dep) | gone | marked fixed; display.c builds against esp_lcd_ili9488 |
+| R3-HIGH-1 (6 PCB MH vs 4 enclosure) | resolved by redesign | PCB now has ZERO mounting holes (cache: no drill ≥2 mm); enclosure clamps the PCB on screw-boss tops, 4 shell screws |
+| R3-HIGH-2 (C28 under module) | still present, recorded | became the known-issues RESPIN entry (C28 removed from assembly; no bulk near U1) |
+| R3-HIGH-3 (INL driven / OUTL floating) | resolved by redesign | INL=INR=PAM_IN_AC mono bias (`datasheet_specs.py:278`), OUTL/− float on the unused channel |
+| **R3-HIGH-4 (no VBUS PTC fuse)** | **never actioned — still absent** | no fuse ref anywhere in BOM/CPL. Now recorded in docs/known-issues.md RESPIN with the honest rationale and the respin decision it needs |
+| R4-CRIT-1 (J4 pinout mismatch) | gone | resolved as the `41−N` reversal; `verify_datasheet_nets` 267 PASS |
+| R4-HIGH-1 (U4/R22/R23 not in schematic) | gone | all three in today's exported netlist |
+| R4-HIGH-2 (U4 designator collision) | gone | display logical symbol is DS1 |
+| R4-HIGH-3 (PAM bias to GND) | gone | R20/R21 tied to VREF via PAM_IN_AC (re-verified in R30 audio domain) |
+| R5-CRIT-1..6 (copper fragmentation) | gone | `verify_net_connectivity` + `verify_power_net_integrity` + gerber e-test all PASS |
+| R9-CRIT-1/2, R9-HIGH-1..6 (crossings/clearance) | gone | `verify_trace_crossings` 0, `verify_copper_clearance` 0 DANGER / 0 WARN, DRC 0 |
+| R17-HIGH-1/2 (NPTH regression, 6 dangling vias) | gone | DRC 0, `verify_dangling_copper` PASS |
+| R21-HIGH-1/2/3 (annular, NPTH clearance, unconnected) | gone | `verify_jlcpcb_capabilities` 12/12, DRC 0 annular/hole/unconnected |
+| R24-HIGH-1 (PAM bias on PCB) | gone | same as R4-HIGH-3 |
+| R24-HIGH-2 (274 UUID collisions) | gone | 0 duplicate uuids across all sheet files (checked today) |
+| R24-HIGH-3 (SW14/15 floating) | gone | `verify_schematic_pin_connectivity` 0 floating |
+| **R25-CRIT-1 (EN has no RC, no pull-up)** | **still present by recorded decision** | RESPIN deviation; `verify_strapping_pins` passes only while known-issues.md records it (the record IS the gate anchor) |
+| **R25-HIGH-1 (backlight no current limit)** | **still present** | RESPIN + one bench measurement owed; family datasheet in repo |
+| R25-HIGH-2 (clean clone cannot build) | gone | `software/CMakeLists.txt` `set(COMPONENTS main)` excludes the broken emulator components; retro-go submodule initialized and compiling (launcher.bin built today, IDF 5.4) |
+| R26-CRIT-1/2, R26-HIGH-1/2/3 (rotation law) | gone | H4 resolved; `verify_cpl_rotation_law` OK 12 / EXCEPTION 2 / FAIL 0; release CPL synced |
+| R28-HIGH-1 (panel pin 13 floats) | fixed in design | tie present; protos fabricated before 2026-07-26 still physically carry the float |
+
+Bottom line: across 30 rounds, the only CRIT/HIGH still physically true on
+the current design are the two recorded respin deviations (R25-CRIT-1 EN
+network, R25-HIGH-1 backlight) plus the never-actioned R3-HIGH-4 VBUS
+fuse — all three now visible in docs/known-issues.md, none fixable
+without a respin or a bench decision.
