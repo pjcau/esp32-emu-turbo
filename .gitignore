@@ -103,3 +103,6 @@ software/benchmark/spiffs_data/
 .claude/issues/issues.json
 .claude/issues/*.md
 !.claude/issues/*.proposal.md
+
+# clangd index cache (editor tooling, machine-local)
+software/.cache/
