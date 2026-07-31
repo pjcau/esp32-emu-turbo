@@ -3246,7 +3246,7 @@ referenced them since it was written.
 
 Reading them produced one finding.
 
-### R28-HIGH-1 — panel pin 13 (SPI SDI) is left floating where the datasheet requires it tied
+### R28-HIGH-1 — panel pin 13 (SPI SDI) is left floating where the datasheet requires it tied — FIXED in the design (see R29 addendum below; boards fabricated before 2026-07-26 still carry the float)
 
 - **Evidence**: the datasheet's own pin table, pin 13 "SPI SDI/SDA": *"SPI
   interface input pin. The data is latched on the rising edge of the SCL
@@ -3310,7 +3310,7 @@ run. No CRIT, no HIGH; two LOW, both fixed in-round.
   (IM2,IM1,IM0) = (GND,+3V3,+3V3) = (0,1,1) = **8080 8-bit parallel**, exactly
   the mode the firmware drives (pads J4.1/2/3 read from copper via
   `pcb_query`). RDX tie to +3V3 also now citable (pin 12: "fix at VDDI or
-  GND"). **R28-HIGH-1 still open**: pad 28 (panel 13, SPI SDI) carries no net.
+  GND"). **R28-HIGH-1 — since FIXED in the design (R29 addendum)**: at the time of this round, pad 28 (panel 13, SPI SDI) carried no net.
 - **Audio**: 0 — the I2S retirement is clean end-to-end: only `I2S_DOUT`
   remains on copper (C22.1 + U1.10), firmware documents the removal at
   `board_config.h:50`, `primitives.NET_LIST` keeps ids 24/25 as retired gaps.
@@ -3443,13 +3443,35 @@ gate at all** (R30-CRIT-1 .. R30-MED-2).
 
 ### Bug list
 
-#### R30-CRIT-1 — retro-go target maps five peripherals onto module-internal Octal-PSRAM pins (GPIO33–37)
+**Status at 2026-07-31 EOD** — main repo `f167b88`+, retro-go `28dfc19a`:
+
+| ID | Sev | Finding (short) | Status |
+|---|---|---|---|
+| R30-CRIT-1 | CRIT | retro-go pins on PSRAM lines / SD on wrong pins | **FIXED** `d940b9a0` |
+| R30-CRIT-2 | CRIT | display driver drives BTN_R/BTN_L lines | **FIXED** `d940b9a0` |
+| R30-HIGH-1 | HIGH | schematic taps not engine-invariant | **FIXED** `c15f9b6` |
+| R30-HIGH-2 | HIGH | R button on USB D− | **FIXED** `d940b9a0` |
+| R30-HIGH-3 | HIGH | no PDM audio driver → audio dead | **FIXED in code** `28dfc19a`, bench pending |
+| R30-HIGH-4 | HIGH | MENU fires on every SELECT | **FIXED** `d940b9a0` |
+| R30-MED-1 | MED | L key missing internal pull-up | **FIXED** `d940b9a0` |
+| R30-MED-2 | MED | SD clock 40 vs 20 MHz | **FIXED** `d940b9a0` |
+| R30-MED-3 | MED | IP5306 auto-shutdown, no KEY wake path | OPEN — respin + firmware constraint |
+| R30-MED-4 | MED | panel controller identity ILI9488 vs ST7796S | OPEN — needs RDDID probe on proto |
+| R30-MED-5 | MED | gates crash-as-FAIL on missing deps | env fixed; gate exit codes OPEN |
+| R30-MED-6 | MED | SNES 60fps unmeasured; -Os, frameskip 3 | OPEN — measure, then optimize |
+| R30-LOW-1 | LOW | stale display.py docstring (seed of CRIT-2) | **FIXED** `f3d825a` |
+| R30-LOW-2..5 | LOW | doc/margin notes | OPEN (notes) |
+
+Structural follow-up (the class-closer): a gate diffing the retro-go
+target GPIO map against `config.py::GPIO_NETS`, in `VERIFY_ALL_SCRIPTS`.
+
+#### R30-CRIT-1 — retro-go target maps five peripherals onto module-internal Octal-PSRAM pins (GPIO33–37) — **FIXED** (retro-go `d940b9a0`)
 - **Files**: `retro-go/components/retro-go/targets/esp32-emu-turbo/config.h:43,52,53,56,57`
 - **Problem**: `RG_KEY_L=GPIO35`, `SDSPI_MISO=GPIO37`, `SDSPI_MOSI=GPIO36`, `I2C_SDA=GPIO33`, `I2C_SCL=GPIO34`. On the N16R8 these are in-package Octal PSRAM lines (SPIIO4–7/SPIDQS); the target's own `sdkconfig` sets `CONFIG_SPIRAM_MODE_OCT=y` + `SPIRAM_BOOT_INIT=y`, so the PSRAM controller owns them from boot. App `gpio_config` over them = PSRAM corruption/abort. Independently, SD MISO/MOSI are simply the wrong pins (board: MISO=GPIO43, MOSI=GPIO44) → **the SD card can never mount → no ROMs**.
 - **Root cause**: config.h was hand-written from a stale/foreign map and declares `board_config.h` as its source of truth (config.h:8) without ever being diffed against it. **No script, gate or CI reads this file.**
 - **Fix**: L→GPIO45 (with `.pullup=1`, see R30-MED-1), SD MISO→43 / MOSI→44; delete the I2C defines (IP5306 I2C is not routed; `RG_BATTERY_DRIVER=0` already). Then add the gate below.
 
-#### R30-CRIT-2 — retro-go display driver actively drives both physical shoulder-button lines
+#### R30-CRIT-2 — retro-go display driver actively drives both physical shoulder-button lines — **FIXED** (retro-go `d940b9a0`)
 - **Files**: `config.h:79,80`; `retro-go/components/retro-go/drivers/display/st7796s_i80.h:110-124,172-174`
 - **Problem**: `RG_GPIO_LCD_RD=GPIO3` and `RG_GPIO_LCD_BCKL=GPIO45`. On the board GPIO3 is **BTN_R** and GPIO45 is **BTN_L + the VDD_SPI strap**; the panel's RD and LED-A are hard-tied to +3V3 with no GPIO. The driver sets GPIO3 push-pull OUTPUT HIGH — pressing R shorts that output to GND through the switch (contention/current stress) — and runs LEDC PWM on GPIO45. Both buttons dead, plus re-driving the strap the R14-DNP design deliberately leaves alone, for zero display benefit (backlight is hardwired on).
 - **Fix**: delete both defines — both driver blocks are `#ifdef`-guarded and skip cleanly.
@@ -3460,27 +3482,27 @@ gate at all** (R30-CRIT-1 .. R30-MED-2).
 - **Root cause**: headless netlisters disagree on endpoint-on-midspan connectivity; the GUI accepts it, so nothing ever flagged the construct.
 - **Fix (done)**: `SchematicSheet._split_wires_at_connection_points()` — after `build()`, every wire is split at any junction / label / global-label / power-symbol anchor strictly inside it. Wire *endpoints* meeting at a point is the one construct every engine nets identically. Verified: KiCad 9.0.9 and nightly 9.99 now produce **identical netlists on all 264 pins**, ERC + netlist-diff + `verify-all` 80/80 green. Renders (SVG/PDF + combined PDF) regenerated.
 
-#### R30-HIGH-2 — retro-go R button on GPIO19 = native USB D−
+#### R30-HIGH-2 — retro-go R button on GPIO19 = native USB D− — **FIXED** (retro-go `d940b9a0`)
 - **Files**: `config.h:44`
 - **Problem**: `RG_KEY_R=GPIO19` (board: BTN_R=GPIO3, USB_DN=GPIO19). The R button is never read, and configuring USB D− as a button input breaks the USB-Serial-JTAG console used for flashing/logs.
 - **Fix**: `RG_KEY_R → GPIO_NUM_3` (together with R30-CRIT-2's RD removal, which frees GPIO3).
 
-#### R30-HIGH-3 — retro-go audio is standard-I2S ext-DAC on a PDM-only board → emulator audio dead
+#### R30-HIGH-3 — retro-go audio is standard-I2S ext-DAC on a PDM-only board → emulator audio dead — **FIXED in code** (retro-go `28dfc19a`: drivers/audio/pdm.c, IDF5 PDM TX mirroring Phase-1 audio.c; compile-verified. Bench validation on a proto still owed)
 - **Files**: `config.h:21,62-63`; `retro-go/components/retro-go/drivers/audio/i2s.c:66-84`
 - **Problem**: `RG_AUDIO_USE_EXT_DAC=1` selects standard I2S (BCK=GPIO15, WS=GPIO16 — both physically unconnected; DATA=GPIO17). The board has no I2S DAC: audio is ESP32-S3 **PDM sigma-delta** on GPIO17 → C22 → PAM8403. A PCM I2S bitstream through that path does not reconstruct to audio, and retro-go has no PDM TX driver. Phase-1 firmware (`software/main/audio.c`) is correct (PDM TX, `.clk=I2S_GPIO_UNUSED`).
 - **Fix**: write a PDM-TX audio driver for the target (or accept no audio until the v2 coprocessor).
 
-#### R30-HIGH-4 — retro-go MENU key on GPIO0 double-fires with SELECT
+#### R30-HIGH-4 — retro-go MENU key on GPIO0 double-fires with SELECT — **FIXED** (retro-go `d940b9a0`: VIRT_MAP combo START|SELECT)
 - **Files**: `config.h:45`
 - **Problem**: `RG_KEY_MENU=GPIO_NUM_0` — the same pin as SELECT. Hardware has no MENU GPIO: SW13 fires START+SELECT through the D1 BAT54C OR-gate (verified: net `MENU_K` = {D1.3, SW13.1/2} only). As configured, every SELECT press opens the menu.
 - **Fix**: drop `RG_KEY_MENU`'s own GPIO; decode the START+SELECT combo in the target (as `software/main/input.c:76-79` does).
 
-#### R30-MED-1 — retro-go sets `.pullup=0` on every key, but L (GPIO45) has no external pull-up
+#### R30-MED-1 — retro-go sets `.pullup=0` on every key, but L (GPIO45) has no external pull-up — **FIXED** (retro-go `d940b9a0`)
 - **Files**: `config.h:30-46`; board: R14 DNP by design (`9709bea`)
 - **Problem**: even after L moves to GPIO45, `.pullup=0` leaves it floating (R14 is deliberately unpopulated; the internal pull-up must be enabled post-boot, as `software/main/input.c:42-49` does).
 - **Fix**: `.pullup=1` on the L entry only.
 
-#### R30-MED-2 — retro-go SD clock 40 MHz vs the board-validated 20 MHz cap
+#### R30-MED-2 — retro-go SD clock 40 MHz vs the board-validated 20 MHz cap — **FIXED** (retro-go `d940b9a0`)
 - **Files**: `config.h:17` (`SDMMC_FREQ_HIGHSPEED`); `board_config.h:45` ("traces ~150mm + 6 vias, 40MHz unreliable")
 - **Problem**: retry logic only falls back on mount failure, not on silent data corruption at 40 MHz.
 - **Fix**: `RG_STORAGE_SDSPI_SPEED = 20000`.
@@ -3495,7 +3517,7 @@ gate at all** (R30-CRIT-1 .. R30-MED-2).
 - **Problem**: the repo records no ground truth for which controller the bare panel actually carries. One of the two init paths is wrong; which one depends on an unrecorded fact.
 - **Fix**: identify the real controller (read controller ID via RDDID on a proto, or from the panel order), then make CLAUDE.md/memory/datasheet_specs/the losing firmware agree.
 
-#### R30-MED-5 — gates crash-as-FAIL: a missing Python module reads as a red hardware gate
+#### R30-MED-5 — gates crash-as-FAIL: a missing Python module reads as a red hardware gate — environment fixed on this machine; the exit-code distinction in the gates is still open
 - **Files**: `scripts/open_issues_report.py` + every shapely/pygerber/ngspice-dependent gate
 - **Problem**: at session start `verify_dangling_copper` was reported "FAIL — copper that ends in the air" when the truth was `ModuleNotFoundError: shapely`. A gate that *cannot run* is a blind spot, not a finding; conflating the two sent this round chasing phantom copper. (Environment has been fixed on this machine: `shapely`, `pygerber`, `easyeda2kicad` via pip; `ngspice` 42 user-local via dpkg-extract to `~/.local/opt/ngspice`.)
 - **Fix**: gates should exit distinctly (e.g. exit 2 = "cannot run") and `open_issues_report.py` / `issue_dispatch.py` should label that state `blind-spot`, which `issue_dispatch.py`'s severity scale already defines. A `requirements.txt` for scripts/ would prevent the class.
@@ -3505,7 +3527,7 @@ gate at all** (R30-CRIT-1 .. R30-MED-2).
 - **Problem**: the repo contains **zero measured FPS numbers** (the only "SNES at 60fps" string is a thermal-budget label, `scripts/vbench/thermal.py:91`); every figure in snes-optimization.md is a projection, and its own baseline ("114% over budget") matches the committed state. Phase-4 items (ASM DSP, dual-core SPC700, SRAM relocation) are all unimplemented.
 - **Fix**: quickest real wins, in order: `CONFIG_COMPILER_OPTIMIZATION_PERF=y`; then measure actual FPS and record it; then the doc's Phase-4 work. Doc is stale in both directions (lists shipped DMA double-buffering as future work; cites the wrong sdkconfig for WiFi).
 
-#### R30-LOW-1 — stale docstring in `routing/display.py` is the likely seed of R30-CRIT-2
+#### R30-LOW-1 — stale docstring in `routing/display.py` is the likely seed of R30-CRIT-2 — **FIXED** (`f3d825a`; PCB regenerated old-vs-new and byte-identical, comment-only change)
 - **Files**: `scripts/generate_pcb/routing/display.py:36,42` — still says "12: RD → GPIO3", "33: LED-A → GPIO45" (the pre-tie design; the code below ties both to +3V3)
 - **Fix**: reword to "tied to +3V3, no GPIO" so it cannot seed the mistake again.
 
