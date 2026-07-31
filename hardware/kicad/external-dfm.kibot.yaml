@@ -10,10 +10,12 @@ preflight:
     enabled: true
     ignore_unconnected: false
     dont_stop: true
+    format: HTML,JSON
   # Run KiCad ERC
   erc:
     enabled: true
     dont_stop: true
+    format: HTML,JSON
   # Zone fill check
   check_zone_fills: true
 

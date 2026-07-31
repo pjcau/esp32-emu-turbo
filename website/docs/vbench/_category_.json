@@ -1,0 +1,11 @@
+{
+  "label": "Virtual Bench",
+  "position": 6,
+  "collapsible": true,
+  "collapsed": true,
+  "link": {
+    "type": "generated-index",
+    "title": "Virtual Bench",
+    "description": "A netlist-driven bench test: a virtual PSU and a virtual LiPo feed a model of this board, built from the KiCad netlist and datasheet-cited component models."
+  }
+}

@@ -108,6 +108,13 @@ fabricated artwork and requires every net to be one piece of copper touching
 no other net (e-test points on all nets, plated holes included). Catches
 release-dir drift that design-side gates cannot see.
 
+Also reports **ORPHAN dead copper**: any copper island that belongs to no
+net — dead zone-fill fragments, forgotten artwork. NC pads are exempt
+without an allowlist because they are exposed through the solder mask,
+while dead copper is always mask-covered. Mutation-tested by
+`test_gerber_etest.py` (M5 paints a 1 mm² blob and requires the ORPHAN
+verdict).
+
 ### 7. Gate Coverage (mutation suite over the gates themselves)
 
 ```bash

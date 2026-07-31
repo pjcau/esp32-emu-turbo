@@ -42,6 +42,104 @@ COPPER_LAYERS = ["F.Cu", "In1.Cu", "In2.Cu", "B.Cu"]
 # clearance judgement still belongs to verify_copper_clearance.py.
 ZONE_SIMPLIFY_MM = 0.02
 
+# ── functional sections ──────────────────────────────────────────────
+#
+# The explorer can isolate one functional block — charging, display,
+# audio… — and dim everything else. Same shape as issue_dispatch's
+# routing: a keyword law plus explicit exceptions, and anything the law
+# does not cover is a HARD ERROR, not a default bucket. Adding a net to
+# the board without giving it a section therefore fails `--check` (which
+# is in VERIFY_ALL_SCRIPTS) instead of silently rendering as "no
+# section".
+#
+# The power rails are deliberately NOT owned by any section: +3V3, +5V
+# and GND touch every subsystem, so a section that included them would
+# light the whole board and defeat the isolation.
+
+RAIL_NETS = {"+3V3", "+5V", "GND"}
+
+SECTIONS = [
+    ("power",    "Alimentazione"),
+    ("display",  "Display"),
+    ("audio",    "Audio"),
+    ("storage",  "MicroSD"),
+    ("controls", "Controlli"),
+    ("usb",      "USB dati"),
+    ("mcu",      "MCU"),
+]
+
+# First matching pattern wins. USB_CC1/2 belong to power, not usb-data:
+# the CC pulldowns advertise charge current, they never carry data.
+SECTION_LAW = [
+    ("controls", r"^BTN_|^MENU_K$"),
+    ("display",  r"^LCD_"),
+    ("storage",  r"^SD_"),
+    ("audio",    r"^I2S_|^PAM_|^SPK"),
+    ("usb",      r"^USB_D"),
+    ("power",    r"^USB_CC|^VBUS$|^BAT|^LX$|^IP5306_|^RPP_|^LED\d+_RA$|^BUCK_"),
+    ("mcu",      r"^EN$"),
+]
+
+# A component follows the majority of its section-owned nets. These refs
+# are the ones a vote gets wrong, each with the reason it is special:
+REF_SECTION_OVERRIDES = {
+    "U1": "mcu",        # ESP32 module touches every subsystem; it IS the MCU
+    "J1": "power",      # USB-C receptacle: its primary role here is charge input
+    "SW_PWR": "power",  # bridges BAT+ to BTN_SELECT, but it is the power switch
+}
+
+NO_SECTION_REF = re.compile(r"^FID\d+$")   # fiducials carry no copper
+
+
+def classify_sections(components, net_name):
+    """(net id -> section, ref -> section); unclassifiable is a hard error."""
+    net_sec, unknown = {}, []
+    for nid, name in net_name.items():
+        if nid == 0 or name in RAIL_NETS:
+            continue
+        for sec, pat in SECTION_LAW:
+            if re.search(pat, name):
+                net_sec[nid] = sec
+                break
+        else:
+            unknown.append(name)
+    if unknown:
+        print(f"ERROR: {len(unknown)} net(s) match no SECTION_LAW pattern "
+              f"and are not rails: {', '.join(sorted(unknown))}")
+        print("       Add a pattern (or a rail entry) in "
+              "scripts/generate_net_explorer.py — no default bucket.")
+        raise SystemExit(2)
+
+    ref_sec, ambiguous = {}, []
+    for c in components:
+        ref = c["ref"]
+        if ref in REF_SECTION_OVERRIDES:
+            ref_sec[ref] = REF_SECTION_OVERRIDES[ref]
+            continue
+        if NO_SECTION_REF.match(ref):
+            continue
+        votes = {}
+        for p in c["pads"]:
+            sec = net_sec.get(p["net"])
+            if sec:
+                votes[sec] = votes.get(sec, 0) + 1
+        if not votes:
+            # Every pad on a rail or GND: decoupling / bulk capacitance —
+            # that is power delivery.
+            ref_sec[ref] = "power"
+            continue
+        best = sorted(votes.items(), key=lambda kv: (-kv[1], kv[0]))
+        if len(best) > 1 and best[0][1] == best[1][1]:
+            ambiguous.append((ref, votes))
+            continue
+        ref_sec[ref] = best[0][0]
+    if ambiguous:
+        for ref, votes in ambiguous:
+            print(f"ERROR: {ref} ties between sections {votes} — "
+                  f"add it to REF_SECTION_OVERRIDES with a reason.")
+        raise SystemExit(2)
+    return net_sec, ref_sec
+
 
 def clearance_report(cache):
     """Where different nets come closest — the short-circuit risk map.
@@ -391,6 +489,13 @@ def main():
     unnetted = [{"ref": p["ref"], "num": p["num"]}
                 for p in merge_through_pads(cache["pads"]) if not p["net"]]
 
+    net_sec, ref_sec = classify_sections(components, net_name)
+    sections = [{
+        "id": sid, "label": label,
+        "nets": sorted(n for n, s in net_sec.items() if s == sid),
+        "refs": sorted(r for r, s in ref_sec.items() if s == sid),
+    } for sid, label in SECTIONS]
+
     data = {
         "generatedFrom": os.path.basename(PCB),
         "pcbHash": cache.get("pcb_hash", "")[:12],
@@ -403,6 +508,9 @@ def main():
         "unnettedPads": unnetted,
         "danglingEnds": dangling_ends(cache, net_name),
         "clearance": clearance_report(cache),
+        "sections": sections,
+        "railNets": sorted(nid for nid, name in net_name.items()
+                           if name in RAIL_NETS),
     }
 
     payload = json.dumps(data, separators=(",", ":"))
@@ -434,6 +542,8 @@ def main():
           f"{len(cache['vias'])} vias, {len(edges)} outline primitives")
     print(f"    {len(zone_fills)} zone fill islands "
           f"({sum(len(z['holes']) for z in zone_fills)} clearance holes)")
+    print("    sections: " + ", ".join(
+        f"{s['id']} {len(s['nets'])}n/{len(s['refs'])}c" for s in sections))
     cl = data["clearance"]
     nd = sum(l["danger"] for l in cl["layers"])
     nw = sum(l["warn"] for l in cl["layers"])

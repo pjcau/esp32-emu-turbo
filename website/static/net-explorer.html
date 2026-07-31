@@ -145,6 +145,25 @@
     color: #f5b083; line-height: 1.55; margin-top: 10px;
   }
 
+  /* ── search suggestions ─────────────────────────────────── */
+  #searchwrap { position: relative; }
+  #sugg {
+    position: absolute; top: 100%; left: 0; margin-top: 4px; z-index: 20;
+    min-width: 260px; max-height: 320px; overflow-y: auto; display: none;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; box-shadow: 0 6px 18px rgba(0,0,0,.5);
+  }
+  .sitem { padding: 5px 9px; cursor: pointer; display: flex; gap: 8px;
+           align-items: baseline; font-size: 12px; white-space: nowrap; }
+  .sitem b { font-family: ui-monospace, monospace; font-weight: 500; }
+  .sitem .goes { flex: 1; text-align: right; overflow: hidden;
+                 text-overflow: ellipsis; max-width: 220px; }
+  .sitem.act, .sitem:hover { background: #21262d; }
+
+  /* copper hit targets */
+  .cuhit { cursor: pointer; }
+  .zonehit { cursor: pointer; }
+
   /* ── svg ────────────────────────────────────────────────── */
   .outline { stroke: #6e7681; stroke-width: .3; fill: none; }
   .seg { fill: none; stroke-linecap: round; }
@@ -173,7 +192,13 @@
 
 <header>
   <h1>PCB <span>Net Explorer</span></h1>
-  <input id="search" placeholder="ref o net… (U5, PAM_VREF)" autocomplete="off" spellcheck="false">
+  <div id="searchwrap">
+    <input id="search" placeholder="ref o net… (U5, PAM_VREF)" autocomplete="off" spellcheck="false">
+    <div id="sugg"></div>
+  </div>
+  <div class="grp" id="secgrp">
+    <label class="tag">Sezione</label>
+  </div>
   <div class="grp">
     <label class="tag">Lato</label>
     <button class="tgl side on" data-side="all">Both</button>
@@ -198,6 +223,7 @@
   </div>
   <button class="tgl" id="flip">Vista da retro</button>
   <button class="tgl on" id="dang">Difetti</button>
+  <button class="tgl" id="issues">Problemi</button>
   <div class="spacer"></div>
   <div class="hint" id="stat">…</div>
 </header>
@@ -242,9 +268,12 @@ const NS = 'http://www.w3.org/2000/svg';
 
 let DATA = null;
 let netById = new Map(), compByRef = new Map(), padOwner = new Map();
+let netByName = new Map(), secById = new Map();
+let netSection = new Map();   // netId -> section object (rails in none)
+let refSection = new Map();   // ref   -> section object
 let view = { x: 0, y: 0, w: 160, h: 75 };
 let state = { side: 'all', layers: new Set(['F.Cu', 'In1.Cu', 'In2.Cu', 'B.Cu']),
-              flip: false, selNet: null, selRef: null,
+              flip: false, selNet: null, selRef: null, selSection: null,
               mode: '2d', az: -22, el: 34, sep: 12, dangling: true };
 
 const el = (n, a = {}) => { const e = document.createElementNS(NS, n);
@@ -272,14 +301,58 @@ function boot() {
       padOwner.get(k).push({ ref: c.ref, num: p.num, side: c.side, layer: p.layer });
     });
   });
+  DATA.nets.forEach(n => netByName.set(n.name, n));
+  (DATA.sections || []).forEach(sec => {
+    secById.set(sec.id, sec);
+    sec.nets.forEach(id => netSection.set(id, sec));
+    sec.refs.forEach(r => refSection.set(r, sec));
+  });
+
+  // Section buttons, from the data — the HTML never hardcodes the list.
+  const sg = document.getElementById('secgrp');
+  (DATA.sections || []).forEach(sec => {
+    const b = document.createElement('button');
+    b.className = 'tgl sec';
+    b.dataset.sec = sec.id;
+    b.textContent = sec.label;
+    b.addEventListener('click', () => {
+      if (state.selSection === sec.id) { clearSel(); return; }
+      selectSection(sec.id);
+    });
+    sg.appendChild(b);
+  });
+
+  const nIssues = countIssues();
+  document.getElementById('issues').textContent =
+    `Problemi${nIssues ? ' (' + nIssues + ')' : ''}`;
+
   const s = DATA.stats || {};
   document.getElementById('stat').textContent =
     `${DATA.components.length} componenti · ${DATA.nets.length} net · ` +
     `${s.segments || 0} piste · ${s.vias || 0} via · rev ${DATA.pcbHash}`;
   fit();
   render();
-  showHome();
+  if (!applyHash()) showHome();
 }
+
+// ── deep links (#ref=U5 · #net=PAM_VREF · #sec=display · #issues) ─────
+function setHash(h) {
+  history.replaceState(null, '',
+    h ? '#' + h : location.pathname + location.search);
+}
+function applyHash() {
+  const m = location.hash.match(/^#(ref|net|sec|issues)(?:=(.*))?$/);
+  if (!m) return false;
+  const v = decodeURIComponent(m[2] || '');
+  if (m[1] === 'ref' && compByRef.has(v)) { selectRef(v); return true; }
+  if (m[1] === 'net' && netByName.has(v)) {
+    selectNet(netByName.get(v).id); return true;
+  }
+  if (m[1] === 'sec' && secById.has(v)) { selectSection(v); return true; }
+  if (m[1] === 'issues') { showIssues(); return true; }
+  return false;
+}
+window.addEventListener('hashchange', () => { if (DATA) applyHash(); });
 
 // ── projection ────────────────────────────────────────────────
 // One code path serves both views. 2D is simply the 3D camera looking
@@ -387,7 +460,12 @@ function render() {
   const gHi = el('g');
   root.appendChild(gDim);
   root.appendChild(gHi);
-  const base = state.selNet !== null ? gDim : root;
+  // What gets lifted out of the dimmed board: one net, or a whole
+  // functional section (all its nets at once).
+  const secSel = state.selSection ? secById.get(state.selSection) : null;
+  const hlNetIds = state.selNet !== null ? new Set([state.selNet])
+    : (secSel ? new Set(secSel.nets) : null);
+  const base = hlNetIds ? gDim : root;
 
   // Vias first in 3D: they are the vertical structure the layers hang on,
   // and drawing them under everything keeps the pads readable.
@@ -423,16 +501,38 @@ function render() {
 
     // poured copper (In1/In2 are planes only — no tracks at all)
     DATA.zoneFills.filter(f => f.layer === layer).forEach(f => {
-      g.appendChild(ppoly([f.outer, ...f.holes], z, {
+      const p = ppoly([f.outer, ...f.holes], z, {
         fill: col, opacity: .16, stroke: col,
-        'stroke-width': .06, 'stroke-opacity': .5 }));
+        'stroke-width': .06, 'stroke-opacity': .5 });
+      const zn = netByName.get(f.net);
+      if (zn) {
+        // Planes are copper too: clicking one selects its net. Tracks,
+        // pads and components are painted later, so they win the click.
+        p.classList.add('zonehit');
+        p.addEventListener('click', ev => { ev.stopPropagation();
+          selectNet(zn.id); });
+        p.addEventListener('mousemove', ev => showTip(ev,
+          `${f.net} · piano ${f.layer} · ${f.area} mm²`));
+        p.addEventListener('mouseleave', hideTip);
+      }
+      g.appendChild(p);
     });
 
-    // tracks
+    // tracks — each with an invisible, slightly fatter hit line so thin
+    // copper is clickable and hoverable
     DATA.nets.forEach(n => n.segments.forEach(s => {
       if (s.layer !== layer) return;
       g.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, {
         class: 'seg', stroke: col, opacity: .85, 'stroke-width': s.width }));
+      const hit = pline(s.x1, s.y1, s.x2, s.y2, z, {
+        class: 'cuhit', stroke: 'transparent',
+        'stroke-width': Math.max(s.width, .35) + .25 });
+      hit.addEventListener('click', ev => { ev.stopPropagation();
+        selectNet(n.id); });
+      hit.addEventListener('mousemove', ev => showTip(ev,
+        `${n.name} · ${s.layer} · ${s.width} mm`));
+      hit.addEventListener('mouseleave', hideTip);
+      g.appendChild(hit);
     }));
 
     // pads on this layer
@@ -450,6 +550,14 @@ function render() {
     DATA.nets.forEach(n => n.vias.forEach(v => {
       g.appendChild(pcircle(v.x, v.y, v.size / 2, z, { class: 'via' }));
       g.appendChild(pcircle(v.x, v.y, v.drill / 2, z, { class: 'viahole' }));
+      const hit = pcircle(v.x, v.y, v.size / 2 + .1, z,
+        { class: 'cuhit', fill: 'transparent' });
+      hit.addEventListener('click', ev => { ev.stopPropagation();
+        selectNet(n.id); });
+      hit.addEventListener('mousemove', ev => showTip(ev,
+        `${n.name} · via ${v.size}/${v.drill} mm`));
+      hit.addEventListener('mouseleave', hideTip);
+      g.appendChild(hit);
     }));
 
     base.appendChild(g);
@@ -471,16 +579,19 @@ function render() {
   }
 
   const gC = el('g');
+  const gCLit = el('g');   // section members stay bright above the dim board
   DATA.components.forEach(c => {
     if (state.side !== 'all' && c.side !== state.side) return;
     const bb = padBox(c);
     if (!bb) return;
     const z = layerZ(c.side === 'B' ? 'B.Cu' : 'F.Cu');
     const g = el('g');
+    const lit = state.selRef === c.ref ||
+      (secSel && refSection.get(c.ref) === secSel);
 
     g.appendChild(ppoly([[[bb.x1 - .2, bb.y1 - .2], [bb.x2 + .2, bb.y1 - .2],
                           [bb.x2 + .2, bb.y2 + .2], [bb.x1 - .2, bb.y2 + .2]]],
-      z, { class: 'body' + (state.selRef === c.ref ? ' sel' : '') }));
+      z, { class: 'body' + (lit ? ' sel' : '') }));
 
     if ((bb.x2 - bb.x1) > 2.2) {
       const [tx, ty] = project((bb.x1 + bb.x2) / 2, bb.y1 - .5, z);
@@ -499,9 +610,10 @@ function render() {
       `${c.ref}${c.value ? ' · ' + c.value : ''} · ${c.side === 'F' ? 'fronte' : 'retro'}`));
     hit.addEventListener('mouseleave', hideTip);
     g.appendChild(hit);
-    gC.appendChild(g);
+    (lit ? gCLit : gC).appendChild(g);
   });
   base.appendChild(gC);
+  gHi.appendChild(gCLit);
 
   // dangling copper — always on top, never dimmed: it is a defect marker
   if (state.dangling && DATA.danglingEnds) {
@@ -526,16 +638,25 @@ function render() {
     root.appendChild(gD);
   }
 
-  // highlighted net, drawn on top of the dimmed board
-  if (state.selNet !== null) {
-    const n = netById.get(state.selNet);
-    if (n) {
+  // highlighted copper, drawn on top of the dimmed board — one net, or
+  // every net of the isolated section. The white halo and the pad rings
+  // only make sense for a single net; a whole section in halos is noise.
+  if (hlNetIds) {
+    const single = state.selNet !== null;
+    hlNetIds.forEach(id => {
+      const n = netById.get(id);
+      if (!n) return;
       n.segments.forEach(s => {
         const z = layerZ(s.layer);
-        gHi.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, { class: 'hl-seg',
-          stroke: '#fff', opacity: .35,
-          'stroke-width': Math.max(s.width, .25) + .18 }));
-        gHi.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, { class: 'hl-seg',
+        if (single) {
+          gHi.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, { class: 'hl-seg',
+            stroke: '#fff', opacity: .35,
+            'stroke-width': Math.max(s.width, .25) + .18 }));
+        }
+        // 'seg', not 'hl-seg': the CSS for hl-seg forces stroke:#fff, and
+        // in section mode the layer colour is the information.
+        gHi.appendChild(pline(s.x1, s.y1, s.x2, s.y2, z, {
+          class: single ? 'hl-seg' : 'seg',
           stroke: LAYER_COLOR[s.layer] || '#fff',
           'stroke-width': Math.max(s.width, .25) }));
       });
@@ -554,13 +675,13 @@ function render() {
             { class: 'hl-via' }));
         });
       });
-      n.pads.forEach(p => {
+      if (single) n.pads.forEach(p => {
         const c = compByRef.get(p.ref);
         const pd = c && c.pads.find(q => String(q.num) === String(p.num));
         const r = pd ? Math.max(pd.w, pd.h) / 2 + .18 : .5;
         gHi.appendChild(pcircle(p.x, p.y, r, layerZ(p.layer), { class: 'hl-pad' }));
       });
-    }
+    });
   }
 }
 
@@ -603,6 +724,15 @@ function showHome() {
     <div class="kv"><span>Net</span><span>${DATA.nets.length}</span></div>
     <div class="kv"><span>Piste</span><span>${(DATA.stats || {}).segments || 0}</span></div>
     <div class="kv"><span>Via</span><span>${(DATA.stats || {}).vias || 0}</span></div>
+    <h3>Sezioni funzionali</h3>
+    <div>${(DATA.sections || []).map(s => `<span class="chip clksec"
+      data-sec="${esc(s.id)}" style="cursor:pointer">${esc(s.label)}
+      <span style="color:var(--faint)">${s.refs.length}</span></span>`).join('')}</div>
+    <div class="goes" style="margin-top:6px">
+      Una sezione isola un blocco funzionale: le sue net e i suoi componenti
+      restano accesi, il resto della board si spegne. Le rail
+      (+3V3, +5V, GND) non appartengono a nessuna sezione.
+    </div>
     <h3>Fronte — F.Cu (${front.length})</h3><div>${list(front)}</div>
     <h3>Retro — B.Cu (${back.length})</h3><div>${list(back)}</div>
 
@@ -681,10 +811,204 @@ function showHome() {
   wire();
 }
 
+// ── sections ──────────────────────────────────────────────────
+function syncSecBtns() {
+  document.querySelectorAll('.tgl.sec').forEach(b =>
+    b.classList.toggle('on', b.dataset.sec === state.selSection));
+}
+function clearSel() {
+  state.selNet = null; state.selRef = null; state.selSection = null;
+  syncSecBtns(); setHash(''); render(); showHome();
+}
+function selectSection(id) {
+  state.selSection = id; state.selNet = null; state.selRef = null;
+  syncSecBtns(); setHash('sec=' + id); render(); showSection(id);
+}
+function singlePadNets() {
+  // One pad, no plane: this copper can never reach a second pin.
+  return DATA.nets.filter(n => n.pads.length === 1 && !n.zoneLayers.length);
+}
+function secOfNetName(name) {
+  const n = netByName.get(name.replace(/ \(same-net\)$/, ''));
+  return n ? netSection.get(n.id) : undefined;
+}
+function secTag(sec) {
+  return sec ? `<span class="chip">${esc(sec.label)}</span>` : '';
+}
+function countIssues() {
+  return (DATA.danglingEnds || []).length +
+         ((DATA.clearance || {}).violations || []).length +
+         singlePadNets().length;
+}
+
+function showSection(id) {
+  const sec = secById.get(id);
+  if (!sec) return;
+  const nets = sec.nets.map(i => netById.get(i)).filter(Boolean);
+  const comps = sec.refs.map(r => compByRef.get(r)).filter(Boolean);
+  const totLen = nets.reduce((a, n) => a + n.length, 0);
+  const totVias = nets.reduce((a, n) => a + n.vias.length, 0);
+
+  const netSet = new Set(sec.nets);
+  const dang = (DATA.danglingEnds || []).filter(d => netSet.has(d.netId));
+  const viol = ((DATA.clearance || {}).violations || []).filter(v =>
+    secOfNetName(v.a) === sec || secOfNetName(v.b) === sec);
+  const solo = singlePadNets().filter(n => netSet.has(n.id));
+
+  const chips = arr => arr.map(c => `<span class="chip ${c.side} clkref"
+    data-ref="${esc(c.ref)}" style="cursor:pointer">${esc(c.ref)}</span>`).join('');
+
+  side.innerHTML = `
+    <button class="back" id="home">← tutta la board</button>
+    <h2>${esc(sec.label)}</h2>
+    <div class="sub">sezione ${esc(sec.id)} · ${nets.length} net ·
+      ${comps.length} componenti</div>
+    <div class="kv"><span>Rame instradato</span><span>${totLen.toFixed(1)} mm</span></div>
+    <div class="kv"><span>Via</span><span>${totVias}</span></div>
+
+    ${dang.length || viol.length || solo.length ? `
+    <h3 style="color:var(--warn)">Problemi in questa sezione
+      (${dang.length + viol.length + solo.length})</h3>
+    ${dang.map(d => `<div class="warnbox clknet" data-net="${d.netId}"
+      style="cursor:pointer"><b>Punto morto</b> su
+      <code>${esc(d.net)}</code> · ${esc(d.layer)} ·
+      ${d.x.toFixed(2)}, ${d.y.toFixed(2)}</div>`).join('')}
+    ${viol.map(v => `<div class="warnbox"><b>${(v.gap * 1000).toFixed(0)} µm</b>
+      fra ${esc(v.a)} ↔ ${esc(v.b)}${v.sameNet ? '' : ' (net diverse)'}
+      · ${esc(v.layer)}</div>`).join('')}
+    ${solo.map(n => `<div class="warnbox clknet" data-net="${n.id}"
+      style="cursor:pointer"><b>Net con un solo pad</b>:
+      <code>${esc(n.name)}</code> — non può raggiungere un secondo pin</div>`).join('')}
+    ` : `<div class="goes" style="margin-top:10px">
+      Nessun problema noto dentro questa sezione.</div>`}
+
+    <h3>Net della sezione (${nets.length})</h3>
+    <table><thead><tr><th>Net</th><th>Layer</th><th>mm</th><th>Pad</th></tr></thead><tbody>
+    ${nets.slice().sort((a, b) => a.name.localeCompare(b.name)).map(n => `
+      <tr class="clk clknet" data-net="${n.id}">
+        <td class="net">${esc(n.name)}</td>
+        <td>${n.layers.map(l => `<span class="chip ${LAYER_CHIP[l] || ''}">${esc(l.replace('.Cu', ''))}</span>`).join('')}</td>
+        <td class="mono">${n.length.toFixed(1)}</td>
+        <td class="mono">${n.pads.length}</td>
+      </tr>`).join('')}
+    </tbody></table>
+
+    <h3>Componenti (${comps.length})</h3>
+    <div>${chips(comps.filter(c => c.side === 'F'))}</div>
+    <div style="margin-top:4px">${chips(comps.filter(c => c.side === 'B'))}</div>
+    <div class="goes" style="margin-top:8px">
+      Le rail +3V3/+5V/GND non sono evidenziate: attraversano tutte le
+      sezioni. I condensatori di disaccoppiamento con soli pad su rail
+      appartengono ad Alimentazione.
+    </div>`;
+  wire();
+}
+
+// ── issues panel ──────────────────────────────────────────────
+function showIssues() {
+  state.selNet = null; state.selRef = null; state.selSection = null;
+  syncSecBtns(); setHash('issues'); render();
+
+  const dang = DATA.danglingEnds || [];
+  const viol = (DATA.clearance || {}).violations || [];
+  const solo = singlePadNets();
+  const unn = DATA.unnettedPads || [];
+  const byRefUnn = {};
+  unn.forEach(p => { (byRefUnn[p.ref] = byRefUnn[p.ref] || []).push(p.num); });
+
+  // Minimum routed width per power-section net + rails: a power trace
+  // that necks down to signal width is a current bottleneck you want to
+  // see, even when no gate flags it.
+  const powIds = new Set([...(secById.get('power') || { nets: [] }).nets,
+                          ...(DATA.railNets || [])]);
+  const pow = [...powIds].map(i => netById.get(i))
+    .filter(n => n && n.segments.length)
+    .map(n => ({ n, min: Math.min(...n.segments.map(s => s.width)) }))
+    .sort((a, b) => a.min - b.min);
+
+  side.innerHTML = `
+    <button class="back" id="home">← tutta la board</button>
+    <h2>Problemi</h2>
+    <div class="sub">${countIssues()} segnalazioni ·
+      ${unn.length} pad senza net · rev ${esc(DATA.pcbHash)}</div>
+
+    <h3>Punti morti (${dang.length})</h3>
+    ${dang.length ? `<table><thead><tr><th>Net</th><th>Sezione</th>
+      <th>Layer</th><th>Posizione</th></tr></thead><tbody>
+    ${dang.map(d => `<tr class="clk clknet" data-net="${d.netId}">
+      <td class="net">${esc(d.net)}</td>
+      <td>${secTag(netSection.get(d.netId))}</td>
+      <td><span class="chip ${LAYER_CHIP[d.layer] || ''}">${esc(d.layer.replace('.Cu', ''))}</span></td>
+      <td class="mono">${d.x.toFixed(2)}, ${d.y.toFixed(2)}</td></tr>`).join('')}
+    </tbody></table>` : `<div class="goes">Nessuno: ogni estremo di pista
+      tocca un pad, una via, una giunzione o un piano.</div>`}
+
+    <h3>Distanze critiche (${viol.length})</h3>
+    ${viol.length ? `<table><thead><tr><th>Gap</th><th>Fra</th>
+      <th>Sezione</th><th>Layer</th></tr></thead><tbody>
+    ${viol.map(v => `<tr>
+      <td class="mono" style="color:${v.severity === 'danger' ? '#f85149' : '#f0883e'}">
+        ${(v.gap * 1000).toFixed(0)} µm</td>
+      <td class="goes">${esc(v.a)} ↔ ${esc(v.b)}${v.sameNet ? '' : ' <b>(net diverse)</b>'}</td>
+      <td>${secTag(secOfNetName(v.a) || secOfNetName(v.b))}</td>
+      <td><span class="chip ${LAYER_CHIP[v.layer] || ''}">${esc(v.layer.replace('.Cu', ''))}</span></td>
+    </tr>`).join('')}
+    </tbody></table>` : `<div class="goes">Nessuna coppia di rame sotto
+      ${(DATA.clearance || {}).warnMm} mm.</div>`}
+
+    <h3>Net con un solo pad (${solo.length})</h3>
+    ${solo.length ? `<table><thead><tr><th>Net</th><th>Sezione</th>
+      <th>mm</th></tr></thead><tbody>
+    ${solo.map(n => `<tr class="clk clknet" data-net="${n.id}">
+      <td class="net">${esc(n.name)}</td>
+      <td>${secTag(netSection.get(n.id))}</td>
+      <td class="mono">${n.length.toFixed(1)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="warnbox">Un pad solo e nessun piano: questo rame non può
+      raggiungere un secondo pin. O è un difetto, o la net è servita da
+      un piano non rilevato.</div>` :
+    `<div class="goes">Nessuna: ogni net raggiunge almeno due pad o un piano.</div>`}
+
+    <h3>Larghezza minima — net di potenza</h3>
+    <table><thead><tr><th>Net</th><th>Min</th><th>mm totali</th>
+      <th>Piano</th></tr></thead><tbody>
+    ${pow.map(({ n, min }) => `<tr class="clk clknet" data-net="${n.id}">
+      <td class="net">${esc(n.name)}</td>
+      <td class="mono" style="color:${min < 0.3 ? '#f0883e' : 'inherit'}">${min} mm</td>
+      <td class="mono">${n.length.toFixed(1)}</td>
+      <td class="goes">${n.zoneLayers.length ? n.zoneLayers.map(esc).join(', ') : '—'}</td>
+    </tr>`).join('')}
+    </tbody></table>
+    <div class="goes" style="margin-top:6px">
+      Informativo, non un verdetto: BUCK_FB è una linea di sense e può
+      essere sottile; una rail che si strozza sotto 0.3 mm invece merita
+      uno sguardo. I gate (verify-all) restano l'autorità.
+    </div>
+
+    <h3>Pad senza net (${unn.length})</h3>
+    <div class="goes">${Object.keys(byRefUnn).sort().map(r =>
+      `<span class="chip clkref" data-ref="${esc(r)}"
+        style="cursor:pointer">${esc(r)} · ${byRefUnn[r].length}</span>`).join('')}
+    </div>
+    <div class="goes" style="margin-top:6px">
+      In gran parte pad meccanici (gusci, fori di fissaggio) o pin
+      volutamente NC — verifica il pinout in
+      <code>datasheet_specs.py</code> prima di considerarli difetti.
+    </div>`;
+  wire();
+}
+
+function backBtn() {
+  const sec = state.selSection && secById.get(state.selSection);
+  return `<button class="back" id="home">← ${sec
+    ? 'sezione ' + esc(sec.label) : 'tutta la board'}</button>`;
+}
+
 function selectRef(ref) {
   const c = compByRef.get(ref);
   if (!c) return;
   state.selRef = ref; state.selNet = null;
+  setHash('ref=' + encodeURIComponent(ref));
   render();
 
   // A power net touches most of the board. Listing all 80 destinations
@@ -711,10 +1035,14 @@ function selectRef(ref) {
   }).join('');
 
   const nc = c.pads.filter(p => !p.net).length;
+  const csec = refSection.get(c.ref);
   side.innerHTML = `
-    <button class="back" id="home">← tutta la board</button>
+    ${backBtn()}
     <h2>${esc(c.ref)}</h2>
     <div class="sub">${esc(c.value || '—')} · ${esc(c.footprint)}</div>
+    ${csec ? `<div class="kv"><span>Sezione</span>
+      <span><span class="chip clksec" data-sec="${esc(csec.id)}"
+        style="cursor:pointer">${esc(csec.label)}</span></span></div>` : ''}
     <div class="kv"><span>Lato</span><span>${c.side === 'F' ? 'Fronte (F.Cu)' : 'Retro (B.Cu)'}</span></div>
     <div class="kv"><span>Posizione</span><span>${c.x.toFixed(2)}, ${c.y.toFixed(2)} mm</span></div>
     <div class="kv"><span>Rotazione</span><span>${c.rot}°</span></div>
@@ -738,7 +1066,8 @@ function selectRef(ref) {
 function selectNet(id) {
   const n = netById.get(id);
   if (!n) return;
-  state.selNet = id;
+  state.selNet = id; state.selRef = null;
+  setHash('net=' + encodeURIComponent(n.name));
   render();
 
   const byRef = {};
@@ -756,10 +1085,14 @@ function selectNet(id) {
     `<br><span class="w">${Math.hypot(s.x2 - s.x1, s.y2 - s.y1).toFixed(2)} mm ` +
     `· larghezza ${s.width} mm</span></li>`).join('');
 
+  const nsec = netSection.get(n.id);
   side.innerHTML = `
-    <button class="back" id="home">← tutta la board</button>
+    ${backBtn()}
     <h2>${esc(n.name)}</h2>
-    <div class="sub">net #${n.id} · ${esc(n.type)}</div>
+    <div class="sub">net #${n.id} · ${esc(n.type)}${nsec
+      ? ` · <span class="chip clksec" data-sec="${esc(nsec.id)}"
+          style="cursor:pointer">${esc(nsec.label)}</span>`
+      : ' · rail — nessuna sezione'}</div>
     <div class="kv"><span>Pad sulla net</span><span>${n.pads.length}</span></div>
     <div class="kv"><span>Segmenti</span><span>${n.segments.length}</span></div>
     <div class="kv"><span>Via</span><span>${n.vias.length}</span></div>
@@ -804,7 +1137,11 @@ function selectNet(id) {
 function wire() {
   const h = document.getElementById('home');
   if (h) h.addEventListener('click', () => {
-    state.selNet = null; state.selRef = null; render(); showHome();
+    if (state.selSection && (state.selNet !== null || state.selRef !== null)) {
+      selectSection(state.selSection);   // back to the section, not home
+      return;
+    }
+    clearSel();
   });
   side.querySelectorAll('.clknet').forEach(e =>
     e.addEventListener('click', ev => { ev.stopPropagation();
@@ -812,6 +1149,9 @@ function wire() {
   side.querySelectorAll('.clkref').forEach(e =>
     e.addEventListener('click', ev => { ev.stopPropagation();
       selectRef(e.dataset.ref); }));
+  side.querySelectorAll('.clksec').forEach(e =>
+    e.addEventListener('click', ev => { ev.stopPropagation();
+      selectSection(e.dataset.sec); }));
 }
 
 // ── tooltip ───────────────────────────────────────────────────
@@ -844,6 +1184,7 @@ document.getElementById('dang').addEventListener('click', e => {
   state.dangling = !state.dangling;
   e.target.classList.toggle('on', state.dangling); render();
 });
+document.getElementById('issues').addEventListener('click', () => showIssues());
 document.querySelectorAll('.tgl.mode').forEach(b =>
   b.addEventListener('click', () => {
     document.querySelectorAll('.tgl.mode').forEach(o => o.classList.remove('on'));
@@ -910,9 +1251,8 @@ svg.addEventListener('click', () => {
   // A drag ends in a click event; without this, orbiting the 3D stack
   // would clear the selection every time you let go.
   if (dragged) { dragged = false; return; }
-  if (state.selNet !== null || state.selRef !== null) {
-    state.selNet = null; state.selRef = null; render(); showHome();
-  }
+  if (state.selNet !== null || state.selRef !== null ||
+      state.selSection !== null) clearSel();
 });
 
 function toBoard(ev) {
@@ -921,21 +1261,86 @@ function toBoard(ev) {
            y: view.y + (ev.clientY - r.top) / r.height * view.h };
 }
 
-document.getElementById('search').addEventListener('input', e => {
-  const q = e.target.value.trim().toUpperCase();
-  if (!q) return;
-  const c = DATA.components.find(x => x.ref.toUpperCase() === q);
-  if (c) return selectRef(c.ref);
-  const n = DATA.nets.find(x => x.name.toUpperCase() === q);
-  if (n) return selectNet(n.id);
+// ── search with suggestions ───────────────────────────────────
+const searchEl = document.getElementById('search');
+const suggEl = document.getElementById('sugg');
+let suggItems = [], suggIdx = -1;
+
+function closeSugg() { suggEl.style.display = 'none'; suggItems = []; suggIdx = -1; }
+
+function pickSugg(it) {
+  closeSugg();
+  searchEl.value = it.k;
+  if (it.t === 'ref') selectRef(it.k);
+  else if (it.t === 'net') selectNet(it.id);
+  else if (it.t === 'sec') selectSection(it.id);
+}
+
+function drawSugg() {
+  if (!suggItems.length) { closeSugg(); return; }
+  suggEl.innerHTML = suggItems.map((it, i) => `
+    <div class="sitem${i === suggIdx ? ' act' : ''}" data-i="${i}">
+      <span class="chip ${it.t === 'net' ? 'pow' : ''}">${
+        it.t === 'ref' ? 'comp' : it.t === 'net' ? 'net' : 'sezione'}</span>
+      <b>${esc(it.k)}</b><span class="goes">${esc(it.d || '')}</span>
+    </div>`).join('');
+  suggEl.style.display = 'block';
+  suggEl.querySelectorAll('.sitem').forEach(e =>
+    e.addEventListener('mousedown', ev => { ev.preventDefault();
+      pickSugg(suggItems[+e.dataset.i]); }));
+}
+
+function buildSugg() {
+  if (!DATA) return;
+  const q = searchEl.value.trim().toUpperCase();
+  if (!q) { closeSugg(); return; }
+  const rank = s => s.toUpperCase().startsWith(q) ? 0 : 1;
+  const secs = (DATA.sections || [])
+    .filter(s => s.label.toUpperCase().includes(q) || s.id.toUpperCase().includes(q))
+    .map(s => ({ t: 'sec', k: s.label, id: s.id,
+                 d: `${s.nets.length} net · ${s.refs.length} comp` }));
+  const comps = DATA.components
+    .filter(c => c.ref.toUpperCase().includes(q) ||
+                 (c.value || '').toUpperCase().includes(q))
+    .sort((a, b) => rank(a.ref) - rank(b.ref) ||
+                    a.ref.localeCompare(b.ref, undefined, { numeric: true }))
+    .slice(0, 7)
+    .map(c => ({ t: 'ref', k: c.ref,
+                 d: `${c.value || ''} · ${c.side === 'F' ? 'fronte' : 'retro'}` }));
+  const nets = DATA.nets
+    .filter(n => n.name.toUpperCase().includes(q))
+    .sort((a, b) => rank(a.name) - rank(b.name) || a.name.localeCompare(b.name))
+    .slice(0, 7)
+    .map(n => ({ t: 'net', k: n.name, id: n.id,
+                 d: `${n.pads.length} pad · ${n.length.toFixed(1)} mm` }));
+  suggItems = [...secs.slice(0, 2), ...comps, ...nets];
+  suggIdx = suggItems.length ? 0 : -1;
+  drawSugg();
+}
+
+searchEl.addEventListener('input', buildSugg);
+searchEl.addEventListener('focus', buildSugg);
+searchEl.addEventListener('blur', () => setTimeout(closeSugg, 150));
+searchEl.addEventListener('keydown', e => {
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (!suggItems.length) return;
+    e.preventDefault();
+    suggIdx = (suggIdx + (e.key === 'ArrowDown' ? 1 : suggItems.length - 1))
+      % suggItems.length;
+    drawSugg();
+  } else if (e.key === 'Enter') {
+    if (suggIdx >= 0 && suggItems[suggIdx]) pickSugg(suggItems[suggIdx]);
+  } else if (e.key === 'Escape') {
+    closeSugg(); searchEl.blur();
+  }
 });
-document.getElementById('search').addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  const q = e.target.value.trim().toUpperCase();
-  const c = DATA.components.find(x => x.ref.toUpperCase().includes(q));
-  if (c) return selectRef(c.ref);
-  const n = DATA.nets.find(x => x.name.toUpperCase().includes(q));
-  if (n) selectNet(n.id);
+
+// Esc anywhere else: close the dropdown first, then drop the selection.
+window.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || e.target === searchEl) return;
+  if (suggItems.length) { closeSugg(); return; }
+  if (state.selNet !== null || state.selRef !== null ||
+      state.selSection !== null) clearSel();
 });
 </script>
 </body>

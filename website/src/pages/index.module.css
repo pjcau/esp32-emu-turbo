@@ -20,4 +20,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section {
+  padding: 2.5rem 0;
+}
+
+.sectionAlt {
+  background-color: var(--ifm-color-emphasis-100);
+}
+
+.sectionTitle {
+  text-align: center;
+}
+
+.sectionSubtitle {
+  text-align: center;
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 2rem;
+}
+
+.feature {
+  text-align: center;
+  padding: 1rem;
+}
+
+.card {
+  height: 100%;
+  color: inherit;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+  text-decoration: none;
+  color: inherit;
+  transform: translateY(-3px);
+  box-shadow: var(--ifm-global-shadow-md);
 }

@@ -67,7 +67,23 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 
 ## Release History
 
-### v3.2 — 2026-04-09 (current)
+### v4.3.2 — 2026-07-31 (current; tag on merge to main)
+
+**J4 GND dry-film fix — one bridge segment, no component moved:**
+
+- **J4 pins 36→35 GND bridge** (B.Cu, 0.25 mm, x=133.712): the pin 37+36
+  and pin 35+34 GND groups each reached the In1 plane through their own
+  via and came within 0.12 mm of each other at x=133.60 — the board's
+  only `verify_copper_clearance` WARN, a dry-film risk for the fab.
+  The pads are adjacent and same-net, so the bridge merges both groups
+  into a single pour. Clearance now **0 DANGER / 0 WARN on all 4 layers**.
+- BOM, CPL and IPC-D-356 unchanged — copper-only change (611 segments,
+  was 610).
+- **Verification**: verify-all 77/77, DFA 9/9, flying-probe e-test on
+  these shipped gerbers PASS (591 points, 54 nets), trace-through-pad 0,
+  net connectivity PASS, gate-coverage audit 9/9.
+
+### v3.2 — 2026-04-09
 
 **Full electrical review, firmware audit fixes, 3D component models, verification suite expansion:**
 

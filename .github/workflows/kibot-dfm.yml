@@ -1,0 +1,73 @@
+name: KiBot DFM (DRC + design report)
+
+# Board-side only. The schematic phase (ERC + BOM) is blocked upstream:
+# KiBot >= 1.6.5 rejects non-IPC references (SW_PWR / SW_BOOT / SW_RST,
+# see INTI-CMNB/KiBot#604). scripts/external-dfm.sh carries the same
+# split and reports that blocker loudly; extend this workflow with -e
+# once the references are renamed in the generator.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'hardware/kicad/**'
+      - '.github/workflows/kibot-dfm.yml'
+  pull_request:
+    paths:
+      - 'hardware/kicad/**'
+      - '.github/workflows/kibot-dfm.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kibot-dfm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  kibot:
+    runs-on: ubuntu-latest
+    # Same base as docker/kibot/Dockerfile — keep the two in sync.
+    container: ghcr.io/inti-cmnb/kicad10_auto:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run KiBot board-side (DRC + reports)
+        # Isolated copy: KiBot auto-loads a sibling .kicad_sch even for
+        # board-only outputs, and ours trips the reference check above.
+        run: |
+          mkdir -p /work /output
+          cp hardware/kicad/esp32-emu-turbo.kicad_pcb \
+             hardware/kicad/esp32-emu-turbo.kicad_dru \
+             hardware/kicad/external-dfm.kibot.yaml /work/
+          cd /work
+          kibot -b esp32-emu-turbo.kicad_pcb -c external-dfm.kibot.yaml \
+                -s erc design_report drc_report 2>&1 | tee /output/kibot.log
+
+      - name: Fail on DRC errors
+        run: |
+          python3 - <<'EOF'
+          import json, glob, sys
+          reports = glob.glob('/output/**/*drc*.json', recursive=True)
+          if not reports:
+              print('No DRC JSON produced — treating as failure')
+              sys.exit(1)
+          failed = False
+          for path in reports:
+              with open(path) as f:
+                  data = json.load(f)
+              violations = data.get('violations', [])
+              errors = [v for v in violations if v.get('severity') == 'error']
+              print(f'{path}: {len(errors)} errors / {len(violations)} findings')
+              if errors:
+                  failed = True
+          sys.exit(1 if failed else 0)
+          EOF
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kibot-dfm-reports
+          path: /output
+          if-no-files-found: warn

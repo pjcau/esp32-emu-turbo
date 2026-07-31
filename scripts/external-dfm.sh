@@ -17,10 +17,12 @@ PASS=0
 FAIL=0
 WARN=0
 
+# NB: POSIX arithmetic, not ((VAR++)) — a post-increment from 0 returns
+# status 1 and kills the script under `set -e`.
 section() { echo -e "\n${CYAN}━━━ $1 ━━━${NC}"; }
-pass()    { echo -e "  ${GREEN}PASS${NC}  $1"; ((PASS++)); }
-fail()    { echo -e "  ${RED}FAIL${NC}  $1"; ((FAIL++)); }
-warn()    { echo -e "  ${YELLOW}WARN${NC}  $1"; ((WARN++)); }
+pass()    { echo -e "  ${GREEN}PASS${NC}  $1"; PASS=$((PASS+1)); }
+fail()    { echo -e "  ${RED}FAIL${NC}  $1"; FAIL=$((FAIL+1)); }
+warn()    { echo -e "  ${YELLOW}WARN${NC}  $1"; WARN=$((WARN+1)); }
 
 # Clean output
 rm -rf "$OUTPUT_DIR"
@@ -29,19 +31,39 @@ mkdir -p "$OUTPUT_DIR"
 ########################################
 # 1. KiBot DRC + ERC + Design Report
 ########################################
+# Two phases because KiBot (>= 1.6.5, upstream issue #604) refuses any
+# schematic whose references are not PREFIX+NUMBER (IPC). Ours has
+# SW_PWR / SW_BOOT / SW_RST, so the schematic phase fails until they are
+# renamed. The board phase must not be held hostage by that: it runs in
+# an isolated copy of the .kicad_pcb (KiBot auto-loads a sibling
+# .kicad_sch even for board-only outputs, so isolation is required).
 section "KiBot Analysis (DRC + ERC + Design Report)"
 
 echo "  Running KiBot (may take 1-2 min under emulation)..."
 KIBOT_LOG="$OUTPUT_DIR/kibot.log"
 
-# Run KiBot with the config file
+# Phase 1a — board only (DRC + design reports), isolated from the schematic
+docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm \
+    --entrypoint bash \
+    kibot \
+    -c "mkdir -p /work \
+        && cp /project/esp32-emu-turbo.kicad_pcb /project/esp32-emu-turbo.kicad_dru /project/external-dfm.kibot.yaml /work/ \
+        && cd /work \
+        && kibot -b esp32-emu-turbo.kicad_pcb -c external-dfm.kibot.yaml -s erc design_report drc_report" \
+    > "$KIBOT_LOG" 2>&1 || true
+
+# Phase 1b — schematic (ERC + BOM). Known-blocked: non-IPC references.
 docker compose -f "$PROJECT_DIR/docker-compose.yml" run --rm \
     kibot \
     -b /project/esp32-emu-turbo.kicad_pcb \
     -e /project/esp32-emu-turbo.kicad_sch \
     -c /project/external-dfm.kibot.yaml \
-    -v \
-    > "$KIBOT_LOG" 2>&1 || true
+    -s drc bom_check \
+    >> "$KIBOT_LOG" 2>&1 || true
+
+if grep -q "Malformed component reference" "$KIBOT_LOG"; then
+    fail "KiBot schematic phase (ERC + BOM) blocked: non-IPC references $(grep -o 'Malformed component reference \`[^\`]*\`' "$KIBOT_LOG" | sort -u | sed 's/.*\`\(.*\)\`/\1/' | tr '\n' ' ')— KiBot requires PREFIX+NUMBER refs (upstream #604). Fix: rename SW_PWR/SW_BOOT/SW_RST in the generator."
+fi
 
 # Check what was generated
 echo -e "  ${CYAN}Generated files:${NC}"

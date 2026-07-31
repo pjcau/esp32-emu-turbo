@@ -191,7 +191,7 @@ U3 is now an SY8089AAAC buck in SOT-23-5 ([C78988](https://www.lcsc.com/product-
 
 ## Rework Guide
 
-Physical rework instructions for existing v2 boards: see [PCB v2 Rework Guide](../rework/rework-v2.md).
+Physical rework instructions for existing v2 boards (the v4.3.1 batch): see [the batch incident's board-level fixes](../rework/incident-v431-rotations.md#board-level-design-gaps-of-the-same-batch).
 
 | Fix | Effort | Required? |
 |-----|--------|-----------|
