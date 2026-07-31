@@ -25,6 +25,37 @@ MODEL_MAP = {
                      (0, 0, 0), (0, 0, 0)),
     "C_1206":       (f"{M}/Capacitor_SMD.3dshapes/C_1206_3216Metric.step",
                      (0, 0, 0), (0, 0, 0)),
+    # R27 backlight series resistor (R25-HIGH-1 fix)
+    "R_1206":       (f"{M}/Resistor_SMD.3dshapes/R_1206_3216Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    # F1 VBUS PTC fuse (R3-HIGH-4 fix): no dedicated 1812 chip-fuse model
+    # in the KiCad lib — the R_1812 body has the same 4532 metric outline.
+    "F_1812":       (f"{M}/Resistor_SMD.3dshapes/R_1812_4532Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    # R22/R23 USB series resistors
+    "R_0402":       (f"{M}/Resistor_SMD.3dshapes/R_0402_1005Metric.step",
+                     (0, 0, 0), (0, 0, 0)),
+    # U4 USBLC6-2SC6 TVS: on B.Cu — same frame convention as SOT-23-3
+    "SOT-23-6":     (f"{M}/Package_TO_SOT_SMD.3dshapes/SOT-23-6.step",
+                     (0, 0, 0), (0, 0, 90)),
+    # U6 TF-01A microSD slot: visual proxy — the Hirose DM3AT push-push
+    # slot has the same class outline; exact body differs slightly.
+    "TF-01A":       (f"{M}/Connector_Card.3dshapes/microSD_HC_Hirose_DM3AT-SF-PEJM5.step",
+                     (0, 0, 0), (0, 0, 180)),
+    # J4 FPC-40P 0.5mm bottom-contact: visual proxy — Hirose FH12-40S,
+    # same pitch/pin count. Our footprint is drawn with the pad row
+    # VERTICAL (rotation baked into the pad coordinates, not the
+    # footprint angle), so the horizontal Hirose model needs +90.
+    "FPC-40P-0.5mm": (f"{M}/Connector_FFC-FPC.3dshapes/Hirose_FH12-40S-0.5SH_1x40-1MP_P0.50mm_Horizontal.step",
+                     (0, 0, 0), (0, 0, 90)),
+    # L1 IP5306 boost inductor (4x4x2mm shielded)
+    "SMD-4x4x2":    (f"{M}/Inductor_SMD.3dshapes/L_APV_ANR4020.step",
+                     (0, 0, 0), (0, 0, 0)),
+    # L2 SY8089 buck output inductor (SWPA4030: 4x4x3mm shielded)
+    "IND-SMD-4.0x4.0": (f"{M}/Inductor_SMD.3dshapes/L_APV_ANR4030.step",
+                     (0, 0, 0), (0, 0, 0)),
+    # Speaker-22mm: NO KiCad model of this class (buzzer models stop at
+    # ~15mm) — deliberately unmapped, pads render bare.
     "LED_0805":     (f"{M}/LED_SMD.3dshapes/LED_0805_2012Metric.step",
                      (0, 0, 0), (0, 0, 0)),
     # SOT-223: legacy AMS1117 package, no longer placed on this board.
@@ -124,7 +155,8 @@ def inject_models(pcb_text: str) -> tuple[str, dict]:
                 # For 2-pad passives (R, C, LED), detect actual pad orientation
                 # from pad coordinates — the footprint may have rotation=0 but
                 # pads placed vertically by the generator.
-                if fp_name in ("R_0805", "C_0805", "C_1206", "LED_0805", "R_0402"):
+                if fp_name in ("R_0805", "C_0805", "C_1206", "LED_0805",
+                               "R_0402", "R_1206", "F_1812"):
                     pad_positions = re.findall(
                         r'\(pad\s+"[^"]*"\s+smd\s+\w+\s+\(at\s+([\d.-]+)\s+([\d.-]+)',
                         fp_block)
