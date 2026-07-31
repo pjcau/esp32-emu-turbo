@@ -6,13 +6,13 @@ disable-model-invocation: true
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-# DFM & Design Verification Suite (122 DFM + 9 DFA tests)
+# DFM & Design Verification Suite (124 DFM + 9 DFA tests)
 
 Run all verification scripts and produce a summary report.
 
 ## Steps
 
-### 1. DFM Verification (122 tests)
+### 1. DFM Verification (124 tests)
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
@@ -97,27 +97,53 @@ python3 scripts/short_circuit_analysis.py
 
 Detects net connectivity conflicts and zone priority issues.
 
+### 6. Gerber E-Test (release copper, not the design)
+
+```bash
+make verify-gerber-etest
+```
+
+Electrical test on the **release gerbers**: builds the copper graph from the
+fabricated artwork and requires every net to be one piece of copper touching
+no other net (e-test points on all nets, plated holes included). Catches
+release-dir drift that design-side gates cannot see.
+
+### 7. Gate Coverage (mutation suite over the gates themselves)
+
+```bash
+make verify-gate-coverage   # ~2 min
+```
+
+Injects the 9 historical fault classes (missing CPL part, reprogrammed BOM
+value, release netlist drift, firmware desync, ...) into a sandbox and fails
+unless at least one gate catches each. This is the guard against gates that
+never fire.
+
 ## Summary Report
 
 After running all tests, summarize results in a table:
 
 | Suite | Tests | Pass | Fail | Status |
 |-------|-------|------|------|--------|
-| DFM v2 | 64 | ? | ? | PASS/FAIL |
+| DFM v2 | 124 | ? | ? | PASS/FAIL |
 | DFA | 9 | ? | ? | PASS/FAIL |
 | Datasheet | 29 | ? | ? | PASS/FAIL |
 | DRC | ? | ? | ? | PASS/FAIL |
 | Connectivity | ? | ? | ? | PASS/FAIL |
 | Schematic sync | ? | ? | ? | PASS/FAIL |
+| Gerber e-test | ? | ? | ? | PASS/FAIL |
+| Gate coverage | 9 faults | ? | ? | PASS/FAIL |
 
 Report any failures with details and suggested fixes.
 
 ## Key Files
 
-- `scripts/verify_dfm_v2.py` — DFM verification (122 tests, includes JLCPCB alignment)
+- `scripts/verify_dfm_v2.py` — DFM verification (124 tests, includes JLCPCB alignment)
 - `scripts/verify_dfa.py` — DFA verification (9 tests)
 - `scripts/verify_datasheet.py` — Datasheet vs PCB physical verification (29 tests)
 - `scripts/drc_check.py` — Design rule check
 - `scripts/test_pcb_connectivity.py` — Connectivity test
 - `scripts/verify_schematic_pcb.py` — Schematic/PCB sync
 - `scripts/short_circuit_analysis.py` — Short circuit analysis
+- `scripts/verify_gerber_etest.py` — E-test on release gerbers (net isolation on fabricated copper)
+- `scripts/test_gate_coverage.py` — Mutation suite: 9 historical fault classes must each be caught by a gate
