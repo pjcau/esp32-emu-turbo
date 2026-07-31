@@ -85,6 +85,18 @@ U3 = Model(
         "t_junction_max": Param(125.0, "degC", locator="p.2 section 1"),
         "t_shutdown": Param(160.0, "degC", locator="p.4 table 1"),
 
+        # ── The feedback divider's own tolerance ────────────────────────
+        # Not a property of U3 but of R25/R26, recorded here because
+        # v_out_spread is the consumer. Both divider parts are Uniroyal
+        # thick-film, model codes 0805W8F1003T5E (R25, C149504) and
+        # 0805W8F2202T5E (R26, C17560): the 7th code "F" means +/-1%,
+        # per the part-number key on page 2 of the Uniroyal datasheet
+        # (section 2.3, "F=+/-1%"). R25's document is held as
+        # R16_100k-0805_C149504.pdf — same LCSC part, R16 got there first.
+        "r_divider_tolerance": Param(
+            0.01, "1", locator="p.2 sec 2.3",
+            doc="R26_22k-0805_C17560.pdf"),
+
         # ── Derived, not cited: the datasheet's own worked example ───────
         # Figure 1 on page 1 draws R1 = 200k, R2 = 100k and labels the
         # output 1.8 V. 0.6 * (1 + 200/100) = 1.8 exactly, which is what
@@ -113,13 +125,22 @@ def v_out(r_top_ohm, r_bottom_ohm, v_ref=0.600):
     return v_ref * (1.0 + r_top_ohm / r_bottom_ohm)
 
 
-def v_out_spread(r_top_ohm, r_bottom_ohm):
-    """(min, typ, max) output from V_REF's own tolerance alone.
+def v_out_spread(r_top_ohm, r_bottom_ohm, include_resistors=True):
+    """(min, typ, max) output from V_REF's tolerance and the divider's.
 
-    Resistor tolerance is NOT included: the BOM does not state it. A spread
-    that silently assumes 1% would be a number with no source.
+    The resistor tolerance is the cited +/-1% of the fitted Uniroyal parts
+    (r_divider_tolerance above) — it stopped being an assumption on
+    2026-07-31 when the part-number key landed in hardware/datasheets/.
+    The worst case stacks the divider against itself: Vout is highest with
+    R_top high and R_bottom low, and vice versa. `include_resistors=False`
+    reproduces the old V_REF-only spread for comparison.
     """
     lo, typ, hi = U3.params["v_fb_ref"].value
-    return (v_out(r_top_ohm, r_bottom_ohm, lo),
+    if not include_resistors:
+        return (v_out(r_top_ohm, r_bottom_ohm, lo),
+                v_out(r_top_ohm, r_bottom_ohm, typ),
+                v_out(r_top_ohm, r_bottom_ohm, hi))
+    tol = U3.params["r_divider_tolerance"].value
+    return (v_out(r_top_ohm * (1 - tol), r_bottom_ohm * (1 + tol), lo),
             v_out(r_top_ohm, r_bottom_ohm, typ),
-            v_out(r_top_ohm, r_bottom_ohm, hi))
+            v_out(r_top_ohm * (1 + tol), r_bottom_ohm * (1 - tol), hi))

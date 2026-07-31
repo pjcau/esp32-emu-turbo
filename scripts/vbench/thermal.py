@@ -14,15 +14,20 @@ Where the numbers come from:
   because the pages read give no gate charge for the internal FETs and no
   efficiency curve at this board's operating point (figure 2 on page 1 is
   V_OUT = 1.8 V, not 3.33 V). So U3's figure is a **lower bound** and says so.
-* **U5 (PAM8403)** — from the cited 90% efficiency and the cited 6.3 mA
-  standby current, both on page 1.
+* **U5 (PAM8403)** — from the cited 87% efficiency at 8 ohm and the cited
+  16 mA quiescent draw (Diodes EC table, p.4). Since 2026-07-31 the Diodes
+  datasheet also cites theta_JA = 110 degC/W for SOP-16 (p.3), so U5 gets
+  a junction temperature; the limit is the cited 140 degC OTP trip (p.8),
+  which is where the silicon itself turns the outputs off.
 * **Q1 (Si2301CDS)** — `I^2 * Rds_on`, on-resistance cited, using the
   steady-state theta_JA of 175 degC/W from note d rather than the 120/145
   pair, which the table qualifies as "<= 5 s". A handheld is steady state.
-* **U2 (IP5306)** — **not computable from the cited pages.** Pages 2-4 give
-  theta_JA and the absolute maxima but no boost efficiency, so the power lost
-  in the converter cannot be derived. Reported as unestablished instead of
-  filled in with an assumed 92%, which is what the existing gate does.
+* **U2 (IP5306)** — computable ON BATTERY since 2026-07-31: the official
+  V1.32 cites "up to 92%" boost efficiency (p.2) and theta_JA = 50 degC/W
+  (p.7), so `P = P_5V_out * (1/0.92 - 1)` — a LOWER bound, because 92% is
+  the best the part claims about itself. In charge-and-play the load is
+  fed through the power path, for which no efficiency is cited, so that
+  scenario's U2 figure stays NOT COMPUTABLE (u2_ip5306.UNESTABLISHED).
 
 Ambient: the plan asks for both 30 degC external air and the 40 degC
 in-enclosure figure the existing gate assumes. Both are printed; **40 degC
@@ -107,13 +112,30 @@ def p_buck_conduction(i_out):
 
 
 def p_pam8403(audio_out_w):
-    """Class-D loss from the cited efficiency, plus the cited standby draw."""
-    eta = U5.params["efficiency_max"].value
+    """Class-D loss from the cited 8 ohm efficiency point (Diodes p.4),
+    plus the cited 16 mA quiescent draw at 5 V (same table)."""
+    eta = U5.params["efficiency_8ohm"].value
     v = U5.params["v_supply_rated"].value
-    quiescent = U5.params["i_standby"].value * v
+    quiescent = U5.params["i_quiescent_5v"].value * v
     if audio_out_w <= 0:
         return quiescent
     return audio_out_w * (1.0 / eta - 1.0) + quiescent
+
+
+def p_ip5306_boost(i_3v3, audio_out_w):
+    """U2's converter loss when the board runs from the battery.
+
+    Everything the boost delivers on +5V: the buck's input power (its own
+    output plus its conduction loss) and the amplifier's supply power.
+    The cited "up to 92%" (p.2) then gives the loss as a LOWER bound:
+    P_loss = P_out * (1/eta - 1).
+    """
+    _, v_out, _ = duty_cycle()
+    p_3v3 = v_out * i_3v3 + p_buck_conduction(i_3v3)
+    p_audio = audio_out_w + p_pam8403(audio_out_w)
+    p_out = p_3v3 + p_audio
+    eta = U2.params["eta_boost_max"].value
+    return p_out * (1.0 / eta - 1.0)
 
 
 def p_q1(i_battery, v_bat):
@@ -136,12 +158,18 @@ def evaluate(scenario, ambient, v_bat=3.83):
         tj3 <= tjmax3 - SAFE_MARGIN))
 
     p5 = p_pam8403(scenario.audio_out_w)
-    # U5 has no cited theta_JA — see u5_pam8403.UNESTABLISHED. Reported as
-    # power only; a Tj without a theta_JA would be invention.
+    # theta_JA 110 degC/W is cited (Diodes p.3) as of 2026-07-31. The limit
+    # is the cited OTP trip: at 140 degC die temperature the part disables
+    # its own outputs (p.8), so that is the ceiling that matters.
+    theta5 = U5.params["theta_ja"].value
+    tj5 = ambient + p5 * theta5
+    tjmax5 = U5.params["t_otp"].value
     out.append(Result(
         "U5", U5.part, p5,
-        "cited 90% efficiency + cited 6.3 mA standby; theta_JA NOT cited "
-        "anywhere, so no Tj is computed", None, None, None, None))
+        "cited 87% efficiency at 8 ohm + cited 16 mA quiescent (Diodes "
+        "p.4); theta_JA 110 degC/W (p.3); limit is the 140 degC OTP trip "
+        "(p.8)", tj5, tjmax5 - SAFE_MARGIN - tj5, tjmax5,
+        tj5 <= tjmax5 - SAFE_MARGIN))
 
     # The battery current in charge-and-play comes from USB, not the cell, so
     # Q1 carries only what the boost draws when running on the battery.
@@ -158,12 +186,25 @@ def evaluate(scenario, ambient, v_bat=3.83):
         tjq, tjmaxq - SAFE_MARGIN - tjq, tjmaxq,
         tjq <= tjmaxq - SAFE_MARGIN))
 
-    out.append(Result(
-        "U2", U2.part, None,
-        "NOT COMPUTABLE: pages 2-4 give theta_JA 40 degC/W and the absolute "
-        "maxima but no boost efficiency, so converter loss cannot be "
-        "derived. verify_thermal_budget.py assumes 92% and 80 degC/W, "
-        "neither of which is cited.", None, None, None, None))
+    if scenario.name == "charge-and-play":
+        out.append(Result(
+            "U2", U2.part, None,
+            "NOT COMPUTABLE while charging: the load is fed through the "
+            "power path, whose efficiency the V1.32 does not cite "
+            "(u2_ip5306.UNESTABLISHED charge_and_play_path).",
+            None, None, None, None))
+    else:
+        p2 = p_ip5306_boost(scenario.i_3v3, scenario.audio_out_w)
+        theta2 = U2.params["theta_ja"].value
+        tj2 = ambient + p2 * theta2
+        tjmax2 = U2.params["t_junction_max"].value
+        out.append(Result(
+            "U2", U2.part, p2,
+            "boost loss from the cited 'up to 92%' (V1.32 p.2) — a LOWER "
+            "bound; theta_JA 50 degC/W (p.7). The part also self-protects "
+            "at a cited 125 degC OTP (p.8).",
+            tj2, tjmax2 - SAFE_MARGIN - tj2, tjmax2,
+            tj2 <= tjmax2 - SAFE_MARGIN))
     return out
 
 
@@ -235,10 +276,12 @@ def main(argv=None):
         return 1
     print("  No part exceeds its margin at the governing ambient — within "
           "the")
-    print("  dissipation figures that are actually derivable. U2's is not, "
-          "and")
-    print("  U3's excludes switching loss, so this is not a clean bill of "
-          "health.")
+    print("  dissipation figures that are actually derivable. U2's and "
+          "U3's are")
+    print("  lower bounds (best-case efficiency, conduction only), and "
+          "U2 while")
+    print("  charging is still not computable, so this is not a clean "
+          "bill of health.")
     print("=" * 72)
     return 0
 

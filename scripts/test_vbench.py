@@ -202,12 +202,19 @@ def test_schema():
     # panel model can validate until those pages are put there. If this test
     # fails, either rule 2 was weakened or the pages arrived, and the second
     # case is a good day.
+    # 2026-07-31: the good day arrived — the ILITEK controller spec is in
+    # hardware/datasheets/ (DS1_ILI9488-controller_ILITEK.pdf, 343 pages).
+    # The test now asserts the opposite of what it used to: the document
+    # must BE there, because T3.1's controller model cites it. What is
+    # still absent is the PANEL's own document (active area, backlight,
+    # supply limits) — the controller spec is the silicon, not the glass.
     panel_docs = [f for f in os.listdir(
         os.path.join(BASE, "hardware", "datasheets"))
         if "ILI9488" in f or "panel" in f.lower()]
-    check("the display panel still has no datasheet, so it cannot be "
-          "modelled (R25-HIGH-1)", not panel_docs,
-          f"found {panel_docs} — update this test and model the panel")
+    check("the ILI9488 controller spec is held, so the controller can be "
+          "modelled (T3.1)",
+          any("ILI9488-controller" in f for f in panel_docs),
+          f"found {panel_docs} — the controller model's citations dangle")
 
     # A derived parameter is the honest escape hatch, so it must work.
     try:
@@ -492,9 +499,21 @@ def test_phase1():
     lo, typ, hi = v_out_spread(div.r_top_ohm, div.r_bottom_ohm)
     check("+3V3 is 3.327 V, not 3.300 — derived from the real divider",
           abs(typ - 3.3273) < 1e-3, f"got {typ}")
-    check("the +3V3 spread comes from V_REF's own tolerance",
-          abs(lo - 3.2607) < 1e-3 and abs(hi - 3.3939) < 1e-3,
+    # Since 2026-07-31 the spread includes the divider's cited +/-1%
+    # (Uniroyal F code, R26 datasheet p.2 sec 2.3) stacked worst-case on
+    # top of V_REF's 0.588..0.612 V. The old V_REF-only spread must still
+    # be reproducible for comparison, and must be narrower.
+    check("the +3V3 spread stacks V_REF and the cited +/-1% divider",
+          abs(lo - 3.2078) < 1e-3 and abs(hi - 3.4500) < 1e-3,
           f"got {lo}..{hi}")
+    vlo, _, vhi = v_out_spread(div.r_top_ohm, div.r_bottom_ohm,
+                               include_resistors=False)
+    check("the V_REF-only spread is still reproducible, and narrower",
+          abs(vlo - 3.2607) < 1e-3 and abs(vhi - 3.3939) < 1e-3
+          and vlo > lo and vhi < hi,
+          f"got {vlo}..{vhi}")
+    check("the worst case stays under the 3.6 V ESP32/SD limit",
+          hi < 3.6, f"got {hi}")
 
     op = rails.operating_point()
     # An independent consistency check: the solver knows nothing about
@@ -622,13 +641,19 @@ def test_thermal():
           abs(v_out - 3.3273) < 1e-3 and abs(d - 0.6655) < 1e-3,
           f"got Vout={v_out}, D={d}")
 
-    # U2 must be reported as not computable, never filled in.
+    # Since 2026-07-31 U2 is computable ON BATTERY (cited 92% + theta_JA
+    # 50, official V1.32), and must say it is a lower bound; while
+    # charging, the power path is still uncited, so charge-and-play must
+    # STILL say NOT COMPUTABLE — checked further down.
     results = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[1], 40.0)}
-    check("U2's dissipation is reported NOT COMPUTABLE, not assumed",
-          results["U2"].p_watts is None
-          and "NOT COMPUTABLE" in results["U2"].basis)
-    check("U5 gets a power figure but no Tj, because theta_JA is uncited",
-          results["U5"].p_watts is not None and results["U5"].tj is None)
+    check("U2's on-battery dissipation is computed, labelled a lower bound",
+          results["U2"].p_watts is not None
+          and "LOWER" in results["U2"].basis
+          and results["U2"].tj is not None)
+    check("U5 gets a Tj from the cited theta_JA 110, limit the 140 OTP",
+          results["U5"].p_watts is not None
+          and results["U5"].tj is not None
+          and results["U5"].tj_max == 140.0)
     check("U3's figure is labelled a lower bound (no switching loss)",
           "LOWER BOUND" in results["U3"].basis)
     check("U3 and Q1 do get a junction temperature",
@@ -638,6 +663,9 @@ def test_thermal():
     cap = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[2], 40.0)}
     check("in charge-and-play Q1 carries no battery current",
           cap["Q1"].p_watts == 0.0, f"got {cap['Q1'].p_watts}")
+    check("in charge-and-play U2 stays NOT COMPUTABLE (power path uncited)",
+          cap["U2"].p_watts is None
+          and "NOT COMPUTABLE" in cap["U2"].basis)
 
     # Both ambients must be present, and 40 must govern.
     check("30 degC external and 40 degC in-enclosure are both defined, and "
@@ -994,22 +1022,36 @@ def test_phase3_peripherals():
     check("the input high-pass corner is 33.9 Hz",
           abs(f_corner - 33.86) < 0.2, f"got {f_corner}")
 
-    # The 8 ohm figure must be derived from the datasheet's 4 ohm rating, and
-    # must halve — the datasheet gives no 8 ohm number to quote.
-    check("8 ohm output power is half the rated 4 ohm figure at the same rail",
-          abs(audio.output_power(5.0, 8.0) - 1.5) < 1e-9
-          and abs(audio.output_power(5.0, 4.0) - 3.0) < 1e-9,
+    # Since 2026-07-31 the 8 ohm figure is CITED (Diodes p.4: 1.8 W at 10%
+    # THD, 5 V), replacing the halved-from-4-ohm derivation of 1.5 W. The
+    # 4 ohm point stays the table's own 3.2 W.
+    check("8 ohm output power is the cited 1.8 W, not the derived 1.5",
+          abs(audio.output_power(5.0, 8.0) - 1.8) < 1e-9
+          and abs(audio.output_power(5.0, 4.0) - 3.2) < 1e-9,
           f"got {audio.output_power(5.0, 8.0)}")
     check("output power scales with the square of the supply",
-          abs(audio.output_power(2.5, 8.0) - 1.5 / 4) < 1e-9)
+          abs(audio.output_power(2.5, 8.0) - 1.8 / 4) < 1e-9)
 
-    # Supply current must include the cited standby draw, not just P/eta/V.
+    # The gain is the cited 24 dB — the DAC-to-amplitude map exists now.
+    check("the closed-loop gain is the cited 24 dB as a linear ratio",
+          abs(audio.gain_linear() - 10.0 ** 1.2) < 1e-9,
+          f"got {audio.gain_linear()}")
+
+    # Supply current must include the cited quiescent draw (Diodes p.4:
+    # 16 mA at 5 V — the Slkor reprint's 6.3 mA figure is superseded).
     i_idle = audio.supply_current(0.0, 5.0)
-    check("at zero output the rail still sees the cited 6.3 mA standby",
-          abs(i_idle - 6.3e-3) < 1e-9, f"got {i_idle}")
-    i_full = audio.supply_current(1.5, 5.0)
-    check("at full output the rail sees about 340 mA",
-          abs(i_full - 0.3396) < 1e-3, f"got {i_full}")
+    check("at zero output the rail sees the cited 16 mA quiescent",
+          abs(i_idle - 16e-3) < 1e-9, f"got {i_idle}")
+    i_full = audio.supply_current(1.8, 5.0)
+    check("at full cited output the rail sees about 430 mA",
+          abs(i_full - 0.4298) < 1e-3, f"got {i_full}")
+
+    # The sag the audio current causes on +5V is now a number: I times the
+    # boost's derived conduction resistance (worst-case battery floor).
+    check("full-output audio sags +5V by ~38 mV through the derived R_out",
+          abs(audio.rail_sag(i_full) - i_full * 0.089) < 1e-12
+          and 0.030 < audio.rail_sag(i_full) < 0.045,
+          f"got {audio.rail_sag(i_full)}")
 
     # A missing BOM value must be fatal, never defaulted.
     import vbench.rails as _rails
