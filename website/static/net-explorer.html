@@ -182,7 +182,11 @@
   .hl-pad { fill: none; stroke: #fff; stroke-width: .18; }
   .hl-via { fill: none; stroke: #fff; stroke-width: .12; }
   .hl-via-barrel { stroke: #fff; stroke-width: .22; opacity: .9; }
-  .dang { stroke: #f85149; stroke-width: .22; fill: none; }
+  /* dead-copper marker: magenta on purpose — the only hue absent from the
+     rest of the palette (layers are red/green/amber/blue, alerts are
+     red/orange), so a dangling end can never be mistaken for F.Cu copper
+     or a clearance marker. */
+  .dang { stroke: #e879f9; stroke-width: .22; fill: none; }
   .clr-danger { stroke: #f85149; stroke-width: .18; fill: none; }
   .clr-warn { stroke: #f0883e; stroke-width: .18; fill: none; }
   #sep { width: 92px; accent-color: var(--accent); }
@@ -242,7 +246,7 @@
       <div><i style="background:var(--in1)"></i>In1.Cu — piano GND (0 piste)</div>
       <div><i style="background:var(--in2)"></i>In2.Cu — piano +3V3/+5V (0 piste)</div>
       <div><i style="background:var(--b-cu)"></i>B.Cu</div>
-      <div><i style="background:#f85149"></i>punto morto</div>
+      <div><i style="background:#e879f9"></i>punto morto</div>
       <div style="color:var(--faint);margin-top:4px">3D: trascina = ruota ·
         shift+trascina = sposta</div>
     </div>
