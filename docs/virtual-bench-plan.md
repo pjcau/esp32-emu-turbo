@@ -366,7 +366,7 @@ pass/fail until the enclosure rise is measured on the prototype.
 | Task | State | Where |
 |---|---|---|
 | T1.1 DC solver | **done** | `scripts/vbench/rails.py`, `sources.py` · `make bench-rails` |
-| T1.2 cited models | **U3, Q1, U5 complete; U2 incomplete and says so** | `scripts/vbench/models/` |
+| T1.2 cited models | **U3, Q1, U5, U2 complete** — U2 rewritten 2026-07-31 from the official V1.32 (theta_JA 50, boost/charge un-swapped, 92%/91%, full EC table); battery family model added | `scripts/vbench/models/` |
 | T1.3 conflict detector | **done**, at 10% pin coverage (27 of 271) and it prints that | `scripts/vbench/conflicts.py` · `make bench-conflicts` |
 | T1.4 transients | **done** (ngspice) | `scripts/vbench/transients.py` · `make bench-transients` |
 | T1.5 thermal | **done** | `scripts/vbench/thermal.py` · `make bench-thermal` |
@@ -628,7 +628,23 @@ RC, the check switches to verifying the parts are there.
 | T2.3 | SW16 switch model — including the known fact that it is **not** in series. The bench must *reproduce* "switch off, board still powered" as expected behaviour, not report it as a bench bug | scenario `switch_off` asserts the board stays powered, citing the v1 invariant |
 | T2.4 | Boot-mode model: sample strapping pins at reset → resulting boot mode | a button held at reset that forces download mode is a FAIL with the pin named |
 
-## Phase 3 — Peripherals: LCD, audio, SD — **partial: what the datasheets allow**
+## Phase 3 — Peripherals: LCD, audio, SD — **DONE 2026-07-31, residue declared per module**
+
+The eight missing documents landed in `hardware/datasheets/` on
+2026-07-31 (official IP5306 V1.32, official Diodes PAM8403, the ILITEK
+controller spec, SD Physical Layer Simplified v3.01, a SanDisk card
+datasheet, the DNK battery family sheet, the Uniroyal resistor key), and
+the halves below that were 'unbuilt and say so' were built against them:
+the ILI9488 command/MADCTL/pixel-format/timing model (`ili9488_ctrl.py`,
+`make bench-display` runs a frame and every write-side AC minimum at the
+firmware clock), the cited 8-ohm output power and 24 dB gain with the
+rail sag computed through the boost's derived output resistance, and the
+SD protocol (`sdcard_protocol.py`, `make bench-sdcard`: CMD0/CMD8/ACMD41
+init and CMD17 block reads of a real host file, byte-identical). What
+remains open is what the documents themselves cannot support — the SPI
+bus-timing section of the simplified spec is literally blank (p.147),
+the panel MODULE still has no PDF, the vendor init register values are
+the panel maker's — and each module prints its own residue.
 
 ### T3.1 — the display, seen from the panel
 
@@ -715,8 +731,9 @@ cited model supports:
 | Quantity | Value | Where it comes from |
 |---|---|---|
 | Input high-pass corner | **33.9 Hz** | R20‖R21 = 10 kΩ and C22 = 0.47 µF, both from the netlist and the BOM |
-| Output into 8 Ω | **1.50 W** | *derived* from the rated 3 W into 4 Ω at 5 V (page 1) — halved for double the impedance, and scaled by (V/5)² |
-| Rail current at full output | **339.6 mA** | cited 90 % efficiency + cited 6.3 mA standby |
+| Output into 8 Ω | **1.8 W** | **CITED** since 2026-07-31: Diodes EC table p.4, 10 % THD at 5 V (supersedes the halved-from-4-Ω 1.50 W) |
+| Rail current at full output | **429.8 mA** | cited 87 % efficiency at 8 Ω + cited 16 mA quiescent (Diodes p.4) |
+| Sag on +5V at full output | **38 mV** | I × r_out_boost, derived from the IP5306's cited FET resistances at the battery floor |
 
 The corner frequency also settles R25-LOW-1 for good: the two 20 kΩ in
 parallel are the datasheet's **own application circuit** (figure 3, page 3 —
@@ -846,7 +863,21 @@ needs ESP-IDF, and no `idf.py` is installed here.
 | T4.3 | Scenario runner: YAML scenarios (`usb_cold_boot`, `battery_3v4`, `press_all_buttons`, `sd_missing`, `audio_max`, `switch_off`) with assertions; headless output = PNG + log + JUnit | `make bench-ci` runs headless, non-zero on failure |
 | T4.4 | Interactive mode: SDL window, keyboard as buttons, instrument panel (per-rail voltmeter, ammeter, Tj) — the actual bench test | `make bench` opens the window with live instruments |
 
-## Phase 5 — Make it a gate that cannot lie
+## Phase 5 — Make it a gate that cannot lie — **T5.1 T5.2 T5.3 DONE; T5.4 T5.5 await instruments**
+
+Status 2026-07-31: T5.1 — `make bench-retro` rediscovers 22/22 corpus
+entries and the count is computed, never written. T5.2 — the five named
+mutations live in `test_vbench.py` section N (D/C swap, deleted pull-up,
+WR to GND, +3V3-GND short) and `test_vbench_display.py` (MADCTL
+rotation); writing them exposed and closed a real hole — no check
+covered the panel's CONTROL lines, only the data bus
+(`display.check_control_lines`). T5.3 — `test_vbench`,
+`test_vbench_display` and `test_vbench_sdcard` are all in
+`VERIFY_ALL_SCRIPTS`, routed by the `vbench` keyword law, and
+`test_issue_dispatch` proves the routing. T5.4/T5.5 stay open: the user
+has no bench instruments, and the fabricated board is a write-off, so
+calibration waits for the next prototype. `CALIBRATION: no` stays on
+every report, which is the design working as intended.
 
 | Task | Deliverable | Done when |
 |---|---|---|

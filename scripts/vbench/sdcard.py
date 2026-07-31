@@ -4,17 +4,26 @@ Checks the four SPI signals against the TF-01A socket's pad roles, then asks
 the question the socket's own wiring raises: **U6.9 (DAT2) sits on the BTN_R
 net, and BTN_R is GPIO3 — a strapping pin.**
 
-That assignment is deliberate and analysed. `routing.py:6055-6085` records it:
-the BTN_R track physically crosses the U6.8/U6.9 pads, so the pads are given
-the same net to keep the overlap same-net rather than a fab short, and the
-analysis concludes it is "SAFE as long as firmware stays in SPI mode (which it
-does — see software/main/sd.c)", because an SD card tri-states DAT1/DAT2 once
-CMD0 has put it in SPI mode.
+That assignment is deliberate and analysed. The routing generator
+(`generate_pcb/routing/_assemble.py`) records it: the BTN_R track physically
+crosses the U6.8/U6.9 pads, so the pads are given the same net to keep the
+overlap same-net rather than a fab short. The original analysis said "SAFE
+as long as firmware stays in SPI mode", because an SD card tri-states
+DAT1/DAT2 once CMD0 has put it in SPI mode.
 
 **The strapping sample happens before any of that.** GPIO3 is latched at
-reset, before the boot ROM runs, let alone `sd.c` — so "the firmware keeps the
-card in SPI mode" is an argument about the wrong window. In the reset window
-the card has not received CMD0 and DAT2 is not tri-stated.
+reset, before the boot ROM runs — so "the firmware keeps the card in SPI
+mode" is an argument about the wrong window. In the reset window the card
+has received no CMD0.
+
+**And the tri-state claim itself was uncited** — corrected 2026-07-31 by
+the T3.3 protocol model: no held document says CMD0 tri-states anything.
+What the card datasheet actually says is "the extended DAT lines
+(DAT1-DAT3) are input on power up" (SanDisk industrial p.17 sec 3.1,
+table 3-1 footnote b) and that in SPI mode contacts 8/9 are RSV (table
+3-2, p.18). The power-up input state — which covers the reset window — is
+the citable reason U6.9 does not drive BTN_R. Right conclusion, wrong
+mechanism, in two places; both now corrected.
 
 Whether that matters is a second question, and the answer today is no, for a
 reason worth writing down: table 8 on page 15 of the module datasheet shows
@@ -22,15 +31,18 @@ GPIO3 is *ignored* unless an eFuse selects it (EFUSE_STRAP_JTAG_SEL), and the
 factory default leaves it unselected. So the exposure is real but currently
 inert — and it stops being inert the day someone burns that eFuse.
 
-## What is not modelled
+## Where the protocol lives now
 
-The card protocol itself. CMD0 / CMD8 / ACMD41, the R1/R7 responses, block
-addressing and the 20 MHz clock's setup/hold all need the SD Physical Layer
-Simplified Specification and a card datasheet, neither of which this repo
-holds. `hardware/datasheets/U6_TF-01A_MicroSD_C91145.pdf` is the **socket**,
-not the card. So no ROM is read through a modelled bus and no init sequence is
-replayed; T3.3's "mounts a host folder" half stays unbuilt rather than being
-faked with a filesystem shim that would prove nothing about this board.
+Since 2026-07-31 the card protocol IS modelled — in
+`scripts/vbench/sdcard_protocol.py`, against the SD Physical Layer
+Simplified Specification v3.01 and the SanDisk industrial card datasheet,
+both in hardware/datasheets/. CMD0 / CMD8 / ACMD41, R1/R7, CCS and CMD17
+block reads from a host directory all replay there with citations
+(`make bench-sdcard`, tests in scripts/test_vbench_sdcard.py). This module
+keeps the BUS side: pad roles, wiring, and the strapping exposure above.
+One half stays unbuildable: the simplified spec's bus-timing section 7.5
+is literally "a blank" (p.147), so no setup/hold check exists — that needs
+the full specification.
 
 Usage:
     python3 scripts/vbench/sdcard.py
@@ -63,11 +75,11 @@ EXPECTED = {
 }
 
 UNMODELLED = {
-    "init_sequence": "CMD0 / CMD8 / ACMD41 and their R1/R7 responses need the "
-                     "SD Physical Layer Simplified Specification, which this "
-                     "repo does not hold",
-    "block_read": "reading a ROM through the modelled bus needs the same "
-                  "specification; a filesystem shim would prove nothing "
+    "init_sequence": "modelled since 2026-07-31 in sdcard_protocol.py "
+                     "(spec v3.01 ch.7, cited per command) — kept here as a "
+                     "pointer, not a gap",
+    "block_read": "modelled in sdcard_protocol.py: CMD17 streams a host "
+                  "file byte-identical through the virtual card "
                   "about this board",
     "timing": "setup/hold at the 20 MHz clock needs a card datasheet — "
               "U6_TF-01A_MicroSD_C91145.pdf is the SOCKET, not the card",
@@ -158,14 +170,16 @@ def main(argv=None):
                   f"({strap['locator']}), internal pull: "
                   f"{strap['internal'] or 'NONE'}")
         print()
-        print("    routing.py:6055-6085 analyses this and concludes it is safe")
-        print("    'as long as firmware stays in SPI mode', because a card "
-              "tri-states")
-        print("    DAT1/DAT2 once CMD0 has arrived. The strapping sample "
-              "happens BEFORE")
-        print("    the boot ROM runs, let alone sd.c — so that argument is "
-              "about the")
-        print("    wrong window. In the reset window the card has had no CMD0.")
+        print("    The routing generator keeps these pads same-net on "
+              "purpose. Why the")
+        print("    card does not drive them in the reset window: 'the "
+              "extended DAT lines")
+        print("    (DAT1-DAT3) are input on power up' — SanDisk industrial "
+              "p.17 sec 3.1,")
+        print("    table 3-1 footnote b. (The old 'tri-states after CMD0' "
+              "justification")
+        print("    was uncited and about the wrong window; corrected "
+              "2026-07-31.)")
         print()
         print("    Currently inert, for a reason worth writing down: table 8 "
               "on page 15")
@@ -192,8 +206,10 @@ def main(argv=None):
         return 1
     print("  The four SPI signals land on the pads the socket datasheet "
           "assigns them.")
-    print("  No card protocol was exercised — the SD specification is not in "
-          "this repo.")
+    print("  The card protocol itself replays in sdcard_protocol.py "
+          "(make bench-sdcard):")
+    print("  CMD0/CMD8/ACMD41 init and CMD17 block reads, cited from the "
+          "spec in-repo.")
     print("=" * 72)
     return 0
 

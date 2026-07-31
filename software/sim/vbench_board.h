@@ -14,14 +14,14 @@
 /* Rails — rails.py: +3V3 = V_REF*(1+R25/R26) from the real divider;
  * spread is V_REF's own tolerance (SY8089 AN p.4). +5V is the
  * IP5306's nominal; its tolerance is NOT established (u2 model). */
-#define VB_RAIL_3V3_MIN_MV 3261
+#define VB_RAIL_3V3_MIN_MV 3208
 #define VB_RAIL_3V3_TYP_MV 3327
-#define VB_RAIL_3V3_MAX_MV 3394
+#define VB_RAIL_3V3_MAX_MV 3450
 #define VB_RAIL_5V_MV      5000
 
 /* LiPo OCV vs SoC — sources.py. UNCALIBRATED: generic single-cell
  * shape, BT1 has no datasheet; T5.4 replaces it with measurements. */
-#define VB_BAT_R_INT_MOHM 80
+#define VB_BAT_R_INT_MOHM 60
 #define VB_BAT_OCV_POINTS 12
 static const struct { float soc; float v; } VB_BAT_OCV[VB_BAT_OCV_POINTS] = {
     { 0.00f, 3.000f },
@@ -72,7 +72,7 @@ static const unsigned char VB_LCD_BUS_MAP[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 
 /* Audio — audio.py: P into 8 ohm DERIVED from the 3W/4ohm rating;
  * eta and standby cited (PAM8403 p.1). */
-#define VB_AUDIO_P_MAX_MW 1500
+#define VB_AUDIO_P_MAX_MW 1800
 #define VB_AUDIO_ETA 0.90f
 #define VB_AUDIO_I_STANDBY_MA 6.3f
 #define VB_SPEAKER_OHM 8f

@@ -202,12 +202,19 @@ def test_schema():
     # panel model can validate until those pages are put there. If this test
     # fails, either rule 2 was weakened or the pages arrived, and the second
     # case is a good day.
+    # 2026-07-31: the good day arrived — the ILITEK controller spec is in
+    # hardware/datasheets/ (DS1_ILI9488-controller_ILITEK.pdf, 343 pages).
+    # The test now asserts the opposite of what it used to: the document
+    # must BE there, because T3.1's controller model cites it. What is
+    # still absent is the PANEL's own document (active area, backlight,
+    # supply limits) — the controller spec is the silicon, not the glass.
     panel_docs = [f for f in os.listdir(
         os.path.join(BASE, "hardware", "datasheets"))
         if "ILI9488" in f or "panel" in f.lower()]
-    check("the display panel still has no datasheet, so it cannot be "
-          "modelled (R25-HIGH-1)", not panel_docs,
-          f"found {panel_docs} — update this test and model the panel")
+    check("the ILI9488 controller spec is held, so the controller can be "
+          "modelled (T3.1)",
+          any("ILI9488-controller" in f for f in panel_docs),
+          f"found {panel_docs} — the controller model's citations dangle")
 
     # A derived parameter is the honest escape hatch, so it must work.
     try:
@@ -492,9 +499,21 @@ def test_phase1():
     lo, typ, hi = v_out_spread(div.r_top_ohm, div.r_bottom_ohm)
     check("+3V3 is 3.327 V, not 3.300 — derived from the real divider",
           abs(typ - 3.3273) < 1e-3, f"got {typ}")
-    check("the +3V3 spread comes from V_REF's own tolerance",
-          abs(lo - 3.2607) < 1e-3 and abs(hi - 3.3939) < 1e-3,
+    # Since 2026-07-31 the spread includes the divider's cited +/-1%
+    # (Uniroyal F code, R26 datasheet p.2 sec 2.3) stacked worst-case on
+    # top of V_REF's 0.588..0.612 V. The old V_REF-only spread must still
+    # be reproducible for comparison, and must be narrower.
+    check("the +3V3 spread stacks V_REF and the cited +/-1% divider",
+          abs(lo - 3.2078) < 1e-3 and abs(hi - 3.4500) < 1e-3,
           f"got {lo}..{hi}")
+    vlo, _, vhi = v_out_spread(div.r_top_ohm, div.r_bottom_ohm,
+                               include_resistors=False)
+    check("the V_REF-only spread is still reproducible, and narrower",
+          abs(vlo - 3.2607) < 1e-3 and abs(vhi - 3.3939) < 1e-3
+          and vlo > lo and vhi < hi,
+          f"got {vlo}..{vhi}")
+    check("the worst case stays under the 3.6 V ESP32/SD limit",
+          hi < 3.6, f"got {hi}")
 
     op = rails.operating_point()
     # An independent consistency check: the solver knows nothing about
@@ -622,13 +641,19 @@ def test_thermal():
           abs(v_out - 3.3273) < 1e-3 and abs(d - 0.6655) < 1e-3,
           f"got Vout={v_out}, D={d}")
 
-    # U2 must be reported as not computable, never filled in.
+    # Since 2026-07-31 U2 is computable ON BATTERY (cited 92% + theta_JA
+    # 50, official V1.32), and must say it is a lower bound; while
+    # charging, the power path is still uncited, so charge-and-play must
+    # STILL say NOT COMPUTABLE — checked further down.
     results = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[1], 40.0)}
-    check("U2's dissipation is reported NOT COMPUTABLE, not assumed",
-          results["U2"].p_watts is None
-          and "NOT COMPUTABLE" in results["U2"].basis)
-    check("U5 gets a power figure but no Tj, because theta_JA is uncited",
-          results["U5"].p_watts is not None and results["U5"].tj is None)
+    check("U2's on-battery dissipation is computed, labelled a lower bound",
+          results["U2"].p_watts is not None
+          and "LOWER" in results["U2"].basis
+          and results["U2"].tj is not None)
+    check("U5 gets a Tj from the cited theta_JA 110, limit the 140 OTP",
+          results["U5"].p_watts is not None
+          and results["U5"].tj is not None
+          and results["U5"].tj_max == 140.0)
     check("U3's figure is labelled a lower bound (no switching loss)",
           "LOWER BOUND" in results["U3"].basis)
     check("U3 and Q1 do get a junction temperature",
@@ -638,6 +663,9 @@ def test_thermal():
     cap = {r.ref: r for r in thermal.evaluate(thermal.SCENARIOS[2], 40.0)}
     check("in charge-and-play Q1 carries no battery current",
           cap["Q1"].p_watts == 0.0, f"got {cap['Q1'].p_watts}")
+    check("in charge-and-play U2 stays NOT COMPUTABLE (power path uncited)",
+          cap["U2"].p_watts is None
+          and "NOT COMPUTABLE" in cap["U2"].basis)
 
     # Both ambients must be present, and 40 must govern.
     check("30 degC external and 40 degC in-enclosure are both defined, and "
@@ -948,8 +976,21 @@ def test_phase3():
     finally:
         disp.PINOUT_DOC = saved
 
-    check("the controller's command set and timing are declared unmodelled",
-          {"command_set", "pixel_format", "timing"} <= set(disp.UNMODELLED))
+    # The controller's command set, MADCTL, pixel format and i80 timing USED
+    # to be declared unmodelled here, because the controller datasheet was
+    # not in the repo. It is now (DS1_ILI9488-controller_ILITEK.pdf) and T3.1
+    # models all four, so asserting they are still unmodelled would pin a
+    # false claim. What must not silently disappear is the PANEL-side gap
+    # that remains: the module itself has no PDF, so no panel Model validates.
+    check("the panel module's missing datasheet is still declared",
+          "panel_module_model" in disp.UNMODELLED)
+    check("the controller half is no longer claimed unmodelled",
+          not {"command_set", "pixel_format", "timing"} & set(disp.UNMODELLED),
+          "display.py still lists the controller as unbuildable, but "
+          "scripts/vbench/ili9488_ctrl.py models it")
+    check("display.py runs the controller model, not just the wiring",
+          disp.check_controller is not None
+          and callable(disp.check_controller))
 
     # The datasheet distinguishes unused INPUTS (tie them) from unused
     # OUTPUTS (leave them open), pin by pin. No summary in this repo carried
@@ -994,22 +1035,36 @@ def test_phase3_peripherals():
     check("the input high-pass corner is 33.9 Hz",
           abs(f_corner - 33.86) < 0.2, f"got {f_corner}")
 
-    # The 8 ohm figure must be derived from the datasheet's 4 ohm rating, and
-    # must halve — the datasheet gives no 8 ohm number to quote.
-    check("8 ohm output power is half the rated 4 ohm figure at the same rail",
-          abs(audio.output_power(5.0, 8.0) - 1.5) < 1e-9
-          and abs(audio.output_power(5.0, 4.0) - 3.0) < 1e-9,
+    # Since 2026-07-31 the 8 ohm figure is CITED (Diodes p.4: 1.8 W at 10%
+    # THD, 5 V), replacing the halved-from-4-ohm derivation of 1.5 W. The
+    # 4 ohm point stays the table's own 3.2 W.
+    check("8 ohm output power is the cited 1.8 W, not the derived 1.5",
+          abs(audio.output_power(5.0, 8.0) - 1.8) < 1e-9
+          and abs(audio.output_power(5.0, 4.0) - 3.2) < 1e-9,
           f"got {audio.output_power(5.0, 8.0)}")
     check("output power scales with the square of the supply",
-          abs(audio.output_power(2.5, 8.0) - 1.5 / 4) < 1e-9)
+          abs(audio.output_power(2.5, 8.0) - 1.8 / 4) < 1e-9)
 
-    # Supply current must include the cited standby draw, not just P/eta/V.
+    # The gain is the cited 24 dB — the DAC-to-amplitude map exists now.
+    check("the closed-loop gain is the cited 24 dB as a linear ratio",
+          abs(audio.gain_linear() - 10.0 ** 1.2) < 1e-9,
+          f"got {audio.gain_linear()}")
+
+    # Supply current must include the cited quiescent draw (Diodes p.4:
+    # 16 mA at 5 V — the Slkor reprint's 6.3 mA figure is superseded).
     i_idle = audio.supply_current(0.0, 5.0)
-    check("at zero output the rail still sees the cited 6.3 mA standby",
-          abs(i_idle - 6.3e-3) < 1e-9, f"got {i_idle}")
-    i_full = audio.supply_current(1.5, 5.0)
-    check("at full output the rail sees about 340 mA",
-          abs(i_full - 0.3396) < 1e-3, f"got {i_full}")
+    check("at zero output the rail sees the cited 16 mA quiescent",
+          abs(i_idle - 16e-3) < 1e-9, f"got {i_idle}")
+    i_full = audio.supply_current(1.8, 5.0)
+    check("at full cited output the rail sees about 430 mA",
+          abs(i_full - 0.4298) < 1e-3, f"got {i_full}")
+
+    # The sag the audio current causes on +5V is now a number: I times the
+    # boost's derived conduction resistance (worst-case battery floor).
+    check("full-output audio sags +5V by ~38 mV through the derived R_out",
+          abs(audio.rail_sag(i_full) - i_full * 0.089) < 1e-12
+          and 0.030 < audio.rail_sag(i_full) < 0.045,
+          f"got {audio.rail_sag(i_full)}")
 
     # A missing BOM value must be fatal, never defaulted.
     import vbench.rails as _rails
@@ -1273,6 +1328,103 @@ def test_header():
           "VB_SWITCH_NOT_IN_SERIES" in hal)
 
 
+def test_phase5_plan_mutations():
+    """T5.2 — the plan names five mutations; each must fail the bench.
+
+    'Fail the bench' means: an existing bench check, run against the
+    mutated netlist, produces a fault that names the damage. The
+    un-mutated board must pass the same check in the same breath, or the
+    test proves nothing about discrimination.
+    """
+    print("\nN. T5.2 — the plan's named mutations")
+    from vbench import buttons, conflicts, display, mutate, rails
+    from vbench import netlist as _nl
+
+    board = _nl.load_board_netlist()
+    values = rails.load_bom_values()
+
+    # ── 1. Swap D/C with a data line ────────────────────────────────
+    # J4 pad 31 carries LCD_DC (panel pin 10), pad 24 carries LCD_D0
+    # (panel pin 17). Crossing them leaves every net with a valid pad
+    # count — invisible to every pad-side gate, dead display in life.
+    m, _ = mutate.apply(board, {"kind": "move_pin", "ref": "J4",
+                                "pin": "31", "to_net": "LCD_D0"})
+    m, _ = mutate.apply(m, {"kind": "move_pin", "ref": "J4",
+                            "pin": "24", "to_net": "LCD_DC"})
+    view_m, _ = display.panel_view(m)
+    ctrl = display.check_control_lines(view_m)
+    data = display.check_data_bus(view_m)
+    check("swap D/C with DB0: control AND data checks both fire",
+          bool(ctrl) and bool(data),
+          f"ctrl={len(ctrl)} data={len(data)}")
+    view_0, _ = display.panel_view()
+    check("the un-mutated board passes the control-line check",
+          not display.check_control_lines(view_0))
+
+    # ── 2. Delete a button pull-up ──────────────────────────────────
+    # Find BTN_A's pull-up from the survey (never hardcode the ref), then
+    # detach it. The button must come back with no RC and a note, where
+    # the real board has both.
+    row0 = next(b for b in buttons.survey(board, values) if b.net == "BTN_A")
+    check("BTN_A has a pull-up and an RC on the real board",
+          row0.pullup is not None and row0.t_rise_s is not None)
+    pad = next(p.pad for p in board.nets["BTN_A"] if p.ref == row0.pullup)
+    m, _ = mutate.apply(board, {"kind": "detach_pin", "ref": row0.pullup,
+                                "pin": pad})
+    row_m = next(b for b in buttons.survey(m, values) if b.net == "BTN_A")
+    check("delete the pull-up: the survey loses the RC and says why",
+          row_m.pullup is None and row_m.t_rise_s is None and row_m.note,
+          f"got pullup={row_m.pullup} note={row_m.note!r}")
+
+    # ── 3. Tie WR to GND ────────────────────────────────────────────
+    # The write strobe welded low: every net keeps a plausible shape, but
+    # panel pin 11 now sees GND where the 8080 interface needs its strobe.
+    m, _ = mutate.apply(board, {"kind": "short_nets", "net_a": "GND",
+                                "net_b": "LCD_WR"})
+    view_m, _ = display.panel_view(m)
+    ctrl = display.check_control_lines(view_m)
+    check("tie WR to GND: the control-line check names the strobe",
+          any("WR" in f for f in ctrl), f"faults: {ctrl}")
+
+    # ── 4. Short +3V3 to GND ────────────────────────────────────────
+    # The rails module must refuse to produce a happy table for a board
+    # whose 3.3 V rail is the ground plane.
+    m, _ = mutate.apply(board, {"kind": "short_nets", "net_a": "GND",
+                                "net_b": "+3V3"})
+    fired = []
+    try:
+        found = conflicts.find_conflicts(m, values)
+        fired = [c for c in found
+                 if "U3" in getattr(c, "detail", "") or
+                 "U3" in getattr(c, "net", "")]
+    except Exception as exc:                              # noqa: BLE001
+        fired = [f"conflicts refused: {exc}"]
+    solved_dead = False
+    try:
+        rails.solve_dc(m, values, {"GND": 0.0, "+5V": 5.0, "+3V3": 3.327,
+                                   "BAT+": 3.83, "BAT_IN": 3.83,
+                                   "VBUS": 5.0})
+    except Exception:                                     # noqa: BLE001
+        solved_dead = True
+    else:
+        # +3V3 no longer exists as a net; a solver that still reports it
+        # at 3.327 V is describing a board that is not there.
+        solved_dead = "+3V3" not in m.nets
+    check("short +3V3 to GND: the bench does not produce a happy table",
+          bool(fired) or solved_dead,
+          f"conflicts={fired} solved_dead={solved_dead}")
+
+    # ── 5. Rotate the LCD model ─────────────────────────────────────
+    # Covered at the controller level: scripts/test_vbench_display.py
+    # (T3.1) asserts MADCTL MV/MX/MY move a probe pixel exactly as the
+    # cited bit semantics say, so a rotated model shows a rotated frame.
+    # Asserted here only that the suite exists and is wired into
+    # bench-test, so this pointer cannot dangle.
+    check("the MADCTL rotation suite exists (T3.1's tests carry mutation 5)",
+          os.path.exists(os.path.join(BASE, "scripts",
+                                      "test_vbench_display.py")))
+
+
 def main():
     print("=" * 72)
     print("  Virtual Bench Phase 0/1/2/3/4/5 — mutation tests")
@@ -1287,6 +1439,7 @@ def main():
     test_phase3()
     test_phase3_peripherals()
     test_phase5()
+    test_phase5_plan_mutations()
     test_scenarios()
     test_header()
     print()

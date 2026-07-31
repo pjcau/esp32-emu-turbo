@@ -29,6 +29,11 @@ from ._schema import DatasheetRef, Model, Param, Pin
 DOC = "U5_PAM8403_C5122557.pdf"
 REV = "no revision printed on the document (Slkor, www.slkormicro.com)"
 
+# The manufacturer's own datasheet (Diodes Incorporated), added 2026-07-31.
+# Pin table and application figures keep citing the Slkor reprint above;
+# electrical tables the reprint lacks cite this document per-parameter.
+DOC_DIODES = "U5_PAM8403_C5122557_official-Diodes.pdf"
+
 # Page 3, "PAM8403 引脚描述" (pin description) table, with the I/O column.
 PINS = (
     Pin("1", "OUTL+", "out", "p.3 table 1"),
@@ -83,18 +88,61 @@ U5 = Model(
         "r_input_series_app": Param(20e3, "ohm", locator="p.3 figure 3"),
         "c_input_block_app": Param(0.47e-6, "F", locator="p.3 figure 3"),
         "c_vref_bypass_app": Param(0.1e-6, "F", locator="p.3 figure 3"),
+
+        # ── from the official Diodes datasheet ──────────────────────
+        # `U5_PAM8403_C5122557_official-Diodes.pdf`. Same silicon, the
+        # manufacturer's own document; it holds the tables the Slkor
+        # reprint does not. Where the two disagree (quiescent current),
+        # the manufacturer's figure is the one a consumer may use.
+        "theta_ja": Param(110.0, "degC/W", locator="p.3 table 2",
+                          doc=DOC_DIODES),
+        "theta_jc": Param(23.0, "degC/W", locator="p.3 table 2",
+                          doc=DOC_DIODES),
+        # Closed-loop gain, fixed internally: GV = 24 dB for VDD 3-5 V
+        # (p.4 EC table). p.7 gives the origin: AVD = 20*log[2*(RF/RI)]
+        # with RF max 142k, RI min 18k. This is the number that finally
+        # maps a DAC code to an output amplitude.
+        "gain_closed_loop_db": Param(24.0, "dB", locator="p.4 table 4",
+                                     doc=DOC_DIODES),
+        # Output power into THIS board's 8 ohm speaker at 5 V — cited,
+        # replacing the halved-from-4-ohm derivation audio.py carried.
+        "p_out_8ohm_10thd": Param(1.8, "W", locator="p.4 table 4",
+                                  doc=DOC_DIODES),
+        "p_out_8ohm_1thd": Param(1.4, "W", locator="p.4 table 4",
+                                 doc=DOC_DIODES),
+        "p_out_4ohm_10thd": Param(3.2, "W", locator="p.4 table 4",
+                                  doc=DOC_DIODES),
+        # Efficiency at the rated loads (the 90% headline above is the
+        # Slkor feature-list figure; these are the EC-table points).
+        "efficiency_8ohm": Param(0.87, "1", locator="p.4 table 4",
+                                 doc=DOC_DIODES),
+        "efficiency_4ohm": Param(0.83, "1", locator="p.4 table 4",
+                                 doc=DOC_DIODES),
+        "i_quiescent_5v": Param(16e-3, "A", locator="p.4 table 4",
+                                doc=DOC_DIODES),
+        "r_dson_pmos": Param(180e-3, "ohm", locator="p.4 table 4",
+                             doc=DOC_DIODES),
+        "r_dson_nmos": Param(140e-3, "ohm", locator="p.4 table 4",
+                             doc=DOC_DIODES),
+        "fs_switching": Param(260e3, "Hz", locator="p.4 table 4",
+                              doc=DOC_DIODES),
+        # Over-temperature: trips at +140 degC die temperature (+/-15
+        # device to device), recovers 30 degC lower, not latched.
+        "t_otp": Param(140.0, "degC", locator="p.8 sec 1", doc=DOC_DIODES),
+        "t_otp_hyst": Param(30.0, "degC", locator="p.8 sec 1",
+                            doc=DOC_DIODES),
     },
 )
 
-# The speaker on this board is 8 ohm, not the 4 ohm the 3 W figure is rated
-# into, so the rated output power does not apply directly. Recorded here
-# rather than silently scaled: the datasheet pages read give no 8 ohm figure.
+# Narrowed 2026-07-31: theta_ja, the 8 ohm output power and the THD points
+# moved into the params above when the official Diodes datasheet landed in
+# hardware/datasheets/. What remains open:
 UNESTABLISHED = {
-    "theta_ja": "no thermal-resistance table on pages 1-3. "
-                "verify_thermal_budget.py uses 100 degC/W for U5 and cites "
-                "no source for it; that number is unverified.",
-    "p_out_8ohm": "the 3 W rating is into 4 ohm at 5 V; this board drives an "
-                  "8 ohm speaker, and no 8 ohm figure is on the pages read.",
-    "thd_vs_power": "no THD curve on the pages read, so audio quality "
-                    "cannot be predicted, only power.",
+    "thd_curve": "the p.4 table gives THD+N at fixed points (0.15% at "
+                 "1 W/8 ohm); the THD-vs-power curves are figures the "
+                 "text layer does not carry numbers for, so distortion "
+                 "between the cited points is interpolation, not data.",
+    "gain_tolerance": "GV = 24 dB is the p.4 typical; no min/max column "
+                      "value is readable for it, so the DAC-to-amplitude "
+                      "map carries the typical only.",
 }

@@ -82,6 +82,8 @@ VERIFY_ALL_SCRIPTS = \
 	test_pcb_connectivity \
 	test_power_net_integrity \
 	test_vbench \
+	test_vbench_display \
+	test_vbench_sdcard \
 	test_verify_memory \
 	validate_jlcpcb \
 	verify_antenna_keepout \
@@ -237,8 +239,14 @@ bench-buttons: ## T2.2 + T2.3 — debounce RC per button, and the switch_off sce
 
 bench-phase2: bench-pins bench-buttons ## Everything Phase 2 delivers
 
-bench-display: ## T3.1 (part) — the display seen from the PANEL: 40 pins through the 41-N reversal, IM straps, data-bus order
+bench-display: ## T3.1 — panel side (40 pins through the 41-N reversal, IM straps, bus order) AND controller side (command sequence, MADCTL, pixel format, i80 timing vs LCD_CLK_HZ)
 	@$(T) bench-display python3 scripts/vbench/display.py
+
+bench-display-frame: ## T3.1 — drive a frame through the ILI9488 state machine and export it as a PNG
+	@$(T) bench-display-frame python3 scripts/vbench/ili9488_ctrl.py --demo
+
+bench-display-test: ## T3.1 mutation tests — break the controller model on purpose and require it to notice
+	@$(T) bench-display-test python3 scripts/test_vbench_display.py
 
 bench-audio: ## T3.2 — audio chain: high-pass corner, 8-ohm output power, rail current
 	@$(T) bench-audio python3 scripts/vbench/audio.py
@@ -246,12 +254,18 @@ bench-audio: ## T3.2 — audio chain: high-pass corner, 8-ohm output power, rail
 bench-sd: ## T3.3 (part) — SD bus wiring, and the DAT2 pad that shares a net with a strapping pin
 	@$(T) bench-sd python3 scripts/vbench/sdcard.py
 
-bench-phase3: bench-display bench-audio bench-sd ## Everything Phase 3 delivers
+bench-sdcard: ## T3.3 — the card protocol: CMD0/CMD8/ACMD41 init, CMD17 block reads of a real file, cited currents
+	@$(T) bench-sdcard python3 scripts/vbench/sdcard_protocol.py --demo software/main
+
+bench-sdcard-test: ## T3.3 mutation tests — break the card model on purpose and require it to notice
+	@$(T) bench-sdcard-test python3 scripts/test_vbench_sdcard.py
+
+bench-phase3: bench-display bench-audio bench-sd bench-sdcard ## Everything Phase 3 delivers
 
 bench-ci: ## T4.3 — every scenario, headless, with assertions; non-zero on any failure
 	@$(T) bench-ci python3 scripts/vbench/scenario.py --junit /tmp/vbench-junit.xml
 
-bench-all: bench-test bench-netlist bench-power bench-phase2 bench-phase3 bench-ci ## The whole bench
+bench-all: bench-test bench-display-test bench-sdcard-test bench-netlist bench-power bench-phase2 bench-phase3 bench-ci ## The whole bench
 
 verify-dangling: ## Fail on track ends that reach no pad, via, junction or zone (dead copper)
 	@$(T) verify-dangling python3 scripts/verify_dangling_copper.py

@@ -91,12 +91,18 @@ def generate_all_traces():
     # REMOVED them thinking they were NC pads — but verify_trace_through_pad
     # then flagged 6 real fab shorts. Restored with explicit safety analysis:
     #
-    # U6.8 (SD DAT1) / U6.9 (SD DAT2): unused in SPI mode. The SD card
-    #   tri-states DAT1/DAT2 when CMD1 (SPI init) is received. SD_MISO and
+    # U6.8 (SD DAT1) / U6.9 (SD DAT2): unused in SPI mode. SD_MISO and
     #   BTN_R tracks physically overlap these pads at the corridor between
     #   U6 rows. Assigning them to SD_MISO/BTN_R nets makes the overlap
-    #   same-net. SAFE as long as firmware stays in SPI mode (which it
-    #   does — see software/main/sd.c sdspi_host_do_transaction).
+    #   same-net. Why the card does not drive them: NOT because of any
+    #   CMD1/CMD0 tri-state claim (no held document says that), but because
+    #   "the extended DAT lines (DAT1-DAT3) are input on power up" —
+    #   SDCARD_SanDisk-Industrial-microSD_2016.pdf p.17 sec 3.1 table 3-1
+    #   footnote b — and in SPI mode contacts 8/9 are RSV (table 3-2,
+    #   p.18). The GPIO3 strap is latched at reset, inside the power-up
+    #   window that footnote covers. Mechanism corrected 2026-07-31 by the
+    #   T3.3 protocol model (scripts/vbench/sdcard_protocol.py); the
+    #   conclusion was right, the cited cause was not.
     #
     # SW16.4b/4d (shell anchor pads): mechanical retention tabs for the
     #   slide switch body, not electrical slide positions. Per

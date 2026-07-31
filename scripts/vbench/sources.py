@@ -3,23 +3,21 @@
 The PSU is honest by construction: a lab supply is a number you dial in, so
 5.00 V with a programmable current limit needs no citation.
 
-The battery is the opposite, and this module refuses to pretend otherwise.
-BT1 is a generic 105080 LiPo cell with **no datasheet in
-hardware/datasheets/** — it is bought by dimensions, not by part number. So
-the OCV-vs-SoC curve below cannot cite a page, and under
-models/_schema.py's rules it is not a Model at all: a Model would have to
-carry a locator, and inventing one is precisely the failure the schema
-exists to catch.
-
-Instead the curve is declared for what it is — a generic single-cell
-Li-polymer shape, stated openly, with `calibrated = False` — and every
-report that consumes it must carry that flag. Plan T5.4/T5.5 is where two
-measurements on prototype #1 replace it: open-circuit voltage at rest, and
-the sag under a known load, which together pin both the curve and R_int.
-Until then the bench is self-consistent and uncalibrated, and must say so.
+The battery is subtler. Since 2026-07-31 the cell has a citable FAMILY
+model — `models/bt1_lp105080.py`, from DNK Power's LP105080 one-pager —
+which bounds the internal resistance ("< 60 mOhm") and pins the charge
+limit and discharge cut-off. But it is a family document, not the fitted
+cell's: the cell in this build is bought by dimensions from an unnamed
+vendor. So `calibrated` stays False, the OCV curve stays a declared
+generic shape (the one-pager has no curve), and plan T5.4's prototype
+measurements remain the only thing that changes either. The flag tracks
+the fitted part, not the paperwork.
 """
 
 import collections
+
+from .models import require_valid
+from .models.bt1_lp105080 import BT1
 
 Source = collections.namedtuple("Source", "name v_open r_internal i_limit "
                                           "calibrated basis")
@@ -47,10 +45,12 @@ _OCV_CURVE = (
     (0.05, 3.50), (0.00, 3.00),
 )
 
-# 5000 mAh pouch cells land in the tens of milliohms. 0.08 ohm is a
-# deliberately pessimistic single number standing in for a curve that also
-# varies with SoC and temperature.
-_R_INTERNAL = 0.08
+# The family datasheet's "Internal Impedance < 60 mOhm" upper bound
+# (BT1 model, p.1 table 1). Used as-is: the bound is the pessimistic end
+# of the family, and pessimistic is the correct default for sag until the
+# fitted cell is measured (T5.4).
+require_valid(BT1)
+_R_INTERNAL = BT1.params["r_internal_max"].value
 
 
 def lipo_ocv(soc):
@@ -69,9 +69,11 @@ def lipo_ocv(soc):
 def lipo(soc=0.5, r_internal=_R_INTERNAL):
     return Source("LiPo 105080", lipo_ocv(soc), r_internal, i_limit=None,
                   calibrated=False,
-                  basis="generic single-cell Li-polymer OCV shape; BT1 has "
-                        "no datasheet in hardware/datasheets/. Replace with "
-                        "prototype #1 measurements (plan T5.4).")
+                  basis="generic single-cell Li-polymer OCV shape; R_int "
+                        "is the DNK LP105080 FAMILY bound (<60 mOhm, "
+                        "models/bt1_lp105080.py), not a measurement of the "
+                        "fitted cell. Replace with prototype #1 "
+                        "measurements (plan T5.4).")
 
 
 def terminal_voltage(source, i_load):
