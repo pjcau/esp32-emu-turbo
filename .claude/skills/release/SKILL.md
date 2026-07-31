@@ -173,15 +173,26 @@ git add release_jlcpcb/ hardware/kicad/esp32-emu-turbo.kicad_pcb
 git commit -m "Update release_jlcpcb/ to $VERSION with [summary of changes]"
 ```
 
-### 9. Print JLCPCB upload instructions
+### 9. JLCPCB upload — sequential, only after steps 1–8 at a tagged HEAD
 
-After release is ready, print:
-- Go to https://cart.jlcpcb.com/quote
-- Upload `release_jlcpcb/gerbers.zip`
-- Select 4-layer, 1.6mm, ENIG/HASL
-- Enable PCBA: upload `bom.csv` and `cpl.csv`
-- Verify 3D viewer alignment for all components
-- Check component count matches BOM (26 unique parts, 80 placements)
+The upload is the final step of the release sequence, never a standalone
+errand. JLCPCB places EXACTLY what the CPL says — no vision correction
+(v4.3.1: ≥8 bottom-side parts mounted 90° off, precisely per the uploaded
+CPL). Full protocol with preview checkpoint:
+`.claude/skills/full-release/SKILL.md` → "JLCPCB Upload Protocol".
+
+Summary of the hard rules:
+- Preconditions: release tag on HEAD; this pipeline ran at this commit
+  (release_jlcpcb/ can be stale with all gates green); upload from
+  `release_jlcpcb/` ONLY.
+- Flow: https://cart.jlcpcb.com/quote → `gerbers.zip` → 4-layer, 1.6mm,
+  ENIG/HASL → PCBA with `bom.csv` + `cpl.csv` → STOP before payment.
+- Preview checkpoint: verify every polarized part (IC pin 1, D1 cathode,
+  tantalum stripe, inductor marking) against `POLARITY_AUDIT.md` and the
+  PCBA renders. NEVER fix a rotation in JLCPCB's online editor — fix the
+  generator and re-release instead. A "rotation adjusted" note from JLC's
+  DFM review is an alarm: reconcile pin→pad→net before ordering.
+- Record the sha256 of the uploaded files in `release_jlcpcb/README.md`.
 
 ## Key Files
 
