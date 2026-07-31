@@ -12,8 +12,8 @@ import re
 import sys
 from pathlib import Path
 
-# KiCad 3D model base variable (KICAD9 var resolves in KiCad 9.x/10 nightly)
-M = "${KICAD9_3DMODEL_DIR}"
+# KiCad 3D model base variable (KICAD10 var resolves in KiCad 10.0 stable)
+M = "${KICAD10_3DMODEL_DIR}"
 
 # Footprint name → (3D model path, offset_xyz, rotation_xyz)
 # Offsets/rotations compensate for differences between custom footprints

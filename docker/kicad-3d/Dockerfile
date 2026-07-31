@@ -1,7 +1,7 @@
-FROM kicad/kicad:nightly-full
+FROM kicad/kicad:10.0-full
 
-# KiCad 10 (nightly-full) bundles kicad-packages3d — no apt install needed.
-# Tag: nightly-full is KiCad 10 pre-release (v9.99.0). Will switch to 10.0-full when stable tag appears.
+# KiCad 10 (10.0-full) bundles kicad-packages3d — no apt install needed.
+# Tag: 10.0-full tracks the latest KiCad 10.0.x stable release.
 
 WORKDIR /project
 ENTRYPOINT ["kicad-cli"]
