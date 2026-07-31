@@ -91,6 +91,7 @@ board regardless of DFM/DFA passing.
 ```bash
 cp hardware/kicad/jlcpcb/bom.csv release_jlcpcb/bom.csv
 cp hardware/kicad/jlcpcb/cpl.csv release_jlcpcb/cpl.csv
+cp hardware/kicad/jlcpcb/esp32-emu-turbo.d356 release_jlcpcb/esp32-emu-turbo.d356
 rm -rf release_jlcpcb/gerbers
 cp -r hardware/kicad/gerbers release_jlcpcb/gerbers
 cd hardware/kicad/gerbers && zip -j ../../release_jlcpcb/gerbers.zip *.gtl *.g1 *.g2 *.gbl *.gto *.gbo *.gts *.gbs *.gtp *.gbp *.gm1 *.drl *.gbrjob 2>/dev/null

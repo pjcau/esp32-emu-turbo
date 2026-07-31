@@ -75,6 +75,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_erc_severity \
+	test_gerber_etest \
 	test_strapping_en_rc \
 	test_issue_dispatch \
 	test_pcb_connectivity \
@@ -102,6 +103,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_drill_standards \
 	verify_easyeda_footprint \
 	verify_esd_protection \
+	verify_gerber_etest \
 	verify_gerber_integrity \
 	verify_ground_loops \
 	verify_isolation \
@@ -278,6 +280,9 @@ verify-sch-overlaps: ## Fail when a label, junction or text overlaps another ite
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py
+
+verify-gerber-etest: ## Flying-probe e-test on the SHIPPED artifacts — opens/shorts from release_jlcpcb gerbers vs its IPC-D-356 netlist
+	@$(T) verify-gerber-etest python3 scripts/verify_gerber_etest.py
 
 verify-cpl-law: ## CPL rotation law — every part must obey ONE law per layer (replaces per-part sign-off table)
 	@$(T) verify-cpl-law python3 scripts/verify_cpl_rotation_law.py

@@ -57,6 +57,16 @@ docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
     --map-format gerberx2 \
     "/project/$PCB_FILE"
 
+# IPC-D-356 e-test netlist from the SAME board as the gerbers —
+# verify_gerber_etest.py cross-checks copper against it, so exporting it on
+# a different cadence makes the two drift apart silently.
+echo "==> Exporting IPC-D-356 e-test netlist..."
+mkdir -p "$KICAD_DIR/jlcpcb"
+docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
+    kicad-pcb pcb export ipcd356 \
+    --output /project/jlcpcb/esp32-emu-turbo.d356 \
+    "/project/$PCB_FILE"
+
 echo ""
 echo "==> Gerbers exported to $GERBER_DIR"
 ls -la "$GERBER_DIR"

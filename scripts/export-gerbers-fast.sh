@@ -66,6 +66,24 @@ else
         "/project/$PCB_FILE"
 fi
 
+# Step 4: IPC-D-356 e-test netlist, from the SAME board the gerbers came
+# from. verify_gerber_etest.py cross-checks copper against this file; if it
+# is exported on a different cadence the two drift apart silently — the
+# release d356 once described the AMS1117 board while the gerbers had the
+# SY8089A.
+echo "==> Step 4: Exporting IPC-D-356 e-test netlist..."
+mkdir -p "$KICAD_DIR/jlcpcb"
+if command -v kicad-cli &>/dev/null; then
+    kicad-cli pcb export ipcd356 \
+        --output "$KICAD_DIR/jlcpcb/esp32-emu-turbo.d356" \
+        "$KICAD_DIR/$PCB_FILE"
+else
+    docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
+        kicad-pcb pcb export ipcd356 \
+        --output /project/jlcpcb/esp32-emu-turbo.d356 \
+        "/project/$PCB_FILE"
+fi
+
 echo ""
 echo "==> Gerbers exported to $GERBER_DIR"
 ls "$GERBER_DIR"/*.g* "$GERBER_DIR"/*.drl 2>/dev/null | wc -l | xargs -I{} echo "  {} files exported"
