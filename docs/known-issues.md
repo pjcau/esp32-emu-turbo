@@ -400,51 +400,49 @@ and is six releases stale; the tag is the truth.
   documented, functional single-orientation workaround, allowlisted in
   `verify_net_connectivity.ACCEPTED_FRAGMENTATIONS`. Tracked as R5-CRIT-9
   for the respin. **Keep the allowlist entry.**
-- **EN has no RC delay network, and no pull-up at all.** The module
-  datasheet is not ambiguous about this. Page 28, under the peripheral
-  reference schematic: *"To ensure the ESP32-S3 chip's supply is correct
-  at power-up, an RC delay circuit **must** be added at the EN pin.
+- **EN has no RC delay network, and no pull-up at all — on every board
+  fabricated through `v4.3.1`. FIXED IN THE DESIGN 2026-07-31** (R25-CRIT-1):
+  `R3` (10 kΩ, EN→+3V3) and `C31` (100 nF, EN→GND) now sit on the EN trace
+  5–7 mm east of `U1` pin 3 (`routing/_shared.py::R3_POS/C31_POS`), and
+  `verify_strapping_pins` passes on the copper arm — it reads both parts
+  off the pad nets, not off this record. The next fabrication gets them;
+  nothing is reworkable on the assembled protos, where the failure mode
+  remains slow supply ramps and brown-outs (margin defect, not dead board).
+
+  The module datasheet is not ambiguous about this. Page 28, under the
+  peripheral reference schematic: *"To ensure the ESP32-S3 chip's supply is
+  correct at power-up, an RC delay circuit **must** be added at the EN pin.
   R = 10 kΩ and C = 1 µF are the usual recommendation, but the values
   should be adjusted to the module's power-up timing and the chip's
   power-on reset timing."* Its figure 7 draws R7 from VDD33 to EN and C8
   (0.1 µF) from EN to GND, with the reset button across the cap.
 
-  The fabricated board has **neither**: R3 is DNP and C3 is wired as a second
-  decoupling cap, so EN reaches only `U1.3` and `SW15` pad 1. It boots
-  today, so this is a margin defect, not a dead board — the failure mode
-  is slow supply ramps and brown-outs, i.e. a fraction of units in the
-  field rather than anything reproducible on the bench.
-
-  How it survived: `mcu.py` carried the comment *"the module integrates a
-  10k EN pull-up on-module (per Espressif reference design), so an
-  external pull-up is redundant"*, which is false, and
-  `hardware-audit-bugs.md` asserts "EN RC delay (R3+C3) intact" in two
+  On the fabricated boards R3 is absent and C3 is wired as a second
+  decoupling cap, so EN reaches only `U1.3` and `SW15` pad 1. How it
+  survived 25 audit rounds: `mcu.py` carried the comment *"the module
+  integrates a 10k EN pull-up on-module (per Espressif reference design),
+  so an external pull-up is redundant"*, which is false, and
+  `hardware-audit-bugs.md` asserted "EN RC delay (R3+C3) intact" in two
   places without anyone comparing that sentence to copper. Same class as
   the R25 finding that a justification comment can outrank the datasheet.
+  It was also deliberately not patched onto the assembled protos: the only
+  cap available was 28 mm away, and dragging a net that far would trade a
+  missing RC for a long high-impedance antenna on the reset line.
 
-  Not patched on the fabricated board: the only cap available is 28 mm away, and dragging a
-  net that far would trade a missing RC for a long high-impedance antenna
-  on the reset line — worse than leaving it bare. **Respin: 10 kΩ from +3V3
-  to EN and 100 nF from EN to GND, both placed adjacent to module pin 3.**
-  The schematic now draws C3 where the board actually has it, so `T4`
-  stays honest instead of describing a network that does not exist.
-
-  **The paragraph above is load-bearing: `verify_strapping_pins` greps this
-  file for the sentence "EN has no RC delay network".** Until `93bf286` that
-  gate regex-matched a *justification comment* in the schematic (`"R3 DNP"`,
-  `"WROOM-1 integrates"`) and computed τ from a WROOM-1 internal ~45 kΩ
-  pull-up — the same false claim `74c196e` had already retired from
-  `mcu.py`. The one gate whose job was to check EN was asserting the
-  network's presence *from the prose that excused its absence*, and reported
-  a board with no pull-up and no RC as passing.
-
-  It now reads copper — a pull-up is a resistor bridging `EN`→`+3V3`, the RC
-  cap a capacitor bridging `EN`→`GND` — and this board has neither. It
-  passes anyway, but *only* as a **recorded** deviation: delete or reword
-  the sentence above without fitting the parts and the gate goes red. That
-  coupling is the whole safety of the arrangement, so **do not reword that
-  bullet casually, and never "fix" a red result by restoring a comment or an
-  allowlist** — fit the parts or keep the record honest.
+  **This sentence stays load-bearing even with the parts fitted:
+  `verify_strapping_pins` greps this file for "EN has no RC delay network"
+  whenever the copper LOSES the RC** — so if R3/C31 are ever deleted from
+  the generators without this record, the gate goes red (and
+  `scripts/test_strapping_en_rc.py::test_the_doc_anchor_still_exists_in_the_real_file`
+  pins the anchor itself). Until `93bf286` that gate regex-matched a
+  *justification comment* in the schematic (`"R3 DNP"`, `"WROOM-1
+  integrates"`) and computed τ from a WROOM-1 internal ~45 kΩ pull-up the
+  module does not have — the one gate whose job was to check EN was
+  asserting the network's presence *from the prose that excused its
+  absence*. It now reads copper: a pull-up is a resistor bridging
+  `EN`→`+3V3`, the RC cap a capacitor bridging `EN`→`GND`. **Never "fix" a
+  red result by restoring a comment or an allowlist** — fit the parts or
+  keep the record honest.
 
   `scripts/test_strapping_en_rc.py` drives every arm (9 mutation tests):
   a planted 10 k + 100 nF passes on the parts with the record *absent*;
@@ -479,11 +477,20 @@ and is six releases stale; the tag is the truth.
   must still rediscover it. On the fabricated boards this is margin/EMI
   exposure on an unused CMOS input — the protos drive the panel fine — not
   a dead display. Nothing to rework in place; the next fabrication gets it.
-- **The display backlight has no current-limiting element at all** (R25-HIGH-1,
-  raised 2026-07-26, previously recorded only in `hardware-audit-bugs.md`).
-  `J4` pad 8 — panel pin 33, LED-A — sits **directly on `+3V3`**, and the
-  cathodes (panel 34–36 → pads 7/6/5) sit on `GND`. No resistor, no driver,
-  no PWM.
+- **The display backlight has no current-limiting element at all — on every
+  board fabricated through `v4.3.1`. FIXED IN THE DESIGN 2026-07-31**
+  (R25-HIGH-1, raised 2026-07-26): `J4` pad 8 (panel pin 33, LED-A) now
+  carries the dedicated `LED_BLA` net, fed from **+5V through `R27`
+  (20 Ω 1206, C17955)** — the resistor the analysis below sizes from the
+  family class rating. `verify_datasheet_nets` now checks pad 8 against
+  `_exact("LED_BLA")`, so a regression to the hard tie goes red. What is
+  still owed: **one bench measurement on the actual panel** (see below) to
+  confirm 20 Ω; the fabricated protos keep the old hard `+3V3` tie —
+  cathodes (panel 34–36 → pads 7/6/5) on `GND`, no resistor, no driver,
+  no PWM — and cannot be reworked in place.
+
+  Everything below is the analysis that produced the fix, kept because the
+  numbers are the record:
 
   **Citation corrected (R29).** This entry used to say `components.md`,
   "quoting the panel", specified "+3V3 *via resistor*". R29 read the panel's
@@ -541,11 +548,13 @@ and is six releases stale; the tag is the truth.
   at 3.2 V, read the current) — that one number replaces the remaining
   guess, and it is a 2-minute measurement on proto #1, not a purchase.
 
-  **As-built risk:** prototypes light up, so the array survives whatever it
-  draws today; the defect is that nobody knows what that is, and it varies
-  per unit and with temperature. No gate can catch this — `verify_datasheet_nets`
-  checks pad 8 against `datasheet_specs.py`, and that file *records the hard
-  tie as correct*, which is the R25 pattern exactly.
+  **As-built risk (fabricated protos only):** prototypes light up, so the
+  array survives whatever it draws today; the defect is that nobody knows
+  what that is, and it varies per unit and with temperature. On the current
+  design this is closed: `datasheet_specs.py::J4.8` records `LED_BLA` (not
+  the hard tie), so `verify_datasheet_nets` would catch a regression — the
+  R25 pattern (spec file agreeing with the deviation) no longer applies to
+  this pin.
 - **The IP5306 boost auto-shuts down after 32 s below 45 mA, and nothing
   can wake it** (R30-MED-3, raised 2026-07-31). Datasheet V1.32 p.8/p.10:
   the boost turns off on sustained light load and restarts only on a KEY
@@ -576,16 +585,20 @@ and is six releases stale; the tag is the truth.
   the fabricated board; the deciding test is a **RDDID (0x04) read on a
   proto** — then make CLAUDE.md, memory, `datasheet_specs.py` and the
   losing firmware agree.
-- **VBUS has no fuse — R3-HIGH-4 was never actioned** (rediscovered by the
-  R30 full-history re-verification, 2026-07-31). The R3 audit prescribed a
-  PTC (MF-PSMF050X class) on VBUS; no fuse ref ever entered the BOM. What
-  stands between a downstream short and the USB source today: the source's
-  own current limit (a compliant charger/host folds back) and the IP5306's
-  internal output protections — plausible for a prototype, but it is an
-  engineering waiver nobody wrote down until now, not a decision. Respin
-  decision needed: fit a PTC on VBUS between J1 and the IP5306/buck input,
-  or record the waiver as final. No gate can see a missing part that no
-  rule requires; the deciding artifact is this entry plus the respin BOM.
+- **VBUS has no fuse — R3-HIGH-4, never actioned for 27 rounds. FIXED IN
+  THE DESIGN 2026-07-31** (rediscovered by the R30 full-history
+  re-verification): `F1` — BHFUSE BSMD1812-200-30V PTC (hold 2 A / trip
+  4 A / 20 mΩ, C960026), sized for the IP5306's ~2 A charge draw — now
+  sits in series between J1's VBUS lands and everything downstream. The
+  connector side is net `VBUS_IN` (J1 pads 2/11 + the reversibility
+  loop); `VBUS` proper starts at F1 pad 2 (U2.1, U4.5, C17.1).
+  `datasheet_specs.py::J1.2/J1.11` record `VBUS_IN`, so
+  `verify_datasheet_nets` catches a regression to the fuseless path.
+  Every board fabricated through `v4.3.1` has no fuse: what stands
+  between a downstream short and the USB source there is the source's
+  own current limit and the IP5306's internal protections — the waiver
+  that was never written down. Those boards stay as they are; the next
+  fabrication gets F1.
 - **R22/R23 22 Ω in series on the FS USB pair** (R30-LOW-4). Espressif S3
   reference designs connect D+/D− through the TVS only — the PHY provides
   the driver impedance. Protos enumerate fine, so this is respin guidance

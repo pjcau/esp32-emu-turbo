@@ -132,51 +132,7 @@ def detect_mutation(entry):
 
 # ── Live detectors, one question each ───────────────────────────────
 
-def _live_r25_crit_1():
-    """EN must come out with no defined DC level, from the copper."""
-    op = rails.operating_point()
-    if op.voltages.get("EN", "missing") is not rails.UNDEFINED:
-        return False, f"EN solved to {op.voltages.get('EN')}, not floating"
-    board = nl.load_board_netlist()
-    pins_on_en = {f"{p.ref}.{p.pad}" for p in board.nets.get("EN", ())}
-    return True, (f"EN has no DC path to any source; its only pins are "
-                  f"{sorted(pins_on_en)} — no pull-up, no capacitor")
 
-
-def _live_r10_low_7():
-    """No R and no C on EN, so no RC time constant exists to compute."""
-    board = nl.load_board_netlist()
-    refs = {}
-    for net, pins in board.nets.items():
-        for p in pins:
-            refs.setdefault(p.ref, set()).add(net)
-    pullup = [r for r, nets in refs.items()
-              if r.startswith("R") and {"EN", "+3V3"} <= nets]
-    cap = [c for c, nets in refs.items()
-           if c.startswith("C") and {"EN", "GND"} <= nets]
-    if pullup or cap:
-        return False, f"EN now has {pullup} and {cap}; the entry is stale"
-    return True, ("no resistor from EN to +3V3 and no capacitor from EN to "
-                  "GND, so any RC boot delay computed for this board is "
-                  "computed from parts that are not there")
-
-
-def _live_r25_high_1():
-    """The backlight anode must reach the rail with no series element."""
-    view, _ = display.panel_view()
-    led_a = [p for p in view if p.symbol == "LED-A"]
-    if not led_a:
-        return False, "no LED-A pin in the parsed panel pinout"
-    p = led_a[0]
-    if p.net != "+3V3":
-        return False, f"LED-A reaches {p.net!r}, not the bare rail"
-    board = nl.load_board_netlist()
-    series = [q.ref for q in board.nets.get("+3V3", ())
-              if q.ref.startswith("R")]
-    return True, (f"panel pin {p.pin} (LED-A) lands on pad {p.pad} carrying "
-                  f"+3V3 directly; the resistors on that rail ({sorted(series)[:3]}"
-                  f"...) are button pull-ups, none in series with the "
-                  f"backlight string")
 
 
 def _live_r25_low_1():
@@ -252,14 +208,22 @@ def _inv_led_pin_numbering():
 
 
 def _inv_vbus_fragments():
-    """VBUS's single-orientation delivery must be stated, not silently OK."""
+    """VBUS's single-orientation delivery must be stated, not silently OK.
+
+    Since the F1 input fuse landed (2026-07-31) the receptacle delivers on
+    VBUS_IN and reaches VBUS through F1, so the J1 pads to check moved nets.
+    """
     board = nl.load_board_netlist()
-    j1 = sorted(p.pad for p in board.nets.get("VBUS", ()) if p.ref == "J1")
+    j1 = sorted(p.pad for p in board.nets.get("VBUS_IN", ()) if p.ref == "J1")
     if not j1:
-        return False, "no J1 pad carries VBUS at all"
-    return True, (f"VBUS reaches J1 pads {j1}; the receptacle's other VBUS "
-                  f"pads are isolated, so it is delivered in one plug "
-                  f"orientation — functional and documented")
+        return False, "no J1 pad carries VBUS_IN at all"
+    f1 = {p.ref for net in ("VBUS_IN", "VBUS") for p in board.nets.get(net, ())}
+    if "F1" not in f1:
+        return False, "F1 no longer bridges VBUS_IN to VBUS"
+    return True, (f"VBUS_IN reaches J1 pads {j1} and crosses F1 into VBUS; "
+                  f"the receptacle's other VBUS pads are isolated, so power "
+                  f"is delivered in one plug orientation — functional and "
+                  f"documented, now behind a resettable fuse")
 
 
 def _live_sd_strapping():
@@ -275,9 +239,6 @@ def _live_sd_strapping():
 
 
 LIVE = {
-    "R25-CRIT-1": _live_r25_crit_1,
-    "R10-LOW-7": _live_r10_low_7,
-    "R25-HIGH-1": _live_r25_high_1,
     "R25-LOW-1": _live_r25_low_1,
     "VB-C28-DNP": _live_vb_c28_dnp,
     "INV-SW-PWR": _inv_sw_pwr,

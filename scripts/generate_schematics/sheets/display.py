@@ -23,7 +23,7 @@ touch pins on 1-4 but **we do not use them as touch** — they remain NC.
         panel_pin 9  (CS)          ↔  J4 pad 32 (LCD_CS)
         panel_pin 11 (WR)          ↔  J4 pad 30 (LCD_WR)
         panel_pin 17 (DB0)         ↔  J4 pad 24 (LCD_D0)
-        panel_pin 33 (LED_A)       ↔  J4 pad  8 (LCD_BL)
+        panel_pin 33 (LED_A)       ↔  J4 pad  8 (LED_BLA)
         panel_pin 38 (IM0)         ↔  J4 pad  3 (+3V3)
         panel_pin 40 (IM2)         ↔  J4 pad  1 (GND)
 
@@ -52,7 +52,7 @@ Panel-side FPC 40-pin pinout (verified against components.md):
   16:    GND
   17-24: DB0-DB7 → GPIO4-11 (LCD_D0..LCD_D7)
   25-32: DB8-DB15 — NC (8-bit mode only)
-  33:    LED-A → +3V3 (LCD_BL — backlight always on)
+  33:    LED-A → +5V via R27 20R (LED_BLA — backlight always on, ~90mA)
   34-36: LED-K → GND (backlight cathode, 8-LED string)
   37:    GND
   38:    IM0 → +3V3 (mode select HIGH)
@@ -74,7 +74,7 @@ class DisplaySheet(SchematicSheet):
     # J4 was being drawn outside the page border and did not appear in
     # the exported SVG/PDF at all.
     paper = "A3"
-    needed_symbols = ["ST7796S_Module", "FPC_16P"]
+    needed_symbols = ["ST7796S_Module", "FPC_16P", "R"]
 
     def build(self):
         # Title
@@ -113,16 +113,18 @@ class DisplaySheet(SchematicSheet):
             ("LCD_RST", -7.62, "GPIO13 / FPC15"),
             ("LCD_DC", -5.08, "GPIO14 / FPC10"),
             ("LCD_WR", -2.54, "GPIO46 / FPC11"),
-            # RD and LED-A are tied to the 3.3 V rail on the board, so the
-            # label has to say "+3V3" — naming them LCD_RD / LCD_BL drew two
-            # nets that exist on no copper, and a schematic net with no PCB
-            # counterpart is exactly what verify_netlist_diff T1 is for. Which
-            # panel pin each one is stays in the annotation text on the right.
+            # RD is tied to the 3.3 V rail on the board, so the label has
+            # to say "+3V3" — naming it LCD_RD drew a net that exists on
+            # no copper, and a schematic net with no PCB counterpart is
+            # exactly what verify_netlist_diff T1 is for. LED-A carries
+            # the real LED_BLA net (R25-HIGH-1 fix: +5V through R27 20R,
+            # drawn below the control column). Which panel pin each one
+            # is stays in the annotation text on the right.
             # Keep these annotations as short as the ones above: the text
             # column and the global labels share a narrow gap, and a longer
             # string overlaps the label (verify_schematic_overlaps catches it).
             ("+3V3", 0, "+3V3 (FPC12, RO)"),
-            ("+3V3", 5.08, "+3V3 (FPC33, BL)"),
+            ("LED_BLA", 5.08, "BL via R27 (FPC33)"),
         ]
         self.text("Control signals:", dx - 72, dy - 14, 2, True)
         for net, yoff, gpio in ctrl_pins:
@@ -131,6 +133,24 @@ class DisplaySheet(SchematicSheet):
             self.wire(px, py, px - 25, py)
             self.glabel(net, px - 25, py, 180)
             self.text(gpio, px - 62, py, 1.5)
+
+        # --- R27: backlight series resistor (R25-HIGH-1 fix) ---
+        # +5V -> R27 (20R 1206) -> LED_BLA -> J4 pad 8 (panel 33, LED-A).
+        # Pin roles match the PCB pad map: pad 1 = LED_BLA (north stub to
+        # the J4-side vias), pad 2 = +5V (south leg to the In2 island tap).
+        # angle=180 puts pin 2 on top (+5V rail above) and pin 1 on the
+        # bottom (LED_BLA label below).
+        r27_x = dx - 55
+        r27_y = dy + 18
+        self.sym("R", "R27", "20", r27_x, r27_y, ["1", "2"], angle=180)
+        self.v5(r27_x, r27_y - 8)
+        self.wire(r27_x, r27_y - 8, r27_x, r27_y - 3.81)
+        self.link("LED_BLA", r27_x, r27_y + 3.81, 270, glob=True)
+        # Notes BELOW the LED_BLA label's text extent (r27_y + 18/+21):
+        # at r27_y + 12 the first line ran into the label whichever side
+        # of the column it started on (verify_schematic_overlaps).
+        self.text("Backlight: (5.0-3.2V)/20R = 90mA", r27_x - 30, r27_y + 18, 1.5)
+        self.text("(family class 6-LED/90mA)", r27_x - 30, r27_y + 21, 1.5)
 
         # --- Data bus (right side) ---
         data_pins = [
@@ -165,16 +185,15 @@ class DisplaySheet(SchematicSheet):
         # scripts/verify_netlist_diff.py — changing it without updating
         # that table will make the netlist cross-check fail.
         #
-        # Pins 7 and 8 carry "+3V3", not "LCD_RD"/"LCD_BL": on the board
-        # the panel's RD pin (panel 12 -> pad 29) and LED-A pin
-        # (panel 33 -> pad 8) are hard-tied to the 3.3 V rail — RD
-        # because the interface is write-only, LED-A because the
-        # backlight is always on. The DS1 side now says "+3V3" too; which
-        # panel pin is involved is documented in the annotation text there
-        # rather than in a net name that no copper carries.
+        # Pin 7 carries "+3V3", not "LCD_RD": on the board the panel's RD
+        # pin (panel 12 -> pad 29) is hard-tied to the 3.3 V rail because
+        # the interface is write-only. Pin 8 (LED-A, panel 33 -> pad 8)
+        # carries LED_BLA — the backlight anode node after R27, fed from
+        # +5V (R25-HIGH-1 fix, 2026-07-31). The always-on choice is
+        # unchanged; the current is now defined by R27.
         fpc_nets = [
             "+3V3", "GND", "LCD_CS", "LCD_RST", "LCD_DC", "LCD_WR",
-            "+3V3", "+3V3",
+            "+3V3", "LED_BLA",
             "LCD_D0", "LCD_D1", "LCD_D2", "LCD_D3",
             "LCD_D4", "LCD_D5", "LCD_D6", "LCD_D7",
         ]

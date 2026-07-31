@@ -197,8 +197,10 @@ _strict("U6", [
 # J1: USB-C 16P
 # ============================================================
 # Pins 1, 11 are not in pad lookup (zone-connected or not explicitly routed)
+# Since the F1 input fuse (2026-07-31) the receptacle delivers on
+# VBUS_IN and reaches VBUS through F1.
 _strict("J1", [
-    ("2", "VBUS"),
+    ("2", "VBUS_IN"),
     ("4", "USB_CC1"),
     ("6", "USB_D+"),
     ("7", "USB_D-"),
@@ -207,8 +209,15 @@ _strict("J1", [
 ])
 _zone("J1", [
     ("1", "GND"),        # zone-connected
-    ("11", "VBUS"),      # zone-connected or not explicitly routed to pad
+    ("11", "VBUS_IN"),   # zone-connected or not explicitly routed to pad
 ])
+
+
+# ============================================================
+# F1: VBUS PTC resettable fuse (2A 1812, C960026) — J1 -> F1 -> VBUS.
+# Nets from the copper: F1.1=VBUS_IN F1.2=VBUS.
+# ============================================================
+_strict("F1", [("1", "VBUS_IN"), ("2", "VBUS")])
 
 # ============================================================
 # J3: JST PH 2P (battery connector)
@@ -234,7 +243,7 @@ _zone("J4", [
     ("9", "LCD_CS"), ("10", "LCD_DC"), ("11", "LCD_WR"),
     ("12", "+3V3"),  # LCD_RD: hard-tied to +3V3 (write-only)
     ("15", "LCD_RST"),
-    ("33", "+3V3"),  # LCD_BL/LED-A: hard-tied to +3V3 (always-on backlight)
+    ("33", "LED_BLA"),  # LCD_BL/LED-A: fed from +5V through R27 20R (R25-HIGH-1 fix 2026-07-31)
 ])
 # Power/GND pins (verified from actual PCB)
 _zone("J4", [
@@ -447,6 +456,23 @@ _strict("Q1", [("1", "RPP_GATE"), ("2", "BAT_IN"), ("3", "BAT+")])
 _strict("R24", [("1", "RPP_GATE"), ("2", "GND")])
 
 
+# ============================================================
+# R3 / C31: ESP32 EN RC delay network (R25-CRIT-1 fix, 2026-07-31)
+# R3 10k pull-up +3V3 -> EN, C31 100nF EN -> GND. Nets read off the
+# copper (pcb_query): R3.1=+3V3 R3.2=EN, C31.1=GND C31.2=EN.
+# ============================================================
+_strict("R3", [("1", "+3V3"), ("2", "EN")])
+_strict("C31", [("1", "GND"), ("2", "EN")])
+
+
+# ============================================================
+# R27: backlight series resistor (R25-HIGH-1 fix) — 20R 1206.
+# +5V -> R27 -> LED_BLA -> J4.8 (panel LED-A). Nets from the copper:
+# R27.1=LED_BLA R27.2=+5V.
+# ============================================================
+_strict("R27", [("1", "LED_BLA"), ("2", "+5V")])
+
+
 # ---- Test class ----
 
 class PolarityVerificationTest(unittest.TestCase):
@@ -628,12 +654,13 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("U6", "7", "SD_MISO")
 
     def test_usb_c_power(self):
-        """J1 (USB-C): VBUS and GND on routed pins."""
-        self._check_strict("J1", "2", "VBUS")
+        """J1 (USB-C): VBUS_IN and GND on routed pins (F1 fuses VBUS_IN
+        into VBUS since 2026-07-31)."""
+        self._check_strict("J1", "2", "VBUS_IN")
         self._check_strict("J1", "12", "GND")
-        # Pin 1 (GND) and 11 (VBUS) zone-connected
+        # Pin 1 (GND) and 11 (VBUS_IN) zone-connected
         self._check_zone_ok("J1", "1", "GND")
-        self._check_zone_ok("J1", "11", "VBUS")
+        self._check_zone_ok("J1", "11", "VBUS_IN")
 
     def test_usb_c_data(self):
         """J1 (USB-C): D+/D- on correct pins."""
@@ -870,14 +897,14 @@ class PolarityVerificationTest(unittest.TestCase):
     # ── Datasheet mandatory connection rules ──
 
     def test_display_backlight_connected(self):
-        """Display LED-A (pin 33, pad 8) must be connected to +3V3.
+        """Display LED-A (pin 33, pad 8) must be connected to LED_BLA.
 
-        ILI9488 datasheet: LED-A = backlight anode (2.9-3.3V).
-        DFM v3 (2026-04-10): pad is directly on the +3V3 net (was LCD_BL net
-        with a dangling via that never connected to +3V3). See
-        routing.py::_fpc_power_traces and datasheet_specs.py::J4.
+        ILI9488 datasheet: LED-A = backlight anode. R25-HIGH-1 fix
+        (2026-07-31): the anode is fed from +5V through R27 (20R 1206),
+        so the pad carries the current-limited LED_BLA node — no longer
+        the bare +3V3 rail the 2026-04-10 layout tied it to.
         """
-        self._check_strict("J4", "8", "+3V3")
+        self._check_strict("J4", "8", "LED_BLA")
 
     def test_display_rd_tied_high(self):
         """Display RD (pin 12, pad 29) must be tied HIGH (+3V3).

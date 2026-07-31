@@ -171,7 +171,8 @@ def render(d):
     w(f'#define VB_BOOT_MODE_DEFAULT "{d["boot_mode"]}"\n')
     w(f"#define VB_VDD_SPI_MV {round((d['vdd_spi'] or 0)*1000)}\n")
     w(f"#define VB_EN_FLOATING {1 if d['en_floating'] else 0} "
-      f"/* R25-CRIT-1: no RC on EN, as-built */\n\n")
+      f"/* R25-CRIT-1: derived from the EN net; 0 since the R3/C31 RC "
+      f"landed (2026-07-31) */\n\n")
 
     w("/* Thermal — thermal.py: Tj = amb + P*thetaJA, conduction only for\n")
     w(" * U3 (LOWER BOUND). Load currents are engineering estimates. */\n")

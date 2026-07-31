@@ -363,24 +363,47 @@ def _power_traces():
     #    The vertical in step 2 already starts on the pad centre, so the stub
     #    has nothing to do — deleted rather than given a token length.
     #    _seg() now raises on any zero-length segment, closing the class.
-    # 2. B.Cu vertical UP from y=68.255 to y=61.0 (above all button F.Cu channels)
+    # 2. B.Cu vertical UP from y=68.255 to y=61.0 (above all button F.Cu
+    #    channels). R3-HIGH-4 FIX (2026-07-31): the connector side of the
+    #    VBUS path is now net VBUS_IN — F1 (PTC 2A hold / 4A trip) sits in
+    #    series before anything downstream sees the USB source.
+    n_vbus_in = NET_ID["VBUS_IN"]
     parts.append(_seg(vbus_fcu_start_x, usb_vbus[1], vbus_fcu_start_x, vbus_fcu_y,
-                       "B.Cu", W_PWR, n_vbus))
-    # 3. via to F.Cu at (82.0, 61.0)
-    parts.append(_via_net(vbus_fcu_start_x, vbus_fcu_y, n_vbus))
-    # 4. F.Cu horizontal to IP5306 approach column, SPLIT at the U4 tap.
-    #    The U4 TVS VBUS stub (emitted in _usb_traces) ends at
-    #    (90.95, 61.0), which was the MIDDLE of this single 28.6mm run.
-    #    The copper overlaps, so the board is fabricated connected — but
-    #    a mid-segment T has no shared endpoint, so verify_dangling_copper
-    #    read the TVS stub as copper ending in air. Splitting here makes
-    #    the tap a real endpoint: electrically identical, and the
-    #    junction becomes visible to the checker and to anyone opening
-    #    the board in KiCad. Not a waiver — the geometry now says what
-    #    the copper always did.
+                       "B.Cu", W_PWR, n_vbus_in))
+    # 3. B.Cu east from the riser bottom into F1 pad 1 (the old via to
+    #    F.Cu at (82.4, 61.0) is gone — the connector side stays entirely
+    #    on B.Cu now).
+    f1_p1 = _pad("F1", "1")   # (83.6, 60.6)
+    f1_p2 = _pad("F1", "2")   # (88.0, 60.6)
+    if f1_p1 and f1_p2:
+        parts.append(_seg(vbus_fcu_start_x, vbus_fcu_y, f1_p1[0], vbus_fcu_y,
+                           "B.Cu", W_PWR, n_vbus_in))
+        parts.append(_seg(f1_p1[0], vbus_fcu_y, f1_p1[0], f1_p1[1],
+                           "B.Cu", W_PWR, n_vbus_in))
+        # 3b. F1 pad 2 -> VBUS: B.Cu south stub, via, F.Cu east to the
+        #     U4-tap vertical's endpoint at (90.95, 59.3) — landing on the
+        #     endpoint keeps the junction visible to
+        #     verify_dangling_copper (same rule as the U4-tap split
+        #     below).
+        #     Clearances: stub x=88.0 edge 88.3 vs BTN_SELECT via
+        #     (88.95, 58.0) edge 88.72 -> 0.42; via (88.0, 59.3) 1.3 mm
+        #     from F1 pad 2 centre and 1.25 mm from U4.4's pad edge.
+        parts.append(_seg(f1_p2[0], f1_p2[1], f1_p2[0], 59.3,
+                           "B.Cu", W_PWR, n_vbus))
+        parts.append(_via_net(f1_p2[0], 59.3, n_vbus))
+        parts.append(_seg(f1_p2[0], 59.3, 90.95, 59.3,
+                           "F.Cu", W_PWR_HIGH, n_vbus))
+    # 4. F.Cu horizontal to IP5306 approach column, starting at the U4
+    #    tap. Historical note (still load-bearing): this run used to start
+    #    at the (now deleted) (82.4, 61.0) via as one single 28.6mm F.Cu
+    #    segment, with the U4 TVS VBUS stub (emitted in _usb_traces)
+    #    ending mid-segment at (90.95, 61.0). The copper overlapped, so
+    #    the board was fabricated connected — but a mid-segment T has no
+    #    shared endpoint, so verify_dangling_copper read the TVS stub as
+    #    copper ending in air. The tap is a real endpoint now; with F1 in
+    #    series, VBUS reaches this run through the U4-tap vertical
+    #    (90.95, 59.3 -> 61.0).
     _u4_vbus_tap_x = 90.95
-    parts.append(_seg(vbus_fcu_start_x, vbus_fcu_y, _u4_vbus_tap_x, vbus_fcu_y,
-                       "F.Cu", W_PWR_HIGH, n_vbus))
     parts.append(_seg(_u4_vbus_tap_x, vbus_fcu_y, ip_vbus_via_x, vbus_fcu_y,
                        "F.Cu", W_PWR_HIGH, n_vbus))
     # 5. F.Cu vertical down to IP5306 pin level

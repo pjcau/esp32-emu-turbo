@@ -524,10 +524,14 @@ def test_phase1():
           and abs(op.voltages["BUCK_FB"] - 0.600) < 1e-3,
           f"got {op.voltages['BUCK_FB']}")
 
-    # R25-CRIT-1, reached from the physics rather than from a comment.
-    check("EN has no defined DC level (R25-CRIT-1, no pull-up, no RC)",
-          op.voltages.get("EN", "missing") is rails.UNDEFINED,
-          f"got {op.voltages.get('EN')}")
+    # R25-CRIT-1 fixed 2026-07-31: R3/C31 sit on EN, so the solver must
+    # now put EN at the +3V3 rail through the 10k pull-up (no DC load).
+    # Still reached from the physics, not from a comment.
+    en_v = op.voltages.get("EN", None)
+    check("EN sits at the rail through R3 (R25-CRIT-1 fixed)",
+          en_v is not rails.UNDEFINED and en_v is not None
+          and abs(en_v - op.voltages["+3V3"]) < 1e-3,
+          f"got {en_v}")
     # R14 is DNP, so BTN_L has no external pull-up either.
     check("BTN_L has no defined DC level (R14 is DNP)",
           op.voltages.get("BTN_L", "missing") is rails.UNDEFINED,
@@ -1284,8 +1288,8 @@ def test_header():
           d["rc_mask"] == 0xBFF, f"got {hex(d['rc_mask'])}")
     check("boot mode and VDD_SPI carry the derived answers",
           d["boot_mode"] == "SPI Boot" and d["vdd_spi"] == 3.3)
-    check("EN is exported as floating (R25-CRIT-1 rides into the window)",
-          d["en_floating"] is True)
+    check("EN is exported as driven (R25-CRIT-1 fixed: RC fitted)",
+          d["en_floating"] is False)
     check("the switch-not-in-series invariant is exported",
           d["switch_not_in_series"] is True)
     check("the header admits it is uncalibrated",

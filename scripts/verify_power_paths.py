@@ -44,7 +44,11 @@ SNAP_TOL = 0.05
 POWER_SOURCES = {
     "BAT_IN": ("J3", "1", "Battery connector positive (pre-RPP)"),
     "BAT+": ("Q1", "3", "Reverse-polarity MOSFET drain (post-RPP)"),
-    "VBUS": ("J1", "2", "USB-C VBUS"),      # pad 2 is VBUS on USB-C 16P
+    # R3-HIGH-4 fix (2026-07-31): F1 (PTC fuse) splits the USB input.
+    # VBUS_IN carries J1 pad 2 -> F1 pad 1; VBUS proper starts at F1
+    # pad 2 and must still reach the IP5306 VIN.
+    "VBUS_IN": ("J1", "2", "USB-C VBUS (pre-fuse)"),
+    "VBUS": ("F1", "2", "PTC fuse output (post-fuse)"),
     "+5V":  ("U2", "8", "IP5306 VOUT"),
     "+3V3": ("U3", "4", "AMS1117 VOUT"),     # SOT-223 pad 4 = tab/VOUT
     "GND":  ("U2", "EP", "IP5306 GND (exposed pad)"),
@@ -63,6 +67,9 @@ POWER_SINKS = {
         ("U5", "6", "PAM8403 VDD"),
         ("U5", "12", "PAM8403 PVDD_L"),
         ("U5", "13", "PAM8403 PVDD_R"),
+    ],
+    "VBUS_IN": [
+        ("F1", "1", "PTC fuse input"),
     ],
     "VBUS": [
         ("U2", "1", "IP5306 VIN"),
@@ -358,7 +365,7 @@ def main():
     print(f"    Pads: {cache['stats']['pads']}")
 
     # Verify each power net
-    for net_name in ["+3V3", "+5V", "VBUS", "BAT_IN", "BAT+", "GND"]:
+    for net_name in ["+3V3", "+5V", "VBUS_IN", "VBUS", "BAT_IN", "BAT+", "GND"]:
         if net_name not in net_map:
             print(f"\n  FAIL  Net '{net_name}' not found in PCB")
             continue

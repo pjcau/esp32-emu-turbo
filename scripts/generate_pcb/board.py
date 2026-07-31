@@ -541,10 +541,20 @@ def _component_placeholders():
     placements.append(("R23", "R_0402", *routing.R23_POS, 90, "B.Cu"))
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
-    # R3 REMOVED: unrouted 10k resistor, no electrical function
     placements.append(("C3", "C_0805", 69.55, 42, 0, "B.Cu"))  # DFM: 0.05mm right (BTN_UP gap 0.095→0.145mm)
     placements.append(("C4", "C_0805", 92, 42, 0, "B.Cu"))  # DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715)
     placements.append(("C26", "C_0805", *routing.C26_POS, 90, "B.Cu"))  # ESP32 VDD bypass (3.6mm from pin 2)
+
+    # EN RC delay network (R25-CRIT-1 respin fix): 10k pull-up + 100nF on
+    # the EN trace east of U1 pin 3 — see routing._shared R3_POS comment.
+    placements.append(("R3", "R_0805", *routing.R3_POS, 90, "B.Cu"))
+    placements.append(("C31", "C_0805", *routing.C31_POS, 90, "B.Cu"))
+
+    # Backlight series resistor (R25-HIGH-1 respin fix): +5V -> R27 -> LED_BLA
+    placements.append(("R27", "R_1206", *routing.R27_POS, 90, "B.Cu"))
+
+    # VBUS PTC fuse (R3-HIGH-4 fix): J1 -> VBUS_IN -> F1 -> VBUS
+    placements.append(("F1", "F_1812", *routing.F1_POS, 180, "B.Cu"))
 
     # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
     placements.append(("R17", "R_0805", 25, 65, 0, "B.Cu"))

@@ -156,8 +156,13 @@ def test_power_chain(net_refs, name_to_id, id_to_name):
     verify_chain("Buck feedback", "BUCK_FB", ["U3", "R25", "R26", "C29"],
                  net_refs, name_to_id, id_to_name)
 
-    # VBUS from USB connector to IP5306
-    verify_chain("USB power", "VBUS", ["J1", "U2"], net_refs, name_to_id, id_to_name)
+    # VBUS from USB connector to IP5306 — through the F1 PTC fuse
+    # (R3-HIGH-4 fix, 2026-07-31): J1 sits on VBUS_IN, U2 on VBUS, and
+    # F1 must bridge both.
+    verify_chain("USB power (pre-fuse)", "VBUS_IN", ["J1", "F1"],
+                 net_refs, name_to_id, id_to_name)
+    verify_chain("USB power (post-fuse)", "VBUS", ["F1", "U2"],
+                 net_refs, name_to_id, id_to_name)
 
 
 def test_display_chain(net_refs, name_to_id, id_to_name):

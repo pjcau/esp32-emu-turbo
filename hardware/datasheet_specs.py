@@ -90,7 +90,7 @@ COMPONENT_SPECS = {
         "datasheet_page": 1,
         "pins": {
             "1":   {"net": _exact("GND"),      "function": "A1+B12 — GND (merged land)", "type": "smd"},
-            "2":   {"net": _exact("VBUS"),     "function": "A4+B9 — VBUS (merged land)", "type": "smd"},
+            "2":   {"net": _exact("VBUS_IN"),  "function": "A4+B9 — VBUS_IN (merged land; F1 PTC fuse to VBUS, R3-HIGH-4 fix)", "type": "smd"},
             "3":   {"net": _unconnected(),     "function": "B8 — SBU2, unused (no alt-mode/audio accessory)", "type": "smd"},
             "4":   {"net": _exact("USB_CC1"),  "function": "A5 — CC1 (5.1k pull-down R1)", "type": "smd"},
             "5":   {"net": _exact("USB_D-"),   "function": "B7 — DN2, flipped-orientation D- (tied to A7 per USB-C r2.1 §4.2)", "type": "smd"},
@@ -99,7 +99,7 @@ COMPONENT_SPECS = {
             "8":   {"net": _exact("USB_D+"),   "function": "B6 — DP2, flipped-orientation D+ (tied to A6 per USB-C r2.1 §4.2)", "type": "smd"},
             "9":   {"net": _unconnected(),     "function": "A8 — SBU1, unused (no alt-mode/audio accessory)", "type": "smd"},
             "10":  {"net": _exact("USB_CC2"),  "function": "B5 — CC2 (5.1k pull-down R2)", "type": "smd"},
-            "11":  {"net": _exact("VBUS"),     "function": "B4+A9 — VBUS (merged land)", "type": "smd"},
+            "11":  {"net": _exact("VBUS_IN"),  "function": "B4+A9 — VBUS_IN (merged land; F1 PTC fuse to VBUS, R3-HIGH-4 fix)", "type": "smd"},
             "12":  {"net": _exact("GND"),      "function": "B1+A12 — GND (merged land)", "type": "smd"},
             "13":  {"net": _exact("GND"),      "function": "Shield (front left)", "type": "thru_hole", "min_drill": 0.5},
             "14":  {"net": _exact("GND"),      "function": "Shield (front right)", "type": "thru_hole", "min_drill": 0.5},
@@ -392,24 +392,19 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "6":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
             "7":  {"net": _exact("GND"),      "function": "GND", "type": "smd"},
-            # Hard-tied to +3V3 (always-on backlight, no GPIO control).
-            # This was _any_of("LCD_BL", "+3V3") while the LCD_BL name still
-            # existed as a zero-pad net declaration; that net is gone (see
-            # primitives.NET_LIST, ids 18/19 retired), so the only net this pad
-            # can carry is +3V3 and the alternative would never match again.
-            # Which panel pin it is stays in "function" below.
-            #
-            # THIS ENTRY RECORDS THE BOARD, NOT THE INTENT. R25-HIGH-1: the
-            # panel specifies this pin as "+3V3 VIA RESISTOR" and no resistor
-            # was ever placed, so 8 parallel white LEDs (Vf 2.9-3.3 V) sit
-            # across a 3.327 V rail with 0.227 V of headroom and no defined
-            # operating point. `_exact("+3V3")` therefore makes
-            # verify_datasheet_nets agree with a deviation rather than catch
-            # it -- do not read a green gate here as "the backlight is right".
-            # Analysis and the respin fix (drive LED-A from +5V): RESPIN
-            # section of docs/known-issues.md. Blocked on the panel datasheet,
-            # which is not in hardware/datasheets/.
-            "8":  {"net": _exact("+3V3"),  "function": "LED_A — backlight anode, hard-tied to +3V3 (R25-HIGH-1: should be via a resistor)", "type": "smd"},
+            # R25-HIGH-1 FIXED IN THE DESIGN 2026-07-31: LED-A is fed from
+            # +5V through R27 (20R 1206) on the dedicated LED_BLA net —
+            # the anode was hard-tied to +3V3 with no current-limiting
+            # element on every board fabricated through v4.3.1 (8 parallel
+            # white LEDs, Vf 2.9-3.3 V, across a measured 3.327 V rail:
+            # 0.227 V of headroom and no defined operating point).
+            # 20R sizing from the family class rating (6 LED / 90 mA,
+            # Vf 3.2 V ± 0.3: (5.0-3.2)/0.090 ≈ 20R), datasheet
+            # DISPLAY-FAMILY_E35RG73248LW6M250-R_FocusLCDs.pdf outline
+            # note 7. Final value still owes ONE bench measurement on the
+            # actual panel (drive LED-A at 3.2 V, read the current) —
+            # known-issues.md RESPIN section keeps that record.
+            "8":  {"net": _exact("LED_BLA"),  "function": "LED_A — backlight anode, +5V via R27 20R (defined ~90 mA)", "type": "smd"},
             "9":  {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "10": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},
             "11": {"net": _unconnected(),     "function": "NC (touch panel)", "type": "smd"},

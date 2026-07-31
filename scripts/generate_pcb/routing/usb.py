@@ -386,17 +386,22 @@ def _usb_c_reversibility_traces():
     _init_pads()
 
     n_gnd = NET_ID["GND"]
-    n_vbus = NET_ID["VBUS"]
+    # R3-HIGH-4 FIX (2026-07-31): the connector's VBUS lands sit on
+    # VBUS_IN — the F1 PTC fuse (routing/power.py) separates them from
+    # the downstream VBUS net (U2/U4/C17). The reversibility link below
+    # bonds the two lands on the SAME side of the fuse, so it moves with
+    # them.
+    n_vbus = NET_ID["VBUS_IN"]
     n_dp = NET_ID["USB_D+"]
     n_dm = NET_ID["USB_D-"]
 
     p1 = _pad("J1", "1")     # GND  (A1 + B12)
-    p2 = _pad("J1", "2")     # VBUS (A4 + B9)  — already routed to the IP5306
+    p2 = _pad("J1", "2")     # VBUS_IN (A4 + B9) — reaches VBUS through F1
     p5 = _pad("J1", "5")     # D-   (B7 / DN2)
     p6 = _pad("J1", "6")     # D+   (A6 / DP1) — already routed to U4/R22
     p7 = _pad("J1", "7")     # D-   (A7 / DN1) — already routed to U4/R23
     p8 = _pad("J1", "8")     # D+   (B6 / DP2)
-    p11 = _pad("J1", "11")   # VBUS (B4 + A9)
+    p11 = _pad("J1", "11")   # VBUS_IN (B4 + A9)
     if not all((p1, p2, p5, p6, p7, p8, p11)):
         return parts
 

@@ -14,6 +14,7 @@ from ._shared import (
     _fpc_display_pin,
     _init_pads,
     _mh_detour_h,
+    _pad,
     _seg,
     _via_net,
 )
@@ -39,7 +40,7 @@ def _display_traces():
       16:    GND
       17-24: DB0-DB7     → GPIO4-11
       25-32: DB8-DB15    — NC (8-bit mode)
-      33:    LED-A (backlight anode) → tied to +3V3, no GPIO (always on; R25-HIGH-1)
+      33:    LED-A (backlight anode) → +5V via R27 20R = net LED_BLA (always on)
       34-36: LED-K (backlight cathode) → GND
       37:    GND
       38:    IM0 → +3V3 (HIGH for 8080 8-bit)
@@ -68,7 +69,7 @@ def _display_traces():
         (14, "LCD_DC", 10),   # RS/DC
         (46, "LCD_WR", 11),   # WR
         # LCD_RD (FPC pin 12): tied HIGH via 3V3 in FPC power section
-        # LCD_BL (FPC pin 33): tied to 3V3 via resistor in FPC power section
+        # LCD_BL (FPC pin 33): +5V via R27 20R (net LED_BLA) in FPC power section
     ]
 
     # Combined list for unified stagger handling.
@@ -512,39 +513,26 @@ def _display_traces():
         # Short B.Cu stub from pin 38 DOWN to pin 39 (same net, 0.5mm away)
         parts.append(_seg(px38, py38, px39, py39, "B.Cu", W_FPC_PWR, n_3v3))
 
-    # ── +3V3 for LCD_RD (pin 12) and LCD_BL (pin 33) ──
+    # ── +3V3 for LCD_RD (pin 12); +5V via R27 for LCD_BL (pin 33) ──
     # LCD_RD tied HIGH (read strobe disabled — display is write-only).
-    # LCD_BL (LED-A) tied to +3V3 (always-on backlight, per ILI9488 datasheet:
-    #   pin 33 LED-A = backlight anode 2.9-3.3V, pins 34-36 LED-K = cathodes to GND).
-    # NOTE: No series current-limiting resistor — and this is R25-HIGH-1, an
-    # OPEN defect, not a design choice.
-    #
-    # "Most ILI9488 bare panels have internal LED current limiting" was the
-    # claim here and it is unverified. R28/R29 sharpened the sourcing: the
-    # panel's own pin table IS in the repo (website/static/img/
-    # ili9488-fpc40-pinout.png — pin 33: "Anode of Backlight, 2.9V-3.3V
-    # Typical 3.1V", no resistor mention, no current rating), and the old
-    # "components.md, quoting the panel, says VIA RESISTOR" line was our own
-    # design note wearing quote marks. 8 parallel white LEDs at Vf 2.9-3.3 V
-    # across a measured 3.327 V rail leaves 0.227 V at typical Vf, dropped
-    # across nothing but the LEDs' own dynamic resistance, with a -2 mV/°C
-    # tempco pushing current UP as the panel warms.
-    #
-    # The "1-10 ohm" figure below follows from that headroom (0.227/I_BL), not
-    # from any rated current, so it is arithmetic on a guess. Do not fit a part
-    # on the strength of it: the respin fix is to drive LED-A from +5V, where
-    # 1.9 V of headroom lets a resistor actually set the current (~32 ohm at
-    # 60 mA), or to use a constant-current driver.
-    #
-    # Full analysis and what is blocking the value: RESPIN section of
-    # docs/known-issues.md.
+    # LCD_BL (LED-A): R25-HIGH-1, FIXED IN THE DESIGN 2026-07-31 — fed from
+    # +5V through R27 (20R 1206) on the dedicated LED_BLA net. The hard
+    # +3V3 tie (every board fabricated through v4.3.1) left 8 parallel
+    # white LEDs at Vf 2.9-3.3 V across a measured 3.327 V rail: 0.227 V
+    # of headroom, no defined operating point, and a -2 mV/°C tempco
+    # pushing current UP as the panel warms. From +5V the 1.8 V of
+    # headroom makes the resistor dominant: (5.0 - 3.2 V) / 20R ≈ 90 mA,
+    # the family class rating (6 white LEDs, 90 mA, Vf 3.2 V ± 0.3 —
+    # DISPLAY-FAMILY_E35RG73248LW6M250-R outline note 7). The exact panel
+    # still owes one bench measurement; record in docs/known-issues.md
+    # RESPIN section.
     #
     # DFM v3 FIX (2026-04-10): previously used separate LCD_RD/LCD_BL nets for
-    # the segment and via. Since both pins are hard-tied to +3V3 (no ESP32 GPIO
-    # connection), creating a LCD_RD/LCD_BL via didn't actually connect to +3V3
-    # (the +3V3 zone fill only connects to +3V3 nets) — leaving 2 dangling vias.
-    # Fix: route directly on +3V3 net. The J4 pad gets +3V3 via the datasheet_specs
-    # mapping (J4.8 and J4.29 updated to +3V3).
+    # the segment and via. Since both pins were hard-tied to +3V3 (no ESP32
+    # GPIO connection), creating a LCD_RD/LCD_BL via didn't actually connect
+    # to +3V3 (the +3V3 zone fill only connects to +3V3 nets) — leaving 2
+    # dangling vias. LCD_RD still routes directly on the +3V3 net; the
+    # backlight now has a real net (LED_BLA) with real copper to R27.
     #
     # Route LEFT from FPC pads to vias that connect to In2.Cu +3V3 zone.
     # VIA_X_PWR (133.6) conflicts with LCD_WR/GND approach traces.
@@ -597,11 +585,78 @@ def _display_traces():
                           "B.Cu", W_FPC_PWR, n_3v3))
 
     if pos_bl:
+        # R25-HIGH-1 FIX (2026-07-31): LED-A is no longer hard-tied to
+        # +3V3. It is now fed from +5V through R27 (20R 1206) so the
+        # backlight current is actually defined: (5.0 - 3.2 V) / 20R
+        # ≈ 90 mA for the family class rating (6 white LEDs, Vf 3.2 V —
+        # DISPLAY-FAMILY_E35RG73248LW6M250-R outline note 7).
+        #
+        # Topology — R27 sits inside the +5V island footprint (x<=123,
+        # y=35..62), south of the LCD bus ladder (1.1 mm-pitch B.Cu
+        # columns at x=114.1..124.0, each ending in a via at
+        # y=26.05..38.115 — no 1206 fits between them, and the FPC slot
+        # cutout at x=125.5..128.5 / y=23.5..47.5 places and routes
+        # nothing). The LED_BLA run passes UNDER the ladder's via row,
+        # up the corridor between the net14 column (x=124.0) and the
+        # slot's west edge, and OVER the slot's north edge at y=22.3:
+        #   LED_BLA: R27 pad 1 (121.7, 44.0) B.Cu north to y=41.3, east
+        #     to x=124.75, north past the slot's top edge to a via at
+        #     (124.75, 22.3), F.Cu east to x=132.5 (the B.Cu route is
+        #     blocked by the net31 vertical at x=130.42, y>=20.65), F.Cu
+        #     south to the legacy via position (132.5, 29.25) — between
+        #     LCD_D7 (131.80) and the J4 GND stubs (133.58) — B.Cu to
+        #     J4 pad 8.
+        #   +5V: R27 pad 2 (121.7, 47.0) drops straight south into the
+        #     In2 +5V island tap via at (121.7, 48.5) — 1.3 mm inside
+        #     the island's east boundary at x=123 (R22-CRIT-1: never
+        #     EXTEND that island, it swallows +3V3 vias).
+        #
+        # Clearances:
+        #   B.Cu y=41.3 x=121.7..124.75: ladder vias net16 (122.9,
+        #     36.845) and net14 (124.0, 38.115) are 3.2+ mm north;
+        #     ladder columns end at those vias, none reach y=41.3
+        #   B.Cu x=124.75 y=41.3->22.3: net14 column x=124.0
+        #     dx=0.75-0.125-0.10=0.525; net14 via dx=0.375; slot west
+        #     edge dx=0.60
+        #   via (124.75, 22.3): net14 column dx=0.40; slot top edge 0.95
+        #   F.Cu y=22.3 x=124.75..132.5: slot top edge 1.05; LCD F.Cu
+        #     verticals start x=135.2; net12/13 F.Cu horizontals
+        #     y=20.5/21.5 end x=111.9/113.0
+        #   F.Cu x=132.5 y=22.3->29.25: +3V3 via (133.6, 26.4) dx=1.1;
+        #     GND via (133.6, 25.5) dx=1.1
+        #   via (121.7, 48.5): C18 pads (116.0, 49.0) 5.7 mm; GND via
+        #     (122.4, 51.8) 3.4 mm
         px, py = pos_bl[0], pos_bl[1]
+        n_bla = NET_ID["LED_BLA"]
+        n_5v = NET_ID["+5V"]
         via_x = 132.5  # between LCD_D7 (131.80) and J4 GND stubs (133.58)
-        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_3v3))
-        parts.append(_via_net(via_x, py, n_3v3,
+        r27_p1 = _pad("R27", "1")   # (121.7, 44.0) after rot 90 + mirror
+        r27_p2 = _pad("R27", "2")   # (121.7, 47.0)
+        # J4.8 -> LED_BLA via (legacy geometry, new net)
+        parts.append(_seg(px, py, via_x, py, "B.Cu", W_FPC_PWR, n_bla))
+        parts.append(_via_net(via_x, py, n_bla,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
+        if r27_p1 and r27_p2:
+            corridor_x = 124.75   # between net14 column and slot west edge
+            # R27 pad 1 -> under the ladder via row -> up the corridor ->
+            # over the slot -> down to the J4-side via
+            parts.append(_seg(r27_p1[0], r27_p1[1], r27_p1[0], 41.3,
+                              "B.Cu", W_PWR_LOW, n_bla))
+            parts.append(_seg(r27_p1[0], 41.3, corridor_x, 41.3,
+                              "B.Cu", W_PWR_LOW, n_bla))
+            parts.append(_seg(corridor_x, 41.3, corridor_x, 22.3,
+                              "B.Cu", W_PWR_LOW, n_bla))
+            parts.append(_via_net(corridor_x, 22.3, n_bla,
+                                  size=VIA_MIN, drill=VIA_MIN_DRILL))
+            parts.append(_seg(corridor_x, 22.3, via_x, 22.3,
+                              "F.Cu", W_PWR_LOW, n_bla))
+            parts.append(_seg(via_x, 22.3, via_x, py,
+                              "F.Cu", W_PWR_LOW, n_bla))
+            # R27 pad 2 -> +5V island tap via
+            parts.append(_seg(r27_p2[0], r27_p2[1], r27_p2[0], 48.5,
+                              "B.Cu", W_PWR_LOW, n_5v))
+            parts.append(_via_net(r27_p2[0], 48.5, n_5v,
+                                  size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── +3V3 pins at BOTTOM (6, 7): now y=42.25-42.75, BELOW approach zone ──
     # Pin 6 at y=42.75, pin 7 at y=42.25. Both below LCD_CS at y=41.25.

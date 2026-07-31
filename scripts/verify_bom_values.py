@@ -191,6 +191,9 @@ KNOWN_MAPPINGS = {
     "fpc-16p-0.5mm": "fpc40-pin0.5mmbottomcontact",  # schematic says 16P but BOM correctly 40-pin
     "red": "redled",
     "green": "greenled",
+    # F1: schematic draws the PTC with an R symbol valued by its hold
+    # current; the BOM names the part class (C960026).
+    "2a": "ptcresettablefuse2a",
     "lipo3.7v5000mah": None,  # battery, not on BOM
     "28mm8ohm": None,  # speaker, not on BOM
     "psp_joystick": None,  # joystick, not on BOM

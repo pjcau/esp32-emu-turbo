@@ -1392,9 +1392,17 @@ def _reset_boot_traces():
             # Vertical: rst_p1 → (rst_p1.x, en_y)
             parts.append(_seg(rst_p1[0], rst_p1[1], rst_p1[0], en_y,
                               "B.Cu", W_SIG, n_en))
-            # Horizontal: (98, en_y) → (en_x, en_y) = U1 pin 3
-            parts.append(_seg(rst_p1[0], en_y, en_x, en_y,
-                              "B.Cu", W_SIG, n_en))
+            # Horizontal: (98, en_y) → (en_x, en_y) = U1 pin 3, split at
+            # the C31 (96.2) and R3 (94.0) tap points so each stub from
+            # the EN RC network (passives.py) lands on a segment ENDPOINT —
+            # the JLCDFM dead-end check does not credit mid-segment
+            # T-junctions.
+            from ._shared import C31_POS, R3_POS
+            taps = sorted({C31_POS[0], R3_POS[0]}, reverse=True)
+            xs = [rst_p1[0]] + taps + [en_x]
+            for x_a, x_b in zip(xs, xs[1:]):
+                parts.append(_seg(x_a, en_y, x_b, en_y,
+                                  "B.Cu", W_SIG, n_en))
 
     # ── SW14 (Boot/Download mode) ──
     # Pads after B.Cu mirroring: p1=(108,63.65) p2=(102,63.65) p3=(108,67.35) p4=(102,67.35)

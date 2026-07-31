@@ -9,7 +9,7 @@
 #pragma once
 
 /* Fingerprint of the .kicad_pcb this was derived from. */
-#define VB_PCB_HASH "sha256:7594f0f5b3dc80c8f517c3635d36f404b18af05dc83fd59ed13a17548ff86c2f"
+#define VB_PCB_HASH "sha256:6586c203004b89a411518b327b14df1a2c84c2c6651aaacea6af0543f8055c2b"
 
 /* Rails — rails.py: +3V3 = V_REF*(1+R25/R26) from the real divider;
  * spread is V_REF's own tolerance (SY8089 AN p.4). +5V is the
@@ -56,7 +56,7 @@ static const unsigned char VB_LCD_BUS_MAP[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
  * GPIO0 rides BTN_SELECT: held at reset -> Joint Download Boot. */
 #define VB_BOOT_MODE_DEFAULT "SPI Boot"
 #define VB_VDD_SPI_MV 3300
-#define VB_EN_FLOATING 1 /* R25-CRIT-1: no RC on EN, as-built */
+#define VB_EN_FLOATING 0 /* R25-CRIT-1: derived from the EN net; 0 since the R3/C31 RC landed (2026-07-31) */
 
 /* Thermal — thermal.py: Tj = amb + P*thetaJA, conduction only for
  * U3 (LOWER BOUND). Load currents are engineering estimates. */

@@ -204,21 +204,37 @@ class PowerSupplySheet(SchematicSheet):
         key_y = ipy + 5.08
         gnd_ip_y = ipy + 10.16
 
-        # ---- VBUS -> VIN wiring ----
+        # ---- VBUS_IN -> F1 (PTC) -> VBUS -> VIN wiring ----
+        # R3-HIGH-4 FIX (2026-07-31): F1 (PTC resettable fuse, 2A hold /
+        # 4A trip, BSMD1812-200-30V) sits in series between the USB-C
+        # VBUS lands and everything downstream. The connector side is
+        # net VBUS_IN; U4.5 (TVS clamp reference), C17 and U2 VIN stay
+        # on VBUS. Drawn with the "R" symbol (no fuse symbol in
+        # lib_symbols) at angle=90: pin 1 lands LEFT (VBUS_IN, matching
+        # PCB pad 1 west toward J1) and pin 2 RIGHT (VBUS).
         # CIN (C17, 10uF) teed off the VIN line
         cin_x, cin_y = 118, 90
-        # VBUS horizontal to CIN junction
-        self.wire(vbus_x, vbus_y, cin_x, vbus_y)
-        # ON the wire, not 2 mm above it. At vbus_y - 2 this label named
-        # nothing, so the whole USB input rail stayed unnamed and KiCad
-        # dropped it from the exported netlist: VBUS came out with a single
-        # node (U4.5, which has its own global label) while C17.1, U2.1,
-        # J1.2 and J1.11 vanished from the cross-check entirely.
+        f1x = 72
+        self.wire(vbus_x, vbus_y, f1x - 3.81, vbus_y)
+        # ON the wire, not 2 mm above it. At vbus_y - 2 a label names
+        # nothing, so the rail would stay unnamed and KiCad would drop it
+        # from the exported netlist (the original VBUS label had exactly
+        # that bug).
+        self.glabel("VBUS_IN", vbus_x + 4, vbus_y, 0)
+        self.sym("R", "F1", "2A", f1x, vbus_y, ["1", "2"], angle=90)
+        self.text("PTC 2A hold / 4A trip", f1x - 16, vbus_y - 7, 1.5)
+        self.wire(f1x + 3.81, vbus_y, cin_x, vbus_y)
+        # PWR_FLAG: VBUS used to be driven by J1's power-out VBUS pin;
+        # with F1 in series that pin now drives VBUS_IN, and nothing of
+        # power-out type sits on VBUS itself (F1 is drawn with passive
+        # "R" pins) — same situation as +3V3 behind L2. Without this,
+        # ERC reports power_pin_not_driven on U2 VIN.
+        self.flag(90, vbus_y)
         # Global, not local: the net already has a VBUS global label at
         # U4, and mixing label types on one net is the ERC
         # same_local_global_label warning — the merge works but only by
         # KiCad's same-text courtesy.
-        self.glabel("VBUS", vbus_x + 5, vbus_y, 0)
+        self.glabel("VBUS", f1x + 8, vbus_y, 0)
         # CIN junction down to cap
         self.wire(cin_x, vbus_y, cin_x, cin_y - 3.81)
         self.sym("C", "C17", "10uF", cin_x, cin_y, ["1", "2"])

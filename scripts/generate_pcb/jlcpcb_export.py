@@ -471,12 +471,33 @@ def _build_placements():
               R23_POS[0], R23_POS[1], 90, "bottom"))
 
     # ESP32 decoupling (y=42, below ESP32 body edge at 40.25)
-    # R3 REMOVED: unrouted 10k, no electrical function
     p.append(("C3", "100nF", "C_0805", 69.5, 42, 0, "bottom"))  # DFM: synced with board.py
     p.append(("C4", "100nF", "C_0805", 92, 42, 0, "bottom"))  # DFM: synced with board.py
     from scripts.generate_pcb.routing import C26_POS
     p.append(("C26", "100nF", "C_0805",
               C26_POS[0], C26_POS[1], 90, "bottom"))  # ESP32 VDD bypass
+
+    # EN RC delay network (R25-CRIT-1 respin fix): 10k pull-up + 100nF
+    # reset cap on the EN trace east of U1 pin 3 (module datasheet p.28
+    # figure 7). Positions from routing to stay board.py-synced.
+    from scripts.generate_pcb.routing import R3_POS, C31_POS
+    p.append(("R3", "10k", "R_0805",
+              R3_POS[0], R3_POS[1], 90, "bottom"))   # EN pull-up to +3V3
+    p.append(("C31", "100nF", "C_0805",
+              C31_POS[0], C31_POS[1], 90, "bottom"))  # EN reset cap to GND
+
+    # Backlight series resistor (R25-HIGH-1 respin fix): LED-A now fed
+    # from +5V through 20R so the backlight current is defined (~90 mA
+    # for the 6-LED family class).
+    from scripts.generate_pcb.routing import R27_POS
+    p.append(("R27", "20", "R_1206",
+              R27_POS[0], R27_POS[1], 90, "bottom"))
+
+    # VBUS PTC fuse (R3-HIGH-4 fix): in series between J1 and IP5306 VIN
+    # (hold 2A / trip 4A — the IP5306 charges at ~2A from a 5V source).
+    from scripts.generate_pcb.routing import F1_POS
+    p.append(("F1", "2A", "F_1812",
+              F1_POS[0], F1_POS[1], 180, "bottom"))
 
     # LED current-limiting resistors (B.Cu, above LEDs on F.Cu)
     # Must match board.py: R17 at (25, 65), R18 at (32, 65)

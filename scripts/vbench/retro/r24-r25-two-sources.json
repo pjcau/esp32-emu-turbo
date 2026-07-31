@@ -35,14 +35,14 @@
         "two-source-drift"
       ],
       "mutation": {
-        "kind": "detach_pin",
+        "kind": "move_pin",
         "ref": "SW15",
         "pin": "1",
-        "side": "schematic"
+        "to_net": "GND"
       },
-      "must_report": "RESET and BOOT are absent from the schematic netlist, so the cross-check has nothing to compare the board's reset and boot buttons against",
+      "must_report": "SW15.1 carries EN in the schematic but GND on the board, so the reset button's two sources disagree and the cross-check names SW15",
       "expect": "caught",
-      "note": "The board was always correct here; the wires were drawn 5.08 mm from the pins they appeared to touch. A rendered sheet that looks right to a human reader is the hazard."
+      "note": "The board was always correct here; the wires were drawn 5.08 mm from the pins they appeared to touch. A rendered sheet that looks right to a human reader is the hazard. Mutation changed 2026-07-31: the original schematic-side detach became invisible once the EN RC fix landed -- EN keeps a defined level through R3/C31 with the pin gone, and a detached-but-declared pad is exempt from D3 by design (netlist.py's declared-pad rule), so the bench structurally cannot see the hole variant any more; verify_schematic_pin_connectivity owns that surface in the repo gates. The drift variant tested here exercises the same reset-button protection."
     },
     {
       "id": "R25-CRIT-1",
@@ -56,12 +56,13 @@
         "power-on-reset"
       ],
       "mutation": {
-        "kind": "none"
+        "kind": "detach_pin",
+        "ref": "R3",
+        "pin": "1"
       },
-      "present_now": true,
-      "must_report": "the EN net has exactly two pins (U1.3 and SW15.1), no resistor to +3V3 and no capacitor to GND, so EN has no defined level at power-on and no reset delay -- against U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf page 28, which requires an RC of R = 10k and C = 1uF at EN",
+      "must_report": "with R3's +3V3 leg gone EN loses its only DC path and the bench must name R3 -- the exact defect every board through v4.3.1 shipped with",
       "expect": "caught",
-      "note": "The single most instructive entry in the corpus. The removal of R3 was justified by a comment claiming the module integrates the pull-up; the datasheet says the opposite in its own words. The claim was then repeated in three more files. See docs/virtual-bench-plan.md phase -1(a) and (d)."
+      "note": "The single most instructive entry in the corpus. The removal of R3 was justified by a comment claiming the module integrates the pull-up; the datasheet says the opposite in its own words. The claim was then repeated in three more files. See docs/virtual-bench-plan.md phase -1(a) and (d). FIXED IN THE DESIGN 2026-07-31: R3 (10k) + C31 (100nF) now sit on EN (mcu.py, routing R3_POS/C31_POS) and EN solves to ~3.33 V -- so the entry flipped from live board fact to reinjection: detaching R3 must bring the defect back and be caught."
     },
     {
       "id": "R25-HIGH-1",
@@ -75,10 +76,11 @@
         "unbounded-current"
       ],
       "mutation": {
-        "kind": "none"
+        "kind": "detach_pin",
+        "ref": "R27",
+        "pin": "2"
       },
-      "present_now": true,
-      "must_report": "J4 pad 8 (panel pin 33, LED-A) sits directly on +3V3 with the cathodes on GND and no series element, so the backlight current is set by the difference between the rail and the LED string's Vf spread divided by its dynamic resistance -- unbounded by design",
+      "must_report": "with R27's +5V leg gone the backlight loses its current-limiting element and the bench must name R27 -- the unbounded-current defect this entry recorded",
       "expect": "caught",
       "note": "Corrected 2026-07-26: this note used to say the panel had no datasheet in this repo and that its backlight requirement 'lives only in a Markdown table'. Two pages of the panel datasheet are checked in as images at website/static/img/ili9488-*.png and have been referenced from components.md all along. What is true is narrower: there is no PDF in hardware/datasheets/, which is the only place models/_schema.py will accept a citation from \u2014 so a panel Model still cannot validate, and the fix is to put those pages there. R28-HIGH-1 is what reading them produced."
     },

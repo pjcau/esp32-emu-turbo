@@ -468,7 +468,9 @@ DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)]
 # Power passives (synced with board.py placements)
 R1_POS = (74.0, 67.0)    # USB CC1 pull-down (ux-6, uy-5)
 R2_POS = (78.0, 67.0)    # USB CC2 pull-down (moved near R1, B.Cu-only route)
-R3_POS = (65.0, 42.0)    # ESP32 decoupling
+# (R3 was "ESP32 decoupling" at (65, 42) in an earlier layout; the ref
+# now belongs to the EN RC pull-up — see the authoritative R3_POS below.
+# The old module-level duplicate was shadowed and only misleading.)
 R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
@@ -503,6 +505,40 @@ C3_POS = (69.55, 42.0)   # ESP32 decoupling 1 — 0.05mm right of 69.5 (C3[2] ga
 C4_POS = (92.0, 42.0)    # ESP32 decoupling 2 — DFM: moved from 85 (pad1@85.95 hit U1[16]@85.715 at y=40)
 C26_POS = (91.5, 21.0)   # ESP32 VDD bypass — within 3.6mm of U1 pin 2 (+3V3 at 88.75,23.51)
 C28_POS = (86.0, 26.0)   # ESP32 +3V3 bulk cap (10uF) — 3.7mm from U1 pin 2, clear of F.Cu LCD traces
+# EN RC delay network (R25-CRIT-1 respin fix, module datasheet p.28 fig.7:
+# an RC delay circuit MUST be added at EN — R=10k to +3V3, C to GND).
+# Placed on the EN trace (y=24.78) 5-7mm east of U1 pin 3 (88.75, 24.78),
+# in the empty B.Cu pocket between C26 (x=91.5) and the EN corner (x=98).
+# rot=90 puts pad 1 north (via to the In-plane at y=19.6, clear of the
+# F.Cu LCD traces at y=20.5/21.5 by 0.5mm) and pad 2 south (stub onto EN).
+R3_POS = (94.0, 22.3)    # 10k pull-up: pad1 -> +3V3 via, pad2 -> EN
+C31_POS = (96.2, 22.3)   # 100nF reset cap: pad1 -> GND via, pad2 -> EN
+# Backlight series resistor (R25-HIGH-1 respin fix): 20R 1206, rot=90 on
+# B.Cu inside the +5V island footprint (x<=123, y=35..62), south of the
+# LCD bus ladder via row. Three earlier placements failed in the
+# collision grid and are recorded so nobody retries them: x=127.0 sat in
+# the middle of the FPC slot cutout (x=125.5..128.5, y=23.5..47.5 —
+# nothing places or routes through it); x=121.5 sat 0.05 mm off the
+# net17 ladder column; x=124.2 sat 0.05 mm off the net14 column — the
+# LCD B.Cu bus ladder runs 1.1 mm-pitch columns at x=114.1..124.0, so no
+# 1206 fits anywhere in x 114..125.5. Pad 1 (north, y=44.0) carries
+# LED_BLA under the ladder's via row (y=41.3), up the corridor between
+# the net14 column (x=124.0) and the slot's west edge (x=124.75), and
+# over the slot's north edge at y=22.3 to J4 pad 8. Pad 2 (south,
+# y=47.0) drops straight into the island tap via at (121.7, 48.5).
+# 20R from the family class rating (6 LED / 90 mA, Vf 3.2V:
+# (5.0-3.2)/0.090 ≈ 20R, P=0.16W -> 1206). See routing/display.py.
+R27_POS = (121.7, 45.5)
+# VBUS PTC resettable fuse (R3-HIGH-4 fix): BHFUSE BSMD1812-200-30V
+# (hold 2 A / trip 4 A, 20 mΩ — sized for the IP5306's ~2 A charge
+# draw). In series between J1's VBUS pads and everything downstream:
+# the J1 side (pads 2/11, the reversibility loop, the B.Cu riser at
+# x=82.4) becomes net VBUS_IN; U2.1 / U4.5 / C17.1 stay VBUS. Placed
+# rot 0 in the pocket between the J3 mech tab (J3.4 top y=58.35, 0.35mm
+# pad-pad gap) and U4 (pads at x>=89.7, 0.75 mm gap); pad 1 west =
+# VBUS_IN from the riser, pad 2 east = VBUS via a new via at
+# (88.0, 59.3) onto the F.Cu leg that already feeds U4.5/U2.
+F1_POS = (85.8, 60.6)
 C17_POS = (110.0, 35.0)  # IP5306 cap
 C18_POS = (116.0, 49.0)  # IP5306 BAT decoupling — moved closer: 10.7mm from pin 6 (was 15.4mm)
 C19_POS = (110.0, 58.5)  # IP5306 VOUT bulk cap (lx, ly+6) — kept as bulk, C27 handles HF
@@ -709,6 +745,13 @@ def _init_pads():
         ("R21", "R_0805", *R21_POS, 0, "B"),
         # ESP32 VDD bypass (rotated 90° to separate +3V3/GND routing)
         ("C26", "C_0805", *C26_POS, 90, "B"),
+        # EN RC delay network (R25-CRIT-1 respin fix)
+        ("R3", "R_0805", *R3_POS, 90, "B"),
+        ("C31", "C_0805", *C31_POS, 90, "B"),
+        # Backlight series resistor (R25-HIGH-1 respin fix)
+        ("R27", "R_1206", *R27_POS, 90, "B"),
+        # VBUS PTC fuse (R3-HIGH-4 fix)
+        ("F1", "F_1812", *F1_POS, 180, "B"),
         # USB ESD protection
         ("U4", "SOT-23-6", *U4_POS, 0, "B"),
         ("R22", "R_0402", *R22_POS, 90, "B"),
@@ -720,8 +763,9 @@ def _init_pads():
     # Button debounce caps (y=50, x=43..103, 5mm spacing)
     for i, ref in enumerate(DEBOUNCE_REFS):
         passive_placements.append((ref, "C_0805", 43 + i * 5, 50, 0, "B"))
-    # R3 REMOVED: unrouted 10k resistor with no electrical function.
-    # Its pad at x=65.95 overlapped BTN_DOWN approach column at x=65.55.
+    # R3 history: the original R3 was an UNROUTED 10k at x=65.95 (overlapping
+    # the BTN_DOWN approach column) and was removed. It is back as the EN
+    # pull-up at R3_POS, this time routed — see the R3_POS comment block.
     # C28: ESP32 +3V3 bulk cap (10uF, 2.8mm from U1 pin 2)
     passive_placements.append(("C28", "C_0805", *C28_POS, 90, "B"))
     for ref, fp, cx, cy, rot, lc in passive_placements:

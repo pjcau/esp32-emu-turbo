@@ -215,6 +215,19 @@ NET_LIST = [
     # on I2S_DOUT, which masked real faults. Carries: C22.2, U5.7 (INL),
     # U5.10 (INR) and the R20/R21 VREF bias taps.
     (61, "PAM_IN_AC"),
+    # Backlight anode node: J4 pad 8 (panel pin 33, LED-A) after the R27
+    # series resistor from +5V. R25-HIGH-1 fix — the anode used to be
+    # hard-tied to +3V3 with no current-limiting element at all; from +5V
+    # the 1.8 V of headroom lets a 20 Ω resistor actually set the current
+    # (~90 mA for the 6-LED family class, datasheet
+    # DISPLAY-FAMILY_E35RG73248LW6M250-R outline note 7).
+    (62, "LED_BLA"),
+    # USB-C connector side of the F1 VBUS PTC fuse (R3-HIGH-4 fix): J1's
+    # VBUS pads and their reversibility loop live on VBUS_IN; everything
+    # downstream of F1 (U2.1, U4.5, C17.1) stays VBUS. A series element
+    # is two nets, not one "logically fragmented" net — same rule as
+    # PAM_IN_AC above.
+    (63, "VBUS_IN"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

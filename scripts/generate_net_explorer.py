@@ -72,11 +72,11 @@ SECTIONS = [
 # the CC pulldowns advertise charge current, they never carry data.
 SECTION_LAW = [
     ("controls", r"^BTN_|^MENU_K$"),
-    ("display",  r"^LCD_"),
+    ("display",  r"^LCD_|^LED_BLA$"),  # LED_BLA: backlight anode after R27
     ("storage",  r"^SD_"),
     ("audio",    r"^I2S_|^PAM_|^SPK"),
     ("usb",      r"^USB_D"),
-    ("power",    r"^USB_CC|^VBUS$|^BAT|^LX$|^IP5306_|^RPP_|^LED\d+_RA$|^BUCK_"),
+    ("power",    r"^USB_CC|^VBUS(_IN)?$|^BAT|^LX$|^IP5306_|^RPP_|^LED\d+_RA$|^BUCK_"),
     ("mcu",      r"^EN$"),
 ]
 

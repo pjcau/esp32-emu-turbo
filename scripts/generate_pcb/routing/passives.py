@@ -215,6 +215,35 @@ def _passive_traces():
         parts.append(_via_net(c26_p2[0], c26_p2[1] + 1.5, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
+    # EN RC delay network (R25-CRIT-1 respin fix): R3 10k pull-up + C31 100nF.
+    # Both rot=90 on B.Cu at y=22.3, pads at y=21.35 (north, "1") and
+    # y=23.25 (south, "2"). South pads drop a stub onto the EN trace that
+    # runs U1.3 (88.75, 24.78) -> (98.0, 24.78); north pads via to the
+    # internal planes at y=19.6 — 0.5mm edge gap to the F.Cu LCD traces at
+    # y=20.5 (via r=0.3 + trace half-width 0.1: 0.9 - 0.4 = 0.5mm).
+    # verify_strapping_pins reads these nets off the copper: R3 must bridge
+    # EN<->+3V3 and C31 must bridge EN<->GND for the RC arm to pass.
+    r3_p1 = _pad("R3", "1")
+    r3_p2 = _pad("R3", "2")
+    if r3_p1:
+        parts.append(_seg(r3_p1[0], r3_p1[1], r3_p1[0], 19.6,
+                          "B.Cu", W_PWR_LOW, n_3v3))
+        parts.append(_via_net(r3_p1[0], 19.6, n_3v3,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    if r3_p2:
+        parts.append(_seg(r3_p2[0], r3_p2[1], r3_p2[0], 24.78,
+                          "B.Cu", 0.25, NET_ID["EN"]))
+    c31_p1 = _pad("C31", "1")
+    c31_p2 = _pad("C31", "2")
+    if c31_p1:
+        parts.append(_seg(c31_p1[0], c31_p1[1], c31_p1[0], 19.6,
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(c31_p1[0], 19.6, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    if c31_p2:
+        parts.append(_seg(c31_p2[0], c31_p2[1], c31_p2[0], 24.78,
+                          "B.Cu", 0.25, NET_ID["EN"]))
+
     # C28 ESP32 +3V3 bulk cap (10uF, rotated 90°): pad "1" -> +3V3, pad "2" -> GND.
     # At (86,24), 2.8mm from U1 pin 2. Improves PSRAM burst transient response.
     c28_p1 = _pad("C28", "1")

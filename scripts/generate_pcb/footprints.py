@@ -777,6 +777,19 @@ def passive_1206(layer="B"):
     ]
 
 
+# ── 1812 resettable fuse (BHFUSE BSMD1812-200-30V, C960026) ─────
+# Body 4.73 x 3.41 mm (datasheet). Land: 1.9 x 3.8 mm pads on 4.4 mm
+# centres — generic 1812 chip land (IPC nominal), sized so the pad
+# extends ~0.75 mm past each body end for the fuse's wraparound
+# terminations.
+def fuse_1812(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    return [
+        _pad("1", "smd", "rect", -2.2, 0, 1.9, 3.8, layers),
+        _pad("2", "smd", "rect", 2.2, 0, 1.9, 3.8, layers),
+    ]
+
+
 # ── MSK12C02 slide switch (LCSC C431540) ────────────────────────
 # Ref: JLCPCB/EasyEDA package SW-TH_MSK12C02
 # 3 signal SMD pads + 4 shell/mounting SMD pads + 2 NPTH holes
@@ -881,6 +894,8 @@ FOOTPRINTS = {
     "C_0805": (passive_0805, "B"),
     "LED_0805": (passive_0805, "F"),
     "C_1206": (passive_1206, "B"),
+    "R_1206": (passive_1206, "B"),
+    "F_1812": (fuse_1812, "B"),
     "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
     "Speaker-22mm": (speaker_22mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),

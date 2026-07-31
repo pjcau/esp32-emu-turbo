@@ -15,8 +15,8 @@
     {"name": "VDD_SPI selects 3.3 V for the N16R8's PSRAM",
      "quantity": "boot.vdd_spi", "op": "==", "value": 3.3,
      "because": "table 7, page 15 — GPIO45 low selects 3.3 V; a pull-up there would select 1.8 V"},
-    {"name": "EN has no defined level at reset",
-     "quantity": "net.EN", "op": "is_floating", "value": true,
-     "because": "R25-CRIT-1, an as-built limitation: the datasheet requires an RC at EN and the board has neither part. Asserted so the day it is fixed, this scenario notices."}
+    {"name": "EN holds a defined level at reset (RC fitted)",
+     "quantity": "net.EN", "op": "is_floating", "value": false,
+     "because": "R25-CRIT-1 FIXED 2026-07-31: R3 (10k to +3V3) and C31 (100nF to GND) now sit on EN per the module datasheet p.28 fig.7. This assertion flipped the day the fix landed, exactly as its old text promised it would."}
   ]
 }

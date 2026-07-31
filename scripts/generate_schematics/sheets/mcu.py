@@ -52,13 +52,9 @@ class MCUSheet(SchematicSheet):
         self.wire(px_l, pwr2_y, px_l - 15, pwr2_y)
         self.wire(px_l - 15, pwr2_y, px_l - 15, pwr_y)
 
-        # --- EN: bare on v1, no RC. See docs/known-issues.md, V2 section ---
-        # This block used to claim the WROOM-1 "integrates a 10k EN pull-up
-        # on-module (per Espressif reference design), so an external
-        # pull-up is redundant". That is false, and it is the reason R3 was
-        # dropped and C3 re-used elsewhere. The module datasheet says the
-        # opposite, in its own words, on page 28 under the peripheral
-        # reference schematic:
+        # --- EN: RC delay network (R3 10k + C31 100nF) ---
+        # The module datasheet, page 28 under the peripheral reference
+        # schematic:
         #
         #   "To ensure the ESP32-S3 chip's supply is correct at power-up,
         #    an RC delay circuit MUST be added at the EN pin. R = 10 kOhm
@@ -69,25 +65,20 @@ class MCUSheet(SchematicSheet):
         # and its figure 7 draws exactly that: R7 from VDD33 to EN, C8
         # 0.1 uF from EN to GND, SW1 across the cap.
         #
-        # On the v1 board EN has NEITHER. R3 is DNP and C3 is wired as a
-        # second decoupling cap (see below), so EN reaches only U1.3 and
-        # SW15 pad 1. hardware-audit-bugs.md asserts "EN RC delay
-        # (R3+C3) intact" in two places; nobody had compared that sentence
-        # to the copper.
-        #
-        # v1 is not being re-fabricated, so this is recorded as an
-        # as-built limitation rather than patched into a board that is
-        # already assembled — dragging a cap 28 mm across the layout to
-        # reach EN would trade a missing RC for a long high-impedance
-        # antenna on the reset line, which is worse. v2 must place the RC
-        # adjacent to the module's EN pin.
+        # History (R25-CRIT-1): every board fabricated through v4.3.1 has
+        # NEITHER — a justification comment here claimed the WROOM-1
+        # integrates its own pull-up, which is false, and that comment is
+        # why R3 was dropped. Fixed in the design 2026-07-31: R3 (10k,
+        # EN -> +3V3) and C31 (100nF, EN -> GND) sit on the EN trace right
+        # of U1 pin 3 (routing._shared R3_POS/C31_POS). verify_strapping_pins
+        # reads both off the copper; docs/known-issues.md keeps the as-built
+        # record for the fabricated boards.
         en_y = MCU_Y - 33.02  # EN pin level
         r_en_x = px_l - 25
-        r_en_y = MCU_Y - 45  # (legacy position kept for layout spacing)
-        # No +3V3 tie: a hard wire from EN to the rail made EN and +3V3 the
-        # same schematic net, so SW15 — which bridges EN to GND — was
-        # drawn shorting 3V3 straight to ground on every press. The PCB
-        # always had EN as its own copper; only the drawing was wrong.
+        # No +3V3 tie ON THE EN WIRE itself: a hard wire from EN to the
+        # rail made EN and +3V3 the same schematic net, so SW15 — which
+        # bridges EN to GND — was drawn shorting 3V3 straight to ground on
+        # every press. The pull-up to +3V3 goes through R3 only.
         # c_en_x stays the anchor the reset/boot columns are placed from.
         c_en_x = px_l - 35
         c_en_y = en_y + 10
@@ -96,13 +87,33 @@ class MCUSheet(SchematicSheet):
         # match the PCB net name — a local label would export as
         # "/MCU/EN" and re-fail the same gate for a different reason.
         self.glabel("EN", r_en_x, en_y, 180)
-        # Kept short and lifted clear of the decoupling row below: the
-        # full reasoning lives in the comment above and in
-        # docs/known-issues.md, not on the plot.
-        self.text("EN bare on v1 — R3 DNP, no RC",
-                  r_en_x - 22, r_en_y - 12, 1.5)
-        self.text("v2: 10k + 100nF at pin 3",
-                  r_en_x - 22, r_en_y - 8, 1.5)
+
+        # R3: 10k pull-up, +3V3 above -> EN line below (pin 1 = +3V3 top,
+        # pin 2 = EN bottom, matching PCB pad 1 -> +3V3 via / pad 2 -> EN).
+        r3_x = c_en_x + 0.24  # 150 — on the EN wire between SW15 and glabel
+        r3_y = en_y - 7.98    # 129
+        self.sym("R", "R3", "10k", r3_x, r3_y, ["1", "2"])
+        self.v33(r3_x, r3_y - 7)
+        self.wire(r3_x, r3_y - 7, r3_x, r3_y - 3.81)
+        self.wire(r3_x, r3_y + 3.81, r3_x, en_y)
+        self.junction(r3_x, en_y)
+        # Short caption only — the datasheet citation (module datasheet
+        # p.28 fig.7) lives in the block comment above. The long text
+        # overlapped C31's value at (r3_x+3, r3_y) and C4's body /
+        # "Decoupling" caption one row higher: this corner of the sheet
+        # has no 19 mm of free space in any direction.
+        self.text("EN RC", r3_x - 14, r3_y - 5, 1.5)
+
+        # C31: 100nF reset cap, EN line above -> GND below. angle=180 puts
+        # pin 2 on top (EN) and pin 1 on the bottom (GND), matching the PCB
+        # pad map (pad 1 -> GND via, pad 2 -> EN stub).
+        c31_x = c_en_x - 5.76  # 144
+        c31_y = en_y + 8.02    # 145
+        self.sym("C", "C31", "100nF", c31_x, c31_y, ["1", "2"], angle=180)
+        self.wire(c31_x, c31_y - 3.81, c31_x, en_y)
+        self.junction(c31_x, en_y)
+        self.gnd(c31_x, c31_y + 7)
+        self.wire(c31_x, c31_y + 3.81, c31_x, c31_y + 7)
 
         # --- RESET button (EN to GND, active-low) ---
         # Own column, LEFT of C3. Sharing C3's column is what broke this:

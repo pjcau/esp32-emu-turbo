@@ -404,8 +404,9 @@ UNESTABLISHED = {
                               "and inversion (20h/21h). The firmware never "
                               "issues them.",
     "cabc_backlight": "CABC and the 51h-55h brightness registers. This "
-                      "board's backlight is hardwired to +3V3 through a "
-                      "resistor with no controller involvement.",
+                      "board's backlight is hardwired always-on — +5V "
+                      "through R27 (20R, net LED_BLA) since the "
+                      "R25-HIGH-1 fix — with no controller involvement.",
     "frame_rate": "the frame rate control registers (B1h-B3h) and therefore "
                   "the panel's actual refresh rate. Frames-per-second "
                   "computed from bus traffic alone is a BUS bound, not a "

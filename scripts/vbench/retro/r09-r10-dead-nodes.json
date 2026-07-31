@@ -56,12 +56,13 @@
         "model-vs-bom"
       ],
       "mutation": {
-        "kind": "none"
+        "kind": "detach_pin",
+        "ref": "C31",
+        "pin": "1"
       },
-      "present_now": true,
-      "must_report": "the EN node has no resistor and no capacitor on it, so no RC time constant exists to compute; any boot-delay figure derived from R3 = 10k and C3 = 100nF describes a network the board does not have",
+      "must_report": "with C31's GND leg gone the EN RC network loses its capacitor, so any boot-delay figure computed from R3/C31 again describes a network the board does not have -- the bench must name C31",
       "expect": "caught",
-      "note": "FIXED in the gates on 2026-07-26, live as a board fact. simulate_circuit.py no longer computes a delay from R3/C3 — it reads the EN net from the copper, finds no R and no C, and passes only while docs/known-issues.md records the absence (same pattern as verify_strapping_pins). The board still lacks the RC, which is what this entry detects."
+      "note": "FIXED in the gates on 2026-07-26 (simulate_circuit.py reads the EN net from the copper instead of assuming parts) and FIXED IN THE DESIGN 2026-07-31: R3 + C31 now exist on EN. The entry flipped from live board fact to reinjection: detaching C31 recreates the parts-not-fitted condition this round recorded."
     },
     {
       "id": "R26-LOW-1",

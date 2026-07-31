@@ -76,7 +76,7 @@ KNOWN_CPL_CORRECTIONS = {"J1", "J3", "J4", "U1", "U2", "U3", "U5", "U6"}
 JLCPCB_FOOTPRINTS = {
     "Module_ESP32-S3-WROOM-1", "ESOP-8", "SOT-223", "SOP-16",
     "USB-C-SMD-16P", "TF-01A", "JST-PH-2P-SMD", "LED_0805",
-    "SMD-4x4x2mm", "R_0805", "R_0402", "C_0805", "C_1206",
+    "SMD-4x4x2mm", "R_0805", "R_0402", "R_1206", "C_0805", "C_1206",
     "SW-SMD-5.1x5.1", "FPC-40P-0.5mm", "SS-12D00G3",
     "SOT-23-6", "SOT-23",
     # U3 SY8089AAAC (C78988) and L2 SWPA4030S2R2MT (C36409): both land
@@ -84,6 +84,9 @@ JLCPCB_FOOTPRINTS = {
     # footprints fetched with easyeda2kicad, so they are by construction
     # JLCPCB-compatible (verify_easyeda_footprint reports delta_row = 0).
     "SOT-23-5", "IND-SMD-4.0x4.0",
+    # F1 VBUS PTC fuse (C960026): generic 1812 chip land (body 4.73x3.41
+    # per the BHFUSE datasheet), same naming convention as R_/C_ chips.
+    "F_1812",
 }
 
 PASS = 0

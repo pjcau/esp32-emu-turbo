@@ -402,6 +402,11 @@ UNPUBLISHED_PACKAGE_FAMILIES = {
                           # wire-wound power inductors.
     "Speaker-22mm",       # speaker pads
     "Fiducial",           # fiducial mark
+    "F_1812",             # 1812 PTC resettable fuse (F1) — JLCPCB's SMD
+                          # spacing matrix stops at the 1206 chip class;
+                          # no published cell for 1812 chips. Still held
+                          # to the strictest published figure of any
+                          # recognised neighbour and to non-overlap.
 }
 
 

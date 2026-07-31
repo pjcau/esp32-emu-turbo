@@ -509,9 +509,17 @@ def test_T6_power_chain(net_pads, ref_pads):
     """T6: Verify power delivery chain completeness."""
     print("\n── T6: Power chain verification ──")
 
-    # VBUS must reach: J1 (USB), U2 (IP5306 VIN)
+    # R3-HIGH-4 fix (2026-07-31): F1 (PTC fuse) sits in series between
+    # J1 and everything downstream. The connector's VBUS lands are on
+    # VBUS_IN; VBUS proper starts at F1 pad 2. The chain is therefore
+    # J1 -> VBUS_IN -> F1 -> VBUS -> U2, and BOTH hops must exist.
+    vbus_in_comps = set(r for r, _ in net_pads.get("VBUS_IN", []))
     vbus_comps = set(r for r, _ in net_pads.get("VBUS", []))
-    check("T6", "VBUS reaches USB connector (J1)", "J1" in vbus_comps,
+    check("T6", "VBUS_IN reaches USB connector (J1)", "J1" in vbus_in_comps,
+          f"VBUS_IN components: {sorted(vbus_in_comps)}")
+    check("T6", "VBUS_IN reaches the F1 PTC fuse", "F1" in vbus_in_comps,
+          f"VBUS_IN components: {sorted(vbus_in_comps)}")
+    check("T6", "VBUS starts at the F1 PTC fuse", "F1" in vbus_comps,
           f"VBUS components: {sorted(vbus_comps)}")
     check("T6", "VBUS reaches IP5306 (U2)", "U2" in vbus_comps,
           f"VBUS components: {sorted(vbus_comps)}")
