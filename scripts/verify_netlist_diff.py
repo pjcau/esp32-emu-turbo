@@ -297,8 +297,10 @@ T2_ALLOW = {
     "EN",           # ESP32 EN pin node (mcu.py skips EN when labelling)
     "IP5306_KEY",   # IP5306 KEY pin <-> R16 <-> SW13 node
     "LED1_RA", "LED2_RA",  # R17/LED1 and R18/LED2 junctions
-    "LX",           # IP5306 SW pin <-> L1 boost inductor node
-    "RPP_GATE",     # Q1 gate <-> R24 junction
+    # LX and RPP_GATE closed 2026-07-31: the schematic now labels both
+    # nodes (power_supply.py), which became possible once the uuid
+    # collision fix stopped dropping L1.2/U2.7/Q1.1/R24.1 from the
+    # exported netlist.
 }
 
 # T3: schematic components with no PCB footprint.

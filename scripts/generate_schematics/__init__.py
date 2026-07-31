@@ -23,8 +23,10 @@ def main(output_dir: str) -> list[str]:
         path = os.path.join(output_dir, filename)
 
         # Symbols must declare the root sheet UUID they live under, or KiCad
-        # drops them from the netlist as unannotated.
-        ctx = KiCadContext(sheet_path=sheet_uuid(i))
+        # drops them from the netlist as unannotated. namespace=i+1 keeps
+        # each sheet's uuids project-unique (the root keeps namespace 0);
+        # colliding uuids across files made ERC merge unrelated objects.
+        ctx = KiCadContext(sheet_path=sheet_uuid(i), namespace=i + 1)
         sheet = mod(ctx)
         content = sheet.render()
 

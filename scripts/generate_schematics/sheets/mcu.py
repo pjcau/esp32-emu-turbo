@@ -186,19 +186,23 @@ class MCUSheet(SchematicSheet):
         # missing RC network the EN block above documents — the schematic
         # was describing a circuit the copper does not have, and T4 caught
         # it as C3.1 sch='EN' pcb='+3V3'.
-        # Placed to the RIGHT of C26, continuing the row outward. The
-        # symmetric-looking spot at c_dec_x - 15 is already occupied: that
-        # is where C4's own "Decoupling" caption sits, so a symbol there
-        # lands underneath it.
-        # c_dec_x + 30, not c26_x + 15: this block runs BEFORE C26 is
-        # defined, so naming c26_x here would be a NameError.
-        c3_x = c_dec_x + 34
+        # Placed between C4 and the module's left edge so its tap lands ON
+        # the +3V3 wire (which spans px_l-20 .. px_l at pwr_y). The old
+        # spot at c_dec_x + 34 = 203.76 dropped its tap into the gap
+        # between that wire (ends at px_l = 184.76) and the LCD_CS stub
+        # (starts at px_r = 215.24): pin 1 floated in empty space, and one
+        # step further right would have shorted +3V3 into LCD_CS. First
+        # real finding of the ERC gate.
+        c3_x = c_dec_x + 7
         c3_y = c_dec_y
         self.sym("C", "C3", "100nF", c3_x, c3_y, ["1", "2"], angle=180)
         self.wire(c3_x, c3_y + 3.81, c3_x, pwr_y)
+        self.junction(c3_x, pwr_y)
         self.gnd(c3_x, c3_y - 10)
         self.wire(c3_x, c3_y - 3.81, c3_x, c3_y - 10)
-        self.text("Decoupling 2", c3_x + 4, c3_y, 1.5)
+        # Caption above the gnd row: at c3_x + 4 it collided with C26's
+        # "VDD bypass" caption and C26's body once C3 moved left.
+        self.text("Decoupling 2", c3_x - 3, c3_y - 15, 1.5)
 
         # --- C26: Additional VDD bypass (100nF, close to pin 2) ---
         c26_x = c_dec_x + 15

@@ -79,11 +79,23 @@ hardware/kicad/.pcb_cache.json
 # classified summary; `--run` regenerates. Grep for a specific violation.
 hardware/kicad/.erc-report.json
 
+# ~130k tokens across drc/erc JSON once KiBot's ERC phase started working
+# (2026-07-31). Canonical access: the summary scripts/external-dfm.sh
+# prints, or `python3 scripts/verify_erc.py` for the gated view; grep the
+# JSON for one violation id if needed.
+hardware/kicad/external-dfm-output/*.json
+hardware/kicad/external-dfm-output/kibot.log
+
 # ── Vendored emulator cores (third-party) ───────────────────────────
 # snes9x / smsplus / nofrendo sources, 25-36k tokens per file. Not ours:
 # upstream is the reference. Canonical access: grep for the symbol you
 # need; edits are rare and go through Bash heredoc/sed.
 software/components/
+
+# ESP-IDF managed dependencies (downloaded by idf component manager,
+# gitignored — the ESP-IDF equivalent of node_modules). Contains 170k-token
+# generated image .c files. Never edit: pin versions in idf_component.yml.
+software/managed_components/
 
 # ── Audit log ───────────────────────────────────────────────────────
 # ~47k tokens of append-only history. Canonical access: grep a finding id

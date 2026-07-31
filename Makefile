@@ -105,6 +105,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_dfm_v2 \
 	verify_drill_standards \
 	verify_easyeda_footprint \
+	verify_erc \
 	verify_esd_protection \
 	verify_gerber_etest \
 	verify_gerber_integrity \
@@ -331,6 +332,9 @@ verify-net-connectivity: ## Per-net copper connectivity — every net must be a 
 
 verify-power-nets: ## Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must each be ONE piece of copper (catches split-plane dead boards)
 	@$(T) verify-power-nets python3 scripts/verify_power_net_integrity.py
+
+verify-erc: ## KiCad ERC gate on the generated schematic (error severity, local kicad-cli)
+	@$(T) verify-erc python3 scripts/verify_erc.py
 
 test-power-nets: ## Regression tests for the power-net integrity detector
 	@$(T) test-power-nets python3 scripts/test_power_net_integrity.py

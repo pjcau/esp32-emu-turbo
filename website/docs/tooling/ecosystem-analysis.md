@@ -144,8 +144,10 @@ All three short-term items were integrated within hours of this analysis being p
 | **InteractiveHtmlBom refresh** | ✅ Regenerated | `ibom.html` regenerated with upstream v2.11.2 (May 2026 release). |
 | **`.claude-plugin/` packaging** (was long-term §4) | ✅ Shipped | `kicad-jlcpcb-skills` v1.0.0 (`.claude-plugin/plugin.json` + `marketplace.json`, commit `dd3d0d6`). |
 
-:::info Resolved — non-IPC references renamed (2026-07-31)
-KiBot (≥ 1.6.5, [upstream #604](https://github.com/INTI-CMNB/KiBot/issues/604) — wontfix) rejects any schematic reference that is not `PREFIX+NUMBER`, which blocked its schematic phase (ERC + BOM cross-check) on our `SW_PWR`, `SW_BOOT`, `SW_RST`. Those are now **`SW16`, `SW14`, `SW15`** across schematic, PCB, BOM, CPL, firmware sim and docs, so the full KiBot run (DRC + ERC + BOM) is live both locally (`scripts/external-dfm.sh`) and in CI. A regression guard in both fails loudly if a non-IPC reference is ever reintroduced.
+:::info Resolved — non-IPC references renamed, first full ERC pass (2026-07-31)
+KiBot (≥ 1.6.5, [upstream #604](https://github.com/INTI-CMNB/KiBot/issues/604) — wontfix) rejects any schematic reference that is not `PREFIX+NUMBER`, which blocked its schematic phase (ERC + BOM cross-check) on our `SW_PWR`, `SW_BOOT`, `SW_RST`. Those are now **`SW16`, `SW14`, `SW15`** across schematic, PCB, BOM, CPL, firmware sim and docs, so the full KiBot run (DRC + ERC + BOM) is live both locally (`scripts/external-dfm.sh`) and in CI, with a regression guard against reintroducing non-IPC references.
+
+The first-ever ERC run then surfaced two generator bugs that had hidden every schematic finding for months — **cross-sheet uuid collisions** (every sheet counted uuids from the same sequence, so ERC merged unrelated objects and attributed findings to the wrong sheets) and single-level symbol instance paths — plus one genuine drawing error: C3's supply tap ended in empty space, one step away from shorting +3V3 into LCD_CS. All fixed; `make verify-erc` (KiCad ERC at error severity, mutation-tested) now runs in `verify-all`, and `make external-dfm` is fully green: DRC 0, ERC 0 errors, BOM cross-referenced.
 :::
 
 ### Next up — Medium-term (next release cycle)

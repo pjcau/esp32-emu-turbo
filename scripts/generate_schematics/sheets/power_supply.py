@@ -15,7 +15,7 @@ class PowerSupplySheet(SchematicSheet):
     needed_symbols = [
         "USB_C", "IP5306", "SY8089AAAC", "Conn_JST_PH_2",
         "Battery", "C", "R", "L", "SW_Push", "LED",
-        "USBLC6_2SC6", "BAT54C",
+        "USBLC6_2SC6", "BAT54C", "PWR_FLAG",
     ]
 
     def build(self):
@@ -264,6 +264,16 @@ class PowerSupplySheet(SchematicSheet):
         # L1 top -> SW: vertical then horizontal
         self.wire(l1_x, l1_y - 3.81, l1_x, sw_y)
         self.wire(l1_x, sw_y, sw_x, sw_y)
+        # Name the boost switch node with the PCB's net name. Until the
+        # uuid-collision fix (2026-07-31) L1.2/U2.7 were silently absent
+        # from the exported netlist, so T4 had nothing to compare; now
+        # they exist and the label closes the LX entry in T2_ALLOW.
+        # GLOBAL label, not local: a local label exports as
+        # "/Power Supply/LX" and never matches the PCB's "LX".
+        # Mid-span on the horizontal, which runs LEFT from L1 to the SW
+        # pin (l1_x=190 -> sw_x=170.16) — at l1_x+6 it floated past the
+        # wire's end, and at l1_x it sat on L1's body.
+        self.glabel("LX", l1_x - 6, sw_y, 0)
 
         # ---- VOUT -> +5V rail ----
         # Route VOUT up then right to avoid L1
@@ -461,6 +471,12 @@ class PowerSupplySheet(SchematicSheet):
         # Wire Q1 gate to R24 pin 1
         self.wire(q1x - 5, q1y + 1.27, r24x, q1y + 1.27)
         self.wire(r24x, q1y + 1.27, r24x, r24y - 3.81)
+        # Name the gate node with the PCB's net name (same story as LX:
+        # Q1.1/R24.1 were missing from the netlist until the uuid fix).
+        # GLOBAL label so the net exports as "RPP_GATE", not
+        # "/Power Supply/RPP_GATE". angle=180 extends the text LEFT —
+        # rightward it lands on Q1's symbol body.
+        self.glabel("RPP_GATE", r24x, q1y + 1.27, 180)
         # R24 pin 2 to GND
         self.gnd(r24x, r24y + 8)
         self.wire(r24x, r24y + 3.81, r24x, r24y + 8)
@@ -570,6 +586,17 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(c30x, in_y, 165, in_y)
         self.glabel("+3V3", 180, in_y, 0, "output")
         self.wire(165, in_y, 180, in_y)
+        # PWR_FLAG: +3V3 is produced by the buck THROUGH L2/C30, so no
+        # power-output pin sits on the net and ERC reports every +3V3
+        # power-input pin as undriven. GND has the same problem (ground
+        # symbols are power inputs). One flag per net, here at the source.
+        # +5V must NOT get one — IP5306 VOUT is already power_out.
+        self.flag(172, 192)
+        self.wire(172, 192, 172, in_y)
+        self.junction(172, in_y)
+        self.flag(158, 212)
+        self.wire(158, 212, 158, 216)
+        self.wire(158, 216, c30x, 216)
 
         # ── Feedback divider ────────────────────────────────────
         # Vout = 0.6 * (1 + R25/R26) = 0.6 * (1 + 100k/22k) = 3.327 V
@@ -637,6 +664,10 @@ class PowerSupplySheet(SchematicSheet):
         # v2 respin: route the battery through pins 1-2 in series.
         self.glabel("BAT+", sw_x - 12, sw_y, 180, "input")
         self.wire(sw_x - 5.08, sw_y, sw_x - 12, sw_y)
+        # Explicit no-connect on pin 2: the throw side is deliberately
+        # unrouted on v1 (see block comment above). The nc marker states
+        # that intent to ERC instead of leaving a bare pin.
+        self.nc(sw_x + 5.08, sw_y)
         self.text("N.C. (v1: throw pins unrouted)", sw_x + 7, sw_y, 1.5)
         self.text("!! v1 as-built: NOT in series - cannot disconnect battery", sw_x - 5, sw_y + 8, 1.5)
         self.text("Power on/off = IP5306 KEY + auto-standby. v2: wire pins 1-2 in series.", sw_x - 5, sw_y + 11, 1.5)

@@ -4,6 +4,19 @@
 # paths are scoped to it; a mismatch makes the instance invisible.
 PROJECT_NAME = "esp32-emu-turbo"
 
+# Root path element for the two-level symbol instance path — the root
+# schematic's own uuid (first uid() the root context allocates).
+# KiCad's tools disagree on the path shape (all verified empirically on
+# KiCad 10.0 / KiBot 1.9.1):
+#   - the netlister resolves the single-level "/<sheet-uuid>" and
+#     reports "annotation errors" + drops every symbol when only the
+#     two-level form is present;
+#   - ERC resolves "/<root-uuid>/<sheet-uuid>" and falls back to "the
+#     first instance" otherwise (KiBot W182), which garbles per-sheet
+#     reference resolution and produces phantom violations.
+# A project block may list several instance paths, so we emit BOTH.
+ROOT_UUID = "00000001-cafe-4000-8000-000000000001"
+
 
 def sheet_uuid(index: int) -> str:
     """UUID of the root's ``(sheet ...)`` block for sub-sheet ``index``.
@@ -30,15 +43,24 @@ class KiCadContext:
     """
 
     def __init__(self, sheet_path: str | None = None,
-                 project: str = PROJECT_NAME):
+                 project: str = PROJECT_NAME, namespace: int = 0):
         self._n = 0
         self._pn = 0
         self.sheet_path = sheet_path
         self.project = project
+        # Per-file uuid namespace. Every context used to count 1, 2, 3...
+        # into the SAME "{n}-cafe-4000-8000-{n}" pattern, so uuid
+        # "000000f6-..." existed in several sheet files at once. KiCad
+        # requires project-unique uuids; the collisions made ERC merge
+        # unrelated objects across sheets — phantom "pin not connected"
+        # on geometrically perfect cells, and findings attributed to the
+        # wrong sheet. The namespace lands in the variant group (8xxx,
+        # a valid RFC 4122 variant), giving each file its own space.
+        self._ns = namespace
 
     def uid(self) -> str:
         self._n += 1
-        return f"{self._n:08x}-cafe-4000-8000-{self._n:012x}"
+        return f"{self._n:08x}-cafe-4000-8{self._ns:03x}-{self._n:012x}"
 
     def instances(self, ref: str, unit: int = 1) -> str:
         """The ``(instances ...)`` block that annotates a symbol.
@@ -52,6 +74,8 @@ class KiCadContext:
         return (
             f' (instances (project "{self.project}"'
             f' (path "/{self.sheet_path}"'
+            f' (reference "{ref}") (unit {unit}))'
+            f' (path "/{ROOT_UUID}/{self.sheet_path}"'
             f' (reference "{ref}") (unit {unit}))))'
         )
 
@@ -123,6 +147,16 @@ class KiCadContext:
     def v5(self, x: float, y: float) -> str:
         self._pn += 1
         return self.power_symbol("+5V", f"#PWR{self._pn:03d}", "+5V", x, y)
+
+    def pwr_flag(self, x: float, y: float) -> str:
+        """PWR_FLAG — tells ERC a net is driven even though no power-output
+        pin sits on it. +3V3 needs one (the SY8089's output reaches the net
+        through L2/C30, so no pin drives it) and so does GND (ground symbols
+        are power inputs). +5V must NOT get one: IP5306 VOUT is typed
+        power_out and a flag there means two drivers on one net."""
+        self._pn += 1
+        return self.power_symbol("PWR_FLAG", f"#FLG{self._pn:03d}",
+                                 "PWR_FLAG", x, y)
 
     def no_connect(self, x: float, y: float) -> str:
         return (
