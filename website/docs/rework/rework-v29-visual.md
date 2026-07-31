@@ -1,7 +1,7 @@
 ---
 id: rework-v29-visual
 title: PCB v2.9 — Visual Rework Guide
-sidebar_position: 2
+sidebar_position: 6
 ---
 
 # PCB v2.9 — Visual Rework Guide

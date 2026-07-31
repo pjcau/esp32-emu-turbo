@@ -1,10 +1,15 @@
 ---
 id: incident-v431-rotations
-title: "Incident: v4.3.1 Batch — Systemic Bottom-Side Rotation Error"
-sidebar_position: 6
+title: "Incident: v4.3.1 Batch (\"v2\" boards) — Systemic Rotation Error"
+sidebar_position: 2
 ---
 
 # Incident: v4.3.1 Batch — Systemic Bottom-Side Rotation Error
+
+> These are the boards silkscreened **"CPJ&CP 2026 v2"** — "v2" on the board
+> and "release v4.3.1" in the repo name the same batch. The board-level design
+> gaps found on them by the datasheet audit are collected
+> [at the end of this page](#board-level-design-gaps-of-the-same-batch).
 
 **Date of diagnosis:** 2026-07-31 (photo-based, no bench instruments available)
 **Severity:** Fatal (boards dead on arrival — no +5V, no +3V3)
@@ -40,7 +45,7 @@ edge** (mirrored left/right vs. KiCad's un-mirrored bottom rendering).
 | L1 1 µH | boost inductor | marking vertical → rotated | FATAL | boost inoperative |
 | Q1 SI2301 | battery reverse-polarity FET | rotated, solder off-pad | FATAL (battery) | no battery power |
 | U4 USBLC6 | USB ESD protection | rotated 90°, 0/6 leads on pads | SEVERE | no ESD, USB data at risk |
-| C2 22 µF tant. | +3V3 bulk / LDO stability | rotated, one terminal floating | SEVERE | unstable 3V3 |
+| C2 22 µF tant. | +3V3 bulk / LDO stability | reversed — bench close-up shows 180°, stripe on GND ([own incident](incident-c2-reversed.md)) | SEVERE | +3V3 hard short, kills regulators |
 | C1 + other MLCCs | decoupling | some 0805s vertical on horizontal pads | DEGRADED | noisy rails |
 | D1 BAT54C | START+SELECT→MENU combo diode | rotated, crooked | MINOR | MENU combo dead |
 | U5 PAM8403, ESP32 module, top side | — | correctly mounted | OK | — |
@@ -118,3 +123,32 @@ seating by pads, never by gloss.
   T1 USB only → CHG/FULL LEDs on (both are +3V3 indicators) · T2 battery only,
   PWR on → same LEDs · T3 USB enumerates and flashes · T4 START+SELECT triggers
   MENU · T5 display backlight uniform.
+
+## Board-level design gaps of the same batch
+
+The datasheet-vs-PCB audit found three design gaps on these boards, separate
+from the rotation error. They only matter if a board is being revived by
+rework; all three are fixed in the current design.
+
+**1. SD card has no power (critical).** The TF-01A slot's pin 4 (VDD) and
+pin 6 (GND) have no copper. Bodge a 30AWG wire from pin 4 to any +3V3
+pad/via and from pin 6 to any GND point; optionally ground two opposite
+shield pads for EMI. Verify by continuity, then card detection in firmware.
+
+**2. PAM8403 application circuit is missing (only if using the speaker).**
+No DC-blocking, bias, or decoupling around U5. Add, all 0805: a 0.47 µF
+DC-block in series with I2S_DOUT into INR (pin 10 — cut the trace and bridge
+the cut with the cap), 20 k from INL (7) and INR (10) to GND, 100 nF from
+VREF (8) to PGND, 1 µF from VDD (6), PVDD (4) and PVDD (13) to their
+grounds. Without a speaker connected the missing passives cause no harm —
+skip until audio is wanted. Acceptance: clean tone, < 20 mV DC across the
+speaker.
+
+**3. USB-C shield pads undersized (mechanical).** Front shield pads are
+1.1 mm vs the datasheet's 1.7 mm. Build up generous solder fillets on all
+four shield tabs (UV-cure adhesive at the base for extra strength); the
+connector must not move under a firm pull. The current design fixes the pad
+geometry — see the DFM constraints in the repo.
+
+Shopping list for a full revival: 1× 0.47 µF, 3× 1 µF, 1× 100 nF, 2× 20 k
+(all 0805) and 30AWG kynar wire.
