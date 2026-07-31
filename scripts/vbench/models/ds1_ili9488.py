@@ -253,9 +253,11 @@ DS1 = Model(
 # test_vbench_display.py can pin them and they cannot quietly regress.
 FINDINGS = {
     "rgb565_over_8bit_is_supported": {
-        "claim_in_repo": "software/main/display.c, file header: 'ILI9488 in "
-                         "8-bit parallel mode only supports RGB666 (18-bit "
-                         "color, 3 bytes/pixel).'",
+        "claim_in_repo": "software/main/display.c, file header — CORRECTED "
+                         "2026-07-31. It read 'ILI9488 in 8-bit parallel "
+                         "mode only supports RGB666 (18-bit color, 3 "
+                         "bytes/pixel)', the SPI-interface limitation "
+                         "misapplied to the parallel bus.",
         "what_the_spec_says": "section 4.7.3 '8-bit Parallel MCU Interface', "
                              "p.123, lists 65K-Colors RGB 5,6,5 (3Ah, "
                              "DBI[2:0] = 101) as an available display data "
@@ -265,12 +267,20 @@ FINDINGS = {
                              "COLMOD table on p.200 places no interface "
                              "qualifier on DBI = 101.",
         "locator": "p.123 sec 4.7.3",
-        "consequence": "the firmware sends 460800 bytes per frame where "
-                       "307200 would do — 1.5x the traffic on the 20 MHz "
-                       "bus that sets the frame rate. software/sim/"
-                       "vbench_hal.c:110 already assumes the supported "
-                       "reading, so the two halves of the repo disagree.",
-        "verdict": "the comment is wrong; the spec permits RGB565 here",
+        "consequence": "verified against the driver source when the first "
+                       "real build ran (atanisoft esp_lcd_ili9488: "
+                       "bits_per_pixel=16 programs COLMOD 0x55 and converts "
+                       "nothing — its RGB666 path is SPI-only): the wire "
+                       "already carried 2 bytes/pixel, so no traffic was "
+                       "being lost. The cost was latent, not paid — the "
+                       "wrong comment invited a 'fix' toward 18 bpp that "
+                       "would have added the 1.5x (460800 vs 307200 bytes "
+                       "per frame), and it survived unexercised because "
+                       "the firmware had never been built (the component "
+                       "namespace in idf_component.yml was wrong until the "
+                       "same day).",
+        "verdict": "the comment was wrong and is now corrected; the spec "
+                   "permits RGB565 here and the firmware uses it",
     },
     "reset_defaults_disagree_between_pages": {
         "claim_in_repo": "(none — this is an internal contradiction in the "

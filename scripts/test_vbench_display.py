@@ -477,16 +477,21 @@ def test_pixel_format_finding():
           "p.123" in
           model.DS1.params["dbi_16bpp_available_on_8bit_bus"].locator)
 
-    # The firmware comment the finding contradicts. Pinned by its text: if it
-    # is corrected or removed, this fires and whoever did it has to update
-    # the finding rather than leave a stale claim behind.
+    # The firmware comment was corrected on 2026-07-31 (same day the first
+    # real build verified the driver programs COLMOD 0x55 at 16 bpp). The
+    # pin flips: the contradicted claim must STAY gone, and the corrected
+    # header must cite the spec section the finding rests on — so a future
+    # edit cannot quietly reintroduce the SPI limitation on the parallel
+    # bus, and cannot drop the citation either.
     src = os.path.join(BASE, "software", "main", "display.c")
     with open(src, errors="replace") as fh:
         text = fh.read()
-    still_there = "only supports RGB666" in text
-    check("software/main/display.c still carries the contradicted claim",
-          still_there,
-          "the comment changed — update FINDINGS in models/ds1_ili9488.py")
+    check("display.c no longer claims 8-bit parallel is RGB666-only",
+          "only supports RGB666" not in text,
+          "the wrong claim is back — re-read FINDINGS in ds1_ili9488.py")
+    check("display.c's corrected header cites p.123 sec 4.7.3 and RGB565",
+          "p.123 sec 4.7.3" in text and "RGB565" in text,
+          "the corrected comment lost its citation")
 
     # The other half of the repo already agrees with the spec.
     hal = os.path.join(BASE, "software", "sim", "vbench_hal.c")

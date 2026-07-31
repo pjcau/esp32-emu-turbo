@@ -1,2 +1,6 @@
 dependencies:
-  espressif/esp_lcd_ili9488: "^1"
+  # The ILI9488 esp_lcd driver lives in the atanisoft namespace on the
+  # component registry; espressif/ publishes no such component. The wrong
+  # namespace survived until the first real `idf.py build` (2026-07-31)
+  # because no build environment existed before it.
+  atanisoft/esp_lcd_ili9488: "^1"
