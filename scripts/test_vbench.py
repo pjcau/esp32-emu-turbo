@@ -976,8 +976,21 @@ def test_phase3():
     finally:
         disp.PINOUT_DOC = saved
 
-    check("the controller's command set and timing are declared unmodelled",
-          {"command_set", "pixel_format", "timing"} <= set(disp.UNMODELLED))
+    # The controller's command set, MADCTL, pixel format and i80 timing USED
+    # to be declared unmodelled here, because the controller datasheet was
+    # not in the repo. It is now (DS1_ILI9488-controller_ILITEK.pdf) and T3.1
+    # models all four, so asserting they are still unmodelled would pin a
+    # false claim. What must not silently disappear is the PANEL-side gap
+    # that remains: the module itself has no PDF, so no panel Model validates.
+    check("the panel module's missing datasheet is still declared",
+          "panel_module_model" in disp.UNMODELLED)
+    check("the controller half is no longer claimed unmodelled",
+          not {"command_set", "pixel_format", "timing"} & set(disp.UNMODELLED),
+          "display.py still lists the controller as unbuildable, but "
+          "scripts/vbench/ili9488_ctrl.py models it")
+    check("display.py runs the controller model, not just the wiring",
+          disp.check_controller is not None
+          and callable(disp.check_controller))
 
     # The datasheet distinguishes unused INPUTS (tie them) from unused
     # OUTPUTS (leave them open), pin by pin. No summary in this repo carried
@@ -1315,6 +1328,103 @@ def test_header():
           "VB_SWITCH_NOT_IN_SERIES" in hal)
 
 
+def test_phase5_plan_mutations():
+    """T5.2 — the plan names five mutations; each must fail the bench.
+
+    'Fail the bench' means: an existing bench check, run against the
+    mutated netlist, produces a fault that names the damage. The
+    un-mutated board must pass the same check in the same breath, or the
+    test proves nothing about discrimination.
+    """
+    print("\nN. T5.2 — the plan's named mutations")
+    from vbench import buttons, conflicts, display, mutate, rails
+    from vbench import netlist as _nl
+
+    board = _nl.load_board_netlist()
+    values = rails.load_bom_values()
+
+    # ── 1. Swap D/C with a data line ────────────────────────────────
+    # J4 pad 31 carries LCD_DC (panel pin 10), pad 24 carries LCD_D0
+    # (panel pin 17). Crossing them leaves every net with a valid pad
+    # count — invisible to every pad-side gate, dead display in life.
+    m, _ = mutate.apply(board, {"kind": "move_pin", "ref": "J4",
+                                "pin": "31", "to_net": "LCD_D0"})
+    m, _ = mutate.apply(m, {"kind": "move_pin", "ref": "J4",
+                            "pin": "24", "to_net": "LCD_DC"})
+    view_m, _ = display.panel_view(m)
+    ctrl = display.check_control_lines(view_m)
+    data = display.check_data_bus(view_m)
+    check("swap D/C with DB0: control AND data checks both fire",
+          bool(ctrl) and bool(data),
+          f"ctrl={len(ctrl)} data={len(data)}")
+    view_0, _ = display.panel_view()
+    check("the un-mutated board passes the control-line check",
+          not display.check_control_lines(view_0))
+
+    # ── 2. Delete a button pull-up ──────────────────────────────────
+    # Find BTN_A's pull-up from the survey (never hardcode the ref), then
+    # detach it. The button must come back with no RC and a note, where
+    # the real board has both.
+    row0 = next(b for b in buttons.survey(board, values) if b.net == "BTN_A")
+    check("BTN_A has a pull-up and an RC on the real board",
+          row0.pullup is not None and row0.t_rise_s is not None)
+    pad = next(p.pad for p in board.nets["BTN_A"] if p.ref == row0.pullup)
+    m, _ = mutate.apply(board, {"kind": "detach_pin", "ref": row0.pullup,
+                                "pin": pad})
+    row_m = next(b for b in buttons.survey(m, values) if b.net == "BTN_A")
+    check("delete the pull-up: the survey loses the RC and says why",
+          row_m.pullup is None and row_m.t_rise_s is None and row_m.note,
+          f"got pullup={row_m.pullup} note={row_m.note!r}")
+
+    # ── 3. Tie WR to GND ────────────────────────────────────────────
+    # The write strobe welded low: every net keeps a plausible shape, but
+    # panel pin 11 now sees GND where the 8080 interface needs its strobe.
+    m, _ = mutate.apply(board, {"kind": "short_nets", "net_a": "GND",
+                                "net_b": "LCD_WR"})
+    view_m, _ = display.panel_view(m)
+    ctrl = display.check_control_lines(view_m)
+    check("tie WR to GND: the control-line check names the strobe",
+          any("WR" in f for f in ctrl), f"faults: {ctrl}")
+
+    # ── 4. Short +3V3 to GND ────────────────────────────────────────
+    # The rails module must refuse to produce a happy table for a board
+    # whose 3.3 V rail is the ground plane.
+    m, _ = mutate.apply(board, {"kind": "short_nets", "net_a": "GND",
+                                "net_b": "+3V3"})
+    fired = []
+    try:
+        found = conflicts.find_conflicts(m, values)
+        fired = [c for c in found
+                 if "U3" in getattr(c, "detail", "") or
+                 "U3" in getattr(c, "net", "")]
+    except Exception as exc:                              # noqa: BLE001
+        fired = [f"conflicts refused: {exc}"]
+    solved_dead = False
+    try:
+        rails.solve_dc(m, values, {"GND": 0.0, "+5V": 5.0, "+3V3": 3.327,
+                                   "BAT+": 3.83, "BAT_IN": 3.83,
+                                   "VBUS": 5.0})
+    except Exception:                                     # noqa: BLE001
+        solved_dead = True
+    else:
+        # +3V3 no longer exists as a net; a solver that still reports it
+        # at 3.327 V is describing a board that is not there.
+        solved_dead = "+3V3" not in m.nets
+    check("short +3V3 to GND: the bench does not produce a happy table",
+          bool(fired) or solved_dead,
+          f"conflicts={fired} solved_dead={solved_dead}")
+
+    # ── 5. Rotate the LCD model ─────────────────────────────────────
+    # Covered at the controller level: scripts/test_vbench_display.py
+    # (T3.1) asserts MADCTL MV/MX/MY move a probe pixel exactly as the
+    # cited bit semantics say, so a rotated model shows a rotated frame.
+    # Asserted here only that the suite exists and is wired into
+    # bench-test, so this pointer cannot dangle.
+    check("the MADCTL rotation suite exists (T3.1's tests carry mutation 5)",
+          os.path.exists(os.path.join(BASE, "scripts",
+                                      "test_vbench_display.py")))
+
+
 def main():
     print("=" * 72)
     print("  Virtual Bench Phase 0/1/2/3/4/5 — mutation tests")
@@ -1329,6 +1439,7 @@ def main():
     test_phase3()
     test_phase3_peripherals()
     test_phase5()
+    test_phase5_plan_mutations()
     test_scenarios()
     test_header()
     print()

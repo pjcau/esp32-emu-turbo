@@ -1,4 +1,4 @@
-"""Virtual Bench T3.1 (part) — the display seen from the PANEL, not the pad.
+"""Virtual Bench T3.1 — the display: the panel's wiring, and the controller.
 
 Every existing gate checks J4 by **pad**: datasheet_specs declares 42 pads,
 verify_datasheet_nets compares their nets, verify_dfm_v2 checks the 41−N
@@ -33,13 +33,24 @@ panel is handled the way `sources.py` handles the LiPo: declared, provenance
 stated, flagged. Putting those two pages in `hardware/datasheets/` is what
 would change that.
 
-## What cannot be modelled yet
+## The controller half
 
-The ILI9488 **controller** behaviour — command set, MADCTL and rotation, pixel
-format, and the setup/hold windows a 20 MHz pclk has to satisfy — needs the
-controller datasheet, which this repo does not hold either. T3.1's frame-render
-and timing halves stay unbuilt, and this module says so rather than emitting a
-framebuffer that would look like proof.
+The other half of T3.1 — command set, MADCTL and rotation, pixel format, and
+the setup/hold windows a 20 MHz pclk has to satisfy — used to be listed here
+as unbuildable, because it needs the controller datasheet and the repo did
+not hold one. It does now:
+`hardware/datasheets/DS1_ILI9488-controller_ILITEK.pdf`, V100, 343 pages.
+
+So this module no longer stops at the ribbon. `ili9488_ctrl.py` carries the
+state machine and `models/ds1_ili9488.py` the cited numbers, and `main()`
+below runs both: a frame through the command sequence, and every write-side
+AC minimum of section 17.4.1 against the firmware's own LCD_CLK_HZ. A
+controller fault or a timing violation fails this gate exactly like a crossed
+data line does.
+
+What that half found, and what this module therefore now asserts, is that
+`software/main/display.c` is wrong about the pixel format — see
+`models/ds1_ili9488.FINDINGS`.
 
 Usage:
     python3 scripts/vbench/display.py
@@ -55,8 +66,10 @@ BASE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 
+from vbench import ili9488_ctrl                               # noqa: E402
 from vbench import netlist as nl                              # noqa: E402
 from vbench import rails                                      # noqa: E402
+from vbench.models.ds1_ili9488 import DS1, FINDINGS           # noqa: E402
 
 PINOUT_DOC = os.path.join(BASE, "website", "docs", "design", "components.md")
 PANEL_PINS = 40
@@ -108,16 +121,31 @@ LEAVE_OPEN_IF_UNUSED = {
 PIN_RULE_SRC = ("website/static/img/ili9488-fpc40-pinout.png — the panel "
                 "datasheet's own pin table")
 
+# What the PANEL side still cannot answer. The controller half is no longer
+# in here — command set, MADCTL, pixel format and the i80 timing budget are
+# modelled from DS1_ILI9488-controller_ILITEK.pdf and run by main() below.
+# What is left is what the CONTROLLER datasheet cannot tell you either,
+# because it is a property of this particular 3.95" module rather than of the
+# die bonded inside it.
 UNMODELLED = {
-    "command_set": "ILI9488 command set, MADCTL and rotation need the "
-                   "CONTROLLER datasheet. The two panel pages this repo holds "
-                   "are the module's pinout and mechanical specification, not "
-                   "the controller's register set.",
-    "pixel_format": "RGB565 vs RGB666 selection is a controller register, "
-                    "same gap",
-    "timing": "setup/hold against the 20 MHz pclk needs the controller's AC "
-              "characteristics, same gap — so no timing verdict is given "
-              "rather than a reassuring one",
+    "panel_module_model": "the panel MODULE still has no PDF in "
+                          "hardware/datasheets/ — only two pages as images "
+                          "under website/static/img/. _schema.py accepts a "
+                          "citation only from hardware/datasheets/, so a "
+                          "panel Model cannot validate and the pinout above "
+                          "is parsed from components.md rather than cited.",
+    "backlight": "the LED string's forward voltage and current. R25-HIGH-1 "
+                 "turns on exactly this number and it is in the module's "
+                 "specification, not the controller's — the controller has "
+                 "no backlight driver.",
+    "vendor_init_sequence": "the gamma, power and VCOM registers the module "
+                            "vendor's init sequence writes. The controller "
+                            "model declares them unestablished "
+                            "(ds1_ili9488.UNESTABLISHED); the values are the "
+                            "panel maker's, and this repo does not hold them.",
+    "optical": "viewing direction, contrast, response time — module "
+               "properties with no electrical consequence the bench can "
+               "check.",
 }
 
 
@@ -194,10 +222,14 @@ def read_pinout(path=PINOUT_DOC):
     return rows
 
 
-def panel_view():
-    """The 40 panel pins with the board net and DC level each one sees."""
+def panel_view(board=None):
+    """The 40 panel pins with the board net and DC level each one sees.
+
+    `board` defaults to the real netlist; the mutation tests pass a
+    doctored copy so a check can be shown to fire.
+    """
     rows = read_pinout()
-    board = nl.load_board_netlist()
+    board = board or nl.load_board_netlist()
     op = rails.operating_point()
     v_rail = op.rail_spread["+3V3"][1]
 
@@ -291,6 +323,82 @@ def check_data_bus(view):
     return faults
 
 
+# The four 8080 control strobes, by panel pin: symbol -> the net that must
+# be on the other side of the ribbon. Derived from the same pinout table as
+# everything else; the net names are this board's, from the netlist. Added
+# with the T5.2 mutation suite, which demonstrated that crossing D/C with a
+# data line was invisible to every existing check: check_data_bus() sees
+# DB0..DB7 only, and a swapped control strobe leaves every data pin happy.
+CONTROL_LINES = {
+    "CS": "LCD_CS",
+    "DC/RS": "LCD_DC",
+    "WR": "LCD_WR",
+    "RESET": "LCD_RST",
+}
+
+
+def check_control_lines(view):
+    """CS, D/C, WR and RESET must each land on their own net. Faults list."""
+    faults = []
+    for p in view:
+        want = CONTROL_LINES.get(p.symbol)
+        if want is None:
+            continue
+        if p.net != want:
+            faults.append(
+                f"panel pin {p.pin} ({p.symbol}) reaches pad {p.pad} "
+                f"carrying {p.net!r}, but the 8080 interface needs {want!r} "
+                f"there — a control strobe is misrouted, and the panel "
+                f"decodes every bus cycle wrongly")
+    return faults
+
+
+def check_controller(f_write_hz=None):
+    """Run the ILI9488 controller model. Returns (faults, verdicts, summary).
+
+    The panel-side checks above prove the ribbon is wired correctly. This
+    proves the thing on the other end of it would answer: a frame driven
+    through the real command sequence, and every write-side AC minimum of
+    section 17.4.1 evaluated at the clock the firmware actually programs.
+
+    Kept separate from `panel_view()` because it needs no netlist — the
+    controller model is a claim about the part, not about this board, and it
+    must stay runnable when the netlist is broken.
+    """
+    ctrl = ili9488_ctrl
+    f = f_write_hz if f_write_hz else ctrl._firmware_clock_hz()
+
+    dut = ctrl.ILI9488Controller()
+    dut.command(ctrl.CMD_RAMWR)          # before SLPOUT — must be refused
+    dut.write(1, 0x00)
+    refused = [f_ for f_ in dut.faults
+               if f_.code == "ram_write_while_sleep_in"]
+
+    dut.reset()
+    written = ctrl.test_pattern(dut, ctrl.DBI_16BPP)
+    verdicts = ctrl.check_timing(f)
+
+    faults = list(dut.faults)
+    if not refused:
+        # The negative control. If a RAMWR issued in the reset state stops
+        # being a fault, this gate has lost its ability to catch the single
+        # most common init bug, and that is worse than a red.
+        faults.append(ctrl.Fault(
+            "sleep_in_check_stopped_firing",
+            "a RAMWR issued in the reset state was accepted; the model no "
+            "longer catches an init sequence missing SLPOUT",
+            "p.201 sec 5.2.35"))
+    summary = {
+        "clock_hz": f,
+        "bytes": written,
+        "pixels": dut.pixels_written,
+        "ignored": dut.pixels_ignored,
+        "format": dut.fmt,
+        "refused_ramwr_in_sleep": bool(refused),
+    }
+    return faults, verdicts, summary
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.parse_args(argv)
@@ -338,6 +446,14 @@ def main(argv=None):
         print(f"    {f}")
     problems.extend(faults)
 
+    ctrl = check_control_lines(view)
+    print()
+    print(f"  Control  : "
+          f"{'CS, D/C, WR, RESET each on their own net' if not ctrl else f'{len(ctrl)} fault(s)'}")
+    for f in ctrl:
+        print(f"    {f}")
+    problems.extend(ctrl)
+
     unused = check_unused_pins(view)
     print()
     print(f"  Unused pins, per {PIN_RULE_SRC}:")
@@ -351,22 +467,76 @@ def main(argv=None):
         print(f"    {f}")
     problems.extend(unused)
 
+    # ── the controller, from its own datasheet ──────────────────────────
+    print()
+    print("-" * 72)
+    print(f"  Controller : ILI9488, {DS1.datasheet.doc}")
+    try:
+        cfaults, verdicts, summary = check_controller()
+    except (OSError, RuntimeError, ValueError) as exc:
+        print(f"  ERROR  the controller model could not run: {exc}",
+              file=sys.stderr)
+        return 2
+
+    fmt = summary["format"]
+    print(f"    RAMWR before SLPOUT is refused : "
+          f"{'yes' if summary['refused_ramwr_in_sleep'] else 'NO'} "
+          f"(reset state is Sleep In, p.306 table 37)")
+    print(f"    Frame  : {summary['bytes']} bytes -> {summary['pixels']} "
+          f"pixels, {summary['ignored']} ignored")
+    print(f"    Format : {fmt.name}, {fmt.transfers} transfer(s)/pixel")
+    if not cfaults:
+        print(f"    A full {ili9488_ctrl.WIDTH}x{ili9488_ctrl.HEIGHT} frame "
+              f"went through the command sequence with no fault.")
+    for flt in cfaults:
+        print(f"    FAULT [{flt.code}] {flt.detail}  ({flt.locator})")
+    problems.extend(
+        f"controller: {flt.detail} ({flt.locator})" for flt in cfaults)
+
+    bad = ili9488_ctrl.timing_failures(verdicts)
+    mhz = summary["clock_hz"] / 1e6
+    print()
+    print(f"    i80 write timing at {mhz:.3g} MHz (LCD_CLK_HZ from "
+          f"board_config.h), sec 17.4.1 p.329:")
+    for v in verdicts:
+        print(f"      {v.symbol:<6} {v.parameter:<34} min "
+              f"{v.required * 1e9:>4.0f} ns, {v.available * 1e9:>5.1f} ns "
+              f"available  {v.verdict}")
+    problems.extend(
+        f"timing: {v.symbol} needs {v.required * 1e9:.0f} ns but a "
+        f"{mhz:.3g} MHz clock leaves {v.available * 1e9:.1f} ns ({v.locator})"
+        for v in bad)
+    if not bad:
+        print(f"      Every write-side minimum fits. Ceiling is "
+              f"{DS1.params['f_write_max'].value / 1e6:.3g} MHz (1/twc).")
+    print(f"      The host half of setup/hold is NOT included — see "
+          f"ds1_ili9488.UNESTABLISHED.")
+
+    # A finding is not a fault: the board is fine, the firmware's comment is
+    # not. It is printed here because this is the report someone reads before
+    # touching the display, and a wrong comment about the pixel format is
+    # exactly what they would otherwise believe.
+    print()
+    print("  Findings against the repo (not board faults):")
+    for key, f in sorted(FINDINGS.items()):
+        print(f"    {key}")
+        print(f"      [{f['locator']}] {f['verdict']}")
+
     print()
     print("-" * 72)
     print("  Not modelled, and not silently:")
     for key, why in sorted(UNMODELLED.items()):
-        print(f"    {key:<14} {why}")
+        print(f"    {key:<22} {why}")
 
     print()
     print("=" * 72)
     if problems:
-        print(f"  FAIL — {len(problems)} panel-side problem(s)")
+        print(f"  FAIL — {len(problems)} problem(s)")
         print("=" * 72)
         return 1
-    print("  The panel sees an 8-bit 8080 bus with its data lines in order.")
-    print("  That is the whole verdict — no frame was rendered and no timing")
-    print("  was checked, because the controller datasheet is not in this "
-          "repo.")
+    print("  The panel sees an 8-bit 8080 bus with its data lines in order,")
+    print("  a frame renders through the controller's own command sequence,")
+    print(f"  and {mhz:.3g} MHz fits every write-side minimum on p.329.")
     print("=" * 72)
     return 0
 
