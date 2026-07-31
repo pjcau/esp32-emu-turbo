@@ -106,3 +106,6 @@ software/benchmark/spiffs_data/
 
 # clangd index cache (editor tooling, machine-local)
 software/.cache/
+
+# vbench compiled binary (built locally from software/sim/)
+software/sim/emu-turbo-bench
