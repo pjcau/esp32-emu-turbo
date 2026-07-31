@@ -63,7 +63,10 @@
  * VDD_SPI=1.8V, breaking Octal PSRAM (needs 3.3V).
  * Firmware MUST enable internal pull-up after boot:
  *   gpio_set_pull_mode(BTN_L, GPIO_PULLUP_ONLY);
- * Internal pull-up (~45k) is sufficient for button debounce. */
+ * Internal pull-up (~45k) is sufficient for button debounce.
+ * NOTE: BTN_R (GPIO3) is also a strapping pin (JTAG source select).
+ * Benign either way: the 10k pull-up + C16 hold it HIGH at reset, and
+ * the strap only selects the JTAG interface, not the boot mode. */
 
 #define BTN_UP              GPIO_NUM_40
 #define BTN_DOWN            GPIO_NUM_41

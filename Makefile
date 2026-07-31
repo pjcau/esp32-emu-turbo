@@ -107,6 +107,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_easyeda_footprint \
 	verify_erc \
 	verify_esd_protection \
+	verify_firmware_retrogo_sync \
 	verify_gerber_etest \
 	verify_gerber_integrity \
 	verify_ground_loops \

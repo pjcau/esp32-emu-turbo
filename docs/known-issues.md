@@ -546,6 +546,41 @@ and is six releases stale; the tag is the truth.
   per unit and with temperature. No gate can catch this — `verify_datasheet_nets`
   checks pad 8 against `datasheet_specs.py`, and that file *records the hard
   tie as correct*, which is the R25 pattern exactly.
+- **The IP5306 boost auto-shuts down after 32 s below 45 mA, and nothing
+  can wake it** (R30-MED-3, raised 2026-07-31). Datasheet V1.32 p.8/p.10:
+  the boost turns off on sustained light load and restarts only on a KEY
+  press or USB insertion. On this board net `IP5306_KEY` = {R16.2, U2.5} —
+  a static 100 k pull-up, **no button** — so a light-load shutdown on
+  battery is terminal until a cable is plugged in. Today it never triggers
+  only because the running CPU + backlight keep +5V draw above 45 mA; that
+  is an accident, not a design property (and the backlight respin above
+  would thin exactly that margin). **Firmware constraint until the respin:
+  no idle/sleep state may drop +5V draw below 45 mA** — RTC wake is
+  impossible once VOUT cuts. Respin: route KEY to a real button and/or fit
+  a keep-alive bleeder. No gate can see dynamic load; the deciding test is
+  a bench idle-current measurement on a proto.
+- **The PDM audio line reaches the PAM8403 with no reconstruction
+  low-pass** (R3-MED-2, deferred to the respin since R3 — recorded here
+  2026-07-31 because it was previously only in `hardware-audit-bugs.md`
+  and invisible to anyone treating this file as the open list). The only
+  elements between GPIO17 and the amp input are C22 (series DC-block) and
+  R20/R21 bias to VREF: the sigma-delta carrier reaches the amp
+  unfiltered. Works on the bench (amp bandwidth does the filtering,
+  badly); respin: series-R + shunt-C integrator sized for the audio band.
+  Deciding test: scope the amp input on a proto.
+- **The panel controller identity is unrecorded: ILI9488 or ST7796S**
+  (R30-MED-4). CLAUDE.md, `datasheet_specs.py` and `software/main/display.c`
+  say ILI9488 3.95"; project memory and the retro-go target driver say
+  ST7796S 4.0". The two firmwares send different init sequences and one of
+  them is initializing the wrong part. This is an unverified claim about
+  the fabricated board; the deciding test is a **RDDID (0x04) read on a
+  proto** — then make CLAUDE.md, memory, `datasheet_specs.py` and the
+  losing firmware agree.
+- **R22/R23 22 Ω in series on the FS USB pair** (R30-LOW-4). Espressif S3
+  reference designs connect D+/D− through the TVS only — the PHY provides
+  the driver impedance. Protos enumerate fine, so this is respin guidance
+  only: consider 0 Ω/DNP. Gate-free by nature; the deciding evidence is
+  that enumeration already works.
 - **`SW16` carries the legacy footprint key `SS-12D00G3`** everywhere in
   routing/CPL; the actual part is MSK12C02 (C431540). The schematic value
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming

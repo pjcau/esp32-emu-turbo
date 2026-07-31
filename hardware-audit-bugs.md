@@ -3455,15 +3455,20 @@ gate at all** (R30-CRIT-1 .. R30-MED-2).
 | R30-HIGH-4 | HIGH | MENU fires on every SELECT | **FIXED** `d940b9a0` |
 | R30-MED-1 | MED | L key missing internal pull-up | **FIXED** `d940b9a0` |
 | R30-MED-2 | MED | SD clock 40 vs 20 MHz | **FIXED** `d940b9a0` |
-| R30-MED-3 | MED | IP5306 auto-shutdown, no KEY wake path | OPEN — respin + firmware constraint |
-| R30-MED-4 | MED | panel controller identity ILI9488 vs ST7796S | OPEN — needs RDDID probe on proto |
+| R30-MED-3 | MED | IP5306 auto-shutdown, no KEY wake path | OPEN — documented in docs/known-issues.md (respin + firmware constraint: keep +5V draw >45 mA) |
+| R30-MED-4 | MED | panel controller identity ILI9488 vs ST7796S | OPEN — documented in docs/known-issues.md; deciding test: RDDID read on proto |
 | R30-MED-5 | MED | gates crash-as-FAIL on missing deps | env fixed; gate exit codes OPEN |
 | R30-MED-6 | MED | SNES 60fps unmeasured; -Os, frameskip 3 | OPEN — measure, then optimize |
 | R30-LOW-1 | LOW | stale display.py docstring (seed of CRIT-2) | **FIXED** `f3d825a` |
-| R30-LOW-2..5 | LOW | doc/margin notes | OPEN (notes) |
+| R30-LOW-2..4 | LOW | doc/margin notes | OPEN (notes; LOW-4 recorded in known-issues.md) |
+| R30-LOW-5 | LOW | bookkeeping gaps (PDM filter not in known-issues, GPIO3 strap undocumented) | **FIXED** — known-issues.md + board_config.h note |
 
-Structural follow-up (the class-closer): a gate diffing the retro-go
-target GPIO map against `config.py::GPIO_NETS`, in `VERIFY_ALL_SCRIPTS`.
+Structural follow-up (the class-closer): **DONE** —
+`scripts/verify_firmware_retrogo_sync.py` (54 checks T1-T9: buttons, MENU
+combo, pull-ups, SD pins+clock, PDM audio, LCD pins, forbidden PSRAM/USB
+pins, unrouted pins) is in `VERIFY_ALL_SCRIPTS`, routed by dispatch via
+`law:firmware` to software-dev, and mutation-tested (re-planting L=GPIO35
+trips 6 FAILs). The R30-CRIT class can no longer drift back silently.
 
 #### R30-CRIT-1 — retro-go target maps five peripherals onto module-internal Octal-PSRAM pins (GPIO33–37) — **FIXED** (retro-go `d940b9a0`)
 - **Files**: `retro-go/components/retro-go/targets/esp32-emu-turbo/config.h:43,52,53,56,57`
@@ -3542,7 +3547,7 @@ target GPIO map against `config.py::GPIO_NETS`, in `VERIFY_ALL_SCRIPTS`.
 #### R30-LOW-4 — R22/R23 22 Ω series on the FS USB pair is non-standard for the S3 PHY
 - Espressif reference designs connect D+/D− through the TVS only; the internal PHY provides the driver impedance. Protos enumerate fine, so this is guidance: consider 0 Ω/DNP at respin. (Zdiff 130 Ω remains a non-issue; not re-raised.)
 
-#### R30-LOW-5 — bookkeeping gaps found while cross-checking
+#### R30-LOW-5 — bookkeeping gaps found while cross-checking — **FIXED** (known-issues.md RESPIN entries for R3-MED-2/R30-MED-3/R30-MED-4/R30-LOW-4; GPIO3 strap note in board_config.h)
 - `R3-MED-2` (PDM line reaches PAM8403 with no low-pass; only C22 DC-block + R20/R21 bias) is real, deferred to v2 — but absent from `docs/known-issues.md`, so anyone using that file as the open list won't see it.
 - `BTN_R` sits on strapping pin GPIO3 (JTAG source select) — benign (10k pull-up + 100nF hold it HIGH at boot) but undocumented next to the GPIO0/GPIO45 strap notes in `board_config.h`.
 - `.claudeheavy` had to be re-pointed: the giant generated emulator tables moved into the `retro-go/` submodule and were exposed (context-budget gate was red). Fixed this round.
