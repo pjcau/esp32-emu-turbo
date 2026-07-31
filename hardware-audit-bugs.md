@@ -45,13 +45,13 @@
 
 ### CRITICAL (1)
 
-**R2-CRIT-1**: R14 (10k pull-up on GPIO45/BTN_L) still in BOM/CPL. JLCPCB will assemble it, causing VDD_SPI strapping conflict. Must remove from BOM designator list.
+**R2-CRIT-1** ✅ *(gone: R14 absent from BOM/CPL — R30 addendum)*: R14 (10k pull-up on GPIO45/BTN_L) still in BOM/CPL. JLCPCB will assemble it, causing VDD_SPI strapping conflict. Must remove from BOM designator list.
 
 ### HIGH (2)
 
-**R2-HIGH-1**: `display.c` uses ST7796S driver but `board_config.h` says ILI9488. Different init commands and pixel format (RGB565 vs RGB666).
+**R2-HIGH-1** ↪ *(morphed: display.c is ILI9488 now; identity question open as R30-MED-4)*: `display.c` uses ST7796S driver but `board_config.h` says ILI9488. Different init commands and pixel format (RGB565 vs RGB666).
 
-**R2-HIGH-2**: AMS1117 output cap C2 BOM is MLCC ceramic (C12891, ESR 0.005 ohm) but AMS1117 requires ESR 0.1-10 ohm (tantalum). Will oscillate.
+**R2-HIGH-2** ✅ *(obsolete: AMS1117 and C2 no longer exist)*: AMS1117 output cap C2 BOM is MLCC ceramic (C12891, ESR 0.005 ohm) but AMS1117 requires ESR 0.1-10 ohm (tantalum). Will oscillate.
 
 ### MEDIUM (7)
 
@@ -85,10 +85,10 @@ R2-LOW-6: R16 described as "pull-down" in 3 files, actually pull-up
 ### v2 HARDWARE IMPROVEMENTS (require PCB respin)
 | Bug | Severity | Issue | v2 Fix |
 |-----|----------|-------|--------|
-| R3-HIGH-1 | HIGH | 6 MH on PCB vs 4 in enclosure | Remove center 2 (needs routing rework) |
-| R3-HIGH-2 | HIGH | C28 under ESP32 module body | Move to x=68 (needs via reroute) |
-| R3-HIGH-3 | HIGH | PAM8403 OUTL floating, INL driven | Disconnect INL from I2S_DOUT |
-| R3-HIGH-4 | HIGH | No VBUS PTC fuse | Add MF-PSMF050X on VBUS |
+| R3-HIGH-1 | HIGH | 6 MH on PCB vs 4 in enclosure | ✅ resolved by redesign: PCB has no MH, shells clamp on bosses (R30 addendum) |
+| R3-HIGH-2 | HIGH | C28 under ESP32 module body | ⚠️ became the C28-removed-from-assembly RESPIN entry in known-issues.md |
+| R3-HIGH-3 | HIGH | PAM8403 OUTL floating, INL driven | ✅ resolved by redesign: INL=INR=PAM_IN_AC mono bias |
+| R3-HIGH-4 | HIGH | No VBUS PTC fuse | ⚠️ never actioned — recorded in known-issues.md 2026-07-31; fix in progress |
 | R3-MED-1 | MEDIUM | No battery reverse polarity protection | Add P-MOSFET on BAT+ |
 | R3-MED-2 | MEDIUM | PDM no LP reconstruction filter | Add 1k+10nF RC before PAM8403 |
 | R3-MED-3 | MEDIUM | JST PH missing anchor pads | Add 2 mechanical pads |
@@ -103,7 +103,7 @@ R2-LOW-6: R16 described as "pull-down" in 3 files, actually pull-up
 
 ### CRITICAL (1)
 
-**R4-CRIT-1** — Display FPC J4 pinout mismatch between schematic and PCB
+**R4-CRIT-1** ✅ GONE (the 41−N reversal; both files correct — R30 addendum) — Display FPC J4 pinout mismatch between schematic and PCB
 - **Files**: `hardware/datasheet_specs.py:271-320` (PCB net assignments) vs `scripts/generate_schematics/sheets/display.py:3-23` (schematic comments)
 - **Problem**: Two different ILI9488 40P FPC pinouts. Schematic documents one panel variant; PCB is routed for another:
   | Pin | datasheet_specs.py (PCB)  | display.py (schematic) |
@@ -124,12 +124,12 @@ R2-LOW-6: R16 described as "pull-down" in 3 files, actually pull-up
 
 ### HIGH (3)
 
-**R4-HIGH-1** — USB ESD protection invisible in schematic
+**R4-HIGH-1** ✅ GONE (U4/R22/R23 in today's netlist) — USB ESD protection invisible in schematic
 - **Files**: `scripts/generate_pcb/routing.py:394-401,556-558,2480-2673` (has U4/R22/R23) vs `scripts/generate_schematics/sheets/power_supply.py:39-43` (has only USB_D+/USB_D- glabels)
 - **Problem**: USBLC6-2SC6 (U4) ESD TVS and R22/R23 (22Ω series) exist only in the PCB Python generator. No schematic sheet instantiates them. A reviewer reading the schematics cannot verify the USB protection circuit.
 - **Fix**: Add U4 (USBLC6-2SC6) + R22/R23 symbols to `power_supply.py` between USB-C D+/D- pins and `USB_DP_MCU`/`USB_DM_MCU` nets. Include TVS VBUS reference.
 
-**R4-HIGH-2** — Designator collision on "U4"
+**R4-HIGH-2** ✅ GONE (display symbol is DS1) — Designator collision on "U4"
 - **Files**: `display.py:45` (schematic uses "U4" for ILI9488 module symbol) vs `routing.py:556`, `jlcpcb_export.py:243`, `bom.csv:26` (PCB/BOM use "U4" for USBLC6)
 - **Problem**: Same reference designator assigned to two different components. Cross-probe schematic↔PCB will produce wrong matches; human review is confusing.
 - **Fix**: Rename the display module symbol in `display.py` to a non-conflicting ref (e.g., `DS1` or keep the physical `J4` as the real reference — the "ST7796S_Module" symbol at line 45 is a logical-only aid, so rename it to `MOD1` or drop the component and keep only the FPC J4 symbol).
@@ -197,7 +197,7 @@ Incidental cleanups driven by the sync check:
 
 All R5 findings are **pre-existing** — they were present in the `release(v3.3)` commit `f88cf1b` and every prior release. None were introduced by R4 or by the session's Fix 1 work.
 
-### R5-CRIT-1 — Boost converter inductor L1 isolated on BAT+ side
+### R5-CRIT-1 ✅ GONE (connectivity gates green today) — Boost converter inductor L1 isolated on BAT+ side
 
 - **Files**: `scripts/generate_pcb/routing.py:1120-1134`, `hardware/kicad/esp32-emu-turbo.kicad_pcb` (cache inspection)
 - **Evidence** (B.Cu only at x=111.7 y=[49.5, 52.5]):
@@ -217,7 +217,7 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
   3. Dogleg around the IP5306_KEY vertical at x=114.05 to reach L1.1 at x=111.7.
   4. Alternative: add a dedicated BAT+ pour on a reshuffled inner layer (intrusive).
 
-### R5-CRIT-2 — IP5306 BAT+ bulk decoupling cap C18 isolated
+### R5-CRIT-2 ✅ GONE (connectivity gates green today) — IP5306 BAT+ bulk decoupling cap C18 isolated
 
 - **Files**: `scripts/generate_pcb/routing.py:4146-4155`, cache
 - **Evidence**:
@@ -229,7 +229,7 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 - **Impact**: **HIGH**. Bulk BAT+ decoupling absent → higher ripple on the IP5306 BAT input during switching load transients. Board may boot but may show instability under high load (audio + display + WiFi).
 - **Fix plan**: merge with R5-CRIT-1 routing — the same new B.Cu BAT+ horizontal can pick up C18.1 on its way east.
 
-### R5-CRIT-3 — IP5306 VBUS decoupling cap C17 isolated
+### R5-CRIT-3 ✅ GONE (connectivity gates green today) — IP5306 VBUS decoupling cap C17 isolated
 
 - **Files**: `scripts/generate_pcb/routing.py:4125-4144`, cache
 - **Evidence**: C17.1 (110.95, 35.00) → short B.Cu stub → dangling via at (110.95, 33.65). Main VBUS F.Cu vertical at x=111.00 starts at y=40.09 — the via is 6.44mm north with no connecting segment on either layer.
@@ -237,7 +237,7 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 - **Impact**: **MEDIUM**. IP5306 still receives VBUS via the U2.1 pin connection, but the input decoupling cap is not filtering anything → higher USB-C input ripple, potential EMI issues, reduced charging noise immunity.
 - **Fix plan**: reroute C17.1 stub SOUTH to meet the existing F.Cu VBUS vertical, or extend the VBUS vertical north to reach the via.
 
-### R5-CRIT-4 — Button pull-up + debounce network fragmented on every button
+### R5-CRIT-4 ✅ GONE (connectivity gates green today) — Button pull-up + debounce network fragmented on every button
 
 - **Files**: `scripts/generate_pcb/routing.py` (button routing section), cache
 - **Evidence** (example BTN_A — same pattern on all 12 buttons):
@@ -258,7 +258,7 @@ All R5 findings are **pre-existing** — they were present in the `release(v3.3)
 - **Why verification missed it**: same class as R5-CRIT-1 — every pad has the "right" net assignment, and the pull-up/debounce junction is internally consistent (R and C share a 4mm trace), so polarity/datasheet checks pass. Nothing walks the full net graph asking *"is every component electrically reachable from every other component on this net?"*.
 - **Fix plan**: for each button, add a B.Cu or F.Cu segment from the R/C junction to the main button signal path (near the ESP32-side via). ~12 segments total. Low risk per button, high tedium.
 
-### R5-CRIT-5 — SW14 not connected to BTN_SELECT network
+### R5-CRIT-5 ✅ GONE (connectivity gates green today) — SW14 not connected to BTN_SELECT network
 
 - **Files**: `scripts/generate_pcb/routing.py:4346-4355`, cache
 - **Evidence**: SW14.2 (102, 63.65) → short B.Cu stub to (102, 60) → dangling via. No connection to the main BTN_SELECT path (which runs on the LEFT side of the board via SW10 → ESP32 GPIO0).
@@ -371,7 +371,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 
 ### Bug list
 
-#### R9-CRIT-1 — BTN_START trace crosses LCD_CS / LCD_DC / LCD_WR on F.Cu (3 shorts)
+#### R9-CRIT-1 ✅ GONE (0 crossings / clearance clean today) — BTN_START trace crosses LCD_CS / LCD_DC / LCD_WR on F.Cu (3 shorts)
 
 - **Files**: `scripts/generate_pcb/routing.py` (BTN_START routing added in R7/R8 commits `0880d3d`, `eaab9e4`)
 - **Evidence** (from KiCad DRC on `hardware/kicad/esp32-emu-turbo.kicad_pcb`):
@@ -392,7 +392,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
   2. Add a new gate `verify_trace_crossings.py`: for each pair of segments on the same layer, if they intersect geometrically and belong to different nets, FAIL. Include in Layer 1 gate suite.
   3. Consider promoting `drc_native.py` to block on `tracks_crossing` automatically (currently "uncategorized").
 
-#### R9-CRIT-2 — Via BTN_B to pad GND(C3) near-short (0.05 mm copper / 0.20 mm hole)
+#### R9-CRIT-2 ✅ GONE (0 crossings / clearance clean today) — Via BTN_B to pad GND(C3) near-short (0.05 mm copper / 0.20 mm hole)
 
 - **Files**: `scripts/generate_pcb/routing.py` (button B routing, R8 era)
 - **Evidence**:
@@ -405,7 +405,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 - **Impact**: **CRITICAL risk, HIGH actual**. At fab the board may or may not short depending on registration; even if it ships intact, any flex or thermal cycling stresses that region. Don't ship.
 - **Fix**: Move the BTN_B via ≥1.2 mm from C3.2 (either north around C3 or south past it).
 
-#### R9-HIGH-1 — Via BAT+ to pad BTN_Y(R11) clearance 0.11 mm
+#### R9-HIGH-1 ✅ GONE (0 crossings / clearance clean today) — Via BAT+ to pad BTN_Y(R11) clearance 0.11 mm
 
 - **Files**: `scripts/generate_pcb/routing.py` (R7 BAT+ routing near button area OR R8 R11 bridge)
 - **Evidence**:
@@ -416,7 +416,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 - **Problem**: BAT+ via 1.07 mm from the BTN_Y pull-up pad. A short here would tie the Y button to raw battery (3.0–4.2 V) — still within ESP32 GPIO tolerance but bypasses the debounce cap and injects battery noise onto an input line.
 - **Fix**: Shift the BAT+ via ≥0.3 mm west, or move R11 east.
 
-#### R9-HIGH-2 — Via BAT+ to pad GND(C18) clearance 0.10 mm
+#### R9-HIGH-2 ✅ GONE (0 crossings / clearance clean today) — Via BAT+ to pad GND(C18) clearance 0.10 mm
 
 - **Files**: `scripts/generate_pcb/routing.py` (R6 BAT+ fix for R5-CRIT-2)
 - **Evidence**:
@@ -428,7 +428,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 - **Impact**: HIGH. Battery short risk.
 - **Fix**: Move the BAT+ via ≥0.3 mm west (toward 114.35 or further); re-route the short segment to C18.1.
 
-#### R9-HIGH-3 — Via GND to pad IP5306 pad4 clearance 0.145 mm
+#### R9-HIGH-3 ✅ GONE (0 crossings / clearance clean today) — Via GND to pad IP5306 pad4 clearance 0.145 mm
 
 - **Files**: `scripts/generate_pcb/routing.py` (IP5306 area GND stitching)
 - **Evidence**:
@@ -439,7 +439,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 - **Problem**: U2 pin 4 is IP5306 `NC` (intentionally no net in `datasheet_specs.py`). The GND via is 1.08 mm from this pad. Electrically harmless (NC pad floats), but a DRC rule violation — JLCPCB may flag on upload.
 - **Fix**: Either shift the via, or declare pad 4 as GND in `datasheet_specs.py` if the package actually ties it to GND internally (check IP5306 datasheet §pin description — some revisions tie NC to EP).
 
-#### R9-HIGH-4 — BTN_X track runs 93 mm across the board, breaches J1 GND clearance twice
+#### R9-HIGH-4 ✅ GONE (0 crossings / clearance clean today) — BTN_X track runs 93 mm across the board, breaches J1 GND clearance twice
 
 - **Files**: `scripts/generate_pcb/routing.py` (R8 BTN_X bridge or pre-existing)
 - **Evidence**:
@@ -454,7 +454,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 - **Impact**: HIGH. USB shield short risk + two-button ghost press risk.
 - **Fix**: Break the 93 mm BTN_X segment into shorter pieces, route through inner layers or around J1; move the BTN_X via at (36.55, 70.65) away from SW16.4b.
 
-#### R9-HIGH-5 — BTN_START short tracks breach J1 GND shield clearance (0.17 mm, ×2)
+#### R9-HIGH-5 ✅ GONE (0 crossings / clearance clean today) — BTN_START short tracks breach J1 GND shield clearance (0.17 mm, ×2)
 
 - **Files**: `scripts/generate_pcb/routing.py` (R7 BTN_START bridge)
 - **Evidence**:
@@ -466,7 +466,7 @@ Delta vs `scripts/drc_baseline.json`: total violations 756 → 44 (−712, great
 - **Impact**: HIGH. START button non-functional (stuck pressed) once USB-C shield touches chassis.
 - **Fix**: Re-route BTN_START stubs ≥0.25 mm from J1 shield pins.
 
-#### R9-HIGH-6 — Four LCD_D1..D4 vias breach J4 pad 42 clearance (0.19 mm ×4)
+#### R9-HIGH-6 ✅ GONE (0 crossings / clearance clean today) — Four LCD_D1..D4 vias breach J4 pad 42 clearance (0.19 mm ×4)
 
 - **Files**: `scripts/generate_pcb/routing.py::_lcd_traces`
 - **Evidence**:
@@ -1922,13 +1922,13 @@ masked by stale zone-fill state in the local DRC report.
 
 ### Bug list
 
-#### R17-HIGH-1 — J1 USB-C NPTH copper clearance regression from R16
+#### R17-HIGH-1 ✅ GONE (DRC 0 today) — J1 USB-C NPTH copper clearance regression from R16
 - **Files**: `scripts/generate_pcb/footprints.py::usb_c_16p`
 - **Symptom**: KiCad DRC `hole_clearance` violations on J1 pads 1 and 12 (B.Cu GND), actual 0.171 mm vs rule 0.200 mm.
 - **Root cause**: R16 widened the wide signal pads (1, 2, 11, 12) from 0.35 → 0.55 mm to match the JLCPCB EasyEDA reference footprint. The new pad rectangles extend further toward the NPTH positioning holes; the bottom-outer corner of pads 1 and 12 ends up 0.171 mm from the NPTH edge, below the 0.20 mm rule.
 - **Fix**: shrink wide-pad height from 1.10 → 1.04 mm. Pad bottom edge moves from y=−1.825 to y=−1.855 (footprint-local), giving a corner-to-NPTH distance of 0.20 mm exactly. The 0.06 mm Y deviation from the JLCPCB reference is well below JLCDFM's per-pin alignment tolerance and applies symmetrically to all 4 wide pads.
 
-#### R17-HIGH-2 — 6 dangling vias (orphans from various rounds)
+#### R17-HIGH-2 ✅ GONE (verify_dangling_copper PASS today) — 6 dangling vias (orphans from various rounds)
 - **Files**: `scripts/generate_pcb/routing.py`
 - **Symptom**: KiCad DRC `via_dangling` × 6.
 - **Root cause**: each via was a vestigial F.Cu↔B.Cu transition that no longer transitions because the surrounding routing was rewritten in earlier rounds.
@@ -2188,7 +2188,7 @@ Layer 1 gates rerun after polarity fix surfaced regressions in multiple gates.
 
 ### Bug list
 
-#### R21-HIGH-1 — J1 USB-C shield tab PTH annular ring 0.225mm < JLCPCB 0.25mm min
+#### R21-HIGH-1 ✅ GONE (jlcpcb_capabilities 12/12, DRC 0 annular today) — J1 USB-C shield tab PTH annular ring 0.225mm < JLCPCB 0.25mm min
 - **Files**: `scripts/generate_pcb/footprints.py` (J1 PTH pads 13, 14)
 - **Problem**: Shield tab PTH pads 13/14 have pad=1.10mm / drill=0.65mm → annular ring 0.225mm. JLCPCB minimum is 0.25mm.  Also surfaces as KiCad DRC `annular_width` errors on both pads plus 2 more at 0.1449mm (likely inner-layer thermal relief or different pad size on inner copper).
 - **Root cause**: R20 widened slot drill 0.60→0.65mm to meet JLCPCB 0.61mm slot-width minimum (commit `caf2b2c`), but did NOT widen the pad dimensions proportionally. 1.10−0.65 = 0.45mm ÷ 2 = 0.225mm ring.
@@ -2198,14 +2198,14 @@ Layer 1 gates rerun after polarity fix surfaced regressions in multiple gates.
   - OR reduce drill to 0.60mm and accept JLCPCB "special process" surcharge (not recommended for volume).
 - **Verify**: `python3 scripts/verify_jlcpcb_capabilities.py` must report `THT annular ring` PASS and `kicad-cli pcb drc` must show 0 annular_width errors.
 
-#### R21-HIGH-2 — J1 USB-C shield GND pads NPTH hole-clearance 0.171mm < rule 0.200mm
+#### R21-HIGH-2 ✅ GONE (DRC 0 hole_clearance today) — J1 USB-C shield GND pads NPTH hole-clearance 0.171mm < rule 0.200mm
 - **Files**: `scripts/generate_pcb/footprints.py` (J1 pads 1 and 12, GND on B.Cu), KiCad DRC rule "NPTH with copper around"
 - **Problem**: KiCad DRC: `Hole clearance violation (rule 'NPTH with copper around' clearance 0.2000 mm; actual 0.1712 mm)` on J1 pads 1 and 12 — GND copper ring too close to NPTH drill edge.
 - **Root cause**: Shield positioning-hole NPTH has tight clearance to adjacent B.Cu GND annular copper. Probably introduced or re-surfaced by the R19/R20 pad/slot revisions.
 - **Fix**: Either shrink the NPTH hole, enlarge the copper-free keep-out around it, or relocate the GND ring so min clearance ≥0.20mm. Respect datasheet NPTH ø0.70mm (component peg ø0.50mm) — do not shrink the hole below 0.70mm.
 - **Verify**: `kicad-cli pcb drc` must show 0 hole_clearance errors.
 
-#### R21-HIGH-3 — DRC reports extra unconnected items beyond accepted tech debt (PARTIAL FIX 2026-04-16)
+#### R21-HIGH-3 ✅ GONE (DRC 0 unconnected today) — DRC reports extra unconnected items beyond accepted tech debt
 - **Files**: `scripts/generate_pcb/routing.py`
 - **Problem (pre-fix)**: KiCad DRC reported 10 unconnected_items. 4 accepted tech debt + 6 additional orphans.
 
@@ -2511,7 +2511,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
 
 ---
 
-### R24-HIGH-1 — PAM8403 input bias still tied to GND on the PCB (R4-HIGH-3 was never fixed on the board)
+### R24-HIGH-1 ✅ GONE (R20/R21 on VREF, re-verified R30) — PAM8403 input bias still tied to GND on the PCB (R4-HIGH-3 was never fixed on the board)
 
 - **Files**: `scripts/generate_pcb/routing.py:2929-2991`, vs
   `scripts/generate_schematics/sheets/audio.py:137-177`
@@ -2550,7 +2550,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   proto #1. A bodge is possible (lift R20/R21 GND-side pad, wire to
   U5 pin 8), but confirm audio symptoms first.
 
-### R24-HIGH-2 — 274 of 321 schematic UUIDs collide across sheet files
+### R24-HIGH-2 ✅ GONE (0 duplicate UUIDs today) — 274 of 321 schematic UUIDs collide across sheet files
 
 - **Files**: `scripts/generate_schematics/` (all sheet emitters),
   `hardware/kicad/*.kicad_sch`
@@ -2577,7 +2577,7 @@ slot annular is 0.260 mm (was 0.225), above the 0.2 mm floor.
   makes every ERC report untrustworthy, which is worse than a bug that
   merely exists.
 
-### R24-HIGH-3 — SW15 and SW14 have all four pins floating in the schematic
+### R24-HIGH-3 ✅ GONE (pin-connectivity gate 0 floating) — SW15 and SW14 have all four pins floating in the schematic
 
 - **File**: `scripts/generate_schematics/sheets/mcu.py:84-102`
 - **Problem**: `SW_Push` has **horizontal** pins — library coordinates
@@ -2817,7 +2817,7 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
 
 ---
 
-#### R25-CRIT-1 — the EN RC delay circuit the datasheet requires is absent; EN floats
+#### R25-CRIT-1 ⚠️ STILL PRESENT (recorded respin deviation, known-issues.md) — the EN RC delay circuit the datasheet requires is absent; EN floats
 
 - **Files**: `scripts/generate_schematics/sheets/mcu.py:55-75`,
   `release_jlcpcb/bom.csv`, `release_jlcpcb/cpl.csv`
@@ -2864,7 +2864,7 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
 - **Not verified**: whether proto #1 boots reliably today. That is the
   deciding observation and it is a bench test, not a repo query.
 
-#### R25-HIGH-1 — the display backlight has no current-limiting element
+#### R25-HIGH-1 ⚠️ STILL PRESENT (design fix in progress 2026-07-31) — the display backlight has no current-limiting element
 
 - **Files**: `hardware/datasheet_specs.py:392-395`,
   `scripts/generate_schematics/sheets/display.py:55-56`,
@@ -2905,7 +2905,7 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
   `hardware/datasheets/` so the requirement stops living only in a
   Markdown table.
 
-#### R25-HIGH-2 — the firmware cannot configure from a clean clone
+#### R25-HIGH-2 ✅ GONE (COMPONENTS main; submodule builds today) — the firmware cannot configure from a clean clone
 
 - **Files**: `software/components/{snes9x,gnuboy,smsplus,pce-go}/CMakeLists.txt:5`,
   `.gitmodules`, `retro-go/`
@@ -2999,7 +2999,7 @@ Started as "close the last two red rows and the two DRC warnings". The two
 red rows were `verify_cpl_rotation_law` on U2 and J4. Both are now green,
 neither for the reason the gate gave.
 
-### R26-CRIT-1 — U2 (IP5306) shipped at a CPL angle that cannot seat
+### R26-CRIT-1 ✅ CLOSED (H4; CPL synced, gate green) — U2 (IP5306) shipped at a CPL angle that cannot seat
 
 - **Problem**: `"ESOP-8"` cannot match the `^SOP-` rule in
   `_JLCPCB_ROT_CORRECTIONS` — the `^` anchor is blocked by the leading E —
@@ -3017,7 +3017,7 @@ neither for the reason the gate gave.
   BAT→BAT+, SW→LX, VOUT→+5V, EP→GND, LED1‑3 open.
 - **Impact**: **CRITICAL**. Same one-letter class as the U4 SOT-23-6 bug.
 
-### R26-CRIT-2 — the law's 90° would have been worse than the bug
+### R26-CRIT-2 ✅ CLOSED (H4) — the law's 90° would have been worse than the bug
 
 - **Problem**: 90° is the value `verify_cpl_rotation_law` derives for U2,
   and it is the one angle that **solders while being wrong**. It puts pin
@@ -3027,7 +3027,7 @@ neither for the reason the gate gave.
   direction is more dangerous than the defect it reports. 0° fails visibly
   at assembly; 90° ships.
 
-### R26-HIGH-1 — the law is wrong for one cell, and that cell has exactly two members
+### R26-HIGH-1 ✅ CLOSED (law exceptions recorded) — the law is wrong for one cell, and that cell has exactly two members
 
 - **Problem**: `row_board + row_ee` is 0 or 180 for every polarized part on
   this board except U2 and J4, which are both 90. That is the one cell
@@ -3039,7 +3039,7 @@ neither for the reason the gate gave.
   the copper or the placement fails them as stale. **One law defect
   recorded twice, not two part quirks.**
 
-### R26-HIGH-2 — J4 was correct and was nearly broken by the audit
+### R26-HIGH-2 ✅ CLOSED (J4 270° kept, hardware-confirmed) — J4 was correct and was nearly broken by the audit
 
 - **Problem**: J4's `_JLCPCB_ROT_DELTAS` entry genuinely lacked a
   derivation, and "no derivation, therefore wrong" was itself wrong. It has
@@ -3052,7 +3052,7 @@ neither for the reason the gate gave.
   pcbnew flip-and-rotate of the LCSC reference matches at 0.002 mm worst
   residual across all 42 pads.
 
-### R26-HIGH-3 — `release_jlcpcb/` was carrying a stale U4
+### R26-HIGH-3 ✅ CLOSED (release dir synced) — `release_jlcpcb/` was carrying a stale U4
 
 - **Problem**: at `74c196e` the generator emitted `U4=0°` but
   `release_jlcpcb/cpl.csv` still carried the pre-fix `90°`. The U4 fix
