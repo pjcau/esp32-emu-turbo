@@ -17,8 +17,11 @@ gap by doing what the fab's flying-probe e-test does, before ordering:
     1. rasterize the four copper gerbers,
     2. connect layers through the plated holes in the drill file,
     3. locate every pad and via from the IPC-D-356 e-test netlist,
-    4. assert  OPENS:  each net is ONE piece of copper,
-               SHORTS: no piece of copper carries two nets.
+    4. assert  OPENS:   each net is ONE piece of copper,
+               SHORTS:  no piece of copper carries two nets,
+               ORPHANS: no piece of copper belongs to NO net at all
+                        (dead zone-fill fragments, forgotten artwork —
+                        copper the fab etches and nobody owns).
 
 All three inputs (gerbers, drill, .d356) come from `release_jlcpcb/` — the
 directory that goes to the fab — so this also catches the "release dir is
@@ -63,9 +66,26 @@ COPPER_SUFFIXES = [  # outer → inner → outer, index = layer id
 ]
 IN_TO_MM = 25.4 / 10000.0  # d356 CUST 0 units: 1/10000 inch
 
+# outer-layer solder-mask gerbers, in (front, back) order matching the first
+# and last entry of COPPER_SUFFIXES. Openings mark intentionally exposed
+# copper: every pad — netted or NC — has one, a dead zone-fill fragment
+# never does. That distinction is what lets the orphan check tell "NC pad,
+# fine" from "copper nobody owns" without any allowlist.
+MASK_SUFFIXES = [
+    ("F.Mask", "-F_Mask.gts"),
+    ("B.Mask", "-B_Mask.gbs"),
+]
+
 # margin added to a hole/pad radius when sampling copper labels: reaches the
 # annular ring without jumping the 0.1 mm minimum clearance to foreign copper
 SAMPLE_MARGIN_MM = 0.05
+
+# smallest unclaimed copper island reported as dead copper. Below this it is
+# raster noise: JLCPCB's minimum manufacturable feature is 0.127 mm wide, so
+# a real fragment is >= 0.127² ≈ 0.016 mm²; 0.01 mm² sits under that with
+# margin while staying an order of magnitude above single-pixel artefacts
+# (one pixel at 40 px/mm is 0.000625 mm²).
+MIN_ORPHAN_MM2 = 0.01
 
 
 class Fatal(RuntimeError):
@@ -237,6 +257,52 @@ def rasterize_layers(gerber_dir: Path, dpmm: int):
     return masks, minx, maxy
 
 
+def rasterize_mask_openings(gerber_dir: Path, dpmm: int, minx: float,
+                            maxy: float, shape):
+    """Render the two solder-mask gerbers onto the copper canvas.
+
+    Returns [front_openings, back_openings] as bool arrays aligned with the
+    copper masks: True where the mask is OPEN (copper deliberately exposed).
+    The mask bbox can exceed the copper bbox, so offsets are clipped."""
+    from PIL import Image
+    from pygerber.gerberx3.api.v2 import GerberFile, ImageFormatEnum
+
+    stem = None
+    for f in gerber_dir.iterdir():
+        if f.name.endswith("-F_Cu.gtl"):
+            stem = f.name[: -len("-F_Cu.gtl")]
+    if stem is None:
+        raise Fatal(f"no *-F_Cu.gtl in {gerber_dir}")
+
+    scheme = _mono_scheme()
+    out = []
+    for _, suffix in MASK_SUFFIXES:
+        path = gerber_dir / (stem + suffix)
+        if not path.exists():
+            raise Fatal(f"missing solder-mask gerber {path.name} — "
+                        "cannot separate NC pads from dead copper")
+        p = GerberFile.from_file(path).parse()
+        info = p.get_info()
+        box = (float(info.min_x_mm), float(info.min_y_mm),
+               float(info.max_x_mm), float(info.max_y_mm))
+        buf = io.BytesIO()
+        p.render_raster(buf, dpmm=dpmm, color_scheme=scheme,
+                        image_format=ImageFormatEnum.PNG)
+        buf.seek(0)
+        img = np.asarray(Image.open(buf).convert("L")) > 127
+        canvas = np.zeros(shape, dtype=bool)
+        r0 = int(round((maxy - box[3]) * dpmm))
+        c0 = int(round((box[0] - minx) * dpmm))
+        sr, sc = max(0, -r0), max(0, -c0)
+        r0, c0 = max(0, r0), max(0, c0)
+        h = min(img.shape[0] - sr, shape[0] - r0)
+        w = min(img.shape[1] - sc, shape[1] - c0)
+        if h > 0 and w > 0:
+            canvas[r0 : r0 + h, c0 : c0 + w] = img[sr : sr + h, sc : sc + w]
+        out.append(canvas)
+    return out
+
+
 # --------------------------------------------------------------- connectivity
 
 class UnionFind:
@@ -271,10 +337,13 @@ def labels_near(labelled, minx, maxy, dpmm, x, y, radius_mm):
     return set(np.unique(window[disk])) - {0}
 
 
-def analyze(records, holes, masks, minx, maxy, dpmm):
+def analyze(records, holes, masks, minx, maxy, dpmm, mask_open):
     """Weld layers through plated holes, place every e-test record, and
     return (failures, stats). failures is a list of (headline, detail_lines);
-    empty means electrically sound."""
+    empty means electrically sound. mask_open is the
+    [front, back] openings pair from rasterize_mask_openings — exposed
+    copper is deliberate (a pad, netted or not), so it is exempt from the
+    dead-copper verdict."""
     from scipy import ndimage
 
     eight = np.ones((3, 3), dtype=int)
@@ -405,11 +474,57 @@ def analyze(records, holes, masks, minx, maxy, dpmm):
              f"({rec['x']:.2f}, {rec['y']:.2f}) mm has no copper under it", [])
         )
 
+    # DEAD COPPER — welded components that no e-test record claims. OPEN and
+    # SHORT both start from the records, so an orphaned zone-fill fragment or
+    # a stub of forgotten artwork — copper the fab etches and no net owns —
+    # is invisible to them and to every model-side gate. Enumerate every
+    # copper island, canonicalize through the same union-find, and flag any
+    # component whose area is manufacturable yet unclaimed.
+    claimed = {uf.find(comp) for _, comp in rec_comp}
+    for li, mo in ((0, mask_open[0]), (len(labelled) - 1, mask_open[1])):
+        for lid in set(np.unique(labelled[li][mo])) - {0}:
+            claimed.add(uf.find((li, int(lid))))
+    px_mm2 = 1.0 / (dpmm * dpmm)
+    orphan_area: dict = defaultdict(float)
+    orphan_example: dict = {}
+    for li, lab in enumerate(labelled):
+        n = islands[li]
+        if not n:
+            continue
+        counts = np.bincount(lab.ravel(), minlength=n + 1)
+        boxes = ndimage.find_objects(lab)
+        for lid in range(1, n + 1):
+            comp = uf.find((li, lid))
+            if comp in claimed:
+                continue
+            orphan_area[comp] += counts[lid] * px_mm2
+            if comp not in orphan_example:
+                sl = boxes[lid - 1]
+                row = (sl[0].start + sl[0].stop) / 2
+                col = (sl[1].start + sl[1].stop) / 2
+                orphan_example[comp] = (COPPER_SUFFIXES[li][0],
+                                        minx + col / dpmm,
+                                        maxy - row / dpmm)
+    orphans = {c: a for c, a in orphan_area.items() if a >= MIN_ORPHAN_MM2}
+    if orphans:
+        detail = []
+        for comp, area in sorted(orphans.items(), key=lambda kv: -kv[1])[:20]:
+            layer, x, y = orphan_example[comp]
+            detail.append(f"      {area:8.3f} mm² on {layer} near "
+                          f"({x:.2f}, {y:.2f}) mm")
+        if len(orphans) > 20:
+            detail.append(f"      ... and {len(orphans) - 20} more")
+        failures.append(
+            (f"ORPHAN {len(orphans)} dead copper island(s) belong to no net "
+             f"(largest {max(orphans.values()):.3f} mm²)", detail)
+        )
+
     stats = {
         "records": len(records),
         "nets": len(net_comps),
         "holes": len(holes),
         "islands": islands,
+        "orphans": len(orphans),
     }
     return failures, stats
 
@@ -438,12 +553,17 @@ def main() -> int:
     records = parse_d356(args.d356)
     holes = parse_drill(find_drill(args.gerbers))
     masks, minx, maxy = rasterize_layers(args.gerbers, args.dpmm)
-    failures, stats = analyze(records, holes, masks, minx, maxy, args.dpmm)
+    mask_open = rasterize_mask_openings(args.gerbers, args.dpmm, minx, maxy,
+                                        masks[0].shape)
+    failures, stats = analyze(records, holes, masks, minx, maxy, args.dpmm,
+                              mask_open)
 
     for (name, _), n in zip(COPPER_SUFFIXES, stats["islands"]):
         print(f"  {name:<7}: {n} copper islands")
     print(f"  e-test points: {stats['records']} on {stats['nets']} nets, "
           f"{stats['holes']} plated holes")
+    print(f"  dead copper : {stats['orphans']} unclaimed island(s) >= "
+          f"{MIN_ORPHAN_MM2} mm²")
     print("-" * 72)
     if failures:
         for head, detail in failures:
@@ -463,7 +583,7 @@ def main() -> int:
         print("from the same board.")
         return 1
     print("Results: PASS — every net is one piece of copper, no net touches "
-          "another")
+          "another, no copper belongs to nobody")
     return 0
 
 
