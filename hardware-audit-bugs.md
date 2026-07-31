@@ -88,7 +88,7 @@ R2-LOW-6: R16 described as "pull-down" in 3 files, actually pull-up
 | R3-HIGH-1 | HIGH | 6 MH on PCB vs 4 in enclosure | ✅ resolved by redesign: PCB has no MH, shells clamp on bosses (R30 addendum) |
 | R3-HIGH-2 | HIGH | C28 under ESP32 module body | ⚠️ became the C28-removed-from-assembly RESPIN entry in known-issues.md |
 | R3-HIGH-3 | HIGH | PAM8403 OUTL floating, INL driven | ✅ resolved by redesign: INL=INR=PAM_IN_AC mono bias |
-| R3-HIGH-4 | HIGH | No VBUS PTC fuse | ⚠️ never actioned — recorded in known-issues.md 2026-07-31; fix in progress |
+| R3-HIGH-4 | HIGH | No VBUS PTC fuse | ✅ FIXED IN DESIGN 2026-07-31: F1 BSMD1812-200-30V (2A hold/4A trip, C960026) in series J1→VBUS_IN→F1→VBUS; fabricated boards through v4.3.1 stay fuseless |
 | R3-MED-1 | MEDIUM | No battery reverse polarity protection | Add P-MOSFET on BAT+ |
 | R3-MED-2 | MEDIUM | PDM no LP reconstruction filter | Add 1k+10nF RC before PAM8403 |
 | R3-MED-3 | MEDIUM | JST PH missing anchor pads | Add 2 mechanical pads |
@@ -2817,7 +2817,7 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
 
 ---
 
-#### R25-CRIT-1 ⚠️ STILL PRESENT (recorded respin deviation, known-issues.md) — the EN RC delay circuit the datasheet requires is absent; EN floats
+#### R25-CRIT-1 ✅ FIXED IN DESIGN 2026-07-31 (R3 10k + C31 100nF on the EN trace; verify_strapping_pins passes on copper — boards through v4.3.1 still bare) — the EN RC delay circuit the datasheet requires is absent; EN floats
 
 - **Files**: `scripts/generate_schematics/sheets/mcu.py:55-75`,
   `release_jlcpcb/bom.csv`, `release_jlcpcb/cpl.csv`
@@ -2864,7 +2864,7 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
 - **Not verified**: whether proto #1 boots reliably today. That is the
   deciding observation and it is a bench test, not a repo query.
 
-#### R25-HIGH-1 ⚠️ STILL PRESENT (design fix in progress 2026-07-31) — the display backlight has no current-limiting element
+#### R25-HIGH-1 ✅ FIXED IN DESIGN 2026-07-31 (LED-A from +5V via R27 20R 1206, net LED_BLA; one bench measurement still owed — boards through v4.3.1 keep the hard +3V3 tie) — the display backlight has no current-limiting element
 
 - **Files**: `hardware/datasheet_specs.py:392-395`,
   `scripts/generate_schematics/sheets/display.py:55-56`,
@@ -3582,7 +3582,7 @@ suite 81/81).
 | R3-HIGH-1 (6 PCB MH vs 4 enclosure) | resolved by redesign | PCB now has ZERO mounting holes (cache: no drill ≥2 mm); enclosure clamps the PCB on screw-boss tops, 4 shell screws |
 | R3-HIGH-2 (C28 under module) | still present, recorded | became the known-issues RESPIN entry (C28 removed from assembly; no bulk near U1) |
 | R3-HIGH-3 (INL driven / OUTL floating) | resolved by redesign | INL=INR=PAM_IN_AC mono bias (`datasheet_specs.py:278`), OUTL/− float on the unused channel |
-| **R3-HIGH-4 (no VBUS PTC fuse)** | **never actioned — still absent** | no fuse ref anywhere in BOM/CPL. Now recorded in docs/known-issues.md RESPIN with the honest rationale and the respin decision it needs |
+| **R3-HIGH-4 (no VBUS PTC fuse)** | **FIXED IN DESIGN 2026-07-31** | F1 (BSMD1812-200-30V, C960026) in series: J1→VBUS_IN→F1→VBUS; `verify_datasheet_nets` locks J1.2/J1.11 to VBUS_IN, `verify_power_paths`/`verify_signal_chain_complete` walk both hops |
 | R4-CRIT-1 (J4 pinout mismatch) | gone | resolved as the `41−N` reversal; `verify_datasheet_nets` 267 PASS |
 | R4-HIGH-1 (U4/R22/R23 not in schematic) | gone | all three in today's exported netlist |
 | R4-HIGH-2 (U4 designator collision) | gone | display logical symbol is DS1 |
@@ -3594,14 +3594,20 @@ suite 81/81).
 | R24-HIGH-1 (PAM bias on PCB) | gone | same as R4-HIGH-3 |
 | R24-HIGH-2 (274 UUID collisions) | gone | 0 duplicate uuids across all sheet files (checked today) |
 | R24-HIGH-3 (SW14/15 floating) | gone | `verify_schematic_pin_connectivity` 0 floating |
-| **R25-CRIT-1 (EN has no RC, no pull-up)** | **still present by recorded decision** | RESPIN deviation; `verify_strapping_pins` passes only while known-issues.md records it (the record IS the gate anchor) |
-| **R25-HIGH-1 (backlight no current limit)** | **still present** | RESPIN + one bench measurement owed; family datasheet in repo |
+| **R25-CRIT-1 (EN has no RC, no pull-up)** | **FIXED IN DESIGN 2026-07-31** | R3 (10k EN→+3V3) + C31 (100nF EN→GND) on the EN trace east of U1.3; `verify_strapping_pins` now passes on the copper arm, and the known-issues record covers only the fabricated boards |
+| **R25-HIGH-1 (backlight no current limit)** | **FIXED IN DESIGN 2026-07-31** | LED-A fed from +5V through R27 (20R 1206) on net LED_BLA (~90 mA per family class); one bench measurement on the actual panel still owed |
 | R25-HIGH-2 (clean clone cannot build) | gone | `software/CMakeLists.txt` `set(COMPONENTS main)` excludes the broken emulator components; retro-go submodule initialized and compiling (launcher.bin built today, IDF 5.4) |
 | R26-CRIT-1/2, R26-HIGH-1/2/3 (rotation law) | gone | H4 resolved; `verify_cpl_rotation_law` OK 12 / EXCEPTION 2 / FAIL 0; release CPL synced |
 | R28-HIGH-1 (panel pin 13 floats) | fixed in design | tie present; protos fabricated before 2026-07-26 still physically carry the float |
 
-Bottom line: across 30 rounds, the only CRIT/HIGH still physically true on
-the current design are the two recorded respin deviations (R25-CRIT-1 EN
-network, R25-HIGH-1 backlight) plus the never-actioned R3-HIGH-4 VBUS
-fuse — all three now visible in docs/known-issues.md, none fixable
-without a respin or a bench decision.
+Bottom line: across 30 rounds, ZERO CRIT/HIGH remain open on the current
+design. The last three (R25-CRIT-1 EN network, R25-HIGH-1 backlight,
+R3-HIGH-4 VBUS fuse) were fixed in the design on 2026-07-31: R3+C31 on
+EN, R27 feeding LED-A from +5V on net LED_BLA, and F1 splitting the USB
+input into VBUS_IN→VBUS. Full suite green (81/81) with all three fitted.
+What survives is as-built truth only — every board fabricated through
+v4.3.1 physically carries all three defects (plus the C28 bulk-cap gap
+and the pre-2026-07-26 pin-13 float) and cannot be reworked in place;
+docs/known-issues.md RESPIN keeps those records. Still owed: one bench
+measurement of the actual panel's backlight current to confirm R27's
+20 R.
