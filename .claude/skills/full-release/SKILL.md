@@ -65,6 +65,13 @@ python3 scripts/verify_schematic_pcb.py
 
 # 2g. Electrical simulation (power budget, timing, GPIO conflicts)
 python3 scripts/verify_electrical.py
+
+# 2h. Virtual Bench — every circuit change ripples into vbench. Netlist is
+# auto-derived from the .kicad_pcb; model parameters (scripts/vbench/models/,
+# from hardware/datasheet_specs) must be updated for any changed part.
+python3 scripts/test_vbench.py
+python3 scripts/test_vbench_display.py
+python3 scripts/test_vbench_sdcard.py
 ```
 
 **Gate check**: If DFM or DFA have failures, STOP. Polarity and electrical warnings are OK if previously acknowledged.
@@ -235,15 +242,45 @@ git commit -m "release($VERSION): full JLCPCB package + renders"
 | 9. Outputs verified | OK/FAIL | — |
 | 10. Git commit | OK/SKIP | — |
 
-## JLCPCB Upload Instructions
+## JLCPCB Upload Protocol (sequential — only as the final step of a release)
 
-After release is ready:
+The upload is part of the release sequence, never a standalone errand.
+JLCPCB places EXACTLY what the CPL says — no vision correction. Proven on
+v4.3.1: at least 8 bottom-side parts mounted 90° off, precisely as the
+uploaded CPL specified. The upload files are therefore the last point where
+a wrong rotation/polarity can still be stopped.
+
+**Preconditions — ALL must hold before opening the browser:**
+1. The release commit is at HEAD and carries a **release tag**. Never upload
+   an untagged state.
+2. Steps 1–9 of this pipeline ran in this same session, at this commit.
+   `release_jlcpcb/` can be stale while every gate is green (the U4 fix sat
+   unshipped for months) — gates compare generator↔board, never
+   release↔generator.
+3. Upload files come from `release_jlcpcb/` ONLY — never from
+   `hardware/kicad/jlcpcb/`.
+
+**Upload flow** (claude-in-chrome MCP can drive it; user must be logged in):
 1. Go to https://cart.jlcpcb.com/quote
 2. Upload `release_jlcpcb/gerbers.zip`
 3. Select: 4-layer, 1.6mm, ENIG/HASL, green solder mask
-4. Enable PCBA: upload `bom.csv` and `cpl.csv`
-5. Verify 3D viewer alignment for all bottom-side components
-6. Check component count matches BOM (21 unique parts, ~71 placements)
+4. Enable PCBA: upload `release_jlcpcb/bom.csv` and `release_jlcpcb/cpl.csv`
+5. **STOP before payment** — order confirmation and payment are the user's.
+
+**Placement-preview checkpoint (mandatory, both sides):**
+- Compare every polarized/oriented part in JLCPCB's placement preview
+  against our PCBA renders (`website/static/img/renders/pcba/`): IC pin 1
+  (U2/U3/U4/U5), diode cathode (D1), tantalum stripe, inductor marking.
+  Polarity source of truth: `hardware/datasheets/POLARITY_AUDIT.md`.
+- **NEVER fix a rotation inside JLCPCB's online editor** — that forks the
+  order from the design invisibly and no gate will ever notice. Go back,
+  fix the generator, regenerate the CPL, re-run the release, re-upload.
+- If JLCPCB's DFM review reports "component rotation adjusted", treat it as
+  an alarm, not a favor: reconcile by pin→pad→net before ordering.
+
+**Post-upload record:** append to `release_jlcpcb/README.md` the sha256 of
+the exact `gerbers.zip`, `bom.csv`, `cpl.csv` uploaded (`shasum -a 256`),
+so "the uploaded CPL matches release_jlcpcb/ at HEAD" stays checkable.
 
 ## Key Files
 
