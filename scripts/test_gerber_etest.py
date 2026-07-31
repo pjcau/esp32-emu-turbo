@@ -9,6 +9,8 @@ failure direction is exercised against the real release artifacts:
     M3  truncated d356                        -> structural error, not a pass
     M4  every record shifted 7 mm             -> structural error ("mapping
         broken"), never a silent all-bare pass
+    M5  1x1 mm copper blob painted on bare board, under mask, no net
+        -> ORPHAN (dead copper) reported
 
 The copper is rasterized ONCE and shared across mutations, so the whole
 suite costs one gate run plus noise.
@@ -45,6 +47,7 @@ from verify_gerber_etest import (  # noqa: E402
     parse_d356,
     parse_drill,
     rasterize_layers,
+    rasterize_mask_openings,
 )
 
 DPMM = 40
@@ -59,6 +62,8 @@ def main() -> int:
     records = parse_d356(DEF_D356)
     holes = parse_drill(find_drill(DEF_GERBERS))
     masks, minx, maxy = rasterize_layers(DEF_GERBERS, DPMM)
+    mask_open = rasterize_mask_openings(DEF_GERBERS, DPMM, minx, maxy,
+                                        masks[0].shape)
 
     def check(name, ok, why=""):
         print(f"  {'PASS' if ok else 'FAIL'}  {name}" + (f" — {why}" if why else ""))
@@ -66,7 +71,8 @@ def main() -> int:
             failures.append(name)
 
     # M1: the release artifacts themselves are electrically sound
-    found, stats = analyze(records, holes, masks, minx, maxy, DPMM)
+    found, stats = analyze(records, holes, masks, minx, maxy, DPMM,
+                           mask_open)
     check("M1 clean release inputs pass", not found,
           "; ".join(h for h, _ in found[:3]) if found else
           f"{stats['records']} points, {stats['nets']} nets")
@@ -79,7 +85,8 @@ def main() -> int:
         if rec["net"] == "GND" and rec["ref"] == "VIA" and swapped < 10:
             rec["net"] = "+3V3"
             swapped += 1
-    found_m2, _ = analyze(mutated, holes, masks, minx, maxy, DPMM)
+    found_m2, _ = analyze(mutated, holes, masks, minx, maxy, DPMM,
+                          mask_open)
     hit = [h for h, _ in found_m2 if "+3V3" in h and "GND" in h]
     check("M2 swapped GND->+3V3 labels detected", swapped == 10 and bool(hit),
           hit[0] if hit else f"swapped={swapped}, findings={len(found_m2)}")
@@ -111,18 +118,55 @@ def main() -> int:
         rec["x"] += 7.0
         rec["y"] += 7.0
     try:
-        analyze(shifted, holes, masks, minx, maxy, DPMM)
+        analyze(shifted, holes, masks, minx, maxy, DPMM, mask_open)
         check("M4 shifted coordinates rejected as structural", False,
               "analyze returned instead of raising Fatal")
     except Fatal:
         check("M4 shifted coordinates rejected as structural", True)
+
+    # M5: paint a 1x1 mm copper blob on bare board, under solder mask and
+    # claimed by no net — dead copper. The gate must say ORPHAN, not pass.
+    import numpy as np
+
+    any_cu = np.zeros_like(masks[0], dtype=bool)
+    for m in masks:
+        any_cu |= m
+    any_cu |= mask_open[0] | mask_open[1]  # stay clear of mask openings too
+    win = 80  # px = 2 mm at 40 px/mm: blob plus standoff from real copper
+    ii = np.cumsum(np.cumsum(any_cu, axis=0), axis=1).astype(np.int64)
+    h, w = any_cu.shape
+    spot = None
+    for r in range(win, h - win, win // 2):
+        for c in range(win, w - win, win // 2):
+            s = (ii[r + win // 2, c + win // 2]
+                 - ii[r - win // 2, c + win // 2]
+                 - ii[r + win // 2, c - win // 2]
+                 + ii[r - win // 2, c - win // 2])
+            if s == 0:
+                spot = (r, c)
+                break
+        if spot:
+            break
+    if spot is None:
+        check("M5 orphan copper blob detected", False,
+              "no copper-free 2 mm window found to paint the blob in")
+    else:
+        r, c = spot
+        blob = [m.copy() for m in masks]
+        blob[0][r - 20 : r + 20, c - 20 : c + 20] = True  # 1x1 mm on F.Cu
+        found_m5, stats_m5 = analyze(records, holes, blob, minx, maxy, DPMM,
+                                     mask_open)
+        hit5 = [head for head, _ in found_m5 if head.startswith("ORPHAN")]
+        check("M5 orphan copper blob detected",
+              bool(hit5) and stats_m5["orphans"] == 1,
+              hit5[0] if hit5 else f"findings={len(found_m5)}")
 
     print("-" * 72)
     if failures:
         print(f"Results: FAIL — {len(failures)} mutation(s) survived: "
               f"{', '.join(failures)}")
         return 1
-    print("Results: PASS — 4/4 mutations detected")
+    print("Results: PASS — 5/5 mutations detected")
     return 0
 
 
