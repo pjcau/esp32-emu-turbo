@@ -1,5 +1,8 @@
 """Base class for KiCad schematic sheet generation."""
 
+import math
+import re
+
 from .kicad_primitives import KiCadContext
 from .lib_symbols import lib_symbols_block
 
@@ -44,6 +47,7 @@ class SchematicSheet:
     def render(self) -> str:
         """Generate the complete .kicad_sch content."""
         self.build()
+        self._split_wires_at_connection_points()
         sections = [
             self.header(),
             lib_symbols_block(self.needed_symbols),
@@ -52,6 +56,73 @@ class SchematicSheet:
             self.footer(),
         ]
         return "".join(sections)
+
+    # Wires must END at every point where something connects to them.
+    # KiCad's GUI accepts a stub ending mid-span of a rail (with a
+    # junction dot) or a label anchored mid-span, but the HEADLESS
+    # netlisters do not agree on that construct across versions — on this
+    # exact file kicad-cli 10.0 (macOS) netted it fully, 9.0.9 (Ubuntu)
+    # split the rail around the junction, and nightly 9.99 dropped the
+    # tapped pins entirely (C18.1/R16.1/C3.1 "unconnected"). A wire
+    # *endpoint* meeting other wire endpoints is the one construct every
+    # engine nets identically, so after build() every wire is split at
+    # each junction, label, global-label or one-pin power-symbol anchor
+    # lying strictly inside it. Sheets keep drawing full-span rails; this
+    # pass makes the emitted geometry engine-invariant.
+    _SPLIT_PT_RES = [
+        re.compile(r'^  \(junction \(at ([\d.eE+-]+) ([\d.eE+-]+)\)'),
+        re.compile(r'^  \(label "[^"]*" \(at ([\d.eE+-]+) ([\d.eE+-]+)'),
+        re.compile(r'^  \(global_label "[^"]*" \(shape \w+\)'
+                   r' \(at ([\d.eE+-]+) ([\d.eE+-]+)'),
+        re.compile(r'^  \(symbol \(lib_id "(?:GND|\+3V3|\+5V|PWR_FLAG)"\)'
+                   r' \(at ([\d.eE+-]+) ([\d.eE+-]+)'),
+    ]
+    _WIRE_RE = re.compile(
+        r'^  \(wire \(pts \(xy ([\d.eE+-]+) ([\d.eE+-]+)\)'
+        r' \(xy ([\d.eE+-]+) ([\d.eE+-]+)\)\)'
+    )
+
+    def _split_wires_at_connection_points(self):
+        eps = 1e-4
+        points = []
+        for part in self.parts:
+            for rx in self._SPLIT_PT_RES:
+                m = rx.match(part)
+                if m:
+                    points.append((float(m.group(1)), float(m.group(2))))
+                    break
+        if not points:
+            return
+        out = []
+        for part in self.parts:
+            m = self._WIRE_RE.match(part)
+            if not m:
+                out.append(part)
+                continue
+            x1, y1, x2, y2 = (float(g) for g in m.groups())
+            dx, dy = x2 - x1, y2 - y1
+            length = math.hypot(dx, dy)
+            cuts = []
+            for px, py in points:
+                # distance from the segment's line, then position along it
+                if length < eps:
+                    continue
+                t = ((px - x1) * dx + (py - y1) * dy) / (length * length)
+                if not (eps / length < t < 1 - eps / length):
+                    continue
+                ox, oy = x1 + t * dx - px, y1 + t * dy - py
+                if math.hypot(ox, oy) < eps:
+                    cuts.append((t, px, py))
+            if not cuts:
+                out.append(part)
+                continue
+            cuts.sort()
+            prev = (x1, y1)
+            for _t, px, py in cuts:
+                out.append(self.ctx.wire(prev[0], prev[1], px, py))
+                prev = (px, py)
+            out.append(self.ctx.wire(prev[0], prev[1], x2, y2))
+        self.parts = out
 
     # Shortcuts delegating to ctx
     def wire(self, x1, y1, x2, y2):
