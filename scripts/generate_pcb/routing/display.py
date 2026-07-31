@@ -33,13 +33,13 @@ def _display_traces():
       9:     CS          → GPIO12
       10:    DC/RS       → GPIO14
       11:    WR          → GPIO46
-      12:    RD          → GPIO3
-      13-14: SPI SDI/SDO — NC (parallel mode)
+      12:    RD          → tied to +3V3, no GPIO (write-only bus)
+      13-14: SPI SDI/SDO — SDI tied to +3V3 (input, must not float), SDO NC
       15:    RESET       → GPIO13
       16:    GND
       17-24: DB0-DB7     → GPIO4-11
       25-32: DB8-DB15    — NC (8-bit mode)
-      33:    LED-A (backlight anode) → GPIO45
+      33:    LED-A (backlight anode) → tied to +3V3, no GPIO (always on; R25-HIGH-1)
       34-36: LED-K (backlight cathode) → GND
       37:    GND
       38:    IM0 → +3V3 (HIGH for 8080 8-bit)
