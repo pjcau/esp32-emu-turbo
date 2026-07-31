@@ -126,6 +126,30 @@ value, release netlist drift, firmware desync, ...) into a sandbox and fails
 unless at least one gate catches each. This is the guard against gates that
 never fire.
 
+### 8. Virtual Bench (circuit-behavior gates)
+
+```bash
+python3 scripts/test_vbench.py
+python3 scripts/test_vbench_display.py
+python3 scripts/test_vbench_sdcard.py
+```
+
+**Every circuit change ripples into the Virtual Bench — always.** The bench
+builds its netlist straight from the `.kicad_pcb` (via `pcb_cache`), so
+topology changes propagate automatically; what does NOT propagate by itself:
+
+- **Component model parameters** (`scripts/vbench/models/`, fed by
+  `hardware/datasheet_specs.COMPONENT_SPECS`): swapping a part or changing a
+  value requires updating its model from the NEW datasheet, or the bench
+  keeps validating the old circuit with green lights.
+- **Scenarios/detectors** that encode circuit intent (rails, thresholds,
+  timings): review them whenever the change alters what "correct behavior"
+  means.
+
+The `test_vbench*` gates are part of the standard battery — a circuit change
+is not verified until they run (and still discriminate) against the new
+netlist and updated models.
+
 ## Summary Report
 
 After running all tests, summarize results in a table:
@@ -139,6 +163,7 @@ After running all tests, summarize results in a table:
 | Connectivity | ? | ? | ? | PASS/FAIL |
 | Schematic sync | ? | ? | ? | PASS/FAIL |
 | Gerber e-test | ? | ? | ? | PASS/FAIL |
+| Virtual Bench | ? | ? | ? | PASS/FAIL |
 | Gate coverage | 9 faults | ? | ? | PASS/FAIL |
 
 Report any failures with details and suggested fixes.
@@ -154,3 +179,4 @@ Report any failures with details and suggested fixes.
 - `scripts/short_circuit_analysis.py` — Short circuit analysis
 - `scripts/verify_gerber_etest.py` — E-test on release gerbers (net isolation on fabricated copper)
 - `scripts/test_gate_coverage.py` — Mutation suite: 9 historical fault classes must each be caught by a gate
+- `scripts/test_vbench.py` (+ `_display`, `_sdcard`) — Virtual Bench gates; models in `scripts/vbench/models/` must track every circuit change

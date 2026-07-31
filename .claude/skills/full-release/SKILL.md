@@ -65,6 +65,13 @@ python3 scripts/verify_schematic_pcb.py
 
 # 2g. Electrical simulation (power budget, timing, GPIO conflicts)
 python3 scripts/verify_electrical.py
+
+# 2h. Virtual Bench — every circuit change ripples into vbench. Netlist is
+# auto-derived from the .kicad_pcb; model parameters (scripts/vbench/models/,
+# from hardware/datasheet_specs) must be updated for any changed part.
+python3 scripts/test_vbench.py
+python3 scripts/test_vbench_display.py
+python3 scripts/test_vbench_sdcard.py
 ```
 
 **Gate check**: If DFM or DFA have failures, STOP. Polarity and electrical warnings are OK if previously acknowledged.

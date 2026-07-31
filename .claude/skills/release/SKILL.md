@@ -83,6 +83,14 @@ python3 scripts/verify_power_sequence.py
 python3 scripts/verify_component_connectivity.py
 python3 scripts/verify_signal_chain_complete.py
 
+# Virtual Bench — circuit behavior against the NEW netlist.
+# Any circuit change ripples into vbench: netlist is auto-derived from the
+# .kicad_pcb, but model parameters (scripts/vbench/models/, from
+# hardware/datasheet_specs) must be updated for any swapped/changed part.
+python3 scripts/test_vbench.py
+python3 scripts/test_vbench_display.py
+python3 scripts/test_vbench_sdcard.py
+
 # Power simulation
 python3 scripts/spice_power_check.py
 ```
