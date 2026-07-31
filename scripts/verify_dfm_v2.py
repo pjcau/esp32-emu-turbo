@@ -383,6 +383,11 @@ def test_kicad_drc():
     with open(drc_out) as f:
         data = json.load(f)
 
+    # Share the parsed report with test_kicad_drc_edge_clearance so the
+    # suite runs kicad-cli DRC once, not twice (~1.1 s each).
+    global _DRC_REPORT
+    _DRC_REPORT = data
+
     from collections import Counter
     types = Counter()
     for v in data.get("violations", []):
@@ -416,6 +421,12 @@ def test_kicad_drc():
     # Clean up
     os.remove(drc_out)
 
+
+# Parsed kicad-cli DRC report, produced by test_kicad_drc and reused by
+# test_kicad_drc_edge_clearance. The producing run uses --all-track-errors,
+# so every count it reports is >= the count of a flagless run: reusing it
+# makes the edge-clearance guard at least as strict, never more permissive.
+_DRC_REPORT = None
 
 _CACHE = None
 
@@ -856,30 +867,35 @@ def test_kicad_drc_edge_clearance():
     Passes only when kicad-cli is available.
     """
     print("\n── KiCad DRC Edge Clearance Guard ──")
-    kicad_cli = shutil.which("kicad-cli")
-    if not kicad_cli:
-        print("  SKIP  kicad-cli not found")
-        return
+    data = _DRC_REPORT
+    if data is None:
+        # test_kicad_drc did not run (or skipped) — run DRC ourselves.
+        kicad_cli = shutil.which("kicad-cli")
+        if not kicad_cli:
+            print("  SKIP  kicad-cli not found")
+            return
 
-    drc_out = os.path.join(BASE, "hardware", "kicad", "drc-edge-guard.json")
-    try:
-        subprocess.run(
-            [kicad_cli, "pcb", "drc",
-             "--output", drc_out, "--format", "json",
-             "--severity-all", "--units", "mm",
-             PCB_FILE],
-            capture_output=True, timeout=60,
-        )
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        print("  SKIP  kicad-cli drc failed")
-        return
+        drc_out = os.path.join(BASE, "hardware", "kicad",
+                               "drc-edge-guard.json")
+        try:
+            subprocess.run(
+                [kicad_cli, "pcb", "drc",
+                 "--output", drc_out, "--format", "json",
+                 "--severity-all", "--units", "mm",
+                 PCB_FILE],
+                capture_output=True, timeout=60,
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            print("  SKIP  kicad-cli drc failed")
+            return
 
-    if not os.path.exists(drc_out):
-        print("  SKIP  DRC report not generated")
-        return
+        if not os.path.exists(drc_out):
+            print("  SKIP  DRC report not generated")
+            return
 
-    with open(drc_out) as f:
-        data = json.load(f)
+        with open(drc_out) as f:
+            data = json.load(f)
+        os.remove(drc_out)
 
     from collections import Counter
     types = Counter(v["type"] for v in data.get("violations", []))
@@ -893,8 +909,6 @@ def test_kicad_drc_edge_clearance():
     # (KiCad default 0.5mm rule; JLCPCB needs only 0.25mm, actual gap is 0.3mm)
     check("KiCad DRC: hole_to_hole <= 1 (regression guard)", hole <= 1,
           f"got {hole} violations")
-
-    os.remove(drc_out)
 
 
 def test_sw8_slot_clearance():
@@ -1706,10 +1720,30 @@ def test_trace_pad_different_net_clearance():
     for s in segs:
         if s["net"] == 0:
             continue
+        sxmin = s["x1"] if s["x1"] < s["x2"] else s["x2"]
+        sxmax = s["x1"] if s["x1"] > s["x2"] else s["x2"]
+        symin = s["y1"] if s["y1"] < s["y2"] else s["y2"]
+        symax = s["y1"] if s["y1"] > s["y2"] else s["y2"]
+        shw = s["w"] / 2.0
         for p in pads_by_layer.get(s["layer"], []):
             if p["net"] == 0:
                 continue
             if s["net"] == p["net"]:
+                continue
+            # Conservative reject: the exact segment-to-rect gap can never be
+            # smaller than the per-axis gap between the segment's bbox and the
+            # pad rect, minus the trace half-width. Skipping here can only
+            # skip pairs whose true gap is >= MIN_CLR.
+            hw, hh = p["w"] / 2.0, p["h"] / 2.0
+            dxg = (p["x"] - hw) - sxmax
+            t = sxmin - (p["x"] + hw)
+            if t > dxg:
+                dxg = t
+            dyg = (p["y"] - hh) - symax
+            t = symin - (p["y"] + hh)
+            if t > dyg:
+                dyg = t
+            if (dxg if dxg > dyg else dyg) - shw >= MIN_CLR:
                 continue
             # Use precise rectangular pad geometry instead of half-diagonal
             gap = _segment_to_rect_gap(s, p["x"], p["y"], p["w"], p["h"])
