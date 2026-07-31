@@ -141,7 +141,11 @@ ISO_SCRIPT="$PROJECT_DIR/scripts/verify_isolation.py"
 ISO_FAIL_COUNT=0
 if [ -f "$ISO_SCRIPT" ]; then
     ISO_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$ISO_SCRIPT" 2>&1) || true
-    ISO_FAIL_COUNT=$(echo "$ISO_OUTPUT" | grep -cE "^[[:space:]]*\[(FAIL|MISS)" 2>/dev/null | tr -d ' \n')
+    # grep -c exits 1 on zero matches; under set -euo pipefail that killed
+    # the whole hook silently on every CLEAN run ("Stop hook error: Failed
+    # with non-blocking status code: No stderr output"). Rescue the
+    # pipeline status like every other block above does.
+    ISO_FAIL_COUNT=$(echo "$ISO_OUTPUT" | grep -cE "^[[:space:]]*\[(FAIL|MISS)" 2>/dev/null | tr -d ' \n' || true)
     [ -z "$ISO_FAIL_COUNT" ] && ISO_FAIL_COUNT=0
 fi
 

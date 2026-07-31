@@ -32,6 +32,20 @@ software/components/gwenesis/cpus/M68K/m68kops.h
 software/components/gwenesis/cpus/M68K/m68ki_cycles*.h
 software/components/nofrendo/database.h
 
+# ── retro-go submodule: vendored upstream code ──────────────────────
+# Emulator cores, single-file vendored libs and generated asset/table
+# files — upstream code we build, not code we review. 20k-313k tokens
+# each. Grep for the symbol you need, or read the small hand-written
+# files (retro-go/components/retro-go/targets/esp32-emu-turbo/ stays
+# readable — that one is ours).
+retro-go/retro-core/components/
+retro-go/gwenesis/components/gwenesis/
+retro-go/prboom-go/components/prboom/
+retro-go/fmsx/components/fmsx/
+retro-go/components/retro-go/libs/
+retro-go/components/retro-go/rg_gui.c
+retro-go/launcher/main/images.c
+
 # ── Generated PCB renders ───────────────────────────────────────────
 # 32k-52k tokens of path data. Use the PNG renders in the same folders.
 website/static/img/pcb/*.svg
