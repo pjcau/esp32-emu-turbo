@@ -510,8 +510,13 @@ def _build_placements():
     p.append(("C18", "10uF", "C_0805", 116, 49, 0, "bottom"))  # BAT decoupling near IP5306
     p.append(("C27", "10uF", "C_0805", 108, 39, 0, "bottom"))  # VOUT HF decoupling near IP5306
     # C28 REMOVED from assembly: was at (86,26) UNDER ESP32 module body.
-    # Decoupling covered by C3+C4+C26 (300nF) + C2 (22uF tantalum on +3V3 rail).
-    # Relocate in v2 PCB respin to a position outside module footprint.
+    # Local decoupling = C3+C4+C26 (300nF); rail bulk = C30 (22uF MLCC at
+    # the buck output). NB the original justification cited "C2 22uF
+    # tantalum", a part deleted in the SY8089 redesign — the ESP32-local
+    # bulk gap is a RECORDED as-built limitation (known-issues RESPIN,
+    # verify_decoupling_adequacy tracks it against the DNP list).
+    # Relocate in v2 PCB respin to a position outside module footprint —
+    # that relocation also resolves the vbench D5 dispute on C28.
 
     # C19 near inductor L1
     p.append(("C19", "22uF", "C_1206",
