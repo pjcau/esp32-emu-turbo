@@ -214,7 +214,11 @@ class PowerSupplySheet(SchematicSheet):
         # dropped it from the exported netlist: VBUS came out with a single
         # node (U4.5, which has its own global label) while C17.1, U2.1,
         # J1.2 and J1.11 vanished from the cross-check entirely.
-        self.label("VBUS", vbus_x + 5, vbus_y)
+        # Global, not local: the net already has a VBUS global label at
+        # U4, and mixing label types on one net is the ERC
+        # same_local_global_label warning — the merge works but only by
+        # KiCad's same-text courtesy.
+        self.glabel("VBUS", vbus_x + 5, vbus_y, 0)
         # CIN junction down to cap
         self.wire(cin_x, vbus_y, cin_x, cin_y - 3.81)
         self.sym("C", "C17", "10uF", cin_x, cin_y, ["1", "2"])
@@ -434,7 +438,9 @@ class PowerSupplySheet(SchematicSheet):
         # — so BAT+ came out of the netlist with one node (SW16.1, from
         # its own global label) while L1.1, C18.1, Q1.3 and U2.6 were
         # absent. The battery rail was undrawn as far as any gate could see.
-        self.label("BAT+", q1x - 10, bat_y)
+        # Global label (see VBUS note); angle=180 extends LEFT — rightward
+        # the text lands on Q1's body.
+        self.glabel("BAT+", q1x - 10, bat_y, 180)
 
         # Q1 pin 2 (Source) — connects to BAT_IN → J3.1
         # Source exits to the right toward JST connector.
@@ -460,7 +466,9 @@ class PowerSupplySheet(SchematicSheet):
         # "HF bypass" annotation at (222, 91), which verify_schematic_overlaps
         # rejects. Anywhere on the span x in [q1x + 5, jst_plus_x] names the
         # same net, so it goes where there is room.
-        self.label("BAT_IN", jst_plus_x - 20, jst_plus_y)
+        # Global label (see VBUS note): this is the one that names the
+        # Q1->J3 copper run.
+        self.glabel("BAT_IN", jst_plus_x - 20, jst_plus_y, 0)
 
         # Q1 pin 1 (Gate) — pulled to GND via R24 (100K)
         r24x, r24y = q1x - 8, q1y + 10
@@ -496,9 +504,10 @@ class PowerSupplySheet(SchematicSheet):
         self.text("3.7V 5000mAh", bt_x + 5, bt_y + 1, 1.5)
         # BT1 pin "+" at (bt_x, bt_y - 3.81)
         # BT1 pin "-" at (bt_x, bt_y + 3.81)
-        # Wire from JST area to battery (same net via label)
-        self.glabel("BAT_IN", jst_x + 5, jst_plus_y, 0)
-        self.wire(jst_x + 3.81, jst_plus_y, jst_x + 5, jst_plus_y)
+        # J3 <-> BT1 continuity comes from the BAT_IN global labels (one
+        # on the Q1->J3 run, one here). The old extra stub at jst_x+3.81
+        # started on no pin — J3's pins are both on its LEFT side — and
+        # dangled for as long as it existed (ERC unconnected_wire_endpoint).
         self.glabel("BAT_IN", bt_x - 5, bt_y - 3.81, 180)
         self.wire(bt_x - 5, bt_y - 3.81, bt_x, bt_y - 3.81)
         # Battery GND

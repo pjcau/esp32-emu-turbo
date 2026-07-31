@@ -55,35 +55,6 @@ _SYMBOL_ESP32 = """    (symbol "ESP32-S3-WROOM-1" (pin_names (offset 1.016)) (in
         (pin power_in line (at 0 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "40" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 2.54 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "41" (effects (font (size 1.016 1.016)))))))\n"""
 
-# AMS1117 SOT-223 pin numbering, per the manufacturer datasheet
-# (hardware/datasheets/U3_AMS1117-3.3_C6186.pdf, "SOT-223 Top View,
-# 3 PIN FIXED/ADJUSTABLE VERSION"):
-#     1 = Ground/Adjust
-#     2 = VOUT
-#     3 = VIN
-#     4 = tab, electrically VOUT
-# The symbol used to be numbered 1=VIN / 2=GND / 3=VOUT, which is the
-# generic three-terminal-regulator convention and does NOT match the
-# SOT-223 land pattern used on the board. That mismatch was the origin
-# of the "U3.3 +3V3 vs +5V" entry that used to sit in the
-# verify_netlist_diff T4 allowlist. The graphical layout is unchanged
-# (VIN left, GND bottom, VOUT right) — only the pin numbers moved.
-_SYMBOL_AMS1117 = """    (symbol "AMS1117-3.3" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
-      (property "Reference" "U" (at 0 5.08 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "AMS1117-3.3" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (symbol "AMS1117-3.3_0_1" (rectangle (start -5.08 3.81) (end 5.08 -3.81) (stroke (width 0.254) (type default)) (fill (type background))))
-      (symbol "AMS1117-3.3_1_1"
-        (pin power_in line (at -7.62 2.54 0) (length 2.54) (name "VIN" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
-        (pin power_in line (at 0 -6.35 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
-        (pin power_out line (at 7.62 2.54 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin power_out line (at 7.62 2.54 180) (length 2.54) (name "VOUT" (effects (font (size 1.016 1.016)) hide)) (number "4" (effects (font (size 1.016 1.016)) hide)))))\n"""
-
-# SY8089AAAC — 2A synchronous step-down regulator, SOT-23-5 (LCSC C78988).
-# Pin numbering follows the datasheet (AN_SY8089/A Rev 0.9A page 2) exactly,
-# so schematic pin numbers match the PCB footprint pin numbers 1:1:
-#   1 = EN, 2 = GND, 3 = LX, 4 = IN, 5 = FB
 _SYMBOL_SY8089 = """    (symbol "SY8089AAAC" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
       (property "Value" "SY8089AAAC" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
@@ -381,7 +352,6 @@ _SYMBOL_FPC_16P = """    (symbol "FPC_16P" (pin_names (offset 1.016)) (in_bom ye
 # Registry: symbol name -> definition string
 SYMBOLS: dict[str, str] = {
     "ESP32-S3-WROOM-1": _SYMBOL_ESP32,
-    "AMS1117-3.3": _SYMBOL_AMS1117,   # legacy, unused since the SY8089 swap
     "SY8089AAAC": _SYMBOL_SY8089,
     "C": _SYMBOL_C,
     "R": _SYMBOL_R,

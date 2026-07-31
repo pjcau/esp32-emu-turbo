@@ -262,25 +262,12 @@ SCH_PIN_TO_PCB_PADS["SW14"] = _TACT_MAP
 
 # T1: schematic nets intentionally absent from the PCB.
 #
-# - GPIO35/36/37: ESP32-S3 PSRAM pins. These MUST stay externally
-#   unconnected to avoid disturbing the on-module Octal PSRAM. The
-#   schematic generator labels them for documentation; the PCB has no
-#   trace because the WROOM-1 module keeps them internal. See R1 audit
-#   `website/docs/feasibility.md` §"PSRAM pins".
-#
-# Removed: VBUS_SW and VREF. VREF was renamed to PAM_VREF in
-# sheets/audio.py so that the schematic and the board use one name for
-# one node; VBUS_SW no longer exists in the generated schematic.
-T1_ALLOW = {
-    "GPIO35", "GPIO36", "GPIO37",
-    # GPIO15/16: unused pins, labelled for documentation only, same class
-    # as the PSRAM trio above. They carried the I2S_BCLK/I2S_LRCK net
-    # reservation until 2026-07-26 (R10-LOW-2): one pin each, zero copper,
-    # while the audio path is PDM TX with .clk = I2S_GPIO_UNUSED. The PCB
-    # deliberately leaves the pads netless; the schematic labels the pins
-    # GPIO15/GPIO16 so a reader knows which pins are free for v2.
-    "GPIO15", "GPIO16",
-}
+# Removed: VBUS_SW and VREF (renamed to PAM_VREF). Closed 2026-07-31:
+# GPIO35/36/37 (ESP32-S3 on-module PSRAM pins that MUST stay externally
+# unconnected) and GPIO15/16 (freed when audio went PDM-DOUT-only,
+# R10-LOW-2) — the schematic now marks all five with no_connect instead
+# of one-pin "GPIOnn" phantom nets, so there is nothing left to allow.
+T1_ALLOW = set()
 
 # T2: PCB nets that legitimately have no schematic-side counterpart.
 #

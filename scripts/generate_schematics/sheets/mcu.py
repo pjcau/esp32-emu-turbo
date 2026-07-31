@@ -252,7 +252,15 @@ class MCUSheet(SchematicSheet):
                 continue
 
             if isinstance(gpio, int):
-                net = _MCU_SIDE_NETS.get(gpio) or GPIO_NETS.get(gpio, f"GPIO{gpio}")
+                net = _MCU_SIDE_NETS.get(gpio) or GPIO_NETS.get(gpio)
+                if net is None:
+                    # Unused GPIO (no net on the board — GPIO15/16 freed
+                    # when audio went PDM-DOUT-only, 35/36/37 spare).
+                    # A "GPIOnn" label here creates a one-pin phantom
+                    # net that netlist-diff T1 then has to allowlist;
+                    # a no_connect states the truth instead.
+                    self.nc(px_l if side == "L" else px_r, MCU_Y - yoff)
+                    continue
             else:
                 net = gpio
 
