@@ -109,6 +109,9 @@ ROUTING_LAW = [
     ("dispatch",   "verification tooling",    "software-dev", "/check",
      "blind-spot", "while the dispatcher is wrong, findings are going "
                    "unassigned and nobody can tell which"),
+    ("coverage",   "verification tooling",    "software-dev", "/check",
+     "blind-spot", "while the coverage auditor is broken, nobody can say "
+                   "which bug classes the gate network actually catches"),
     # The Virtual Bench measures its own coverage against a corpus of this
     # board's real historical bugs (docs/virtual-bench-plan.md, T5.1). When
     # it goes red, either a model has drifted from its datasheet or the

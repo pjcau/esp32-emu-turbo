@@ -75,6 +75,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_erc_severity \
+	test_gate_coverage \
 	test_gerber_etest \
 	test_strapping_en_rc \
 	test_issue_dispatch \
@@ -283,6 +284,9 @@ verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-
 
 verify-gerber-etest: ## Flying-probe e-test on the SHIPPED artifacts — opens/shorts from release_jlcpcb gerbers vs its IPC-D-356 netlist
 	@$(T) verify-gerber-etest python3 scripts/verify_gerber_etest.py
+
+verify-gate-coverage: ## Inject 9 historical fault classes into a sandbox and demand a gate goes red for each (~3-5 min; release-time audit, NOT in verify-all)
+	@$(T) verify-gate-coverage python3 scripts/verify_gate_coverage.py
 
 verify-cpl-law: ## CPL rotation law — every part must obey ONE law per layer (replaces per-part sign-off table)
 	@$(T) verify-cpl-law python3 scripts/verify_cpl_rotation_law.py
