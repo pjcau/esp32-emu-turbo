@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "emu")(type "KiCad")(uri "${KIPRJMOD}/emu.kicad_sym")(options "")(descr "ESP32 Emu Turbo generated symbols — source of truth is scripts/generate_schematics/lib_symbols.py"))
+)

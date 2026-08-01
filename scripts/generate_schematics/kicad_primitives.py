@@ -31,6 +31,23 @@ def sheet_uuid(index: int) -> str:
     return f"{n:08x}-cafe-4000-8000-{n:012x}"
 
 
+def snap(v: float) -> float:
+    """Snap a coordinate to KiCad's 1.27 mm connection grid.
+
+    Sheets lay out on a human 1 mm-ish grid; KiCad connects by exact
+    coordinate match but WARNS (endpoint_off_grid, 507 of them) for
+    every pin or wire end off the 1.27 mm grid — noise that will hide a
+    real warning. Snapping HERE, at emission, is safe where snapping in
+    the sheets would not be: it is monotonic and distributes over the
+    library's pin offsets (all multiples of 1.27), so any two points
+    that coincided before snapping still coincide after, a point inside
+    a wire span stays inside it, and a symbol's pins move with the wires
+    drawn to them. Net merges from two coordinates collapsing into one
+    bucket are caught by verify_netlist_diff against the PCB.
+    """
+    return round(round(v / 1.27) * 1.27, 4)
+
+
 class KiCadContext:
     """Manages UUID generation and provides KiCad S-expression helpers.
 
@@ -80,6 +97,14 @@ class KiCadContext:
         )
 
     def wire(self, x1: float, y1: float, x2: float, y2: float) -> str:
+        x1, y1, x2, y2 = snap(x1), snap(y1), snap(x2), snap(y2)
+        if x1 == x2 and y1 == y2:
+            # A sub-grid stub collapsed onto its anchor point. The stub
+            # only existed to bridge an off-grid gap; both of its ends
+            # now ARE the same grid point, so the connection it made is
+            # made by coincidence of coordinates and the wire itself
+            # would be a degenerate zero-length segment.
+            return ""
         return (
             f'  (wire (pts (xy {x1} {y1}) (xy {x2} {y2}))'
             f' (stroke (width 0) (type default))'
@@ -87,6 +112,7 @@ class KiCadContext:
         )
 
     def label(self, name: str, x: float, y: float, angle: float = 0) -> str:
+        x, y = snap(x), snap(y)
         return (
             f'  (label "{name}" (at {x} {y} {angle})'
             f' (effects (font (size 1.27 1.27)))'
@@ -99,6 +125,7 @@ class KiCadContext:
         Without it KiCad treats the touch as a crossing, not a connection,
         and so does a human reader. See scripts/verify_schematic_crossings.py.
         """
+        x, y = snap(x), snap(y)
         return (
             f'  (junction (at {x} {y}) (diameter 0) (color 0 0 0 0)'
             f' (uuid "{self.uid()}"))\n'
@@ -106,6 +133,7 @@ class KiCadContext:
 
     def global_label(self, name: str, x: float, y: float, angle: float = 0,
                      shape: str = "bidirectional") -> str:
+        x, y = snap(x), snap(y)
         return (
             f'  (global_label "{name}" (shape {shape}) (at {x} {y} {angle})'
             f' (effects (font (size 1.27 1.27)))'
@@ -124,8 +152,10 @@ class KiCadContext:
 
     def power_symbol(self, lib: str, ref: str, val: str,
                      x: float, y: float) -> str:
+        from .lib_symbols import LIB_NICKNAME
+        x, y = snap(x), snap(y)
         return (
-            f'  (symbol (lib_id "{lib}") (at {x} {y} 0) (unit 1)'
+            f'  (symbol (lib_id "{LIB_NICKNAME}:{lib}") (at {x} {y} 0) (unit 1)'
             f' (exclude_from_sim no) (in_bom no) (on_board no) (dnp no)'
             f' (uuid "{self.uid()}")'
             f' (property "Reference" "{ref}" (at {x} {y - 2} 0)'
@@ -159,6 +189,7 @@ class KiCadContext:
                                  "PWR_FLAG", x, y)
 
     def no_connect(self, x: float, y: float) -> str:
+        x, y = snap(x), snap(y)
         return (
             f'  (no_connect (at {x} {y})'
             f' (uuid "{self.uid()}"))\n'
@@ -181,10 +212,11 @@ class KiCadContext:
         # U3 (body +-5.08) and U6 (+-6.35) both had their Value struck
         # through the component. Derived from the symbol's own graphics, so a
         # symbol that grows pushes its labels out by itself.
-        from .lib_symbols import body_half_height
+        from .lib_symbols import LIB_NICKNAME, body_half_height
+        x, y = snap(x), snap(y)
         _fo = max(5.0, body_half_height(lib) + 2.0)
         s = (
-            f'  (symbol (lib_id "{lib}") (at {x} {y} {angle}) (unit 1)'
+            f'  (symbol (lib_id "{LIB_NICKNAME}:{lib}") (at {x} {y} {angle}) (unit 1)'
             f' (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)'
             f' (uuid "{self.uid()}")'
             f' (property "Reference" "{ref}" (at {x} {y - _fo} 0)'

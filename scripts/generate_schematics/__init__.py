@@ -35,6 +35,18 @@ def main(output_dir: str) -> list[str]:
         generated.append(path)
         print(f"  {filename} ({content.count(chr(10))} lines)")
 
+    # Symbol library + table: the schematics reference symbols as
+    # "emu:<name>"; without these two files every instance warns that
+    # library "emu" is not configured — the exact noise this replaces.
+    from .lib_symbols import library_file, sym_lib_table
+    for fname, content in (("emu.kicad_sym", library_file()),
+                           ("sym-lib-table", sym_lib_table())):
+        fpath = os.path.join(output_dir, fname)
+        with open(fpath, "w") as f:
+            f.write(content)
+        generated.append(fpath)
+        print(f"  {fname}")
+
     # Generate hierarchical root schematic
     from .root_schematic import generate_root
     root_content = generate_root(config.SHEET_DEFS)

@@ -48,5 +48,23 @@ for sheet in "${SHEETS[@]}"; do
 done
 
 echo ""
+echo "==> Merging the all-sheets PDF (the website's 'Download all sheets' link)..."
+# This file used to be a one-off hand merge that nothing regenerated: the
+# per-sheet PDFs moved on and the combined download silently served the
+# old schematic. Merged here, from the exact PDFs exported above, so it
+# can no longer drift. Requires ghostscript (brew install ghostscript).
+COMBINED="$OUTPUT_DIR/esp32-emu-turbo-schematics.pdf"
+PDF_LIST=()
+for sheet in "${SHEETS[@]}"; do
+    [ -f "$OUTPUT_DIR/${sheet}.pdf" ] && PDF_LIST+=("$OUTPUT_DIR/${sheet}.pdf")
+done
+if [ "${#PDF_LIST[@]}" -eq 0 ]; then
+    echo "ERROR: no per-sheet PDFs to merge" >&2
+    exit 1
+fi
+gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile="$COMBINED" "${PDF_LIST[@]}"
+echo "  merged ${#PDF_LIST[@]} sheets -> $COMBINED"
+
+echo ""
 echo "==> Schematics exported to $OUTPUT_DIR"
 ls -la "$OUTPUT_DIR"

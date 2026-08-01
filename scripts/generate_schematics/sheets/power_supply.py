@@ -90,17 +90,17 @@ class PowerSupplySheet(SchematicSheet):
         # 3=4=USB_D+; the schematic now agrees.
         #
         # Left side stubs (connector side)
-        self.glabel("USB_D-", u4x - 10 - stub, u4y - 2.54, 180)
-        self.wire(u4x - 10 - stub, u4y - 2.54, u4x - 10, u4y - 2.54)
-        self.glabel("USB_D+", u4x - 10 - stub, u4y,        180)
-        self.wire(u4x - 10 - stub, u4y,        u4x - 10, u4y)
+        self.glabel("USB_D-", u4x - 10.16 - stub, u4y - 2.54, 180)
+        self.wire(u4x - 10.16 - stub, u4y - 2.54, u4x - 10.16, u4y - 2.54)
+        self.glabel("USB_D+", u4x - 10.16 - stub, u4y,        180)
+        self.wire(u4x - 10.16 - stub, u4y,        u4x - 10.16, u4y)
         # Right side stubs — SAME nets as the left side (internal node),
         # they are the pins the D+/D- traces leave the TVS on toward
         # R22/R23. The pre/post split is made by R22/R23, not by U4.
-        self.glabel("USB_D-", u4x + 10 + stub, u4y + 2.54, 0)
-        self.wire(u4x + 10, u4y + 2.54, u4x + 10 + stub, u4y + 2.54)
-        self.glabel("USB_D+", u4x + 10 + stub, u4y,        0)
-        self.wire(u4x + 10, u4y,        u4x + 10 + stub, u4y)
+        self.glabel("USB_D-", u4x + 10.16 + stub, u4y + 2.54, 0)
+        self.wire(u4x + 10.16, u4y + 2.54, u4x + 10.16 + stub, u4y + 2.54)
+        self.glabel("USB_D+", u4x + 10.16 + stub, u4y,        0)
+        self.wire(u4x + 10.16, u4y,        u4x + 10.16 + stub, u4y)
         # GND on bottom
         self.gnd(u4x, u4y + 12)
         self.wire(u4x, u4y + 7.62, u4x, u4y + 12)
@@ -448,7 +448,7 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(l1_x, bat_y, q1x, bat_y)
         # C18 taps the rail mid-span now, so it needs a dot.
         self.junction(cbat_x, bat_y)
-        self.wire(q1x, bat_y, q1x, q1y - 5)
+        self.wire(q1x, bat_y, q1x, q1y - 5.08)
         # Mid-span on the horizontal rail. At (q1x + 2, bat_y - 2) it was
         # 2 mm off the horizontal and 2 mm off the vertical, i.e. on neither
         # — so BAT+ came out of the netlist with one node (SW16.1, from
@@ -468,8 +468,8 @@ class PowerSupplySheet(SchematicSheet):
         # node. The schematic then described a battery connector with its
         # + and - shorted together, while the PCB copper was correct
         # (verify_netlist_diff T4: J3.1 sch='GND' pcb='BAT_IN').
-        self.wire(q1x + 5, q1y + 1.27, q1x + 5, jst_plus_y)
-        self.wire(q1x + 5, jst_plus_y, jst_plus_x, jst_plus_y)
+        self.wire(q1x + 5.08, q1y + 1.27, q1x + 5.08, jst_plus_y)
+        self.wire(q1x + 5.08, jst_plus_y, jst_plus_x, jst_plus_y)
         # Label must sit ON the segment it names. At q1y - 0.5 it floated
         # 1.77mm off every wire and renamed nothing — and the correction
         # that replaced it, jst_plus_y - 1.5, was still 1.5 mm off the same
@@ -493,7 +493,7 @@ class PowerSupplySheet(SchematicSheet):
         # not run into Q1's symbol/value or the C18 annotation.
         self.text("Q1 gate PD", r24x - 5, r24y + 14, 1.5)
         # Wire Q1 gate to R24 pin 1
-        self.wire(q1x - 5, q1y + 1.27, r24x, q1y + 1.27)
+        self.wire(q1x - 5.08, q1y + 1.27, r24x, q1y + 1.27)
         self.wire(r24x, q1y + 1.27, r24x, r24y - 3.81)
         # Name the gate node with the PCB's net name (same story as LX:
         # Q1.1/R24.1 were missing from the netlist until the uuid fix).
