@@ -3,7 +3,7 @@
 Phase 1 will fill `scripts/vbench/models/` with models of the IP5306, the
 SY8089 buck, the PAM8403, the ILI9488 and the rest. Every number in them is
 a claim about a physical part, and the boundary table in
-docs/virtual-bench-plan.md admits the one failure this bench cannot detect
+docs/archived/virtual-bench-plan.md admits the one failure this bench cannot detect
 by simulating harder: **a model that misreads its datasheet**. A wrong
 model does not produce a wrong-looking answer. It produces a confident one.
 

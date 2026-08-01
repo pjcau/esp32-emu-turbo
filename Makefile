@@ -194,7 +194,7 @@ dispatch: ## Turn every red gate into an agent work order in .claude/issues/
 dispatch-fast: ## Same, but only the session-start gate subset
 	@$(T) dispatch-fast python3 scripts/issue_dispatch.py --fast
 
-# ── Virtual Bench (docs/virtual-bench-plan.md) ───────────────────────
+# ── Virtual Bench (docs/archived/virtual-bench-plan.md) ───────────────────────
 #
 # Phase 0: extract the netlist, cross-check the two sources, define what a
 # component model must cite, and write down the bugs the bench must

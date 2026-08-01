@@ -84,7 +84,7 @@ U1 = Model(
         # Table 5, page 13 — strapping timing.
         "t_setup_min": Param(0.0, "s", locator="p.13 table 5"),
         "t_hold_min": Param(3e-3, "s", locator="p.13 table 5"),
-        # The EN RC the datasheet requires — see docs/virtual-bench-plan.md
+        # The EN RC the datasheet requires — see docs/archived/virtual-bench-plan.md
         # phase -1(a). Page 28, note to figure 7 (外围设计原理图): an RC delay
         # circuit MUST be added at EN, R = 10k and C = 1uF recommended.
         "en_rc_r_recommended": Param(10e3, "ohm", locator="p.28 figure 7"),

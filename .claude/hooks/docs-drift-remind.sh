@@ -19,7 +19,7 @@ case "$FILE" in
     ;;
   */scripts/vbench/*)
     echo ">>> Virtual Bench changed: keep website/docs/vbench/virtual-bench.md"
-    echo ">>> and docs/virtual-bench-plan.md phase table in sync."
+    echo ">>> and docs/archived/virtual-bench-plan.md phase table in sync."
     ;;
   */software/main/*)
     echo ">>> Firmware changed: check website/docs/software/ still describes it"

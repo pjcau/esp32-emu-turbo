@@ -15,7 +15,7 @@ chains check out — plus a log of every voltage, current and junction
 temperature that produced it.
 
 Source of truth: the full phased plan lives in
-[`docs/virtual-bench-plan.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/virtual-bench-plan.md)
+[`docs/archived/virtual-bench-plan.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/archived/virtual-bench-plan.md)
 in the repo; the implementation is the `scripts/vbench/` package, gated by
 `scripts/test_vbench.py` inside `make verify-all`.
 

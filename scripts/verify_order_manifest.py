@@ -5,7 +5,7 @@
 `python3 scripts/<name>.py` with no arguments, so the `--check` mode of
 the manifest writer needs its own entry point to be part of the suite.
 
-Containment layer 1 (docs/containment-roadmap.md): the manifest is what
+Containment layer 1 (docs/archived/containment-roadmap.md): the manifest is what
 the upload protocol compares against; a manifest that lags the files it
 fingerprints re-opens the "the fix never reached the order" bug class.
 """

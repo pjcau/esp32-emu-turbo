@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Gate the load-bearing claims ledger — hardware/CLAIMS.md.
 
-Containment layer 2 of docs/containment-roadmap.md (closes residual-risk
+Containment layer 2 of docs/archived/containment-roadmap.md (closes residual-risk
 class 1: right copper, wrong decision). Gates check the board against
 what we declared; a wrong declaration turns every gate green and wrong
 together. The ledger holds each load-bearing claim with a status, and

@@ -277,7 +277,7 @@ def test_en_rc_delay():
         datasheet says the opposite in its own words — page 28, note to
         figure 7 (外围设计原理图): an RC delay circuit MUST be added at the EN
         pin, R = 10 kΩ and C = 1 µF recommended. There is no on-module pull-up
-        to rely on. See docs/virtual-bench-plan.md phase -1(a).
+        to rely on. See docs/archived/virtual-bench-plan.md phase -1(a).
       * It used C = 100 nF for "C3 on EN". C3 is not on EN. On the board its
         pads sit on +3V3 and GND — it is the third cap in the decoupling row
         (phase -1(d)).

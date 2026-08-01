@@ -40,7 +40,7 @@ COMPONENTS_3V3 = {
     "Button pull-ups (14x worst)":  {"typ": 0.000, "max": 0.00462},
     # R3 is DNP: it is in neither the BOM nor the CPL, so it draws nothing.
     # This line budgeted 0.33 mA for a resistor that is not fitted — a third
-    # file telling a third story about R3 (see docs/virtual-bench-plan.md,
+    # file telling a third story about R3 (see docs/archived/virtual-bench-plan.md,
     # phase -1(a)). Kept at zero rather than deleted so the entry stays
     # visible when v2 fits the EN network the datasheet requires.
     "EN pull-up (R3 10k, DNP)":     {"typ": 0.0, "max": 0.0},

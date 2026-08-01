@@ -5,7 +5,7 @@ Builds `{net_name: [PinRef(ref, pin, pad, layer)]}` from the `.kicad_pcb`
 file) and cross-checks it against the schematic netlist exported by
 `kicad-cli`.
 
-Two rules from docs/virtual-bench-plan.md are load-bearing here:
+Two rules from docs/archived/virtual-bench-plan.md are load-bearing here:
 
   1. **The PCB netlist is the truth**, because the PCB is what gets
      fabricated. The schematic is the cross-check, and a disagreement is a

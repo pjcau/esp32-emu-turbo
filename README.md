@@ -226,7 +226,7 @@ Engineering notes live in `docs/`:
 
 - [**Known issues**](docs/known-issues.md) — what is still broken and what
   must not be "fixed". Re-derive the live state with `make open-issues`.
-- [Waiver audit recovery](docs/waiver-audit-recovery.md) — how the
+- [Waiver audit recovery](docs/archived/waiver-audit-recovery.md) — how the
   suppressions that could hide a dead board were retired.
 - [Repository map](docs/REPO_MAP.md) — generated index of every script.
 

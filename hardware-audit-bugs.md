@@ -2967,7 +2967,7 @@ Also red, outside the skill's Step-0 list: `verify_dangling_copper`,
   all while pad 1 is `BTN_L`. Even a placed resistor would be a dead
   end, so GPIO45 cannot be pulled up and VDD_SPI stays at 3.3 V for the
   Octal PSRAM. This closes the "not independently verified" caveat on
-  `verify_netlist_diff.EXCLUDED_REFS` in `docs/waiver-audit-recovery.md`
+  `verify_netlist_diff.EXCLUDED_REFS` in `docs/archived/waiver-audit-recovery.md`
   §O6.
 - **The PAM8403 bias fix (`ee0ec02`) landed correctly** — R20.1 and
   R21.1 both read `PAM_VREF`, C21 bypasses VREF to GND, C22 AC-couples

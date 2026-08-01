@@ -17,7 +17,7 @@ line each, naming the net and the component behind every failure. The serial
 log is the instrument.
 
 It is containment layer 5 of the
-[containment roadmap](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/containment-roadmap.md):
+[containment roadmap](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/archived/containment-roadmap.md):
 the layer that covers what happens after the board is already fabricated and
 every geometric gate was green.
 

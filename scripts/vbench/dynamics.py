@@ -2,7 +2,7 @@
 
 Three questions the geometric gates cannot ask, each answered by ngspice
 on decks built from the netlist, the BOM's values and cited parameters
-(docs/containment-roadmap.md, layer 3):
+(docs/archived/containment-roadmap.md, layer 3):
 
 1. **Buck output across divider corners.** Vout = Vref * (1 + R25/R26) is
    monotone: increasing in Vref and R_top, decreasing in R_bottom. So the
@@ -75,7 +75,7 @@ from vbench.transients import (                              # noqa: E402
 # current on +3V3. transients.py's 0.430 A is the measured-class gaming
 # estimate; this is the deliberate worst-case question.
 I_SNES_STRESS = 1.5
-I_SNES_STRESS_SRC = ("docs/containment-roadmap.md layer 3 — scenario "
+I_SNES_STRESS_SRC = ("docs/archived/containment-roadmap.md layer 3 — scenario "
                      "input, not a datasheet number")
 
 # The board browns out at this much pack remaining => defect. A judgment

@@ -5,7 +5,7 @@
 `python3 scripts/<name>.py`, so the `--check` mode of the bring-up
 generator needs its own entry point to be part of the suite.
 
-Containment layer 5 (docs/containment-roadmap.md): the bring-up firmware
+Containment layer 5 (docs/archived/containment-roadmap.md): the bring-up firmware
 is the multimeter for a bench with no instruments. If it lags
 board_config.h it measures the wrong pins, and every verdict it prints —
 PASS and FAIL alike — is about a board that does not exist. That is a
