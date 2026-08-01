@@ -44,7 +44,7 @@ UNVERIFIED — red on 2026-09-14 unless verified — the falsified EN pull-up
 claim and the bench-verified USB-C 1.60 slot) + `verify_claims_ledger`
 (N = 45 days, evidence required for any verdict) + `test_claims_ledger`.
 
-### 3. Dynamic SPICE gates (closes class 4) — TODO
+### 3. Dynamic SPICE gates (closes class 4) — DONE (3a08f07)
 
 The ngspice MCP is already installed. Scenarios to hook into vbench:
 
@@ -52,6 +52,17 @@ The ngspice MCP is already installed. Scenarios to hook into vbench:
   (worst-case Vout);
 - power-up ramp with strap-threshold verification at t=0;
 - brownout at 3.0 V battery under 1.5 A SNES load.
+
+Landed as `scripts/vbench/dynamics.py` (T1.4b, `make bench-dynamics`) +
+`test_vbench_dynamics` (mutation-paired, in `VERIFY_ALL_SCRIPTS`). Two
+deliberate substitutions, both argued in the module docstring: Monte
+Carlo became a deterministic corner sweep (Vout is monotone in each
+variable, so corners bound every MC draw and a gate must be
+reproducible); MLCC ESR at f_sw is declared NOT establishable from the
+held pages (the C12891 doc is a catalog citing DF at 120 Hz only), so
+the simulated ripple is stated as a floor rather than decorated with an
+invented ESR. First run: all three scenarios pass on the current design
+(corners 3.213–3.455 V, EN margin +1.06 ms, brownout only at SoC 0).
 
 ### 4. First-article photographic protocol (closes class 2) — DONE (d6de9e3)
 
@@ -70,11 +81,19 @@ The `hardware-test-gen` skill exists: a Unity firmware that verifies every
 GPIO/bus/rail at boot and reports over serial turns the "no bench
 instruments, photos only" constraint into telemetry. It is the multimeter.
 
-### 6. ERC warning burn-down — TODO
+### 6. ERC warning burn-down — DONE (3c3d749)
 
 636 ERC warnings remain (481 off-grid endpoints). Noise that can hide a real
 warning tomorrow; already parked in memory
 (`project_schematic_deferred_deepdives`).
+
+Landed: 676 warnings (as measured at burn-down time) → ZERO. Grid snap
+at emission in `generate_schematics/kicad_primitives.py`, on-grid pin
+offsets for the three off-grid symbols (BAT54C/USBLC6/Speaker) with
+their sheet wiring, and the `emu:` symbol library (generated
+`emu.kicad_sym` + `sym-lib-table`) for the 169 bare-lib_id warnings.
+`verify_erc` now gates `--severity-all` against a zero baseline — a
+ratchet with nothing left to ratchet.
 
 ---
 
