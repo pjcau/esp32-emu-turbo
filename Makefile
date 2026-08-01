@@ -314,7 +314,7 @@ verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-
 verify-gerber-etest: ## Flying-probe e-test on the SHIPPED artifacts — opens/shorts from release_jlcpcb gerbers vs its IPC-D-356 netlist
 	@$(T) verify-gerber-etest python3 scripts/verify_gerber_etest.py
 
-verify-gate-coverage: ## Inject 9 historical fault classes into a sandbox and demand a gate goes red for each (~3-5 min; release-time audit, NOT in verify-all)
+verify-gate-coverage: ## Inject known fault classes (historical + predicted) into a sandbox and demand each one's owning gate goes red (~3-5 min; release-time audit, NOT in verify-all)
 	@$(T) verify-gate-coverage python3 scripts/verify_gate_coverage.py
 
 verify-cpl-law: ## CPL rotation law — every part must obey ONE law per layer (replaces per-part sign-off table)

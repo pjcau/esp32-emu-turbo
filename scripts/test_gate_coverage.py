@@ -14,6 +14,11 @@ it stamps "9/9 caught" on a gate network it never actually questioned. So:
     T5  with run_gates stubbed to "everything stays green", the audit
         reports every fault as a blind spot and exits 1 — the failure
         path is real, not decorative
+    T6  a fault expecting a gate that is not in VERIFY_ALL_SCRIPTS is a
+        structural error (Fatal), never silently ignored
+    T7  a fault whose expected OWNER stays green while a bystander fires
+        is reported and exits 1 — "some gate objected" must not vouch
+        for the gate the fault was written to prove
 """
 
 from __future__ import annotations
@@ -97,12 +102,51 @@ def main() -> int:
         vgc.run_gates = real_run
         sys.argv = real_argv
 
+    # T6: an expect naming an unshipped gate is a structural error — the
+    # audit can never observe that gate, so the fault table is lying
+    real_faults = vgc.FAULTS
+    try:
+        vgc.FAULTS = real_faults + [
+            ("t6-fake", "test: unknown expect", [],
+             lambda sb: "noop", ("no_such_gate_exists",))]
+        vgc.run_gates = lambda sandbox, gs: {g: 0 for g in gs}
+        try:
+            vgc.main()
+            check("T6 unknown expect raises Fatal", False, "no error raised")
+        except vgc.Fatal:
+            check("T6 unknown expect raises Fatal", True)
+    finally:
+        vgc.FAULTS = real_faults
+        vgc.run_gates = real_run
+
+    # T7: bystanders firing must not vouch for the owner — an expected
+    # gate that stays green while another fires is a failure, not CAUGHT
+    owner, bystander = gates[0], gates[1]
+    calls = {"n": 0}
+
+    def stub_missed(sandbox, gs):
+        calls["n"] += 1
+        if calls["n"] == 1:                      # baseline: all green
+            return {g: 0 for g in gs}
+        return {g: (1 if g == bystander else 0) for g in gs}
+
+    try:
+        vgc.FAULTS = [("t7-missed", "test: owner stays green", [],
+                       lambda sb: "noop", (owner,))]
+        vgc.run_gates = stub_missed
+        rc = vgc.main()
+        check("T7 missed owner yields exit 1", rc == 1,
+              f"rc={rc} (owner={owner}, bystander={bystander})")
+    finally:
+        vgc.FAULTS = real_faults
+        vgc.run_gates = real_run
+
     print("-" * 72)
     if failures:
         print(f"Results: FAIL — {len(failures)} check(s): "
               f"{', '.join(failures)}")
         return 1
-    print("Results: PASS — 5/5 auditor mutations detected")
+    print("Results: PASS — 7/7 auditor mutations detected")
     return 0
 
 

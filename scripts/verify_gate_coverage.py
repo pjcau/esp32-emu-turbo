@@ -24,6 +24,16 @@ measured owners of that bug class) or BLIND SPOT. Any blind spot fails the
 run: it means a bug class can reach the fab with every light green, and the
 fix is a new gate, never a shrug.
 
+A fault may additionally declare `expect`: the gate(s) that OWN its bug
+class and must be among the ones that fire. Without it, deleting a part
+would count as "caught" because the BOM/CPL/netlist family always objects
+to a missing part — proving the network is noisy, not that the owning gate
+works. With `expect`, an owner that stays green while bystanders fire is
+reported as MISSED BY OWNER and fails the run just like a blind spot. An
+`expect` naming a gate that is not in VERIFY_ALL_SCRIPTS, or one that is
+baseline-red in the sandbox, is a structural error (exit 2): the audit
+cannot vouch for a gate it could not observe.
+
 The gate list is parsed from the Makefile via issue_dispatch.gates_from_
 makefile() — the same single source verify-all uses. This script is NOT in
 VERIFY_ALL_SCRIPTS: it runs the whole suite N+1 times (~3-5 minutes) and
@@ -114,9 +124,16 @@ def _delete_zone_of_net(path: Path, net_no: int) -> int:
 
 # ------------------------------------------------------------------ faults
 #
-# Each entry: (name, historical bug class, files it touches, mutate(sandbox)).
-# Every fault reproduces a REAL bug this project has already had once —
-# the suite asks whether today's gates would have caught yesterday's bugs.
+# Each entry: (name, bug class, files it touches, mutate(sandbox), expect)
+# where `expect` is a tuple of gate names that must be among the gates that
+# fire — the measured OWNERS of the bug class — or () when ownership is
+# ambiguous and any objection counts.
+#
+# Faults come in two categories: HISTORICAL (reproduces a real bug this
+# project already had once — the suite asks whether today's gates would
+# have caught yesterday's bugs) and PREDICTED (a bug class the taxonomy
+# audit named before it happened; the fault exists so its new gate is
+# proven to fire, not assumed to).
 
 def f_plane_split(sb: Path):
     board = sb / BOARD
@@ -195,16 +212,26 @@ def f_firmware_desync(sb: Path):
     return f"BTN_R GPIO_NUM_{old} -> GPIO_NUM_{old + 1} — firmware desync"
 
 
+# historical faults; expect backfilled only where ownership is unambiguous
 FAULTS = [
-    ("plane-split", "dead board: power plane fragmented", [BOARD], f_plane_split),
-    ("track-cut", "dead board: power net cut open", [BOARD], f_track_cut),
-    ("net-swap-short", "short: copper relabeled across nets", [BOARD], f_net_swap_short),
-    ("annular-collapse", "fabrication: via annular ring below minimum", [BOARD], f_annular_collapse),
-    ("cpl-rotation", "assembly: part rotated 270 degrees", [CPL], f_cpl_rotation),
-    ("cpl-missing", "assembly: part missing from CPL", [CPL], f_cpl_missing),
-    ("bom-designator", "sourcing: BOM row no longer matches the board", [BOM], f_bom_value),
-    ("release-drift", "release: d356 disagrees with the gerbers", [D356], f_release_drift),
-    ("firmware-desync", "cross-domain: GPIO map out of sync", [FIRMWARE], f_firmware_desync),
+    ("plane-split", "dead board: power plane fragmented", [BOARD],
+     f_plane_split, ("verify_power_net_integrity",)),
+    ("track-cut", "dead board: power net cut open", [BOARD],
+     f_track_cut, ("verify_power_net_integrity",)),
+    ("net-swap-short", "short: copper relabeled across nets", [BOARD],
+     f_net_swap_short, ()),
+    ("annular-collapse", "fabrication: via annular ring below minimum", [BOARD],
+     f_annular_collapse, ()),
+    ("cpl-rotation", "assembly: part rotated 270 degrees", [CPL],
+     f_cpl_rotation, ("verify_cpl_rotation_law",)),
+    ("cpl-missing", "assembly: part missing from CPL", [CPL],
+     f_cpl_missing, ("verify_bom_cpl_pcb",)),
+    ("bom-designator", "sourcing: BOM row no longer matches the board", [BOM],
+     f_bom_value, ("verify_bom_values",)),
+    ("release-drift", "release: d356 disagrees with the gerbers", [D356],
+     f_release_drift, ()),
+    ("firmware-desync", "cross-domain: GPIO map out of sync", [FIRMWARE],
+     f_firmware_desync, ()),
 ]
 
 
@@ -252,6 +279,14 @@ def main() -> int:
         raise Fatal("this audit must not be in VERIFY_ALL_SCRIPTS — it runs "
                     "the whole suite per fault and would recurse")
 
+    # an expect naming a gate that is not shipped can never be observed —
+    # that is a structural error in the fault table, not a blind spot
+    for name, _klass, _files, _mutate, expect in FAULTS:
+        unknown = [g for g in expect if g not in gates]
+        if unknown:
+            raise Fatal(f"fault {name!r} expects gate(s) not in "
+                        f"VERIFY_ALL_SCRIPTS: {', '.join(unknown)}")
+
     tmp = Path(tempfile.mkdtemp(prefix="gate-coverage-"))
     try:
         print(f"  sandbox : {tmp}")
@@ -278,19 +313,35 @@ def main() -> int:
                 "too much noise to attribute failures to injected faults")
 
         blind, caught = [], []
-        for name, klass, files, mutate in FAULTS:
+        for name, klass, files, mutate, expect in FAULTS:
+            # an expected owner that is baseline-red cannot be observed
+            # firing — the audit cannot vouch for it either way
+            red_owners = [g for g in expect if g not in green]
+            if red_owners:
+                raise Fatal(f"fault {name!r} expects gate(s) that are "
+                            f"baseline-red in the sandbox: "
+                            f"{', '.join(red_owners)}")
             saved = {f: (tmp / f).read_bytes() for f in files}
             desc = mutate(tmp)
             after = run_gates(tmp, green)
             fired = sorted(g for g in green if after[g] != 0)
             for f, data in saved.items():
                 (tmp / f).write_bytes(data)
-            if fired:
+            missed_owners = sorted(g for g in expect if g not in fired)
+            if fired and not missed_owners:
                 caught.append((name, fired))
                 shown = ", ".join(fired[:4]) + (
                     f" (+{len(fired) - 4} more)" if len(fired) > 4 else "")
                 print(f"  CAUGHT     {name:<18} {desc}")
                 print(f"             by: {shown}")
+            elif fired and missed_owners:
+                blind.append((name, klass,
+                              f"{desc} — MISSED BY OWNER "
+                              f"{', '.join(missed_owners)} (bystanders "
+                              f"fired: {', '.join(fired[:4])})"))
+                print(f"  MISSED     {name:<18} {desc}")
+                print(f"             owner stayed green: "
+                      f"{', '.join(missed_owners)}")
             else:
                 blind.append((name, klass, desc))
                 print(f"  BLIND SPOT {name:<18} {desc}")
@@ -298,12 +349,13 @@ def main() -> int:
         print("-" * 72)
         if blind:
             print(f"Results: FAIL — {len(blind)}/{len(FAULTS)} fault "
-                  "class(es) reach the fab with every gate green:")
+                  "class(es) reach the fab unowned:")
             for name, klass, desc in blind:
                 print(f"  {name}: {klass}")
             print()
-            print("A blind spot is a missing gate, not a tolerable gap —")
-            print("write the gate that catches it, then re-run this audit.")
+            print("A blind spot is a missing gate; a missed-owner is a gate")
+            print("that does not do what its fault claims — fix the gate or")
+            print("the expect, then re-run this audit.")
             return 1
         print(f"Results: PASS — {len(FAULTS)}/{len(FAULTS)} injected fault "
               "classes caught by at least one gate")
