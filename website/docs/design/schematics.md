@@ -95,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
+USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
 
 <div className="schematic-container">
 
@@ -109,6 +109,7 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC synchr
 |-----|-----------|-------|---------|-----------|
 | J1 | USB-C connector | — | 5V power input | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
 | J3 | JST PH 2-pin SMD connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| F1 | PTC resettable fuse | 2 A hold, 1812 (C960026) | VBUS input overcurrent protection: J1 delivers on **VBUS_IN**, the board's VBUS is reached through F1 (R3-HIGH-4 fix, in design since `1c3ded4`) | — |
 | R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
 | R16 | Resistor | 100 kΩ | IP5306 KEY pin pull-down | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R17 | Resistor | 1 kΩ | LED1 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
@@ -132,36 +133,43 @@ USB-C input with CC pull-downs, IP5306 charge-and-play module, SY8089AAAC synchr
 
 ### Power Budget
 
-| Consumer | Typical | Peak |
-|----------|---------|------|
-| ESP32-S3 (dual-core active) | 150 mA | 350 mA |
-| ILI9488 display + backlight | 80 mA | 120 mA |
-| PAM8403 + speaker | 20 mA | 100 mA |
-| SD card (SPI read) | 30 mA | 100 mA |
-| Misc (pull-ups, buttons) | 10 mA | 20 mA |
-| **Total** | **~290 mA** | **~690 mA** |
+| Consumer | Rail | Typical | Peak |
+|----------|------|---------|------|
+| ESP32-S3 (dual-core active) | +3V3 | 150 mA | 350 mA |
+| ILI9488 logic + panel drive | +3V3 | 20 mA | 30 mA |
+| Backlight (LED-A via R27, always on) | **+5V** | 90 mA | 95 mA |
+| PAM8403 + speaker | +5V | 20 mA | 100 mA |
+| SD card (SPI read) | +3V3 | 30 mA | 100 mA |
+| Misc (pull-ups, buttons) | +3V3 | 10 mA | 20 mA |
+| **Total** | | **~320 mA** | **~695 mA** |
 
-**Battery life:** ~**15.7 hours** typical gameplay.
+**Battery life:** ~**12.9 hours** typical gameplay.
 
-Not `5000 / 290`. That division ignores both conversion stages. The +3V3 rail
-(270 mA typical — PAM8403 sits on +5V) passes through the SY8089 buck at ~93%,
-and the whole 5V rail is produced by the IP5306 boosting 3.7V at ~90%:
+Not `5000 / 320`. That division ignores both conversion stages. The +3V3 rail
+(210 mA typical) passes through the SY8089 buck at ~93% (a buck converts
+*power*, so its input current scales by the voltage ratio); the backlight and
+PAM8403 draw straight from +5V; and the whole 5V rail is produced by the
+IP5306 boosting 3.7V at ~90%:
 
 ```
-I_5V  = 270 / 0.93 + 20  = 212 mA
-I_bat = 212 x 5 / (3.7 x 0.90) = 318 mA   ->  5000 / 318 = 15.7 h
+I_5V  = 210 x 3.3 / (5 x 0.93) + 90 + 20 = 259 mA
+I_bat = 259 x 5 / (3.7 x 0.90) = 389 mA   ->  5000 / 389 = 12.9 h
 ```
 
-With the AMS1117 LDO this was **11.5 h**: a linear regulator draws the full
-270 mA from the 5V rail regardless of output voltage, so the buck buys ~37%
-more runtime as well as ~7x less heat.
+Two design notes baked into these figures: the backlight moved from a
+hardwired +3V3 tie to **+5V through R27 (20 Ω, net LED_BLA, ~90 mA)** in the
+R25 respin — brighter and current-limited, at a real runtime cost — and the
+SY8089 buck replaced the AMS1117 LDO (a linear regulator draws the full +3V3
+current from the 5V rail regardless of output voltage, costing ~25% runtime
+and ~7x more heat). Fabricated boards through v4.3.1 predate the R27 change
+and tie LED-A to +3V3.
 
 ### Power Path Architecture
 
 ```
                           ┌─────────────┐
-  USB-C ──VBUS────────────┤ pin 1 (VIN) │
-  (5V)                    │             │
+  USB-C ─VBUS_IN─► F1 ────┤ pin 1 (VIN) │
+  (5V)            (PTC)   │             │
                           │   IP5306    │──pin 8 (VOUT)──► +5V ──► SY8089 ──► +3V3
                           │             │                          (U3)       (ESP32, LCD, SD)
   Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │
@@ -176,7 +184,7 @@ more runtime as well as ~7x less heat.
 **Key design points:**
 - **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail: for a correctly-inserted battery the gate (pulled low by R24) keeps it ON; a reversed battery is blocked by the body diode.
 - **SW16** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional on the v1 board** (see warning below). It does NOT control USB VBUS.
-- **VBUS** goes directly to IP5306 pin 1 (VIN) — always available when USB is plugged in.
+- **VBUS** reaches IP5306 pin 1 (VIN) through the F1 PTC fuse (J1 → VBUS_IN → F1 → VBUS) — always available when USB is plugged in.
 - **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
 - **No backfeed diode needed:** IP5306 charger is internally regulated (CC/CV), boost is unidirectional.
 
@@ -243,7 +251,7 @@ switch, so sliding it changes nothing. Consequences on v1:
 
 ## Sheet 2 — MCU (ESP32-S3)
 
-ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupling capacitors, and EN reset circuit. LCD_RD and LCD_BL are hardwired to +3V3 on the PCB (not GPIO-controlled).
+ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupling capacitors, and the EN reset RC network (R3 + C31, added in the R25 respin). LCD_RD is hardwired to +3V3 on the PCB and the backlight is fed from +5V via R27 (neither is GPIO-controlled).
 
 <div className="schematic-container">
 
@@ -256,8 +264,9 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | U1 | MCU module | ESP32-S3-WROOM-1 N16R8 | 16MB Flash, 8MB PSRAM | [PDF](/datasheets/U1_ESP32-S3-WROOM-1-N16R8_C2913202.pdf) |
-| R3 | Resistor | 10 kΩ | EN pull-up (DNP — ESP32-S3-WROOM-1 integrates ~45 kΩ internal EN pull-up) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
-| C3 | Capacitor | 100 nF | EN reset delay (RC ≈ 4.5 ms via WROOM-1 internal ~45 kΩ pull-up) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| R3 | Resistor | 10 kΩ | EN pull-up to +3V3 (R25 respin, `1c3ded4` — the earlier "WROOM-1 integrates an EN pull-up" claim was **falsified**: the module has none, and boards through v4.3.1 shipped without any RC) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
+| C31 | Capacitor | 100 nF | EN → GND reset delay (RC ≈ 1 ms with R3, module datasheet p.28 power-up timing) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C3 | Capacitor | 100 nF | 3V3 decoupling (twin of C4) — NOT the EN cap; that is C31 | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C4 | Capacitor | 100 nF | 3V3 decoupling | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C26 | Capacitor | 100 nF | 3V3 VDD bypass (within 3.6 mm of module pin 2) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | SW15 | Tact switch | — | EN reset (pulls EN low) | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
@@ -269,7 +278,8 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 |----------|-------|---------|-----|
 | **Display** | 4–11 | D0–D7 | 8080 data |
 | | 12, 13, 14, 46 | CS, RST, DC, WR | 8080 control |
-| | — | RD, BL | Tied to +3V3 (hardwired) |
+| | — | RD | Tied to +3V3 (hardwired) |
+| | — | BL | +5V via R27 20 Ω (net LED_BLA, always on) |
 | **Audio** | 15, 16, 17 | BCLK, LRCK, DOUT | I2S |
 | **SD Card** | 44, 43, 38, 39 | MOSI, MISO, CLK, CS | SPI |
 | **D-pad** | 40, 41, 42, 1 | UP, DOWN, LEFT, RIGHT | GPIO |
@@ -286,11 +296,12 @@ GPIO26–32 are used internally by the PSRAM. GPIO19/20 are the native USB D-/D+
 
 ## Sheet 3 — Display
 
-ILI9488 4.0" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A(backlight), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
+ILI9488 4.0" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A (backlight — fed from +5V through R27 on net LED_BLA, ~90 mA, always on), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
 
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | J4 | FPC connector | 40-pin 0.5mm bottom contact | Display ribbon cable | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
+| R27 | Resistor | 20 Ω 1206 | Backlight series resistor: +5V → R27 → LED_BLA → FPC pad 8 (panel pin 33, LED-A). R25-HIGH-1 fix, in design since `1c3ded4`; boards through v4.3.1 tie LED-A to +3V3 instead | — |
 
 <div className="schematic-container">
 
