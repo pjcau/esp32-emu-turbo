@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-OUTPUT_DIR="$PROJECT_ROOT/website/static/img/renders"
+OUTPUT_DIR="$PROJECT_ROOT/website/static/img/renders/enclosure"
 IMGSIZE="1920,1080"
 
 mkdir -p "$OUTPUT_DIR"
@@ -13,7 +13,10 @@ mkdir -p "$OUTPUT_DIR"
 # View definitions: name|camera_center|rotation|part|distance
 VIEWS=(
     "front|0,0,12.5|25,0,340|assembly|500"
-    "back|0,0,12.5|205,0,20|assembly|500"
+    # back: as seen when you physically turn the console around — up stays up,
+    # left/right mirror (matches pcba-bottom.png). The old rz=20 rendered the
+    # back upside down (flipped over the top edge, left/right NOT mirrored).
+    "back|0,0,12.5|205,0,200|assembly|500"
     "top|0,0,12.5|90,0,0|assembly|500"
     "exploded|0,0,20|55,0,330|exploded|600"
     "cross-section|0,-10,12.5|55,0,0|cross_section|400"
@@ -27,7 +30,7 @@ for entry in "${VIEWS[@]}"; do
 
     docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
         openscad \
-        -o "/output/enclosure-${name}.png" \
+        -o "/output/enclosure/enclosure-${name}.png" \
         --imgsize "$IMGSIZE" \
         --camera "${center},${rotation},${distance}" \
         -D "part=\"${view_part}\"" \

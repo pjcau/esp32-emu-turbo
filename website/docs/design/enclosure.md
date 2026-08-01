@@ -59,12 +59,12 @@ make render-enclosure
 
 ### Back Panel
 - **L/R shoulder buttons** — pill-shaped cutouts near top edge (28 × 10mm)
-- **Speaker grille** — array of 1.5mm holes in circular pattern (left side)
+- **Speaker grille** — array of 1.5mm holes in circular pattern (D-pad side of the device; appears on the **right** when you look at the back)
 
 ### Bottom Edge
 - **USB-C port** — 9.0 × 3.2mm cutout (centered), Z-aligned with PCB connector
-- **SD card slot** — 12 × 2.5mm cutout (right side), Z-aligned with PCB module
-- **Power switch** — 8 × 4mm cutout (left of USB-C)
+- **SD card slot** — 12 × 2.5mm cutout (ABXY side of the device), Z-aligned with PCB module
+- **Power switch** — 8 × 4mm cutout (D-pad side, left of USB-C when viewed from the front)
 
 ### Internal
 - **Battery compartment** — 70 × 55 × 9.5mm cavity with 1.5mm raised border wall and retainer clips (fits 65×55×9.5mm LiPo)
@@ -77,33 +77,44 @@ make render-enclosure
 
 ```
 FRONT (display side):
-┌─────────────────────────────────────────────────────────┐
-│                                                         │
-│                 ┌───────────────────┐                    │
-│                 │                   │                    │
-│    ┌─┐          │   3.95" Display   │          [X]      │
-│  ┌─┤ ├─┐        │    320 x 480      │       [Y]   [A]   │
-│  └─┤ ├─┘        │    ILI9488        │          [B]      │
-│    └─┘          │                   │                    │
-│   D-pad         └───────────────────┘                    │
-│  [Sel] [Sta]                                             │
-│                                                         │
-│  ┌──USB-C──┐                           ┌──SD Card──┐    │
-└──┴─────────┴───────────────────────────┴───────────┴────┘
+┌──────────────────────────────────────────────────────────┐
+│                                                          │
+│              ┌────────────────────────────┐              │
+│              │                            │     [X]      │
+│      ┌─┐     │       3.95" Display        │              │
+│    ┌─┤ ├─┐   │         320 x 480          │ [Y]     [A]  │
+│    └─┤ ├─┘   │          ILI9488           │              │
+│      └─┘     │                            │              │
+│     D-pad    └────────────────────────────┘     [B]      │
+│  (Sta)  (Sel)                                  (Menu)    │
+│        ∘ ∘  LEDs                                         │
+│            ┌─PWR─┐    ┌──USB-C──┐         ┌──SD Card──┐  │
+└────────────┴─────┴────┴─────────┴─────────┴───────────┴──┘
 
-BACK (battery side):
-┌─────────────────────────────────────────────────────────┐
-│  [L]                                              [R]   │
-│                                                         │
-│                                                         │
-│                    (( Speaker ))                         │
-│                                                         │
-│                                                         │
-│                                                         │
-│                                                         │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
+BACK (as physically seen from behind — left/right MIRRORED vs front):
+┌──────────────────────────────────────────────────────────┐
+│    ┌──R──┐                                  ┌──L──┐      │
+│                                                          │
+│                                                          │
+│                                                          │
+│                                       (( Speaker ))      │
+│                                                          │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+
+BOTTOM EDGE (as physically seen from behind — mirrored):
+─┬───────────┬─────────┬─────────┬────┬─────┬─────────────┬─
+ └──SD Card──┘         └──USB-C──┘    └─PWR─┘
 ```
+
+:::note Left/right convention
+The FRONT view is what the player sees; the BACK and BOTTOM-EDGE views above are
+what you see when you physically turn the device around, so left/right are
+mirrored. USB-C, the SD slot and the power switch are all mounted on the
+**bottom (back) side of the PCB** — on the bare board they face you when you
+look at the back, with SD on the left and PWR on the right. In device terms:
+SD is on the ABXY side, the power switch and speaker are on the D-pad side.
+:::
 
 ## Dimensions Reference
 
