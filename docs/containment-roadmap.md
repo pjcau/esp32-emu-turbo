@@ -18,20 +18,31 @@ gates; none was a "construction" problem.
 
 ## Containment layers — TODO, in order of yield
 
-### 1. Pre-order gate (closes class 3) — TODO
+### 1. Pre-order gate (closes class 3) — DONE (d6de9e3)
 
 `make order-manifest`: print SHA256 of `gerbers.zip` / `bom.csv` / `cpl.csv`
 from `release_jlcpcb/` and write a dated manifest; at upload time the hashes
 are compared against what the JLC site received. Minimal cost, kills the
 "the fix never reached the order" bug class by construction.
 
-### 2. Unverified-claims ledger (closes class 1) — TODO
+Landed as `scripts/order_manifest.py` (writer) + `verify_order_manifest`
+(freshness gate in `VERIFY_ALL_SCRIPTS` and the session-start subset) +
+`test_order_manifest` (mutation suite). The `/release` skill regenerates
+the manifest immediately after the `release_jlcpcb/` copy and records the
+hashes in the release notes.
+
+### 2. Unverified-claims ledger (closes class 1) — DONE (d6de9e3)
 
 Every load-bearing claim of the kind "the shell is internally isolated"
 (SW16↔BTN_SELECT, parked) or "the module has the pull-up" must live in a
 claims file with status `VERIFIED-ON-DATASHEET` / `UNVERIFIED`, gated: an
 `UNVERIFIED` claim older than N days goes red. Turns the most dangerous text
 in the repo — the justification comment — into a work queue.
+
+Landed as `hardware/CLAIMS.md` (seeded with the SW16 shell-isolation claim
+UNVERIFIED — red on 2026-09-14 unless verified — the falsified EN pull-up
+claim and the bench-verified USB-C 1.60 slot) + `verify_claims_ledger`
+(N = 45 days, evidence required for any verdict) + `test_claims_ledger`.
 
 ### 3. Dynamic SPICE gates (closes class 4) — TODO
 
@@ -42,11 +53,16 @@ The ngspice MCP is already installed. Scenarios to hook into vbench:
 - power-up ramp with strap-threshold verification at t=0;
 - brownout at 3.0 V battery under 1.5 A SNES load.
 
-### 4. First-article photographic protocol (closes class 2) — TODO
+### 4. First-article photographic protocol (closes class 2) — DONE (d6de9e3)
 
 Formalize the v4.3.1 lesson as a skill: checklist per package *family* (not
 per component), orientation check on the JLC 3D viewer before paying,
 photo-vs-render comparison for each side.
+
+Landed as `/first-article-check` (`.claude/skills/first-article-check/`):
+phase A pre-payment on the JLC preview (referenced from the `/release`
+skill), phase B on arrival, photos only. No gate — the checklist is human
+work by nature; the machine-checkable halves live in layers 1 and 2.
 
 ### 5. Bring-up test firmware at first power-on — TODO
 
