@@ -344,7 +344,12 @@ def _silkscreen_labels():
     parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*JST_BAT_ENC)
     # v4.0: moved label up to clear Q1 P-MOSFET + debounce caps (DFA: Q1 at y=52.5)
-    parts.append(P.gr_text("BATT", px, py - 15, "B.SilkS", 1.0))
+    # Moved again from py-15 (y=47.5): the BAT+ layer transition now stitches
+    # a row of 0.45mm barrels along y=47.275 and the anchor sat 0.36mm from
+    # the westmost one, under the 0.5mm JLCDFM silk-to-hole rule. py-13.9
+    # keeps it in the same corridor between the R11/R12 and C12/C13 rows,
+    # 1.35mm from the nearest hole and 0.25mm clear of the C12/C13 pads.
+    parts.append(P.gr_text("BATT", px, py - 13.9, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*FPC_ENC)
     parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)

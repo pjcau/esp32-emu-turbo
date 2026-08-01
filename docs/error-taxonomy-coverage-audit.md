@@ -237,11 +237,24 @@ each layer transition and assert a minimum by expected current.
 | 12 | Functional behavior | ✅ vbench + fault injection |
 | 13 | Signal integrity | ✅ gated (USB, RF, GND) |
 | 14 | Verification machinery | ✅ mutation-tested meta-level |
-| 15 | ESD protection | ⚠️ advisory only — promote for v2 |
-| 16 | Test points | ⚠️ advisory only |
-| 17 | PCB ↔ enclosure mechanics | ❌ gap — no sync gate |
-| 18 | Power-via ampacity | ❌ gap — geometric checks only |
+| 15 | ESD protection | ✅ gated (net-verified; heuristic blocks via claims ledger, CLAIM-004) |
+| 16 | Test points | ✅ gated (bring-up signals included; mutation-tested) |
+| 17 | PCB ↔ enclosure mechanics | ✅ gated (`verify_enclosure_sync`; found+fixed 4 live bugs incl. the battery pocket) |
+| 18 | Power-via ampacity | ✅ gated (`verify_power_via_ampacity` min-cut; found+fixed 5 starved transitions) |
 | 19 | EMC / environmental / live stock | ➖ accepted, not automatable |
+
+## Status update — 2026-08-01
+
+Categories 15-18 were closed the same day by the gate-coverage
+expansion (docs/gate-coverage-expansion-plan.md): rows above updated.
+Closing them surfaced and fixed nine live bugs — four mechanical
+(battery pocket F1, ABXY Y-offset, menu/shoulder drift, A/B/X/Y labels
+on the wrong switches) and five electrical (starved power-via
+transitions, worst: BAT+ at 12% of required ampacity). Known residuals,
+deliberately visible: per-consumer transitions are printed "not judged"
+by the ampacity gate until per-load budgets are declared (BAT+ -> L1.1
+is the one worth fixing first — needs an IP5306_KEY re-route);
+release_jlcpcb/README.md is updated only when a release tag is cut.
 
 ## Recommended next steps (best cost/benefit first)
 

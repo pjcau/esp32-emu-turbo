@@ -68,6 +68,10 @@ CPL = "release_jlcpcb/cpl.csv"
 D356 = "release_jlcpcb/esp32-emu-turbo.d356"
 FIRMWARE = "software/main/board_config.h"
 SCAD = "hardware/enclosure/enclosure.scad"
+# generated (pre-release) copies — the content gates read THESE, while the
+# release_jlcpcb/ copies are owned by the order-manifest integrity gate
+GEN_BOM = "hardware/kicad/jlcpcb/bom.csv"
+GEN_CPL = "hardware/kicad/jlcpcb/cpl.csv"
 
 # a fault whose mutation touches nothing is a lie, not a pass
 class Fatal(RuntimeError):
@@ -177,8 +181,12 @@ def f_cpl_rotation(sb: Path):
 
 
 def f_cpl_missing(sb: Path):
+    # Both copies: the generated CPL is what verify_bom_cpl_pcb reads;
+    # the release copy is what the manifest fingerprints. Mutating both
+    # models "the exporter dropped U3", which each owner must see.
+    _sub(sb / GEN_CPL, r"^U3,.*\n", "", flags=re.MULTILINE)
     _sub(sb / CPL, r"^U3,.*\n", "", flags=re.MULTILINE)
-    return "removed U3 from the CPL — regulator on the BOM but never placed"
+    return "removed U3 from both CPLs — regulator on the BOM but never placed"
 
 
 def f_bom_value(sb: Path):
@@ -202,14 +210,38 @@ def f_release_drift(sb: Path):
     return "relabeled 5 GND e-test points as +3V3 — release netlist drift"
 
 
+def f_via_starvation(sb: Path):
+    # PREDICTED (taxonomy audit cat. 18): a rail's layer transition loses
+    # its parallel barrels until one via carries everything. Deleting the
+    # +3V3 vias also fragments the In2 pour, so power-net-integrity fires
+    # as a bystander — `expect` is what makes this fault prove the
+    # ampacity gate rather than the network's noise.
+    board = sb / BOARD
+    text = board.read_text()
+    n = _net_number(text, "+3V3")
+    pat = re.compile(r"^\s*\(via \(at [^)]+\).*\(net %d\).*\n" % n,
+                     re.MULTILINE)
+    matches = list(pat.finditer(text))
+    if len(matches) < 2:
+        raise Fatal(f"only {len(matches)} +3V3 via(s) found — cannot starve")
+    out = text[:matches[1].start()] + pat.sub("", text[matches[1].start():])
+    board.write_text(out)
+    return (f"deleted {len(matches) - 1} of {len(matches)} +3V3 vias — "
+            "the rail left behind a single barrel")
+
+
 def f_esd_removed(sb: Path):
     # PREDICTED (taxonomy audit cat. 15): the USB ESD array quietly drops
-    # off the BOM. The BOM/CPL family will object to the row mismatch as
-    # bystanders; only verify_esd_protection can say the PROTECTION is
-    # gone — which is what `expect` demands of it.
+    # off the BOM. Both copies must go — the ESD gate deliberately merges
+    # the release and generated BOMs, so a part surviving in either one
+    # keeps the protection "present". The BOM/CPL family objects to the
+    # row mismatch as bystanders; only verify_esd_protection can say the
+    # PROTECTION is gone — which is what `expect` demands of it.
     _sub(sb / BOM, r"^USBLC6-2SC6 USB ESD TVS,U4,.*\n", "", count=1,
          flags=re.MULTILINE)
-    return "removed U4 (USBLC6-2SC6) from the BOM — USB left unprotected"
+    _sub(sb / GEN_BOM, r"^USBLC6-2SC6 USB ESD TVS,U4,.*\n", "", count=1,
+         flags=re.MULTILINE)
+    return "removed U4 (USBLC6-2SC6) from both BOMs — USB left unprotected"
 
 
 def f_test_point_starved(sb: Path):
@@ -260,10 +292,15 @@ FAULTS = [
      f_net_swap_short, ()),
     ("annular-collapse", "fabrication: via annular ring below minimum", [BOARD],
      f_annular_collapse, ()),
-    ("cpl-rotation", "assembly: part rotated 270 degrees", [CPL],
-     f_cpl_rotation, ("verify_cpl_rotation_law",)),
-    ("cpl-missing", "assembly: part missing from CPL", [CPL],
-     f_cpl_missing, ("verify_bom_cpl_pcb",)),
+    # Ownership note (learned from this audit's first MISSED run): the
+    # rotation LAW gate verifies the GENERATOR's angles in memory — no
+    # artifact mutation can reach it. A wrong angle in the release CPL is
+    # artifact drift, and artifact integrity is owned by the manifest
+    # (the "what gets uploaded is not what was verified" gate).
+    ("cpl-rotation", "assembly: release CPL angle drifted", [CPL],
+     f_cpl_rotation, ("verify_order_manifest",)),
+    ("cpl-missing", "assembly: part missing from CPL", [CPL, GEN_CPL],
+     f_cpl_missing, ("verify_bom_cpl_pcb", "verify_order_manifest")),
     ("bom-designator", "sourcing: BOM row no longer matches the board", [BOM],
      f_bom_value, ("verify_bom_values",)),
     ("release-drift", "release: d356 disagrees with the gerbers", [D356],
@@ -275,7 +312,9 @@ FAULTS = [
     ("test-point-starved", "bring-up: required signal with no probeable copper",
      [BOARD], f_test_point_starved, ("verify_test_points",)),
     ("esd-removed", "protection: USB ESD array dropped from the BOM",
-     [BOM], f_esd_removed, ("verify_esd_protection",)),
+     [BOM, GEN_BOM], f_esd_removed, ("verify_esd_protection",)),
+    ("via-starvation", "power: rail's layer transition down to one barrel",
+     [BOARD], f_via_starvation, ("verify_power_via_ampacity",)),
 ]
 
 

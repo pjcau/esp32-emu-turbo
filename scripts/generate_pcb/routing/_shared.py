@@ -52,6 +52,23 @@ VIA_TIGHT_DRILL = 0.20
 VIA_MIN = 0.50       # minimum via OD (AR=0.15mm — JLCPCB recommended minimum)
 VIA_MIN_DRILL = 0.20
 
+# ── Power-rail barrels ────────────────────────────────────────────
+# A layer transition on a power rail is a conductor like any other and
+# has to be sized for the rail's current, not for "a via fits here".
+# verify_power_via_ampacity.py measures a transition against the IPC-2221B
+# internal curve with an 18 um barrel and a 10 degC rise:
+#
+#     0.20 mm drill -> 0.527 A     0.35 mm drill -> 0.791 A
+#     0.45 mm drill -> 0.949 A
+#
+# so a 2 A rail needs at least three 0.35 mm barrels in parallel and the
+# 4.35 A battery path needs six. Annular ring stays >= 0.13 mm (the
+# drc_check.py minimum) at every OD/drill pair below.
+VIA_PWR = 0.90        # power barrel OD (AR=0.275 with drill 0.35) — the _via_net default
+VIA_PWR_DRILL = 0.35
+VIA_PWR_TIGHT = 0.80  # power barrel for crowded clusters (AR=0.225 with drill 0.35)
+VIA_PWR_BIG_DRILL = 0.45  # 0.949 A per barrel; OD 0.85 -> AR=0.20
+
 # ── Board geometry ────────────────────────────────────────────────
 BOARD_W = 160.0
 BOARD_H = 75.0

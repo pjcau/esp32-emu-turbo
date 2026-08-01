@@ -9,6 +9,10 @@ from ._shared import (
     P,
     VIA_MIN,
     VIA_MIN_DRILL,
+    VIA_PWR,
+    VIA_PWR_BIG_DRILL,
+    VIA_PWR_DRILL,
+    VIA_PWR_TIGHT,
     VIA_STD,
     VIA_STD_DRILL,
     W_PWR,
@@ -132,6 +136,19 @@ def _buck_traces(bk_en, bk_gnd, bk_lx, bk_in, bk_fb):
     #   via (122.40,53.50) x[122.10,122.70] vs L2.2 pad left 123.45 = 0.75mm ✓
     #   via (122.40,51.80) vs EN pad right 121.65    = 0.45mm ✓
     #   via (122.60,56.60) vs L2.2 pad corner (123.45,56.45): 0.56mm ✓
+    #
+    # AMPACITY (verify_power_via_ampacity): the buck's return current leaves
+    # through this column and nowhere else — there is no B.Cu GND pour, so
+    # these barrels ARE the path to In1.Cu. Two 0.20 mm barrels carry
+    # 1.054 A against the 2 A the regulator returns. The column now runs
+    # 0.35 mm barrels and reaches one via further south:
+    #   (122.40,53.50) stays VIA_STD — a 0.80 OD ring here leaves only
+    #     0.17 mm to the BUCK_LX trace at y[54.07,54.83], under the 0.175
+    #     house clearance, so this one cannot grow;
+    #   (122.40,51.80) -> 0.80/0.35, U3.1 pad corner gap 0.354mm ✓
+    #   (122.40,50.60) -> 0.80/0.35, new; +5V via (121.10,51.20) copper
+    #     gap 0.732mm ✓, via-to-via copper gap to (122.40,51.80) 0.40mm ✓
+    # 0.527 + 0.791 + 0.791 = 2.109 A against 2.0 A returned.
     parts.append(_seg(bk_gnd[0], bk_gnd[1], 122.40, bk_gnd[1],
                       "B.Cu", W_PWR, n_gnd))
     parts.append(_via_net(122.40, bk_gnd[1], n_gnd,
@@ -139,7 +156,11 @@ def _buck_traces(bk_en, bk_gnd, bk_lx, bk_in, bk_fb):
     parts.append(_seg(122.40, bk_gnd[1], 122.40, 51.80,
                       "B.Cu", W_PWR, n_gnd))
     parts.append(_via_net(122.40, 51.80, n_gnd,
-                          size=VIA_STD, drill=VIA_STD_DRILL))
+                          size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
+    parts.append(_seg(122.40, 51.80, 122.40, 50.60,
+                      "B.Cu", W_PWR, n_gnd))
+    parts.append(_via_net(122.40, 50.60, n_gnd,
+                          size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
     parts.append(_seg(c1_p2[0], c1_p2[1], 122.60, c1_p2[1],
                       "B.Cu", W_PWR, n_gnd))
     parts.append(_via_net(122.60, c1_p2[1], n_gnd,
@@ -174,12 +195,27 @@ def _buck_traces(bk_en, bk_gnd, bk_lx, bk_in, bk_fb):
     #   via (126.00,57.40) vs C30.1 pad left 126.90          = 0.45mm ✓
     #   via (124.60,57.40) vs L2.2 pad corner (124.95,56.45) = 0.56mm ✓
     #   via-to-via gap 1.40 - 0.90                           = 0.50mm ✓
+    #
+    # AMPACITY (verify_power_via_ampacity): every amp the buck delivers
+    # crosses this pair — the whole rail lives on the In2.Cu +3V3 plane and
+    # this is the only way onto it. Two 0.35 mm barrels are 1.582 A against
+    # the 1.989 A the loads take, so a third hangs off a stub 1.20 mm south
+    # of the run, where the nearest different-net copper is the C30 GND
+    # return at y=60.40 (1.05 mm) and both siblings are 0.489 mm away.
+    _v3_out_via_y2 = 58.60
     parts.append(_seg(c30_p1[0], c30_p1[1], 126.00, c30_p1[1],
                       "B.Cu", W_PWR_HIGH, n_3v3))
-    parts.append(_seg(126.00, c30_p1[1], 124.60, c30_p1[1],
+    # Split at 125.30 so the third via's stub starts on a shared endpoint
+    # rather than T-ing into the middle of this run (verify_dangling_copper).
+    parts.append(_seg(126.00, c30_p1[1], 125.30, c30_p1[1],
+                      "B.Cu", W_PWR_HIGH, n_3v3))
+    parts.append(_seg(125.30, c30_p1[1], 124.60, c30_p1[1],
                       "B.Cu", W_PWR_HIGH, n_3v3))
     parts.append(_via_net(126.00, c30_p1[1], n_3v3))
     parts.append(_via_net(124.60, c30_p1[1], n_3v3))
+    parts.append(_seg(125.30, c30_p1[1], 125.30, _v3_out_via_y2,
+                      "B.Cu", W_PWR_HIGH, n_3v3))
+    parts.append(_via_net(125.30, _v3_out_via_y2, n_3v3))
 
     # ── C30 GND return: two vias to In1.Cu ───────────────────────
     #   via (126.30,60.40) right edge 126.60 vs C30.2 pad left 126.90 = 0.30mm ✓
@@ -388,9 +424,28 @@ def _power_traces():
         #     Clearances: stub x=88.0 edge 88.3 vs BTN_SELECT via
         #     (88.95, 58.0) edge 88.72 -> 0.42; via (88.0, 59.3) 1.3 mm
         #     from F1 pad 2 centre and 1.25 mm from U4.4's pad edge.
+        #
+        #     AMPACITY (verify_power_via_ampacity): F1 is the source of
+        #     this net and everything downstream of it — U2.1 and the U4
+        #     TVS — sits on F.Cu, so this single barrel carried the fuse's
+        #     whole 2 A hold current on 0.791 A of copper. The stub now
+        #     runs 2.20 mm further WEST along y=59.3 on both layers and
+        #     carries two more 0.35 mm barrels. West is the only free
+        #     direction: east is U4's pad field and the BTN_SELECT via at
+        #     (88.95, 58.0), north is the F1 body, south is U4.
+        #       (86.90, 59.30) — F1.1 pad (VBUS_IN, different net!) ends at
+        #         x=84.55, so 0.80 mm of B.Cu clearance; BTN_SELECT F.Cu at
+        #         y=58.0 is 0.75 mm below.
+        #       (85.80, 59.30) — 0.80 mm from that same F1.1 pad edge.
+        #     via-to-via copper 1.10 - 0.90 = 0.20 mm ✓. 3 x 0.791 = 2.373 A.
+        _f1_vbus_via_xs = (f1_p2[0], 86.90, 85.80)
         parts.append(_seg(f1_p2[0], f1_p2[1], f1_p2[0], 59.3,
                            "B.Cu", W_PWR, n_vbus))
-        parts.append(_via_net(f1_p2[0], 59.3, n_vbus))
+        for _vx in _f1_vbus_via_xs:
+            parts.append(_via_net(_vx, 59.3, n_vbus))
+        for _xa, _xb in zip(_f1_vbus_via_xs, _f1_vbus_via_xs[1:]):
+            parts.append(_seg(_xa, 59.3, _xb, 59.3, "B.Cu", W_PWR, n_vbus))
+            parts.append(_seg(_xa, 59.3, _xb, 59.3, "F.Cu", W_PWR_HIGH, n_vbus))
         parts.append(_seg(f1_p2[0], 59.3, 90.95, 59.3,
                            "F.Cu", W_PWR_HIGH, n_vbus))
     # 4. F.Cu horizontal to IP5306 approach column, starting at the U4
@@ -410,7 +465,18 @@ def _power_traces():
     parts.append(_seg(ip_vbus_via_x, vbus_fcu_y, ip_vbus_via_x, ip_vbus_via_y,
                        "F.Cu", W_PWR_HIGH, n_vbus))
     # 6. via to B.Cu at IP5306 approach
+    #
+    # AMPACITY (verify_power_via_ampacity): this is where the fuse's whole
+    # 2 A hold current leaves F.Cu for U2.1, so one barrel (0.791 A) was
+    # not enough. A second one sits 1.075 mm further south — the F.Cu
+    # column runs on and the C17 B.Cu run at x=110.95 is already under it,
+    # so the pair joins the same two islands. It cannot go further: LCD_CS
+    # crosses on F.Cu at y=38.115 and a third ring would land on it.
+    _ip_vbus_via2_y = ip_vbus_via_y - 1.075
     parts.append(_via_net(ip_vbus_via_x, ip_vbus_via_y, n_vbus))
+    parts.append(_seg(ip_vbus_via_x, ip_vbus_via_y, ip_vbus_via_x, _ip_vbus_via2_y,
+                       "F.Cu", W_PWR_HIGH, n_vbus))
+    parts.append(_via_net(ip_vbus_via_x, _ip_vbus_via2_y, n_vbus))
     # 7. B.Cu stub: via -> IP5306 VBUS pad (horizontal then vertical)
     # R13-CU-CLR FIX (2026-04-11): narrow last-mile to U2.1 to W_PWR (0.60)
     # to pass U2.EP GND (top edge y=41.10) with ≥0.15mm clearance.
@@ -444,10 +510,10 @@ def _power_traces():
         # the VBUS F.Cu vertical at x=111.00 (the corridor 111.30..112.15 is
         # only 0.85 mm wide — not enough for a 0.60 mm via with 0.20 mm clearance
         # on each side).
-        # The IP5306 EP already has three dedicated thermal vias under the
-        # exposed pad at (108.5, 45.0), (110.0, 45.0), (109.3, 44.5) — these
-        # provide the EP→In1.Cu GND plane connection. The east-side stitching
-        # via was redundant.
+        # The IP5306 EP has its own thermal via array immediately south of
+        # the exposed pad (see _ip5306_therm_vias below) — that array is
+        # the EP→In1.Cu GND plane connection and is sized for the return
+        # current. The east-side stitching via was redundant.
         # U3 buck GND vias are emitted in the dedicated buck block below —
         # they need to be a tight pair right at the GND pin, not a single
         # generic stitching via.
@@ -551,32 +617,33 @@ def _power_traces():
     parts.append(_seg(jst_n[0], jst_n[1], jst_n[0], jst_n[1] - 3.5,
                        "B.Cu", W_PWR, n_gnd))
 
-    # ── IP5306 (U2) GND thermal vias: 3-via array near EP pad ──────
-    # EP pad center at ip_ep = (110.0, 42.5), size 3.2x3.2mm.
-    # VBUS F.Cu vertical at x=111.0 (y=40..61): thermal vias must stay clear.
-    # With W_PWR=0.6: via right edge + trace left edge need >= 0.15mm gap.
-    # Place vias LEFT of EP center to avoid VBUS trace at x=111.
-    # y=ip_ep[1]+2.5=45.0, below KEY horizontal (y=44.41, x=107..114.05).
-    # VBUS F.Cu vert at x=111.0: need gap >= 0.275+0.30+0.15 = 0.725mm.
-    # Max via x = 111.0 - 0.725 = 110.275. Use x=110.0 for margin.
-    # IP5306 thermal vias: 3 GND vias below EP pad.
-    # KEY trace at x=107.0: need gap >= 0.30+0.125+0.15 = 0.575mm min.
-    # VBUS F.Cu at x=111.0: need gap >= 0.275+0.30+0.15 = 0.725mm.
-    # EP pad bounds: x=108.4..111.6, y=40.9..44.1.
-    # Place inside EP pad bounds to avoid dead-end issues.
+    # ── IP5306 (U2) GND thermal vias: 2x2 array south of the EP pad ──
+    # EP pad centre at ip_ep = (110.0, 42.5), 3.4 x 2.8mm, so the pad
+    # occupies x=108.3..111.7, y=41.1..43.9. The array sits south of it,
+    # in the only free pocket U2's pin field and its neighbours leave.
+    #
+    # AMPACITY (verify_power_via_ampacity): there is no B.Cu GND pour, so
+    # this array is the ONLY path from the boost's return pad to In1.Cu.
+    # Three 0.20 mm barrels are 1.581 A and the return carries the whole
+    # battery current, 4.348 A. The array is now a 2x2 grid of 0.35 mm
+    # barrels (3.164 A) which, with the buck's own column at 2.109 A,
+    # brings the net's source cut to 5.273 A.
+    #
+    # The pocket it has to fit in is 2.0 mm tall and 2.0 mm wide, so the
+    # grid is pitched at exactly 1.00 mm (0.20 mm of copper between rings)
+    # and cannot hold a third row or column:
+    #   south — BAT+ B.Cu corridor at y=46.100 (rings stop at 45.70, 0.25)
+    #   east  — VBUS F.Cu vertical at x=111.00 (rings stop at 109.95, 0.67)
+    #   west  — U2.5 pad ends at x=107.85 (rings start at 108.15, 0.30)
+    #   north — the EP pad itself; the inner row's rings meet its bottom
+    #           edge at y=43.90 on the SAME net, and the drills stay
+    #           0.225 mm clear of it so the paste aperture is untouched.
     _ip5306_therm_vias = [
-        (ip_ep[0] - 1.5, ip_ep[1] + 2.5),  # (108.5, 45.0) — gap to KEY=1.075mm ✓
-        (ip_ep[0],        ip_ep[1] + 2.5),  # (110.0, 45.0) — center
-        # R6 FIX (2026-04-10): was (109.3, 46.0) with stub down to y=44.0.
-        # The via at y=46.0 size 0.6 blocked the new BAT+ corridor horizontal
-        # at y=46.135 (different net → DRC short). Moved to y=44.5, still
-        # south of the EP pad (EP bottom at 43.9) for GND stitching function.
-        # Via distance to sibling thermal vias (108.5, 45) and (110, 45):
-        #   dx=0.8, dy=0.5 → 0.94mm center distance, gap=0.34mm ✓
-        (ip_ep[0] - 0.7,  ip_ep[1] + 2.0),  # (109.3, 44.5) — R6 moved north
+        (108.55, 44.30), (109.55, 44.30),   # inner row, along the EP edge
+        (108.55, 45.30), (109.55, 45.30),   # outer row
     ]
-    # Connect each thermal via to the EP pad with a vertical B.Cu stub
-    # that lands ON the EP pad centre. ONE rule for all three vias.
+    # Connect each column of thermal vias to the EP pad with a vertical
+    # B.Cu stub that lands ON the EP pad centre. ONE rule for all of them.
     #
     # The previous split — centre via to ip_ep[1], the other two to
     # ip_ep[1] + 1.5 — stopped the side stubs at y = 44.0, and the EP
@@ -602,10 +669,23 @@ def _power_traces():
     # the drops together along that line into the pad centre. Every
     # corner is 90 deg, every endpoint is shared with the next segment,
     # and no two segments overlap.
+    #
+    # With two vias per column the drop is emitted per COLUMN, not per
+    # via: outer via -> inner via -> EP centre line. Two stubs on the same
+    # x would otherwise be drawn on top of each other, which is the
+    # overlapping copper the rule above exists to prevent.
+    _therm_cols = {}
     for tvx, tvy in _ip5306_therm_vias:
-        parts.append(_via_net(tvx, tvy, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
-        parts.append(_seg(tvx, tvy, tvx, ip_ep[1], "B.Cu", W_PWR, n_gnd))
-    _therm_xs = sorted({tvx for tvx, _ in _ip5306_therm_vias} | {ip_ep[0]})
+        parts.append(_via_net(tvx, tvy, n_gnd,
+                              size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
+        _therm_cols.setdefault(tvx, []).append(tvy)
+    for tvx in sorted(_therm_cols):
+        for _ya, _yb in zip(sorted(_therm_cols[tvx], reverse=True),
+                            sorted(_therm_cols[tvx], reverse=True)[1:]):
+            parts.append(_seg(tvx, _ya, tvx, _yb, "B.Cu", W_PWR, n_gnd))
+        parts.append(_seg(tvx, min(_therm_cols[tvx]), tvx, ip_ep[1],
+                          "B.Cu", W_PWR, n_gnd))
+    _therm_xs = sorted(set(_therm_cols) | {ip_ep[0]})
     for _xa, _xb in zip(_therm_xs, _therm_xs[1:]):
         parts.append(_seg(_xa, ip_ep[1], _xb, ip_ep[1], "B.Cu", W_PWR, n_gnd))
 
@@ -669,11 +749,32 @@ def _power_traces():
     # MH(105,37.5) center: gap = 2.0 - 0.45 - 1.25 = 0.30mm < 0.50mm needed.
     # Fix: add short B.Cu horizontal to x+0.5, then vert to y-1.5.
     # New via at (107.5, 39.09): MH gap=0.80mm ✓, no other obstacles ✓
+    #
+    # AMPACITY (verify_power_via_ampacity): VOUT reaches every +5V consumer
+    # through the In2.Cu pour, so this via was the whole rail's only layer
+    # transition — 0.791 A against the 2.150 A the loads take. Two more
+    # barrels flank it, each on its own short B.Cu stub so no two vias
+    # crowd the same corridor:
+    #   (105.60, 40.595) — west of the VOUT pad, under U2's body. Nearest
+    #     different-net copper is the LX run at y=41.865 (0.44 mm) and the
+    #     LX column at x=104.40 (0.37 mm); MH(105,37.5) is 1.40 mm away.
+    #   (107.50, 37.90)  — south of C27.2 on the existing VOUT column.
+    #     LCD_DC B.Cu at x=108.27 is 0.22 mm away, its via 0.606 mm.
+    # Both land inside the In2.Cu +5V pour (x<109 / y<41 island), which is
+    # the copper the rail actually distributes on. 3 x 0.791 = 2.373 A.
     parts.append(_seg(ip_vout[0], ip_vout[1], ip_vout[0] + 0.5, ip_vout[1],
                        "B.Cu", W_PWR, n_5v))
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1], ip_vout[0] + 0.5, ip_vout[1] - 1.5,
                        "B.Cu", W_PWR, n_5v))
     parts.append(_via_net(ip_vout[0] + 0.5, ip_vout[1] - 1.5, n_5v))
+    _vout_via_w = (105.60, ip_vout[1])          # (105.60, 40.595)
+    _vout_via_s = (ip_vout[0] + 0.5, 37.90)     # (107.50, 37.90)
+    parts.append(_seg(ip_vout[0], ip_vout[1], _vout_via_w[0], _vout_via_w[1],
+                       "B.Cu", W_PWR, n_5v))
+    parts.append(_via_net(_vout_via_w[0], _vout_via_w[1], n_5v))
+    parts.append(_seg(_vout_via_s[0], ip_vout[1] - 1.5, _vout_via_s[0], _vout_via_s[1],
+                       "B.Cu", W_PWR, n_5v))
+    parts.append(_via_net(_vout_via_s[0], _vout_via_s[1], n_5v))
     # U3 buck input: C1 (C_IN) taps the In2.Cu +5V pour through its own via
     # pair; see _buck_traces(). No dedicated VIN via here any more.
 
@@ -897,7 +998,36 @@ def _power_traces():
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(bat_col_x, ip_bat[1], bat_col_x, bat_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_via_net(bat_col_x, bat_via_y, n_bat))
+    #
+    # AMPACITY (verify_power_via_ampacity): U2.6 is the IP5306's battery
+    # pin — the entire 4.348 A crosses from the F.Cu corridor onto this
+    # B.Cu column, and it used to do so through this one barrel (0.791 A).
+    # The transition is now a 2 x 2 field in the pocket between the LX
+    # column at x=104.40/103.00 and the IP5306_KEY column at x=107.00,
+    # 1.075 mm south of the corridor where the B.Cu is otherwise empty:
+    #   x = 104.30 / 105.50   ring gap to the LX column 0.47mm ✓
+    #   y = 46.135 / 47.210   ring gap to LX horizontal y=44.50 0.875mm ✓,
+    #                         to the +5V F.Cu run at y=48.85 0.88mm ✓
+    # Drill 0.45 (0.949 A a barrel) rather than 0.35: four 0.35 barrels
+    # come to 4.482 A against 4.348 A required, and a 3% margin on the
+    # battery path is not a margin.
+    _bat_stitch_y2 = 47.210
+    _bat_stitch_x2 = 104.300
+    parts.append(_seg(bat_col_x, bat_via_y, bat_col_x, _bat_stitch_y2,
+                       "B.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(bat_col_x, bat_via_y, bat_col_x, _bat_stitch_y2,
+                       "F.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(bat_col_x, bat_via_y, _bat_stitch_x2, bat_via_y,
+                       "B.Cu", W_PWR_HIGH, n_bat))
+    for _layer in ("F.Cu", "B.Cu"):
+        parts.append(_seg(bat_col_x, _bat_stitch_y2, _bat_stitch_x2, _bat_stitch_y2,
+                           _layer, W_PWR_HIGH, n_bat))
+        parts.append(_seg(_bat_stitch_x2, _bat_stitch_y2, _bat_stitch_x2, bat_via_y,
+                           _layer, W_PWR_HIGH, n_bat))
+    for _sx in (bat_col_x, _bat_stitch_x2):
+        for _sy in (bat_via_y, _bat_stitch_y2):
+            parts.append(_via_net(_sx, _sy, n_bat,
+                                  size=VIA_PWR, drill=VIA_PWR_BIG_DRILL))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
     # DFM FIX: was 79.75 (overlapped R11), was 80.05 (too close to J3[2]).
     # At 80.01 with VIA_STD (r=0.45): via ring gap = 0.11mm (was rule 0.10mm).
@@ -913,10 +1043,64 @@ def _power_traces():
     #   J3[2] pad left edge:  80.50-0.60=80.00? No, J3 is ~1.20x1.40 THT
     #     J3[2] left edge ≈ 80.50 → gap 80.50-80.26=0.24 mm ✓ (>0.20)
     bat_approach_x = 80.01
-    parts.append(_seg(bat_col_x, bat_via_y, bat_approach_x, bat_via_y,
+    # Split at the U2.6 stitching field's west column so that field's
+    # copper shares an endpoint with this corridor (verify_dangling_copper).
+    parts.append(_seg(bat_col_x, bat_via_y, _bat_stitch_x2, bat_via_y,
+                       "F.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(_bat_stitch_x2, bat_via_y, bat_approach_x, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
+    #
+    # AMPACITY (verify_power_via_ampacity) — the worst transition on the
+    # board. Q1's drain and everything downstream of it live on B.Cu; the
+    # rail crosses to F.Cu here and ONLY here, so this one 0.20 mm barrel
+    # carried 4.348 A worth of battery current on 0.527 A of copper.
+    #
+    # The via itself cannot grow: R11.1 (BTN_Y, a different net) ends at
+    # x=79.45 and the 0.175 mm house clearance caps the ring at 0.50 mm
+    # OD, which is exactly why R9-HIGH-1 shrank it. So the transition is
+    # widened instead of the hole, in two places:
+    #
+    #   band 0, on the existing corridor at y=46.135 — one more barrel
+    #     0.89 mm east at (80.90). R12.2 (+3V3) starts at x=81.55, leaving
+    #     a 0.25 mm ring gap; the B.Cu stub between the two vias reaches
+    #     x=81.28, 0.27 mm short of that pad. 0.80 OD / 0.35 -> 0.791 A.
+    #
+    #   band 1, a second F.Cu/B.Cu overlap 1.14 mm north at y=47.275 —
+    #     four barrels. This band is 0.95 mm tall and that is not a choice:
+    #     R11/R12's pads end at y=46.65 below it and BTN_R's F.Cu channel
+    #     runs at y=48.0 above it, so a 0.85 OD ring centred at 47.275
+    #     clears both by 0.25 mm and nothing larger fits. Sideways it is
+    #     bounded by the BTN_Y (x=78.95) and BTN_START (x=83.95) B.Cu
+    #     columns. Drill 0.45 rather than 0.35 buys 0.949 A per barrel and
+    #     is what puts the rail comfortably over its requirement — the
+    #     four 0.35 mm barrels this band would otherwise hold come to
+    #     4.482 A total, a 3% margin, and this is the battery.
+    #
+    # 0.527 + 0.791 + 4 x 0.949 = 5.114 A against 4.348 A required.
+    _bat_band0_via_x = 80.90
+    _bat_band1_y = 47.275
+    _bat_band1_xs = (79.725, 80.750, 81.775, 82.800)
+    parts.append(_seg(bat_approach_x, bat_via_y, _bat_band0_via_x, bat_via_y,
+                       "B.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_via_net(_bat_band0_via_x, bat_via_y, n_bat,
+                          size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
+    # Riser to band 1: B.Cu already runs north from the via (the Q1 column
+    # below), so only F.Cu needs one. Both bands are chained through
+    # bat_approach_x so every segment ends on a via or on another
+    # segment's endpoint — verify_dangling_copper and the JLCDFM dead-end
+    # rule both measure endpoints, not overlaps.
+    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_band1_y,
+                       "F.Cu", W_PWR_HIGH, n_bat))
+    _bat_band1_nodes = sorted(set(_bat_band1_xs) | {bat_approach_x})
+    for _layer in ("F.Cu", "B.Cu"):
+        for _xa, _xb in zip(_bat_band1_nodes, _bat_band1_nodes[1:]):
+            parts.append(_seg(_xa, _bat_band1_y, _xb, _bat_band1_y,
+                               _layer, W_PWR_HIGH, n_bat))
+    for _bx in _bat_band1_xs:
+        parts.append(_via_net(_bx, _bat_band1_y, n_bat,
+                              size=0.85, drill=VIA_PWR_BIG_DRILL))
     # ── v5.0: BAT+ approach → Q1 drain (P-MOSFET RPP, relocated) ──
     # Q1 (SI2301CDS SOT-23-3) at (85.0, 53.0) on B.Cu, 0 deg:
     #   Pin 3 (Drain/BAT+) at (85.0, 51.9)
@@ -947,7 +1131,11 @@ def _power_traces():
     #   Channel y=52.5: GND via (86.80,52.0) at x=86.80 > trace end x=85.0 → CLEAR
     #   Drain vert x=85.0: GND via (86.80,52.0) gap_x=|85-86.80|-0.30-0.30=1.20mm OK
     _bat_q1_channel_y = 52.5  # above J3.4 tab (54.95) and button GND vias
-    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_q1_channel_y,
+    # Split at the band-1 stitching row so that row's copper shares an
+    # endpoint with this column instead of T-ing into the middle of it.
+    parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_band1_y,
+                       "B.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(bat_approach_x, _bat_band1_y, bat_approach_x, _bat_q1_channel_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(bat_approach_x, _bat_q1_channel_y, q1_drain[0], _bat_q1_channel_y,
                        "B.Cu", W_PWR, n_bat))

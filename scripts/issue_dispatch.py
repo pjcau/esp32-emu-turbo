@@ -285,6 +285,19 @@ ROUTING_EXCEPTIONS = {
         "software-dev", "/check", "blind-spot",
         "while the ESD gate's own tests are red, its verdicts on "
         "protection presence are untrustworthy"),
+    # The "power" keyword would rank this dead-board, but an undersized
+    # via transition carries the current — hotter, with less margin —
+    # rather than opening the net: same class as law:width (Decision D2
+    # of docs/gate-coverage-expansion-plan.md).
+    "verify_power_via_ampacity": (
+        "pcb-engineer", "/pcb-routing", "degraded",
+        "a starved layer transition runs hot and ages the barrel; it "
+        "degrades margin before it kills the board"),
+    # And its mutation suite is a tooling blind spot, like the others.
+    "test_power_via_ampacity": (
+        "software-dev", "/check", "blind-spot",
+        "while the ampacity gate's own tests are red, its verdicts on "
+        "via sizing are untrustworthy"),
 }
 
 

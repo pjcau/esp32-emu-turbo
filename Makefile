@@ -86,6 +86,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_order_manifest \
 	test_pcb_connectivity \
 	test_power_net_integrity \
+	test_power_via_ampacity \
 	test_vbench \
 	test_vbench_display \
 	test_vbench_sdcard \
@@ -130,6 +131,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_order_manifest \
 	verify_polarity \
 	verify_power_net_integrity \
+	verify_power_via_ampacity \
 	verify_power_paths \
 	verify_power_resonance \
 	verify_power_sequence \

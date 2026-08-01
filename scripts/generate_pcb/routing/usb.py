@@ -10,6 +10,8 @@ from ._shared import (
     USBC,
     VIA_MIN,
     VIA_MIN_DRILL,
+    VIA_PWR_DRILL,
+    VIA_PWR_TIGHT,
     VIA_STD,
     VIA_STD_DRILL,
     W_DATA,
@@ -247,8 +249,14 @@ def _usb_traces():
     _tvs_vbus_via_y = 59.3
     parts.append(_seg(90.95, _tvs_vbus_y, 90.95, _tvs_vbus_via_y,
                        "B.Cu", W_PWR, n_vbus))
+    # AMPACITY (verify_power_via_ampacity): VBUS reaches its two consumers
+    # over two barrels in parallel — this one and the pair at the IP5306
+    # approach — so this ring carries part of the fuse's 2 A budget and a
+    # 0.20 mm drill (0.527 A) held the whole net's cut down. 0.80/0.35
+    # is the largest that fits: U4.6's pad is 0.25 mm east of the ring and
+    # the USB_D- B.Cu column at x=91.65 is 0.20 mm past that.
     parts.append(_via_net(90.95, _tvs_vbus_via_y, n_vbus,
-                          size=VIA_STD, drill=VIA_STD_DRILL))
+                          size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
     # F.Cu stub from via down to VBUS horizontal at y=61.0
     parts.append(_seg(90.95, _tvs_vbus_via_y, 90.95, 61.0,
                        "F.Cu", W_PWR, n_vbus))
