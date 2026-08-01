@@ -202,6 +202,23 @@ def f_release_drift(sb: Path):
     return "relabeled 5 GND e-test points as +3V3 — release netlist drift"
 
 
+def f_test_point_starved(sb: Path):
+    # PREDICTED (taxonomy audit cat. 16): a routing change swallows the
+    # last probeable copper of a bring-up signal. LCD_WR is the minimal
+    # target — it has exactly one probeable pad (U1.16), so shrinking the
+    # LCD_WR pads below MIN_PAD_DIM leaves the signal unreachable.
+    board = sb / BOARD
+    n = _net_number(board.read_text(), "LCD_WR")
+    changed = _sub(
+        board,
+        r'^(\s*\(pad "[^"]+" smd rect \(at [^)]+\) )\(size [^)]+\)'
+        r'(.*\(net %d "LCD_WR"\).*)$' % n,
+        r"\g<1>(size 0.3 0.3)\g<2>",
+        flags=re.MULTILINE)
+    return (f"shrunk {changed} LCD_WR pad(s) below MIN_PAD_DIM — "
+            "a required bring-up signal left unprobeable")
+
+
 def f_enclosure_drift(sb: Path):
     # HISTORICAL (F1): the scad's battery pocket drifted from the spec'd
     # 105080 cell and nothing objected. The injected form is an outline
@@ -245,6 +262,8 @@ FAULTS = [
      f_firmware_desync, ()),
     ("enclosure-drift", "mechanical: shell no longer matches the board",
      [SCAD], f_enclosure_drift, ("verify_enclosure_sync",)),
+    ("test-point-starved", "bring-up: required signal with no probeable copper",
+     [BOARD], f_test_point_starved, ("verify_test_points",)),
 ]
 
 

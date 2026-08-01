@@ -705,7 +705,7 @@ Complete automated test suite that validates every dimensional constraint requir
 | `verify_via_in_pad.py` | 3 | 3 | Via-in-pad detection (different net) |
 | `verify_thermal_relief.py` | 4 | 4 | Zone thermal relief settings |
 | `verify_ground_loops.py` | 2 | 2 | Audio-digital ground coupling |
-| `verify_test_points.py` | 17 | 15+2 | Debug probe accessibility |
+| `verify_test_points.py` | 19 | 16+3 | Debug probe accessibility (blocking; bring-up signals included) |
 | `verify_esd_protection.py` | 6 | 6 | USB TVS + series resistors |
 | `verify_usb_return_path.py` | 3 | 3 | GND via density near USB traces |
 | `verify_sd_interface.py` | 7 | 7 | SD card SPI completeness |

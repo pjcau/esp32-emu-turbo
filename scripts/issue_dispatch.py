@@ -273,6 +273,12 @@ ROUTING_EXCEPTIONS = {
         "software-dev", "/check", "blind-spot",
         "while the enclosure-sync gate's own tests are red, its PASS "
         "verdicts on mechanical fit are untrustworthy"),
+    # The "test_point" keyword would hand this suite the degraded severity
+    # of the gate it tests; a red mutation suite is a tooling blind spot.
+    "test_test_points": (
+        "software-dev", "/check", "blind-spot",
+        "while the test-point gate's own tests are red, its verdicts on "
+        "probe access are untrustworthy"),
 }
 
 

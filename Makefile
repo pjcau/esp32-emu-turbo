@@ -80,6 +80,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_gate_coverage \
 	test_gerber_etest \
 	test_strapping_en_rc \
+	test_test_points \
 	test_issue_dispatch \
 	test_order_manifest \
 	test_pcb_connectivity \
