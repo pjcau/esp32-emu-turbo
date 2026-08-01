@@ -29,16 +29,7 @@ class has bitten before.
 before routing begins, so the router is default-closed.
 Source: waiver audit O5 = `docs/known-issues.md` §C.
 
-### 2. `verify_enclosure_sync` — the one ungated hardware contract
-
-Error-taxonomy gap #17: nothing syncs `enclosure.scad` constants against
-`board.py` (board outline 160×75 mm, mounting holes, USB-C / SD apertures).
-The same drift class that bit GPIO before `firmware-sync-check` existed.
-
-**Fix:** parse both files, compare the shared constants, mutation-test it,
-add to `VERIFY_ALL_SCRIPTS`. Best cost/benefit of the three gaps.
-
-### 3. SW16 shell-isolation claim — DEADLINE 2026-09-14
+### 2. SW16 shell-isolation claim — DEADLINE 2026-09-14
 
 `hardware/CLAIMS.md` carries the claim "SW16's shell is internally
 isolated from the contacts" (BTN_SELECT on shell tabs, GPIO0 strap) as
@@ -46,23 +37,23 @@ isolated from the contacts" (BTN_SELECT on shell tabs, GPIO0 strap) as
 **2026-09-14**. Verify against the switch datasheet (or falsify and fix)
 before that date.
 
-## Medium priority — coverage gaps for v2
+## Medium priority — follow-ups from the ampacity gate (2026-08-01)
 
-### 4. Promote ESD to a blocking gate for v2
+Left deliberately visible by the gate-coverage expansion (the gate prints
+them as "not judged", it does not fail on them):
 
-Error-taxonomy gap #15: TVS on USB D+/D− and VBUS is advisory only. One
-component per line, but the decision must be made at design time for v2.
+### 3. BAT+ → L1.1 single-via feed
 
-### 5. Power-via ampacity check
+The boost inductor feed sits behind a single 0.46/0.20 via (0.527 A);
+fixing it needs an IP5306_KEY re-route (y=46.605 → ~47.2) to make room.
+Same shape, smaller stakes: +3V3→U1.2 and +5V→U3.1 each sit behind one
+0.527 A via.
 
-Error-taxonomy gap #18: net-class width checks are trace-only; no gate
-computes current through the +5V / BAT+ / +3V3 via stitching. Extend
-`verify_net_class_widths` or add a small dedicated gate.
+### 4. Per-load current budgets for `verify_power_via_ampacity`
 
-### 6. Test points — advisory only
-
-Error-taxonomy gap #16, minor. Decide whether v2 gets probeable test
-points (the bring-up firmware is the current substitute for instruments).
+Declaring per-load budgets would upgrade the gate from min-cut ampacity
+to a feasibility max-flow. Until then the three single-via feeds above
+are printed but not judged.
 
 ## Small cleanups — known fix, known reason they are open
 
@@ -90,7 +81,14 @@ Detail for each lives in `docs/known-issues.md` §C; this is the index.
 
 ## Already closed — do not redo
 
-The waiver audit's Part 2 items O1 (CPL rotation law, incl. D1/Q1/LED2),
-O2 (VBUS widths), O3 (R20/R21 → PAM_VREF, fixed in `ee0ec02`) and O4
-(phantom nets) are closed; the containment roadmap's six layers all
-landed. See `docs/archived/` for the full record.
+- Waiver audit Part 2: O1 (CPL rotation law, incl. D1/Q1/LED2), O2 (VBUS
+  widths), O3 (R20/R21 → PAM_VREF, `ee0ec02`), O4 (phantom nets).
+- The containment roadmap's six layers all landed.
+- **Error-taxonomy gaps 15–18 all landed 2026-08-01** via the
+  gate-coverage expansion merge: `verify_enclosure_sync` (`7b51eda`, also
+  fixed a battery pocket that could not hold the 105080 cell),
+  `verify_test_points` promoted to blocking (`e68347a`),
+  `verify_esd_protection` net-verified via the claims ledger (`21716ec`),
+  `verify_power_via_ampacity` (`0d456be`, 5 starved transitions fixed).
+
+See `docs/archived/` and memory `HISTORY.md` for the full records.

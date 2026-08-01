@@ -19,15 +19,23 @@ Takes user feedback, preferences, or rules and intelligently distributes them to
 
 Parse the user's input and classify it:
 
+Memory rule (matches how the store actually works now): behavioral feedback
+becomes a `feedback_*` memory FILE (frontmatter + **Why** + **How to
+apply**) plus a ≤300-char hook line in MEMORY.md's "How I work here" —
+never a paragraph pasted into the index. MEMORY.md's real sections are:
+NOW / How I work here / Hardware invariants / DFM constraints / Where
+things are. `make verify-memory` gates the result (hook ceiling, links,
+titles).
+
 | Category | Target Files |
 |----------|-------------|
-| **Project convention** | `CLAUDE.md`, `memory/MEMORY.md` |
-| **DFM/PCB rule** | `memory/MEMORY.md` (Critical DFM Lessons), `.claude/skills/dfm-fix/dfm-reference.md` |
-| **Agent behavior** | `memory/MEMORY.md` (Anti-Stall Rules), agent definition in `.claude/agents/` |
-| **Workflow preference** | `memory/MEMORY.md` (User Preferences), `memory/session-guide.md` |
-| **Tool/Docker rule** | `memory/MEMORY.md` (Project Conventions), relevant skill SKILL.md files |
+| **Project convention** | `CLAUDE.md`; if not repo-derivable, a memory + hook in "How I work here" |
+| **DFM/PCB rule** | MEMORY.md "DFM constraints" hook, `.claude/skills/dfm-fix/dfm-reference.md` |
+| **Agent behavior** | agent definition in `.claude/agents/`; behavioral lesson → `feedback_*` memory |
+| **Workflow preference** | `feedback_*` memory + hook in "How I work here", `memory/session-guide.md` |
+| **Tool/Docker rule** | relevant skill SKILL.md files; a memory hook only if not repo-derivable |
 | **Skill improvement** | The specific skill's SKILL.md in `.claude/skills/<name>/` |
-| **Build/deploy rule** | `Makefile`, `docker-compose.yml`, `memory/MEMORY.md` |
+| **Build/deploy rule** | `Makefile`, `docker-compose.yml`; a memory hook only if not repo-derivable |
 
 ### 2. Read current state of target files
 
@@ -74,16 +82,16 @@ Print what was updated:
 ## Examples
 
 **Input**: "tutti i comandi devono passare per docker"
-- → `memory/MEMORY.md` Project Conventions: "ALL commands via Docker"
+- → hook in MEMORY.md "How I work here": "ALL commands via Docker"
 - → `.claude/skills/check/SKILL.md`: replace `kicad-cli` with `docker compose run`
 - → `.claude/skills/release/SKILL.md`: ensure all steps use Docker
 - → `.claude/skills/drc-native/SKILL.md`: use Docker for DRC
 
 **Input**: "non voglio regressioni, ogni fix deve avere un test"
-- → `memory/MEMORY.md` User Preferences: "No regressions — every fix must have a guard test"
+- → `feedback_*` memory + hook in "How I work here": "No regressions — every fix must have a guard test"
 - → `.claude/skills/dfm-fix/SKILL.md`: add step "Add regression test for each fix"
 
 **Input**: "gli agenti non devono stallare, max 3 tentativi"
-- → `memory/MEMORY.md` Anti-Stall Rules
+- → `feedback_*` memory + hook in "How I work here"
 - → `.claude/agents/pcb-engineer.md`: add anti-stall protocol
 - → `.claude/agents/team-lead.md`: add monitoring rules
