@@ -1,0 +1,8 @@
+# ESP32 Emu Turbo — bring-up firmware partition table (16 MB flash)
+# Identical layout to software/partitions.csv so that flashing the bring-up
+# firmware and flashing the application do not disturb each other's offsets.
+# Name,    Type, SubType, Offset,   Size,     Flags
+nvs,       data, nvs,     0x9000,   0x8000,
+phy_init,  data, phy,     0x11000,  0x1000,
+factory,   app,  factory, 0x20000,  0x400000,
+storage,   data, spiffs,  0x420000, 0xBE0000,

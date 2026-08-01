@@ -118,9 +118,11 @@ GPIO map in firmware disagreeing with the board.
 
 Covered by: `generate_board_config` (`config.py` → `board_config.h`, single
 source), `make firmware-sync-check`, `verify_firmware_retrogo_sync` (retro-go
-target ↔ board GPIO), the `pcb-to-firmware` skill, and `generate_hw_tests`
-(generates ESP-IDF Unity test firmware to validate every GPIO/bus/peripheral
-on the physical prototype).
+target ↔ board GPIO), the `pcb-to-firmware` skill, and the bring-up test
+firmware (`software/bringup_test/`, generated from `board_config.h` and
+freshness-gated by `verify_bringup_fresh`; it validates every
+GPIO/bus/peripheral on the physical prototype — the retired
+`generate_hw_tests` never compiled and was deleted).
 
 ### 12. Functional / electrical behavior (simulated)
 Does the board actually work: rail voltages, inrush, brownout, boot straps,

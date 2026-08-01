@@ -29,7 +29,11 @@
 #define LCD_CS              GPIO_NUM_12
 #define LCD_RST             GPIO_NUM_13
 #define LCD_DC              GPIO_NUM_14
-#define LCD_WR              GPIO_NUM_46
+#define LCD_WR              GPIO_NUM_46 /* strapping pin: ROM log enable.
+                                         * Benign — a high level at reset only
+                                         * suppresses ROM boot messages; the
+                                         * documented straps GPIO0/3/45 decide
+                                         * boot mode, this one does not. */
 /* LCD_RD: tied HIGH on PCB (no GPIO needed, no read-back from ILI9488) */
 /* LCD_BL: tied to 3V3 on PCB via resistor (always-on backlight) */
 

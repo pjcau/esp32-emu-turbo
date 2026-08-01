@@ -1,63 +1,94 @@
 ---
 name: hardware-test-gen
 model: claude-opus-5
-description: Generate ESP-IDF Unity test firmware for prototype board validation. Run after PCB assembly to verify all GPIOs, buses, and peripherals work correctly.
+description: Regenerate, build and run the bring-up test firmware (software/bringup_test) for first power-on board validation. Run after PCB assembly to verify every GPIO, bus and peripheral, with machine-parseable serial telemetry.
 disable-model-invocation: false
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
-# Hardware Test Generator
+# Bring-Up Test Firmware (containment layer 5)
 
-Generates Unity test firmware from `board_config.h` for post-assembly prototype validation.
+The bring-up firmware is the multimeter for a bench with no instruments:
+57 checks over serial, one machine-parseable line each. It lives in
+`software/bringup_test/` as a standalone ESP-IDF project — it compiles
+the PRODUCTION drivers (`display.c`, `audio.c`, `sdcard.c` from
+`software/main/`) rather than reimplementing them, so validation cannot
+disagree with shipping firmware (the R10-LOW-2 lesson). Its
+`main/bringup_test.c` is GENERATED from `board_config.h` by
+`software/bringup_test/generate.py`; never edit the .c by hand.
+
+Full protocol, per-check implication tables and serial format:
+`website/docs/manufacturing/bring-up-protocol.md`.
 
 ## Steps
 
-### 1. Generate test file
+### 1. Regenerate after any GPIO change
 
 ```bash
-cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
-python3 scripts/generate_hw_tests.py
+make bringup-generate   # board_config.h -> main/bringup_test.c
+make bringup-check      # staleness gate (also in verify-all as verify_bringup_fresh)
 ```
 
-Reads `software/main/board_config.h` and generates `software/test/test_hardware.c` with 20 tests:
-- 12 button idle-HIGH tests (BTN_L uses internal pull-up)
-- LCD D0-D7 walking-1 short detection
-- LCD CS/RST/DC/WR toggle test
-- SD SPI bus init + CMD0 probe
-- I2S PDM TX silence test
-- USB Serial JTAG verification
-- 3.3V power rail ADC sanity
-- LED blink (visual, skipped in CI)
-- PSRAM 1MB XOR pattern verify
-
-### 2. Build and flash
+### 2. Build (Docker, ESP-IDF v5.4)
 
 ```bash
-# Option A: replace app_main temporarily
-cd software
-cp main/main.c main/main.c.bak
-cp test/test_hardware.c main/main.c
-idf.py build flash monitor
-mv main/main.c.bak main/main.c
-
-# Option B: use ESP-IDF test component (preferred)
-idf.py -T test build flash monitor
+make bringup-build
 ```
 
-### 3. Interpret results
+Zero warnings under -Werror is the bar; the build has already caught
+real defects (format truncation, a spinlock inside an
+interrupts-disabled timing loop).
 
-USB-CDC serial output (115200 baud):
+### 3. Flash and capture (board connected via USB)
+
+```bash
+make bringup-flash
 ```
-20 Tests 0 Failures 1 Ignored
-OK
+
+Serial format — six ';'-separated fields per check, then a trailer:
+
+```
+BRINGUP;<seq>;<PASS|FAIL|SKIP>;<id>;<pins>;<detail>
+BRINGUP-FAILED;<ids>
+BRINGUP-SKIPPED;<ids>
+BRINGUP-SUMMARY;total=57;pass=..;fail=..;skip=..;verdict=GREEN|RED
+BRINGUP-END
 ```
 
-- **PASS**: GPIO/bus/peripheral verified working
-- **FAIL**: hardware defect, assembly error, or wrong component
-- **IGNORE**: test skipped (e.g., LED visual check)
+FAIL lines append `implicates: <net or component>` — the line names the
+copper to inspect, not just the symptom.
 
-## Key Files
+## What to know before reading a report
 
-- `scripts/generate_hw_tests.py` — test generator script
-- `software/test/test_hardware.c` — generated test firmware
-- `software/main/board_config.h` — GPIO pin definitions (input)
+- **Six SKIPs are permanent board properties**, each with its reason on
+  the line: no battery sense exists (no divider, no IP5306 I2C), +3V3 is
+  not ADC-measurable on ESP32-S3 (covered instead by brownout-detector +
+  load + temperature delta), LCD_RD is tied HIGH so the panel cannot be
+  read back (bus/DMA proven, visual confirmation is the SKIP).
+- **sd.cmd0 SKIPs conditionally** naming BOTH hypotheses (empty socket
+  vs broken SD_MISO) — there is no card-detect on this board, so they
+  are indistinguishable from firmware.
+- **btn.<X>.rc are measurements, not polls**: each button node is driven
+  low, released, and the 10k/100nF rise through VIH is timed (~1390 us
+  expected; the microseconds are always printed). BTN_L (GPIO45, DNP
+  pull) inverts: never rising is its PASS.
+- **btn.isolation catches D1 fitted backwards** (the v4.3.1 failure
+  class): drive each button net low, the other 11 must stay high.
+- **A brownout mid-check is telemetry, not silence**: the dying check's
+  id is kept in RTC_NOINIT memory and the next boot reports it next to
+  reset=BROWNOUT.
+- Strapping pins GPIO0/3/45 are tested after boot only — their reset
+  state cannot be asserted from software; GPIO46 (LCD_WR) is the fourth
+  strap (ROM log enable), benign, noted in board_config.h.
+
+Before first power-on, run `/first-article-check` phase B (photos) — do
+not power a board whose orientation sweep has not passed.
+
+## History
+
+The previous generator (`scripts/generate_hw_tests.py` →
+`software/test/test_hardware.c`) was retired 2026-08-01: the generated
+firmware called `i2s_channel_init_pdm_tx_channel()`, which does not
+exist in ESP-IDF (production uses `i2s_channel_init_pdm_tx_mode`), so it
+had never compiled — validation firmware that cannot build is a
+blind spot wearing a green badge.

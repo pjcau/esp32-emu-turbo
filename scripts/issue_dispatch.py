@@ -124,6 +124,13 @@ ROUTING_LAW = [
      "blind-spot", "the bench's own coverage is what makes its silence "
                    "meaningful; while it is red, a clean bench report proves "
                    "less than it appears to"),
+    # The bring-up firmware is the only instrument the bench has. Stale
+    # against board_config.h, it measures pins the board does not have —
+    # its PASS lines and its FAIL lines are equally about a fiction, so
+    # a red here poisons first-power-on telemetry, not the board.
+    ("bringup",    "bring-up telemetry",      "software-dev", "/hardware-test-gen",
+     "blind-spot", "while the bring-up firmware lags board_config.h, every "
+                   "verdict it prints is about a board that does not exist"),
     ("context",    "agent context",           "software-dev", "/context-engineering",
      "blind-spot", "a bloated preamble or an exposed token landmine degrades "
                    "every session before its first question"),

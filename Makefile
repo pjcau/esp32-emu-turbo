@@ -5,6 +5,7 @@
        net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad open-issues \
        verify-memory test-memory \
        firmware-build firmware-flash firmware-monitor firmware-clean \
+       bringup-generate bringup-check bringup-build bringup-flash \
        retro-go-build retro-go-build-launcher retro-go-flash retro-go-monitor retro-go-clean \
        website-dev website-build clean help stats
 
@@ -93,6 +94,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_battery_protection \
 	verify_bom_cpl_pcb \
 	verify_bom_values \
+	verify_bringup_fresh \
 	verify_claims_ledger \
 	verify_component_connectivity \
 	verify_copper_balance \
@@ -413,6 +415,23 @@ firmware-monitor: ## Open serial monitor only (no flash)
 
 firmware-clean: ## Clean firmware build artifacts
 	docker compose run --rm idf-build idf.py fullclean
+
+# ── Bring-up test firmware (containment layer 5) ────────────────────
+# The board is validated by a user with no bench instruments, so this
+# firmware's serial report is the instrument. See
+# website/docs/manufacturing/bring-up-protocol.md
+
+bringup-generate: ## Regenerate the bring-up firmware from board_config.h
+	@$(T) bringup-generate python3 software/bringup_test/generate.py
+
+bringup-check: ## Fail if the bring-up firmware is stale w.r.t. board_config.h
+	@$(T) bringup-check python3 software/bringup_test/generate.py --check
+
+bringup-build: bringup-generate ## Build the bring-up test firmware via Docker
+	@$(T) bringup-build docker compose run --rm bringup-build
+
+bringup-flash: ## Flash the bring-up firmware and capture its report (connect board first)
+	@$(T) bringup-flash docker compose run --rm bringup-flash
 
 # ── QEMU CPU Benchmark ──────────────────────────────────────────────
 

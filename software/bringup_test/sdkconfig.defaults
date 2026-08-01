@@ -1,0 +1,64 @@
+# ESP32 Emu Turbo — bring-up test firmware
+#
+# Deliberately a copy of software/sdkconfig.defaults: the bring-up run must
+# exercise the same clock, flash, PSRAM and console configuration the
+# application ships with, or it proves nothing about the application. The
+# only additions are at the bottom.
+
+# Target
+CONFIG_IDF_TARGET="esp32s3"
+
+# CPU — 240 MHz dual-core
+CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y
+
+# Flash — 16 MB QIO 80 MHz  (ESP32-S3 N16R8)
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHMODE_QIO=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+
+# PSRAM — 8 MB Octal 80 MHz
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_OCT=y
+CONFIG_SPIRAM_SPEED_80M=y
+CONFIG_SPIRAM_BOOT_INIT=y
+CONFIG_SPIRAM_ALLOW_STACK_EXTERNAL_MEMORY=y
+
+# Partition table — custom CSV
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+
+# FAT filesystem — long filenames for ROM files
+CONFIG_FATFS_LONG_FILENAMES=y
+CONFIG_FATFS_LFN_HEAP=y
+CONFIG_FATFS_MAX_LFN=255
+
+# FreeRTOS tick rate — 1 kHz for 1 ms polling resolution
+CONFIG_FREERTOS_HZ=1000
+
+# Log level — Info
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# USB-CDC console — route ESP_LOGx output through USB-C port
+# (no UART TX/RX GPIOs are routed on PCB)
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# Task watchdog — 10s timeout
+CONFIG_ESP_TASK_WDT_TIMEOUT_S=10
+
+# Main task stack
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# ── Bring-up specific ────────────────────────────────────────────────
+
+# The serial log is parsed by machine as well as read by a human. ANSI colour
+# codes would land in the middle of the report lines.
+CONFIG_UNITY_ENABLE_COLOR=n
+
+# This firmware runs its own ordered check table from app_main and never uses
+# the TEST_CASE registry or the interactive menu runner.
+CONFIG_UNITY_ENABLE_IDF_TEST_RUNNER=n
+
+# The brownout detector is the only rail sensor this board has. Leave it
+# enabled at the default threshold: a reset it triggers is the evidence that
+# +3V3 collapsed, reported by sys.reset_reason on the following boot.
+CONFIG_ESP_BROWNOUT_DET=y

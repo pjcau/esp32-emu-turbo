@@ -34,6 +34,15 @@ software/sdkconfig.old
 software/managed_components/
 software/dependencies.lock
 
+# Bring-up test firmware — same artifacts, separate ESP-IDF project.
+# main/bringup_test.c is generated but IS tracked: it is the artifact that
+# gets flashed to a board, and a reviewer must be able to read it in a diff.
+software/bringup_test/build/
+software/bringup_test/sdkconfig
+software/bringup_test/sdkconfig.old
+software/bringup_test/managed_components/
+software/bringup_test/dependencies.lock
+
 # Generated KiCad files (3D model injection for rendering)
 hardware/kicad/esp32-emu-turbo-3d.kicad_pcb
 

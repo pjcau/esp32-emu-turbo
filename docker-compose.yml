@@ -66,6 +66,25 @@ services:
       - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
     command: idf.py -p ${ESP_PORT:-/dev/ttyUSB0} flash monitor
 
+  # Bring-up test firmware — build. Mounts all of ./software because the
+  # bring-up project compiles the production drivers out of ../main.
+  bringup-build:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./software:/project
+    working_dir: /project/bringup_test
+    command: bash -c "idf.py set-target esp32s3 && idf.py build"
+
+  # Bring-up test firmware — flash + capture the report over USB-CDC
+  bringup-flash:
+    image: espressif/idf:v5.4
+    volumes:
+      - ./software:/project
+    working_dir: /project/bringup_test
+    devices:
+      - "${ESP_PORT:-/dev/ttyUSB0}:${ESP_PORT:-/dev/ttyUSB0}"
+    command: idf.py -p ${ESP_PORT:-/dev/ttyUSB0} flash monitor
+
   # QEMU ESP32-S3 benchmark — build firmware
   qemu-bench-build:
     build:
