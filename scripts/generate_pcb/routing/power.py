@@ -898,18 +898,30 @@ def _power_traces():
     #
     #   C18.1 picks up via its own stub (extended to 46.135 in _passive_traces).
     #
-    _BRIDGE_Y = 47.80  # R9-HIGH-2: shifted from 48.00 to clear C18.2 pad
-    # L1.1 branch (B.Cu + F.Cu bridge):
-    parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], _BRIDGE_Y,
-                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # L1.1 → (111.7, BRIDGE_Y)
-    parts.append(_seg(l1_1[0], _BRIDGE_Y, 113.45, _BRIDGE_Y,
-                       "B.Cu", W_BAT_CORRIDOR, n_bat))
-    parts.append(_via_net(113.45, _BRIDGE_Y, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(113.45, _BRIDGE_Y, 114.65, _BRIDGE_Y,
-                       "F.Cu", W_BAT_CORRIDOR, n_bat))  # F.Cu bridge over KEY vert
-    parts.append(_via_net(114.65, _BRIDGE_Y, n_bat, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(114.65, _BRIDGE_Y, 114.65, CORRIDOR_Y,
-                       "B.Cu", W_BAT_CORRIDOR, n_bat))
+    # AMPACITY (2026-08-01): the dogleg described above is GONE. It was
+    # L1.1's only supply and it delivered that supply through three
+    # 0.20 mm barrels in series — the corridor entry at (107.80, 46.10)
+    # and the two ends of the F.Cu bridge — 0.527 A each against the
+    # 4.348 A the cell can push into the boost inductor. None of the
+    # three can grow: the corridor is 0.78 mm tall between the U2.EP
+    # thermal via rings and the IP5306_KEY horizontal, and the bridge's
+    # west landing is capped at 0.60 OD by the KEY vertical at x=114.05.
+    #
+    # L1.1 is now fed from the pocket SOUTH of the KEY horizontal on
+    # 0.76 mm of B.Cu with no barrel on the last leg at all — see
+    # _BAT_BAND2_* at the end of this function. Once that exists the
+    # dogleg carries a negligible share of the current, so keeping it
+    # would only preserve four undersized (0.30 mm) segments, two more
+    # sub-0.6 A barrels and their POWER_HIGH_ALLOWLIST waivers.
+    #
+    # What it cost: C18.1 now reaches U2.6 through the single corridor
+    # barrel instead of two. C18 is a BULK cap 11.55 mm from the BAT pin
+    # whose path is dominated by ~10 mm of 0.30 mm corridor (~15 mOhm);
+    # the second barrel was worth ~0.25 mOhm of that. It is classified
+    # "not a DC load" by verify_power_via_ampacity for the same reason.
+    _L1_FEED_Y = 49.90  # where the fat B.Cu feed meets L1.1's column
+    parts.append(_seg(l1_1[0], l1_1[1], l1_1[0], _L1_FEED_Y,
+                       "B.Cu", W_PWR_HIGH, n_bat))      # L1.1 → the fat feed
 
     # Main corridor: F.Cu bridge east from (105.5, 46.135) past KEY left vertical
     # (x=107) to (107.8, CORRIDOR_Y=46.10), then via to B.Cu for the eastward run.
@@ -925,10 +937,10 @@ def _power_traces():
     # was only 0.135 mm (JLCDFM flagged). With 0.46mm via (r=0.23) the
     # gap becomes 0.155 mm — safely above 0.15 mm JLCPCB minimum.
     parts.append(_via_net(107.8, CORRIDOR_Y, n_bat, size=0.46, drill=0.20))
-    parts.append(_seg(107.8, CORRIDOR_Y, 114.65, CORRIDOR_Y,
-                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # main corridor part 1
-    parts.append(_seg(114.65, CORRIDOR_Y, 116.95, CORRIDOR_Y,
-                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # main corridor part 2 (meets L1 dogleg)
+    # One run, not two: the old split at x=114.65 existed only so the L1.1
+    # dogleg could land on a shared endpoint, and that dogleg is gone.
+    parts.append(_seg(107.8, CORRIDOR_Y, 116.95, CORRIDOR_Y,
+                       "B.Cu", W_BAT_CORRIDOR, n_bat))  # corridor → C18.1 stub
 
     # ── KEY: IP5306 pin 5 -> R16 pull-up to +5V ─────────────
     # B.Cu route from KEY pin down to R16 area
@@ -1028,6 +1040,65 @@ def _power_traces():
         for _sy in (bat_via_y, _bat_stitch_y2):
             parts.append(_via_net(_sx, _sy, n_bat,
                                   size=VIA_PWR, drill=VIA_PWR_BIG_DRILL))
+    #
+    # AMPACITY (verify_power_via_ampacity) — L1.1, the IP5306's boost
+    # inductor, is the second consumer that carries the whole 4.348 A.
+    # It used to hang off THREE 0.20 mm barrels in series: the corridor
+    # entry at (107.80, 46.10) — 0.46 OD, 0.527 A — and the two ends of
+    # the F.Cu bridge that hops the IP5306_KEY vertical at x=114.05.
+    #
+    # None of them can grow. The corridor is 0.78 mm tall, boxed between
+    # the U2.EP thermal vias (ring bottom 45.70) and the IP5306_KEY
+    # horizontal (top edge 46.48), which admits a 0.43 mm ring at best;
+    # the bridge's west landing is capped at 0.60 OD by that same KEY
+    # vertical. The corridor is simply the wrong place to carry a
+    # battery: it is the narrowest channel on this half of the board.
+    #
+    # The pocket SOUTH of the KEY horizontal is the opposite — x
+    # 106.0..110.3, y 47.2..50.3 is empty on BOTH outer layers:
+    #   +5V's F.Cu run ends at x=105.88 (cap) with its plane via at
+    #     (105.50, 48.85)
+    #   VBUS' F.Cu wall starts at x=110.62 and is the reason nothing can
+    #     reach L1.1 from the west on F.Cu — hence the B.Cu-only feed
+    #   L1.2's pad starts at y=50.80, KEY's horizontal ends at y=46.73
+    # So BAT+ takes a second F.Cu/B.Cu stitching band there and then
+    # reaches L1.1 on 0.76 mm of uninterrupted B.Cu — no barrel at all
+    # on the last leg, which is what actually removes the bottleneck.
+    #
+    #   band  y=47.55, x = 106.60 / 107.70 / 108.80 / 109.90
+    #         0.90 OD / 0.45 drill -> 4 x 0.949 = 3.796 A, in PARALLEL
+    #         with the U2.6 field above -> 7.592 A onto L1.1's island,
+    #         so the binding cut moves back to the 5.114 A west bank
+    #   feed  (109.90,47.55) -> (109.90,49.90) -> (111.70,49.90) -> L1.1
+    #
+    # Clearances, 0.175 mm house margin, worst case per obstacle:
+    #   band trace top edge 47.17 vs KEY horizontal bottom 46.73   0.44
+    #   ring top 47.10 vs KEY horizontal bottom 46.73              0.37
+    #   ring (106.60) vs the KEY vertical's end cap (107.00,46.73) 0.42
+    #   ring (109.90) right edge 110.35 vs VBUS F.Cu 110.62        0.27
+    #   ring (106.60) vs the +5V plane via at (105.50, 48.85)      0.37
+    #   ring (108.80) vs the U2.EP thermal via at (108.55, 45.30)  1.41
+    #   band cap bottom 47.93 vs +5V F.Cu top edge 48.47           0.54
+    #   feed column x=109.90 left edge 109.52 vs L1.2 pad 109.00   0.52
+    #   feed row y=49.90 bottom edge 50.28 vs L1.2 pad top 50.80   0.52
+    #   barrel-to-barrel hole gap 1.10 - 0.45                      0.65
+    _BAT_BAND2_Y = 47.550
+    _BAT_BAND2_XS = (106.600, 107.700, 108.800, 109.900)
+    _band2_nodes = (bat_col_x,) + _BAT_BAND2_XS
+    for _layer in ("F.Cu", "B.Cu"):
+        parts.append(_seg(bat_col_x, _bat_stitch_y2, bat_col_x, _BAT_BAND2_Y,
+                           _layer, W_PWR_HIGH, n_bat))
+        for _xa, _xb in zip(_band2_nodes, _band2_nodes[1:]):
+            parts.append(_seg(_xa, _BAT_BAND2_Y, _xb, _BAT_BAND2_Y,
+                               _layer, W_PWR_HIGH, n_bat))
+    for _bx in _BAT_BAND2_XS:
+        parts.append(_via_net(_bx, _BAT_BAND2_Y, n_bat,
+                              size=VIA_PWR, drill=VIA_PWR_BIG_DRILL))
+    parts.append(_seg(_BAT_BAND2_XS[-1], _BAT_BAND2_Y,
+                       _BAT_BAND2_XS[-1], _L1_FEED_Y,
+                       "B.Cu", W_PWR_HIGH, n_bat))
+    parts.append(_seg(_BAT_BAND2_XS[-1], _L1_FEED_Y, l1_1[0], _L1_FEED_Y,
+                       "B.Cu", W_PWR_HIGH, n_bat))
     # F.Cu horizontal to JST approach column between pull-up resistors R11(x=78) and R12(x=83).
     # DFM FIX: was 79.75 (overlapped R11), was 80.05 (too close to J3[2]).
     # At 80.01 with VIA_STD (r=0.45): via ring gap = 0.11mm (was rule 0.10mm).

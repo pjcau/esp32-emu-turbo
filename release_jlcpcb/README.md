@@ -38,7 +38,7 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | File                        | Description                              |
 | --------------------------- | ---------------------------------------- |
 | `bom.csv`                   | Bill of Materials (JLCPCB format)        |
-| `cpl.csv`                   | Component Placement List (80 components) |
+| `cpl.csv`                   | Component Placement List (85 components) |
 | `bom-summary.md`            | Human-readable BOM with cost estimate    |
 | `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference)             |
 
@@ -70,7 +70,43 @@ Raytraced 3D views of the assembled board (KiCad raytracer, synced from
 
 ## Release History
 
-### v4.3.2 — 2026-07-31 (current; tag on merge to main)
+### v4.4.0 — 2026-08-01 (current)
+
+**Gate-coverage expansion (audit categories 15-18) + 10 live bugs fixed:**
+
+- **Four new blocking gates**: `verify_enclosure_sync` (shell vs board,
+  17 checks), `verify_power_via_ampacity` (min-cut via ampacity per
+  power net, IPC-2221B), `verify_esd_protection` rewritten net-verified
+  (heuristic blocks only via the claims ledger, CLAIM-004),
+  `verify_test_points` promoted with bring-up signals (EN, GPIO0 strap,
+  BUCK_FB). Injection audit gained an `expect` field: every fault class
+  must be caught by its OWNER gate, not a bystander.
+- **4 mechanical bugs fixed** (found by the enclosure gate): battery
+  pocket could not hold the 105080 cell in any orientation (pocket now
+  85x50x10 at x+10, body_d 25->26); ABXY Y-switch DFM shift never
+  reached the shell; menu/shoulder cutout drift; engraved A/B/X/Y
+  labels named the wrong switches (A is top on this board).
+- **6 electrical bugs fixed** (found by the ampacity gate): every
+  power rail crossed a starved layer transition — worst BAT+ at 12% of
+  required ampacity over one 0.2 mm via; plus the L1.1 boost-inductor
+  branch behind THREE serial single barrels. 20 new barrels + 6
+  resized across +3V3/+5V/VBUS/BAT+/GND, 0.45 mm drill introduced,
+  L1.1 dogleg deleted (dead copper removed), 5 dead width waivers
+  dropped from POWER_HIGH_ALLOWLIST.
+- Copper-only vs v4.3.2 assembly: BOM/CPL byte-identical to the
+  2026-08-01 regeneration (bom.csv 1495 B, cpl.csv 3909 B). Board now
+  664 segments, 341 vias, 56 nets.
+- **Verification**: verify-all 93/93, DFM 124/124, DFA 9/9, datasheet
+  29/29, gerber e-test on THESE shipped artifacts PASS (every net one
+  piece of copper, no orphan copper), gate-coverage injection audit
+  13/13 caught by owners.
+- **Order manifest** (`order-manifest.json`, what the upload is checked
+  against):
+  - `gerbers.zip` `6cae13c959ed3ba5e405d35c93adaf0e3a4f17f4b0d5deecb424c129cec82fdd`
+  - `bom.csv` `001bfab1bf33c91fc77b3f23a4b928d91ce9b994e050e57b272913a18ba06516`
+  - `cpl.csv` `c28aa63799e926d6c292f1702c75f6f0b6e5d10120724ea1cf7bb3743062bc64`
+
+### v4.3.2 — 2026-07-31 (merged, never tagged; superseded by v4.4.0)
 
 **J4 GND dry-film fix — one bridge segment, no component moved:**
 

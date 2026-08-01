@@ -39,13 +39,13 @@ docker compose run --rm kicad-pcb pcb export drill --output /gerbers/ --format e
 
 ```bash
 # ── BLOCKING: gate-coverage audit (~3-5 min) ────────────────────
-# Injects 9 historical fault classes (split plane, CPL rotation,
+# Injects every known fault class (historical + predicted: split plane, CPL rotation,
 # stale d356, firmware desync, ...) into a sandbox copy and demands
 # at least one gate goes red for each. A blind spot here means a
 # bug class can reach the fab with every light green — write the
 # missing gate before ordering. Deliberately NOT in verify-all
 # (it runs the whole suite once per fault).
-make verify-gate-coverage  # MUST be 9/9 caught
+make verify-gate-coverage  # MUST catch ALL faults, each by its OWNER (expect field)
 
 # ── BLOCKING: fab-short gate ─────────────────────────────────────
 # Catches netted traces physically crossing unnetted pads.

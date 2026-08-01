@@ -79,15 +79,15 @@ SKIP_NETS = {""}
 # widen to 0.50mm.
 POWER_HIGH_ALLOWLIST = [
     # (net, layer, x1, y1, x2, y2, width) — BAT+ corridor
-    # R9-HIGH-2 (2026-04-11): L1.1 bridge Y shifted from 48.00 to 47.80
-    ("BAT+", "B.Cu", 107.80, 46.10, 114.65, 46.10, 0.30),  # main corridor part 1
-    ("BAT+", "B.Cu", 114.65, 46.10, 116.95, 46.10, 0.30),  # main corridor part 2
-    ("BAT+", "B.Cu", 111.70, 52.50, 111.70, 47.80, 0.30),  # L1.1 vertical
-    ("BAT+", "B.Cu", 111.70, 47.80, 113.45, 47.80, 0.30),  # L1.1 horizontal
-    ("BAT+", "B.Cu", 114.65, 47.80, 114.65, 46.10, 0.30),  # L1.1 dogleg down
+    #
+    # 2026-08-01: the five L1.1 dogleg entries are gone with the dogleg.
+    # L1.1 is fed on 0.76 mm B.Cu from the pocket south of the IP5306_KEY
+    # horizontal (routing/power.py, _BAT_BAND2_*), so the only 0.30 mm
+    # BAT+ copper left is the corridor that feeds C18 — a bulk cap, not a
+    # DC load. Nothing on this list carries the cell current any more.
+    ("BAT+", "B.Cu", 107.80, 46.10, 116.95, 46.10, 0.30),  # main corridor
     ("BAT+", "F.Cu", 105.50, 46.13, 105.50, 46.10, 0.30),  # F.Cu bridge stub
     ("BAT+", "F.Cu", 105.50, 46.10, 107.80, 46.10, 0.30),  # F.Cu bridge over KEY
-    ("BAT+", "F.Cu", 113.45, 47.80, 114.65, 47.80, 0.30),  # F.Cu bridge over KEY (L1.1)
 
     # ── J1 VBUS escape gate ────────────────────────────────────────────
     # The two diagonals that bring USB-C lands 11 and 2 out from under the

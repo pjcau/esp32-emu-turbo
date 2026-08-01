@@ -121,7 +121,7 @@ verdict).
 make verify-gate-coverage   # ~2 min
 ```
 
-Injects the 9 historical fault classes (missing CPL part, reprogrammed BOM
+Injects every known fault class — historical + predicted (missing CPL part, reprogrammed BOM
 value, release netlist drift, firmware desync, ...) into a sandbox and fails
 unless at least one gate catches each. This is the guard against gates that
 never fire.
@@ -164,7 +164,7 @@ After running all tests, summarize results in a table:
 | Schematic sync | ? | ? | ? | PASS/FAIL |
 | Gerber e-test | ? | ? | ? | PASS/FAIL |
 | Virtual Bench | ? | ? | ? | PASS/FAIL |
-| Gate coverage | 9 faults | ? | ? | PASS/FAIL |
+| Gate coverage | all faults | ? | ? | PASS/FAIL |
 
 Report any failures with details and suggested fixes.
 
@@ -178,5 +178,5 @@ Report any failures with details and suggested fixes.
 - `scripts/verify_schematic_pcb.py` — Schematic/PCB sync
 - `scripts/short_circuit_analysis.py` — Short circuit analysis
 - `scripts/verify_gerber_etest.py` — E-test on release gerbers (net isolation on fabricated copper)
-- `scripts/test_gate_coverage.py` — Mutation suite: 9 historical fault classes must each be caught by a gate
+- `scripts/test_gate_coverage.py` — Mutation suite: every fault class must be caught by its owner gate (see FAULTS in verify_gate_coverage.py — the count lives there, not here)
 - `scripts/test_vbench.py` (+ `_display`, `_sdcard`) — Virtual Bench gates; models in `scripts/vbench/models/` must track every circuit change
