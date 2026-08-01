@@ -42,6 +42,12 @@ BT1 = Model(
     pins=PINS,
     params={
         # p.1, the specification table.
+        # Mechanical envelope (thickness, width, length) — the 105080
+        # family designation itself: 10.0 x 50 x 80 mm, matching the
+        # dimension drawing. The enclosure gate (verify_enclosure_sync)
+        # reads THIS as the battery-pocket source of truth — do not
+        # duplicate these numbers elsewhere.
+        "dims": Param((10.0, 50.0, 80.0), "mm", locator="p.1 fig 1"),
         "v_nominal": Param(3.7, "V", locator="p.1 table 1"),
         "capacity": Param(5.0, "Ah", locator="p.1 table 1"),
         # "Internal Impedance < 60 mOhm" — a family upper bound.

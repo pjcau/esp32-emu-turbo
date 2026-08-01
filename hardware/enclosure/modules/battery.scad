@@ -1,10 +1,11 @@
 // ESP32 Emu Turbo — Battery compartment modules
 // All dimensions in mm
 
-// LiPo: 65 x 55 x 9.5 mm (9.5mm thick, confirmed user spec)
+// LiPo 105080: 10 x 50 x 80 mm cell (bought by dimensions — the model
+// with the datasheet citation is scripts/vbench/models/bt1_lp105080.py)
 
 // Battery compartment cavity (recessed into bottom shell)
-module battery_compartment(width=65, height=55, depth=9.5, corner_r=3) {
+module battery_compartment(width=85, height=50, depth=10, corner_r=3) {
     translate([0, 0, -0.1])
     linear_extrude(height=depth+0.1) {
         offset(r=corner_r)

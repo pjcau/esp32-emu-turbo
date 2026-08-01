@@ -58,6 +58,9 @@ GATES = [
     ("verify_order_manifest",
      "the JLCPCB order fingerprint lags the files in release_jlcpcb/ — "
      "what gets uploaded is not what was verified"),
+    ("verify_enclosure_sync",
+     "the printed shell no longer matches the board (outline, holes, "
+     "cutouts, battery, or Z-stack)"),
 ]
 
 TIMEOUT_S = 30

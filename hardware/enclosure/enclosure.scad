@@ -15,7 +15,9 @@ part = "assembly";  // "assembly", "top", "bottom", "exploded", "cross_section",
 // === Main enclosure parameters ===
 body_w = 170;           // Width (landscape, X axis)
 body_h = 85;            // Height (Y axis)
-body_d = 25;            // Depth/thickness (Z axis)
+body_d = 26;            // Depth/thickness (Z axis) — 25 -> 26: the 10mm
+                        // 105080 cell needs clearance under the ESP32
+                        // module (see Z-axis stack below)
 wall = 2.0;             // Wall thickness
 corner_r = 8;           // Corner radius
 
@@ -40,8 +42,16 @@ dpad_arm_w = 5;
 // === ABXY parameters (right side, diamond layout) ===
 abxy_x = 62;            // X offset from center (moved right, symmetric with D-pad)
 abxy_y = 5;             // Y offset from center
-abxy_spacing = 10;      // KiCad: switches at 10mm from diamond center
+abxy_spacing = 10;      // Nominal diamond radius (labels only; cutouts use abxy_offsets)
 abxy_diam = 8;
+// Per-button offsets from the diamond center — MUST match board
+// ABXY_OFFSETS (A, B, X, Y): the Y switch sits at -9, not -10 (DFM shift)
+abxy_offsets = [
+    [0, 10],     // A
+    [10, 0],     // B
+    [0, -10],    // X
+    [-9, 0],     // Y — DFM: shifted 1mm toward center on the board
+];
 
 // === Start/Select (below D-pad, left side) ===
 ss_x = dpad_x;          // Centered horizontally under D-pad
@@ -50,9 +60,9 @@ ss_spacing = 20;        // Horizontal distance Start↔Select (KiCad: 8→28 = 2
 ss_w = 10;              // Pill width
 ss_h = 4;               // Pill height
 
-// === Menu button (below ABXY, right side) — KiCad SW13 BTN_MENU (142,62.5) ===
-menu_x = 62;            // Same X as ABXY center
-menu_y = -25;           // KiCad Y=62.5 → enc -25
+// === Menu button (below ABXY, right side) — KiCad SW13 BTN_MENU ===
+menu_x = 62;            // Same X as ABXY center (board MENU_ENC)
+menu_y = -24.2;         // board MENU_ENC = (62, -24.2)
 
 // === LED indicators (below Start/Menu, left side) ===
 led1_x = -55;           // KiCad (25, 67.5) → enc (-55, -30)
@@ -62,8 +72,8 @@ led2_y = -30;
 led_d = 2.0;            // Light pipe hole diameter
 
 // === Shoulder buttons (L/R on back side, near top edge) ===
-shoulder_inset_x = 65;  // Distance from center
-shoulder_y = 35;        // Y position from KiCad (15, 2.5) → enc_y=35
+shoulder_inset_x = 65;  // Distance from center (board SHOULDER_*_ENC)
+shoulder_y = 32;        // board SHOULDER_L/R_ENC = (±65, 32)
 shoulder_w = 28;
 shoulder_h = 10;
 
@@ -95,11 +105,16 @@ spk_x = -50;
 spk_y = -15;
 spk_diam = 22;
 
-// === Battery (9.5 × 55 × 65 mm LiPo) ===
-bat_w = 65;             // Width (X)
-bat_h = 55;             // Height (Y)
-bat_d = 9.5;            // Thickness (Z)
-bat_offset_y = 3;       // Y offset from center
+// === Battery (105080 LiPo: 10 x 50 x 80 mm cell — vbench bt1_lp105080) ===
+// Axis map: cell length 80 -> X, cell width 50 -> Y, cell thickness 10 -> Z.
+// The pocket adds +5 in X (battery_compartment call) for lead clearance.
+bat_w = 80;             // Cell length (X)
+bat_h = 50;             // Cell width (Y)
+bat_d = 10;             // Cell thickness (Z)
+bat_offset_x = 10;      // Shifted right: keeps the pocket border clear of
+                        // the 28mm speaker driver on the left
+bat_offset_y = 0;       // Centered: pocket edge stays below the corner
+                        // screw bosses at |y|=30.5
 
 // === PCB (from KiCad: 160 × 75 mm, 4-layer 1.6mm, 6mm corner radius) ===
 pcb_w = 160;
@@ -111,7 +126,7 @@ pcb_z = bot_d;          // PCB bottom sits on screw boss tops at shell split
 // === ESP32-S3-WROOM-1-N16R8 (bottom-mount on PCB) ===
 esp_w = 25.5;
 esp_h = 18.0;
-esp_d = 3.0;            // Protrusion below PCB
+esp_d = 3.1;            // Module thickness below PCB (WROOM-1 datasheet 3.1mm)
 esp_x = 0;              // KiCad (80, 27.5) → enc (0, 10)
 esp_y = 10;
 
@@ -121,15 +136,15 @@ lip_t = 1.0;
 lip_clearance = 0.3;    // 3D-print tolerance
 
 // === Z-axis stack (closed assembly) ===
-// Z=0:      Bottom shell outer face
-// Z=2:      Bottom shell floor (wall=2)
-// Z=2-11.5: Battery (9.5mm)
-// Z=12-15:  ESP32 module zone (3mm below PCB)
-// Z=15:     PCB bottom face / shell split line
-// Z=16.6:   PCB top face (1.6mm board)
-// Z=15-23:  Top shell interior (8mm)
-// Z=23:     Top shell ceiling
-// Z=25:     Top shell outer face
+// Z=0:       Bottom shell outer face
+// Z=2:       Bottom shell floor (wall=2)
+// Z=2-12:    Battery (10mm)
+// Z=12.9-16: ESP32 module zone (3.1mm below PCB; 0.9mm over battery top)
+// Z=16:      PCB bottom face / shell split line
+// Z=17.6:    PCB top face (1.6mm board)
+// Z=16-24:   Top shell interior (8mm)
+// Z=24:      Top shell ceiling
+// Z=26:      Top shell outer face
 
 // === Screw boss parameters ===
 screw_d_outer = 6;
@@ -177,9 +192,11 @@ module top_shell() {
         translate([dpad_x, dpad_y, 0])
         dpad_cutout(dpad_arm_len, dpad_arm_w, top_d + 1);
 
-        // ABXY button cutouts (diamond layout: A, B, X, Y)
-        translate([abxy_x, abxy_y, 0])
-        abxy_diamond(abxy_spacing, abxy_diam, top_d + 1);
+        // ABXY button cutouts — one per board switch position (SW5-SW8),
+        // driven by abxy_offsets so the shell follows the board's DFM shifts
+        for (off = abxy_offsets)
+            translate([abxy_x + off[0], abxy_y + off[1], 0])
+            face_button_cutout(abxy_diam, top_d + 1);
 
         // Start button cutout (below D-pad, left) — KiCad SW9 BTN_START
         translate([ss_x - ss_spacing/2, ss_y, 0])
@@ -221,14 +238,17 @@ module top_shell() {
         translate([dpad_x, dpad_y - dpad_arm_len - 3, 0.1])
         button_label("v", 2.5, 0.2);
 
-        // ABXY labels
-        translate([abxy_x + abxy_spacing + 5, abxy_y, 0.1])
+        // ABXY labels — placed beyond each button, following the BOARD's
+        // net mapping (SW5=A top, SW6=B right, SW7=X bottom, SW8=Y left);
+        // the previous A-right/B-bottom/X-top engraving labeled the wrong
+        // switches
+        translate([abxy_x, abxy_y + abxy_offsets[0][1] + 5, 0.1])
         button_label("A", 2.5, 0.2);
-        translate([abxy_x, abxy_y - abxy_spacing - 5, 0.1])
+        translate([abxy_x + abxy_offsets[1][0] + 5, abxy_y, 0.1])
         button_label("B", 2.5, 0.2);
-        translate([abxy_x, abxy_y + abxy_spacing + 5, 0.1])
+        translate([abxy_x, abxy_y + abxy_offsets[2][1] - 5, 0.1])
         button_label("X", 2.5, 0.2);
-        translate([abxy_x - abxy_spacing - 5, abxy_y, 0.1])
+        translate([abxy_x + abxy_offsets[3][0] - 5, abxy_y, 0.1])
         button_label("Y", 2.5, 0.2);
 
         // Start/Select labels (below D-pad)
@@ -279,7 +299,7 @@ module bottom_shell() {
         speaker_grille(spk_diam, 1.5, 3.5, wall + 1);
 
         // Battery compartment (5mm length tolerance)
-        translate([0, bat_offset_y, wall])
+        translate([bat_offset_x, bat_offset_y, wall])
         battery_compartment(bat_w + 5, bat_h, bat_d);
 
         // M3 screw counterbores on 4 corner positions (flush with exterior)
@@ -294,8 +314,8 @@ module bottom_shell() {
             }
         }
 
-        // Wire channel for battery cable
-        translate([bat_w/2 + 2, 3, wall])
+        // Wire channel for battery cable (off the pocket's right edge)
+        translate([bat_offset_x + (bat_w + 5)/2 + 2, bat_offset_y + 3, wall])
         wire_channel(15, 4, 3);
 
         // L shoulder button cutout (back face) — KiCad SW11 at enc (-65, 35)
@@ -325,7 +345,7 @@ module bottom_shell() {
     bat_clip_h = 2;
     color([0.18, 0.18, 0.22])
     for (side = [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        cx = side[0] * ((bat_w + 5) / 2 + 0.5);
+        cx = bat_offset_x + side[0] * ((bat_w + 5) / 2 + 0.5);
         cy = bat_offset_y + side[1] * (bat_h / 2 + 0.5);
         translate([cx, cy, wall + bat_d - bat_clip_h]) {
             if (abs(side[0]) > 0) {
@@ -344,7 +364,7 @@ module bottom_shell() {
     bat_border_w = 1.5;    // Border wall thickness
     bat_border_h = bat_d;  // Same height as battery
     color([0.18, 0.18, 0.22])
-    translate([0, bat_offset_y, wall])
+    translate([bat_offset_x, bat_offset_y, wall])
     linear_extrude(height=bat_border_h)
     difference() {
         offset(r=3) offset(r=-3)
@@ -481,10 +501,12 @@ module _abxy_cap(cx, cy) {
     cylinder(h=btn_stem_h, d=btn_stem_d, $fn=16);
 }
 
-module cap_btn_a() { _abxy_cap(abxy_x + abxy_spacing, abxy_y); }
-module cap_btn_b() { _abxy_cap(abxy_x, abxy_y - abxy_spacing); }
-module cap_btn_x() { _abxy_cap(abxy_x, abxy_y + abxy_spacing); }
-module cap_btn_y() { _abxy_cap(abxy_x - abxy_spacing, abxy_y); }
+// Cap positions follow abxy_offsets = board switch positions (SW5-SW8):
+// A top, B right, X bottom, Y left (net-verified against BTN_A..BTN_Y)
+module cap_btn_a() { _abxy_cap(abxy_x + abxy_offsets[0][0], abxy_y + abxy_offsets[0][1]); }
+module cap_btn_b() { _abxy_cap(abxy_x + abxy_offsets[1][0], abxy_y + abxy_offsets[1][1]); }
+module cap_btn_x() { _abxy_cap(abxy_x + abxy_offsets[2][0], abxy_y + abxy_offsets[2][1]); }
+module cap_btn_y() { _abxy_cap(abxy_x + abxy_offsets[3][0], abxy_y + abxy_offsets[3][1]); }
 
 // ---- Pill-shaped caps (Start, Menu, Select) ----
 module _pill_cap(cx, cy) {
@@ -591,7 +613,7 @@ module exploded_view() {
     top_shell();
 
     // Battery (in bottom shell area)
-    translate([0, bat_offset_y, wall + 1])
+    translate([bat_offset_x, bat_offset_y, wall + 1])
     color([0.3, 0.3, 0.7, 0.7])
     linear_extrude(height=bat_d)
     rounded_rect(bat_w, bat_h, 3);
@@ -626,7 +648,7 @@ module assembly_internal() {
     pcb_model();
 
     // Battery
-    translate([0, bat_offset_y, wall])
+    translate([bat_offset_x, bat_offset_y, wall])
     color([0.3, 0.3, 0.7, 0.7])
     linear_extrude(height=bat_d)
     rounded_rect(bat_w, bat_h, 3);
@@ -664,7 +686,7 @@ module fit_check() {
     pcb_model();
 
     // Battery in compartment
-    translate([0, bat_offset_y, wall])
+    translate([bat_offset_x, bat_offset_y, wall])
     color([0.3, 0.3, 0.7, 0.7])
     linear_extrude(height=bat_d)
     rounded_rect(bat_w, bat_h, 3);
@@ -683,7 +705,7 @@ module battery_fit() {
     bottom_shell();
 
     // Battery in compartment (exact dimensions)
-    translate([0, bat_offset_y, wall])
+    translate([bat_offset_x, bat_offset_y, wall])
     color([0.3, 0.3, 0.7, 0.85])
     linear_extrude(height=bat_d)
     rounded_rect(bat_w, bat_h, 3);

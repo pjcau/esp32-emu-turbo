@@ -75,6 +75,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_claims_ledger \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
+	test_enclosure_sync \
 	test_erc_severity \
 	test_gate_coverage \
 	test_gerber_etest \
@@ -108,6 +109,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_dfm_v2 \
 	verify_drill_standards \
 	verify_easyeda_footprint \
+	verify_enclosure_sync \
 	verify_erc \
 	verify_esd_protection \
 	verify_firmware_retrogo_sync \
@@ -349,6 +351,12 @@ verify-power-nets: ## Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must e
 
 verify-erc: ## KiCad ERC gate on the generated schematic (error severity, local kicad-cli)
 	@$(T) verify-erc python3 scripts/verify_erc.py
+
+verify-enclosure-sync: ## Enclosure <-> PCB mechanical sync gate (scad constants vs board.py / battery model)
+	@$(T) verify-enclosure-sync python3 scripts/verify_enclosure_sync.py
+
+test-enclosure-sync: ## Mutation tests for the enclosure-sync gate
+	@$(T) test-enclosure-sync python3 scripts/test_enclosure_sync.py
 
 test-power-nets: ## Regression tests for the power-net integrity detector
 	@$(T) test-power-nets python3 scripts/test_power_net_integrity.py

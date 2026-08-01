@@ -205,6 +205,9 @@ ROUTING_LAW = [
      "degraded",  "keepout violations cost range, not boot"),
     ("esd",        "protection",              "pcb-engineer", "/electrical-review",
      "degraded",  "missing protection fails in the field, not on the bench"),
+    ("enclosure",  "mechanical fit",          "cad-engineer", "/enclosure-design",
+     "degraded",  "a shell that does not fit the board is discovered after "
+                  "printing, not before"),
     ("balance",    "fabrication",             "pcb-engineer", "/dfm-fix",
      "degraded",  "copper imbalance warps the panel"),
     ("stackup",    "fabrication",             "pcb-engineer", "/dfm-fix",
@@ -262,6 +265,14 @@ ROUTING_EXCEPTIONS = {
         "software-dev", "/check", "blind-spot",
         "while the manifest gate's own tests are red, its PASS verdicts on "
         "release integrity are untrustworthy"),
+    # Same shape: the "enclosure" keyword would hand this mutation suite
+    # the cad-engineer and a degraded severity, but a red mutation suite
+    # means the SYNC GATE can no longer be trusted, not that the shell
+    # drifted — a tooling blind spot.
+    "test_enclosure_sync": (
+        "software-dev", "/check", "blind-spot",
+        "while the enclosure-sync gate's own tests are red, its PASS "
+        "verdicts on mechanical fit are untrustworthy"),
 }
 
 

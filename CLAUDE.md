@@ -106,8 +106,10 @@ Three properties are deliberate and must survive refactors:
    added.
 2. **Routing is a keyword law + declared exceptions**, and every finding
    prints which rule decided it (`law:rotation`, `exception:<gate>`).
-   `ROUTING_EXCEPTIONS` is empty on purpose — an entry must say what is
-   non-standard about that gate.
+   `ROUTING_EXCEPTIONS` stays minimal on purpose — an entry must say
+   what is non-standard about that gate (current entries: mutation
+   suites whose gate keyword would mis-rank a tooling blind spot as a
+   board defect).
 3. **A failing gate no rule covers is a hard error (exit 2), not a
    default assignment.** Adding a gate to the Makefile without giving it
    an owner therefore fails `verify-all`, via `test_issue_dispatch`.

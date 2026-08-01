@@ -67,6 +67,7 @@ BOM = "release_jlcpcb/bom.csv"
 CPL = "release_jlcpcb/cpl.csv"
 D356 = "release_jlcpcb/esp32-emu-turbo.d356"
 FIRMWARE = "software/main/board_config.h"
+SCAD = "hardware/enclosure/enclosure.scad"
 
 # a fault whose mutation touches nothing is a lie, not a pass
 class Fatal(RuntimeError):
@@ -201,6 +202,16 @@ def f_release_drift(sb: Path):
     return "relabeled 5 GND e-test points as +3V3 — release netlist drift"
 
 
+def f_enclosure_drift(sb: Path):
+    # HISTORICAL (F1): the scad's battery pocket drifted from the spec'd
+    # 105080 cell and nothing objected. The injected form is an outline
+    # drift — the cheapest member of the same "shell no longer matches
+    # the board" class, and one only verify_enclosure_sync reads.
+    _sub(sb / SCAD, r"^pcb_w = 160;", "pcb_w = 159;", count=1,
+         flags=re.MULTILINE)
+    return "pcb_w 160 -> 159 in enclosure.scad — shell/board outline drift"
+
+
 def f_firmware_desync(sb: Path):
     fw = sb / FIRMWARE
     m = re.search(r"BTN_R\s+GPIO_NUM_(\d+)", fw.read_text())
@@ -232,6 +243,8 @@ FAULTS = [
      f_release_drift, ()),
     ("firmware-desync", "cross-domain: GPIO map out of sync", [FIRMWARE],
      f_firmware_desync, ()),
+    ("enclosure-drift", "mechanical: shell no longer matches the board",
+     [SCAD], f_enclosure_drift, ("verify_enclosure_sync",)),
 ]
 
 

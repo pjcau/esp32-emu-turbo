@@ -22,22 +22,34 @@ if git -C "$PROJECT_DIR" diff --cached --name-only 2>/dev/null | grep -qE '(gene
     PCB_CHANGED=true
 fi
 
-if [ "$PCB_CHANGED" = false ]; then
+# Enclosure side: a scad edit must re-run the mechanical sync gate (the
+# PCB side of that gate is already covered by the generate_pcb/ pattern
+# above). This guards UNCOMMITTED work only — committed drift is caught
+# by SessionStart's open-issues report and verify-all.
+SCAD_CHANGED=false
+if git -C "$PROJECT_DIR" diff --name-only HEAD 2>/dev/null | grep -qE 'hardware/enclosure/.*\.scad'; then
+    SCAD_CHANGED=true
+fi
+if git -C "$PROJECT_DIR" diff --cached --name-only 2>/dev/null | grep -qE 'hardware/enclosure/.*\.scad'; then
+    SCAD_CHANGED=true
+fi
+
+if [ "$PCB_CHANGED" = false ] && [ "$SCAD_CHANGED" = false ]; then
     exit 0
 fi
 
-# Run DFM verification
+# Run DFM verification (PCB changes only — a scad-only edit must not
+# pay for, or be blamed by, the whole copper suite)
 DFM_SCRIPT="$PROJECT_DIR/scripts/verify_dfm_v2.py"
-if [ ! -f "$DFM_SCRIPT" ]; then
-    exit 0
+FAIL_COUNT=0
+DFM_OUTPUT=""
+if [ "$PCB_CHANGED" = true ] && [ -f "$DFM_SCRIPT" ]; then
+    DFM_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$DFM_SCRIPT" 2>&1 || true)
+    # Count failures (grep -c returns 1 when no matches; strip with tr)
+    FAIL_COUNT=$(printf "%s\n" "$DFM_OUTPUT" | grep -cE "FAIL|DANGER" || true)
+    FAIL_COUNT=$(printf "%s" "$FAIL_COUNT" | tr -d '[:space:]')
+    : "${FAIL_COUNT:=0}"
 fi
-
-DFM_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$DFM_SCRIPT" 2>&1 || true)
-
-# Count failures (grep -c returns 1 when no matches; strip with tr)
-FAIL_COUNT=$(printf "%s\n" "$DFM_OUTPUT" | grep -cE "FAIL|DANGER" || true)
-FAIL_COUNT=$(printf "%s" "$FAIL_COUNT" | tr -d '[:space:]')
-: "${FAIL_COUNT:=0}"
 
 # ── Trace-through-pad overlap check ───────────────────────────────
 # Blocking guard against the v3.3 regression (commit 775e9fd) where
@@ -46,7 +58,7 @@ FAIL_COUNT=$(printf "%s" "$FAIL_COUNT" | tr -d '[:space:]')
 TTP_SCRIPT="$PROJECT_DIR/scripts/verify_trace_through_pad.py"
 TTP_FAIL_COUNT=0
 TTP_OUTPUT=""
-if [ -f "$TTP_SCRIPT" ]; then
+if [ "$PCB_CHANGED" = true ] && [ -f "$TTP_SCRIPT" ]; then
     TTP_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$TTP_SCRIPT" 2>&1 || true)
     TTP_FAIL_COUNT=$(printf "%s\n" "$TTP_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
     TTP_FAIL_COUNT=$(printf "%s" "$TTP_FAIL_COUNT" | tr -d '[:space:]')
@@ -60,7 +72,7 @@ fi
 NC_SCRIPT="$PROJECT_DIR/scripts/verify_net_connectivity.py"
 NC_FAIL_COUNT=0
 NC_OUTPUT=""
-if [ -f "$NC_SCRIPT" ]; then
+if [ "$PCB_CHANGED" = true ] && [ -f "$NC_SCRIPT" ]; then
     NC_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$NC_SCRIPT" 2>&1 || true)
     NC_FAIL_COUNT=$(printf "%s\n" "$NC_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
     NC_FAIL_COUNT=$(printf "%s" "$NC_FAIL_COUNT" | tr -d '[:space:]')
@@ -78,7 +90,7 @@ fi
 PN_SCRIPT="$PROJECT_DIR/scripts/verify_power_net_integrity.py"
 PN_FAIL_COUNT=0
 PN_OUTPUT=""
-if [ -f "$PN_SCRIPT" ]; then
+if [ "$PCB_CHANGED" = true ] && [ -f "$PN_SCRIPT" ]; then
     PN_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$PN_SCRIPT" 2>&1) && PN_EXIT=0 || PN_EXIT=$?
     if [ "$PN_EXIT" -ne 0 ]; then
         PN_FAIL_COUNT=$(printf "%s\n" "$PN_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
@@ -139,7 +151,7 @@ fi
 # everywhere else.
 ISO_SCRIPT="$PROJECT_DIR/scripts/verify_isolation.py"
 ISO_FAIL_COUNT=0
-if [ -f "$ISO_SCRIPT" ]; then
+if [ "$PCB_CHANGED" = true ] && [ -f "$ISO_SCRIPT" ]; then
     ISO_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$ISO_SCRIPT" 2>&1) || true
     # grep -c exits 1 on zero matches; under set -euo pipefail that killed
     # the whole hook silently on every CLEAN run ("Stop hook error: Failed
@@ -149,7 +161,27 @@ if [ -f "$ISO_SCRIPT" ]; then
     [ -z "$ISO_FAIL_COUNT" ] && ISO_FAIL_COUNT=0
 fi
 
-TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + PN_FAIL_COUNT + EE_FAIL_COUNT + ISO_FAIL_COUNT))
+# ── Enclosure <-> PCB mechanical sync ─────────────────────────────
+# Runs when EITHER side moved: the scad (SCAD_CHANGED) or the board
+# sources (generate_pcb/ is in the PCB pattern). Catches the F1 class:
+# a battery pocket, cutout or Z-stack silently drifting from the board.
+ENC_SCRIPT="$PROJECT_DIR/scripts/verify_enclosure_sync.py"
+ENC_FAIL_COUNT=0
+ENC_OUTPUT=""
+if [ -f "$ENC_SCRIPT" ]; then
+    ENC_OUTPUT=$(cd "$PROJECT_DIR" && python3 "$ENC_SCRIPT" 2>&1) && ENC_EXIT=0 || ENC_EXIT=$?
+    if [ "$ENC_EXIT" -ne 0 ]; then
+        ENC_FAIL_COUNT=$(printf "%s\n" "$ENC_OUTPUT" | grep -cE "^[[:space:]]*FAIL" || true)
+        ENC_FAIL_COUNT=$(printf "%s" "$ENC_FAIL_COUNT" | tr -d '[:space:]')
+        : "${ENC_FAIL_COUNT:=0}"
+        # Structural errors (exit 2) print no FAIL line — still signal.
+        if [ "$ENC_FAIL_COUNT" -eq 0 ]; then
+            ENC_FAIL_COUNT=1
+        fi
+    fi
+fi
+
+TOTAL_FAIL=$((FAIL_COUNT + TTP_FAIL_COUNT + NC_FAIL_COUNT + PN_FAIL_COUNT + EE_FAIL_COUNT + ISO_FAIL_COUNT + ENC_FAIL_COUNT))
 
 if [ "$TOTAL_FAIL" -gt 0 ]; then
     echo "" >&2
@@ -188,6 +220,12 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
         echo "  Something is shorted, unconnected, or on the wrong layer." >&2
         echo "" >&2
     fi
+    if [ "$ENC_FAIL_COUNT" -gt 0 ]; then
+        echo "── Enclosure sync (verify_enclosure_sync.py): $ENC_FAIL_COUNT mismatch(es) ──" >&2
+        echo "$ENC_OUTPUT" | grep -E "^[[:space:]]*(FAIL|STRUCTURAL)" | head -15 >&2
+        echo "  The printed shell no longer matches the board." >&2
+        echo "" >&2
+    fi
     echo "Run for full details:" >&2
     [ "$FAIL_COUNT" -gt 0 ]     && echo "  python3 scripts/verify_dfm_v2.py" >&2
     [ "$TTP_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_trace_through_pad.py" >&2
@@ -195,6 +233,7 @@ if [ "$TOTAL_FAIL" -gt 0 ]; then
     [ "$PN_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_power_net_integrity.py" >&2
     [ "$EE_FAIL_COUNT" -gt 0 ]  && echo "  python3 scripts/verify_easyeda_footprint.py" >&2
     [ "$ISO_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_isolation.py --verbose" >&2
+    [ "$ENC_FAIL_COUNT" -gt 0 ] && echo "  python3 scripts/verify_enclosure_sync.py" >&2
     echo "Fix issues before committing." >&2
     exit 2
 fi
