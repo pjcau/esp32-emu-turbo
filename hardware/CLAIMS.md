@@ -61,3 +61,12 @@ exactly these `- key: value` fields: `status`, `declared`, `claim`,
 - where: scripts/verify_esd_protection.py (the surge-TVS check reads this claim); J1 / U4 / F1 on the board
 - risk-if-false: a surge event on VBUS (hot-plug overshoot into an inductive cable, non-compliant charger) exceeds U4's ESD-clamp energy rating and kills U4 and/or U2 — a field failure the bench never sees.
 - evidence: USBLC6-2SC6 datasheet (ST, DS5814) — the VBUS pin clamp is specified for IEC 61000-4-2 ESD transients, not 8/20 us surge; F1 (landed in 1c3ded4) limits fault current on VBUS_IN; the supply is a consumer USB-C PSU, not an automotive/industrial rail.
+
+## CLAIM-005 — IP5306 delivers stable VOUT from VIN with no battery cell attached
+
+- status: UNVERIFIED
+- declared: 2026-08-01
+- claim: With USB power on VIN and NO cell on the BAT pin, the IP5306 passes power through to VOUT stably enough to run the whole board (ESP32 + display + SD), so the bring-up procedure may run USB-only and defer the battery to last. The datasheet (Chinese, C181692) does not document the no-battery case; power-bank ICs of this class are known to sometimes hiccup or gate VOUT off when the charger finds no cell.
+- where: the bring-up order in website/docs/manufacturing/bring-up-protocol.md (USB first, battery last — rests on this claim); the charge-and-play power path in website/docs/design/schematics.md
+- risk-if-false: first power-on without a battery yields a dead or flickering +5V and the bring-up telemetry reads as a broken board — hours lost chasing a phantom fault, or worse, a battery hot-plugged onto an unproven board to "fix" it, which is exactly what the procedure forbids.
+- evidence: none (verification is free: first USB-only power-on with the bring-up firmware's brownout telemetry settles it either way — stable rails → VERIFIED-ON-BENCH; no/unstable VOUT → FALSIFIED and the battery becomes a bring-up prerequisite)
