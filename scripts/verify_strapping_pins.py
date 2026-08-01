@@ -323,11 +323,12 @@ def test_en_rc_delay():
     if pullup and reset_cap:
         # The RC exists: compute tau from the real parts. Values would have to
         # come from the BOM, which this gate does not read, so it reports the
-        # parts and leaves the timing to scripts/vbench/transients.py.
+        # parts and leaves the timing to scripts/vbench/dynamics.py.
         check("EN has the RC delay network the datasheet requires "
               "(p.28 figure 7)", True,
               f"pull-up {pullup}, cap {reset_cap}")
-        info("timing is computed by scripts/vbench/transients.py from the "
+        info("timing is computed by scripts/vbench/dynamics.py (EN ramp vs "
+             "rail validity, gated by test_vbench_dynamics) from the "
              "BOM's values, not estimated here")
         return
 

@@ -42,8 +42,8 @@ pcb-filled: generate-pcb ## Generate the PCB, fill its copper zones, refresh Net
 	@$(T) fill-zones ./scripts/fill-zones.sh
 	@$(T) net-explorer python3 scripts/generate_net_explorer.py
 
-render-pcb: pcb-filled ## Render PCB layout to SVG/PNG/GIF
-	@$(T) render-pcb sh -c 'python3 scripts/render_pcb_svg.py website/static/img/pcb && python3 scripts/render_pcb_animation.py website/static/img/pcb'
+render-pcb: pcb-filled ## Render photorealistic PCBA views (KiCad raytracer, 13 views)
+	@$(T) render-pcb ./scripts/render_pcba.sh
 
 simulate: ## Run electrical circuit simulation/verification
 	@$(T) simulate python3 scripts/simulate_circuit.py
@@ -85,6 +85,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_power_net_integrity \
 	test_vbench \
 	test_vbench_display \
+	test_vbench_dynamics \
 	test_vbench_sdcard \
 	test_verify_memory \
 	validate_jlcpcb \
@@ -241,6 +242,9 @@ bench: bench-build ## T4.4 — open the Virtual Bench window: LCD through the i8
 
 bench-transients: ## T1.4 — cold start, inrush, load step, sag (ngspice; exits 2 if it is missing)
 	@$(T) bench-transients python3 scripts/vbench/transients.py
+
+bench-dynamics: ## T1.4b — divider corners, EN ramp timing, battery brownout under stress (ngspice; exits 2 if missing)
+	@$(T) bench-dynamics python3 scripts/vbench/dynamics.py
 
 bench-power: bench-rails bench-conflicts bench-thermal bench-transients ## T1.6 — rails + conflicts + thermal + transients, non-zero on any out-of-spec value
 
@@ -454,7 +458,5 @@ clean: ## Remove generated renders
 	rm -f website/static/img/schematics/*.svg
 	rm -f website/static/img/schematics/*.pdf
 	rm -f website/static/img/renders/*.png
-	rm -f website/static/img/pcb/*.svg
-	rm -f website/static/img/pcb/*.png
-	rm -f website/static/img/pcb/*.gif
+	rm -f website/static/img/renders/pcba/*.png
 	rm -f hardware/kicad/0[1-7]-*.kicad_sch
