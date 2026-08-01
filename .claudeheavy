@@ -32,6 +32,15 @@ software/components/gwenesis/cpus/M68K/m68kops.h
 software/components/gwenesis/cpus/M68K/m68ki_cycles*.h
 software/components/nofrendo/database.h
 
+# ── ESP-IDF managed components: vendored dependencies ───────────────
+# Auto-downloaded by the IDF component manager (idf_component.yml →
+# managed_components/), gitignored, and re-fetched on every clean build.
+# Their bundled examples carry 170k-token image arrays. Nothing in them
+# is ours; grep for the API you need or read the component's docs.
+# (Bare directory name on purpose: it covers every managed_components/
+# under software/, the same way gitignore treats a bare dir name.)
+managed_components
+
 # ── retro-go submodule: vendored upstream code ──────────────────────
 # Emulator cores, single-file vendored libs and generated asset/table
 # files — upstream code we build, not code we review. 20k-313k tokens

@@ -84,12 +84,12 @@ class AudioSheet(SchematicSheet):
         # SPK+ wire (orthogonal L-shape)
         spk_plus_y = ay - 3.81
         self.wire(ax + 10.16, spk_plus_y, spk_x - 3.81, spk_plus_y)
-        self.wire(spk_x - 3.81, spk_plus_y, spk_x - 3.81, spk_y - 0.635)
+        self.wire(spk_x - 3.81, spk_plus_y, spk_x - 3.81, spk_y - 1.27)
         # SPK- wire (orthogonal L-shape)
         spk_minus_y = ay
-        self.wire(ax + 10.16, spk_minus_y, spk_x - 10, spk_minus_y)
-        self.wire(spk_x - 10, spk_minus_y, spk_x - 10, spk_y + 0.635)
-        self.wire(spk_x - 10, spk_y + 0.635, spk_x - 3.81, spk_y + 0.635)
+        self.wire(ax + 10.16, spk_minus_y, spk_x - 10.16, spk_minus_y)
+        self.wire(spk_x - 10.16, spk_minus_y, spk_x - 10.16, spk_y + 1.27)
+        self.wire(spk_x - 10.16, spk_y + 1.27, spk_x - 3.81, spk_y + 1.27)
 
         # --- PAM8403 passive components (per datasheet application circuit) ---
         self.text("PAM8403 Passives:", 30, 122, 2.54, True)

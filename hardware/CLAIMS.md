@@ -1,6 +1,6 @@
 # Load-bearing claims ledger
 
-Containment layer 2 of `docs/containment-roadmap.md` (closes residual-risk
+Containment layer 2 of `docs/archived/containment-roadmap.md` (closes residual-risk
 class 1: right copper, wrong decision). Every geometric gate checks the
 board against what we *declared*; when a declaration is wrong, all gates
 go green and wrong together — R25 proved it with 24 agreeing gates, the

@@ -1,0 +1,5 @@
+dependencies:
+  # Same pin as software/main/idf_component.yml — display.c is compiled from
+  # there and includes esp_lcd_ili9488.h. The driver lives in the atanisoft
+  # namespace; espressif/ publishes no such component.
+  atanisoft/esp_lcd_ili9488: "^1"

@@ -6,7 +6,7 @@ argument-hint: [pre-order | arrival]
 
 # First-Article Check — orientation containment at the two moments that matter
 
-Containment layer 4 of `docs/containment-roadmap.md` (closes residual-risk
+Containment layer 4 of `docs/archived/containment-roadmap.md` (closes residual-risk
 class 2: assembly conventions). The v4.3.1 batch shipped with **at least 8
 bottom-side parts seated 90° off their pads** from a syntactically perfect
 CPL — JLC placed exactly what the file said, no vision correction. Every

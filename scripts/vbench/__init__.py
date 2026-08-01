@@ -1,6 +1,6 @@
 """Virtual Bench — a netlist-driven bench test for the ESP32 Emu Turbo board.
 
-Plan and phase boundaries: docs/virtual-bench-plan.md. Read the boundary
+Plan and phase boundaries: docs/archived/virtual-bench-plan.md. Read the boundary
 table there before adding anything: this package deliberately does NOT
 cover geometry (clearance, acid traps, shorts by distance), which belong
 to verify_isolation / drc_native / short_circuit_analysis, nor signal

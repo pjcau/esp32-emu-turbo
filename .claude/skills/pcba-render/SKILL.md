@@ -9,6 +9,13 @@ allowed-tools: Bash, Read, Glob
 
 Generates high-quality raytraced 3D renders of the assembled PCB using local `kicad-cli pcb render` with the KiCad raytracer engine.
 
+**These renders are the ONLY board imagery** — the old SVG/PNG/GIF pipeline
+(`render_pcb_svg.py` / `render_pcb_animation.py`, `website/static/img/pcb/`)
+was deleted. The whole pipeline below is automated as `scripts/render_pcba.sh`
+(invoked by `make render-pcb`, which also fills zones first); the manual steps
+here are for custom views/lighting. The script also syncs
+`pcba-top/bottom/iso-front` into `release_jlcpcb/renders/`.
+
 ## Critical Rules
 
 - ALWAYS inject 3D models first (step 1) before rendering

@@ -147,7 +147,7 @@ class ControlsSheet(SchematicSheet):
         # Supply sheet and D1 (dual Schottky) here. Symbol-local pin
         # positions (world_y = symbol_y - local_y):
         #   pin 1: (-5, -1.27)  bottom-left  → wired to BTN_START
-        #   pin 2: (+5, -1.27)  bottom-right → wired to BTN_SELECT
+        #   pin 2: (+5.08, -1.27)  bottom-right → wired to BTN_SELECT
         #   pin 3: (0, +5)      top          → wired to MENU_K
         #
         # BAT54C SOT-23 pinout (electrical role for D1):
@@ -160,18 +160,18 @@ class ControlsSheet(SchematicSheet):
         # cover pin 3's stub / MENU_K glabel above D1.
         self.text("MENU combo", dx + 12, dy - 4, 1.5)
         self.text("(START + SELECT)", dx + 12, dy - 1, 1.5)
-        # Pin 3 (common cathode, world (dx, dy - 5)) → MENU_K glabel
+        # Pin 3 (common cathode, world (dx, dy - 5.08)) → MENU_K glabel
         # placed above D1. Same pattern as U4's +5V tap on sheet 1.
         self.glabel("MENU_K", dx, dy - 10, 90)
-        self.wire(dx, dy - 5, dx, dy - 10)
-        # Pin 1 (anode 1, world (dx - 5, dy + 1.27)) → BTN_START to the
+        self.wire(dx, dy - 5.08, dx, dy - 10)
+        # Pin 1 (anode 1, world (dx - 5.08, dy + 1.27)) → BTN_START to the
         # left. Short horizontal stub, glabel points left (angle 180).
         self.glabel("BTN_START", dx - 11, dy + 1.27, 180)
-        self.wire(dx - 5, dy + 1.27, dx - 11, dy + 1.27)
-        # Pin 2 (anode 2, world (dx + 5, dy + 1.27)) → BTN_SELECT to the
+        self.wire(dx - 5.08, dy + 1.27, dx - 11, dy + 1.27)
+        # Pin 2 (anode 2, world (dx + 5.08, dy + 1.27)) → BTN_SELECT to the
         # right. Short horizontal stub, glabel points right (angle 0).
         self.glabel("BTN_SELECT", dx + 11, dy + 1.27, 0)
-        self.wire(dx + 5, dy + 1.27, dx + 11, dy + 1.27)
+        self.wire(dx + 5.08, dy + 1.27, dx + 11, dy + 1.27)
 
         # Schematic note at bottom
         ny = 295

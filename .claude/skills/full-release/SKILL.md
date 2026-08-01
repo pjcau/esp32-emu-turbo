@@ -76,77 +76,19 @@ python3 scripts/test_vbench_sdcard.py
 
 **Gate check**: If DFM or DFA have failures, STOP. Polarity and electrical warnings are OK if previously acknowledged.
 
-### Step 3: SVG renders (PCB layout + animation)
+### Step 3: 3D PCBA renders (raytraced, 13 views — only board imagery)
 
 ```bash
-# PCB SVG visualization (layers, traces, components)
-python3 scripts/render_pcb_svg.py website/static/img/pcb
-
-# PCB animated GIF (layer-by-layer reveal)
-python3 scripts/render_pcb_animation.py website/static/img/pcb
+# Injects 3D models (temp copy), renders 13 raytraced views to
+# website/static/img/renders/pcba/, and syncs pcba-top/bottom/iso-front
+# to release_jlcpcb/renders/. Zones must be filled (Step 1 did that).
+./scripts/render_pcba.sh
 ```
 
-### Step 4: 3D PCBA renders (raytraced, 6 views)
+The old SVG/GIF pipeline (`render_pcb_svg.py` / `render_pcb_animation.py`)
+is deleted — do not resurrect it. Camera/lighting presets: `/pcba-render`.
 
-```bash
-# Inject 3D component models into temp file
-python3 scripts/inject-3d-models.py \
-  hardware/kicad/esp32-emu-turbo.kicad_pcb \
-  /tmp/pcba-render.kicad_pcb
-
-OUT="website/static/img/renders"
-PCB="/tmp/pcba-render.kicad_pcb"
-W=1920; H=1080
-
-# Top view
-kicad-cli pcb render -o "$OUT/pcba-top.png" \
-  --width $W --height $H --side top \
-  --quality high --floor --background opaque \
-  --light-top 0.85 --light-camera 0.3 --light-side 0.4 \
-  "$PCB"
-
-# Bottom view
-kicad-cli pcb render -o "$OUT/pcba-bottom.png" \
-  --width $W --height $H --side bottom \
-  --quality high --floor --background opaque \
-  --light-top 0.85 --light-camera 0.3 --light-side 0.4 \
-  "$PCB"
-
-# Isometric front-left (hero shot)
-kicad-cli pcb render -o "$OUT/pcba-iso-front.png" \
-  --width $W --height $H --rotate "-45,0,30" \
-  --quality high --perspective --floor --background opaque \
-  --zoom 0.7 --light-top 0.9 --light-camera 0.4 --light-side 0.5 \
-  "$PCB"
-
-# Isometric back-right
-kicad-cli pcb render -o "$OUT/pcba-iso-back.png" \
-  --width $W --height $H --rotate "-45,0,210" \
-  --quality high --perspective --floor --background opaque \
-  --zoom 0.7 --light-top 0.9 --light-camera 0.4 --light-side 0.5 \
-  "$PCB"
-
-# Low angle (dramatic)
-kicad-cli pcb render -o "$OUT/pcba-low-angle.png" \
-  --width $W --height $H --rotate "-25,0,20" \
-  --quality high --perspective --floor --background opaque \
-  --zoom 0.6 --light-top 0.7 --light-camera 0.5 --light-side 0.6 \
-  --light-side-elevation 30 \
-  "$PCB"
-
-# Detail MCU (zoomed ESP32 area)
-kicad-cli pcb render -o "$OUT/pcba-detail-mcu.png" \
-  --width $W --height $H --rotate "-40,0,15" \
-  --quality high --perspective --background opaque \
-  --zoom 2.0 --pan "2,1,0" \
-  --light-top 0.85 --light-camera 0.5 --light-side 0.4 \
-  "$PCB"
-
-# Cleanup temp file
-rm -f /tmp/pcba-render.kicad_pcb
-```
-
-### Step 5: Gerber export (local kicad-cli + Docker zone fill)
+### Step 4: Gerber export (local kicad-cli + Docker zone fill)
 
 ```bash
 ./scripts/export-gerbers-fast.sh
@@ -173,7 +115,7 @@ cd hardware/kicad/gerbers && \
   zip -j ../jlcpcb/gerbers.zip *.gtl *.g1 *.g2 *.gbl *.gto *.gbo *.gts *.gbs *.gtp *.gbp *.gm1 *.drl *.gbrjob 2>/dev/null
 ```
 
-### Step 6: Post-export DFM recheck
+### Step 5: Post-export DFM recheck
 
 ```bash
 cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
@@ -182,7 +124,7 @@ python3 scripts/verify_dfm_v2.py
 
 Must still pass 114/114 after gerber export.
 
-### Step 7: Sync to release_jlcpcb/
+### Step 6: Sync to release_jlcpcb/
 
 ```bash
 cp hardware/kicad/jlcpcb/bom.csv release_jlcpcb/bom.csv
@@ -193,7 +135,7 @@ cp -r hardware/kicad/gerbers release_jlcpcb/gerbers
 cp hardware/kicad/jlcpcb/gerbers.zip release_jlcpcb/gerbers.zip 2>/dev/null || true
 ```
 
-### Step 8: Update release README
+### Step 7: Update release README
 
 Edit `release_jlcpcb/README.md`:
 - Add version header with date
@@ -201,20 +143,20 @@ Edit `release_jlcpcb/README.md`:
 - Include verification results summary (DFM, DFA, DRC counts)
 - Include component count and cost estimate
 
-### Step 9: Verify outputs
+### Step 8: Verify outputs
 
 ```bash
 echo "=== Release Files ==="
 ls -lh release_jlcpcb/gerbers.zip release_jlcpcb/bom.csv release_jlcpcb/cpl.csv
 echo "=== Gerbers ==="
 ls release_jlcpcb/gerbers/ | wc -l
-echo "=== SVG Renders ==="
-ls website/static/img/pcb/*.svg 2>/dev/null | wc -l
-echo "=== PCBA Renders ==="
+echo "=== PCBA Renders (only board imagery — 13 expected) ==="
 ls website/static/img/renders/pcba/pcba-*.png 2>/dev/null | wc -l
+echo "=== Release renders (top/bottom/iso synced from pcba) ==="
+ls release_jlcpcb/renders/pcba-*.png 2>/dev/null | wc -l
 ```
 
-### Step 10: Git commit
+### Step 9: Git commit
 
 ```bash
 git add release_jlcpcb/ hardware/kicad/esp32-emu-turbo.kicad_pcb website/static/img/
@@ -233,14 +175,13 @@ git commit -m "release($VERSION): full JLCPCB package + renders"
 | 2e. Connectivity | OK/FAIL | — |
 | 2f. Schematic sync | OK/FAIL | — |
 | 2g. Electrical sim | OK/WARN | X errors, Y warnings |
-| 3. SVG renders | OK/FAIL | X files |
-| 4. PCBA 3D renders | OK/FAIL | 6 views |
-| 5. Gerber export | OK/FAIL | X files in zip |
-| 6. Post-export DFM | OK/FAIL | 114/114 |
-| 7. Release sync | OK/FAIL | — |
-| 8. README updated | OK/SKIP | — |
-| 9. Outputs verified | OK/FAIL | — |
-| 10. Git commit | OK/SKIP | — |
+| 3. PCBA 3D renders | OK/FAIL | 13 views |
+| 4. Gerber export | OK/FAIL | X files in zip |
+| 5. Post-export DFM | OK/FAIL | 114/114 |
+| 6. Release sync | OK/FAIL | — |
+| 7. README updated | OK/SKIP | — |
+| 8. Outputs verified | OK/FAIL | — |
+| 9. Git commit | OK/SKIP | — |
 
 ## JLCPCB Upload Protocol (sequential — only as the final step of a release)
 
@@ -288,7 +229,6 @@ so "the uploaded CPL matches release_jlcpcb/ at HEAD" stays checkable.
 - `release_jlcpcb/gerbers.zip` — Gerber package for JLCPCB upload
 - `release_jlcpcb/bom.csv` — Bill of Materials
 - `release_jlcpcb/cpl.csv` — Component Placement List
-- `website/static/img/pcb/` — SVG renders + animation
-- `website/static/img/renders/pcba/pcba-*.png` — 3D raytraced PCBA views
+- `website/static/img/renders/pcba/pcba-*.png` — 3D raytraced PCBA views (only board imagery; old SVG/GIF pipeline deleted)
 - `scripts/verify_dfm_v2.py` — DFM verification (114 tests)
 - `scripts/verify_dfa.py` — DFA verification (9 tests)

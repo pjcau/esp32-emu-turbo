@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate: KiCad ERC on the generated schematic — zero error-severity findings.
+"""Gate: KiCad ERC on the generated schematic — zero findings, ANY severity.
 
 Why this gate exists
 --------------------
@@ -12,9 +12,16 @@ first real run found a decoupling cap (C3) whose tap wire ended in empty
 space one step away from shorting +3V3 into LCD_CS. This gate makes ERC a
 standing check instead of a one-off.
 
-Scope: error severity only. The ~650 warning-severity findings (mostly
-endpoint_off_grid and lib_symbol_issues) are a separate cleanup; gating on
-them today would just get this gate ignored (a red gate stops being read).
+Scope history: error severity only at first — the 676 warning-severity
+findings (507 endpoint_off_grid from the sheets' human 1 mm grid, 169
+lib_symbol_issues from bare lib_ids with no library) would have kept the
+gate permanently red, and a red gate stops being read. The 2026-08-01
+burn-down (containment roadmap layer 6) took warnings to ZERO: emission-
+time grid snap in kicad_primitives, on-grid pin offsets for BAT54C /
+USBLC6 / Speaker, and the emu: library + sym-lib-table. From zero, every
+severity is gated: any new warning is a regression some specific change
+introduced, and letting "just one" back in is how the noise floor that
+hid C3 rebuilt itself last time.
 
 Requires kicad-cli on PATH — and fails loudly when it is missing, because
 a silently skipped check is how ERC stayed unread for four months.
@@ -46,7 +53,7 @@ def collect_violations(report: dict) -> list[dict]:
 def main() -> int:
     sch = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_SCH
     print("=" * 60)
-    print("KiCad ERC gate (error severity)")
+    print("KiCad ERC gate (all severities — zero-finding baseline)")
     print("=" * 60)
 
     if not os.path.exists(sch):
@@ -57,7 +64,7 @@ def main() -> int:
         report_path = os.path.join(td, "erc.json")
         try:
             proc = subprocess.run(
-                ["kicad-cli", "sch", "erc", "--severity-error",
+                ["kicad-cli", "sch", "erc", "--severity-all",
                  "--format", "json", "-o", report_path, sch],
                 capture_output=True, text=True, timeout=300,
             )
@@ -75,24 +82,26 @@ def main() -> int:
         with open(report_path) as f:
             report = json.load(f)
 
-    errors = [v for v in collect_violations(report)
-              if v.get("severity") == "error"]
+    findings = collect_violations(report)
 
-    for v in errors:
+    for v in findings:
         items = " | ".join(
             f"{i.get('description', '?')} @({i.get('pos', {}).get('x')},"
             f"{i.get('pos', {}).get('y')})"
             for i in v.get("items", [])[:2]
         )
-        print(f"  FAIL  [{v.get('_sheet', '/')}] {v.get('type')}: {items}")
+        print(f"  FAIL  [{v.get('_sheet', '/')}] "
+              f"{v.get('severity')}/{v.get('type')}: {items}")
 
     print("-" * 60)
-    if errors:
-        print(f"Results: FAIL — {len(errors)} error-severity ERC violation(s)")
+    if findings:
+        errors = sum(1 for v in findings if v.get("severity") == "error")
+        print(f"Results: FAIL — {len(findings)} ERC finding(s) "
+              f"({errors} error-severity) against a zero baseline")
         print("The schematic drawing disagrees with itself. Fix the sheet")
         print("generator (scripts/generate_schematics/), not the output.")
         return 1
-    print("Results: PASS — ERC clean at error severity")
+    print("Results: PASS — ERC clean at every severity")
     return 0
 
 

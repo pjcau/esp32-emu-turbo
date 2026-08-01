@@ -78,4 +78,4 @@ Partly — and the uncovered part is known and has owners:
 | Oscilloscope | ~€300+ | T5.5: transient calibration — may stay open forever, the flag is honest either way |
 
 Full history and per-task detail:
-[`docs/virtual-bench-plan.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/virtual-bench-plan.md).
+[`docs/archived/virtual-bench-plan.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/archived/virtual-bench-plan.md).

@@ -1,7 +1,7 @@
 ---
 name: render
 model: claude-opus-5
-description: Run the Docker rendering pipeline (schematics, PCB, enclosure)
+description: Run the rendering pipeline (schematics SVG, raytraced PCBA views, enclosure)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob
 argument-hint: [all|schematics|pcb|enclosure]
@@ -36,14 +36,20 @@ docker compose run --rm generate-sch
 
 Output: `website/static/img/schematics/*.svg`
 
-### PCB (layout visualization)
+### PCB (photorealistic PCBA raytracer)
 
 ```bash
-# Generate + FILL + refresh Net Explorer, then render SVG/PNG/GIF
+# Generate + FILL + refresh Net Explorer, then render 13 raytraced PCBA views
 make render-pcb
 ```
 
-**Use the make target — do not call the renderers directly.**
+The old SVG/PNG/GIF pipeline (`render_pcb_svg.py` / `render_pcb_animation.py`,
+output `website/static/img/pcb/`) is **deleted** — the raytraced PCBA renders
+are the only board imagery. Camera presets, lighting and details:
+`/pcba-render` skill (this target runs the same pipeline via
+`scripts/render_pcba.sh`, local `kicad-cli`, no Docker).
+
+**Use the make target — do not call the renderer directly.**
 `generate_pcb` writes the `.kicad_pcb` with no `filled_polygon` (the fill
 needs the `pcbnew` Python API, which `kicad-cli` does not expose), so a
 render taken straight after a bare generate shows **a board with no copper
@@ -56,15 +62,15 @@ gate going red after a documentation-only action, and the pre-commit DFM
 hook blocking a commit while citing zone fills that have nothing to do with
 the change being committed.
 
-If you must run a renderer by hand, fill first:
+If you must run the renderer by hand, fill first:
 
 ```bash
 make pcb-filled
-python3 scripts/render_pcb_svg.py website/static/img/pcb
-python3 scripts/render_pcb_animation.py website/static/img/pcb
+./scripts/render_pcba.sh
 ```
 
-Output: `website/static/img/pcb/`
+Output: `website/static/img/renders/pcba/` (+ top/bottom/iso synced to
+`release_jlcpcb/renders/`)
 
 ### Enclosure (OpenSCAD → PNG)
 
@@ -86,7 +92,7 @@ After rendering, check that outputs exist:
 
 ```bash
 ls -la website/static/img/schematics/*.svg
-ls -la website/static/img/pcb/*.svg
+ls -la website/static/img/renders/pcba/pcba-*.png
 ls -la website/static/img/renders/*.png
 ```
 
@@ -95,6 +101,5 @@ ls -la website/static/img/renders/*.png
 - `scripts/render-all.sh` — Master orchestration
 - `scripts/render-schematics.sh` — Schematic SVG export
 - `scripts/render-enclosure.sh` — OpenSCAD rendering
-- `scripts/render_pcb_svg.py` — PCB SVG visualization
-- `scripts/render_pcb_animation.py` — PCB GIF animation
+- `scripts/render_pcba.sh` — Raytraced PCBA views (see `/pcba-render`)
 - `docker-compose.yml` — Docker service definitions

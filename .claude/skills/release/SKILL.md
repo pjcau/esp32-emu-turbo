@@ -124,7 +124,7 @@ make order-manifest   # writes release_jlcpcb/order-manifest.json, prints SHA256
 
 Record the three printed SHA256s in the release notes; at upload time
 they are what the JLC order is checked against (containment layer 1,
-`docs/containment-roadmap.md`). Before paying, run `/first-article-check`
+`docs/archived/containment-roadmap.md`). Before paying, run `/first-article-check`
 phase A on the JLC order preview.
 
 ### 5. Generate PCBA renders (`/pcba-render`)

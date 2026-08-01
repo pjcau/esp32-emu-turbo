@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Order manifest — SHA256 fingerprint of exactly what goes to JLCPCB.
 
-Containment layer 1 of docs/containment-roadmap.md (closes residual-risk
+Containment layer 1 of docs/archived/containment-roadmap.md (closes residual-risk
 class 3: drift between what was verified and what was uploaded). Two
 incidents motivated it: the U4 rotation fix that sat months outside
 `release_jlcpcb/`, and the C2 polarity fix that never reached the

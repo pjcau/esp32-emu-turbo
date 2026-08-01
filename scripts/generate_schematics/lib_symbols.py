@@ -227,8 +227,8 @@ _SYMBOL_SPEAKER = """    (symbol "Speaker" (pin_names (offset 1.016)) (in_bom ye
         (rectangle (start -1.27 1.27) (end 0 -1.27) (stroke (width 0.254) (type default)) (fill (type none)))
         (polyline (pts (xy 0 1.27) (xy 2.54 3.81) (xy 2.54 -3.81) (xy 0 -1.27)) (stroke (width 0.254) (type default)) (fill (type none))))
       (symbol "Speaker_1_1"
-        (pin passive line (at -3.81 0.635 0) (length 2.54) (name "+" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
-        (pin passive line (at -3.81 -0.635 0) (length 2.54) (name "-" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))\n"""
+        (pin passive line (at -3.81 1.27 0) (length 2.54) (name "+" (effects (font (size 1.27 1.27)))) (number "1" (effects (font (size 1.27 1.27)))))
+        (pin passive line (at -3.81 -1.27 0) (length 2.54) (name "-" (effects (font (size 1.27 1.27)))) (number "2" (effects (font (size 1.27 1.27)))))))\n"""
 
 _SYMBOL_JOYSTICK = """    (symbol "PSP_Joystick" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "J" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
@@ -307,9 +307,9 @@ _SYMBOL_BAT54C = """    (symbol "BAT54C" (pin_names (offset 1.016) hide) (in_bom
         (polyline (pts (xy -2.54 -1.27) (xy -1.6 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
         (polyline (pts (xy 2.54 -1.27) (xy 1.6 -1.27)) (stroke (width 0.254) (type default)) (fill (type none))))
       (symbol "BAT54C_1_1"
-        (pin passive line (at -5 -1.27 0) (length 2.46) (name "1" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 5 -1.27 180) (length 2.46) (name "2" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 0 5 270) (length 2.46) (name "3" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
+        (pin passive line (at -5.08 -1.27 0) (length 2.54) (name "1" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 5.08 -1.27 180) (length 2.54) (name "2" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 0 5.08 270) (length 2.54) (name "3" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
 
 _SYMBOL_USBLC6_2SC6 = """    (symbol "USBLC6_2SC6" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
@@ -318,12 +318,12 @@ _SYMBOL_USBLC6_2SC6 = """    (symbol "USBLC6_2SC6" (pin_names (offset 1.016)) (i
       (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
       (symbol "USBLC6_2SC6_0_1" (rectangle (start -7.62 5.08) (end 7.62 -5.08) (stroke (width 0.254) (type default)) (fill (type background))))
       (symbol "USBLC6_2SC6_1_1"
-        (pin bidirectional line (at -10 2.54 0) (length 2.38) (name "I/O1_A" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at -10.16 2.54 0) (length 2.54) (name "I/O1_A" (effects (font (size 1.016 1.016)))) (number "1" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 0 -7.62 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at -10 0 0) (length 2.38) (name "I/O2_A" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at 10 0 180) (length 2.38) (name "I/O2_B" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at -10.16 0 0) (length 2.54) (name "I/O2_A" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at 10.16 0 180) (length 2.54) (name "I/O2_B" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 0 7.62 270) (length 2.54) (name "VBUS" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at 10 -2.54 180) (length 2.38) (name "I/O1_B" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))))\n"""
+        (pin bidirectional line (at 10.16 -2.54 180) (length 2.54) (name "I/O1_B" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))))\n"""
 
 _SYMBOL_FPC_16P = """    (symbol "FPC_16P" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "J" (at 0 21.59 0) (effects (font (size 1.27 1.27))))
@@ -377,6 +377,27 @@ SYMBOLS: dict[str, str] = {
 }
 
 
+# Library nickname the schematics reference their symbols under. A bare
+# lib_id ("R") makes every symbol instance warn "the current configuration
+# does not include the symbol library ''" — 169 times, i.e. most of the
+# ERC noise floor. The nickname resolves against hardware/kicad/
+# sym-lib-table, which points at the generated emu.kicad_sym; cache and
+# library are emitted from the same SYMBOLS dict, so KiCad can compare
+# them and they can never disagree.
+LIB_NICKNAME = "emu"
+
+
+def _prefixed(name: str) -> str:
+    """The symbol body with its OUTER name qualified as emu:<name>.
+
+    Only the outer (symbol "<name>" gets the nickname — the unit
+    sub-symbols ("R_0_1") stay bare, matching how KiCad itself writes a
+    cached library symbol.
+    """
+    return SYMBOLS[name].replace(
+        f'(symbol "{name}" ', f'(symbol "{LIB_NICKNAME}:{name}" ', 1)
+
+
 def lib_symbols_block(needed: list[str]) -> str:
     """Return (lib_symbols ...) block with only the needed symbol defs."""
     parts = ["  (lib_symbols\n"]
@@ -384,9 +405,42 @@ def lib_symbols_block(needed: list[str]) -> str:
     always = {"GND", "+3V3", "+5V"}
     for name in list(needed) + sorted(always - set(needed)):
         if name in SYMBOLS:
-            parts.append(SYMBOLS[name])
+            parts.append(_prefixed(name))
     parts.append("  )\n")
     return "".join(parts)
+
+
+def library_file() -> str:
+    """The complete emu.kicad_sym — every symbol, bare names.
+
+    Written next to the schematics so the sym-lib-table's
+    ${KIPRJMOD}/emu.kicad_sym resolves. Same source strings as the
+    embedded caches: a diff between library and cache is impossible by
+    construction, so KiCad's cache-vs-library comparison stays quiet.
+    """
+    parts = [
+        '(kicad_symbol_lib\n'
+        '  (version 20231120)\n'
+        '  (generator "generate_schematics")\n'
+        '  (generator_version "9.0")\n'
+    ]
+    for name in sorted(SYMBOLS):
+        parts.append(SYMBOLS[name])
+    parts.append(')\n')
+    return "".join(parts)
+
+
+def sym_lib_table() -> str:
+    """The project sym-lib-table declaring the emu library."""
+    return (
+        '(sym_lib_table\n'
+        '  (version 7)\n'
+        f'  (lib (name "{LIB_NICKNAME}")(type "KiCad")'
+        '(uri "${KIPRJMOD}/emu.kicad_sym")(options "")'
+        '(descr "ESP32 Emu Turbo generated symbols — source of truth is '
+        'scripts/generate_schematics/lib_symbols.py"))\n'
+        ')\n'
+    )
 
 
 def body_half_height(name: str) -> float:

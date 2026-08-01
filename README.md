@@ -198,8 +198,7 @@ esp32-emu-turbo/
 │   ├── setup-sdcard.sh     # Format SD card + copy ROMs
 │   ├── generate_schematics/ # Schematic generator (Python)
 │   ├── generate_pcb/       # PCB layout generator (Python)
-│   ├── render_pcb_svg.py   # PCB SVG renderer
-│   ├── render_pcb_animation.py  # PCB PNG/GIF renderer
+│   ├── render_pcba.sh      # Raytraced PCBA renders (only board imagery)
 │   └── verify_schematic_pcb.py  # Consistency checker
 ├── docker/                 # Docker containers (KiCad + OpenSCAD)
 ├── website/                # Docusaurus documentation site
@@ -227,7 +226,7 @@ Engineering notes live in `docs/`:
 
 - [**Known issues**](docs/known-issues.md) — what is still broken and what
   must not be "fixed". Re-derive the live state with `make open-issues`.
-- [Waiver audit recovery](docs/waiver-audit-recovery.md) — how the
+- [Waiver audit recovery](docs/archived/waiver-audit-recovery.md) — how the
   suppressions that could hide a dead board were retired.
 - [Repository map](docs/REPO_MAP.md) — generated index of every script.
 

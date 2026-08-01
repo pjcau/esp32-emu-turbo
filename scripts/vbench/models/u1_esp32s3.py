@@ -84,13 +84,18 @@ U1 = Model(
         # Table 5, page 13 — strapping timing.
         "t_setup_min": Param(0.0, "s", locator="p.13 table 5"),
         "t_hold_min": Param(3e-3, "s", locator="p.13 table 5"),
-        # The EN RC the datasheet requires — see docs/virtual-bench-plan.md
+        # The EN RC the datasheet requires — see docs/archived/virtual-bench-plan.md
         # phase -1(a). Page 28, note to figure 7 (外围设计原理图): an RC delay
         # circuit MUST be added at EN, R = 10k and C = 1uF recommended.
         "en_rc_r_recommended": Param(10e3, "ohm", locator="p.28 figure 7"),
         "en_rc_c_recommended": Param(1e-6, "F", locator="p.28 figure 7"),
         # Supply range, for rails.py's V_3V3_VALID threshold.
-        "v_supply_range": Param((3.0, 3.3, 3.6), "V", locator="p.13 table 5")
+        "v_supply_range": Param((3.0, 3.3, 3.6), "V", locator="p.13 table 5"),
+        # Chip reset release threshold — the EN pin's V_IH_nRST, as a
+        # ratio of VDD ("芯片复位释放电压", min 0.75 x VDD). This is the
+        # level EN must cross for the chip to leave reset, i.e. the
+        # threshold dynamics.py measures the EN RC ramp against.
+        "v_ih_nrst_ratio": Param(0.75, "1", locator="p.16 table 11"),
     },
 )
 

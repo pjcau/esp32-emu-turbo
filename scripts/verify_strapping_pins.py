@@ -277,7 +277,7 @@ def test_en_rc_delay():
         datasheet says the opposite in its own words — page 28, note to
         figure 7 (外围设计原理图): an RC delay circuit MUST be added at the EN
         pin, R = 10 kΩ and C = 1 µF recommended. There is no on-module pull-up
-        to rely on. See docs/virtual-bench-plan.md phase -1(a).
+        to rely on. See docs/archived/virtual-bench-plan.md phase -1(a).
       * It used C = 100 nF for "C3 on EN". C3 is not on EN. On the board its
         pads sit on +3V3 and GND — it is the third cap in the decoupling row
         (phase -1(d)).
@@ -323,11 +323,12 @@ def test_en_rc_delay():
     if pullup and reset_cap:
         # The RC exists: compute tau from the real parts. Values would have to
         # come from the BOM, which this gate does not read, so it reports the
-        # parts and leaves the timing to scripts/vbench/transients.py.
+        # parts and leaves the timing to scripts/vbench/dynamics.py.
         check("EN has the RC delay network the datasheet requires "
               "(p.28 figure 7)", True,
               f"pull-up {pullup}, cap {reset_cap}")
-        info("timing is computed by scripts/vbench/transients.py from the "
+        info("timing is computed by scripts/vbench/dynamics.py (EN ramp vs "
+             "rail validity, gated by test_vbench_dynamics) from the "
              "BOM's values, not estimated here")
         return
 

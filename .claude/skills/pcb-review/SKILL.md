@@ -150,12 +150,14 @@ python3 scripts/verify_schematic_pcb_sync.py
 
 What it catches: `references/script-notes.md` → "1m2. Run schematic↔PCB/datasheet_specs sync guard (R4 class)".
 
-### 1n. Generate hardware test firmware (Phase 3 prototype)
+### 1n. Bring-up test firmware freshness (Phase 3 prototype)
 ```bash
-python3 scripts/generate_hw_tests.py
+make bringup-check
 ```
 
-What it catches: `references/script-notes.md` → "1n. Generate hardware test firmware (Phase 3 prototype)".
+What it catches: the bring-up firmware (`software/bringup_test/`, see the
+`/hardware-test-gen` skill) drifting from `board_config.h` — stale
+validation firmware tests the wrong pins and its verdicts are worthless.
 
 ### 2. Manual review against checklist
 

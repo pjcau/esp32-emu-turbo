@@ -74,7 +74,7 @@ class SchematicSheet:
         re.compile(r'^  \(label "[^"]*" \(at ([\d.eE+-]+) ([\d.eE+-]+)'),
         re.compile(r'^  \(global_label "[^"]*" \(shape \w+\)'
                    r' \(at ([\d.eE+-]+) ([\d.eE+-]+)'),
-        re.compile(r'^  \(symbol \(lib_id "(?:GND|\+3V3|\+5V|PWR_FLAG)"\)'
+        re.compile(r'^  \(symbol \(lib_id "(?:emu:)?(?:GND|\+3V3|\+5V|PWR_FLAG)"\)'
                    r' \(at ([\d.eE+-]+) ([\d.eE+-]+)'),
     ]
     _WIRE_RE = re.compile(

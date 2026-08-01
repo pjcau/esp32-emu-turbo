@@ -3,7 +3,7 @@
 Everything in this file is **open**: it fails a gate, or it is an
 unverified claim about a board that has already been fabricated. Nothing
 here is a plan, a nice-to-have, or a closed finding. Closed work lives in
-`docs/waiver-audit-recovery.md` (Part 1) and `hardware-audit-bugs.md`.
+`docs/archived/waiver-audit-recovery.md` (Part 1) and `hardware-audit-bugs.md`.
 
 **This file is a snapshot, the gates are the truth.** Measured on
 `35d6454`, 2026-07-26, macOS + local `kicad-cli`. Before acting on any
@@ -113,7 +113,7 @@ LED2.2  sch='GND'       pcb='LED2_RA'
 ```
 
 Note the R20/R21 PAM8403 bias mismatch documented in
-`docs/waiver-audit-recovery.md` §O3 is **closed** upstream (`ee0ec02`) —
+`docs/archived/waiver-audit-recovery.md` §O3 is **closed** upstream (`ee0ec02`) —
 that document is stale on this point, this list is current.
 
 ### H3. Four VBUS segments below their net-class minimum — CLOSED
