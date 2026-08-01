@@ -42,13 +42,16 @@ Upload the entire `gerbers/` folder as a ZIP to JLCPCB.
 | `bom-summary.md`            | Human-readable BOM with cost estimate    |
 | `esp32-emu-turbo.kicad_pcb` | KiCad source (for reference)             |
 
-### PCB Renders (`renders/`)
+### PCBA Renders (`renders/`)
 
-| File                | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `renders/pcb-top.svg`      | Top side (F.Cu) — face buttons, LEDs, display area      |
-| `renders/pcb-bottom.svg`   | Bottom side (B.Cu) — ESP32, ICs, connectors, passives   |
-| `renders/pcb-combined.svg` | Both sides side-by-side (160x75mm, 4-layer overview)    |
+Raytraced 3D views of the assembled board (KiCad raytracer, synced from
+`website/static/img/renders/pcba/` by `scripts/render_pcba.sh`):
+
+| File                      | Description                                            |
+| ------------------------- | ------------------------------------------------------ |
+| `renders/pcba-top.png`       | Top side — face buttons, LEDs, display area          |
+| `renders/pcba-bottom.png`    | Bottom side — ESP32, ICs, connectors, passives       |
+| `renders/pcba-iso-front.png` | Isometric hero view (top, front-left)                |
 
 ## JLCPCB Order Instructions
 
