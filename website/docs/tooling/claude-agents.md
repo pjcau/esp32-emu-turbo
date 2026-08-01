@@ -98,8 +98,9 @@ graph TB
     end
     CAD --- CAD_SK
 
-    subgraph CROSS["Cross-Agent 1"]
+    subgraph CROSS["Cross-Agent 2"]
         s_ufb["/user-feedback"]
+        s_mem["/memory-maintenance"]
     end
     TL --- CROSS
 
@@ -124,14 +125,14 @@ graph TB
 - **Isolated contexts**: each agent has its own conversation context, preventing RAM bloat
 - **Parallel execution**: independent tasks run simultaneously (e.g., PCB verify + render)
 - **Right-sized models**: Haiku for repetitive CAD tasks (cheaper, faster), Opus for complex PCB/firmware reasoning
-- **Skill-based dispatch**: 39 skills map to specific workflows, reducing prompt engineering overhead
+- **Skill-based dispatch**: 40 skills map to specific workflows, reducing prompt engineering overhead
 
 ### Why Opus for PCB and Software?
 
 - **pcb-engineer**: routing with JLCPCB constraints (clearance, drill, annular ring) requires deep multi-step reasoning. DFM violations need root-cause analysis across multiple scripts. Errors cost real money (JLCPCB rework)
 - **software-dev**: ESP-IDF firmware involves low-level GPIO, DMA, I2S, SPI debugging. Cross-domain sync (firmware ↔ schematic ↔ PCB) requires broad contextual understanding
 
-## Skills System (39 Skills)
+## Skills System (40 Skills)
 
 ### PCB Engineer — 27 Skills
 
@@ -161,11 +162,12 @@ graph TB
 | `/enclosure-render` | Render enclosure views to PNG via Docker |
 | `/enclosure-export` | Export STL files for 3D printing |
 
-### Cross-Agent — 1 Skill
+### Cross-Agent — 2 Skills
 
 | Skill | Description |
 |-------|-------------|
 | `/user-feedback` | Record user preferences and distribute to agents/memory |
+| `/memory-maintenance` | Audit and improve the persistent memory — stale-claim sweep vs the live repo, archive resolved items to HISTORY.md, condense the index, verify with `make verify-memory` |
 
 ### Scout (Autonomous) — 1 Skill
 
