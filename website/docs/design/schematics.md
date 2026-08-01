@@ -124,7 +124,7 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
-| SW16 | Slide switch | MSK12C02 | Power on/off — **⚠ v1 as-built: not in series, see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
+| SW16 | Slide switch | MSK12C02 | Power on/off — **⚠ not in series in ANY revision to date (v4.4.0 included), see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
 | C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C2 | Capacitor | 22 µF tantalum 16V (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω) | LDO output stability | [PDF](/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf) |
 | C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
@@ -178,27 +178,31 @@ and tie LED-A to +3V3.
                           └──────┬──────┘
                                 GND
 
-  SW16 (slide switch): common pin tapped on BAT+ — throws unrouted on v1 (see warning)
+  SW16 (slide switch): common pin tapped on BAT+ as a stub — throw pins unrouted (see warning)
 ```
 
 **Key design points:**
 - **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail: for a correctly-inserted battery the gate (pulled low by R24) keeps it ON; a reversed battery is blocked by the body diode.
-- **SW16** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional on the v1 board** (see warning below). It does NOT control USB VBUS.
+- **SW16** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional in any revision to date** (see warning below). It does NOT control USB VBUS.
 - **VBUS** reaches IP5306 pin 1 (VIN) through the F1 PTC fuse (J1 → VBUS_IN → F1 → VBUS) — always available when USB is plugged in.
 - **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
 - **No backfeed diode needed:** IP5306 charger is internally regulated (CC/CV), boost is unidirectional.
 
-:::caution SW16 does not switch anything on the v1 board as built
-PCB routing connects only the switch **common pin (2)** to BAT+ as a stub; throw pins 1/3
-are unrouted (`hardware/datasheet_specs.py` declares them unconnected). The battery path
+:::caution SW16 does not switch anything — a standing design limitation, not a build defect
+Still true in the current design (v4.4.0): PCB routing connects only the switch
+**common pin (2)** to BAT+ as a stub; throw pins 1/3 are unrouted
+(`hardware/datasheet_specs.py` declares them unconnected). The battery path
 **J3 → Q1 → BAT+ → IP5306 pin 6** is continuous copper that never passes through the
-switch, so sliding it changes nothing. Consequences on v1:
+switch, so sliding it changes nothing. Consequences:
 
-- Power-state rows with *SW16 = OFF* describe **design intent**, not actual v1 behavior.
+- Power-state rows with *SW16 = OFF* describe **design intent**, not actual behavior
+  on any board built from this design.
 - To truly isolate the battery (e.g. for flashing), **unplug the J3 battery connector**.
 - System on/off relies on the IP5306 KEY logic (SW13/MENU via R16) and its automatic
   light-load standby.
-- **v2 respin fix:** route the battery through switch pins 1–2 in series (BAT_IN side).
+- **Planned respin fix** (tracked in the RESPIN section of
+  [`docs/known-issues.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/known-issues.md)):
+  route the battery through switch pins 1–2 in series (BAT_IN side).
 :::
 
 ### Power States & Debug
@@ -222,7 +226,7 @@ switch, so sliding it changes nothing. Consequences on v1:
 
 **Flash firmware (recommended: switch OFF):**
 1. Connect USB-C cable
-2. Set SW16 to OFF (⚠ v1 as-built: ineffective — unplug J3 for true battery isolation)
+2. Set SW16 to OFF (⚠ ineffective on every board to date — unplug J3 for true battery isolation)
 3. Hold **SW14**, press+release **SW15**, release **SW14**
 4. Run `idf.py flash` — ESP32 enters download mode
 5. Press **SW15** to reboot into normal mode
@@ -243,7 +247,7 @@ switch, so sliding it changes nothing. Consequences on v1:
 |------|-----------|-----------|
 | VBUS → BAT+ | IP5306 internal charger | CC/CV regulated, max 1A |
 | BAT+ → VBUS | Boost unidirectional | IP5306 boost only drives BAT→VOUT |
-| USB + switch OFF | Physical isolation | SW16 disconnects battery from IP5306 pin 6 |
+| USB + switch OFF | Physical isolation *(design intent — see SW16 warning; today: unplug J3)* | SW16 would disconnect battery from IP5306 pin 6 |
 | USB + switch ON | Charge-and-play | IP5306 manages both paths internally |
 | Reversed battery | Q1 P-MOSFET RPP | Body diode blocks; gate pull-down R24 keeps Q1 ON only with correct polarity |
 
@@ -432,8 +436,13 @@ The optional PSP joystick (previously GPIO20/GPIO44) has been removed. The D-pad
 
 ## v2 — additional sheet: Audio Coprocessor (ESP32-S3-MINI-1)
 
-:::info v2 addition
-This sheet is only present on the **v2 PCB**. The v1 PCB uses direct I2S from the main ESP32-S3 to the PAM8403 (Sheet 4). In v2, the main ESP32-S3 communicates with the coprocessor via SPI, and the coprocessor drives I2S to the PAM8403.
+:::info Future revision — naming note
+"v2" on this page means the **planned audio-coprocessor respin**, which no fabricated
+or tagged revision implements yet: every release tag so far (v4.0 → v4.4.0) is a
+revision of the single-MCU board this document calls "v1". The current board uses
+direct I2S from the main ESP32-S3 to the PAM8403 (Sheet 4). In the coprocessor
+revision, the main ESP32-S3 communicates with the coprocessor via SPI, and the
+coprocessor drives I2S to the PAM8403.
 :::
 
 ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-S3 and I2S output to the PAM8403 amplifier.
