@@ -29,11 +29,18 @@
 #define LCD_CS              GPIO_NUM_12
 #define LCD_RST             GPIO_NUM_13
 #define LCD_DC              GPIO_NUM_14
-#define LCD_WR              GPIO_NUM_46 /* strapping pin: ROM log enable.
-                                         * Benign — a high level at reset only
-                                         * suppresses ROM boot messages; the
-                                         * documented straps GPIO0/3/45 decide
-                                         * boot mode, this one does not. */
+#define LCD_WR              GPIO_NUM_46 /* strapping pin (the 4th, with
+                                         * GPIO0/3/45): ROM log control, AND a
+                                         * boot-mode input when GPIO0 is low —
+                                         * Joint Download needs GPIO46=0
+                                         * (WROOM-1 datasheet table 6). The
+                                         * chip's internal pull-down holds it
+                                         * LOW at reset; verify_strapping_pins
+                                         * enforces that on the copper. The
+                                         * bring-up firmware derived the same
+                                         * four straps independently from the
+                                         * datasheet — a cross-check, not a
+                                         * copy. Testable after boot only. */
 /* LCD_RD: tied HIGH on PCB (no GPIO needed, no read-back from ILI9488) */
 /* LCD_BL: tied to 3V3 on PCB via resistor (always-on backlight) */
 
