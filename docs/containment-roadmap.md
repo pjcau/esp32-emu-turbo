@@ -16,7 +16,7 @@ gates; none was a "construction" problem.
 | 5 | Hardware↔firmware↔mechanics contract — enclosure tolerances, FPC bend radius, button travel, battery fit | GPIO sync is gated; the mechanical side is not |
 | 6 | Sourcing — wrong package variant, EOL/substitutions, stock | PAM8403 narrow SOP-16 vs wide SOIC-16W |
 
-## Containment layers — TODO, in order of yield
+## Containment layers — ALL SIX LANDED (2026-08-01), in order of yield
 
 ### 1. Pre-order gate (closes class 3) — DONE (d6de9e3)
 
@@ -75,11 +75,19 @@ phase A pre-payment on the JLC preview (referenced from the `/release`
 skill), phase B on arrival, photos only. No gate — the checklist is human
 work by nature; the machine-checkable halves live in layers 1 and 2.
 
-### 5. Bring-up test firmware at first power-on — TODO
+### 5. Bring-up test firmware at first power-on — DONE (c3755c1)
 
 The `hardware-test-gen` skill exists: a Unity firmware that verifies every
 GPIO/bus/rail at boot and reports over serial turns the "no bench
 instruments, photos only" constraint into telemetry. It is the multimeter.
+
+Landed as `software/bringup_test/` — 57 checks generated from
+`board_config.h`, built clean on ESP-IDF v5.4, machine-parseable serial
+lines with the implicated net named on every FAIL, RC rise-time
+measurements on every button, reversed-D1 detection, brownout telemetry
+that survives the reboot. Freshness-gated by `verify_bringup_fresh`;
+protocol in `website/docs/manufacturing/bring-up-protocol.md`. The old
+never-compiling `generate_hw_tests` firmware was retired with it.
 
 ### 6. ERC warning burn-down — DONE (3c3d749)
 
