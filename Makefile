@@ -76,6 +76,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_enclosure_sync \
+	test_esd_protection \
 	test_erc_severity \
 	test_gate_coverage \
 	test_gerber_etest \

@@ -52,3 +52,12 @@ exactly these `- key: value` fields: `status`, `declared`, `claim`,
 - where: hardware/datasheet_specs.py (USB-C shield THT geometry); DFM constraints in project memory say "do not 'correct' it back"
 - risk-if-false: an unsoldered or cracked shield joint loses the connector under cable strain — a field failure, not a bench one.
 - evidence: prototype #1 was fabricated with the 1.60 slot and the USB-C soldered correctly (2026-07 build); the rear slot follows the datasheet.
+
+## CLAIM-004 — VBUS needs no discrete surge TVS on the v1 prototype
+
+- status: VERIFIED-ON-DATASHEET
+- declared: 2026-08-01
+- claim: VBUS carries no surge-rated TVS (SMF5.0A class) by decision. U4's (USBLC6-2SC6) VBUS pin provides the rail's IEC 61000-4-2 ESD clamp, and the only VBUS source is a current-limited USB-C supply behind fuse F1, so the remaining 8/20 us surge class is accepted for the v1 prototype. v2/production should add a discrete surge TVS at J1.
+- where: scripts/verify_esd_protection.py (the surge-TVS check reads this claim); J1 / U4 / F1 on the board
+- risk-if-false: a surge event on VBUS (hot-plug overshoot into an inductive cable, non-compliant charger) exceeds U4's ESD-clamp energy rating and kills U4 and/or U2 — a field failure the bench never sees.
+- evidence: USBLC6-2SC6 datasheet (ST, DS5814) — the VBUS pin clamp is specified for IEC 61000-4-2 ESD transients, not 8/20 us surge; F1 (landed in 1c3ded4) limits fault current on VBUS_IN; the supply is a consumer USB-C PSU, not an automotive/industrial rail.

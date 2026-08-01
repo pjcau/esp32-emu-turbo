@@ -202,6 +202,16 @@ def f_release_drift(sb: Path):
     return "relabeled 5 GND e-test points as +3V3 — release netlist drift"
 
 
+def f_esd_removed(sb: Path):
+    # PREDICTED (taxonomy audit cat. 15): the USB ESD array quietly drops
+    # off the BOM. The BOM/CPL family will object to the row mismatch as
+    # bystanders; only verify_esd_protection can say the PROTECTION is
+    # gone — which is what `expect` demands of it.
+    _sub(sb / BOM, r"^USBLC6-2SC6 USB ESD TVS,U4,.*\n", "", count=1,
+         flags=re.MULTILINE)
+    return "removed U4 (USBLC6-2SC6) from the BOM — USB left unprotected"
+
+
 def f_test_point_starved(sb: Path):
     # PREDICTED (taxonomy audit cat. 16): a routing change swallows the
     # last probeable copper of a bring-up signal. LCD_WR is the minimal
@@ -264,6 +274,8 @@ FAULTS = [
      [SCAD], f_enclosure_drift, ("verify_enclosure_sync",)),
     ("test-point-starved", "bring-up: required signal with no probeable copper",
      [BOARD], f_test_point_starved, ("verify_test_points",)),
+    ("esd-removed", "protection: USB ESD array dropped from the BOM",
+     [BOM], f_esd_removed, ("verify_esd_protection",)),
 ]
 
 
