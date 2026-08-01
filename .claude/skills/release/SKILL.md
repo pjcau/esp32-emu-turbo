@@ -114,6 +114,19 @@ cp -r hardware/kicad/gerbers release_jlcpcb/gerbers
 cd hardware/kicad/gerbers && zip -j ../../release_jlcpcb/gerbers.zip *.gtl *.g1 *.g2 *.gbl *.gto *.gbo *.gts *.gbs *.gtp *.gbp *.gm1 *.drl *.gbrjob 2>/dev/null
 ```
 
+Then re-fingerprint the order — the manifest MUST be regenerated after
+every copy into `release_jlcpcb/`, or `verify_order_manifest` goes red
+and the upload protocol has stale hashes to check against:
+
+```bash
+make order-manifest   # writes release_jlcpcb/order-manifest.json, prints SHA256s
+```
+
+Record the three printed SHA256s in the release notes; at upload time
+they are what the JLC order is checked against (containment layer 1,
+`docs/containment-roadmap.md`). Before paying, run `/first-article-check`
+phase A on the JLC order preview.
+
 ### 5. Generate PCBA renders (`/pcba-render`)
 
 Inject 3D models and render all 13 views (top/bottom/iso/detail):

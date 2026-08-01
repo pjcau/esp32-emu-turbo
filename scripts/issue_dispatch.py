@@ -131,6 +131,19 @@ ROUTING_LAW = [
      "blind-spot", "the memory preamble is loaded before every question, so a "
                    "wrong claim in it outranks the derived truth for the whole "
                    "session"),
+    # A load-bearing claim ("the shell is isolated", "the module has the
+    # pull-up") is what every geometric gate checks the board AGAINST.
+    # While one is stale or evidence-free, a green suite proves the board
+    # matches the declaration — not that the declaration is true. That is
+    # the R25 failure mode, and it is a blind spot, not a broken board.
+    ("claims",     "design assumptions",      "pcb-engineer", "/datasheet-verify",
+     "blind-spot", "gates check the board against declarations; while a "
+                   "load-bearing claim is unverified past its deadline, every "
+                   "green that rests on it is unproven"),
+    ("manifest",   "release integrity",       "pcb-engineer", "/release",
+     "dead-board", "what was verified and what the fab receives can differ; "
+                   "a stale order fingerprint is how a fixed bug gets "
+                   "fabricated anyway"),
     ("netlist",    "schematic/PCB agreement", "pcb-engineer", "/pcb-schematic",
      "dead-board", "a pin wired to the wrong net is a wrong board"),
     ("schematic",  "schematic",               "pcb-engineer", "/pcb-schematic",
@@ -238,7 +251,18 @@ ROUTING_LAW = [
 # why the default rule is wrong for THIS gate). Empty is the honest state:
 # add an entry only when a specific gate genuinely does not belong where
 # its name puts it, and say why here rather than in a commit message.
-ROUTING_EXCEPTIONS = {}
+ROUTING_EXCEPTIONS = {
+    # The law's "manifest" keyword would give this mutation suite the
+    # dead-board severity of the gate it tests. A red mutation suite does
+    # not mean the release drifted — it means the manifest gate itself can
+    # no longer be trusted to notice drift, which is a tooling blind spot,
+    # same as test_issue_dispatch (which the "dispatch" keyword happens to
+    # classify correctly by accident of naming).
+    "test_order_manifest": (
+        "software-dev", "/check", "blind-spot",
+        "while the manifest gate's own tests are red, its PASS verdicts on "
+        "release integrity are untrustworthy"),
+}
 
 
 def route(gate):

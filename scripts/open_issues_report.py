@@ -52,6 +52,12 @@ GATES = [
     ("verify_strapping_pins",
      "a strapping pin is forced to the wrong boot state, or EN has no "
      "pull-up / RC delay on copper"),
+    ("verify_claims_ledger",
+     "a load-bearing design claim is stale (UNVERIFIED past its deadline) "
+     "or carries a verdict without evidence"),
+    ("verify_order_manifest",
+     "the JLCPCB order fingerprint lags the files in release_jlcpcb/ — "
+     "what gets uploaded is not what was verified"),
 ]
 
 TIMEOUT_S = 30

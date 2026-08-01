@@ -72,6 +72,7 @@ VERIFY_ALL_SCRIPTS = \
 	short_circuit_analysis \
 	simulate_circuit \
 	spice_power_check \
+	test_claims_ledger \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_erc_severity \
@@ -79,6 +80,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_gerber_etest \
 	test_strapping_en_rc \
 	test_issue_dispatch \
+	test_order_manifest \
 	test_pcb_connectivity \
 	test_power_net_integrity \
 	test_vbench \
@@ -90,6 +92,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_battery_protection \
 	verify_bom_cpl_pcb \
 	verify_bom_values \
+	verify_claims_ledger \
 	verify_component_connectivity \
 	verify_copper_balance \
 	verify_copper_clearance \
@@ -120,6 +123,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_net_connectivity \
 	verify_netlist_diff \
 	verify_netlist_vs_kicad \
+	verify_order_manifest \
 	verify_polarity \
 	verify_power_net_integrity \
 	verify_power_paths \
@@ -151,6 +155,15 @@ VERIFY_ALL_SCRIPTS = \
 verify-all: ## Run every pass/fail verification script (fails if any check fails)
 	@echo "Running verification suite ($(words $(VERIFY_ALL_SCRIPTS)) checks)..."
 	@$(T) verify-all scripts/run-verifiers.sh $(VERIFY_ALL_SCRIPTS)
+
+order-manifest: ## Fingerprint the JLCPCB order files (SHA256 of gerbers.zip/bom.csv/cpl.csv -> release_jlcpcb/order-manifest.json)
+	@$(T) order-manifest python3 scripts/order_manifest.py
+
+verify-order-manifest: ## Fail when the order manifest lags the files in release_jlcpcb/
+	@$(T) verify-order-manifest python3 scripts/verify_order_manifest.py
+
+verify-claims: ## Gate hardware/CLAIMS.md — stale UNVERIFIED or evidence-free claims go red
+	@$(T) verify-claims python3 scripts/verify_claims_ledger.py
 
 context-budget: ## Measure what this repo costs a context window (M1 preamble, M2 landmines, M3 navigation, M4 recency)
 	@$(T) context-budget python3 scripts/context_budget.py

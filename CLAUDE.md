@@ -59,7 +59,7 @@ it drifted twice.
 ### Skills, agents & architecture
 
 5 agents (team-lead orchestrates pcb-engineer / software-dev / cad-engineer;
-plan-reviewer and scout stand alone) and 43 skills. **The full skill list with
+plan-reviewer and scout stand alone) and the project skill suite. **The full skill list with
 descriptions is injected into the system prompt automatically — it is not
 repeated here.** Diagram, per-agent skill tables and the cross-agent
 dependency map: [`docs/architecture.md`](docs/architecture.md).
