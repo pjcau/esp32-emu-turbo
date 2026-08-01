@@ -42,18 +42,31 @@ before that date.
 Left deliberately visible by the gate-coverage expansion (the gate prints
 them as "not judged", it does not fail on them):
 
-### 3. BAT+ → L1.1 single-via feed
+### 3. ~~BAT+ → L1.1 single-via feed~~ — DONE in v4.4.0 (c7a01bc)
 
-The boost inductor feed sits behind a single 0.46/0.20 via (0.527 A);
-fixing it needs an IP5306_KEY re-route (y=46.605 → ~47.2) to make room.
-Same shape, smaller stakes: +3V3→U1.2 and +5V→U3.1 each sit behind one
-0.527 A via.
+Closed 2026-08-01. The branch was actually behind THREE serial single
+barrels (the gate prints only the minimum cut — lesson recorded); the
+planned IP5306_KEY re-route would have moved the bottleneck, not
+removed it. Fixed by a second BAT+ stitching band (4x 0.90/0.45 at
+y=47.55) + barrel-free B.Cu feed to L1.1 + dogleg deletion (5 dead
+POWER_HIGH_ALLOWLIST waivers dropped). L1.1 cut: 0.527 A → 5.114 A.
+Still open, smaller stakes: +3V3→U1.2 and +5V→U3.1 each sit behind one
+0.527 A via, and SW16.2 (no load current by design) tops the printed
+"not judged" list.
 
 ### 4. Per-load current budgets for `verify_power_via_ampacity`
 
 Declaring per-load budgets would upgrade the gate from min-cut ampacity
-to a feasibility max-flow. Until then the three single-via feeds above
-are printed but not judged.
+to a feasibility max-flow. Until then the single-via feeds above are
+printed but not judged.
+
+### 4b. `verify_decoupling_paths` bounding-box metric weakness
+
+Its "path length" sums every same-net segment whose midpoint falls in
+the cap↔IC bounding box + 3 mm — not an actual path. C18→U2 sits at
+3.8x/4.0 because the v4.4.0 stitching band lands in the box; the next
+BAT+ copper near U2 trips the gate for the wrong reason. Fix the gate's
+metric (real path walk), not the board.
 
 ## Small cleanups — known fix, known reason they are open
 
