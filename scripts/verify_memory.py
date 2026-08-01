@@ -6,7 +6,7 @@ no gate on it. `docs/REPO_MAP.md` has `repo-map-check`; the net-explorer JSON
 has `verify_net_explorer_fresh`; MEMORY.md had nothing — and drifted into
 claiming 2 red gates when 5 of 6 were red.
 
-Six checks:
+Nine checks:
 
   T1  frontmatter is present and well-formed on every memory file
   T2  `name:` equals the filename stem — one canonical ID per memory
@@ -14,6 +14,12 @@ Six checks:
   T4  no orphans — every memory is reachable from the MEMORY.md index
   T5  MEMORY.md asserts no gate state that a tool already derives
   T6  counts MEMORY.md asserts about the repo match the repo
+  T7  no index bullet exceeds the hook ceiling — bloated hooks ARE the
+      truncation mechanism (the ecosystem's canonical failure: a standing
+      rule truncated out of a 281-line index, then violated)
+  T8  every index link targets an existing file, and no memory is listed
+      twice — condensation may change hook text, never membership
+  T9  index link text is a human title, not the filename slug
 
 T5 is the one that matters most. A hand-written "gate X is red" line in the
 preamble outranks the truth in practice: it is loaded before any question,
@@ -310,6 +316,107 @@ def test_counts_match_repo(mdir):
     )
 
 
+# One index line = one hook. Above this, hooks stop being pointers and start
+# being bodies — and an index full of bodies is what gets truncated. The
+# number comes from GlassOnTin/claude-memory-skills' lint (fail >300, compact
+# targets ≤180), adopted as-is rather than re-derived. Detail belongs in the
+# memory file the line links to; the KEEP rule in /memory-maintenance governs
+# how to shrink a hook without losing a fact.
+HOOK_CEILING = 300
+
+
+def test_hook_ceiling(mdir):
+    """T7 — no index bullet exceeds HOOK_CEILING characters."""
+    text = (mdir / INDEX_FILE).read_text(encoding="utf-8")
+    over = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        if line.lstrip().startswith("- ") and len(line) > HOOK_CEILING:
+            over.append(
+                f"{INDEX_FILE}:{lineno}: {len(line)} chars — {line.strip()[:70]}…"
+            )
+    check(
+        f"[T7] No index bullet exceeds {HOOK_CEILING} chars",
+        not over,
+        "\n".join(over)
+        + (
+            "\n→ push the detail down into the memory file the line links to"
+            "\n  (KEEP rule: only after every specific — SHA, path, flag, count —"
+            "\n  is recoverable from the body), then shrink the hook. Do not"
+            "\n  split one bullet into two to duck the ceiling."
+            if over
+            else ""
+        ),
+    )
+
+
+def _index_md_links(text):
+    """(lineno, title, target) for every [title](target.md) link in the index."""
+    out = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        for title, target in re.findall(r"\[([^\]]+)\]\(([A-Za-z0-9_.-]+\.md)\)", line):
+            out.append((lineno, title, target))
+    return out
+
+
+def test_index_links(mdir, files):
+    """T8 — index links point at real files; no memory is listed twice.
+
+    T4 asks "is every memory reachable"; T8 asks the inverse — "does every
+    index line point somewhere real, exactly once". A line linking a deleted
+    memory passes T4 (the file is gone, so nothing is orphaned) and quietly
+    keeps a dead entry in the preamble; a memory indexed twice doubles its
+    context cost and lets the two hooks drift apart.
+    """
+    text = (mdir / INDEX_FILE).read_text(encoding="utf-8")
+    links = _index_md_links(text)
+    bad = []
+    seen = {}
+    for lineno, _title, target in links:
+        if not (mdir / target).is_file():
+            bad.append(f"{INDEX_FILE}:{lineno}: link to missing file '{target}'")
+        if target in (ARCHIVE_FILE, INDEX_FILE):
+            continue  # the archive is legitimately linked from several sections
+        if target in seen:
+            bad.append(
+                f"{INDEX_FILE}:{lineno}: '{target}' already indexed on line "
+                f"{seen[target]} — one memory, one index line"
+            )
+        else:
+            seen[target] = lineno
+    check(
+        "[T8] Index links target existing files, each memory listed once",
+        not bad,
+        "\n".join(bad),
+    )
+
+
+def test_no_slug_titles(mdir):
+    """T9 — link text must be a human title, not the filename slug.
+
+    `[project_foo](project_foo.md)` carries zero recall value: the reader
+    already sees the target. A 3–8 word title derived from the body is what
+    makes the index scannable. The archive link `[HISTORY.md](HISTORY.md)` is
+    exempt — naming a file by its name is correct when the file IS the point.
+    """
+    text = (mdir / INDEX_FILE).read_text(encoding="utf-8")
+    bad = []
+    for lineno, title, target in _index_md_links(text):
+        if target in (ARCHIVE_FILE, INDEX_FILE):
+            continue
+        stem = target[: -len(".md")]
+        norm = title.strip().strip("`*").lower()
+        if norm in (stem.lower(), target.lower(), stem.lower().replace("_", " ")):
+            bad.append(
+                f"{INDEX_FILE}:{lineno}: [{title}]({target}) — slug title;"
+                f" give it a 3–8 word human title from the body"
+            )
+    check(
+        "[T9] Index link text is a human title, not the filename slug",
+        not bad,
+        "\n".join(bad),
+    )
+
+
 def main():
     mdir = memory_dir()
     print("=" * 60)
@@ -338,6 +445,9 @@ def main():
     test_no_orphans(mdir, files)
     test_no_derivable_gate_state(mdir)
     test_counts_match_repo(mdir)
+    test_hook_ceiling(mdir)
+    test_index_links(mdir, files)
+    test_no_slug_titles(mdir)
 
     total = len(passes) + len(failures)
     print()

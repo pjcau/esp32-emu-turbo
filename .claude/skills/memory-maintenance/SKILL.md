@@ -85,8 +85,24 @@ For each NOW bullet and each `project_*` memory describing in-flight work:
 
 ### 4. Condensation — the index must stay cheap
 
-- MEMORY.md: **one line per memory**, hook only — any bullet longer than
-  ~3 lines gets its detail pushed down into the memory file it links.
+The body is the source of truth; the hook is a derived pointer.
+`verify_memory.py` T7 enforces a 300-char ceiling per index bullet — this
+step is HOW to get under it without losing a fact.
+
+- **The KEEP rule (shrink the pointer, never the fact).** A hook may be
+  shortened *only if* every specific it carries — commit SHA, path,
+  deadline, "still open" flag, count, dimension — is already recoverable
+  from the linked memory's body or a named repo record. If it carries
+  anything the body does not: first push that fact down into the body (or
+  a new memory file), THEN shrink. If pushing down is not possible, leave
+  the hook verbatim and flag it in the report — an over-length true hook
+  beats a short lossy one. Never rewrite a body just to make its hook
+  shrinkable.
+- **Membership assertion.** Before/after any index rewrite, the set of
+  linked `(file.md)` targets must be identical, each listed exactly once —
+  condensation changes hook *text*, never membership. `verify_memory.py`
+  T8 enforces this; run it immediately after the rewrite, not at the end.
+- MEMORY.md: **one line per memory**, human title (T9), hook only.
 - NOW section: current state only, aim for ≤8 bullets. Anything that has
   not changed in weeks probably belongs in a linked memory, not in NOW.
 - Merge near-duplicate memories (same lesson from two incidents → one
@@ -116,6 +132,27 @@ deleted), stale claims found and their fix, NOW bullet count before/after,
 MEMORY.md word count before/after, and anything escalated (passed
 deadlines, open-item mismatches). "Swept" without the per-file list is not
 a pass.
+
+## Backlog — from the 2026-08-01 ecosystem scout, not implemented on purpose
+
+- **CANDIDATES.md advisory backlog** (GlassOnTin): a file beside the index,
+  deliberately NOT loaded into context, listing linking candidates (2–5
+  memories that read as one sub-thread) and abstraction candidates (≥3
+  memories sharing a root cause). Adopt when merges start feeling risky.
+- **Batching for the deep pass**: reading every body costs ~10–16k tokens
+  per hook; beyond ~30 over-length hooks, split across parallel agents
+  writing JSON, merged mechanically. Irrelevant at the current store size.
+- **Recall priority rule**: memories governing the *mechanics of the exact
+  action* outrank topically-adjacent ones. Relevant only if a /recall-style
+  retrieval skill is ever added.
+
+Rejected (do not adopt): usage-count priority and auto-expiry (would demote
+exactly the landmines — J4 reversal, polarity audit — that are rarely read
+and catastrophic to lose); LLM passes that *synthesize new entries*
+(fabrication path into every future session); "current session is fresher
+so it wins" as contradiction resolution (the C2 incident proves recency is
+not correctness); DB/embedding memory backends (give up git-inspectable
+markdown for nothing at this scale).
 
 ## Key Files
 

@@ -271,6 +271,85 @@ def test_missing_memory_dir_is_a_failure_not_a_skip():
         print(f"  {'PASS' if ok else 'FAIL'}  missing memory dir fails loudly (no soft-skip)")
 
 
+def test_oversized_hook():
+    """T7 fires on an index bullet past the ceiling; a long non-bullet doesn't."""
+    filler = "x" * 320
+    with tempfile.TemporaryDirectory() as tmp:
+        mdir, repo = build(
+            tmp,
+            index=INDEX_TEMPLATE.format(n=INDEXED)
+            + f"- [A thing again, oversized](project_alpha.md) — {filler}\n",
+        )
+        rc, out = run(mdir, repo)
+        expect("T7 fires on an index bullet over the ceiling", rc, out, True, "T7")
+    with tempfile.TemporaryDirectory() as tmp:
+        # Same length as prose (a blockquote), not a bullet: hooks are the
+        # index's unit of truncation, prose paragraphs are not indexed hooks.
+        mdir, repo = build(
+            tmp, index=INDEX_TEMPLATE.format(n=INDEXED) + f"> {filler}\n"
+        )
+        rc, out = run(mdir, repo)
+        expect(
+            "T7 does NOT fire on a long non-bullet line", rc, out, should_fail=False
+        )
+
+
+def test_stale_index_link():
+    """T8 fires on an index line linking a memory file that does not exist.
+
+    The discriminating pair with T4: deleting the file AND keeping the index
+    line orphans nothing (T4 is happy), yet the preamble now carries a dead
+    entry forever.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        mdir, repo = build(
+            tmp,
+            index=INDEX_TEMPLATE.format(n=INDEXED)
+            + "- [A deleted thing](project_deleted.md) — its file is gone.\n",
+        )
+        rc, out = run(mdir, repo)
+        expect("T8 fires on an index link to a missing file", rc, out, True, "T8")
+
+
+def test_duplicate_index_entry():
+    """T8 fires when one memory is indexed twice — two hooks that will drift."""
+    with tempfile.TemporaryDirectory() as tmp:
+        mdir, repo = build(
+            tmp,
+            index=INDEX_TEMPLATE.format(n=INDEXED)
+            + "- [The alpha thing, again](project_alpha.md) — second entry.\n",
+        )
+        rc, out = run(mdir, repo)
+        expect("T8 fires on a memory indexed twice", rc, out, True, "T8")
+
+
+def test_slug_title():
+    """T9 fires on [project_alpha](project_alpha.md); HISTORY.md link is exempt."""
+    with tempfile.TemporaryDirectory() as tmp:
+        mdir, repo = build(
+            tmp,
+            index=INDEX_TEMPLATE.format(n=INDEXED).replace(
+                "[A thing](project_alpha.md)", "[project_alpha](project_alpha.md)"
+            ),
+        )
+        rc, out = run(mdir, repo)
+        expect("T9 fires on a slug used as link title", rc, out, True, "T9")
+    with tempfile.TemporaryDirectory() as tmp:
+        mdir, repo = build(
+            tmp,
+            index=INDEX_TEMPLATE.format(n=INDEXED)
+            + "- Archive: [HISTORY.md](HISTORY.md).\n",
+        )
+        (mdir / "HISTORY.md").write_text("# History\n", encoding="utf-8")
+        rc, out = run(mdir, repo)
+        expect(
+            "T9 does NOT fire on the [HISTORY.md](HISTORY.md) archive link",
+            rc,
+            out,
+            should_fail=False,
+        )
+
+
 def main():
     print("=" * 60)
     print("MUTATION TESTS — verify_memory.py")
@@ -288,6 +367,10 @@ def main():
         test_stale_count,
         test_missing_repo_map_fails_not_skips,
         test_missing_memory_dir_is_a_failure_not_a_skip,
+        test_oversized_hook,
+        test_stale_index_link,
+        test_duplicate_index_entry,
+        test_slug_title,
     ]:
         fn()
 
