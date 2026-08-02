@@ -45,7 +45,9 @@
       "Skill(claude-api)",
       "Bash(sed -i '' 's|# View 11: Bottom detail — power area \\(IP5306, AMS1117, PAM8403\\)|# View 11: Bottom detail — power area \\(IP5306, U3 SY8089 buck, PAM8403\\)|; s;IP5306/AMS1117/PAM8403 zoom;IP5306/SY8089/PAM8403 zoom;' .claude/skills/pcba-render/SKILL.md)",
       "Bash(rtk grep *)",
-      "mcp__pcbparts__jlc_search"
+      "mcp__pcbparts__jlc_search",
+      "Skill(pcb-to-firmware)",
+      "Bash(kill -0 83036)"
     ],
     "deny": [
       "Bash(rm -rf /*)",
