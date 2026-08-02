@@ -208,11 +208,18 @@ physically cannot report, and the reason is printed on the skip line:
 
 Two more skips are conditional rather than permanent, and say so in their
 detail field: `sd.cmd0` skips when nothing answers on `SD_MISO`, because
-this revision has **no card-detect line** and therefore no way to tell an
-empty socket from a broken MISO net. Re-run with a known-good card
-inserted; if it still reads `0xFF`, the fault is on the board. Every later
-SD check then skips naming `sd.cmd0` as the reason, so a missing card never
-looks like six independent failures.
+**no card-detect line is read on this revision** and therefore nothing in
+software can tell an empty socket from a broken MISO net. Re-run with a
+known-good card inserted; if it still reads `0xFF`, the fault is on the
+board. Every later SD check then skips naming `sd.cmd0` as the reason, so a
+missing card never looks like six independent failures.
+
+The socket itself is not the reason. The TF-01A **does** have a card-detect
+contact — its drawing labels the pad row (1)…(8) and then **Cd**, so pad 9
+is the socket's detect contact, not a card contact and not DAT2. What this
+revision lacks is a *route* for it: the BTN_R track crosses pad 9, so pad 9
+carries `BTN_R` (GPIO3) rather than a detect input of its own, and no
+firmware reads it. See [CLAIM-006](#u6-pad-9-cd-and-btn_r) below.
 
 ---
 
@@ -249,6 +256,35 @@ agreeing is a cross-check rather than a copy.
 in prose but does not mention GPIO46. The pin is handled correctly
 everywhere it matters; only the header comment is silent about it.
 :::
+
+### U6 pad 9 (Cd) and BTN\_R {#u6-pad-9-cd-and-btn_r}
+
+One extra reading belongs to the GPIO3 line above, and it costs nothing:
+**read `BTN_R` once with the socket empty and once with a card inserted.**
+
+U6 pad 9 is the TF-01A's own card-detect contact (`Cd` on the socket
+drawing) and it carries the `BTN_R` net, because the BTN\_R track crosses
+that pad and the generator declares the overlap same-net rather than a fab
+short. The card can never drive it — a microSD card has eight contacts and
+none of them reaches pad 9. The **socket** is the open question: the
+TF-01A datasheet is a mechanical drawing with no schematic and no
+normally-open/normally-closed statement, so whether the Cd blade shorts to
+the shell (GND, pads 10/12) when a card is inserted cannot be read out of
+it. This is [CLAIM-006](https://github.com/pjcau/esp32-emu-turbo/blob/main/hardware/CLAIMS.md).
+
+What the two readings mean:
+
+| `BTN_R`, card inserted, button not pressed | Verdict |
+|---|---|
+| stays HIGH | The Cd contact is floating or not shell-referenced. CLAIM-006 verified on bench, nothing to fix |
+| goes LOW | The Cd blade grounds through the shell. **The R shoulder button is dead whenever a card is in the socket** — a respin item (lift pad 9 off BTN\_R), and until then R is unusable with a card |
+
+**Boot is unaffected either way.** GPIO3's strap selects the JTAG signal
+source, and per table 8 (p.15) of the module datasheet the pin is *ignored*
+unless `EFUSE_STRAP_JTAG_SEL` is burned — which the factory default leaves
+unselected. A card pulling pad 9 low cannot change how this board boots. It
+would stop being harmless only if someone burned that eFuse, which is
+another reason not to.
 
 ---
 

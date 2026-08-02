@@ -35,7 +35,7 @@ Covers:
      net stays valid.
   I. audio.py, sdcard.py — the 8 ohm output power must be DERIVED from the
      datasheet's 4 ohm rating rather than quoted, a missing BOM value must be
-     fatal, and the SD socket's DAT2 pad must be detected on a strapping pin's
+     fatal, and the SD socket's Cd pad must be detected on a strapping pin's
      net.
   J. corpus coverage — every corpus entry must be caught, blinding one of the
      bench's checks must LOWER that count (a coverage number that survives a
@@ -1095,8 +1095,8 @@ def test_phase3_peripherals():
     check("DAT1 is tied to DAT0/MISO, as the design intends",
           "8" in shared and shared["8"][0] == "SD_MISO",
           f"{shared.get('8')}")
-    # The finding: DAT2 shares a net with a strapping pin.
-    check("U6.9 (DAT2) is detected on a strapping pin's net",
+    # The finding: the socket's Cd pad shares a net with a strapping pin.
+    check("U6.9 (Cd) is detected on a strapping pin's net",
           any(pad == "9" and gpio == "GPIO3"
               for pad, _role, _net, gpio, _strap in exposure),
           f"{exposure}")

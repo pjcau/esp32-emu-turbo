@@ -2304,7 +2304,8 @@ def test_trace_through_ic_pad():
         ("U2", "3"), ("U2", "4"),
         # AMS1117 (U3): pin 2 = Vout (+3V3), trace is intended connection
         ("U3", "2"),
-        # SD card module (U6): pins 8, 9 are unused (card detect / write protect)
+        # SD socket (U6): pad 8 = DAT1, unused in SPI mode; pad 9 = Cd, the
+        # socket's own card-detect contact, which this design does not read
         ("U6", "8"), ("U6", "9"),
         # MSK12C02 power switch (SW16): shell/mounting pads, no internal connection
         ("SW16", "4a"), ("SW16", "4b"), ("SW16", "4c"), ("SW16", "4d"),

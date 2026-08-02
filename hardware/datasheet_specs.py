@@ -294,9 +294,21 @@ COMPONENT_SPECS = {
     # ======================================================================
     # U6 — TF-01A MicroSD Card Slot (C91145)
     # Datasheet: U6_TF-01A_MicroSD_C91145.pdf, page 1
-    # Standard MicroSD pinout:
-    #   1=DAT2(NC), 2=CS, 3=MOSI, 4=VDD, 5=CLK, 6=GND, 7=MISO, 8=DAT1(NC)
-    #   9=CD(card detect, NC), 10-13=shell GND, NPTH positioning holes
+    #
+    # The socket has NINE pads but a microSD card has only EIGHT contacts.
+    # The datasheet's "PCB Layout (Pattern Side)" view labels the row
+    # (1)(2)(3)(4)(5)(6)(7)(8) and then **Cd** — pad 9 is the socket's own
+    # card-detect contact, not a card contact. Pads 1-8 carry the microSD
+    # contacts in microSD numbering:
+    #   1=DAT2(NC in SPI), 2=CD/DAT3(=CS), 3=CMD(=MOSI), 4=VDD, 5=CLK,
+    #   6=VSS, 7=DAT0(=MISO), 8=DAT1(NC in SPI)
+    #   9=Cd (socket card-detect contact), 10-13=shell GND, NPTH pegs
+    #
+    # DO NOT relabel pad 9 "DAT2" again. That mistake came from SanDisk's
+    # pin tables, which are the FULL-SIZE SD tables (9 contacts, rows headed
+    # "SD Card", "the host uses a dedicated 9-pin connector" — p.17 sec 3.1)
+    # laid over this socket's 9 pads. On full-size SD, contact 9 IS DAT2; on
+    # microSD it does not exist. See CLAIM-006 in hardware/CLAIMS.md.
     # ======================================================================
     "U6": {
         "component": "TF-01A MicroSD Card Slot",
@@ -311,13 +323,21 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("SD_CLK"),    "function": "CLK — SPI clock", "type": "smd"},
             "6":  {"net": _exact("GND"),       "function": "VSS — ground", "type": "smd"},
             "7":  {"net": _exact("SD_MISO"),   "function": "DAT0/MISO — data out", "type": "smd"},
-            # Pins 8 (DAT1) and 9 (DAT2) are unused in SPI mode — the SD card
-            # tri-states them when CMD1 selects SPI mode. The PCB routes SD_MISO
-            # (x=145.6) and BTN_R (x=146.85) vertical tracks through the DAT1/DAT2
-            # pad positions; _PAD_NETS in routing.py assigns same-net to silence
-            # the trace-through-pad fab short. See commit 9709bea → 775e9fd → eff85e6.
+            # Pad 8 is the card's DAT1, unused in SPI mode. Pad 9 is the
+            # socket's Cd contact and no card contact ever touches it. The PCB
+            # routes the SD_MISO (x=145.6) and BTN_R (x=146.85) vertical tracks
+            # through those two pad positions; _PAD_NETS in routing.py assigns
+            # same-net to silence the trace-through-pad fab short. See commit
+            # 9709bea → 775e9fd → eff85e6.
+            #
+            # Why pad 8 on SD_MISO is safe: "the extended DAT lines (DAT1-DAT3)
+            # are input on power up" — SanDisk industrial microSD p.17 sec 3.1
+            # table 3-1 footnote b — which covers the reset window.
+            # Pad 9 is a different question and it is NOT closed: the card
+            # cannot drive it at all, but the socket's own Cd switch might tie
+            # it to the shell (GND). See CLAIM-006 in hardware/CLAIMS.md.
             "8":  {"net": _any_of("", "SD_MISO"), "function": "DAT1 — unused in SPI, shares copper with SD_MISO trace", "type": "smd"},
-            "9":  {"net": _any_of("", "BTN_R"),   "function": "DAT2 — unused in SPI, shares copper with BTN_R shoulder-button trace", "type": "smd"},
+            "9":  {"net": _any_of("", "BTN_R"),   "function": "Cd — socket card-detect contact, shares copper with BTN_R shoulder-button trace", "type": "smd"},
             "10": {"net": _exact("GND"),       "function": "Shell/GND", "type": "smd"},
             "11": {"net": _unconnected(),      "function": "Shell (not connected)", "type": "smd"},
             "12": {"net": _exact("GND"),       "function": "Shell/GND", "type": "smd"},

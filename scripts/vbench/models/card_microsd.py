@@ -34,11 +34,27 @@ So `p.140 sec 7.3.1.4` is Table 7-5, footer 128. Sections are quoted as
 the documents number them, and the section is the load-bearing half of
 every locator: page numbers move between revisions, `7.3.1.4` does not.
 
+## These are the FULL-SIZE SD contact numbers, not microSD's
+
+SanDisk's tables number nine contacts and head every row "SD Card", under
+the sentence *"The host uses a dedicated 9-pin connector to connect to SD
+cards"* (p.17 sec 3.1) — the document reuses the full-size SD tables for a
+microSD part. A microSD card has **eight** contacts, and its numbering is
+shifted: microSD 1 = DAT2, 2 = CD/DAT3, 3 = CMD, 4 = VDD, 5 = CLK, 6 = VSS,
+7 = DAT0, 8 = DAT1. `PINS` below transcribes what the document prints, so it
+is SD-numbered.
+
+**Do not lay these numbers on the TF-01A socket's pads.** Doing that is what
+produced four releases of "U6.9 = DAT2": the socket also has nine pads, but
+its ninth is the socket's own **Cd** (card-detect) contact, which no card
+contact touches. See `sdcard.py` and CLAIM-006 in hardware/CLAIMS.md.
+
 ## The finding this model was written to nail down
 
 `sdcard.py` and `routing.py:6055-6085` both rest on one sentence: an SD
-card *"tri-states DAT1/DAT2 once CMD0 has arrived"*, which is why U6.9
-(DAT2) sharing the BTN_R net with GPIO3 — a strapping pin — is safe.
+card *"tri-states DAT1/DAT2 once CMD0 has arrived"*, which is why U6.8
+(DAT1) sharing the SD_MISO net — and, as it was mislabelled then, U6.9 —
+is safe next to GPIO3, a strapping pin.
 
 **Neither document says that.** What they say is better:
 
@@ -53,9 +69,12 @@ The second is the sentence the strapping analysis actually needed, and it
 is about the **right** window. `sdcard.py` is correct that "the firmware
 keeps the card in SPI mode" is an argument about the wrong window — the
 GPIO3 strap is latched at reset, long before CMD0. The citable answer is
-that the card does not drive DAT2 in that window either, because DAT1-DAT3
+that the card does not drive DAT1 in that window either, because DAT1-DAT3
 are inputs from power-up until a bus-width command that SPI mode never
 sends. The conclusion survives; the reason it was given for does not.
+
+That argument covers U6.8. It never covered U6.9, which is not a card
+contact — see the section above.
 
 Usage:
     from vbench.models.card_microsd import CARD, R1_FLAGS, UNESTABLISHED
@@ -89,6 +108,8 @@ PINS = (
     # document assigns no function"; the power-up direction of the same
     # physical contacts is the SD-bus footnote cited above, and it is an
     # INPUT, which is what the GPIO3 strapping question turns on.
+    # These are SD contact numbers. On a microSD card contact 9 does not
+    # exist, and TF-01A pad 9 is the socket's Cd contact, not this one.
     Pin("8", "RSV", "nc", "p.18 sec 3.1"),
     Pin("9", "RSV", "nc", "p.18 sec 3.1"),
 )

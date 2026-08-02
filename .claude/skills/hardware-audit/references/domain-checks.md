@@ -105,10 +105,15 @@ Target: TF-01A micro SD slot, SPI 1-bit mode @ 25 MHz.
 
 Check:
 - SPI pins (CMD/DAT0/CLK/CS) on SPI-capable GPIO (U6 pads 2,3,5,7)
-- DAT1 (pad 8) and DAT2 (pad 9) are unused in SPI mode but MUST NOT
-  be shorted to other nets. `verify_trace_through_pad.py` will catch
-  any trace physically crossing them.
-- Card detect (if wired) uses dedicated GPIO + pull-up
+- DAT1 (pad 8) is unused in SPI mode but MUST NOT be shorted to other
+  nets. `verify_trace_through_pad.py` will catch any trace physically
+  crossing it.
+- Pad 9 is **Cd**, the socket's own card-detect contact — not DAT2, which
+  is pad 1. A microSD card has eight contacts; the socket has nine pads.
+  Do not carry SanDisk's nine-row pin tables onto this footprint: they are
+  the full-size SD tables (see `scripts/vbench/models/card_microsd.py`).
+- Card detect (if wired) uses dedicated GPIO + pull-up. On this board it
+  is not wired as one — pad 9 shares BTN_R by trace overlap (CLAIM-006).
 - +3V3 supply has ≥ 1 µF decoupling within 5 mm of U6 VCC
 - Level shifting: ESP32-S3 is 3.3 V native → no shifter needed
 - NPTH positioning hole size matches datasheet (1.00 mm)

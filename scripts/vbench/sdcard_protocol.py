@@ -928,8 +928,10 @@ def main(argv=None):
         print(f"    {locator:<16} {quote}")
     print("    Neither says 'tri-stated after CMD0'. The power-up input "
           "state is the")
-    print("    citable reason U6.9 on GPIO3 is inert in the strapping "
-          "window.")
+    print("    citable reason U6.8 (DAT1) is inert in the strapping "
+          "window. U6.9 is")
+    print("    the socket's Cd contact, not a card contact — see "
+          "CLAIM-006.")
     print()
 
     print("  Not modelled, and not silently:")

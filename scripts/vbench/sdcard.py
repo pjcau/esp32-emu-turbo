@@ -1,35 +1,57 @@
 """Virtual Bench T3.3 — the SD card's bus, and the pin it shares with a button.
 
 Checks the four SPI signals against the TF-01A socket's pad roles, then asks
-the question the socket's own wiring raises: **U6.9 (DAT2) sits on the BTN_R
-net, and BTN_R is GPIO3 — a strapping pin.**
+the question the socket's own wiring raises: **U6.9 sits on the BTN_R net,
+and BTN_R is GPIO3 — a strapping pin.**
 
-That assignment is deliberate and analysed. The routing generator
+That assignment is deliberate. The routing generator
 (`generate_pcb/routing/_assemble.py`) records it: the BTN_R track physically
 crosses the U6.8/U6.9 pads, so the pads are given the same net to keep the
-overlap same-net rather than a fab short. The original analysis said "SAFE
-as long as firmware stays in SPI mode", because an SD card tri-states
-DAT1/DAT2 once CMD0 has put it in SPI mode.
+overlap same-net rather than a fab short.
 
-**The strapping sample happens before any of that.** GPIO3 is latched at
-reset, before the boot ROM runs — so "the firmware keeps the card in SPI
-mode" is an argument about the wrong window. In the reset window the card
-has received no CMD0.
+## What U6.9 is — and what it took three tries to get right
 
-**And the tri-state claim itself was uncited** — corrected 2026-07-31 by
-the T3.3 protocol model: no held document says CMD0 tri-states anything.
-What the card datasheet actually says is "the extended DAT lines
-(DAT1-DAT3) are input on power up" (SanDisk industrial p.17 sec 3.1,
-table 3-1 footnote b) and that in SPI mode contacts 8/9 are RSV (table
-3-2, p.18). The power-up input state — which covers the reset window — is
-the citable reason U6.9 does not drive BTN_R. Right conclusion, wrong
-mechanism, in two places; both now corrected.
+Not DAT2. The socket has **nine pads**; a microSD card has **eight
+contacts**. The TF-01A drawing's "PCB Layout (Pattern Side)" view labels the
+row (1)(2)(3)(4)(5)(6)(7)(8) and then **Cd**: pad 9 is the socket's own
+card-detect contact, and no card contact ever reaches it.
 
-Whether that matters is a second question, and the answer today is no, for a
-reason worth writing down: table 8 on page 15 of the module datasheet shows
-GPIO3 is *ignored* unless an eFuse selects it (EFUSE_STRAP_JTAG_SEL), and the
-factory default leaves it unselected. So the exposure is real but currently
-inert — and it stops being inert the day someone burns that eFuse.
+The DAT2 label came from SanDisk's own pin tables, which are the FULL-SIZE
+SD tables — the document says so in the sentence above them ("the host uses
+a dedicated 9-pin connector to connect to SD cards", p.17 sec 3.1) and every
+row is headed "SD Card". On full-size SD, contact 9 IS DAT2. Laying that
+nine-row table over this socket's nine pads shifted every name past 8 by one
+part that does not exist. The board's own wiring never made that mistake:
+pad 2 = CS, 3 = MOSI, 4 = VDD, 5 = CLK, 6 = VSS, 7 = MISO is microSD
+numbering, and it is correct.
+
+## So the two shared pads need two different arguments
+
+**U6.8 is DAT1, a real card contact.** The card does not drive it in the
+reset window because "the extended DAT lines (DAT1-DAT3) are input on power
+up" (SanDisk industrial p.17 sec 3.1, table 3-1 footnote b), and in SPI mode
+contacts 8/9 are RSV (table 3-2, p.18). That covers the right window: GPIO3
+is latched at reset, before the boot ROM runs, so the older "SAFE as long as
+firmware stays in SPI mode" was an argument about the wrong window — and the
+"tri-states DAT1/DAT2 once CMD0 arrives" mechanism it rested on was uncited
+in the first place (corrected 2026-07-31 by the T3.3 protocol model).
+
+**U6.9 is Cd, and the card cannot reach it at all** — which makes the card
+side of the question moot, and opens a different one on the socket side. The
+TF-01A datasheet is a mechanical drawing: parts list, dimensions, pattern.
+It carries no schematic, no switch symbol and no normally-open /
+normally-closed statement, so **whether the Cd blade shorts to the shell
+(GND — U6.10/U6.12) when a card is inserted is not determinable from the
+document this repo holds**. If it does, BTN_R sits at GND whenever a card is
+in the socket and the R shoulder button reads permanently pressed. Tracked
+as CLAIM-006 in hardware/CLAIMS.md; one bring-up read of BTN_R with the
+socket empty and then loaded settles it, no instruments required.
+
+Boot is a separate question from the button, and the answer there is no for
+a reason worth writing down: table 8 on page 15 of the module datasheet
+shows GPIO3 is *ignored* unless an eFuse selects it (EFUSE_STRAP_JTAG_SEL),
+and the factory default leaves it unselected. So a card that pulls the pad
+low cannot change how the board boots — until someone burns that eFuse.
 
 ## Where the protocol lives now
 
@@ -64,7 +86,8 @@ from vbench.models.u1_esp32s3 import STRAPPING_DEFAULTS       # noqa: E402
 
 # TF-01A pad -> the net this design puts on it. Pad roles come from
 # datasheet_specs.py::U6, which quotes the socket datasheet; the expected nets
-# are this board's SPI assignment.
+# are this board's SPI assignment. Numbering is microSD's: pads 1-8 are the
+# card's eight contacts, pad 9 is the socket's Cd contact.
 EXPECTED = {
     "2": "SD_CS",      # CD/DAT3 -> chip select in SPI mode
     "3": "SD_MOSI",    # CMD
@@ -171,23 +194,38 @@ def main(argv=None):
                   f"{strap['internal'] or 'NONE'}")
         print()
         print("    The routing generator keeps these pads same-net on "
-              "purpose. Why the")
-        print("    card does not drive them in the reset window: 'the "
-              "extended DAT lines")
-        print("    (DAT1-DAT3) are input on power up' — SanDisk industrial "
-              "p.17 sec 3.1,")
-        print("    table 3-1 footnote b. (The old 'tri-states after CMD0' "
-              "justification")
-        print("    was uncited and about the wrong window; corrected "
-              "2026-07-31.)")
+              "purpose, and the")
+        print("    two of them need different arguments:")
         print()
-        print("    Currently inert, for a reason worth writing down: table 8 "
-              "on page 15")
-        print("    shows GPIO3 is IGNORED unless EFUSE_STRAP_JTAG_SEL is "
-              "burned, and the")
-        print("    factory default leaves it unselected. It stops being inert "
-              "the day")
-        print("    somebody burns that eFuse.")
+        print("      U6.8 is DAT1, a card contact. The card does not drive it "
+              "in the reset")
+        print("      window: 'the extended DAT lines (DAT1-DAT3) are input on "
+              "power up' —")
+        print("      SanDisk industrial p.17 sec 3.1, table 3-1 footnote b. "
+              "(The old")
+        print("      'tri-states after CMD0' justification was uncited and "
+              "about the wrong")
+        print("      window; corrected 2026-07-31.)")
+        print()
+        print("      U6.9 is Cd, the SOCKET's card-detect contact — no card "
+              "contact reaches")
+        print("      it, so the card cannot drive it at all. What the socket "
+              "does is OPEN:")
+        print("      the TF-01A drawing carries no schematic and no NO/NC "
+              "statement, so")
+        print("      whether the Cd blade shorts to the shell (GND) on "
+              "insertion is not")
+        print("      determinable from it. If it does, BTN_R reads pressed "
+              "with a card in.")
+        print("      Tracked as CLAIM-006; one bring-up read settles it.")
+        print()
+        print("    Boot is inert either way, for a reason worth writing down: "
+              "table 8 on")
+        print("    page 15 shows GPIO3 is IGNORED unless EFUSE_STRAP_JTAG_SEL "
+              "is burned,")
+        print("    and the factory default leaves it unselected. It stops "
+              "being inert the")
+        print("    day somebody burns that eFuse.")
     else:
         print("  No shared pad lands on a strapping pin.")
 

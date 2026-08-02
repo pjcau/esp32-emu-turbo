@@ -37,23 +37,47 @@ isolated from the contacts" (BTN_SELECT on shell tabs, GPIO0 strap) as
 **2026-09-14**. Verify against the switch datasheet (or falsify and fix)
 before that date.
 
-### 3. SD card-detect pad semantics — three sources, three stories
+### 3. ~~SD card-detect pad semantics — three sources, three stories~~ — DONE
 
-Same pad, three contradictory descriptions (found by the 2026-08-02 docs
-audit, deliberately NOT resolved by editing prose — this is a hardware
-question for the pcb-engineer):
+Closed 2026-08-02. **U6 pad 9 is the socket's own `Cd` (card-detect)
+contact.** The TF-01A drawing settles it directly:
+`hardware/datasheets/U6_TF-01A_MicroSD_C91145.pdf` p.1, the "PCB Layout
+(Pattern Side)" view, labels the pad row (1)(2)(3)(4)(5)(6)(7)(8) and then
+**Cd**; the parts list is shell ×1 / spring ×1 / contact ×9 / housing ×1.
+It is not DAT2 (that is pad **1**, left unconnected here) and not NC.
 
-- `website/docs/manufacturing/bring-up-protocol.md`: "this revision has
-  **no card-detect line**".
-- `scripts/verify_sd_interface.py`: prints `PASS Card detect (CD) connected
-  to BTN_R` (U6 pad 9 shares a net with GPIO3).
-- `Makefile`: calls the same pad "the DAT2 pad that shares a net with a
-  strapping pin".
+Root cause of the three-way split, worth keeping: SanDisk's pin tables are
+the **full-size SD** tables — nine rows, every row headed "SD Card", under
+"the host uses a dedicated 9-pin connector" (p.17 sec 3.1) — and they were
+laid over this socket's nine *pads*. On full-size SD, contact 9 IS DAT2. A
+microSD card has eight contacts, so everything past pad 8 shifted onto a
+part that does not exist. The board's copper never made that mistake: pads
+2/3/4/5/6/7 = CS/MOSI/VDD/CLK/VSS/MISO is correct microSD numbering.
 
-**Fix:** determine from the TF-01A module datasheet + the `.kicad_pcb` what
-U6 pad 9 physically is (CD switch, DAT2, or NC), then align all three
-sources and the docs to that one answer. Note GPIO3 is a strapping pin —
-whether the pad can pull it at boot matters for the verdict.
+All sources now say one thing: `verify_sd_interface.py` (was `PASS Card
+detect (CD) connected to BTN_R`, now an INFO that names it as the socket's
+contact and says no firmware reads it), `Makefile` `bench-sd`,
+`datasheet_specs.py::U6`, `routing/_assemble.py`, `footprints.py`,
+`vbench/sdcard.py`, `vbench/models/card_microsd.py`, `sdcard_protocol.py`,
+`verify_dfm_v2.py`, `bringup_test/generate.py`, the hardware-audit skill
+checklist, and `bring-up-protocol.md` (which was right that no card-detect
+line is *read*, and now says why).
+
+**Strapping, explicitly:** BTN_R is GPIO3, whose strap selects the JTAG
+signal source and is *ignored* unless `EFUSE_STRAP_JTAG_SEL` is burned
+(module datasheet table 8, p.15; factory default leaves it unselected).
+A card pulling pad 9 low cannot change how this board boots.
+
+**What replaced it, smaller and precise → `hardware/CLAIMS.md` CLAIM-006.**
+The old safety argument ("DAT1–DAT3 are input on power up") covers U6.8 but
+never covered pad 9, because no card contact reaches it. The socket side is
+open instead: the TF-01A datasheet is a mechanical drawing with no
+schematic and no NO/NC statement, so whether the Cd blade shorts to the
+shell (GND, pads 10/12) on insertion **cannot be read out of the document
+this repo holds**. If it does, BTN_R sits at GND with a card in the socket
+and the R shoulder button is dead. Verification is free and needs no
+instruments — read BTN_R empty vs loaded; procedure and verdict table are
+in `website/docs/manufacturing/bring-up-protocol.md`.
 
 ## Medium priority — follow-ups from the ampacity gate (2026-08-01)
 

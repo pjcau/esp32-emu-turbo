@@ -93,18 +93,35 @@ def generate_all_traces():
     # REMOVED them thinking they were NC pads — but verify_trace_through_pad
     # then flagged 6 real fab shorts. Restored with explicit safety analysis:
     #
-    # U6.8 (SD DAT1) / U6.9 (SD DAT2): unused in SPI mode. SD_MISO and
-    #   BTN_R tracks physically overlap these pads at the corridor between
-    #   U6 rows. Assigning them to SD_MISO/BTN_R nets makes the overlap
-    #   same-net. Why the card does not drive them: NOT because of any
-    #   CMD1/CMD0 tri-state claim (no held document says that), but because
-    #   "the extended DAT lines (DAT1-DAT3) are input on power up" —
+    # U6.8 (SD DAT1) / U6.9 (socket Cd): the SD_MISO and BTN_R tracks
+    #   physically overlap these pads at the corridor between U6 rows.
+    #   Assigning them to SD_MISO/BTN_R makes the overlap same-net. The two
+    #   pads need DIFFERENT justifications — they are not the same kind of
+    #   thing, and calling both "an unused SPI data line" is what hid this
+    #   for four releases:
+    #
+    #   Pad 8 IS a card contact (DAT1), unused in SPI mode. The card does
+    #   not drive it in the reset window because "the extended DAT lines
+    #   (DAT1-DAT3) are input on power up" —
     #   SDCARD_SanDisk-Industrial-microSD_2016.pdf p.17 sec 3.1 table 3-1
-    #   footnote b — and in SPI mode contacts 8/9 are RSV (table 3-2,
-    #   p.18). The GPIO3 strap is latched at reset, inside the power-up
-    #   window that footnote covers. Mechanism corrected 2026-07-31 by the
-    #   T3.3 protocol model (scripts/vbench/sdcard_protocol.py); the
-    #   conclusion was right, the cited cause was not.
+    #   footnote b — and in SPI mode contacts 8/9 are RSV (table 3-2, p.18).
+    #   The GPIO3 strap is latched at reset, inside the window that footnote
+    #   covers. (Mechanism corrected 2026-07-31 by the T3.3 protocol model,
+    #   scripts/vbench/sdcard_protocol.py — the old "tri-states after CMD0"
+    #   claim was uncited and about the wrong window.)
+    #
+    #   Pad 9 is NOT a card contact. The socket datasheet's PCB-pattern view
+    #   labels it **Cd** — the socket's own card-detect contact, which no
+    #   card contact ever touches (a microSD card has eight contacts; this
+    #   socket has nine pads). So the SanDisk citation above does not apply
+    #   to it at all: on the card side pad 9 is safer than pad 8, because
+    #   the card cannot reach it. What is NOT settled is the socket side —
+    #   the datasheet is a mechanical drawing with no schematic and no
+    #   normally-open/normally-closed statement, so whether the Cd blade
+    #   shorts to the shell (GND, pads 10/12) on insertion is unknown.
+    #   If it does, BTN_R reads pressed whenever a card is in the socket.
+    #   Tracked as CLAIM-006 in hardware/CLAIMS.md; one bring-up read of
+    #   BTN_R with and without a card settles it.
     #
     # SW16.4b/4d (shell anchor pads): mechanical retention tabs for the
     #   slide switch body, not electrical slide positions. Per
