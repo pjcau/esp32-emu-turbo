@@ -6,6 +6,6 @@
   "link": {
     "type": "generated-index",
     "title": "Rework & Incidents",
-    "description": "Post-mortems of every production failure — root cause, why the gates missed it, the rework, and the gate that now guards it. Newest first: the v4.3.1 batch rotation error, C2 reversed, the +3V3 split plane, the v1 power short."
+    "description": "Post-mortems of every production failure — root cause, why the gates missed it, the rework, and the gate that now guards it. Newest first: the v4.3.1 batch rotation error, C2 reversed, the +3V3 split plane, the v1 power short, and the v2.9 visual rework guide."
   }
 }

@@ -1,7 +1,7 @@
 ---
 id: incident-3v3-split-plane
 title: "Incident: +3V3 Split Plane — Regulator Feeds Nothing (PCB v1)"
-sidebar_position: 4
+sidebar_position: 3
 ---
 
 # Incident: +3V3 Split Plane — the regulator feeds nothing

@@ -450,7 +450,7 @@ The ESP32-S3-MINI-1 runs two firmware modes, selected by the main ESP32-S3 via a
 
 #### GPIO / SPI Wiring
 
-In v2, the main ESP32-S3's I2S pins (GPIO 15, 16, 17) are freed since audio output moves to the coprocessor. These pins are repurposed for the SPI link to the MINI-1:
+In v2, GPIO 15, 16 and 17 are all available on the main ESP32-S3 — 15/16 were never connected (PDM needs no BCLK/LRCK) and 17 is freed when audio output moves to the coprocessor. All three are repurposed for the SPI link to the MINI-1:
 
 ```
 ESP32-S3 Main (SPI Master)         ESP32-S3-MINI-1 (SPI Slave)
@@ -467,9 +467,9 @@ GPIO 17 (I2S_DOUT, PDM)   ───────→ C22 → PAM8403 INR/INL
 ```
 
 **Notes:**
-- The main ESP32-S3's I2S pins (GPIO 15–17) become SPI pins in v2 — clean reuse, no wasted GPIOs.
+- GPIO 15/16 are already unconnected in v1 (the PDM audio path needs only DOUT) and GPIO 17 is freed when audio moves off-chip, so all three become SPI pins in v2 — clean reuse, no wasted GPIOs.
 - GPIO 20 (USB_D+ in v1) serves as SPI chip select in v2. Native USB is no longer available in v2 (debug via SPI or UART instead).
-- The MINI-1 uses its own GPIO 15–17 for I2S output to the PAM8403 — the same pin numbers as v1, making the audio output path identical.
+- The MINI-1 drives the PAM8403 from its own GPIO 17 (PDM DOUT), the same arrangement as v1 — the audio output path is identical.
 
 #### Performance: v1 vs v2
 

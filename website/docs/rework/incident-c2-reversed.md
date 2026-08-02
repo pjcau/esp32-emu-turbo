@@ -1,7 +1,7 @@
 ---
 id: incident-c2-reversed
 title: "Incident: C2 Tantalum Mounted Reversed (Proto #1)"
-sidebar_position: 3
+sidebar_position: 2
 ---
 
 # Incident: C2 Tantalum Mounted Reversed — Proto #1

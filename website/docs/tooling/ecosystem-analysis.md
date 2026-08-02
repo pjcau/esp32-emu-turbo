@@ -16,7 +16,7 @@ ESP32 Emu Turbo has the **most advanced Claude Code + KiCad integration** found 
 
 | Metric | Our Project | Best Alternative |
 |--------|------------|-----------------|
-| Claude Code skills total | **43** (27 PCB + 4 firmware + 3 CAD + 9 others) | 10 (atopile-agent-skill) |
+| Claude Code skills total | **46** (27 PCB + 6 firmware/docs + 3 CAD + 10 audit/meta/scout) | 10 (atopile-agent-skill) |
 | DFM verification tests | **124** (115 at the April analysis) | 0 (no comparable suite) |
 | MCP server | None — studied [mixelpixx/KiCAD-MCP-Server](https://github.com/mixelpixx/KiCAD-MCP-Server) (64 tools in April; **171 tools as of v2.6.0, July 2026**) and mapped them to our skills | 28 (Seeed-Studio) |
 | Automated checks per commit | **1150+** (DFM+DFA+electrical+adversarial+design intent) | ~10 (KiBot DRC) |
@@ -77,12 +77,12 @@ We do **not** currently run an MCP server. Our pipeline is based on Python scrip
 | Aspect | Seeed-Studio | Our Project |
 |--------|-------------|-------------|
 | Approach | MCP server over pcbnew Python API (live KiCad) | Claude Code skills + S-expression parsing (standalone) |
-| Tool count | 28 MCP tools | 43 Claude Code skills (no MCP server) |
+| Tool count | 28 MCP tools | 46 Claude Code skills (no MCP server) |
 | Requires running KiCad | Yes | No |
 | Schematic access | Yes (eeschema) | Yes (custom parser) |
 | PCB edit capability | Yes (live edit) | Yes (generator-based, deterministic) |
 | DFM verification | Basic DRC | 124 custom tests + JLCPCB rules |
-| Claude integration | CLAUDE.md only | 43 skills + 5 agents + hooks |
+| Claude integration | CLAUDE.md only | 46 skills + 6 agents + hooks |
 
 **Takeaway**: Their pcbnew API approach gives real-time editing but requires a running KiCad instance. Our generator-based pipeline is standalone, CI-friendly, and fully deterministic. Wrapping our skills as an MCP server (tracked in [long-term plan](#long-term-v2-planning)) would complement — not replace — the generator pipeline.
 
@@ -103,7 +103,7 @@ skills/
   lsp/                # Language server integration
 ```
 
-**Takeaway**: Their `.claude-plugin/` format enables marketplace distribution. We should consider packaging our 43 PCB skills as a distributable plugin for other KiCad projects.
+**Takeaway**: Their `.claude-plugin/` format enables marketplace distribution. We should consider packaging our 46 skills as a distributable plugin for other KiCad projects.
 
 ### KiBot — The Automation Standard
 
@@ -114,7 +114,7 @@ KiBot (728 stars, v1.9.1 with KiCad 10 support) is the most mature KiCad automat
 | Gerber export | YAML config, 1 command | Docker + kicad-cli hybrid |
 | DRC | Basic KiCad DRC | 124-test custom suite |
 | BOM generation | Multiple formats | JLCPCB-specific with LCSC |
-| 3D rendering | Blender/raytracer | kicad-cli raytracer (11 views) |
+| 3D rendering | Blender/raytracer | kicad-cli raytracer (13 views) |
 | CI/CD | First-class GitHub Actions | Custom hooks + Makefile |
 | JLCPCB output | Supported | Native (custom export) |
 | Setup complexity | YAML file | Python scripts + Docker |
@@ -132,7 +132,7 @@ All three short-term items were integrated within hours of this analysis being p
 | Item | Status | Commit |
 |------|--------|--------|
 | **InteractiveHtmlBom** on website for visual BOM inspection | ✅ Integrated | `b1660ba` — `feat(website): add InteractiveHtmlBom for visual assembly inspection` (+4717 lines); `7bb75b5` adds links from components/PCB docs |
-| **agausmann/jlcpcb-kicad-drc** cross-reference against our 115 tests | ✅ Analyzed | `dbfd653` — `docs: add JLCPCB DRC gap analysis (6 threshold gaps found)` |
+| **agausmann/jlcpcb-kicad-drc** cross-reference against our DFM suite (115 tests at the time) | ✅ Analyzed | `dbfd653` — `docs: add JLCPCB DRC gap analysis (6 threshold gaps found)` |
 | **JLC2KiCad_lib** LCSC→footprint lookup in `/jlcpcb-parts` | ✅ Integrated (via EasyEDA API) | `0c69f32` — `feat(jlcpcb-parts): add LCSC footprint lookup via EasyEDA API` (+149 lines) |
 
 ### Done — Upstream refresh integrated 2026-07-31
@@ -166,4 +166,4 @@ A follow-up sweep then removed every **dead net** the drawing carried: the five 
 
 ## Conclusion
 
-The ESP32 Emu Turbo project has built the most comprehensive AI-assisted PCB design pipeline in the open-source ecosystem. With **43 Claude Code skills**, **124 DFM tests**, and **1150+ automated checks per commit**, it significantly exceeds any other project found on GitHub. We do not currently ship an MCP server — our integration is skill-based — and the mixelpixx reference has since grown to 171 tools (v2.6.0), so the `memory/kicad-mcp-tools.md` mapping needs a refresh before any MCP work. The two gaps named in April — **CI/CD automation** and **plugin distribution** — are both closed as of July 2026; the open items are the **non-IPC reference rename** (unblocks KiBot ERC) and the long-term MCP consolidation.
+The ESP32 Emu Turbo project has built the most comprehensive AI-assisted PCB design pipeline in the open-source ecosystem. With **46 Claude Code skills**, **124 DFM tests**, and **1150+ automated checks per commit**, it significantly exceeds any other project found on GitHub. We do not currently ship an MCP server — our integration is skill-based — and the mixelpixx reference has since grown to 171 tools (v2.6.0), so the `memory/kicad-mcp-tools.md` mapping needs a refresh before any MCP work. The two gaps named in April — **CI/CD automation** and **plugin distribution** — are both closed as of July 2026; the open items are the **non-IPC reference rename** (unblocks KiBot ERC) and the long-term MCP consolidation.

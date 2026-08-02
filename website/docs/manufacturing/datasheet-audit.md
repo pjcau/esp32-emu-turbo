@@ -6,7 +6,15 @@ sidebar_position: 4
 
 # Datasheet vs PCB Audit Report
 
-Full audit of all 20 BOM components against their LCSC datasheets. Datasheets stored in `hardware/datasheets/`.
+Full audit of the 20 BOM components that existed at the time of the audit, against
+their LCSC datasheets. Datasheets are stored in `hardware/datasheets/`.
+
+:::note Snapshot, not a live report
+This page records one audit pass. The BOM has since grown to **32 line items /
+85 placements** (buck respin: L2, C29–C31, R25–R27, plus F1/Q1/D1/U4). The live,
+always-current pin-to-net check is `verify_datasheet_nets.py` (267 checks over 37
+components) — see [Pre-Production Verification](verification.md).
+:::
 
 ---
 
@@ -164,14 +172,14 @@ U3 is now an SY8089AAAC buck in SOT-23-5 ([C78988](https://www.lcsc.com/product-
 | **Risk** | None — conservative oversizing improves thermal contact. |
 | **Action** | None. |
 
-### JST PH 2-pin (J3) — THT (C173752)
+### JST PH 2-pin (J3) — now SMD (C295747)
 
 | Detail | Value |
 |--------|-------|
-| **Change** | THT version (C173752, S2B-PH-K-S) — connector body on B.Cu |
-| **PCB** | THT pads ø1.6mm, drill 0.85mm, pitch 2.0mm |
-| **Risk** | None — drill 0.85mm meets JLCPCB minimum (≥0.80mm). |
-| **Action** | None. |
+| **At audit time** | THT version (C173752, S2B-PH-K-S) — THT pads ø1.6mm, drill 0.85mm, pitch 2.0mm |
+| **Current design** | **SMD** (C295747, footprint `JST-PH-2P-SMD`, 4 SMD pads, no drills) — the board is now all-surface-mount |
+| **Risk** | None. |
+| **Action** | The shipped datasheet PDF is still the THT sibling's; only the mating dimensions carry over. |
 
 ---
 
@@ -182,7 +190,7 @@ U3 is now an SY8089AAAC buck in SOT-23-5 ([C78988](https://www.lcsc.com/product-
 | FPC 40-pin (J4) | C2856812 | 40 pads, 0.5mm pitch, 0.3x1.5mm — all match |
 | Slide Switch (SW16) | C431540 | Pin spacing, NPTH holes, pad layout correct. Minor 0.05mm pin 2-3 spacing deviation. |
 | Red LED (LED1) | C84256 | Standard 0805, correct |
-| Green LED (LED2) | C19171391 | Standard 0805, correct |
+| Red LED (LED2) | C19171391 | Standard 0805, correct. **It is a red part** (YLED0805R, 615–630 nm) — the "green" label in the old BOM was wrong |
 | Resistors 0805 (R1-R21) | C27834/C17414/C149504/C17513/C4328 | Standard 0805, correct |
 | Capacitors 0805 (C1-C27) | C49678/C15850/C12891/C13967/C28323 | Standard 0805/1206, correct |
 | PAM8403 footprint | C5122557 | Narrow SOP-16 body 3.9mm correctly used (not wide 7.5mm SOIC-16W) |

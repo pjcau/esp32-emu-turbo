@@ -30,7 +30,7 @@ Validates the PCB layout against JLCPCB 4-layer manufacturing constraints using 
 
 | Rule | JLCPCB Minimum | Our Design |
 |:---|:---|:---|
-| Trace width | 0.09 mm | 0.25 mm |
+| Trace width | 0.09 mm | 0.20 mm (data) / 0.60 mm (power) |
 | Trace spacing | 0.09 mm | 0.2 mm |
 | Via drill | 0.15 mm | 0.2 mm |
 | Via pad | 0.35 mm | 0.35–0.46 mm |
@@ -105,7 +105,9 @@ Static electrical analysis — verifies power budget, signal timing, component v
 
 **SY8089 thermal:** at ~93% efficiency P_loss = 3.3V x 0.27A x (1/0.93 - 1) = **0.07W** typical, ~0.12W at 590 mA peak. The AMS1117 it replaced burned (5.0 - 3.3) x 335mA = 0.57W for less current.
 
-**Battery life:** 11.8h typical, 8.6h heavy use (5000mAh LiPo)
+**Battery life:** ~**12.9 h** typical on the 5000 mAh cell, derived through both
+conversion stages in [Power Budget](/docs/design/schematics#power-budget) — that
+page is the single place the number is computed.
 
 ```
 LiPo 3.7V 5000mAh
@@ -138,10 +140,13 @@ LiPo 3.7V 5000mAh
 | Component | Value | Purpose | Validation |
 |:---|:---|:---|:---|
 | R1, R2 | 5.1k | USB-C CC pull-down | USB spec: 4.7k–5.6k |
-| R3 | 10k | ESP32 EN pull-up (DNP — WROOM-1 internal) | RC = 4.5ms with C3 via internal ~45kΩ |
-| R4–R13, R15 | 10k | Button pull-ups | Logic HIGH = 3.3V > 2.475V (Vih) |
+| R3 | 10k | ESP32 EN pull-up — **populated** (R25 respin). The earlier "WROOM-1 integrates an EN pull-up, so R3 is DNP" claim was falsified: the module has none | RC ≈ 1 ms with **C31** (not C3) |
+| C31 | 100nF | EN → GND reset delay | Module datasheet p.28 power-up timing |
+| R4–R13, R15 | 10k | Button pull-ups (11 of 12; R14 is DNP for BTN_L) | Logic HIGH = 3.3V > 2.475V (Vih) |
 | R16 | 100k | IP5306 KEY pull-down | Keeps KEY low when idle |
-| R17, R18 | 1k | LED current limiting | 1.3mA red, 1.1mA green |
+| R17, R18 | 1k | LED current limiting | ~1.1–1.3 mA; **both LEDs are red** — C19171391 was mislabelled "green" |
+| R25 / R26 / C29 | 100k / 22k / 22pF | SY8089 feedback divider + feed-forward | Vout = 0.6 × (1 + R25/R26) = 3.327 V |
+| R27 | 20R 1206 | Backlight series resistor, +5V → LED_BLA | ~90 mA into the panel LED string |
 | C1 | 22uF 1206 MLCC | SY8089 input | Tight hot loop to VIN/GND |
 | C30 | 22uF 1206 MLCC | SY8089 output | Ceramic — the LDO's ESR window is gone with the LDO. C2, the tantalum that destroyed prototype #1 when mounted reversed, no longer exists |
 | C3, C4 | 100nF | ESP32 decoupling | Standard practice |
@@ -160,18 +165,19 @@ Cross-checks three sources of truth to ensure nothing is missing or mismatched.
 
 | Source | Components |
 |:---|:---|
-| Schematic (6 sub-sheets) | 81 unique refs |
-| PCB footprints | 83 refs |
-| JLCPCB CPL (assembly) | 77 refs |
+| PCB footprints | 91 refs (+6 mounting holes) |
+| JLCPCB CPL (assembly) | 85 refs |
 
-### Off-board components (correct exclusions)
+### On the board but not assembled (correct exclusions)
 
 | Ref | Component | Reason |
 |:---|:---|:---|
-| BT1 | LiPo battery | Connected via JST-PH cable |
-| DS1 | ILI9488 display | Bare panel, connected via FPC cable to J4 (not assembled by JLCPCB) |
-| R14 | Resistor | DNP (do-not-populate) |
-| SPK1 | 28mm speaker | Soldered manually to pads |
+| BT1 | LiPo battery | Off-board — connected via JST-PH cable |
+| DS1 | ILI9488 display | Off-board bare panel — FPC cable into J4 |
+| R14 | Resistor | DNP: a pull-up on GPIO45 would strap VDD_SPI to 1.8 V |
+| C28 | Capacitor | DNP placeholder |
+| SPK1 | 28mm speaker | Pads only — speaker soldered manually |
+| FID1–FID3 | Fiducials | Assembly alignment marks, no part |
 
 ---
 
@@ -237,7 +243,7 @@ Full audit of every ESP32-S3 GPIO connection, verified across four sources: `con
 | 14 | LCD_DC | 16 | 10 | 6 | OK |
 | 46 | LCD_WR | 17 | 8 | 6 | OK |
 | — | LCD_RD | +3V3 | — | — | Hardwired to +3V3 |
-| — | LCD_BL | +3V3 | — | — | Hardwired to +3V3 via resistor |
+| — | LCD_BL / LED-A | LED_BLA | — | — | +5V through R27 (20 Ω) — J4 pad 8 |
 
 ### SD Card — SPI (4/4 routed)
 
@@ -322,7 +328,7 @@ Cross-reference validation:
 
 Verification of all through-holes (PTH + NPTH) against component datasheets, short circuit risk analysis, and copper clearance check.
 
-**Total holes:** 12 component holes + 6 mounting holes + 320 vias = **338 drill operations**
+**Total holes:** 6 component NPTH + 6 mounting NPTH + 341 vias = **353 drill operations**
 
 ### Component NPTH — Datasheet Verification
 
@@ -332,8 +338,11 @@ Positioning holes (NPTH) must match the component peg diameter with adequate cle
 |-----|-----------|-------|-----------|----------------|--------------|-----------|--------|
 | J1 | USB-C 16P (C2765186) | 2x NPTH | 0.65 mm | ø0.65(2X) | ø0.50 mm | 0.15 mm | **PASS** |
 | U6 | TF-01A SD slot (C91145) | 2x NPTH | 1.00 mm | 2-∅1.00 | ø0.80 mm | 0.20 mm | **PASS** |
-| SW16 | MSK12C02 slide switch (C431540) | 2x NPTH | 0.90 mm | ø0.75 pegs | ø0.75 mm | 0.15 mm | **PASS** |
-| J3 | JST PH 2-pin THT (C173752) | 2x THT | 0.85 mm | ø0.64 pins | ø0.64 mm | 0.21 mm | **PASS** |
+| SW16 | SS-12D00G3 slide switch (C431540) | 2x NPTH | 0.90 mm | ø0.75 pegs | ø0.75 mm | 0.15 mm | **PASS** |
+
+J3 is a **surface-mount** JST-PH (C295747, footprint `JST-PH-2P-SMD`, 4 SMD pads,
+no drills) — the through-hole sibling C173752 was replaced, so it contributes no
+holes. Only the shipped datasheet PDF still carries the THT part number.
 
 ### Mounting Holes (6x NPTH, 2.5 mm)
 
@@ -352,7 +361,7 @@ Standard M2.5 mounting holes at board corners and center, no electrical connecti
 
 | Check | Detail | Result |
 |-------|--------|--------|
-| J3 pad-to-pad gap (BAT+ vs GND) | 0.40 mm edge-to-edge (min 0.15 mm) | **PASS** |
+| J3 pad-to-pad gap (BAT_IN vs GND) | 0.40 mm edge-to-edge (min 0.15 mm) | **PASS** |
 | J3 pads to diff-net copper | > 0.20 mm to all nearby vias/traces | **PASS** |
 | All NPTH to nearest copper | Min gap 0.24 mm (J1 positioning holes) | **PASS** |
 | All mounting holes to copper | Min gap 0.57 mm (MH center) | **PASS** |
@@ -366,12 +375,12 @@ NPTH positioning holes are always sized from the component datasheet — never g
 
 | Type | Count | Drill Range | Annular Ring | Status |
 |------|-------|-------------|--------------|--------|
-| Signal vias | 320 | 0.20 mm | ≥ 0.075 mm | **PASS** |
+| Signal vias | 341 | 0.20 mm | ≥ 0.075 mm | **PASS** |
 | Component NPTH | 6 | 0.65–1.00 mm | — (no pad) | **PASS** |
 | Mounting NPTH | 6 | 2.50 mm | — (no pad) | **PASS** |
-| Component THT (J3 C173752) | 0.85 mm | ø1.6 mm | 0.375 mm | **PASS** |
+| Component THT | 0 | — | — | none — the board is all-SMD |
 
-**Result: 22/22 checks passed — no short circuit risk, all drills match datasheets.**
+**Result: all hole & drill checks passed — no short circuit risk, all drills match datasheets.**
 
 ---
 
@@ -516,23 +525,24 @@ Aggregate assessment across all verification sources to estimate the probability
 
 | Verification Source | Tests | Passed | Failed | Rate |
 |---------------------|-------|--------|--------|------|
-| Local DFM v2 | 115 | 115 | 0 | 100% |
-| Local DFA assembly | 9 | 9 | 0 | 100% |
-| Polarity verification | 40 | 40 | 0 | 100% |
+| Local DFM v2 (`verify_dfm_v2.py`) | 124 | 124 | 0 | 100% |
+| Local DFA assembly (`verify_dfa.py`) | 9 | 9 | 0 | 100% |
+| JLCPCB validation (`validate_jlcpcb.py`) | 24 | 24 | 0 | 100% |
+| Polarity verification (`verify_polarity.py`) | 48 | 48 | 0 | 100% |
 | Hole & drill audit | 22 | 22 | 0 | 100% |
 | JLCPCB PCB DFM (routing) | 14 | 14 | 0 | 100% |
 | JLCPCB soldermask | 4 | 4 | 0 | 100% |
 | JLCPCB silkscreen | 3 | 3 | 0 | 100% |
 | JLCPCB drill | 8 | 8 | 0 | 100% |
 | JLCPCB SMT assembly | 10 | 10 | 0 | 100% |
-| **Total** | **225** | **225** | **0** | **100%** |
+| **Total** | **266** | **266** | **0** | **100%** |
 
 ### Risk Matrix
 
 | Risk Category | Severity (0–5) | Evidence | Mitigation |
 |---------------|----------------|----------|------------|
-| Electrical shorts | **0** | 312 drill ops verified, all clearances >0.15mm | — |
-| Wrong component values | **0** | BOM ↔ schematic ↔ PCB synced, 40/40 polarity, 239 pin-net checks | — |
+| Electrical shorts | **0** | 353 drill ops verified, all clearances >0.15mm | — |
+| Wrong component values | **0** | BOM ↔ schematic ↔ PCB synced, 48/48 polarity, 274 pin-net checks | — |
 | PCB manufacturing reject | **0** | JLCPCB DFM: 0 errors on routing/mask/silk/drill | — |
 | PCBA assembly defect | **0** | AR warnings reduced 77 to 23 (VIA\_MIN 0.15mm), 2 fiducials detected, CPL rotation variants for U5 | — |
 | Signal integrity | **1** | USB D+/D- mismatch reduced 4.57mm to **1.57mm** via 3-loop meander. Under 2mm target | Within USB 2.0 FS spec |
@@ -550,7 +560,7 @@ Manufacturing confidence = (1 - risk/max_risk) × 100
 
 | Metric | Value | Assessment |
 |--------|-------|------------|
-| Automated test pass rate | **225/225 (100%)** | All checks green |
+| Automated test pass rate | **266/266 (100%)** | All checks green |
 | JLCPCB DFM errors | **0** | Ready for order |
 | JLCPCB routing warnings | **25** (was 81) | -69% reduction |
 | Risk score | **1/35** (was 4/35) | Very low risk |
@@ -566,10 +576,19 @@ Manufacturing confidence = (1 - risk/max_risk) × 100
 | Fiducial marks FID1/FID2 at diagonal corners | 2 warnings | **0** | Assembly accuracy |
 
 :::tip What 97% confidence means
-Based on 225 automated checks (100% pass rate), 0 JLCPCB DFM errors, and a risk score of just 1/35, there is a **97% probability that the first PCB + PCBA batch will work correctly without rework**. The only remaining risk (1/35) is:
+Based on 266 automated checks (100% pass rate), 0 JLCPCB DFM errors, and a risk score of just 1/35, there is a **97% probability that the first PCB + PCBA batch will work correctly without rework**. The only remaining risk (1/35) is:
 - USB D+/D- mismatch of 1.57mm — within USB 2.0 Full Speed spec (tolerance ~25mm at 12MHz), used only for firmware flash and debug console
 
 This is a **production-ready** design.
+:::
+
+:::caution What this score does *not* cover
+Confidence in the **design files** is not confidence in the **assembly**. The
+v4.3.1 batch scored like this and still arrived dead, because the CPL carried
+systematically wrong rotations for the packages where 90° matters — a class no
+geometric gate looked at then. That is now covered by `verify_cpl_rotation_law`
+plus the pre-payment 3D-preview check; see
+[the incident](/docs/rework/incident-v431-rotations).
 :::
 
 ### Remaining Optimization Opportunities
@@ -586,7 +605,7 @@ This is a **production-ready** design.
 ### Fast commands (recommended)
 
 ```bash
-# Quick DFM check — 115 tests, ~2s, no Docker needed
+# Quick DFM check — 124 tests, ~1.4s, no Docker needed
 make verify-fast
 
 # Full pipeline — generate + DFM + DRC + gerbers + connectivity (~5s)
@@ -628,7 +647,7 @@ make verify-all    # DRC + simulation + consistency + short circuit
 Or individually:
 
 ```bash
-python3 scripts/verify_dfm_v2.py         # 115 DFM guard tests
+python3 scripts/verify_dfm_v2.py         # 124 DFM guard tests
 python3 scripts/drc_native.py --run      # JLCPCB design rules (smart analysis)
 python3 scripts/erc_check.py --run       # ERC (Electrical Rules Check) on schematics
 python3 scripts/simulate_circuit.py      # Power/timing simulation
@@ -636,7 +655,7 @@ python3 scripts/spice_power_check.py     # SPICE power supply ripple/transient s
 python3 scripts/verify_schematic_pcb.py  # Schematic-PCB sync
 python3 scripts/test_pcb_connectivity.py # Electrical connectivity
 python3 scripts/analyze_pad_distances.py # Pad spacing analysis
-python3 scripts/validate_jlcpcb.py       # JLCPCB manufacturing rules (26 tests)
+python3 scripts/validate_jlcpcb.py       # JLCPCB manufacturing rules (24 tests)
 ```
 
 ### Automatically (Husky pre-commit hook)
@@ -676,29 +695,29 @@ Complete automated test suite that validates every dimensional constraint requir
 
 | Script | Tests | Pass | Description |
 |---|---:|---:|---|
-| `verify_dfm_v2.py` | 115 | 115 | JLCPCB DFM manufacturing rules |
+| `verify_dfm_v2.py` | 124 | 124 | JLCPCB DFM manufacturing rules |
 | `verify_dfa.py` | 9 | 9 | SMT assembly (paste, tombstoning, polarity) |
-| `validate_jlcpcb.py` | 25 | 25 | JLCPCB-specific (drill, copper island, gerbers) |
+| `validate_jlcpcb.py` | 24 | 24 | JLCPCB-specific (drill, copper island, gerbers) |
 | `verify_copper_clearance.py` | all nets | 0 DANGER | Shapely polygon copper gap analysis |
-| `verify_polarity.py` | 47 | 47 | Pin-to-net assignment (256 pin checks) |
+| `verify_polarity.py` | 48 | 48 | Pin-to-net assignment (274 pin checks) |
 | `verify_easyeda_footprint.py` | all BOM | FAIL on delta | Cross-check every BOM footprint vs EasyEDA reference fetched via `easyeda2kicad` (catches pad-1 rotation/polarity bugs BEFORE JLCPCB assembly). Caches under `scripts/.easyeda_cache/` per LCSC ID. See category table below. |
-| `verify_datasheet_nets.py` | 261 | 221 PASS | Pad net vs datasheet specs (34 components) |
+| `verify_datasheet_nets.py` | 267 | 267 | Pad net vs datasheet specs (37 components) |
 | `verify_datasheet.py` | 29 | 29 | Physical footprint vs datasheet |
-| `verify_design_intent.py` | 362 | 362 | Cross-source GPIO/net consistency (T1-T22) |
+| `verify_design_intent.py` | 357 | 357 | Cross-source GPIO/net consistency (T1-T22) |
 | `verify_trace_through_pad.py` | 1 | 1 | Fab-short gate (trace over unnetted pad) |
 | `verify_trace_crossings.py` | 1 | 1 | Same-layer different-net trace intersection |
 | `verify_net_connectivity.py` | all nets | PASS | Union-find copper graph per net |
-| `verify_bom_cpl_pcb.py` | 10 | 10 | BOM/CPL/PCB cross-reference |
-| `verify_bom_values.py` | 74 | 74 | Schematic vs BOM value match |
-| `verify_signal_chain_complete.py` | 53 | 53 | Signal chain endpoints (power, display, audio, SD, USB, buttons) |
+| `verify_bom_cpl_pcb.py` | 12 | 12 | BOM/CPL/PCB cross-reference |
+| `verify_bom_values.py` | 84 | 84 | Schematic vs BOM value match |
+| `verify_signal_chain_complete.py` | 56 | 56 | Signal chain endpoints (power, display, audio, SD, USB, buttons) |
 | `verify_component_connectivity.py` | 2 | 2 | Phantom component detection |
 | `verify_net_class_widths.py` | 5 | 5 | Trace width per net class enforcement |
 | `verify_netlist_diff.py` | 4 | 4 | Schematic-to-PCB netlist cross-check |
-| `verify_schematic_pcb_sync.py` | 3 | PASS | R4 sync guard (ref coverage, collision, net coverage) |
-| `verify_strapping_pins.py` | 12 | 12 | ESP32-S3 boot pin validation |
-| `verify_decoupling_adequacy.py` | 25 | 25 | Per-IC capacitance check vs datasheet |
-| `verify_power_sequence.py` | 26 | 26 | Power chain topology and ordering |
-| `verify_power_paths.py` | 8 | 8 | Copper path from source to IC VDD |
+| `verify_schematic_pcb_sync.py` | 3 | PASS | R4 sync guard (ref coverage, collision, net coverage) — 53 schematic refs vs 85 CPL refs vs 37 datasheet_specs entries |
+| `verify_strapping_pins.py` | 12 | 11 + 1 warn | ESP32-S3 boot pin validation |
+| `verify_decoupling_adequacy.py` | 23 | 23 | Per-IC capacitance check vs datasheet |
+| `verify_power_sequence.py` | 29 | 29 | Power chain topology and ordering |
+| `verify_power_paths.py` | 10 + 11 info | 10 | Copper path from source to IC VDD (info = reachable through zone fill) |
 | `verify_antenna_keepout.py` | 5 | 5 | ESP32 WiFi/BLE antenna zone clearance |
 | `verify_stackup.py` | 5 | 5 | 4-layer stackup net assignment |
 | `verify_usb_impedance.py` | 4 | 4 | USB D+/D- differential pair geometry |
@@ -710,7 +729,7 @@ Complete automated test suite that validates every dimensional constraint requir
 | `verify_usb_return_path.py` | 3 | 3 | GND via density near USB traces |
 | `verify_sd_interface.py` | 7 | 7 | SD card SPI completeness |
 | `verify_power_resonance.py` | 4 | 4 | Power plane LC resonance |
-| **TOTAL** | **~1200+** | | |
+| **TOTAL** | **~1200+** | | Counts refreshed by running every script; do not hand-edit |
 
 #### `verify_easyeda_footprint.py` — Status Categories
 
@@ -898,11 +917,11 @@ make verify-fast
 make verify-all
 
 # Individual checks
-python3 scripts/verify_dfm_v2.py          # 115 DFM tests
+python3 scripts/verify_dfm_v2.py          # 124 DFM tests
 python3 scripts/verify_dfa.py             #   9 DFA assembly tests
-python3 scripts/validate_jlcpcb.py        #  25 JLCPCB-specific tests
+python3 scripts/validate_jlcpcb.py        #  24 JLCPCB-specific tests
 python3 scripts/verify_copper_clearance.py #  Shapely polygon gap check
-python3 scripts/verify_polarity.py        #  47 pin-to-net tests
+python3 scripts/verify_polarity.py        #  48 pin-to-net tests
 
 # Release pipeline (all checks + gerbers + renders)
 make release-prep

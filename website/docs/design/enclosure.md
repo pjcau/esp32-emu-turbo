@@ -12,10 +12,10 @@ Parametric handheld console enclosure designed in [OpenSCAD](https://openscad.or
 
 The enclosure follows a landscape form factor inspired by the Game Boy Advance and Nintendo Switch Lite, with ergonomic grip areas on both sides.
 
-**Dimensions:** 170 × 85 × 25 mm
+**Dimensions:** 170 × 85 × 26 mm
 
 :::info Source files
-The OpenSCAD project files are in [`hardware/enclosure/`](https://github.com/pjonny/esp32-emu-turbo/tree/main/hardware/enclosure). Open with OpenSCAD 2021.01+.
+The OpenSCAD project files are in [`hardware/enclosure/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/hardware/enclosure). Open with OpenSCAD 2021.01+.
 
 To render all views:
 ```bash
@@ -59,7 +59,7 @@ make render-enclosure
 
 ### Back Panel
 - **L/R shoulder buttons** — pill-shaped cutouts near top edge (28 × 10mm)
-- **Speaker grille** — array of 1.5mm holes in circular pattern (D-pad side of the device; appears on the **right** when you look at the back)
+- **Speaker grille** — array of 1.5mm holes in a 22mm circular pattern (D-pad side of the device; appears on the **right** when you look at the back)
 
 ### Bottom Edge
 - **USB-C port** — 9.0 × 3.2mm cutout (centered), Z-aligned with PCB connector
@@ -67,8 +67,8 @@ make render-enclosure
 - **Power switch** — 8 × 4mm cutout (D-pad side, left of USB-C when viewed from the front)
 
 ### Internal
-- **Battery compartment** — 70 × 55 × 9.5mm cavity with 1.5mm raised border wall and retainer clips (fits 65×55×9.5mm LiPo)
-- **Screw bosses** — 4 corner mounting points with M3 countersunk clearance holes
+- **Battery compartment** — 85 × 50 × 10mm cavity with 1.5mm raised border wall and retainer clips (fits the 105080 cell: 80 × 50 × 10mm)
+- **Screw bosses** — 4 corner mounting points with M3 countersunk clearance holes (the 2 centre bosses were removed — they fouled the battery, so the PCB's 2 centre M2.5 holes are unused mechanically)
 - **PCB model** — 160 × 75mm PCB at shell split line (Z=15mm)
 - **Button caps** — retention flange (3mm wider than cutout) prevents fallthrough, actuator stem presses PCB tactile switch
 - **Wire channel** — routing path for battery connector cable
@@ -120,7 +120,7 @@ SD is on the ABXY side, the power switch and speaker are on the D-pad side.
 
 | Element | Dimension | Notes |
 |---|---|---|
-| Overall body | 170 × 85 × 25 mm | Landscape orientation |
+| Overall body | 170 × 85 × 26 mm | Landscape orientation (depth went 25 → 26 mm for the 10 mm cell) |
 | Wall thickness | 2.0 mm | All walls |
 | Corner radius | 8 mm | Rounded for ergonomics |
 | Display cutout | 86.4 × 64.8 mm | Active display area |
@@ -128,11 +128,11 @@ SD is on the ABXY side, the power switch and speaker are on the D-pad side.
 | Face button holes | 8 mm diameter | A/B/X/Y, 10mm spacing (matches KiCad) |
 | Start/Select | 10 × 4 mm pills | Below D-pad, 20mm apart |
 | Menu button | 10 × 4 mm pill | Below ABXY |
-| Shoulder buttons | 28 × 10 mm | Back panel, Y=35mm from center |
-| USB-C port | 9.0 × 3.2 mm | Centered, Z=13.5mm (PCB-aligned) |
-| SD card slot | 12 × 2.5 mm | X=60mm, Z=13.5mm (PCB-aligned) |
-| Power switch | 8 × 4 mm | X=-40mm, Z=13mm (PCB-aligned) |
-| Battery bay | 70 × 55 × 9.5 mm | 65×55mm LiPo + 5mm tolerance |
+| Shoulder buttons | 28 × 10 mm | Back panel, Y=32mm from center |
+| USB-C port | 9.0 × 3.2 mm | Centered, Z=14.5mm (PCB-aligned) |
+| SD card slot | 12 × 2.5 mm | X=60mm, Z=14.5mm (PCB-aligned) |
+| Power switch | 8 × 4 mm | X=-40mm, Z=14mm (PCB-aligned) |
+| Battery bay | 85 × 50 × 10 mm | 80×50×10mm LiPo (105080) + 5mm length tolerance |
 | Battery border | 1.5mm wall | Raised edge around bay perimeter |
 | Screw bosses | 6mm OD / 2.5mm ID | 4 corners, M3 countersunk |
 
@@ -160,7 +160,7 @@ All dimensions are parameterized in `enclosure.scad`. Key parameters to adjust:
 ```openscad
 body_w = 170;        // Overall width
 body_h = 85;         // Overall height
-body_d = 25;         // Overall depth
+body_d = 26;         // Overall depth
 wall   = 2.0;        // Wall thickness
 corner_r = 8;        // Corner radius
 
@@ -171,9 +171,9 @@ dpad_x = -62;        // D-pad horizontal position
 abxy_x = 62;         // ABXY horizontal position
 abxy_spacing = 10;   // Button center-to-center (matches KiCad PCB)
 
-bat_w = 65;          // Battery width
-bat_h = 55;          // Battery height
-bat_d = 9.5;         // Battery thickness
+bat_w = 80;          // Cell length (X)
+bat_h = 50;          // Cell width  (Y)
+bat_d = 10;          // Cell thickness (Z)
 ```
 
 ### Rendering Different Views

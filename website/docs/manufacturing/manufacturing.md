@@ -9,15 +9,18 @@ slug: /manufacturing
 
 Production-ready PCB Assembly (PCBA) ordered from [JLCPCB](https://jlcpcb.com/) — minimum order of 5 units with full SMT assembly.
 
-:::tip Release v2.1
+:::tip Current release state
 All production files in `release_jlcpcb/` are verified and ready for ordering:
-- **115 DFM tests**, **9 DFA assembly tests**, and **26 JLCPCB validation tests** pass
-- **PCB review score:** 60/60 (v3.4)
-- **19 silkscreen labels** added on F.SilkS/B.SilkS for component identification
-- **W_PWR_LOW = 0.30mm** trace width added for power stubs
-- **LCSC parts fixed:** C22 = C13967 (0.47uF), C23-C25 = C28323 (1uF)
-- **77 components** in BOM/CPL matched against schematic and PCB (v3.4, post R9-MED-4)
+- **124 DFM tests**, **9 DFA assembly tests** and **24 JLCPCB validation tests** pass
+- **48/48 polarity checks**, 274 pin-to-net comparisons against the datasheets
+- **19 silkscreen labels** on F.SilkS/B.SilkS for component identification
+- **W_PWR_LOW = 0.30mm** trace width for power stubs
+- **85 placements** in BOM/CPL matched against schematic and PCB
 - **0 DRC errors**, all pre-production checks passed
+
+⚠ **Do not fabricate from tag v4.3.1** — that batch died of a systemic CPL
+rotation error ([incident](/docs/rework/incident-v431-rotations)). Cut a fresh
+tag from `main`, where the rotation law and its gates are in force.
 :::
 
 ## Assembled PCB Preview
@@ -35,7 +38,7 @@ The top side carries all user-facing components:
 | Designator | Component                                        | JLCPCB Part # | Footprint |
 | :--------- | :----------------------------------------------- | :------------ | :-------- |
 | LED1       | Red LED (power indicator)                        | C84256        | LED_0805  |
-| LED2       | Green LED (charge indicator)                     | C19171391     | LED_0805  |
+| LED2       | Red LED (second power indicator — the "green"/"charged" label was wrong; C19171391 is a red part and U2's LED pins are NC) | C19171391 | LED_0805  |
 | SW1–SW10   | SMT tactile buttons (D-pad, ABXY, Start, Select) | C318884       | SW-SMD    |
 
 All 12 gaming buttons are surface-mounted on the top face for direct user interaction.
@@ -61,7 +64,10 @@ The bottom side hosts the main circuitry:
 | **J1**         | USB-C connector (16-pin)    | C2765186      | USB-C-SMD |
 | **J3**         | JST-PH 2-pin SMD (battery)  | C295747       | JST-PH-2P-SMD |
 | **J4**         | FPC 40-pin 0.5mm (display)  | C2856812      | FPC-40P   |
-| **L1**         | 1uH 5A inductor             | C280579       | SMD-4x    |
+| **L1**         | 1uH 4.5A inductor           | C280579       | SMD-4x    |
+| **L2**         | 2.2uH 2.95A buck inductor   | C36409        | IND-SMD-4.0x4.0 |
+| **U4**         | USBLC6-2SC6 USB ESD TVS     | C7519         | SOT-23-6  |
+| **Q1 / D1 / F1** | RPP MOSFET / BAT54C / 2A PTC fuse | C10487 / C37704 / C960026 | SOT-23 / SOT-23 / 1812 |
 | **SW16**     | Slide switch (power)        | C431540       | SS-12D0   |
 | **SW11, SW12** | SMT tactile (L, R shoulder) | C318884       | SW-SMD    |
 | R1, R2         | 5.1k (USB-C CC)             | C27834        | R_0805    |
@@ -69,14 +75,21 @@ The bottom side hosts the main circuitry:
 | R16            | 100k                        | C149504       | R_0805    |
 | R17, R18       | 1k                          | C17513        | R_0805    |
 | R20, R21       | 20k (PAM8403 INL/INR bias to VREF) | C4328   | R_0805    |
-| C1, C17, C18, C27, C28 | 10uF                | C15850        | C_0805    |
-| C2             | 22uF tantalum 16V (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | C1953590 | C_1206    |
-| C19            | 22uF                        | C12891        | C_1206    |
-| C3–C16,C21,C26 | 100nF                      | C49678        | C_0805    |
+| C17, C18, C27  | 10uF                        | C15850        | C_0805    |
+| C1, C19, C30   | 22uF (buck in / boost out / buck out) | C12891 | C_1206    |
+| C29            | 22pF C0G (buck feed-forward) | C1804        | C_0805    |
+| C3–C16,C21,C26,C31 | 100nF                  | C49678        | C_0805    |
 | C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
 | C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
+| R22,R23 / R24 / R25 / R26 / R27 | 22R USB / 100k gate / 100k FB / 22k FB / 20R backlight | C25092 / C149504 / C149504 / C17560 / C17955 | R_0402 / R_0805 / R_1206 |
 
-**Total SMT components:** 26 unique part types, 75 individual placements.
+**Total SMT components:** 32 unique part types, 85 individual placements.
+
+:::note C2 no longer exists
+The 22 µF tantalum on the old AMS1117 output was **deleted** with the move to the
+SY8089 buck — a ceramic C30 replaced it. It is the part that destroyed prototype
+#1 when mounted reversed ([incident](/docs/rework/incident-c2-reversed)).
+:::
 
 ---
 
@@ -147,8 +160,9 @@ These components are **not included** in the JLCPCB order and must be connected 
 - **Display** — ILI9488 3.95" via 40-pin FPC cable
 - **Battery** — LiPo 3.7V 5000mAh via JST-PH connector
 - **Speaker** — 28mm 8 ohm via solder pads
-- **SD card module** — via SPI wiring
 - **3D-printed enclosure** — see [Enclosure Design](/docs/design/enclosure)
+
+The micro SD slot (U6, TF-01A) **is** placed by JLCPCB — it is on the board, not a wired module.
 
 ### Complete prototype cost estimate
 
@@ -159,9 +173,9 @@ These components are **not included** in the JLCPCB order and must be connected 
 | ILI9488 display         |         ~$6 |
 | LiPo battery 5000mAh    |         ~$5 |
 | Speaker 28mm            |         ~$1 |
-| SD card module          |         ~$1 |
+| Micro SD card 32GB      |         ~$4 |
 | 3D printed enclosure    |       ~$3–5 |
-| **Total per prototype** | **~$64–73** |
+| **Total per prototype** | **~$67–76** |
 
 :::info Economies of scale
 The one-time fees (engineering $24, stencil $16.18, setup $50.37, fixture $16.18) total **$106.73** — this is amortized across all 5 units. If ordering 10+ units, the per-unit cost drops below $25.
@@ -178,7 +192,9 @@ The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5
 | Ref     | Component               | JLCPCB Part # | Footprint            |  Qty |
 | :------ | :---------------------- | :------------ | :------------------- | ---: |
 | **U7**  | ESP32-S3-MINI-1-N8      | C2913206      | Module (15.4×20.5mm) |    1 |
-| C26,C27 | 100nF 0805 (decoupling) | C49678        | C_0805               |    2 |
+| C32,C33 | 100nF 0805 (decoupling) | C49678        | C_0805               |    2 |
+
+(C1–C31 are all in use on the v1 board, so the coprocessor's caps start at C32.)
 
 ### v2 Cost Impact
 
@@ -186,20 +202,23 @@ The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5
 | :----------------------- | ------: | ------: | ------: |
 | JLCPCB components        |    ~$40 |    ~$43 |  +$3.27 |
 | Per-unit cost (5 boards) | ~$39.57 |    ~$43 | +~$3.43 |
-| Complete prototype       | ~$64–73 | ~$67–76 |    +~$3 |
+| Complete prototype       | ~$67–76 | ~$70–79 |    +~$3 |
 
 The v2 addition is minor in cost ($3.27 per unit) but eliminates 48% of SNES frame time at the hardware level. The module's integrated flash and crystal mean **no additional external components** are needed — simpler routing than the RP2040 alternative (which required 7 components).
 
 ### v2 Power Budget Update
 
-| Consumer                    | v1 Typical  | v2 Typical  | Notes                       |
-| --------------------------- | ----------- | ----------- | --------------------------- |
-| ESP32-S3 (dual-core active) | 150 mA      | 150 mA      | Same                        |
-| ESP32-S3-MINI-1 (audio)     | —           | 50 mA       | Single-core audio task      |
-| ILI9488 display + backlight | 80 mA       | 80 mA       | Same                        |
-| PAM8403 + speaker           | 20 mA       | 20 mA       | Same (driven by MINI-1 now) |
-| SD card (SPI read)          | 30 mA       | 30 mA       | Same                        |
-| Misc (pull-ups, buttons)    | 10 mA       | 10 mA       | Same                        |
-| **Total**                   | **~290 mA** | **~340 mA** | +50 mA                      |
+Same consumer list and rails as the [Power Budget](/docs/design/schematics#power-budget) on the schematics page:
 
-**v2 battery life:** the coprocessor adds ~50 mA to the +3V3 rail. Through the SY8089 buck (~93%) and the IP5306 boost (~90%) that is ~75 mA more battery current, taking typical draw from ~318 mA to ~393 mA — about **12.7 hours** against 15.7 h without it. The buck is rated 2 A and stays cool at 340 mA typical / 740 mA peak.
+| Consumer                    | Rail  | v1 Typical  | v2 Typical  | Notes                       |
+| --------------------------- | ----- | ----------- | ----------- | --------------------------- |
+| ESP32-S3 (dual-core active) | +3V3  | 150 mA      | 150 mA      | Same                        |
+| ESP32-S3-MINI-1 (audio)     | +3V3  | —           | 50 mA       | Single-core audio task      |
+| ILI9488 logic + panel drive | +3V3  | 20 mA       | 20 mA       | Same                        |
+| Backlight (LED-A via R27)   | **+5V** | 90 mA     | 90 mA       | Always on                   |
+| PAM8403 + speaker           | +5V   | 20 mA       | 20 mA       | Same (driven by MINI-1 now) |
+| SD card (SPI read)          | +3V3  | 30 mA       | 30 mA       | Same                        |
+| Misc (pull-ups, buttons)    | +3V3  | 10 mA       | 10 mA       | Same                        |
+| **Total**                   |       | **~320 mA** | **~370 mA** | +50 mA                      |
+
+**v2 battery life:** the coprocessor adds ~50 mA to the +3V3 rail. Through the SY8089 buck (~93%) and the IP5306 boost (~90%) that is ~53 mA more battery current, taking typical draw from ~389 mA to ~442 mA — about **11.3 hours** against **12.9 h** without it. The buck is rated 2 A and stays cool at 370 mA typical / 745 mA peak.

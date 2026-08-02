@@ -17,7 +17,7 @@ Complete electrical design for the ESP32 Emu Turbo, split into 6 detailed schema
   </a>
   <a href="#sheet-2--mcu-esp32-s3" className="sheet-card">
     <h4>2. MCU</h4>
-    <p>ESP32-S3 + 33 GPIO labels</p>
+    <p>ESP32-S3 + 31 GPIO labels</p>
   </a>
   <a href="#sheet-3--display" className="sheet-card">
     <h4>3. Display</h4>
@@ -108,7 +108,7 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
 | J1 | USB-C connector | — | 5V power input | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
-| J3 | JST PH 2-pin SMD connector | — | LiPo battery connector | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) |
+| J3 | JST PH 2-pin SMD connector | C295747 | LiPo battery connector (surface-mount, no through-holes) | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) — *THT sibling C173752; only the mating dimensions apply* |
 | F1 | PTC resettable fuse | 2 A hold, 1812 (C960026) | VBUS input overcurrent protection: J1 delivers on **VBUS_IN**, the board's VBUS is reached through F1 (R3-HIGH-4 fix, in design since `1c3ded4`) | — |
 | R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
 | R16 | Resistor | 100 kΩ | IP5306 KEY pin pull-down | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
@@ -124,11 +124,15 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
-| SW16 | Slide switch | MSK12C02 | Power on/off — **⚠ not in series in ANY revision to date (v4.4.0 included), see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
-| C1 | Capacitor | 10 µF | LDO input decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
-| C2 | Capacitor | 22 µF tantalum 16V (C1953590 Vishay TMCMA1C226MTRF, ESR 2.9Ω) | LDO output stability | [PDF](/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf) |
+| SW16 | Slide switch | SS-12D00G3 (C431540) | Power on/off — **⚠ not in series in ANY revision to date (v4.4.0 included), see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
+| L2 | Inductor | 2.2 µH 2.95 A (C36409) | SY8089 buck output inductor | — |
+| R25 | Resistor | 100 kΩ | Buck feedback divider, upper leg — Vout = 0.6 × (1 + R25/R26) = 3.327 V | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| R26 | Resistor | 22 kΩ (C17560) | Buck feedback divider, lower leg | — |
+| C29 | Capacitor | 22 pF C0G (C1804) | Feed-forward across R25 (loop phase boost) | — |
+| C1 | Capacitor | 22 µF 1206 MLCC | SY8089 buck **input** decoupling — tight hot loop to VIN/GND | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
+| C30 | Capacitor | 22 µF 1206 MLCC | SY8089 buck **output** — ceramic. (The tantalum C2 that lived here for the AMS1117's ESR window is deleted; it is what destroyed prototype #1, see [the incident](/docs/rework/incident-c2-reversed).) | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 | C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
-| C19 | Capacitor | 22 µF | Bulk capacitor | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
+| C19 | Capacitor | 22 µF | Bulk capacitor on IP5306 VOUT | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 | C27 | Capacitor | 10 µF | IP5306 VOUT HF decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 
 ### Power Budget
@@ -255,7 +259,7 @@ switch, so sliding it changes nothing. Consequences:
 
 ## Sheet 2 — MCU (ESP32-S3)
 
-ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupling capacitors, and the EN reset RC network (R3 + C31, added in the R25 respin). LCD_RD is hardwired to +3V3 on the PCB and the backlight is fed from +5V via R27 (neither is GPIO-controlled).
+ESP32-S3-WROOM-1 N16R8 with all 31 GPIO connections grouped by function, decoupling capacitors, and the EN reset RC network (R3 + C31, added in the R25 respin). LCD_RD is hardwired to +3V3 on the PCB and the backlight is fed from +5V via R27 (neither is GPIO-controlled).
 
 <div className="schematic-container">
 
@@ -284,7 +288,8 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 | | 12, 13, 14, 46 | CS, RST, DC, WR | 8080 control |
 | | — | RD | Tied to +3V3 (hardwired) |
 | | — | BL | +5V via R27 20 Ω (net LED_BLA, always on) |
-| **Audio** | 15, 16, 17 | BCLK, LRCK, DOUT | I2S |
+| **Audio** | 17 | I2S_DOUT | PDM TX (single pin — no BCLK/LRCK) |
+| | 15, 16 | — | Unconnected: the I2S clock reservation was retired with the move to PDM |
 | **SD Card** | 44, 43, 38, 39 | MOSI, MISO, CLK, CS | SPI |
 | **D-pad** | 40, 41, 42, 1 | UP, DOWN, LEFT, RIGHT | GPIO |
 | **Face** | 2, 48, 47, 21 | A, B, X, Y | GPIO |
@@ -293,14 +298,18 @@ ESP32-S3-WROOM-1 N16R8 with all 33 GPIO connections grouped by function, decoupl
 | **USB Data** | 19, 20 | USB_D-, USB_D+ | USB |
 
 :::info Reserved GPIOs
-GPIO26–32 are used internally by the PSRAM. GPIO19/20 are the native USB D-/D+ pins (firmware flash + debug console via USB CDC).
+GPIO26–32 are the WROOM-1's internal SPI flash bus and are not brought out on any
+module pin. GPIO33–37 belong to the N16R8's Octal PSRAM — GPIO35–37 *do* appear on
+module pins 28–30 but carry explicit no-connect markers in the schematic and must
+stay unconnected. GPIO19/20 are the native USB D-/D+ pins (firmware flash + debug
+console via USB CDC).
 :::
 
 ---
 
 ## Sheet 3 — Display
 
-ILI9488 4.0" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A (backlight — fed from +5V through R27 on net LED_BLA, ~90 mA, always on), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
+ILI9488 3.95" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. *(The generated sheet title and the DS1 symbol value still read "4.0in" — a label-only mismatch in `scripts/generate_schematics/sheets/display.py`; the panel, the enclosure cutout and the BOM are all the 3.95" part.)* FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A (backlight — fed from +5V through R27 on net LED_BLA, ~90 mA, always on), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
 
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|
@@ -402,7 +411,8 @@ SPI bus up to 20MHz. The SD module has a built-in level shifter (3.3V safe). On 
 
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
-| R4–R15 | Resistor | 10 kΩ (C17414) | Button pull-ups (12 buttons) |
+| R4–R13, R15 | Resistor | 10 kΩ (C17414) | Button pull-ups — 11 of the 12 buttons |
+| R14 | Resistor | **DNP** | BTN_L (GPIO45) gets no external pull-up: GPIO45 is the VDD_SPI strapping pin, and a pull-up would force VDD_SPI to 1.8 V and break the Octal PSRAM. Firmware enables the internal pull-up after boot |
 | C5–C16 | Capacitor | 100 nF (C49678) | Button debounce (12 buttons) |
 
 | Group | Buttons | Switches | GPIOs |
@@ -450,15 +460,17 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
 | U7 | ESP32-S3-MINI-1-N8 | Module | Audio coprocessor (SPC700 + I2S) |
-| C28 | Capacitor | 100 nF | 3V3 decoupling (refs C26/C27 are already used on the main board) |
-| C29 | Capacitor | 100 nF | EN decoupling |
+| C32 | Capacitor | 100 nF | 3V3 decoupling |
+| C33 | Capacitor | 100 nF | EN decoupling |
+
+*(References C1–C31 are all taken on the v1 board — C28 is a DNP placeholder, C29 is the buck feed-forward, C30 the buck output and C31 the EN reset cap — so the coprocessor starts at **C32**.)*
 
 ### SPI Bus (Main ESP32-S3 → Coprocessor)
 
 | Signal | Main ESP32-S3 GPIO | MINI-1 GPIO | Direction |
 |--------|-------------------|-------------|-----------|
-| SPI_CLK | GPIO 15 (was I2S_BCLK) | GPIO 12 | Main → MINI-1 |
-| SPI_MOSI | GPIO 16 (was I2S_LRCLK) | GPIO 11 | Main → MINI-1 |
+| SPI_CLK | GPIO 15 (unused in v1) | GPIO 12 | Main → MINI-1 |
+| SPI_MOSI | GPIO 16 (unused in v1) | GPIO 11 | Main → MINI-1 |
 | SPI_MISO | GPIO 17 (was I2S_DOUT) | GPIO 13 | MINI-1 → Main |
 | SPI_CS | GPIO 20 (was USB_D+) | GPIO 10 | Main → MINI-1 |
 
@@ -474,11 +486,11 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 
 | Main ESP32-S3 GPIO | v1 Function | v2 Function | Notes |
 |---------------------|-------------|-------------|-------|
-| GPIO 15 | I2S_BCLK → PAM8403 | SPI_CLK → MINI-1 | Audio path moves to coprocessor |
-| GPIO 16 | I2S_LRCLK → PAM8403 | SPI_MOSI → MINI-1 | Audio path moves to coprocessor |
+| GPIO 15 | unconnected (PDM needs no BCLK) | SPI_CLK → MINI-1 | Spare pin put to work |
+| GPIO 16 | unconnected (PDM needs no LRCK) | SPI_MOSI → MINI-1 | Spare pin put to work |
 | GPIO 17 | I2S_DOUT → PAM8403 | SPI_MISO ← MINI-1 | Audio path moves to coprocessor |
 | GPIO 20 | USB_D+ (native USB) | SPI_CS → MINI-1 | USB D+ reassigned for coprocessor |
 
 :::tip Clean GPIO reuse
-The 3 I2S pins freed by moving audio to the coprocessor are reused for SPI communication — no GPIOs wasted. GPIO 20 (USB_D+ in v1) is reassigned to SPI chip select; in v2, USB native data is no longer available (debug via SPI or UART instead).
+GPIO 15/16 (already spare in v1) plus the single PDM pin GPIO 17 freed by moving audio to the coprocessor become the SPI link — no GPIOs wasted. GPIO 20 (USB_D+ in v1) is reassigned to SPI chip select; in v2, USB native data is no longer available (debug via SPI or UART instead).
 :::

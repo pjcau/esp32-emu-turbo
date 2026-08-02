@@ -1,7 +1,7 @@
 ---
 id: short-test-multimeter
 title: "Short-Circuit Test Bible (Multimeter)"
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Short-Circuit Test Bible
@@ -48,10 +48,10 @@ Battery ─BAT_IN─► Q1(RPP) ─BAT+─► IP5306(BAT)      +5V ─► SY8089
 | Net | Source | Also present on (probe points) |
 |-----|--------|-------------------------------|
 | **VBUS** | USB-C VBUS pin | **C17**+, IP5306 VIN(pin 1) |
-| **+5V** | IP5306 VOUT (pin 8) | **C19**+, **C27**+, **C1**+, R16, SY8089A VIN(pin 3), USBLC6 |
+| **+5V** | IP5306 VOUT (pin 8) | **C19**+, **C27**+, **C1**+, R16, SY8089A IN (pin 4) and EN (pin 1), R27 (backlight), USBLC6 |
 | **BAT+** | IP5306 BAT (pin 6), post-RPP | **C18**+, L1, Q1 drain |
 | **BAT_IN** | Battery connector J3.1 | Q1 source, BT1+ (pre-RPP) |
-| **+3V3** | **C30**+ (buck output) | C26, C_dec, ESP32 3V3 pins, R4–R15 (button pull-ups), R17/R18 (LEDs) |
+| **+3V3** | **C30**+ (buck output) | C26, C_dec, ESP32 3V3 pins, R3 (EN pull-up), R4–R13/R15 (11 button pull-ups — R14 is DNP), R17/R18 (LEDs) |
 | **GND** | everywhere | USB-C shell, every cap − pad, ESP32 GND pad |
 
 ---
@@ -185,7 +185,7 @@ other and to GND. See [BUG #1/#2/#3](../rework/incident-power-short.md).
 | **T12** | SY8089A **pin 4** (IN/+5V) | **C30** + pad (+3V3) | no beep (buck doesn't conduct at 0 V) | C1 (solder bridge across regulator) |
 | **T13** | SY8089A **pin 2** (GND) | **C30** + pad (+3V3) | no beep | A1 |
 | **T14** | IP5306 **VOUT** (pin 8) | IP5306 **GND** (exposed pad) | no beep | A2 |
-| **T15** | each +3V3 cap **C2 / C26 / C_dec** +pad | GND | no beep, all identical | A1 (find *which* cap beeps) |
+| **T15** | each +3V3 cap **C30 / C26 / C_dec** +pad | GND | no beep, all identical | A1 (find *which* cap beeps) |
 | **T16** | each +5V cap **C1 / C19 / C27** +pad | GND | no beep | A2 |
 
 :::note Isolating with per-cap tests
@@ -277,17 +277,24 @@ Buzzer is fine for adjacent-pin checks; for signal-to-power use the directional 
 | 5 | GND | 15 | NC | 25 | GND | 35 | +3V3 |
 | 6 | GND | 16 | NC | 26 | LCD_RST | 36 | GND |
 | 7 | GND | 17 | LCD_D7 | 27 | NC | 37 | NC |
-| 8 | +3V3 | 18 | LCD_D6 | 28 | NC | 38 | NC |
+| 8 | **LED_BLA** | 18 | LCD_D6 | 28 | **+3V3** | 38 | NC |
 | 9 | NC | 19 | LCD_D5 | 29 | +3V3 | 39 | NC |
 | 10 | NC | 20 | LCD_D4 | 30 | LCD_WR | 40 | NC |
 
 :::caution Most adjacent J4 pins are the SAME net — a beep there is NORMAL
-- **GND pins:** 1, 4, 5, 6, 7, 25, 36 — all one net, connected by design.
-- **+3V3 pins:** 2, 3, 8, 29, 34, 35 — all one net.
+- **GND pads:** 1, 4, 5, 6, 7, 25, 36 — all one net, connected by design.
+- **+3V3 pads:** 2, 3, 28, 29, 34, 35 — all one net.
+- **Pad 8 is `LED_BLA`**, not +3V3: it is the backlight anode, fed from **+5V through
+  R27 (20 Ω)**. Pad 8 ↔ +3V3 must read **open**; pad 8 ↔ +5V reads ~20 Ω through R27.
+- **Pad 28 is +3V3** — panel pin 13 (SPI SDI) is tied high on purpose (R28-HIGH-1 fix);
+  it is no longer a no-connect.
 
-So "contacts between pins" in a photo (e.g. **5 of the first 10 pins are GND**) are the
-ground pins tied together — **not a solder defect**. `T1 (+3V3↔GND) clean` proves GND and
+So "contacts between pins" in a photo (e.g. **5 of the first 10 pads are GND**) are the
+ground pads tied together — **not a solder defect**. `T1 (+3V3↔GND) clean` proves GND and
 +3V3 are not shorted to each other on the FPC.
+
+Remember the reversal: **connector pad = 41 − panel pin**, so connector pad 8 is panel
+pin 33 (LED-A) and connector pad 28 is panel pin 13.
 :::
 
 | Check | Expected |
@@ -325,7 +332,7 @@ The adjacent bottom pins read low because they are **power pins + the VCC decoup
 the capacitor-charging artifact, **not** a solder bridge. Same class as [T17](#t17--false-alarm-resolved).
 :::
 
-### E4 — Buttons (pull-ups R4–R15)
+### E4 — Buttons (pull-ups R4–R13, R15 — R14 is DNP)
 | Check | Expected |
 |-------|----------|
 | across any pull-up (BTN_x ↔ +3V3) | ≈ **10 kΩ** (not 0, not open) |
@@ -731,7 +738,7 @@ Heat = power = V·I, so if the reg ever got hot, real power flowed — measure i
 
 ### F. Functional bring-up (once voltages are good)
 - [ ] Connect USB-C, open serial monitor (115200) → ESP32 boot messages.
-- [ ] Flash firmware ([firmware build](../development/workflow-guide.md)).
+- [ ] Flash firmware ([ESP32 firmware](../software/firmware.md#build--flash-docker)).
 - [ ] Test display (fill test), SD (mount), audio (tone), all 12 buttons.
 
 ### Result if all pass

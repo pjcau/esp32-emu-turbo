@@ -1,7 +1,7 @@
 ---
 id: incident-v431-rotations
 title: "Incident: v4.3.1 Batch (\"v2\" boards) — Systemic Rotation Error"
-sidebar_position: 2
+sidebar_position: 1
 ---
 
 # Incident: v4.3.1 Batch — Systemic Bottom-Side Rotation Error
@@ -138,9 +138,10 @@ shield pads for EMI. Verify by continuity, then card detection in firmware.
 **2. PAM8403 application circuit is missing (only if using the speaker).**
 No DC-blocking, bias, or decoupling around U5. Add, all 0805: a 0.47 µF
 DC-block in series with I2S_DOUT into INR (pin 10 — cut the trace and bridge
-the cut with the cap), 20 k from INL (7) and INR (10) to GND, 100 nF from
-VREF (8) to PGND, 1 µF from VDD (6), PVDD (4) and PVDD (13) to their
-grounds. Without a speaker connected the missing passives cause no harm —
+the cut with the cap), 20 k from INL (7) and INR (10) to **VREF (pin 8)** —
+*not* to GND; the PAM8403 biases its inputs at VREF and grounding them kills
+the operating point — 100 nF from VREF (8) to PGND, 1 µF from VDD (6),
+PVDD (4) and PVDD (13) to their grounds. Without a speaker connected the missing passives cause no harm —
 skip until audio is wanted. Acceptance: clean tone, < 20 mV DC across the
 speaker.
 

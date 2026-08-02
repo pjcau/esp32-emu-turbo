@@ -57,7 +57,7 @@ Add decoupling capacitors:
 
 ### Step 3: Display Connection (8080 Parallel)
 
-Connect the ILI9488 4.0" display panel with 8-bit 8080 parallel interface (via 40-pin FPC).
+Connect the ILI9488 3.95" display panel with 8-bit 8080 parallel interface (via 40-pin FPC).
 FPC pin numbers from the ILI9488 panel datasheet:
 
 | FPC Pin | Signal | Wire to | ESP32-S3 GPIO |
@@ -78,7 +78,7 @@ FPC pin numbers from the ILI9488 panel datasheet:
 | 10 | DC/RS | jumper | GPIO14 |
 | 11 | WR | jumper | GPIO46 |
 | 12 | RD | 3.3V rail | — (tied HIGH, no read-back) |
-| 33 | LED-A (BL) | 3.3V rail via resistor | — (always-on backlight) |
+| 33 | LED-A (BL) | 3.3V rail via a series resistor on the breadboard (the PCB feeds it from **+5V through R27, 20 Ω**) | — (always-on backlight) |
 | 34-36 | LED-K | GND rail | — |
 | 38 | IM0 | 3.3V rail | — (HIGH for 8-bit 8080) |
 | 39 | IM1 | 3.3V rail | — (HIGH for 8-bit 8080) |
@@ -103,15 +103,16 @@ Connect the SD card SPI module:
 
 ### Step 5: Audio
 
-Connect the I2S DAC and PAM8403 amplifier:
+There is **no external I2S DAC**. The ESP32-S3 drives the amplifier directly with
+**PDM sigma-delta on a single pin** — the PAM8403's analog input plus the DC-blocking
+cap reconstruct the waveform, so GPIO15/16 stay unused.
 
 | Connection | From | To |
 |---|---|---|
-| I2S BCLK | GPIO15 | DAC BCLK input |
-| I2S LRCK | GPIO16 | DAC LRCK input |
-| I2S DOUT | GPIO17 | DAC DIN input |
-| DAC analog out | DAC output | PAM8403 AUDIO_IN |
-| PAM8403 VCC | 5V rail | PAM8403 VCC |
+| PDM data (I2S_DOUT) | GPIO17 | 0.47 µF cap (C22) → PAM8403 INL/INR (pins 7 & 10) |
+| Input bias | 20 kΩ from each input | PAM8403 VREF (pin 8), **not** GND |
+| VREF bypass | 100 nF | PAM8403 pin 8 → GND |
+| PAM8403 VCC | 5V rail | PAM8403 VDD/PVDD |
 | PAM8403 GND | GND rail | PAM8403 GND |
 | PAM8403 SPK+ | wire | Speaker (+) |
 | PAM8403 SPK- | wire | Speaker (-) |

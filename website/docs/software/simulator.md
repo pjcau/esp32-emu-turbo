@@ -24,8 +24,8 @@ SDL2-based hardware simulator that runs on macOS/Linux without physical hardware
 │ 12 tact switches            │    │ Keyboard WASD/JK/UI             │
 │  └─ GPIO 40,41,42,1,...     │◄──►│  └─ sim_buttons_read()          │
 │                             │    │                                 │
-│ I2S → PAM8403 → Speaker    │    │ SDL2 audio 32kHz mono           │
-│  └─ GPIO 15,16,17           │◄──►│  └─ sim_audio_write()           │
+│ PDM → PAM8403 → Speaker    │    │ SDL2 audio 32kHz mono           │
+│  └─ GPIO 17 (DOUT only)     │◄──►│  └─ sim_audio_write()           │
 │                             │    │                                 │
 │ SPI → SD card (TF-01A)     │    │ Host filesystem (test-roms/)    │
 │  └─ GPIO 44,43,38,39        │◄──►│  └─ sdcard_sim_load_rom()       │
@@ -128,7 +128,7 @@ software/
     main.c              — ESP32 firmware (same test sequence)
     display.h/c         — ESP32 display driver (8080 parallel)
     input.h/c           — ESP32 input driver (GPIO)
-    audio.h/c           — ESP32 audio driver (I2S)
+    audio.h/c           — ESP32 audio driver (I2S PDM TX)
     sdcard.h/c          — ESP32 SD card driver (SPI)
     board_config.h      — GPIO pin definitions (source of truth)
 ```
@@ -173,7 +173,7 @@ make benchmark-build
 # Run benchmark in QEMU (headless, results on UART)
 make benchmark-run
 
-# Run with VNC display (connect vnc://localhost:5901, password: esp32)
+# Run with VNC display (connect vnc://localhost:5900)
 make benchmark-vnc
 ```
 

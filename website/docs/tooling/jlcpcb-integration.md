@@ -1,4 +1,5 @@
 ---
+id: jlcpcb-integration
 sidebar_position: 2
 title: JLCPCB API & MCP Integration
 ---

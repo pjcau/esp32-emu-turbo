@@ -10,15 +10,17 @@ This project uses **Claude Code** as its AI-powered development assistant, with 
 
 ## Architecture Overview
 
-The system uses a **team-lead + 3 specialist agents** model:
+The system uses a **team-lead + 3 specialist agents** model, plus two
+stand-alone agents — **6 agent definitions** in `.claude/agents/`:
 
 ```
 team-lead (Sonnet) ──── orchestrator, task coordination
   ├── pcb-engineer (Opus) ───── 27 skills, PCB design + manufacturing
-  ├── software-dev (Opus) ───── 4 skills, firmware + website
-  └── cad-engineer (Haiku) ──── 3 skills, OpenSCAD enclosure
+  ├── software-dev (Opus) ───── 6 skills, firmware + website + docs
+  └── cad-engineer (Sonnet) ─── 3 skills, OpenSCAD enclosure
 
-scout (Opus) ──── 1 skill, GitHub pattern discovery (weekly via GitHub Action)
+plan-reviewer (Opus) ──── review only, no skills — vets plans before implementation
+scout (Opus) ─────────── 1 skill, GitHub pattern discovery (weekly via GitHub Action)
 ```
 
 ### Architecture Graph
@@ -28,7 +30,7 @@ graph TB
     TL["TEAM-LEAD<br/><i>sonnet - orchestrator</i>"]
 
     PCB["PCB-ENGINEER<br/><i>opus - 27 skills</i>"]
-    SW["SOFTWARE-DEV<br/><i>opus - 4 skills</i>"]
+    SW["SOFTWARE-DEV<br/><i>opus - 6 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>sonnet - 3 skills</i>"]
 
     TL -->|coordinates| PCB
@@ -83,11 +85,13 @@ graph TB
     PCB --- PCB_FIX
     PCB --- PCB_MCP
 
-    subgraph SW_SK["Firmware and Web 4"]
+    subgraph SW_SK["Firmware and Web 6"]
         s_fw["/firmware-build"]
         s_sync["/firmware-sync"]
         s_web["/website-dev"]
         s_doc["/doc"]
+        s_p2f["/pcb-to-firmware"]
+        s_htg["/hardware-test-gen"]
     end
     SW --- SW_SK
 
@@ -124,33 +128,35 @@ graph TB
 
 - **Isolated contexts**: each agent has its own conversation context, preventing RAM bloat
 - **Parallel execution**: independent tasks run simultaneously (e.g., PCB verify + render)
-- **Right-sized models**: Haiku for repetitive CAD tasks (cheaper, faster), Opus for complex PCB/firmware reasoning
-- **Skill-based dispatch**: 40 skills map to specific workflows, reducing prompt engineering overhead
+- **Right-sized models**: Sonnet for orchestration and repetitive CAD tasks (cheaper, faster), Opus for complex PCB/firmware reasoning and plan review
+- **Skill-based dispatch**: 46 skills map to specific workflows, reducing prompt engineering overhead
 
 ### Why Opus for PCB and Software?
 
 - **pcb-engineer**: routing with JLCPCB constraints (clearance, drill, annular ring) requires deep multi-step reasoning. DFM violations need root-cause analysis across multiple scripts. Errors cost real money (JLCPCB rework)
 - **software-dev**: ESP-IDF firmware involves low-level GPIO, DMA, I2S, SPI debugging. Cross-domain sync (firmware ↔ schematic ↔ PCB) requires broad contextual understanding
 
-## Skills System (40 Skills)
+## Skills System (46 Skills)
 
 ### PCB Engineer — 27 Skills
 
 | Category | Skills | Description |
 |----------|--------|-------------|
 | **Pipeline (7)** | `/generate`, `/release`, `/release-prep`, `/full-release`, `/render`, `/pcba-render`, `/check` | Full PCB generation → JLCPCB export flow |
-| **Verification (11)** | `/verify`, `/dfm-test`, `/drc-native`, `/drc-audit`, `/pcb-optimize`, `/pcb-review`, `/datasheet-verify`, `/design-intent`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 115 DFM + 9 DFA + 26 JLCPCB tests, DRC checks, layout scoring |
+| **Verification (11)** | `/verify`, `/dfm-test`, `/drc-native`, `/drc-audit`, `/pcb-optimize`, `/pcb-review`, `/datasheet-verify`, `/design-intent`, `/pad-analysis`, `/jlcpcb-alignment`, `/jlcpcb-validate` | 124 DFM + 9 DFA + 24 JLCPCB tests, DRC checks, layout scoring |
 | **Fix & Debug (4)** | `/dfm-fix`, `/fix-rotation`, `/jlcpcb-check`, `/jlcpcb-parts` | Automated issue resolution |
 | **MCP Design (5)** | `/pcb-schematic`, `/pcb-components`, `/pcb-routing`, `/pcb-library`, `/pcb-board` | Direct KiCad manipulation via MCP protocol |
 
 **Standard workflow:** `/pcb-schematic` → `/pcb-board` → `/pcb-components` → `/pcb-routing` → `/generate` → `/verify` → `/release`
 
-### Software Dev — 4 Skills
+### Software Dev — 6 Skills
 
 | Skill | Description |
 |-------|-------------|
 | `/firmware-build` | Build, flash, test ESP-IDF firmware via Docker |
 | `/firmware-sync` | Verify GPIO pins match between firmware and schematic |
+| `/pcb-to-firmware` | Propagate PCB/routing changes into `board_config.h`, docs and config files |
+| `/hardware-test-gen` | Regenerate, build and run the bring-up test firmware |
 | `/website-dev` | Develop, build, deploy this Docusaurus website |
 | `/doc` | Audit docs against source-of-truth files, fix outdated values |
 
@@ -168,6 +174,20 @@ graph TB
 |-------|-------------|
 | `/user-feedback` | Record user preferences and distribute to agents/memory |
 | `/memory-maintenance` | Audit and improve the persistent memory — stale-claim sweep vs the live repo, archive resolved items to HISTORY.md, condense the index, verify with `make verify-memory` |
+
+### Audit & Meta — 7 Skills
+
+| Skill | Description |
+|-------|-------------|
+| `/hardware-audit` | Layer 1 automated gates + Layer 2 domain-by-domain electrical review |
+| `/electrical-review` | Strapping, decoupling, power sequencing, SPICE |
+| `/isolation-check` | Every conductor connected where intended and isolated everywhere else |
+| `/external-dfm` | KiBot + Tracespace DFM analysis via Docker |
+| `/first-article-check` | Pre-payment 3D-preview orientation check, photo-vs-render on arrival |
+| `/pipeline-resume` | Resume an interrupted release pipeline |
+| `/create-skill` | Author a new skill for this project |
+
+**Total: 27 + 6 + 3 + 2 + 7 + 1 (scout) = 46 skills.**
 
 ### Scout (Autonomous) — 1 Skill
 
@@ -284,7 +304,7 @@ Rules that prevent agents from getting stuck in loops:
 
 | Target | Time | Description |
 |--------|------|-------------|
-| `make verify-fast` | ~1.5s | Quick DFM check (115 tests) |
+| `make verify-fast` | ~1.4s | Quick DFM check (124 tests) |
 | `make verify-dfa` | ~1.1s | Quick DFA check (9 assembly tests) |
 | `make verify-all` | ~1.6s | All verification checks (DFM + DFA + DRC + sim + consistency) |
 | `make fast-check` | ~5s | Full pipeline (local kicad-cli) |

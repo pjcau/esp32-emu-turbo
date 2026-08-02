@@ -35,7 +35,7 @@ software/
     ├── idf_component.yml       esp_lcd_ili9488 ^1.4.0
     ├── board_config.h          All GPIO pin definitions (source of truth)
     ├── main.c                  Test harness → interactive button display
-    ├── display.c/h             ILI9488 320×480 i80 parallel + LEDC backlight
+    ├── display.c/h             ILI9488 320×480 i80 parallel (backlight is hardwired — `display_set_backlight()` is a no-op)
     ├── input.c/h               12 buttons, active-low, bitmask polling
     ├── sdcard.c/h              SPI @ 20MHz, FAT32, ROM listing
     ├── audio.c/h               I2S PDM TX (sigma-delta) → PAM8403 amplifier
@@ -161,7 +161,7 @@ Fork and adapt Retro-Go for our hardware. Retro-Go is included as a git submodul
 | 2.4 | Custom display driver `ili9488_i80.h` | 8-bit i80 parallel via `esp_lcd_panel_io_i80`, async DMA, 5-buffer pool | ✅ Done |
 | 2.5 | Frame scaling | Automatic via Retro-Go core (320x480 portrait, integer scale + letterbox) | ✅ Done |
 | 2.6 | Input mapping | 12 GPIO direct buttons + MENU=SELECT (GPIO 0) | ✅ Done |
-| 2.7 | Audio routing | I2S ext DAC (BCLK=15, WS=16, DATA=17) → PAM8403 | ✅ Done |
+| 2.7 | Audio routing | I2S **PDM TX** on DOUT only (GPIO17) → C22 → PAM8403. No external DAC, no BCLK/LRCK — same path as step 1.6 | ✅ Done |
 | 2.8 | First boot: NES test | nofrendo running Super Mario Bros at 60fps | ⏳ Needs hardware |
 
 ### Build & flash (Docker)
@@ -213,15 +213,15 @@ The target lives at `retro-go/components/retro-go/targets/esp32-emu-turbo/` with
 
 ### GPIO mapping verification
 
-All 33 GPIO pins have been cross-verified between three sources with **zero discrepancies**:
+All 31 GPIO pins have been cross-verified between three sources with **zero discrepancies**:
 
 | Group | Pins | board_config.h | Retro-Go config.h | KiCad schematic |
 |:---|:---|:---|:---|:---|
 | Display data D0–D7 | GPIO 4–11 | ✅ | ✅ | ✅ |
 | Display control | GPIO 12–14, 46 | ✅ | ✅ | ✅ |
-| Display hardwired | RD, BL → +3V3 (no GPIO) | ✅ | ✅ | ✅ |
+| Display hardwired | RD → +3V3, BL → +5V via R27 (no GPIO) | ✅ | ✅ | ✅ |
 | SD card SPI | GPIO 44, 43, 38, 39 | ✅ | ✅ | ✅ |
-| I2S audio | GPIO 15–17 | ✅ | ✅ | ✅ |
+| Audio (PDM DOUT only) | GPIO 17 | ✅ | ✅ | ✅ |
 | D-pad | GPIO 40, 41, 42, 1 | ✅ | ✅ | ✅ |
 | Face buttons | GPIO 2, 48, 47, 21 | ✅ | ✅ | ✅ |
 | System buttons | GPIO 18, 0 | ✅ | ✅ | ✅ |
@@ -230,9 +230,10 @@ All 33 GPIO pins have been cross-verified between three sources with **zero disc
 **Notes:**
 - MENU and SELECT share GPIO 0 in Retro-Go (intentional — 12 physical buttons, 13 logical)
 - GPIO 19/20 are used for native USB data (D-/D+) — firmware flash + CDC debug console
-- GPIO 3 is BTN_R, GPIO 45 is BTN_L (shoulder buttons freed by hardwiring LCD_RD/LCD_BL to +3V3)
+- GPIO 3 is BTN_R, GPIO 45 is BTN_L (shoulder buttons freed by hardwiring LCD_RD and the backlight on the PCB)
 - GPIO 43 is SD_MISO (was TX0 UART debug, replaced by USB native)
-- GPIO 26–32 are reserved for Octal PSRAM (cannot be used)
+- GPIO 26–32 are the module's internal SPI flash bus and GPIO 33–37 the Octal PSRAM — neither may be used
+- GPIO 15/16 are unconnected: the audio path is PDM and needs only DOUT
 
 ### Display driver: `ili9488_i80.h`
 
@@ -245,7 +246,7 @@ Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 paralle
 | Resolution | 320x480 portrait |
 | Color format | RGB565 (16-bit) |
 | DMA | Async with 5-buffer pool |
-| Backlight | Always-on (tied to +3V3 via resistor on PCB) |
+| Backlight | Always-on — LED-A fed from **+5V through R27 (20 Ω)** on the PCB, no GPIO control |
 | Driver ID | `RG_SCREEN_DRIVER 2` |
 
 The driver uses `esp_lcd_panel_io_tx_param` for commands (CASET/RASET) and `esp_lcd_panel_io_tx_color` for async DMA pixel transfers. A completion callback recycles buffers to the pool, providing natural backpressure without explicit sync.

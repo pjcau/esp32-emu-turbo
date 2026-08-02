@@ -112,7 +112,7 @@ Our design uses **8080 8-bit parallel** (IM2=0, IM1=1, IM0=1): IM0 and IM1 pulle
 :::
 
 :::warning Pinout verified from actual panel datasheet
-This pinout is from the actual ILI9488 4.0" panel datasheet (see images above). It differs significantly from generic/typical pinouts found online. **Do NOT use generic ILI9488 pinout tables** — always refer to this datasheet.
+This pinout is from the actual ILI9488 3.95" panel datasheet (see images above). It differs significantly from generic/typical pinouts found online. **Do NOT use generic ILI9488 pinout tables** — always refer to this datasheet.
 :::
 
 :::info FPC Pin Reversal on PCB
@@ -155,7 +155,10 @@ When the display is mounted in landscape (CCW rotation), Pin 1 is at the south e
 **Recommended:** LiPo 5000mAh + IP5306 + SY8089AAAC buck (~$7-10)
 
 :::note Estimated battery life with 5000mAh
-At an average draw of ~300mA (ESP32-S3 + display + audio), the 5000mAh battery provides approximately **14-16 hours** of continuous gameplay.
+About **12.9 hours** of continuous gameplay. That is not `5000 / load` — the number
+is derived through both conversion stages (SY8089 buck at ~93 %, IP5306 boost at
+~90 %) in [Power Budget](schematics.md#power-budget), which is the single place it
+is computed.
 :::
 
 :::info Power architecture
@@ -242,7 +245,8 @@ The IP5306 manages battery charge/discharge and provides a stable 5V output. The
 12 buttons total: **D-pad** (4), **A, B, X, Y**, **Start, Select**, **L, R**
 
 :::tip Recommended budget
-Plan for **~$55** to have margin for spares and unexpected needs.
+Plan for **~$45** to have margin for spares and unexpected needs — the
+project's stated prototype budget band is **$33–45**.
 :::
 
 :::note Shipping
@@ -296,7 +300,7 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 
 <!-- BOM:END -->
 
-**Estimated PCB cost:** ~$90 for 5 boards (~$18/board) including fabrication, components, and assembly.
+**PCBA cost (real JLCPCB quote):** **$197.86 for 5 boards (~$39.57/board)** including fabrication, components and assembly. Most of it is one-time setup — see the [full quote breakdown](/docs/manufacturing#jlcpcb-quote-breakdown-5-units).
 
 ### v2 Additional Components (Audio Coprocessor)
 
@@ -305,11 +309,11 @@ The v2 PCB adds an ESP32-S3-MINI-1-N8 as a dedicated audio coprocessor (see [Pha
 | Ref | Component | Package | LCSC | Class | Unit cost |
 |-----|-----------|---------|------|-------|-----------|
 | U7 | ESP32-S3-MINI-1-N8 | Module (15.4×20.5mm) | C2913206 | Extended | $3.25 |
-| C26,C27 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
+| C32,C33 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
 
-**v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything.
+**v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything. (References C26–C31 are already taken on the v1 board, so the coprocessor's decoupling caps are **C32/C33**.)
 
-**v2 estimated PCB cost:** ~$106 for 5 boards (~$21/board).
+**v2 estimated PCBA cost:** ~$215 for 5 boards (~$43/board).
 
 ---
 

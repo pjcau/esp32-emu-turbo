@@ -62,10 +62,16 @@ All systems run at full speed on ESP32-S3 N16R8 @ 240MHz. QEMU benchmark confirm
 
 ### ILI9488 8-bit Parallel (i80 Bus)
 
-Retro-Go ships with an SPI-only ILI9341 driver. Our hardware uses 8-bit 8080 parallel which requires a custom driver. The firmware uses the [`esp_lcd_ili9488`](https://components.espressif.com/components/espressif/esp_lcd_ili9488) component with the `esp_lcd_panel_io_i80` bus API.
+Retro-Go ships with an SPI-only ILI9341 driver. Our hardware uses 8-bit 8080 parallel which requires a custom driver. The firmware uses the [`atanisoft/esp_lcd_ili9488`](https://components.espressif.com/components/atanisoft/esp_lcd_ili9488) component with the `esp_lcd_panel_io_i80` bus API.
+
+:::warning There is no `espressif/esp_lcd_ili9488`
+`idf_component.yml` required that non-existent component for months, so the
+firmware had never actually built. The namespace is **`atanisoft/`** — see
+[Virtual Bench findings](/docs/vbench/findings-and-limits).
+:::
 
 ```
-ESP32-S3                      ILI9488 (4.0" 320x480)
+ESP32-S3                      ILI9488 (3.95" 320x480)
 ─────────                     ──────────────────────────
 GPIO 4-11  (D0-D7) ────────► DB0-DB7 (8-bit data bus)
 GPIO 12    (CS)     ────────► CS  (chip select)
@@ -73,19 +79,23 @@ GPIO 14    (DC)     ────────► DC  (data/command)
 GPIO 46    (WR)     ────────► WR  (write strobe)
 +3V3       (RD)     ────────► RD  (tied HIGH, no read-back)
 GPIO 13    (RST)    ────────► RST (reset)
-+3V3       (BL)     ────────► LED (always-on via resistor)
++5V via R27 (20 Ω)  ────────► LED-A (always-on backlight, net LED_BLA)
 ```
 
 GPIO4–11 form a contiguous 8-bit bus, enabling efficient DMA transfers.
 
 ### Bandwidth
 
+A full 320×480 RGB565 frame at 60 fps needs **18.4 MB/s**:
+
 | Interface | Clock | Throughput | 60fps 320x480 16-bit |
 |:---|:---|:---|:---|
-| SPI (ILI9341) | 40 MHz | 5.0 MB/s | 54% utilization |
-| **8-bit i80 (ours)** | **20 MHz** | **20.0 MB/s** | **14% utilization** |
+| SPI (ILI9341) | 40 MHz | 5.0 MB/s | **368% — impossible** |
+| **8-bit i80 (ours)** | **20 MHz** | **20.0 MB/s** | **92% utilization** |
 
-The 8080 parallel bus has **4x the bandwidth** of SPI, leaving headroom for scaling and double-buffering.
+The 8080 parallel bus has **4x the bandwidth** of SPI. Full-screen 60 fps fits with
+~8% margin; the real headroom for scaling and double-buffering comes from the fact
+that emulator frames are letterboxed, not full-screen.
 
 ### Frame Scaling
 

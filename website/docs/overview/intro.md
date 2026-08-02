@@ -18,9 +18,9 @@ Build a portable battery-powered device with USB-C charging and an ILI9488 3.95"
 | Phase | Description | Status |
 |---|---|---|
 | **1. Feasibility** | Component analysis, schematics, budget | Completed |
-| **2. Hardware Design** | KiCad schematics, OpenSCAD enclosure, GPIO mapping | In Progress |
-| **3. Prototype** | Breadboard assembly, testing and validation | Pending |
-| **4. Final version** | Custom PCB + 3D-printed enclosure | Pending |
+| **2. Hardware Design** | KiCad schematics, OpenSCAD enclosure, GPIO mapping | Completed |
+| **3. Prototype** | PCB fabrication, assembly, bring-up and rework | In Progress |
+| **4. Final version** | Respin with the audio coprocessor + 3D-printed enclosure | Pending |
 
 ## Key Requirements
 
@@ -31,7 +31,7 @@ Build a portable battery-powered device with USB-C charging and an ILI9488 3.95"
 | **Power** | LiPo 3.7V, 5000mAh |
 | **Charging** | USB-C (IP5306, charge-and-play) |
 | **Emulation** | SNES (primary), NES (secondary) |
-| **Budget** | ~$42-55 for the prototype |
+| **Budget** | ~$33-45 for the prototype parts (see [BOM](/docs/design/components#budget-summary)) |
 
 ## Documentation
 
@@ -40,5 +40,5 @@ Build a portable battery-powered device with USB-C charging and an ILI9488 3.95"
 | [Design](/docs/design/schematics) | Schematics, components, PCB layout, GPIO mapping |
 | [Manufacturing](/docs/manufacturing) | JLCPCB ordering, BOM, CPL, DFM verification |
 | [Software](/docs/software) | ESP-IDF firmware, SNES optimization, audio profiles |
-| [Development](/docs/development/workflow-guide) | **Agent & Skill Workflow Guide** — how to use 43 skills and 6 agents |
+| [Development](/docs/development/workflow-guide) | **Agent & Skill Workflow Guide** — how to use 46 skills and 6 agents |
 | [Tooling](/docs/tooling/claude-agents) | Claude Code agents, JLCPCB integration, ecosystem |

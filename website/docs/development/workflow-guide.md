@@ -1,12 +1,12 @@
 ---
 id: workflow-guide
 title: Agent & Skill Workflow Guide
-sidebar_position: 10
+sidebar_position: 1
 ---
 
 # Agent & Skill Workflow Guide
 
-How to use the 6 agents, 43 skills, and 6 lifecycle commands to design, verify, fix, and release the ESP32 Emu Turbo PCB.
+How to use the 6 agents, 46 skills, and 6 lifecycle commands to design, verify, fix, and release the ESP32 Emu Turbo PCB.
 
 ---
 
@@ -18,7 +18,7 @@ graph TB
 
     TL["TEAM-LEAD<br/><i>sonnet - orchestrator</i>"]
     PCB["PCB-ENGINEER<br/><i>opus - 27 skills</i>"]
-    SW["SOFTWARE-DEV<br/><i>opus - 5 skills</i>"]
+    SW["SOFTWARE-DEV<br/><i>opus - 6 skills</i>"]
     CAD["CAD-ENGINEER<br/><i>sonnet - 3 skills</i>"]
     PR["PLAN-REVIEWER<br/><i>opus - review only</i>"]
     SC["SCOUT<br/><i>opus - weekly auto</i>"]
@@ -137,7 +137,7 @@ JLCPCB DFM report (PDF)
 /generate                      regenerate .kicad_pcb
         |
         v
-/verify                        confirm all 115 DFM tests pass
+/verify                        confirm all 124 DFM tests pass
         |
         v
 /dfm-test                      add regression guard test
@@ -171,13 +171,13 @@ Full verification sweep before ordering from JLCPCB:
 ```
 /verify-pcb                composes ALL verification skills:
     |
-    |-- /verify            115 DFM + 9 DFA + 26 JLCPCB
+    |-- /verify            124 DFM + 9 DFA + 24 JLCPCB
     |-- /drc-native        KiCad native DRC + baseline delta
     |-- /drc-audit         full electrical classification
     |-- /pad-analysis      pad spacing table
-    |-- /jlcpcb-validate   26 JLCPCB manufacturing rules
-    |-- /datasheet-verify  246 pin-to-net checks vs datasheets
-    |-- /design-intent     362 cross-source consistency checks
+    |-- /jlcpcb-validate   24 JLCPCB manufacturing rules
+    |-- /datasheet-verify  267 pin-to-net checks vs datasheets
+    |-- /design-intent     357 cross-source consistency checks
     '-- /pcb-review        8-domain 100-point scored review
 ```
 
@@ -198,10 +198,10 @@ Full verification sweep before ordering from JLCPCB:
 /release-pcb               composes /full-release:
     |
     |-- 1. /generate       regenerate from Python
-    |-- 2. /verify         115 DFM + 9 DFA + 26 JLCPCB
+    |-- 2. /verify         124 DFM + 9 DFA + 24 JLCPCB
     |-- 3. /drc-native     KiCad DRC
     |-- 4. /render         SVG layers + animation
-    |-- 5. /pcba-render    11 raytraced 3D PCBA views
+    |-- 5. /pcba-render    13 raytraced 3D PCBA views
     |-- 6. Export gerbers  kicad-cli + Docker zone fill
     |-- 7. BOM + CPL       JLCPCB formatting
     |-- 8. Sync            release_jlcpcb/ updated
@@ -228,18 +228,18 @@ After release:
     |   verify_trace_crossings     (same-layer crossings)
     |   verify_copper_clearance    (Shapely polygon gaps)
     |   verify_net_connectivity    (per-net copper graph)
-    |   verify_dfm_v2             (115 DFM tests)
+    |   verify_dfm_v2             (124 DFM tests)
     |   verify_dfa                (9 assembly tests)
-    |   validate_jlcpcb           (26 JLCPCB rules)
-    |   verify_polarity           (47 pin-to-net)
-    |   verify_datasheet_nets     (261 checks)
+    |   validate_jlcpcb           (24 JLCPCB rules)
+    |   verify_polarity           (48 pin-to-net)
+    |   verify_datasheet_nets     (267 checks)
     |   verify_datasheet          (29 physical)
-    |   verify_design_intent      (362 cross-source)
+    |   verify_design_intent      (357 cross-source)
     |   verify_schematic_pcb_sync (R4 guard)
     |   verify_strapping_pins     (12 ESP32 boot)
-    |   verify_decoupling_adequacy (25 cap checks)
-    |   verify_power_sequence     (26 power chain)
-    |   verify_power_paths        (8+11 copper paths)
+    |   verify_decoupling_adequacy (23 cap checks)
+    |   verify_power_sequence     (29 power chain)
+    |   verify_power_paths        (10+11 copper paths)
     |   erc_check + KiCad DRC     (0 real shorts)
     |   ... and more
     |
@@ -293,7 +293,7 @@ After PCB board outline or component position changes:
 1. /enclosure-design       update OpenSCAD parameters
         |                  (pcb_w, pcb_h, cutouts, screw holes)
         v
-2. /enclosure-render       7 PNG views via Docker
+2. /enclosure-render       PNG views via Docker
         |
         v
 3. /enclosure-export       STL files for 3D printing
@@ -320,21 +320,21 @@ After PCB board outline or component position changes:
 | `/generate` | Python scripts -> .kicad_pcb + BOM + CPL + gerbers |
 | `/check` | DRC + 3D render + gerbers + DFM quick check |
 | `/render` | SVG layer views + animation GIF |
-| `/pcba-render` | 11 photorealistic 3D PCBA views (raytracer) |
+| `/pcba-render` | 13 photorealistic 3D PCBA views (raytracer) |
 
 ### Verify Phase (find problems)
 
 | Skill | What it does |
 |---|---|
-| `/verify` | 115 DFM + 9 DFA + 26 JLCPCB + connectivity |
+| `/verify` | 124 DFM + 9 DFA + 24 JLCPCB + connectivity |
 | `/drc-native` | KiCad DRC with smart filtering + baseline delta |
 | `/drc-audit` | Full electrical classification (shorts, unconnected, dangling) |
 | `/pcb-review` | 8-domain 100-point scored review |
-| `/datasheet-verify` | 246 pin-to-net checks vs component datasheets |
-| `/design-intent` | 362 cross-source adversary (GPIO, power, signal chains) |
+| `/datasheet-verify` | 267 pin-to-net checks vs component datasheets |
+| `/design-intent` | 357 cross-source adversary (GPIO, power, signal chains) |
 | `/pad-analysis` | Pad spacing distance table |
 | `/jlcpcb-alignment` | IC/connector rotation + position vs CPL |
-| `/jlcpcb-validate` | 26 JLCPCB-specific manufacturing rules |
+| `/jlcpcb-validate` | 24 JLCPCB-specific manufacturing rules |
 | `/dfm-test` | DFM regression guard test generator |
 | `/pcb-optimize` | 5-module 100-point layout optimization score |
 
@@ -369,16 +369,30 @@ After PCB board outline or component position changes:
 | `/pcb-to-firmware` | Propagate PCB changes to board_config.h + docs |
 | `/firmware-build` | Build/flash ESP-IDF firmware via Docker |
 | `/firmware-sync` | Verify GPIO match between config.py and board_config.h |
-| `/hardware-test-gen` | Generate ESP-IDF Unity test firmware for prototype |
+| `/hardware-test-gen` | Regenerate/build/run the bring-up firmware from `board_config.h` |
 | `/doc` | Audit docs vs source-of-truth, fix outdated values |
 | `/website-dev` | Build/deploy Docusaurus site |
+
+### Audit & Meta
+
+| Skill | What it does |
+|---|---|
+| `/hardware-audit` | Layer 1 automated gates + Layer 2 domain-by-domain prose review |
+| `/electrical-review` | Strapping + decoupling + power sequence + SPICE |
+| `/isolation-check` | Every conductor connected where intended, isolated everywhere else |
+| `/external-dfm` | KiBot + Tracespace DFM analysis via Docker |
+| `/first-article-check` | Pre-payment 3D-preview orientation check + photo-vs-render on arrival |
+| `/pipeline-resume` | Resume an interrupted release pipeline |
+| `/create-skill` | Author a new skill for this project |
+| `/user-feedback` | Record user preferences and distribute them |
+| `/memory-maintenance` | Audit and condense the persistent project memory |
 
 ### CAD
 
 | Skill | What it does |
 |---|---|
 | `/enclosure-design` | OpenSCAD parametric enclosure design |
-| `/enclosure-render` | Render 7 PNG views via Docker |
+| `/enclosure-render` | Render enclosure PNG views via Docker |
 | `/enclosure-export` | Export STL for 3D printing |
 
 ---
@@ -405,7 +419,7 @@ After PCB board outline or component position changes:
  board_config.h     <-- firmware (must match config.py)
      |
      v
- datasheet_specs.py <-- pin-to-net specs (34 components)
+ datasheet_specs.py <-- pin-to-net specs (37 components)
      |
      v
  routing.py         <-- PCB traces + vias

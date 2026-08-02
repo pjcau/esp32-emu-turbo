@@ -1,7 +1,7 @@
 ---
 id: bring-up-protocol
 title: First Power-On Bring-Up Protocol
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # First Power-On Bring-Up Protocol
@@ -194,7 +194,7 @@ physically cannot report, and the reason is printed on the skip line:
 | Skip | Why it can never pass or fail |
 |---|---|
 | `lcd.panel.readback` | `LCD_RD` is tied HIGH on the PCB. With no read line the panel's status and ID registers are unreachable, so no software check can confirm the pixels arrived — **confirm the colour bars by eye** |
-| `lcd.backlight` | The backlight is hardwired to 3V3 through a resistor with no GPIO control. A dark panel after a passing `lcd.panel.pattern` is the backlight series resistor or FPC seating, never the firmware |
+| `lcd.backlight` | The backlight is hardwired — LED-A is fed from **+5V through R27 (20 Ω)** with no GPIO control. A dark panel after a passing `lcd.panel.pattern` is R27, the LED_BLA net at J4 pad 8, or FPC seating — never the firmware |
 | `audio.audible` | There is no feedback path from the PAM8403 back to any GPIO. If `audio.tone` passed and you heard nothing, the fault is after GPIO17: the coupling cap, the PAM8403 supply or its SD pin, or the speaker |
 | `power.rail3v3.absolute` | The ESP32-S3 exposes no ADC channel on VDD3P3. Absolute rail voltage is not a measurable quantity in software; rail health is inferred from the brownout detector and `power.load` |
 | `power.battery_sense` | `board_config.h` defines no battery-sense net. There is no divider from BAT+ into any ADC pin on this revision, so battery voltage is not observable from firmware |

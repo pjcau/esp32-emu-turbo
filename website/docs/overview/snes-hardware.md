@@ -66,7 +66,7 @@ Complete pin mapping for the ESP32-S3 N16R8 DevKitC-1:
 
 **Hardwired on PCB (no GPIO):**
 - **LCD_RD** (FPC pin 12) → tied HIGH to +3V3 (no read-back from ILI9488 needed)
-- **LCD_BL** (FPC pin 33) → tied to +3V3 via resistor (always-on backlight, no PWM)
+- **LCD_BL / LED-A** (FPC pin 33) → **+5V through R27 (20 Ω)** on net `LED_BLA` (always-on backlight, no PWM). Boards fabricated through v4.3.1 predate this and tie LED-A straight to +3V3 with no series element.
 
 FPC power pins: 6=VDDI(+3V3), 7=VDDA(+3V3), 5/16/34-36/37=GND, 38=IM0(+3V3), 39=IM1(+3V3), 40=IM2(GND).
 Interface mode: IM2=0, IM1=1, IM0=1 → 8080 8-bit parallel.
@@ -84,13 +84,16 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 | GPIO38 | SD_CLK | SPI clock |
 | GPIO39 | SD_CS | Chip select |
 
-### Audio (I2S) — 3 GPIOs
+### Audio (PDM) — 1 GPIO
 
 | GPIO | Function | Notes |
 |---|---|---|
-| GPIO15 | unused | free for v2 — I2S_BCLK reservation retired (PDM needs only DOUT) |
-| GPIO16 | unused | free for v2 — I2S_LRCK reservation retired |
-| GPIO17 | I2S_DOUT | Serial data out |
+| GPIO17 | I2S_DOUT | PDM sigma-delta data out → PAM8403 analog input (via C22) |
+
+**Not used by audio:** GPIO15 and GPIO16 were reserved as `I2S_BCLK` / `I2S_LRCK`
+until 2026-07-26 (R10-LOW-2). The path is **PDM TX**, which drives only DOUT
+(`audio.c` sets `.clk = I2S_GPIO_UNUSED`), so both pins are unconnected on the
+PCB and free for v2.
 
 ### Buttons (GPIO Input, active-low) — 12 GPIOs
 
@@ -120,8 +123,8 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 
 | GPIOs | Reason |
 |---|---|
-| GPIO26–GPIO32 | Used by Quad Flash (WROOM-1 module internal) |
-| GPIO33–GPIO37 | Used by Octal PSRAM (N16R8 variant internal) |
+| GPIO26–GPIO32 | Internal SPI flash bus of the WROOM-1 module — not brought out on any module pin |
+| GPIO33–GPIO37 | Octal PSRAM of the N16R8 variant. GPIO33/34 are not brought out; GPIO35–37 appear on module pins 28–30 but **must stay unconnected** (explicit no-connect markers in the schematic) |
 
 ### Summary
 
@@ -129,29 +132,33 @@ The FPC pin numbers above refer to the **display** pin numbering. On the PCB, th
 |---|---|
 | Display (8080 parallel) | 12 |
 | SD Card (SPI) | 4 |
-| Audio (I2S) | 3 |
+| Audio (PDM) | 1 |
 | Buttons | 12 |
 | USB (native) | 2 |
-| **Total** | **33** |
-| ESP32-S3 available | 45 |
-| **Remaining** | **12** |
+| **Total** | **31** |
+| Exposed on the WROOM-1 module | 36 |
+| **Remaining** | **5** (GPIO15, GPIO16, and the three PSRAM pins that must stay free) |
+
+The bring-up firmware asserts this independently — `config.gpio_unique` reports
+`31 GPIO assignments, all distinct` (see [Bring-Up Protocol](/docs/manufacturing/bring-up-protocol)).
 
 ## Audio Architecture
 
 The SNES has a sophisticated audio system (SPC700 + S-DSP) with 8 channels of BRR-compressed audio. Our implementation:
 
 ```
-ESP32-S3 (I2S DMA) ──> PAM8403 Class-D Amp ──> 28mm 8Ω Speaker
-     │                      │
-     GPIO15 (BCLK)          Volume pot (10kΩ)
-     GPIO16 (LRCK)
-     GPIO17 (DOUT)
+ESP32-S3 (PDM TX + DMA) ──> C22 (DC block) ──> PAM8403 Class-D Amp ──> 28mm 8Ω Speaker
+     │                                              │
+     GPIO17 (I2S_DOUT)                       R20/R21 bias to VREF (pin 8)
 ```
 
-- **Sample rate:** 32 kHz stereo (matches SNES native rate)
+- **Sample rate:** 32 kHz (matches SNES native rate)
 - **Bit depth:** 16-bit
+- **Interface:** PDM sigma-delta on a single pin — the PAM8403's analog input plus
+  its input RC network reconstructs the waveform, so no external DAC and no
+  BCLK/LRCK are needed
 - **DMA buffer:** Double-buffered for glitch-free playback
-- **Amplifier:** PAM8403 2x3W Class-D (only one channel used for mono speaker)
+- **Amplifier:** PAM8403 2x3W Class-D (only the right channel drives the mono speaker)
 
 ## Reference Implementations
 
