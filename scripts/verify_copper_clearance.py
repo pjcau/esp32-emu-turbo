@@ -146,8 +146,56 @@ def merge_by_net(features):
     return merged
 
 
+def _bbox_centre(geom):
+    """Centre of a geometry's bounding box. Defined for anything non-empty."""
+    xmin, ymin, xmax, ymax = geom.bounds
+    return (xmin + xmax) / 2.0, (ymin + ymax) / 2.0
+
+
+def _locate(ga, gb):
+    """Where two close geometries approach: (ax, ay, bx, by, exact).
+
+    `exact` is False when the true closest points could not be computed and
+    the caller is being handed an approximation instead.
+
+    This used to report (0, 0, 0, 0) whenever nearest_points() raised, which
+    is a coordinate on the board — the bottom-left corner — so a reader had
+    no way to tell "here is the violation" from "we lost it". The violation
+    itself was never suppressed; only its position was, which is the half
+    that makes it findable. Now the fallbacks degrade instead of lying:
+
+      1. nearest_points — the true closest pair (exact).
+      2. representative_point — a point guaranteed to lie INSIDE each
+         geometry, which survives some geometries nearest_points refuses.
+      3. bounding-box centres — defined for anything with bounds at all.
+
+    Only an empty geometry reaches neither, and an empty geometry cannot be
+    within `threshold` of anything, so it cannot arrive here.
+    """
+    try:
+        pt_a, pt_b = nearest_points(ga, gb)
+        return (pt_a.x, pt_a.y, pt_b.x, pt_b.y, True)
+    except Exception:
+        pass
+    try:
+        pa, pb = ga.representative_point(), gb.representative_point()
+        return (pa.x, pa.y, pb.x, pb.y, False)
+    except Exception:
+        pass
+    (ax, ay), (bx, by) = _bbox_centre(ga), _bbox_centre(gb)
+    return (ax, ay, bx, by, False)
+
+
+def _fmt_violation(v):
+    """One report line. `~` marks an approximated position (see _locate)."""
+    d, na, nb, ax, ay, bx, by, exact = v
+    mark = "" if exact else "~"
+    return (f"    {d*1000:5.1f}µm  [{na}] {mark}({ax:.2f},{ay:.2f}) "
+            f"vs [{nb}] {mark}({bx:.2f},{by:.2f})")
+
+
 def find_gaps(merged, nets, threshold=GAP_WARN):
-    """Return list of (gap_mm, net_a, net_b, pt_a, pt_b) for every
+    """Return list of (gap_mm, net_a, net_b, ax, ay, bx, by, exact) for every
     copper pair with polygon distance < threshold.
 
     Covers THREE categories of violation:
@@ -185,12 +233,7 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
                 nb = nets.get(kb, str(kb)) if isinstance(kb, int) else kb
                 if na == "<no net>" and nb == "<no net>":
                     continue
-                try:
-                    pt_a, pt_b = nearest_points(pa, pb)
-                    loc = (pt_a.x, pt_a.y, pt_b.x, pt_b.y)
-                except Exception:
-                    loc = (0, 0, 0, 0)
-                violations.append((d, na, nb) + loc)
+                violations.append((d, na, nb) + _locate(pa, pb))
 
     # Category 2: same-net non-touching sub-polygons (fab dry-film risk)
     # Walk each net's merged geometry. If it's a MultiPolygon, the net
@@ -227,13 +270,9 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
                 # Unguarded — see the note in find_gaps().
                 d = subs[i].distance(subs[j])
                 if d < threshold and d > 0.001:
-                    try:
-                        pt_a, pt_b = nearest_points(subs[i], subs[j])
-                        loc = (pt_a.x, pt_a.y, pt_b.x, pt_b.y)
-                    except Exception:
-                        loc = (0, 0, 0, 0)
                     violations.append(
-                        (d, f"{net_name} (same-net)", net_name) + loc
+                        (d, f"{net_name} (same-net)", net_name)
+                        + _locate(subs[i], subs[j])
                     )
 
     return violations
@@ -294,19 +333,16 @@ def main():
         if not args.quiet:
             if danger:
                 print(f"\n  DANGER violations ({layer}) — manufacturing short risk:")
-                for d, na, nb, ax, ay, bx, by in danger[:10]:
-                    print(f"    {d*1000:5.1f}µm  [{na}] ({ax:.2f},{ay:.2f}) "
-                          f"vs [{nb}] ({bx:.2f},{by:.2f})")
+                for v in danger[:10]:
+                    print(_fmt_violation(v))
             if warn and len(warn) <= 20:
                 print(f"\n  WARN violations ({layer}) — below 0.15mm preferred minimum:")
-                for d, na, nb, ax, ay, bx, by in warn:
-                    print(f"    {d*1000:5.1f}µm  [{na}] ({ax:.2f},{ay:.2f}) "
-                          f"vs [{nb}] ({bx:.2f},{by:.2f})")
+                for v in warn:
+                    print(_fmt_violation(v))
             elif warn:
                 print(f"\n  WARN violations ({layer}) — below 0.15mm (top 15 of {len(warn)}):")
-                for d, na, nb, ax, ay, bx, by in warn[:15]:
-                    print(f"    {d*1000:5.1f}µm  [{na}] ({ax:.2f},{ay:.2f}) "
-                          f"vs [{nb}] ({bx:.2f},{by:.2f})")
+                for v in warn[:15]:
+                    print(_fmt_violation(v))
 
     print()
     print("=" * 70)

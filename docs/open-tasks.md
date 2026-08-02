@@ -151,14 +151,33 @@ metric (real path walk), not the board.
 
 Detail for each lives in `docs/known-issues.md` §C; this is the index.
 
-- **R14 in `verify_netlist_diff.EXCLUDED_REFS`** — documented as DNP but
-  never independently verified. Confirm before trusting the exclusion.
-- **`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" → 40-pin`,
-  papering over a real schematic/BOM inconsistency. Fix the schematic
-  symbol value, then delete the mapping.
-- **`verify_copper_clearance`** reports `loc = (0,0,0,0)` on the
-  `nearest_points` fallback. Does not hide violations, only misplaces
-  them.
+- ~~**R14 in `verify_netlist_diff.EXCLUDED_REFS`**~~ — VERIFIED
+  2026-08-02 from four independent sources (BOM run has one gap at R14,
+  qty 12; 0 of 94 CPL rows; the footprint is placed but pad 2 carries no
+  net while R13.2/R15.2 are on +3V3; and R14 would strap GPIO45 = VDD_SPI
+  HIGH, which kills the Octal PSRAM). Recorded at the exclusion site.
+- ~~**`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" →
+  40-pin`~~ — FIXED 2026-08-02. J4's schematic value is `FPC 40-pin 0.5mm
+  Bottom Contact` at source now; the mapping is deleted and the gate
+  passes on a real match (92/92). The symbol still draws 16 pins — that
+  simplification is fine, naming a 16-pin part was not.
+- ~~**`verify_copper_clearance`** reports `loc = (0,0,0,0)`~~ — FIXED
+  2026-08-02. `_locate()` degrades through nearest-points →
+  representative-point → bbox centre and marks approximations with `~`;
+  no path returns zeros, which mattered because (0,0) is a real board
+  coordinate.
+- **`verify_bom_values.KNOWN_MAPPINGS` still maps `"ili94883.95in8080"`
+  onto the same 40-pin BOM comment** — left alone deliberately. That is
+  DS1, the schematic-only logical panel symbol whose physical part IS J4
+  (already `T3_ALLOW`'d in `verify_netlist_diff`), so the two names
+  describe different things on purpose. Not the same defect as the
+  `fpc-16p` entry, which named the wrong part.
+- **J4's schematic symbol is emitted with `(dnp no)` like every other
+  part, and so is R14** — `generate_schematics/kicad_primitives.py` hard-
+  codes `dnp no`, so the schematic cannot express DNP at all. Cosmetic
+  today (the BOM and CPL are what the fab obeys, and R14 is absent from
+  both), but it means a reader of the schematic alone would fit R14 and
+  kill the PSRAM.
 - **`verify_easyeda_footprint._GEOMETRIC_MISMATCH_ALLOWLIST`** still holds
   U2 (90°) and LED2 (180°). Both angles are now *explained* (H4/H6 closed)
   but the allowlist is a tolerance, not a proof — replace with a derived

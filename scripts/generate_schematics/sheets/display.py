@@ -175,7 +175,13 @@ class DisplaySheet(SchematicSheet):
         fpc_x, fpc_y = 260, 120
         self.text("FPC RIBBON CONNECTOR (J4)", fpc_x - 15, fpc_y - 25, 2, True)
         self.text("(40P on PCB, 16 active signals shown)", fpc_x - 45, fpc_y - 23, 1.5)
-        self.sym("FPC_16P", "J4", "FPC-16P-0.5mm", fpc_x, fpc_y, range(1, 17))
+        # 16 PINS DRAWN, 40-PIN VALUE, and both are deliberate: the symbol is
+        # a simplification of the drawing, the value names the part that is
+        # actually fitted (C2856812, the BOM's "FPC 40-pin 0.5mm Bottom
+        # Contact"). Do not "correct" the value back to 16P to match the pin
+        # count — that is what verify_bom_values had to paper over.
+        self.sym("FPC_16P", "J4", "FPC 40-pin 0.5mm Bottom Contact",
+                 fpc_x, fpc_y, range(1, 17))
 
         # Wire display module outputs to FPC pins
         # Schematic uses simplified 16-pin symbol; physical FPC-40P footprint

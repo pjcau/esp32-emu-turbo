@@ -195,7 +195,13 @@ KNOWN_MAPPINGS = {
     "esp32-s3-n16r8": "esp32-s3-wroom-1-n16r8",
     "sd_card_spi": "microsdcardslot",
     "ili94883.95in8080": "fpc40-pin0.5mmbottomcontact",
-    "fpc-16p-0.5mm": "fpc40-pin0.5mmbottomcontact",  # schematic says 16P but BOM correctly 40-pin
+    # "fpc-16p-0.5mm" lived here until 2026-08-02, mapping J4's schematic
+    # value onto the 40-pin BOM comment. That was not a naming difference to
+    # tolerate — the schematic literally named a 16-pin part where a 40-pin
+    # one is fitted. The schematic value is fixed at source now
+    # (generate_schematics/lib_symbols.py + sheets/display.py), the two
+    # strings match without help, and the entry is gone. The symbol still
+    # DRAWS 16 pins, which is a drawing simplification and stays.
     "red": "redled",
     "green": "greenled",
     # F1: schematic draws the PTC with an R symbol valued by its hold

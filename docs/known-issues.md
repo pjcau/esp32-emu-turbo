@@ -719,20 +719,37 @@ and is six releases stale; the tag is the truth.
   plants each of the three properties: reinstating the net-0 skip fails 2
   tests, removing the uuid rewind fails 3, and mislabelling FID3's side is
   required to still reproduce the historical phantom.
-- **`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" → 40-pin`,
-  papering over a real schematic/BOM inconsistency. Fix the schematic
-  symbol value instead.
+- ~~**`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" →
+  40-pin`~~ — FIXED 2026-08-02. J4's schematic value said `FPC-16P-0.5mm`
+  while a 40-pin connector (C2856812) is fitted, and the mapping taught the
+  gate to accept it. The value is `FPC 40-pin 0.5mm Bottom Contact` at
+  source now (`generate_schematics/lib_symbols.py` +
+  `sheets/display.py`), the two strings match with no help, and the entry
+  is deleted. The symbol still **draws** 16 pins — that is a drawing
+  simplification (only 16 of the 40 carry a signal) and it stays; the value
+  is not a simplification, it names the part that gets soldered.
 - **`verify_easyeda_footprint._GEOMETRIC_MISMATCH_ALLOWLIST`** still holds
   U2 (90°) and LED2 (180°). U2's entry is now *explained* rather than
   merely tolerated — the 90° is the real ESOP-8 frame delta that H4 traced,
   and the CPL that follows from it is 270° — but the allowlist itself is
   still a tolerance, not a proof. LED2 remains tied to H6.
-- **`verify_netlist_diff.EXCLUDED_REFS` contains `R14`**, documented as
-  DNP but **never independently verified**. Confirm R14 is genuinely
-  do-not-populate before trusting the exclusion.
-- **`verify_copper_clearance`** still reports `loc = (0,0,0,0)` on the
-  `nearest_points` fallback path. It does not suppress the violation, only
-  misreports where it is.
+- ~~**`verify_netlist_diff.EXCLUDED_REFS` contains `R14`**, documented as
+  DNP but never independently verified~~ — VERIFIED 2026-08-02, from four
+  sources that are not each other. BOM: the 10k 0805 line reads
+  `R3,R4,…,R13,R15`, quantity 12 — R14 is the one gap in a contiguous run.
+  CPL: 0 of 94 rows. PCB: the footprint IS placed but **pad 2 carries no
+  net**, while its neighbours R13.2 and R15.2 are both on +3V3 — the
+  pull-up leg is deliberately unrouted. And the reason it must not be
+  fitted: R14 would pull BTN_L = GPIO45 = the VDD_SPI strapping pin up to
+  +3V3, and GPIO45 must be LOW at reset to select 3.3 V VDD_SPI, which the
+  Octal PSRAM requires. Recorded at the exclusion site.
+- ~~**`verify_copper_clearance`** reports `loc = (0,0,0,0)` on the
+  `nearest_points` fallback~~ — FIXED 2026-08-02. `(0,0,0,0)` is a real
+  coordinate on this board (the bottom-left corner), so a reader could not
+  tell "the violation is here" from "we lost it". `_locate()` now degrades
+  instead of lying: true closest points, else a `representative_point`
+  inside each geometry, else the bounding-box centres — and the report
+  prefixes approximated positions with `~`. No path can return zeros.
 
 ---
 

@@ -325,9 +325,17 @@ _SYMBOL_USBLC6_2SC6 = """    (symbol "USBLC6_2SC6" (pin_names (offset 1.016)) (i
         (pin power_in line (at 0 7.62 270) (length 2.54) (name "VBUS" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
         (pin bidirectional line (at 10.16 -2.54 180) (length 2.54) (name "I/O1_B" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))))\n"""
 
+# The symbol NAME is a drawing abstraction — J4 is physically a 40-pin FPC
+# connector and only 16 of its pins carry a signal, so the schematic draws
+# 16 pins (see sheets/display.py). The VALUE is not an abstraction: it names
+# the part that gets fitted, and it must be the BOM's part or the BOM and the
+# schematic are describing different components. It said "FPC-16P-0.5mm"
+# until 2026-08-02, and verify_bom_values carried a KNOWN_MAPPINGS entry
+# translating that to the 40-pin BOM comment — a gate agreeing to look away
+# from a real disagreement. Value fixed, mapping deleted.
 _SYMBOL_FPC_16P = """    (symbol "FPC_16P" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "J" (at 0 21.59 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "FPC-16P-0.5mm" (at 0 -21.59 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "FPC 40-pin 0.5mm Bottom Contact" (at 0 -21.59 0) (effects (font (size 1.27 1.27))))
       (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
       (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
       (symbol "FPC_16P_0_1" (rectangle (start -5.08 20.32) (end 5.08 -20.32) (stroke (width 0.254) (type default)) (fill (type background))))
