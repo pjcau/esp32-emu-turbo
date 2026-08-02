@@ -24,6 +24,17 @@ Checks:
   T7  LCD i80 pins match; no RD/BCKL define (both are +3V3 hard-ties)
   T8  no RG define lands on PSRAM (26-37) or USB (19/20) pins
   T9  every GPIO the target claims exists in GPIO_NETS (i.e. is routed)
+  T10 the target sdkconfig sets CPU freq / console / PSRAM mode, IDF5 names
+
+Round 31 found the same perimeter hole one file over: this gate read
+config.h only, so the target's sdkconfig — handed to the build as
+SDKCONFIG_DEFAULTS by rg_tool.py:195, where an unknown symbol is silently
+DROPPED and the Kconfig default wins — kept IDF4 symbol names.
+R31-HIGH-3: CONFIG_ESP32S3_DEFAULT_CPU_FREQ_* was renamed in IDF 5.0, so
+the emulator built at the 160 MHz default, a 33% deficit against the
+SNES-at-240 MHz plan. R31-MED-1: no CONFIG_ESP_CONSOLE_* line at all, so
+the console fell back to UART0 on GPIO43/44 = SD_MISO/SD_MOSI. T10 asserts
+the three settings whose silent absence is invisible in a build log.
 
 Usage: python3 scripts/verify_firmware_retrogo_sync.py
 """
@@ -37,9 +48,32 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 from generate_schematics.config import GPIO_NETS  # noqa: E402
 
-CONFIG_H = os.path.join(
+TARGET_DIR = os.path.join(
     BASE, "retro-go", "components", "retro-go",
-    "targets", "esp32-emu-turbo", "config.h")
+    "targets", "esp32-emu-turbo")
+CONFIG_H = os.path.join(TARGET_DIR, "config.h")
+SDKCONFIG = os.path.join(TARGET_DIR, "sdkconfig")
+
+# Settings the target sdkconfig must carry, with the IDF5 symbol name and
+# the consequence of the line going missing. Every one of these is silent
+# when absent: the build succeeds and the wrong default ships.
+SDKCONFIG_REQUIRED = [
+    ("CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=240",
+     "IDF5 CPU freq (the IDF4 CONFIG_ESP32S3_DEFAULT_CPU_FREQ_MHZ name is "
+     "dropped silently and the build runs at 160 MHz — R31-HIGH-3)"),
+    ("CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y",
+     "console on USB (the IDF default is UART0 = GPIO43/44 = "
+     "SD_MISO/SD_MOSI on this board — R31-MED-1)"),
+    ("CONFIG_SPIRAM_MODE_OCT=y",
+     "N16R8 PSRAM is Octal; Quad mode leaves the 8 MB unusable"),
+]
+
+# IDF4 symbol names that must not come back: renamed in IDF 5.0, so they
+# are inert here and read as configuration that is not actually applied.
+SDKCONFIG_FORBIDDEN = [
+    ("CONFIG_ESP32S3_DEFAULT_CPU_FREQ_", "renamed to CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_*"),
+    ("CONFIG_ESP32S3_SPIRAM_SUPPORT", "renamed to CONFIG_SPIRAM"),
+]
 
 # RG key -> board net name in GPIO_NETS. MENU is deliberately absent: it
 # must NOT have a GPIO (T2 checks the virtual combo instead).
@@ -165,6 +199,24 @@ def main():
     unrouted = {n: g for n, g in used.items() if g not in GPIO_NETS}
     check("[T9] every claimed GPIO is routed (exists in GPIO_NETS)",
           not unrouted, f"unrouted: {unrouted}")
+
+    print("── T10: target sdkconfig (IDF5 symbol names) ──")
+    check(f"[T10] {os.path.relpath(SDKCONFIG, BASE)} exists",
+          os.path.exists(SDKCONFIG),
+          "rg_tool.py only passes SDKCONFIG_DEFAULTS if this file is present "
+          "— without it EVERY setting below falls back to the Kconfig default")
+    if os.path.exists(SDKCONFIG):
+        active = {ln.strip() for ln in open(SDKCONFIG)
+                  if ln.strip() and not ln.lstrip().startswith("#")}
+        for setting, why in SDKCONFIG_REQUIRED:
+            check(f"[T10] {setting}", setting in active,
+                  f"MISSING from {os.path.relpath(SDKCONFIG, BASE)} — {why}")
+        for relic, renamed_to in SDKCONFIG_FORBIDDEN:
+            hits = sorted(s for s in active if s.startswith(relic))
+            check(f"[T10] no IDF4 relic {relic}*", not hits,
+                  f"{os.path.relpath(SDKCONFIG, BASE)} still has {hits} — "
+                  f"{renamed_to}; the IDF4 name is dropped silently, so this "
+                  f"line configures NOTHING")
 
     print("=" * 60)
     print(f"Results: {PASS} passed, {FAIL} failed")
