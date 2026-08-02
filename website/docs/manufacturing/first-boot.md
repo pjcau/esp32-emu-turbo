@@ -23,6 +23,25 @@ USB-C cable + any USB PSU (a PC port is fine and current-limits harder),
 a multimeter, a phone camera. **Not yet**: battery, SD card, closed
 case. Keep the case open — the LEDs and test points are read bare.
 
+## Where the LEDs are
+
+All four diagnostic LEDs sit in one silk-labelled bank on the **top
+side, right edge, just above the MENU button** — one glance (or one
+photo) reads the whole power tree, left to right in the same order the
+stages below walk it: VBUS → 5V → 3V3 → HB.
+
+![Diagnostic LED bank — VBUS / 5V / 3V3 / HB, top side, right edge, above the MENU button](/img/renders/pcba/pcba-detail-diag-leds.png)
+
+The IP5306 charge-status pair (CHG / FULL) sits near the bottom-left
+corner and only joins the session at Stage 4, battery in:
+
+![Charge-status pair — CHG / FULL, top side, bottom-left corner](/img/renders/pcba/pcba-detail-charge-leds.png)
+
+Full board for orientation — the bank is on the right edge, the charge
+pair on the lower left:
+
+![Top side, full board — diagnostic bank right edge, CHG/FULL lower left](/img/renders/pcba/pcba-top.png)
+
 ## The session log
 
 Copy this table; fill one row per stage. A stage is done only when its
