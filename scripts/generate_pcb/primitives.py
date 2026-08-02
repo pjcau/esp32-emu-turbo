@@ -228,6 +228,21 @@ NET_LIST = [
     # is two nets, not one "logically fragmented" net — same rule as
     # PAM_IN_AC above.
     (63, "VBUS_IN"),
+    # Diagnostic LED heartbeat, GPIO15 (U1.8) -> R31 -> LED6. Workstream H
+    # of docs/diagnostic-leds-roadmap.md. GPIO15 and GPIO16 are the only
+    # genuinely free module pins — GPIO26-37 belong to the flash / octal
+    # PSRAM — so the driven tier of the diagnostic tree is ONE pin carrying
+    # blink codes per subsystem, not one LED per subsystem.
+    (64, "LED_HB"),
+    # Resistor-to-anode junctions for the four diagnostic LEDs, exactly like
+    # LED1_RA / LED2_RA above: the series resistor and the LED are two
+    # elements, so the node between them is its own net. Unnamed, KiCad
+    # drops it from the exported netlist and verify_netlist_diff cannot
+    # match it against the copper.
+    (65, "LED3_RA"),
+    (66, "LED4_RA"),
+    (67, "LED5_RA"),
+    (68, "LED6_RA"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}

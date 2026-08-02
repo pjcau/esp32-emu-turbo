@@ -12,9 +12,14 @@ oscilloscope. This project does not have either — the only instruments
 available are a camera and a USB cable.
 
 So the board measures itself. `software/bringup_test/` is an ESP-IDF
-firmware whose entire output is a serial report: 57 checks, one parseable
+firmware whose entire output is a serial report: 58 checks, one parseable
 line each, naming the net and the component behind every failure. The serial
-log is the instrument.
+log is the instrument — and since the next run, the [diagnostic
+LEDs](../rework/diagnostic-leds.md) are its cable-free fallback: the
+heartbeat LED repeats each failed subsystem as a blink code, so a photo
+or video carries the verdict even with no serial connection.
+The step-by-step commissioning sequence (USB first, battery last) is
+[first-boot.md](./first-boot.md).
 
 It is containment layer 5 of the
 [containment roadmap](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/archived/containment-roadmap.md):
@@ -102,7 +107,8 @@ BRINGUP;38;PASS;lcd.panel.init;D0-D7+CS/RST/DC/WR;display_init()=ESP_OK 320x480 
 BRINGUP;40;SKIP;lcd.panel.readback;-;LCD_RD is tied HIGH on the PCB, the panel cannot be read back — confirm the colour bars by eye (R,G,B,white,black,cyan,magenta,yellow)
 ...
 BRINGUP-SKIPPED;lcd.panel.readback,lcd.backlight,audio.audible,power.rail3v3.absolute,power.battery_sense,power.ip5306_i2c
-BRINGUP-SUMMARY;total=57;pass=51;fail=0;skip=6;verdict=GREEN
+BRINGUP-SUMMARY;total=58;pass=52;fail=0;skip=6;verdict=GREEN
+BRINGUP-LED;steady 1 Hz — all subsystems green
 BRINGUP-END
 ```
 

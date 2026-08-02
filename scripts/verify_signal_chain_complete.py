@@ -267,6 +267,10 @@ def test_dedicated_pins(net_refs, name_to_id, id_to_name):
     # LED indicator chains
     verify_chain("LED1", "LED1_RA", ["LED1", "R17"], net_refs, name_to_id, id_to_name)
     verify_chain("LED2", "LED2_RA", ["LED2", "R18"], net_refs, name_to_id, id_to_name)
+    verify_chain("LED3", "LED3_RA", ["LED3", "R28"], net_refs, name_to_id, id_to_name)
+    verify_chain("LED4", "LED4_RA", ["LED4", "R29"], net_refs, name_to_id, id_to_name)
+    verify_chain("LED5", "LED5_RA", ["LED5", "R30"], net_refs, name_to_id, id_to_name)
+    verify_chain("LED6", "LED6_RA", ["LED6", "R31"], net_refs, name_to_id, id_to_name)
 
     # PAM8403 VREF
     verify_chain("PAM VREF", "PAM_VREF", ["U5", "C21"], net_refs, name_to_id, id_to_name)

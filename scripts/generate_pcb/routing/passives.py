@@ -4,6 +4,8 @@ and every constant lives in _shared (original order, so import-time
 execution is unchanged). See routing/__init__.py for the contract."""
 from ._shared import (
     DEBOUNCE_REFS,
+    DIAG_LEDS,
+    DIAG_VBUS_TAP_Y,
     NET_ID,
     PULL_UP_REFS,
     VIA_MIN,
@@ -15,6 +17,7 @@ from ._shared import (
     W_PWR_HIGH,
     W_PWR_LOW,
     W_SIG,
+    W_VBUS_DIAG,
     _init_pads,
     _pad,
     _seg,
@@ -422,5 +425,161 @@ def _led_traces():
         parts.append(_seg(led_p1[0], led_p1[1], gnd_via_x, led_p1[1],
                           "F.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(gnd_via_x, led_p1[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+
+    return parts
+
+
+def _diag_led_traces():
+    """Diagnostic LED bank — workstream H of docs/diagnostic-leds-roadmap.md.
+
+    Three passive rail indicators (LED3/VBUS, LED4/+5V, LED5/+3V3) plus one
+    firmware-driven heartbeat (LED6 on LED_HB / GPIO15). Everything is on
+    F.Cu in the bottom-right pocket; see the DIAG_* block in _shared.py for
+    why the resistors are NOT on B.Cu under their LEDs the way R17/R18 are.
+
+    Per LED, the chain is identical to _led_traces() above:
+        rail -> R pad2 (west) | R pad1 (east) -> LEDn_RA -> LED pad2/anode
+        LED pad1/cathode -> short west stub -> GND via -> In1.Cu plane
+    R28-R31 are placed at rot=180 precisely so that "rail west, _RA east"
+    holds, which makes every R->LED link a straight vertical at x+0.95.
+
+    The three rails arrive on their own horizontal lanes, and the lane of
+    the LED that drops FURTHEST WEST is the SOUTHMOST, so no drop ever
+    crosses another lane:
+        VBUS   lane y=47.00, drops at x=133.05  (R28.2)
+        +5V    lane y=46.00, drops at x=139.05  (R29.2)
+        LED_HB lane y=38.00 area, drops at x=151.05 (R31.2)
+    +3V3 needs no lane: R30 taps the In2.Cu plane through a local via.
+    """
+    parts = []
+    _init_pads()
+    n_gnd = NET_ID["GND"]
+
+    # ── Per-LED local wiring (R -> LED -> GND) ───────────────────
+    for r_ref, led_ref, _rail, ra_name, _label in DIAG_LEDS:
+        r_p1 = _pad(r_ref, "1")      # F.Cu rot180: x+0.95 — EAST, _RA side
+        led_p1 = _pad(led_ref, "1")  # F.Cu rot0:   x-0.95 — WEST, cathode
+        led_p2 = _pad(led_ref, "2")  # F.Cu rot0:   x+0.95 — EAST, anode
+        if not (r_p1 and led_p1 and led_p2):
+            continue
+        n_ra = NET_ID[ra_name]
+
+        # R pad1 -> LED pad2: both at x+0.95, so one straight vertical.
+        parts.append(_seg(r_p1[0], r_p1[1], led_p2[0], led_p2[1],
+                          "F.Cu", W_SIG, n_ra))
+
+        # Cathode -> GND via. 2.15 mm west of the pad centre: far enough to
+        # respect the >=1 mm via-to-pad-centre rule, and the only offset
+        # that puts all four vias inside a both-layers-clear window (B.Cu
+        # here is the ABXY/SD fan-out — see the DIAG_* comment in _shared).
+        gnd_via_x = led_p1[0] - 1.20
+        parts.append(_seg(led_p1[0], led_p1[1], gnd_via_x, led_p1[1],
+                          "F.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(gnd_via_x, led_p1[1], n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # Every lane below has to get EAST of the FPC slot (x 125.5-128.5,
+    # y 23.5-47.5, a board cutout — collision.register_slot). The band
+    # immediately south of the slot is the pinch point of this whole layout:
+    # between the slot and the U3/L2 buck cluster there is exactly ONE gap
+    # wide enough for a trace, at y ~= 49.5. VBUS takes it; +5V enters the
+    # corridor east of the pinch; LED_HB goes over the top of the slot.
+    # These polylines were found by A* over the actual copper and then
+    # clearance-checked — do not "straighten" them without re-running that.
+
+    # ── VBUS: tap the existing F.Cu riser at x=111 ────────────────
+    # The riser already carries VBUS from F1/J1 up to U2 (y 40.1..61.0), so
+    # this is a branch off existing copper, not a new spur from the
+    # connector — no extra load on the fused path.
+    r28_p2 = _pad("R28", "2")
+    if r28_p2:
+        n_vbus = NET_ID["VBUS"]
+        # W_VBUS_DIAG, not W_SIG: VBUS is in the "Power High" net class
+        # (verify_net_class_widths) with a 0.50 mm floor. The branch itself
+        # only carries LED3's 0.59 mA, but the class is a property of the
+        # NET, and narrowing it here would be a waiver, not a fix.
+        # The branch leaves the riser HORIZONTALLY. Leaving it vertically
+        # (a 49.50 -> 49.75 step) doubled back along the riser and JLCDFM
+        # read the 0 deg reversal as an acute corner.
+        for x1, y1, x2, y2 in (
+            (111.00, DIAG_VBUS_TAP_Y, 116.25, DIAG_VBUS_TAP_Y),
+            (116.25, DIAG_VBUS_TAP_Y, 116.25, 50.00),
+            (116.25, 50.00, 119.75, 50.00),
+            (119.75, 50.00, 119.75, 54.00),
+            (119.75, 54.00, 121.25, 54.00),
+            (121.25, 54.00, 121.25, 54.75),
+            (121.25, 54.75, 123.75, 54.75),
+            (123.75, 54.75, 123.75, 54.00),
+            (123.75, 54.00, r28_p2[0], 54.00),
+        ):
+            parts.append(_seg(x1, y1, x2, y2, "F.Cu", W_VBUS_DIAG, n_vbus))
+
+    # ── +5V: via into the In2.Cu +5V island ───────────────────────
+    # The island is (105,35)-(123,62) — see _power_zones(). The via sits at
+    # x=119.75, i.e. 3.25 mm inside its east boundary, deliberately clear of
+    # the x=123 edge: R22-CRIT-1 killed a board when vias landed just inside
+    # a higher-priority pour and were orphaned from the plane they wanted.
+    r29_p2 = _pad("R29", "2")
+    if r29_p2:
+        n_5v = NET_ID["+5V"]
+        # y=48.75, not 49.50: at 49.50 the via barrel came within 0.075 mm
+        # of the VBUS corner at (119.75, 50.00) — the two taps share this
+        # column because it is the last x still safely inside the island.
+        parts.append(_via_net(119.75, 48.75, n_5v, size=VIA_STD, drill=VIA_STD_DRILL))
+        for x1, y1, x2, y2 in (
+            (119.75, 48.75, 119.75, 49.25),
+            (119.75, 49.25, 123.75, 49.25),
+            (123.75, 49.25, 123.75, 50.75),
+            (123.75, 50.75, 133.25, 50.75),
+            (133.25, 50.75, 133.25, 52.50),
+            (133.25, 52.50, 136.25, 52.50),
+            (136.25, 52.50, 136.25, 54.00),
+            (136.25, 54.00, r29_p2[0], 54.00),
+        ):
+            parts.append(_seg(x1, y1, x2, y2, "F.Cu", W_SIG, n_5v))
+
+    # ── +3V3: local via to the In2.Cu plane ───────────────────────
+    # East of V5_EAST=123, so In2.Cu here is the continuous +3V3 pour and a
+    # plain via lands on it. (144.25, 51.60) is inside the [143.75, 144.75]
+    # both-layers-clear window; a via straight above R30.2 would sit on the
+    # BTN_B riser on B.Cu.
+    r30_p2 = _pad("R30", "2")
+    if r30_p2:
+        n_3v3 = NET_ID["+3V3"]
+        parts.append(_seg(r30_p2[0], r30_p2[1], r30_p2[0], 51.60,
+                          "F.Cu", W_PWR_LOW, n_3v3))
+        parts.append(_seg(r30_p2[0], 51.60, 144.25, 51.60, "F.Cu", W_PWR_LOW, n_3v3))
+        parts.append(_via_net(144.25, 51.60, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── LED_HB: U1.8 (GPIO15) all the way to R31.2 ────────────────
+    # The long one, ~108 mm. It escapes east on B.Cu along the U1.8 pad row,
+    # vias up to F.Cu at x=97, and then goes OVER THE TOP of the FPC slot
+    # (north to y~20, east past x=140, back south) because the band south of
+    # the slot is already spoken for by VBUS and +5V. A 1 Hz LED drive has
+    # no signal-integrity stake in the detour; it is purely a space problem.
+    r31_p2 = _pad("R31", "2")
+    u1_p8 = _pad("U1", "8")
+    if r31_p2 and u1_p8:
+        n_hb = NET_ID["LED_HB"]
+        parts.append(_seg(u1_p8[0], u1_p8[1], 97.00, u1_p8[1], "B.Cu", W_SIG, n_hb))
+        parts.append(_via_net(97.00, u1_p8[1], n_hb, size=VIA_STD, drill=VIA_STD_DRILL))
+        for x1, y1, x2, y2 in (
+            (97.00, u1_p8[1], 123.50, u1_p8[1]),
+            (123.50, u1_p8[1], 123.50, 21.00),
+            (123.50, 21.00, 129.25, 21.00),
+            (129.25, 21.00, 129.25, 19.50),
+            (129.25, 19.50, 140.25, 19.50),
+            (140.25, 19.50, 140.25, 33.50),
+            (140.25, 33.50, 141.00, 33.50),
+            (141.00, 33.50, 141.00, 42.50),
+            (141.00, 42.50, 144.75, 42.50),
+            (144.75, 42.50, 144.75, 43.25),
+            (144.75, 43.25, 146.25, 43.25),
+            (146.25, 43.25, 146.25, 52.50),
+            (146.25, 52.50, 148.25, 52.50),
+            (148.25, 52.50, 148.25, 54.00),
+            (148.25, 54.00, r31_p2[0], 54.00),
+        ):
+            parts.append(_seg(x1, y1, x2, y2, "F.Cu", W_SIG, n_hb))
 
     return parts

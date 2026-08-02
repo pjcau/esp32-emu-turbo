@@ -215,6 +215,12 @@ class CollisionGrid:
         fcu_refs = {
             "SW1", "SW2", "SW3", "SW4", "SW5", "SW6", "SW7", "SW8",
             "SW9", "SW10", "SW13", "LED1", "LED2",
+            # Diagnostic LED bank — the only RESISTORS on the top side, so
+            # this set is no longer "buttons and LEDs". Omitting a ref here
+            # makes the short detector treat it as B.Cu and report phantom
+            # violations against the real B.Cu copper underneath.
+            "LED3", "LED4", "LED5", "LED6",
+            "R28", "R29", "R30", "R31",
         }
 
         # Skip ESP32 GND thermal pad (U1:41) — it's a 3.9x3.9mm exposed pad

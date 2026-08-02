@@ -266,7 +266,30 @@ _JLCPCB_ROT_DELTAS = {
                  # LED2 at 0°): LED2 is reversed and stays dark — and it is NOT
                  # confounded by battery state, because U2's LED pins are NC and
                  # both LEDs are plain +3V3 power indicators.
+    #
+    # LED3-LED6 are the SAME PART as LED2 (C19171391) in the SAME placement
+    # (rot 0, Top) on the SAME copper convention (pad 1 = GND = cathode,
+    # pad 2 = LEDn_RA = anode), so they inherit LED2's delta verbatim. This
+    # is the "sweep the whole family" rule from the v4.3.1 rotation
+    # post-mortem: one member of a package family being misrotated means
+    # every member must be re-derived, and conversely a member that shares
+    # part number, footprint, side and pad-net convention must share the
+    # override. Omitting these four would ship four LEDs that never light.
+    "LED3": 180,
+    "LED4": 180,
+    "LED5": 180,
+    "LED6": 180,
 }
+
+# Diagnostic-LED series resistors. Both values were ALREADY on the BOM, so
+# the bank adds zero new part numbers — only quantity on two existing lines.
+# Red C19171391 at these currents sits around Vf = 2.0 V:
+#   5.1 k on a 5 V rail  -> (5.000 - 2.0) / 5100 = 0.59 mA   (C27834, R1/R2)
+#   1 k   on +3V3        -> (3.327 - 2.0) / 1000 = 1.33 mA   (C17513, R17/R18)
+# 1 k on the 5 V rails would have been 2.9 mA — above the 2 mA ceiling for
+# parts meant to be DNP-able bench indicators, and 3x the drain budget.
+# 10 k on +3V3 would have been 0.13 mA, below the visibility floor.
+DIAG_R_VALUES = {"R28": "5.1k", "R29": "5.1k", "R30": "1k", "R31": "1k"}
 
 
 def _jlcpcb_rotation(rot, layer, footprint_name, ref=None):
@@ -349,6 +372,17 @@ def _build_placements():
     x, y = enc_to_pcb(*LED_FULL_ENC)
     p.append(("LED2", "Red",  # C19171391 is red (YLED0805R); "Green" was a BOM-label error
               "LED_0805", x, y, 0, "top"))
+
+    # Diagnostic LED bank (workstream H) — TOP side, two rows. The series
+    # resistors are on the top side too, which makes them the only top-side
+    # resistors on the board; see routing/_shared.py DIAG_* for why B.Cu was
+    # not an option here.
+    from scripts.generate_pcb.routing import DIAG_LEDS, DIAG_X, DIAG_R_Y, DIAG_LED_Y
+    for _r, _led, _rail, _ra, _lbl in DIAG_LEDS:
+        p.append((_r, DIAG_R_VALUES[_r], "R_0805",
+                  DIAG_X[_r], DIAG_R_Y, 180, "top"))
+        p.append((_led, "Red", "LED_0805",
+                  DIAG_X[_r], DIAG_LED_Y, 0, "top"))
 
     # ══════════════════════════════════════════════════════════════
     # BOTTOM SIDE (B.Cu): everything else + shoulder buttons

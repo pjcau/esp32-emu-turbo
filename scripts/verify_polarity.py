@@ -352,6 +352,13 @@ _strict("R16", [("1", "+5V"), ("2", "IP5306_KEY")])
 # R17 pin 1 connects to LED1 anode (LED1_RA net), R18 to LED2 (LED2_RA)
 _strict("R17", [("1", "LED1_RA")])
 _strict("R18", [("1", "LED2_RA")])
+# Diagnostic LED bank: pad 1 = LEDn_RA (anode side), pad 2 = the rail.
+# Nets read off the copper, not off the symbol — see the LED2 block in
+# POLARITY_AUDIT.md for why the symbol frame is not authoritative here.
+_strict("R28", [("1", "LED3_RA"), ("2", "VBUS")])
+_strict("R29", [("1", "LED4_RA"), ("2", "+5V")])
+_strict("R30", [("1", "LED5_RA"), ("2", "+3V3")])
+_strict("R31", [("1", "LED6_RA"), ("2", "LED_HB")])
 
 # ============================================================
 # R4-R15: Button pull-up resistors
@@ -434,6 +441,10 @@ for i, ref in enumerate(_DEBOUNCE_REFS):
 # Both LED pads carry the LED_RA intermediate net from resistor junction
 _strict("LED1", [("2", "LED1_RA")])
 _strict("LED2", [("2", "LED2_RA")])
+_strict("LED3", [("1", "GND"), ("2", "LED3_RA")])
+_strict("LED4", [("1", "GND"), ("2", "LED4_RA")])
+_strict("LED5", [("1", "GND"), ("2", "LED5_RA")])
+_strict("LED6", [("1", "GND"), ("2", "LED6_RA")])
 
 # ============================================================
 # D1: BAT54C dual Schottky diode (menu combo)

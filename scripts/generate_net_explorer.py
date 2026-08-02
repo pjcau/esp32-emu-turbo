@@ -76,8 +76,13 @@ SECTION_LAW = [
     ("storage",  r"^SD_"),
     ("audio",    r"^I2S_|^PAM_|^SPK"),
     ("usb",      r"^USB_D"),
+    # mcu comes BEFORE power so LED6_RA is claimed here. LED1/2/3/4/5_RA are
+    # passive rail-indicator junctions and belong to power; LED6_RA hangs off
+    # LED_HB, a firmware-driven GPIO15 output carrying blink codes, so it and
+    # its resistor R31 belong to the MCU. Without this ordering R31 ties 1-1
+    # between the two sections and the generator refuses to guess.
+    ("mcu",      r"^EN$|^LED_HB$|^LED6_RA$"),
     ("power",    r"^USB_CC|^VBUS(_IN)?$|^BAT|^LX$|^IP5306_|^RPP_|^LED\d+_RA$|^BUCK_"),
-    ("mcu",      r"^EN$"),
 ]
 
 # A component follows the majority of its section-owned nets. These refs

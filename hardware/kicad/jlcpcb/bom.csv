@@ -31,3 +31,6 @@ USBLC6-2SC6 USB ESD TVS,U4,SOT-23-6,C7519,1
 PTC Resettable Fuse 2A 1812,F1,F_1812,C960026,1
 BAT54C Dual Schottky Diode,D1,SOT-23,C37704,1
 SI2301CDS P-Channel MOSFET,Q1,SOT-23,C10487,1
+"Red LED 0805 (bring-up diagnostic, DNP in production)","LED3,LED4,LED5,LED6",LED_0805,C19171391,4
+"5.1k 0805 (bring-up diagnostic, DNP in production)","R28,R29",R_0805,C27834,2
+"1k 0805 (bring-up diagnostic, DNP in production)","R30,R31",R_0805,C17513,2

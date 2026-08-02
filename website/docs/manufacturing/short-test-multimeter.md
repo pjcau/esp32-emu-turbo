@@ -11,7 +11,8 @@ with a multimeter (reference: **UNI-T UT890D+**), and — most importantly — a
 **diagnostic matrix** that maps *your* measured results to the *likely location* of the
 fault.
 
-This is the check that would have caught the PCB v1 disaster (44 routing violations,
+This page is the **unpowered** continuity check (Stage 0 of
+[First boot](./first-boot.md)). It is the check that would have caught the PCB v1 disaster (44 routing violations,
 6 decoupling caps shorted to GND — see
 [Incident: Power Short](../rework/incident-power-short.md)).
 
@@ -185,7 +186,7 @@ other and to GND. See [BUG #1/#2/#3](../rework/incident-power-short.md).
 | **T12** | SY8089A **pin 4** (IN/+5V) | **C30** + pad (+3V3) | no beep (buck doesn't conduct at 0 V) | C1 (solder bridge across regulator) |
 | **T13** | SY8089A **pin 2** (GND) | **C30** + pad (+3V3) | no beep | A1 |
 | **T14** | IP5306 **VOUT** (pin 8) | IP5306 **GND** (exposed pad) | no beep | A2 |
-| **T15** | each +3V3 cap **C2 / C26 / C_dec** +pad | GND | no beep, all identical | A1 (find *which* cap beeps) |
+| **T15** | each +3V3 cap **C3 / C4 / C26 / C28 / C29 / C30** +pad | GND | no beep, all identical | A1 (find *which* cap beeps) |
 | **T16** | each +5V cap **C1 / C19 / C27** +pad | GND | no beep | A2 |
 
 :::note Isolating with per-cap tests
@@ -390,7 +391,17 @@ Find your failing test(s) in the left column → the likely root cause and where
 
 ---
 
-## 5b. Current board findings — proto #1 (2026-07-14)
+## 5b. Proto #1 findings — HISTORICAL RECORD (old AMS1117 + C2 design)
+
+:::warning This whole section is a dated record, not current instructions
+Everything from here to section E describes **proto #1** (April-July 2026),
+which carried the **AMS1117 linear regulator (U3)** and the **C2 tantalum**.
+The current board has neither: U3 is the **SY8089 synchronous buck**
+(R25/R26 divider — the "v2 PCB: design in a buck IC" recommendation below
+was implemented), and C2 was deleted from the design. Do not order parts or
+plan rework from this section. The staged power-on for the current board is
+**[First boot](./first-boot.md)**.
+:::
 
 :::tip SOLVED (2026-07-24) — root cause found: C2 tantalum mounted reversed
 The AMS1117 burnouts described below were traced to **C2 (22 µF tantalum output cap)
@@ -713,7 +724,7 @@ a real downstream load still to find.
       connecting it** — adjustable modules ship at a random voltage; 5 V on +3V3 kills the ESP32.
 - [ ] **Or (simplest):** solder a **new AMS1117-3.3** drop-in — works, but stays thermally
       marginal for the ESP32-S3 + 3.95″ display load.
-- [ ] **v2 PCB:** design in a dedicated **buck IC** (MP2315 / TPS563 / MP1584) with inductor +
+- [x] **v2 PCB (DONE — SY8089AAAC landed):** design in a dedicated **buck IC** with inductor +
       in/out caps + feedback divider. 3 W @ 3.3 V ≈ 900 mA — ample for ESP32-S3 + display + SD +
       audio. Keep good output caps / an LC filter on the audio DAC (switching ripple).
 
@@ -729,12 +740,9 @@ Heat = power = V·I, so if the reg ever got hot, real power flowed — measure i
 - [ ] Touch the regulator + **ESP32** — must stay **cool**. ESP32 hot with no firmware → U1
       damaged, replace it.
 
-### F. Functional bring-up (once voltages are good)
-- [ ] Connect USB-C, open serial monitor (115200) → ESP32 boot messages.
-- [ ] Flash firmware ([firmware build](../development/workflow-guide.md)).
-- [ ] Test display (fill test), SD (mount), audio (tone), all 12 buttons.
+### F. Functional bring-up
 
-### Result if all pass
-Board runs as a **USB-powered** handheld (no battery). To restore battery + charging later,
-fit a **known-good IP5306** in place of the bypass and re-run tests **T4, T5, T9** (must be
-directional, not shorted).
+Superseded: the staged commissioning sequence for the current board —
+USB-only first, diagnostic LEDs, heartbeat blink codes, battery last —
+is **[First boot — a linear, staged session](./first-boot.md)**. This
+page's job ends when the continuity tests above are clean.

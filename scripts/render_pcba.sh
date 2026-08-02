@@ -21,7 +21,8 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 cd "$PROJECT_ROOT"
 
 PCB_SRC="hardware/kicad/esp32-emu-turbo.kicad_pcb"
-PCB_TMP="$(mktemp -t pcba-render)"
+# BSD mktemp accepts a bare -t prefix; GNU mktemp needs the XXXXXX template.
+PCB_TMP="$(mktemp -t pcba-render.XXXXXX)"
 PCB="$PCB_TMP.kicad_pcb"
 OUT="website/static/img/renders/pcba"
 W=1920; H=1080

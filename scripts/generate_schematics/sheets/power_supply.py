@@ -739,6 +739,53 @@ class PowerSupplySheet(SchematicSheet):
         self.text("Full", led_x + 12, led2_y - 6, 1.5)
 
         # ═══════════════════════════════════════════════
+        # DIAGNOSTIC RAIL LEDs (workstream H)
+        # LED3/VBUS, LED4/+5V, LED5/+3V3 — passive "is this rail up?"
+        # indicators, DNP in production. LED6 (the GPIO15 heartbeat) lives
+        # on the MCU sheet, next to the pin that drives it.
+        # Same topology as LED1/LED2 above: rail -> R -> LEDn_RA -> anode,
+        # cathode -> GND.
+        # ═══════════════════════════════════════════════
+        # Own zone in the empty right-hand third of the A3 sheet. The
+        # first attempt sat at x=led_x, y=led2_y+26 and landed straight
+        # on the POWER SWITCH block at (284, 199).
+        dg_x = 345
+        dg_y0 = 120
+        self.text("DIAGNOSTIC RAIL LEDs (DNP in production)",
+                  dg_x - 30, dg_y0 - 16, 2.54, True)
+        # Unrolled on purpose: verify_schematic_pcb_sync parses these sheet
+        # sources STATICALLY for self.sym("<lib>", "<REF>", ...). A loop with
+        # f-strings hides every ref from it, and the gate then reports the
+        # parts as "BOM refs with no schematic symbol".
+        def _diag_led(ledref, rail, y):
+            if rail == "+3V3":
+                self.v33(dg_x - 15, y - 8)
+            elif rail == "+5V":
+                self.v5(dg_x - 15, y - 8)
+            else:
+                # VBUS has no power-symbol helper; name it like every other
+                # VBUS tap on this sheet.
+                self.glabel(rail, dg_x - 15, y - 8, 90)
+            self.wire(dg_x - 15, y - 8, dg_x - 15, y - 3.81)
+            self.wire(dg_x - 15, y + 3.81, dg_x - 3.81, y)
+            # Name the R<->LED junction, same reason as LED1_RA/LED2_RA.
+            self.wire(dg_x - 3.81, y, dg_x - 3.81, y + 7)
+            self.glabel(ledref + "_RA", dg_x - 3.81, y + 7, 270)
+            self.gnd(dg_x + 8, y)
+            self.wire(dg_x + 3.81, y, dg_x + 8, y)
+            self.text(rail, dg_x + 12, y - 6, 1.5)
+
+        self.sym("R", "R28", "5.1k", dg_x - 15, dg_y0, ["1", "2"], angle=180)
+        self.sym("LED", "LED3", "Red", dg_x, dg_y0, ["1", "2"])
+        _diag_led("LED3", "VBUS", dg_y0)
+        self.sym("R", "R29", "5.1k", dg_x - 15, dg_y0 + 18, ["1", "2"], angle=180)
+        self.sym("LED", "LED4", "Red", dg_x, dg_y0 + 18, ["1", "2"])
+        _diag_led("LED4", "+5V", dg_y0 + 18)
+        self.sym("R", "R30", "1k", dg_x - 15, dg_y0 + 36, ["1", "2"], angle=180)
+        self.sym("LED", "LED5", "Red", dg_x, dg_y0 + 36, ["1", "2"])
+        _diag_led("LED5", "+3V3", dg_y0 + 36)
+
+        # ═══════════════════════════════════════════════
         # DESIGN NOTES — moved further down to sit below the
         # VOLTAGE REGULATOR / POWER SWITCH row on the A3 sheet.
         # ═══════════════════════════════════════════════

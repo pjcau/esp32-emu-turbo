@@ -66,7 +66,10 @@ MAX_APERTURE_RATIO = 1.50  # allow up to 1:1 + margin for large pads
 TOMBSTONE_PACKAGES = {"R_0805", "C_0805", "LED_0805", "C_1206"}
 
 # Polarity-sensitive components (must have correct orientation)
-POLARITY_LEDS = {"LED1", "LED2"}  # LED_0805 — cathode at pad 1
+POLARITY_LEDS = {"LED1", "LED2",
+                 # Diagnostic bank — same LED_0805 footprint, same
+                 # pad-1-is-cathode copper convention.
+                 "LED3", "LED4", "LED5", "LED6"}
 POLARITY_ICS = {"U1", "U2", "U3", "U5"}  # ICs with pin-1 marker
 
 
