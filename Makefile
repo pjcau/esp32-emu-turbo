@@ -134,6 +134,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_netlist_vs_kicad \
 	verify_order_manifest \
 	verify_polarity \
+	verify_rpp_polarity \
 	verify_power_net_integrity \
 	verify_power_via_ampacity \
 	verify_power_paths \
