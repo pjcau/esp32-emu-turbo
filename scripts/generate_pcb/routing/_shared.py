@@ -35,6 +35,10 @@ W_PWR = 0.6
 W_PWR_HIGH = 0.76     # High-current power: VBUS, BAT+, LX (≥2.1A, 1oz Cu, 10°C rise)
 W_PWR_LOW = 0.30      # Light power stubs: +3V3/GND short cap-to-via runs (~0.5A)
 W_SIG = 0.25
+# Diagnostic VBUS branch: the 'Power High' class floor, not the current it
+# needs. LED3 draws 0.59 mA and 0.15 mm would carry it, but VBUS is a
+# Power High net and verify_net_class_widths judges the net, not the branch.
+W_VBUS_DIAG = 0.50
 W_DATA = 0.2
 W_AUDIO = 0.3
 # Narrow width used only where a button channel has to thread the gap
@@ -492,6 +496,55 @@ R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
+# ── Diagnostic LED bank (workstream H, docs/diagnostic-leds-roadmap.md) ──
+# LED3/VBUS, LED4/+5V, LED5/+3V3 passive rail indicators + LED6 on LED_HB
+# (GPIO15). Two F.Cu rows in the bottom-right pocket: resistors at y=54,
+# LEDs at y=58, silk labels in the 2.7 mm gap between them at y=56.
+#
+# Why F.Cu for the RESISTORS too, breaking the R17/R18 "resistor on B.Cu
+# under its LED" pattern: B.Cu here is the SD-card / ABXY button fan-out
+# (BTN_A/BTN_X/BTN_Y risers plus SD_MOSI). A 0805 only fits on B.Cu at
+# x 132.5-139.5 and 149-150.5 — room for two of the four. F.Cu, by
+# contrast, is one clear 28 x 4.9 mm rectangle (x 128.5-156.5, y 53.5-58.4).
+#
+# Why x = 134/140/146/152 and not a rounder 132/138/144/150: each LED
+# cathode needs a GND via, and a via must be clear on BOTH layers. The
+# both-layers-clear windows here are x [131.25, 140.50], [143.75, 144.75]
+# and [147.75, 151.50]; this pitch puts every cathode via (at x - 2.15)
+# inside one of them. At 132/138/144/150 three of the four vias landed on
+# BTN_A/BTN_X/BTN_Y or SD_MOSI on B.Cu.
+#
+# Why not further west: the display module PCB is 98 x 72 mm and the
+# enclosure seats it 0.5 mm above the board (enclosure.scad
+# `pcb_z + pcb_d + 0.5`), so x 31..129 is a height keepout for anything
+# taller than that gap. x=134 keeps the westmost pad 2.45 mm clear of it.
+# Y at which the diagnostic VBUS tap leaves the F.Cu VBUS riser at x=111.
+# power.py SPLITS the riser here so the branch meets a shared endpoint:
+# a mid-segment T has degree 1 and verify_dangling_copper reads it as copper
+# ending in air (the same bug already fixed once for the U4 VBUS tap).
+# Shared constant so the split and the branch cannot drift apart.
+DIAG_VBUS_TAP_Y = 49.75
+DIAG_LED_Y = 58.0        # LED row (F.Cu)
+DIAG_R_Y = 54.0          # series-resistor row (F.Cu, 4 mm north)
+DIAG_LABEL_Y = 56.0      # F.SilkS rail labels, centred between the rows
+DIAG_X = {"R28": 134.0, "R29": 140.0, "R30": 146.0, "R31": 152.0}
+R28_POS = (DIAG_X["R28"], DIAG_R_Y)    # VBUS  indicator, 5.1k -> 0.59 mA
+R29_POS = (DIAG_X["R29"], DIAG_R_Y)    # +5V   indicator, 5.1k -> 0.59 mA
+R30_POS = (DIAG_X["R30"], DIAG_R_Y)    # +3V3  indicator, 1k   -> 1.33 mA
+R31_POS = (DIAG_X["R31"], DIAG_R_Y)    # LED_HB heartbeat, 1k  -> 1.33 mA
+LED3_POS = (DIAG_X["R28"], DIAG_LED_Y)
+LED4_POS = (DIAG_X["R29"], DIAG_LED_Y)
+LED5_POS = (DIAG_X["R30"], DIAG_LED_Y)
+LED6_POS = (DIAG_X["R31"], DIAG_LED_Y)
+# (ref_r, ref_led, rail net, RA net) — one row per diagnostic LED, consumed
+# by routing.passives._diag_led_traces() and by board.py for the silk.
+DIAG_LEDS = [
+    ("R28", "LED3", "VBUS", "LED3_RA", "VBUS"),
+    ("R29", "LED4", "+5V", "LED4_RA", "5V"),
+    ("R30", "LED5", "+3V3", "LED5_RA", "3V3"),
+    ("R31", "LED6", "LED_HB", "LED6_RA", "HB"),
+]
+
 # ── U3 SY8089AAAC buck converter cluster ─────────────────────────
 # All coordinates are hand-verified against the surrounding copper; see the
 # clearance table in _power_traces()::"buck converter" for the arithmetic.
@@ -752,6 +805,19 @@ def _init_pads():
         ("R18", "R_0805", *R18_POS, 0, "B"),
         ("LED1", "LED_0805", *LED1, 0, "F"),
         ("LED2", "LED_0805", *LED2, 0, "F"),
+        # Diagnostic LED bank — all F.Cu. The resistors are rot=180 so that
+        # pad 2 (the rail side) faces WEST, towards the incoming rails, and
+        # pad 1 (the LEDn_RA side) faces EAST, towards the LED anode. That
+        # keeps the polarity convention identical to R17/R18 (pad 1 = _RA,
+        # pad 2 = rail) while making every link a plain Manhattan hop.
+        ("R28", "R_0805", *R28_POS, 180, "F"),
+        ("R29", "R_0805", *R29_POS, 180, "F"),
+        ("R30", "R_0805", *R30_POS, 180, "F"),
+        ("R31", "R_0805", *R31_POS, 180, "F"),
+        ("LED3", "LED_0805", *LED3_POS, 0, "F"),
+        ("LED4", "LED_0805", *LED4_POS, 0, "F"),
+        ("LED5", "LED_0805", *LED5_POS, 0, "F"),
+        ("LED6", "LED_0805", *LED6_POS, 0, "F"),
         # PAM8403 passives
         ("C21", "C_0805", *C21_POS, 0, "B"),
         ("C22", "C_0805", *C22_POS, 90, "B"),

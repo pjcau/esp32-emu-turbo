@@ -246,6 +246,11 @@ SCH_PIN_TO_PCB_PADS = {
     "SW16": _SW16_MAP,
     "LED1": _LED_MAP,
     "LED2": _LED_MAP,
+    # Diagnostic bank — identical symbol/footprint pin convention.
+    "LED3": _LED_MAP,
+    "LED4": _LED_MAP,
+    "LED5": _LED_MAP,
+    "LED6": _LED_MAP,
 }
 for _n in range(1, 14):
     SCH_PIN_TO_PCB_PADS[f"SW{_n}"] = _TACT_MAP

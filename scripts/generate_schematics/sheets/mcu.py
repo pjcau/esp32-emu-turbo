@@ -29,7 +29,7 @@ class MCUSheet(SchematicSheet):
     title = "MCU - ESP32-S3-WROOM-1 N16R8"
     page_number = 2
     paper = "A3"
-    needed_symbols = ["ESP32-S3-WROOM-1", "C", "R", "SW_Push"]
+    needed_symbols = ["ESP32-S3-WROOM-1", "C", "R", "SW_Push", "LED"]
 
     def build(self):
         # Title
@@ -114,6 +114,28 @@ class MCUSheet(SchematicSheet):
         self.junction(c31_x, en_y)
         self.gnd(c31_x, c31_y + 7)
         self.wire(c31_x, c31_y + 3.81, c31_x, c31_y + 7)
+
+        # --- LED6: GPIO15 heartbeat indicator (workstream H) ---
+        # The driven tier of the diagnostic tree. GPIO15 -> R31 -> LED6 ->
+        # GND: 1 Hz steady = firmware alive, N blinks + pause = subsystem N
+        # failed. It lives on THIS sheet, next to the pin that drives it,
+        # while the three passive rail LEDs sit on the power sheet.
+        # DNP in production — bench instrument, not user UI.
+        # LED_HB is a global label so it stays flat and matches the PCB net;
+        # GPIO15's own label is emitted by the pin loop below from
+        # config.GPIO_NETS.
+        hb_x, hb_y = 300, 245
+        self.text("HEARTBEAT LED (GPIO15, DNP in production)",
+                  hb_x - 30, hb_y - 16, 2.54, True)
+        self.sym("R", "R31", "1k", hb_x - 15, hb_y, ["1", "2"], angle=180)
+        self.sym("LED", "LED6", "Red", hb_x, hb_y, ["1", "2"])
+        self.glabel("LED_HB", hb_x - 15, hb_y - 8, 90)
+        self.wire(hb_x - 15, hb_y - 8, hb_x - 15, hb_y - 3.81)
+        self.wire(hb_x - 15, hb_y + 3.81, hb_x - 3.81, hb_y)
+        self.wire(hb_x - 3.81, hb_y, hb_x - 3.81, hb_y + 7)
+        self.glabel("LED6_RA", hb_x - 3.81, hb_y + 7, 270)
+        self.gnd(hb_x + 8, hb_y)
+        self.wire(hb_x + 3.81, hb_y, hb_x + 8, hb_y)
 
         # --- RESET button (EN to GND, active-low) ---
         # Own column, LEFT of C3. Sharing C3's column is what broke this:

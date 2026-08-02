@@ -197,7 +197,7 @@ def _inv_j4_im_strap():
 def _inv_led_pin_numbering():
     """The bench must take LED current direction from the footprint."""
     board = nl.load_board_netlist()
-    for led in ("LED1", "LED2"):
+    for led in ("LED1", "LED2", "LED3", "LED4", "LED5", "LED6"):
         pads = {p.pad: net for net, pins in board.nets.items()
                 for p in pins if p.ref == led}
         if pads.get("1") != "GND" or not pads.get("2", "").endswith("_RA"):

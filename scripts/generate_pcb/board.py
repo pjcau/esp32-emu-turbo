@@ -259,11 +259,27 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*ABXY_ENC)
     parts.append(P.gr_text("ABXY", px, py - 20, "F.SilkS"))
     px, py = enc_to_pcb(*MENU_ENC)
-    parts.append(P.gr_text("MENU", px, py - 5, "F.SilkS", 1.0))
+    # BELOW SW13, not above it. At py-5 the label sat at (142.0, 56.7),
+    # which is inside the diagnostic LED bank added in workstream H — it
+    # overlapped the "3V3" rail label and came within 0.098 mm of LED4's
+    # anode pad (KiCad silk_overlap x2). Below the button the band is
+    # empty: the nearest F.Cu is the BTN_A run at y=66.8, which stops at
+    # x=130.4, and U6 underneath is on B.Cu so it cannot clip front silk.
+    parts.append(P.gr_text("MENU", px, py + 3.8, "F.SilkS", 1.0))
     px, py = enc_to_pcb(*LED_CHARGE_ENC)
     parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 1.0))
     px, py = enc_to_pcb(*LED_FULL_ENC)
     parts.append(P.gr_text("FULL", px, py + 3, "F.SilkS", 1.0))
+    # Diagnostic LED bank: name the rail each LED reports on, so the board
+    # is readable during bring-up without a schematic. The labels sit in the
+    # 2.7 mm gap between the resistor row (y=54) and the LED row (y=58), and
+    # are nudged 1.2 mm west of centre to clear the LEDn_RA link, which runs
+    # straight down the x+0.95 column between the two pads.
+    for _r, _led, _rail, _ra, _lbl_txt in routing.DIAG_LEDS:
+        parts.append(P.gr_text(
+            _lbl_txt, routing.DIAG_X[_r] - 1.2, routing.DIAG_LABEL_Y,
+            "F.SilkS", 1.0,
+        ))
     # Front branding.
     # R21 FIX (2026-07-25): moved from (CX=80.0, 73.0) to (110.0, 73.0).
     # At x=80 the string straddled J1's rear shield through-holes, whose
@@ -564,6 +580,15 @@ def _component_placeholders():
     # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
     placements.append(("R17", "R_0805", 25, 65, 0, "B.Cu"))
     placements.append(("R18", "R_0805", 32, 65, 0, "B.Cu"))
+
+    # Diagnostic LED bank (workstream H) — everything on F.Cu, two rows.
+    # Resistors are rot=180 so pad 2 (rail) faces west; see the DIAG_*
+    # block in routing/_shared.py for the placement arithmetic.
+    for _r, _led, _rail, _ra, _lbl_txt in routing.DIAG_LEDS:
+        placements.append((_r, "R_0805", routing.DIAG_X[_r],
+                           routing.DIAG_R_Y, 180, "F.Cu"))
+        placements.append((_led, "LED_0805", routing.DIAG_X[_r],
+                           routing.DIAG_LED_Y, 0, "F.Cu"))
 
     # Pull-up resistors (y=46, x=43..98, 5mm spacing)
     # R9-MED-4: R19 deleted (was on dead BTN_MENU net).

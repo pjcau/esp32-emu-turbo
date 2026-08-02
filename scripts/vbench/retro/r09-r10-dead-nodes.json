@@ -37,12 +37,12 @@
       "mutation": {
         "kind": "attach_pin",
         "ref": "U1",
-        "pin": "8",
-        "to_net": "I2S_BCLK"
+        "pin": "9",
+        "to_net": "I2S_LRCK"
       },
-      "must_report": "a net named I2S_BCLK with exactly one pin (U1.8) and zero copper — a label, not a circuit",
+      "must_report": "a net named I2S_LRCK with exactly one pin (U1.9) and zero copper — a label, not a circuit",
       "expect": "caught",
-      "note": "FIXED 2026-07-26: the reservation nets were retired outright — NET_LIST ids 24/25 gap-retired like 18/19, U1 pads 8/9 netless, schematic labels fall back to plain GPIO15/GPIO16 (T1_ALLOW, same class as the PSRAM trio), and THREE gate allowlists died with them (verify_design_intent KNOWN_SINGLE + DIRECT_ROUTED, drc_check _UNROUTED_OK). The generated test firmware also stopped driving .clk on GPIO15, matching production audio.c. The mutation re-creates the one-pin net so the bench must rediscover the original shape."
+      "note": "FIXED 2026-07-26: the reservation nets were retired outright — NET_LIST ids 24/25 gap-retired like 18/19, U1 pads 8/9 netless, schematic labels fall back to plain GPIO15/GPIO16 (T1_ALLOW, same class as the PSRAM trio), and THREE gate allowlists died with them (verify_design_intent KNOWN_SINGLE + DIRECT_ROUTED, drc_check _UNROUTED_OK). The generated test firmware also stopped driving .clk on GPIO15, matching production audio.c. The mutation re-creates the one-pin net so the bench must rediscover the original shape. RE-TARGETED to U1.9/GPIO16 (2026-08-01): GPIO15 is no longer free — it now drives LED_HB (R31/LED6, the diagnostic heartbeat), so attach_pin on U1.8 fails outright. GPIO16 is the surviving netless pin of the retired pair and reproduces the identical electrical shape."
     },
     {
       "id": "R10-LOW-7",

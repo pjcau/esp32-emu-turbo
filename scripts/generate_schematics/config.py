@@ -8,12 +8,15 @@ GPIO_NETS: dict[int, str] = {
     # LCD_RD: removed from GPIO, tied HIGH (3V3) at FPC connector
     # LCD_BL: removed from GPIO, tied to 3V3 via resistor at FPC connector
     44: "SD_MOSI", 43: "SD_MISO", 38: "SD_CLK", 39: "SD_CS",
-    # GPIO15/16 retired 2026-07-26 (R10-LOW-2): they were reserved as
-    # I2S_BCLK/I2S_LRCK, but the audio path is PDM TX — audio.c configures
-    # .clk = I2S_GPIO_UNUSED and drives only I2S_DOUT (GPIO17). A net name
-    # with one pin and no copper is a label, not a circuit; the pins now
-    # fall back to plain GPIO15/GPIO16 labels (mcu.py), same as the PSRAM
-    # pins, and are free for v2 (ADC2 candidates).
+    # GPIO15 drives LED6, the diagnostic heartbeat LED (workstream H of
+    # docs/diagnostic-leds-roadmap.md): 1 Hz steady = alive, N blinks +
+    # pause = subsystem N failed. Unlike the I2S_BCLK/I2S_LRCK labels that
+    # used to sit on GPIO15/16 and were retired 2026-07-26 (R10-LOW-2) for
+    # being one-pin nets with no copper, LED_HB is a real two-pin circuit:
+    # U1.8 -> R31 -> LED6 -> GND.
+    15: "LED_HB",
+    # GPIO16 stays retired and free for v2 (ADC2 candidate) — it falls back
+    # to a plain GPIO16 label in mcu.py, same as the PSRAM pins.
     17: "I2S_DOUT",
     40: "BTN_UP", 41: "BTN_DOWN", 42: "BTN_LEFT", 1: "BTN_RIGHT",
     2: "BTN_A", 48: "BTN_B", 47: "BTN_X", 21: "BTN_Y",

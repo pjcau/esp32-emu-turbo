@@ -15,6 +15,7 @@ from .buttons import _button_pullup_bridges
 from .buttons import _button_traces
 from .display import _display_traces
 from .audio import _i2s_traces
+from .passives import _diag_led_traces
 from .passives import _led_traces
 from .buttons import _menu_diode_traces
 from .audio import _pam_passive_traces
@@ -66,6 +67,7 @@ def generate_all_traces():
     all_parts.extend(_button_traces())
     all_parts.extend(_passive_traces())
     all_parts.extend(_led_traces())
+    all_parts.extend(_diag_led_traces())
     all_parts.extend(_reset_boot_traces())
     all_parts.extend(_menu_diode_traces())
     all_parts.extend(_button_pullup_bridges())

@@ -164,6 +164,13 @@ def normalize_value(value: str) -> str:
     """
     v = value.strip()
 
+    # Drop a trailing parenthesised qualifier before anything else. The BOM
+    # uses it to carry assembly INTENT rather than value — currently
+    # "(bring-up diagnostic, DNP in production)" on the LED3-LED6 / R28-R31
+    # bank. The qualifier has to be machine-visible in the shipped BOM, but
+    # it is not part of the component value and must not defeat the match.
+    v = re.sub(r'\s*\([^()]*\)\s*$', '', v)
+
     # Remove trailing package size (e.g. "10k 0805" -> "10k")
     v = re.sub(r'\s+\d{4}$', '', v)
 

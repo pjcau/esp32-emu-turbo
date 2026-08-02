@@ -5,6 +5,7 @@ execution is unchanged). See routing/__init__.py for the contract."""
 from ._shared import (
     BOARD_H,
     BOARD_W,
+    DIAG_VBUS_TAP_Y,
     NET_ID,
     P,
     VIA_MIN,
@@ -461,8 +462,16 @@ def _power_traces():
     _u4_vbus_tap_x = 90.95
     parts.append(_seg(_u4_vbus_tap_x, vbus_fcu_y, ip_vbus_via_x, vbus_fcu_y,
                        "F.Cu", W_PWR_HIGH, n_vbus))
-    # 5. F.Cu vertical down to IP5306 pin level
-    parts.append(_seg(ip_vbus_via_x, vbus_fcu_y, ip_vbus_via_x, ip_vbus_via_y,
+    # 5. F.Cu vertical down to IP5306 pin level, SPLIT at the diagnostic
+    #    VBUS tap. LED3's series resistor branches off this riser, and a
+    #    mid-segment T has no shared endpoint — exactly the U4-tap bug
+    #    described in note 4 above. Splitting here gives the junction
+    #    degree 3 instead of leaving the branch at degree 1.
+    parts.append(_seg(ip_vbus_via_x, vbus_fcu_y,
+                       ip_vbus_via_x, DIAG_VBUS_TAP_Y,
+                       "F.Cu", W_PWR_HIGH, n_vbus))
+    parts.append(_seg(ip_vbus_via_x, DIAG_VBUS_TAP_Y,
+                       ip_vbus_via_x, ip_vbus_via_y,
                        "F.Cu", W_PWR_HIGH, n_vbus))
     # 6. via to B.Cu at IP5306 approach
     #

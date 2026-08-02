@@ -136,8 +136,11 @@ COMPONENT_SPECS = {
             "7":  {"net": _exact("LCD_D3"),     "function": "GPIO7 — LCD data bus D3", "type": "smd"},
             # GPIO15/16: the I2S_BCLK/I2S_LRCK net reservation was retired
             # 2026-07-26 (R10-LOW-2) — audio is PDM TX, .clk = I2S_GPIO_UNUSED,
-            # only DOUT is used. Unconnected on the board, free for v2 (ADC2).
-            "8":  {"net": _unconnected(),       "function": "GPIO15 — unused, free for v2 (I2S reservation retired)", "type": "smd"},
+            # only DOUT is used. GPIO15 was then taken by the diagnostic
+            # heartbeat LED (workstream H): unlike the retired I2S labels, it
+            # is a real two-pin circuit, U1.8 -> R31 -> LED6 -> GND. GPIO16
+            # stays unconnected and free for v2 (ADC2).
+            "8":  {"net": _exact("LED_HB"),     "function": "GPIO15 — diagnostic heartbeat LED (R31/LED6)", "type": "smd"},
             "9":  {"net": _unconnected(),       "function": "GPIO16 — unused, free for v2 (I2S reservation retired)", "type": "smd"},
             "10": {"net": _exact("I2S_DOUT"),   "function": "GPIO17 — I2S data out", "type": "smd"},
             "11": {"net": _exact("BTN_START"),  "function": "GPIO18 — Start button", "type": "smd"},
@@ -711,6 +714,54 @@ COMPONENT_SPECS["LED2"] = {
         "2": {"net": _exact("LED2_RA"), "function": "Anode — via resistor", "type": "smd"},
     },
 }
+
+
+# ======================================================================
+# LED3-LED6 + R28-R31 — diagnostic LED bank (workstream H,
+# docs/diagnostic-leds-roadmap.md). Three passive rail indicators plus one
+# firmware heartbeat, all on the TOP side so a photo of the powered board
+# reports the power tree without a multimeter. All four LEDs are the SAME
+# part as LED2 (C19171391) and therefore share its 180 deg CPL delta.
+#
+# Series resistors are sized for ~0.6-1.3 mA — visible indoors, negligible
+# drain, and both values were already on the BOM:
+#   R28/R29  5.1k (C27834) on 5 V rails -> (5.000-2.0)/5100 = 0.59 mA
+#   R30/R31  1k   (C17513) on 3.3 V     -> (3.327-2.0)/1000 = 1.33 mA
+# The bank is marked "bring-up diagnostic, DNP in production" in the BOM:
+# ~3.7 mA of constant drain is fine on the bench, not in a battery handheld.
+# ======================================================================
+_DIAG_BANK = [
+    ("R28", "LED3", "5.1k", "C27834", "VBUS",   "VBUS present, F1 fuse intact"),
+    ("R29", "LED4", "5.1k", "C27834", "+5V",    "IP5306 boost alive"),
+    ("R30", "LED5", "1k",   "C17513", "+3V3",   "buck alive, rail not shorted"),
+    ("R31", "LED6", "1k",   "C17513", "LED_HB", "GPIO15 heartbeat / blink codes"),
+]
+
+for _r, _led, _val, _rlcsc, _rail, _why in _DIAG_BANK:
+    COMPONENT_SPECS[_r] = {
+        "component": f"{_val} 0805 diagnostic LED series resistor ({_why})",
+        "lcsc": _rlcsc,
+        "datasheet": None,
+        "datasheet_page": 1,
+        "pins": {
+            "1": {"net": _exact(f"{_led}_RA"),
+                  "function": f"{_led} anode side", "type": "smd"},
+            "2": {"net": _exact(_rail),
+                  "function": f"{_rail} rail tap", "type": "smd"},
+        },
+    }
+    COMPONENT_SPECS[_led] = {
+        "component": f"Red LED 0805 (C19171391 YLED0805R) — {_why}",
+        "lcsc": "C19171391",
+        "datasheet": "LED2_Red-LED-0805_C19171391.pdf",
+        "datasheet_page": 1,
+        "pins": {
+            "1": {"net": _exact("GND"),
+                  "function": "Cathode — ground", "type": "smd"},
+            "2": {"net": _exact(f"{_led}_RA"),
+                  "function": f"Anode — via {_r}", "type": "smd"},
+        },
+    }
 
 
 # ======================================================================

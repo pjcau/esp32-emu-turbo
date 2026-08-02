@@ -52,6 +52,35 @@ S3_STRAPPING_PINS = {
     46: "ROM message print enable",
 }
 
+# The net that drives the diagnostic heartbeat LED (LED6 + R31 in the
+# diagnostic-LED design). Absent from board_config.h on revisions that predate
+# it — the firmware then reports led.heartbeat as a SKIP rather than pretending
+# to drive a pin that carries something else.
+HB_LED_NET = "LED_HB"
+
+# Blink-code contract. docs/diagnostic-leds-roadmap.md, "Design (locked)":
+#
+#   "Heartbeat firmware contract (bringup_test): 1 Hz steady = alive;
+#    N blinks + pause = subsystem N failed (2=SD, 3=display, 4=audio,
+#    5=buttons, 6=PSRAM) — telemetry stays the rich channel, the LED is
+#    the cable-free fallback."
+#
+# This list is the only place that mapping exists: the C table, the report
+# lines and the documentation comment are all rendered from it. A check is
+# attributed to a subsystem by the prefix of its id, so every current and
+# future check in a group inherits its code without a second table to update.
+#
+# Code 1 is deliberately unused: one blink followed by a pause is hard to tell
+# apart from the 1 Hz "alive" pattern, which is the one reading that must never
+# be ambiguous.
+BLINK_CODES = [
+    (2, "SD",      ["sd."]),
+    (3, "display", ["lcd."]),
+    (4, "audio",   ["audio."]),
+    (5, "buttons", ["btn."]),
+    (6, "PSRAM",   ["psram.", "chip.psram_size"]),
+]
+
 
 class GenError(Exception):
     pass
@@ -136,6 +165,8 @@ def c_tables(defines: dict[str, str], header_text: str) -> str:
             raise GenError(f"{key} missing from board_config.h")
         sd_pins.append((key, key[3:], num))
 
+    hb_gpio = gpio_of(defines, HB_LED_NET)
+
     i2s_dout = gpio_of(defines, "I2S_DOUT")
     usb_dp = gpio_of(defines, "USB_DP")
     usb_dn = gpio_of(defines, "USB_DN")
@@ -214,6 +245,43 @@ def c_tables(defines: dict[str, str], header_text: str) -> str:
     w("};")
     w(f"#define N_STRAPS {len(straps)}")
     w("")
+    w("/* ── Diagnostic heartbeat LED ────────────────────────────────── */")
+    w("/*")
+    w(" * Blink-code contract, quoted from docs/diagnostic-leds-roadmap.md:")
+    w(" *")
+    w(' *   "Heartbeat firmware contract (bringup_test): 1 Hz steady = alive;')
+    w(" *    N blinks + pause = subsystem N failed (2=SD, 3=display, 4=audio,")
+    w(" *    5=buttons, 6=PSRAM) — telemetry stays the rich channel, the LED is")
+    w(' *    the cable-free fallback."')
+    w(" *")
+    w(" * The table below is generated from BLINK_CODES in generate.py, which is")
+    w(" * the single place the mapping is written down. A check joins a subsystem")
+    w(" * by the prefix of its id, so a new sd.* or lcd.* check needs no edit here.")
+    w(" */")
+    if hb_gpio is None:
+        w("/* board_config.h defines no " + HB_LED_NET + " net on this revision. */")
+        w("#define HB_LED_PRESENT   0")
+    else:
+        w(f"#define HB_LED_PRESENT   1")
+        w(f"#define HB_LED_PIN       {HB_LED_NET}")
+        w(f"#define HB_LED_NUM       {hb_gpio}")
+    w("")
+    w("typedef struct {")
+    w("    uint8_t     code;        /* number of short blinks              */")
+    w("    const char *subsystem;   /* label, for the report line          */")
+    w("    const char *id_prefix;   /* check ids this code speaks for      */")
+    w("} hb_code_t;")
+    w("")
+    w("static const hb_code_t HB_CODES[] = {")
+    for code, label, prefixes in BLINK_CODES:
+        for prefix in prefixes:
+            w(f'    {{ {code}, "{label}", "{prefix}" }},')
+    w("};")
+    w(f"#define N_HB_CODES  {sum(len(p) for _, _, p in BLINK_CODES)}")
+    w(f"#define HB_CODE_MAX {max(code for code, _, _ in BLINK_CODES)}")
+    w('#define HB_CODE_LEGEND "'
+      + " ".join(f"{code}={label}" for code, label, _ in BLINK_CODES) + '"')
+    w("")
     w(f'#define MODULE_VARIANT   "{variant}"')
     w(f"#define EXPECT_FLASH_MB  {flash_mb}")
     w(f"#define EXPECT_PSRAM_MB  {psram_mb}")
@@ -247,9 +315,15 @@ C_PREAMBLE = r'''/*
  *   BRINGUP-FAILED;<comma-separated ids>      (omitted when there are none)
  *   BRINGUP-SKIPPED;<comma-separated ids>     (omitted when there are none)
  *   BRINGUP-SUMMARY;total=..;pass=..;fail=..;skip=..;verdict=<GREEN|RED>
+ *   BRINGUP-LED;<what the diagnostic heartbeat LED is signalling>
  *   BRINGUP-END
  *
  * Fields never contain ';' — bringup_detail() rewrites it to ','.
+ *
+ * A second, cable-free channel carries the same verdict: the diagnostic
+ * heartbeat LED on LED_HB blinks 1 Hz while all is well and switches to
+ * per-subsystem blink codes when a check fails. Serial stays the rich
+ * channel; the LED adds nothing to it and removes nothing from it.
  */
 
 #include <stdio.h>
@@ -352,6 +426,10 @@ typedef struct {
     const char *implicates;  /* printed on FAIL: which net or part to look at */
 } check_t;
 
+/* Defined with the heartbeat LED below; declared here because run_check() is
+ * the one place that learns a check has failed. */
+static void hb_note_failure(const char *id);
+
 static void run_check(const check_t *c)
 {
     s_detail[0] = '\0';
@@ -371,6 +449,7 @@ static void run_check(const check_t *c)
         result = "FAIL";
         s_fail++;
         id_append(s_failed_ids, sizeof(s_failed_ids), c->id);
+        hb_note_failure(c->id);
     } else {
         result = "PASS";
         s_pass++;
@@ -444,6 +523,191 @@ static void stuck_probe(gpio_num_t pin, int *with_pu, int *with_pd)
     *with_pd = gpio_get_level(pin);
 
     pin_input(pin, GPIO_PULLUP_ONLY);
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+ * Diagnostic heartbeat LED
+ *
+ * The serial report above is the rich channel and stays the rich channel;
+ * this LED is the same verdict for a board with no cable attached. It is
+ * additive — nothing here changes what is printed.
+ *
+ * What it says:
+ *
+ *   1 Hz steady        the chip booted, the straps let it run, and the
+ *                      firmware is still executing — during the suite and
+ *                      after it finishes with no failures
+ *   N blinks + pause   subsystem N failed (see HB_CODES); several failed
+ *                      subsystems cycle in ascending order
+ *   fast flutter       something failed that no code speaks for — read the
+ *                      serial log. A failed run must never leave the LED
+ *                      beating a healthy 1 Hz, so an uncoded failure gets
+ *                      its own unmistakable pattern rather than none.
+ *
+ * The LED is lit by driving the pin to HB_LED_ACTIVE_LEVEL. Active HIGH is
+ * the assumption the hardware side must match: GPIO -> R31 -> LED anode,
+ * cathode to GND, so a HIGH pin sources the ~1 mA and lights it. If the
+ * schematic instead ties the anode to +3V3 and sinks through the GPIO, this
+ * one constant flips and nothing else changes.
+ * ══════════════════════════════════════════════════════════════════ */
+
+#define HB_LED_ACTIVE_LEVEL  1
+
+#define HB_ALIVE_MS       500   /* 1 Hz symmetric = alive                 */
+#define HB_BLINK_ON_MS    160   /* a "short blink" inside a code          */
+#define HB_BLINK_OFF_MS   240
+#define HB_PAUSE_MS      1000   /* the gap the roadmap calls "1s pause"   */
+#define HB_FLUTTER_MS      80
+#define HB_FLUTTER_N       12
+
+/* Bit N set = subsystem code N has a failing check. Written by the test
+ * sequence, read by the LED task, so both are volatile. */
+static volatile uint32_t s_hb_fail_mask;
+static volatile bool     s_hb_uncoded;
+
+/* Attribute a failed check to its subsystem code by id prefix. A check no
+ * code covers is not dropped: it raises the uncoded flag, because the one
+ * thing this LED must never do is report health on a board that failed. */
+static void hb_note_failure(const char *id)
+{
+    for (int i = 0; i < N_HB_CODES; i++) {
+        if (strncmp(id, HB_CODES[i].id_prefix, strlen(HB_CODES[i].id_prefix)) == 0) {
+            s_hb_fail_mask |= 1u << HB_CODES[i].code;
+            return;
+        }
+    }
+    s_hb_uncoded = true;
+}
+
+/* Describe what the LED is doing right now, for the serial trailer — so the
+ * log and the LED can be checked against each other. */
+static void hb_describe(char *out, size_t cap)
+{
+#if HB_LED_PRESENT
+    if (!s_hb_fail_mask && !s_hb_uncoded) {
+        snprintf(out, cap, "GPIO%d 1Hz steady = alive", HB_LED_NUM);
+        return;
+    }
+    snprintf(out, cap, "GPIO%d cycling:", HB_LED_NUM);
+    for (int i = 0; i < N_HB_CODES; i++) {
+        if (!(s_hb_fail_mask & (1u << HB_CODES[i].code))) continue;
+        /* Two prefixes can share a code; name it once. */
+        bool already = false;
+        for (int j = 0; j < i; j++)
+            if (HB_CODES[j].code == HB_CODES[i].code) already = true;
+        if (already) continue;
+        size_t n = strlen(out);
+        if (n < cap)
+            snprintf(out + n, cap - n, " %dx=%s",
+                     HB_CODES[i].code, HB_CODES[i].subsystem);
+    }
+    if (s_hb_uncoded) {
+        size_t n = strlen(out);
+        if (n < cap)
+            snprintf(out + n, cap - n, " + fast flutter (failure with no code)");
+    }
+#else
+    snprintf(out, cap, "no LED_HB net on this board revision");
+#endif
+}
+
+#if HB_LED_PRESENT
+
+static int s_hb_probe_high = -1;   /* level read back while driving HIGH */
+static int s_hb_probe_low  = -1;
+
+static void hb_set(bool on)
+{
+    gpio_set_level(HB_LED_PIN, on ? HB_LED_ACTIVE_LEVEL : !HB_LED_ACTIVE_LEVEL);
+}
+
+static void hb_pulse(int on_ms, int off_ms)
+{
+    hb_set(true);
+    vTaskDelay(pdMS_TO_TICKS(on_ms));
+    hb_set(false);
+    vTaskDelay(pdMS_TO_TICKS(off_ms));
+}
+
+/* The mask is sampled once per cycle, so a failure found mid-suite appears at
+ * the next pattern boundary rather than cutting a code in half. */
+static void hb_task(void *arg)
+{
+    (void)arg;
+    for (;;) {
+        uint32_t mask    = s_hb_fail_mask;
+        bool     uncoded = s_hb_uncoded;
+
+        if (!mask && !uncoded) {
+            hb_pulse(HB_ALIVE_MS, HB_ALIVE_MS);
+            continue;
+        }
+
+        /* Ascending order, so the first code seen is always the lowest —
+         * counting blinks is easier when the sequence is predictable.
+         * Codes 0 and 1 are never set: the contract starts at 2. */
+        for (int code = 0; code <= HB_CODE_MAX; code++) {
+            if (!(mask & (1u << code))) continue;
+            for (int i = 0; i < code; i++)
+                hb_pulse(HB_BLINK_ON_MS, HB_BLINK_OFF_MS);
+            hb_set(false);
+            vTaskDelay(pdMS_TO_TICKS(HB_PAUSE_MS));
+        }
+
+        if (uncoded) {
+            for (int i = 0; i < HB_FLUTTER_N; i++)
+                hb_pulse(HB_FLUTTER_MS, HB_FLUTTER_MS);
+            hb_set(false);
+            vTaskDelay(pdMS_TO_TICKS(HB_PAUSE_MS));
+        }
+    }
+}
+
+#endif  /* HB_LED_PRESENT */
+
+/* Probe the net once, then hand the pin to the task for good. Doing the
+ * electrical test here rather than inside the check means the LED starts
+ * beating before the first line of serial output — on a board that hangs in
+ * an early check, the LED is then the only evidence the chip ever ran. */
+static void hb_init(void)
+{
+#if HB_LED_PRESENT
+    if (pin_inout(HB_LED_PIN) == ESP_OK) {
+        gpio_set_level(HB_LED_PIN, 1);
+        vTaskDelay(pdMS_TO_TICKS(2));
+        s_hb_probe_high = gpio_get_level(HB_LED_PIN);
+        gpio_set_level(HB_LED_PIN, 0);
+        vTaskDelay(pdMS_TO_TICKS(2));
+        s_hb_probe_low = gpio_get_level(HB_LED_PIN);
+    }
+    hb_set(false);
+    xTaskCreate(hb_task, "heartbeat", 2048, NULL, 3, NULL);
+#endif
+}
+
+static void chk_led_heartbeat(void)
+{
+#if HB_LED_PRESENT
+    /* Whether the LED emits light is not observable: nothing feeds back from
+     * LED6 into a GPIO. What is observable is that the net follows the pin
+     * both ways, which is what an unsoldered LED_HB or a short to a rail
+     * breaks. */
+    bringup_detail("GPIO%d drive HIGH reads %d, LOW reads %d, active-%s; "
+                   "1Hz heartbeat running, codes " HB_CODE_LEGEND ". "
+                   "Light output cannot be sensed — look at LED6",
+                   HB_LED_NUM, s_hb_probe_high, s_hb_probe_low,
+                   HB_LED_ACTIVE_LEVEL ? "high" : "low");
+    TEST_ASSERT_EQUAL_MESSAGE(1, s_hb_probe_high,
+                              "LED_HB will not go HIGH — shorted to GND, or the pin "
+                              "could not be configured");
+    TEST_ASSERT_EQUAL_MESSAGE(0, s_hb_probe_low,
+                              "LED_HB will not go LOW — shorted to +3V3");
+#else
+    BRINGUP_SKIP("board_config.h defines no LED_HB net, so this board revision has "
+                 "no heartbeat LED to drive. Blink codes (" HB_CODE_LEGEND ") are "
+                 "still computed and reported on the BRINGUP-LED line; they simply "
+                 "have nowhere to blink");
+#endif
 }
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -1267,6 +1531,9 @@ static const check_t CHECKS_HEAD[] = {
       "J1 USB-C, its D+/D- pair, or the 5.1k CC resistors" },
     { "gpio.strapping", "GPIO0/3/45/46", chk_straps,
       "not a pass/fail check; see the detail field" },
+    { "led.heartbeat", "LED_HB", chk_led_heartbeat,
+      "R31 or LED6 unsoldered, or the LED_HB net shorted to a rail — the blink "
+      "codes are unreadable until this passes" },
     { "temp.baseline", "-", chk_temp_baseline,
       "on-die sensor, or a short heating the die" },
 };
@@ -1339,6 +1606,10 @@ void app_main(void)
 {
     s_reset_reason = esp_reset_reason();
 
+    /* Before anything is printed: the LED starts beating here, so a board that
+     * never gets a word out still shows whether the chip is executing. */
+    hb_init();
+
     /* The console is USB-CDC — give the host a moment to attach, otherwise
      * the first lines are written into a void. */
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -1390,6 +1661,15 @@ void app_main(void)
     if (s_skipped_ids[0]) printf("BRINGUP-SKIPPED;%s\n", s_skipped_ids);
     printf("BRINGUP-SUMMARY;total=%u;pass=%u;fail=%u;skip=%u;verdict=%s\n",
            s_seq, s_pass, s_fail, s_skip, s_fail ? "RED" : "GREEN");
+
+    /* What the diagnostic LED is saying now that the run is over — the same
+     * verdict a user reads with no cable attached, printed here so the two
+     * channels can be checked against each other. */
+    {
+        char led[192];
+        hb_describe(led, sizeof(led));
+        printf("BRINGUP-LED;%s\n", led);
+    }
     printf("BRINGUP-END\n");
     fflush(stdout);
 

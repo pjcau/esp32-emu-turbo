@@ -9,7 +9,7 @@ allowed-tools: Bash, Read, Grep, Glob
 # Bring-Up Test Firmware (containment layer 5)
 
 The bring-up firmware is the multimeter for a bench with no instruments:
-57 checks over serial, one machine-parseable line each. It lives in
+58 checks over serial, one machine-parseable line each. It lives in
 `software/bringup_test/` as a standalone ESP-IDF project — it compiles
 the PRODUCTION drivers (`display.c`, `audio.c`, `sdcard.c` from
 `software/main/`) rather than reimplementing them, so validation cannot
@@ -51,7 +51,7 @@ Serial format — six ';'-separated fields per check, then a trailer:
 BRINGUP;<seq>;<PASS|FAIL|SKIP>;<id>;<pins>;<detail>
 BRINGUP-FAILED;<ids>
 BRINGUP-SKIPPED;<ids>
-BRINGUP-SUMMARY;total=57;pass=..;fail=..;skip=..;verdict=GREEN|RED
+BRINGUP-SUMMARY;total=58;pass=..;fail=..;skip=..;verdict=GREEN|RED
 BRINGUP-END
 ```
 

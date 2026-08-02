@@ -59,14 +59,21 @@
 /* ── Audio: I2S → PAM8403 ────────────────────────────────────────── */
 
 /* I2S_BCLK / I2S_LRCK removed 2026-07-26 (R10-LOW-2): audio is PDM TX and
- * uses only DOUT — audio.c sets .clk = I2S_GPIO_UNUSED. GPIO15/16 are
- * unconnected on the board and free for v2 (ADC2 candidates). The defines
- * were referenced only by the generated test firmware, which now matches
- * production. */
+ * uses only DOUT — audio.c sets .clk = I2S_GPIO_UNUSED. GPIO16 is
+ * unconnected on the board and free for v2 (ADC2 candidate); GPIO15 drives
+ * the diagnostic heartbeat LED below. The defines were referenced only by
+ * the generated test firmware, which now matches production. */
 #define I2S_DOUT            GPIO_NUM_17
 #define I2S_NUM             I2S_NUM_0
 #define AUDIO_SAMPLE_RATE   32000     /* 32 kHz */
 #define AUDIO_BITS          16
+
+/* ── Diagnostic heartbeat LED (LED6 + R31, DNP in production) ────── */
+/* Active HIGH: GPIO15 → R31 → LED6 anode, cathode to GND. Bring-up
+ * firmware blinks 1 Hz while healthy, N blinks + pause = subsystem N
+ * failed (see software/bringup_test). Bench indicator only — the LED is
+ * not populated on production boards, the pin is then free. */
+#define LED_HB              GPIO_NUM_15
 
 /* ── Buttons: active-low, 10k pull-up + 100nF debounce ────────── */
 /* NOTE: BTN_L (GPIO45) has NO external pull-up (R14 DNP).
