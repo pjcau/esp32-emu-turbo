@@ -493,10 +493,15 @@ COMPONENT_SPECS = {
             "3":  {"net": _unconnected(),  "function": "Position 2 (ON)", "type": "smd"},
             # Shell/anchor pads 4a-4d are mechanical retention tabs soldered to the
             # switch body. The shell metal is internally isolated from the slide
-            # signal terminals (1/2/3). Pads 4b and 4d (right-side) are crossed by
-            # the BTN_SELECT vertical track at x=35.95 — _PAD_NETS in routing.py
-            # assigns same-net to eliminate the fab short. Safe because the shell
-            # is electrically floating inside the component.
+            # signal terminals (1/2/3) — the datasheet says so twice: section 3.2
+            # requires >=100 MOhm insulation "across terminals, and across
+            # terminals and cover" at 100 V DC, and the outline drawing's own
+            # circuit diagram draws terminal (4) (= these four pads) as a separate
+            # earth-symbol node joined to nothing. CLAIM-001, VERIFIED-ON-DATASHEET.
+            # Pads 4b and 4d (right-side) are crossed by the BTN_SELECT vertical
+            # track at x=35.95 — _PAD_NETS in routing.py assigns same-net to
+            # eliminate the fab short. Safe because the shell is electrically
+            # floating inside the component.
             "4a": {"net": _unconnected(),                "function": "Shell/anchor (mechanical) — top-left", "type": "smd"},
             "4b": {"net": _any_of("", "BTN_SELECT"),     "function": "Shell/anchor (mechanical) — top-right, shares copper with BTN_SELECT trace", "type": "smd"},
             "4c": {"net": _unconnected(),                "function": "Shell/anchor (mechanical) — bottom-left", "type": "smd"},

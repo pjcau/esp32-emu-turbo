@@ -133,6 +133,13 @@ def generate_all_traces():
     #   shell to BTN_SELECT, which is harmless because the shell is
     #   floating inside the component body.
     #
+    #   That isolation is no longer just asserted here. CLAIM-001 in
+    #   hardware/CLAIMS.md is VERIFIED-ON-DATASHEET: MSK12C02 spec section
+    #   3.2 requires >=100 MOhm "across terminals, and across terminals and
+    #   cover" at 100 V DC (PDF page 4, printed 2/8), and the manufacturer's
+    #   own circuit diagram on the outline drawing draws terminal (4) — the
+    #   four anchor pads — as a separate earth-symbol node joined to nothing.
+    #
     # DO NOT REMOVE THESE without first rerouting the corresponding tracks.
     # `scripts/verify_trace_through_pad.py` is a hard gate and will block
     # release-prep if these overlaps reappear.

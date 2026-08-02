@@ -29,13 +29,31 @@ class has bitten before.
 before routing begins, so the router is default-closed.
 Source: waiver audit O5 = `docs/known-issues.md` §C.
 
-### 2. SW16 shell-isolation claim — DEADLINE 2026-09-14
+### 2. ~~SW16 shell-isolation claim~~ — VERIFIED 2026-08-02
 
-`hardware/CLAIMS.md` carries the claim "SW16's shell is internally
-isolated from the contacts" (BTN_SELECT on shell tabs, GPIO0 strap) as
-`UNVERIFIED`. `verify_claims_ledger` turns red 45 days after filing —
-**2026-09-14**. Verify against the switch datasheet (or falsify and fix)
-before that date.
+CLAIM-001 is now `VERIFIED-ON-DATASHEET`; the 2026-09-14 deadline is
+retired. `SW16_Slide-Switch_C431540.pdf` states it twice, independently:
+
+- Section 3.2, PDF page 4 (printed "Page 2/8"): insulation resistance
+  **≥100 MΩ** measured at 100 V DC "**across terminals, and across
+  terminals and cover**", for one minute. Repeated as technical note 2 on
+  the outline drawing. Section 3.3 adds 250 V AC across terminals for one
+  minute with no breakdown.
+- The manufacturer's own circuit diagram (电路图, PDF page 1) draws
+  terminals (1)(2)(3) as the slide contact strip and terminal **(4) as a
+  separate node with an earth symbol, joined to nothing** — and the
+  mounting reference view labels all four corner anchor pads (4).
+
+Part identity reconciled while there: the datasheet is for **MSK12C02**
+(Shenzhen Shouhan, spec A/0, 2015-03-26), so `footprints.py`'s comment is
+right and `SS-12D00G3` is a legacy dict key. `schematics.md` said
+SS-12D00G3 and now says MSK12C02.
+
+One residual, recorded in the claim rather than acted on: the drawing
+gives terminal (4) an **earth** symbol — the cover is meant to be
+grounded, and this board ties 4b/4d to BTN_SELECT instead. Inert for the
+switch, but it does leave GPIO0 reachable through exposed metal. That is
+an ESD path, not a short, and no gate covers it.
 
 ### 3. ~~SD card-detect pad semantics — three sources, three stories~~ — DONE
 

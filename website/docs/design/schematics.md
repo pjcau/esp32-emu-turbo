@@ -124,7 +124,7 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
-| SW16 | Slide switch | SS-12D00G3 (C431540) | Power on/off — **⚠ not in series in ANY revision to date (v4.4.0 included), see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
+| SW16 | Slide switch | MSK12C02 (C431540) — the held datasheet is MSK12C02, not the SS-12D00G3 it is often called | Power on/off — **⚠ not in series in ANY revision to date (v4.4.0 included), see warning below** | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
 | L2 | Inductor | 2.2 µH 2.95 A (C36409) | SY8089 buck output inductor | — |
 | R25 | Resistor | 100 kΩ | Buck feedback divider, upper leg — Vout = 0.6 × (1 + R25/R26) = 3.327 V | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R26 | Resistor | 22 kΩ (C17560) | Buck feedback divider, lower leg | — |
