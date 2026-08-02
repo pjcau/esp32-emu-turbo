@@ -12,6 +12,12 @@
 > footprint library update. Cached EasyEDA footprints live in
 > `scripts/.easyeda_cache/`.
 >
+> **R25-respin sync 2026-08-02**: C2 (22µF tantalum) is deleted from the
+> design and U3 is now the SY8089AAAC buck (C78988, SOT-23-5) — the summary
+> table, the U3 section, the delta table and the allowlist listing below were
+> brought back in line with the code. The old C2/AMS1117 evidence is kept as
+> clearly-marked history.
+>
 > **EasyEDA API status: WORKING** (re-confirmed 2026-07-25). The earlier
 > `HTTP 403` was transient rate-limiting caused by several agents fetching
 > concurrently, not a permanent block. `easyeda2kicad` repopulates the cache
@@ -32,20 +38,21 @@
 |-----|------|---------|---------|----------|---------|
 | **LED1** | C84256 | LED 0805 red | 0° | — | CORRECT |
 | **LED2** | C19171391 | LED 0805 **red** (was mislabelled green) | 180° | 180° | CORRECT w/ override — **reconfirmed 2026-07-26** from both LED datasheets; the original derivation's "pin 1 = cathode standard" premise was wrong (YONGYUTAI numbers pin 1 = anode), see the correction block below |
-| **C2** | C1953590 | Tantalum 22µF 16V 1206 (Vishay TMCMA1C226MTRF, ESR 2.9Ω) | 180° | 180° | CORRECT w/ override |
 | **D1** | C37704 | BAT54C SOT-23 | **90°** | — | CORRECTED 2026-07-26 — was 270°, which seated no lead at all (3.120 mm off). See the correction block below |
 | **Q1** | C10487 | SI2301CDS SOT-23 | **270°** | — | CORRECTED 2026-07-26 — was 90°, which seated no lead at all (2.933 mm off). See the correction block below |
 | **U1** | C2913202 | ESP32-S3-WROOM-1 | 0° | — | CORRECT |
 | **U2** | C181692 | IP5306 ESOP-8 | **270°** | — | CORRECTED 2026-07-26 — was 0°, which put 0 of 8 leads on copper. **Confirmed on protos #1 and #2**: chip vertical, pin 1 top-left from the back with USB-C on the lower edge = pad 1 (VIN/VBUS) |
-| **U3** | C6186 | AMS1117-3.3 SOT-223 | 0° | — | CORRECT |
-| **U4** | C7519 | USBLC6-2SC6 SOT-23-6 | 90° | — | CORRECT (datasheet not on disk — uses ST USBLC6-2SC6 industry convention) |
+| **U3** | C78988 | SY8089AAAC buck SOT-23-5 (replaces AMS1117, R25 respin) | 180° | — (family formula) | CORRECT — our land pattern is a verbatim copy of the EasyEDA reference, δ_row = 0, no waiver; see section |
+| **U4** | C7519 | USBLC6-2SC6 SOT-23-6 | 90° | — | CORRECT (datasheet `U4_USBLC6-2SC6_C7519.pdf` on disk, pinout confirmed) |
 | **U5** | C5122557 | PAM8403 SOP-16 | 180° | 180° | CORRECT w/ override |
 | **J1** | C2765186 | USB-C 16-pin | 0° | — | CORRECT |
 | **J3** | C295747 | JST-PH 2P SMD | 180° | — (base rot) | CORRECT |
 | **J4** | C2856812 | FPC 40P 0.5mm | 270° | 270° | CORRECT w/ override (datasheet PDF corrupted — see action #2) |
 
-Non-polarized caps/resistors intentionally excluded. C19 is 22uF MLCC (same 1206
-package as C2 but non-polarized — no polarity audit needed).
+Non-polarized caps/resistors intentionally excluded. C19 and C30 (the SY8089
+buck output cap) are 22uF MLCC — non-polarized, no polarity audit needed.
+**C2 (22µF tantalum, C1953590) was deleted in the R25 respin** together with
+the AMS1117 it stabilized; its audit section below is retained as history.
 
 ---
 
@@ -114,11 +121,22 @@ Original chain, kept for the record:
   (+3V3) → forward biased.
 - **Verdict**: CORRECT with 180° override.
 - **Override location**: `scripts/generate_pcb/jlcpcb_export.py`
-  `_JLCPCB_ROT_OVERRIDES["LED2"] = 180`.
+  `_JLCPCB_ROT_DELTAS["LED2"] = 180` (the absolute-override table was
+  converted to additive deltas on 2026-07-25 — see the delta table below).
 - **Verify tool**: `scripts/verify_easyeda_footprint.py` — LED2 in
   `_GEOMETRIC_MISMATCH_ALLOWLIST` with datasheet+EasyEDA evidence.
 
-### C2 — Tantalum 22µF 16V 1206 (C1953590 Vishay TMCMA1C226MTRF)
+### C2 — Tantalum 22µF 16V 1206 (C1953590) — HISTORICAL, deleted in the R25 respin
+
+> **Component no longer on the board.** C2 was the AMS1117 output cap; the
+> R25 respin replaced that LDO with the SY8089 buck (see U3), whose output
+> cap is C30 — a non-polarized 22µF MLCC. The `"C2"` rotation entry was
+> removed from `jlcpcb_export.py` in the same change (a comment there marks
+> the removal). C2 destroyed prototype #1 when assembled reversed
+> (`website/docs/rework/incident-c2-reversed.md`) — that history is why the
+> respin deliberately eliminated the board's only polarized capacitor.
+> Everything below describes the pre-respin design; kept for the record.
+
 - **Datasheet**: `hardware/datasheets/C2_Tantalum-22uF-1206_C1953590_Vishay-TMCM.pdf`
   (Vishay TMCM series — downloaded 2026-04-15 from Distrelec).
 - **MPN**: Vishay TMCMA1C226MTRF — Molded Case Tantalum Electrolytic (MnO2).
@@ -352,23 +370,35 @@ wrong, and it moved both of them by 180°.
   after rotation). Empirically validated on R4-R8 boards (charge/boost works).
 - **Verdict**: CORRECT.
 
-### U3 — AMS1117-3.3 SOT-223 (C6186)
-- **Datasheet**: `hardware/datasheets/U3_AMS1117-3.3_C6186.pdf` p.1 SOT-223 Top
-  View — pin 1 = GND/ADJ, pin 2 = VOUT, pin 3 = VIN, tab (pin 4) = VOUT
-  (electrically same net as pin 2).
-- **EasyEDA**: `scripts/.easyeda_cache/C6186/fp.pretty/SOT-223-3*.kicad_mod`
-  - pad 1 at `(+2.97, +2.30)` line 17
-  - pad 2 at `(+2.97, 0)`
-  - pad 3 at `(+2.97, -2.30)`
-  - pad 4 (tab) at `(-2.97, 0)`
-  - fp_circle pin-1 at `(+3.40, +3.25)`
-- **Our routing**: `scripts/generate_pcb/routing.py:5206` — pad 1 → GND, pad 2
-  → +3V3, pad 3 → +5V, pad 4 (tab) → +3V3 (same net as pad 2, per datasheet).
-- **CPL rotation**: 0° (no override).
-- **Geometric mismatch allowlist**: δ_row=90° (EasyEDA's row direction differs
-  from our library; topologically consistent). Empirically validated: R4-R8
-  boards boot ESP32 on +3V3 rail.
-- **Verdict**: CORRECT.
+### U3 — SY8089AAAC synchronous buck SOT-23-5 (C78988) — replaces AMS1117, R25 respin
+- **Datasheet**: `hardware/datasheets/U3_SY8089AAAC_C78988.pdf` — AN_SY8089/A
+  Rev 0.9A p.2 "Pinout (top view)": pin 1 = EN, 2 = GND, 3 = LX, 4 = IN,
+  5 = FB.
+- **EasyEDA**: `scripts/.easyeda_cache/C78988/fp.pretty/SOT-23-5_L3.0-W1.7-P0.95-LS2.8-BR.kicad_mod`
+  - pad 1 at `(+1.30, +0.95)`, pad 2 `(+1.30, 0)`, pad 3 `(+1.30, -0.95)`,
+    pad 4 `(-1.30, -0.95)`, pad 5 `(-1.30, +0.95)` — all 1.10×0.60 rect.
+  - Our `footprints.py::sot23_5` is a **verbatim copy** of this frame
+    (comment block above the function records the provenance), so
+    `verify_easyeda_footprint` reports **δ_row = 0** for U3 — no waiver, no
+    per-part delta.
+- **Our routing**: `scripts/generate_pcb/routing/power.py::_buck_traces` —
+  pad 4 (IN) → +5V, pad 3 (LX) → BUCK_LX → L2, pad 5 (FB) → BUCK_FB →
+  R25/R26 divider (Vout = 0.6 × (1 + R25/R26) = 3.327 V), pad 2 → GND,
+  pad 1 (EN) → enable per `_buck_traces`.
+- **CPL rotation**: **180°** (`release_jlcpcb/cpl.csv`: `U3, SOT-23-5,
+  180, Bottom`) — produced by the "SOT-23-5" family entry in
+  `_JLCPCB_ROT_CORRECTIONS`, which sits ahead of the generic `^SOT-23` rule
+  because the EasyEDA SOT-23-5 frame is the KiCad-standard frame rotated
+  −90°. NO `_JLCPCB_ROT_DELTAS` entry (see the jlcpcb_export.py comment:
+  "U3 needs NO override").
+- **Verdict**: CORRECT — δ_row = 0 against the EasyEDA reference, angle from
+  the family formula, no waiver. Not yet assembled on any prototype (first
+  R25-respin boards pending); flag for `/first-article-check` on the SOT-23
+  package family.
+- **Historical**: the pre-respin U3 was the AMS1117-3.3 SOT-223 (C6186),
+  audited here until 2026-07 with a δ_row=90 allowlist waiver. Its section
+  is in git history (pre-R25); the waiver was removed with the swap so it
+  cannot silently re-arm for the new part.
 
 ### U4 — USBLC6-2SC6 SOT-23-6 (C7519)
 - **Datasheet**: `hardware/datasheets/U4_USBLC6-2SC6_C7519.pdf` (219KB,
@@ -396,11 +426,12 @@ wrong, and it moved both of them by 180°.
   - fp_circle pin-1 at `(-5.00, +3.15)` — top-left
 - **Our routing**: follows PAM8403 datasheet pinout (INL, INR, OUTL+, OUTL-,
   OUTR+, OUTR-, VDD, PVDD, GND, PGND, /SD, VREF).
-- **CPL rotation**: 180° override (base 90° + 180° = rotation exported).
-  Per JLCPCB DFM history: without override the 3D pin-1 dot lands opposite to
-  our silk pin-1 marker. Override aligns them.
-- **Verdict**: CORRECT with 180° override.
-- **Override location**: `_JLCPCB_ROT_OVERRIDES["U5"] = 180`.
+- **CPL rotation**: 180° — produced by the `^SOP-` family correction alone.
+  The old absolute `_JLCPCB_ROT_OVERRIDES["U5"] = 180` merely restated the
+  formula's own result (its delta was 0) and was removed as dead code in the
+  2026-07-25 conversion to additive deltas — the emitted CPL angle is
+  unchanged.
+- **Verdict**: CORRECT (no delta entry).
 
 ### J1 — USB-C 16-pin SMD (C2765186)
 - **Datasheet**: `hardware/datasheets/J1_USB-C-16pin_C2765186.pdf` p.1 — 16-pin
@@ -549,29 +580,42 @@ wrong, and it moved both of them by 180°.
   implements `_fpc_display_pin(N)` → `connector_pad = 41 - N`. Correct for
   bottom-contact convention (panel-side pin order is reversed vs connector-pad
   order). See `MEMORY.md` "J4 FPC 41-N pin reversal — DO NOT fix".
-- **CPL rotation**: 270° override. Without override, JLCPCB 3D model places pin
-  1 triangle on the opposite end vs our silk.
-- **Verdict**: CORRECT with 270° override.
-- **Override location**: `_JLCPCB_ROT_OVERRIDES["J4"] = 270`.
+- **CPL rotation**: emitted 270° — family formula plus
+  `_JLCPCB_ROT_DELTAS["J4"] = 180` (the additive form of the old absolute
+  270° override; the emitted angle is byte-identical). Without the delta,
+  JLCPCB's 3D model places the pin-1 triangle on the opposite end vs our
+  silk. The delta's own comment block in `jlcpcb_export.py` records two
+  convention-free proofs (cable side + seating residual) — read it before
+  ever touching this entry again.
+- **Verdict**: CORRECT with the 180° delta (emitted CPL 270°).
 
 ---
 
-## Override table (source of truth)
+## Rotation delta table (source of truth)
 
-Located in `scripts/generate_pcb/jlcpcb_export.py:66-72` as `_JLCPCB_ROT_OVERRIDES`:
+Located in `scripts/generate_pcb/jlcpcb_export.py` as `_JLCPCB_ROT_DELTAS`.
+The table holds **additive deltas on top of the package-family formula**, not
+absolute angles — it was converted from the old absolute
+`_JLCPCB_ROT_OVERRIDES` on 2026-07-25 precisely because an absolute angle
+stops tracking the placement when a part is rotated in the layout (that is
+how D1 shipped 180° out for months). The emitted CPL was verified
+byte-identical across the conversion.
+
+Current entries (each with a long evidence comment in the source — that
+comment, not this list, is the canonical rationale):
 
 ```python
-_JLCPCB_ROT_OVERRIDES = {
-    "U5":  180,  # PAM8403 C5122557 — JLCPCB 3D pin-1 dot alignment
-    "J4":  270,  # FPC-40P C2856812 — bottom-contact pin-1 triangle
-    # "D1" REMOVED 2026-07-25 — was 270° at KiCad 0°, which is 180° out vs
-    # the identical-footprint Q1 (90° by formula). D1 now sits at KiCad
-    # 180° and the formula produces the same 270° CPL angle. See the D1
-    # section above for the full derivation (U4 is NOT a reference part).
-    "C2":  180,  # Tantalum 22uF C1953590 Vishay TMCMA1C226MTRF — EasyEDA 3D model pre-rotated 180° in kicad_mod, override compensates on bottom layer
-    "LED2": 180, # Green LED C19171391 — EasyEDA pad numbering reversed
+_JLCPCB_ROT_DELTAS = {
+    "J4":  180,   # FPC-40P C2856812 — emitted CPL 270; two convention-free
+                  # proofs (cable side, seating residual) in the source
+    "LED2": 180,  # Red LED 0805 C19171391 — YONGYUTAI numbers pin 1 = anode,
+                  # opposite of LED1's NationStar convention (H6 closed)
 }
 ```
+
+Removed entries, recorded in comments at the same location: **U5** (delta
+was 0 — dead code), **C2** (component deleted in the R25 respin), **D1**
+(re-derived 2026-07-25, formula suffices at KiCad 180°).
 
 ## Geometric-mismatch allowlist
 
@@ -579,9 +623,9 @@ Located in `scripts/verify_easyeda_footprint.py::_GEOMETRIC_MISMATCH_ALLOWLIST`
 with empirical-validation evidence strings. Entries:
 
 - **U2** (δ=90°) — IP5306 ESOP-8, charge/boost operational on R4-R8.
-- **U3** (δ=90°) — AMS1117 SOT-223, +3V3 rail operational on R4-R8.
-- **LED2** (δ=180°) — green LED 0805, analytical (EasyEDA pad numbering
-  reversed vs cathode silk); 2-pad part, see caveat below.
+- **LED2** (δ=180°) — red LED 0805 (C19171391, long mislabelled green),
+  analytical per the manufacturer's pin-1 = anode numbering; 2-pad part, see
+  caveat below.
 
 Removed 2026-07-25:
 
@@ -589,6 +633,13 @@ Removed 2026-07-25:
   section). Not silenced: it now passes a *stronger* computed check.
 - **D1** — never added. D1 was resolved by fixing the checker, not by
   allowlisting it.
+
+Removed with the R25 respin:
+
+- **U3** — the δ=90 waiver described the AMS1117 SOT-223 footprint, which no
+  longer exists. The SY8089's land pattern is a verbatim EasyEDA copy
+  (δ_row = 0) and needs no waiver; the source comment at the old entry's
+  location warns against re-adding one for a different part.
 
 ---
 
@@ -612,7 +663,8 @@ this without assembly feedback, so conservatively FAIL and ask human").
    parts library** (tape-and-reel), not in a footprint drawing.
 2. **Real polarity bug** — pad *numbering* permuted or mirrored relative to
    the package geometry, so physical pin 1 lands on the pad we routed to
-   pin 2. This is the C2 and LED2 class, and no rotation repairs it.
+   pin 2. This is the C2 (since deleted) and LED2 class, and no rotation
+   repairs it.
 
 Proof that δ_row does not drive the CPL angle: Q1 (δ_row = 90) and U4
 (δ_row = 0) are in the same `^SOT-23` family, both emit CPL 90°, and **both
@@ -628,8 +680,10 @@ pad pitch), so a genuine pin swap — always a full pitch — can never pass.
 
 **Two-pad caveat.** For a symmetric 2-pad part (0805 LED, 1206 tantalum) a
 180° rotation and a pad-1/pad-2 swap are geometrically *indistinguishable*.
-The test therefore requires ≥ 3 pads and never clears such parts; C2 and
-LED2 remain on the manual lists, decided by silkscreen / 3D marker.
+The test therefore requires ≥ 3 pads and never clears such parts; LED2
+remains on the manual lists, decided by silkscreen / 3D marker (C2, the
+other member of this class, was deleted in the R25 respin — the board no
+longer carries any polarized capacitor).
 
 **Undefined-comparison guard.** If a pad *name* does not denote the same pin
 in both libraries the comparison is meaningless. The old code silently fell
@@ -644,20 +698,18 @@ which is why J1 flip-flopped with cache state. Such refs now report **WARN
 
 ## Action items
 
-1. **Download C7171 tantalum datasheet** (AVX / KEMET 22uF 16V 1206) into
-   `hardware/datasheets/C2_Tantalum-22uF-1206_C7171.pdf`. Verify stripe side
-   relative to EasyEDA pad 1. Currently relying on industry-convention +
-   user's visual iBOM-vs-preview mismatch observation.
+1. ~~Download C7171 tantalum datasheet~~ — **OBSOLETE 2026-08-02**: C2 was
+   deleted in the R25 respin; no polarized capacitor remains on the board.
 2. **Re-download J4 FPC datasheet** (HRS / Hirose FH12-40S-0.5SH or equivalent)
    from LCSC product page `C2856812` into
    `hardware/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf`. Current file is
    corrupted. Verify contact side (bottom vs top) matches `41 - panel_pin`.
-3. **Download Q1 SI2301CDS datasheet** (Vishay or Alpha & Omega) into
-   `hardware/datasheets/Q1_SI2301CDS-SOT23_C10487.pdf`. Currently relying on
-   industry convention.
-4. **Download U4 USBLC6-2SC6 datasheet** (STMicroelectronics) into
-   `hardware/datasheets/U4_USBLC6-2SC6_C7519.pdf`. Currently relying on
-   industry convention.
+3. ~~Download Q1 SI2301CDS datasheet~~ — **DONE**:
+   `Q1_SI2301CDS-SOT23_C10487.pdf` on disk (198KB, 9 pages, Vishay), cited
+   in the Q1 section.
+4. ~~Download U4 USBLC6-2SC6 datasheet~~ — **DONE**:
+   `U4_USBLC6-2SC6_C7519.pdf` on disk (219KB, 14 pages, ST), cited in the
+   U4 section.
 5. **Replace HTML-as-PDF BAT54C files** — all four D1 files in
    `hardware/datasheets/` are LCSC product-page HTML dumps saved with `.pdf`
    extension. Replace with the actual Nexperia/Diodes Inc BAT54C,215 PDF.
@@ -670,7 +722,7 @@ empirical evidence) but not primary-source-proven.
 
 ## How to extend this document
 
-- After any `_JLCPCB_ROT_OVERRIDES` change: add/update the corresponding entry
+- After any `_JLCPCB_ROT_DELTAS` change: add/update the corresponding entry
   above, cite datasheet page + EasyEDA file:line, and re-run
   `make verify-easyeda`.
 - After any LCSC part substitution: re-run the audit for that ref only (fetch

@@ -397,9 +397,9 @@ def check_designator_collisions(
        tokenise the schematic ``type + value`` and the CPL ``value +
        footprint`` and require at least one shared ≥3-char alphanumeric
        token. This correctly matches ``ST7796S_Module`` against ``ILI9488``
-       once the schematic value is ``"ILI9488 4.0in 8080"`` — and crucially
+       once the schematic value is ``"ILI9488 3.95in 8080"`` — and crucially
        it catches R4-HIGH-2 where schematic ``ST7796S_Module`` / value
-       ``"ILI9488 4.0in 8080"`` is reused for CPL ``USBLC6-2SC6`` /
+       ``"ILI9488 3.95in 8080"`` is reused for CPL ``USBLC6-2SC6`` /
        ``SOT-23-6`` (zero shared tokens → collision).
     """
     violations: List[str] = []

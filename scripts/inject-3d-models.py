@@ -54,7 +54,7 @@ MODEL_MAP = {
     # L2 SY8089 buck output inductor (SWPA4030: 4x4x3mm shielded)
     "IND-SMD-4.0x4.0": (f"{M}/Inductor_SMD.3dshapes/L_APV_ANR4030.step",
                      (0, 0, 0), (0, 0, 0)),
-    # Speaker-22mm: NO KiCad model of this class (buzzer models stop at
+    # Speaker-28mm: NO KiCad model of this class (buzzer models stop at
     # ~15mm) — deliberately unmapped, pads render bare.
     "LED_0805":     (f"{M}/LED_SMD.3dshapes/LED_0805_2012Metric.step",
                      (0, 0, 0), (0, 0, 0)),
@@ -94,7 +94,7 @@ MODEL_MAP = {
 # model in the KiCad library; L1/L2 render as bare pads.
     # "FPC-40P-0.5mm" → FPC connector (no exact 40P match)
     # "TF-01A"      → SD card module (no standard model)
-    # "Speaker-22mm" → Speaker (no standard model)
+    # "Speaker-28mm" → Speaker (no standard model)
     # "MountingHole:MountingHole_2.5mm" → Just a hole
 }
 

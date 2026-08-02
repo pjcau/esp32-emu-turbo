@@ -51,7 +51,7 @@ PAD_GEOMETRY = {
     "TF-01A":   [(0.6, 1.3)] * 9 + [(1.2, 1.4)] * 2 + [(1.2, 2.0)] * 2,
     "SS-12D00G3": [(0.6, 1.3)] * 3 + [(1.05, 0.7)] * 4,  # MSK12C02
     "SMD-4x4x2": [(1.4, 3.4)] * 2,
-    "Speaker-22mm": [(2.0, 3.0)] * 2,
+    "Speaker-28mm": [(2.0, 3.0)] * 2,
 }
 
 # IPC-7525 solder paste aperture ratio limits

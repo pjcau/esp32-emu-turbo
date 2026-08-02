@@ -62,9 +62,8 @@ Partly — and the uncovered part is known and has owners:
    - Verify the **uploaded CPL is `release_jlcpcb/cpl.csv` at the tag**,
      not a stale download.
    - Review JLCPCB's **3D assembly preview part by part** against
-     `hardware/datasheets/POLARITY_AUDIT.md` — U2, D1, Q1, LED2, L1 first.
-     (That file still carries a `C2` row and an `AMS1117` U3 row; both parts are
-     gone from the design — the audit doc itself needs the same sweep.)
+     `hardware/datasheets/POLARITY_AUDIT.md` — U2, D1, Q1, LED2, L1 first,
+     plus U3 (SY8089 SOT-23-5, never yet assembled on a prototype).
      This is the only moment release 2's failure mode is visible *before*
      paying; JLC applied the wrong rotations verbatim and vision-corrected
      nothing.

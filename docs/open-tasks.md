@@ -37,6 +37,24 @@ isolated from the contacts" (BTN_SELECT on shell tabs, GPIO0 strap) as
 **2026-09-14**. Verify against the switch datasheet (or falsify and fix)
 before that date.
 
+### 3. SD card-detect pad semantics — three sources, three stories
+
+Same pad, three contradictory descriptions (found by the 2026-08-02 docs
+audit, deliberately NOT resolved by editing prose — this is a hardware
+question for the pcb-engineer):
+
+- `website/docs/manufacturing/bring-up-protocol.md`: "this revision has
+  **no card-detect line**".
+- `scripts/verify_sd_interface.py`: prints `PASS Card detect (CD) connected
+  to BTN_R` (U6 pad 9 shares a net with GPIO3).
+- `Makefile`: calls the same pad "the DAT2 pad that shares a net with a
+  strapping pin".
+
+**Fix:** determine from the TF-01A module datasheet + the `.kicad_pcb` what
+U6 pad 9 physically is (CD switch, DAT2, or NC), then align all three
+sources and the docs to that one answer. Note GPIO3 is a strapping pin —
+whether the pad can pull it at boot matters for the verdict.
+
 ## Medium priority — follow-ups from the ampacity gate (2026-08-01)
 
 Left deliberately visible by the gate-coverage expansion (the gate prints

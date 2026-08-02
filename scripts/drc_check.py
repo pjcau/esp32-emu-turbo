@@ -400,7 +400,7 @@ UNPUBLISHED_PACKAGE_FAMILIES = {
                           # same class as SMD-4x4x2 above, different footprint
                           # name. JLCPCB publishes no spacing cell for
                           # wire-wound power inductors.
-    "Speaker-22mm",       # speaker pads
+    "Speaker-28mm",       # speaker wire pads (28mm off-board driver)
     "Fiducial",           # fiducial mark
     "F_1812",             # 1812 PTC resettable fuse (F1) — JLCPCB's SMD
                           # spacing matrix stops at the 1206 chip class;

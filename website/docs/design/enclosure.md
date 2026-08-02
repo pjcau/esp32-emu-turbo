@@ -59,7 +59,7 @@ make render-enclosure
 
 ### Back Panel
 - **L/R shoulder buttons** — pill-shaped cutouts near top edge (28 × 10mm)
-- **Speaker grille** — array of 1.5mm holes in a 22mm circular pattern (D-pad side of the device; appears on the **right** when you look at the back)
+- **Speaker grille** — array of 1.5mm holes in a 22mm circular pattern, sized to the radiating cone of the 28mm driver whose frame seats against the inner face (D-pad side of the device; appears on the **right** when you look at the back)
 
 ### Bottom Edge
 - **USB-C port** — 9.0 × 3.2mm cutout (centered), Z-aligned with PCB connector

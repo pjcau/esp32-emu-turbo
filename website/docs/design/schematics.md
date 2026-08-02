@@ -309,7 +309,7 @@ console via USB CDC).
 
 ## Sheet 3 — Display
 
-ILI9488 3.95" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. *(The generated sheet title and the DS1 symbol value still read "4.0in" — a label-only mismatch in `scripts/generate_schematics/sheets/display.py`; the panel, the enclosure cutout and the BOM are all the 3.95" part.)* FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A (backlight — fed from +5V through R27 on net LED_BLA, ~90 mA, always on), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
+ILI9488 3.95" 320×480 bare panel with 40-pin FPC, 8-bit 8080 parallel interface — mandatory for SNES emulation speed. FPC pin mapping per ILI9488 panel datasheet: pins 9-12=CS/DC/WR/RD, pin 15=RESET, pins 17-24=DB0-DB7, pin 33=LED-A (backlight — fed from +5V through R27 on net LED_BLA, ~90 mA, always on), pins 6-7=VDDI/VDDA(+3V3), pins 38-39=IM0/IM1(+3V3), pin 40=IM2(GND). **Note:** on the PCB, display Pin N maps to connector Pad (41−N) due to the landscape FPC pass-through (see [PCB docs](pcb.md#fpc-slot--pin-reversal)).
 
 | Ref | Component | Value | Purpose | Datasheet |
 |-----|-----------|-------|---------|-----------|

@@ -1,7 +1,7 @@
 """Sheet 3: Display — ILI9488 3.95" 320×480 8-bit 8080 parallel interface.
 
 Source of truth: ``website/docs/design/components.md`` (section
-"FPC 40-Pin Pinout") — verified against the actual ILI9488 4.0" bare
+"FPC 40-Pin Pinout") — verified against the actual ILI9488 3.95" bare
 panel datasheet shipped by the AliExpress seller
 (https://it.aliexpress.com/item/1005009422879126.html). The panel has
 touch pins on 1-4 but **we do not use them as touch** — they remain NC.
@@ -67,7 +67,7 @@ from ..sheet_base import SchematicSheet
 
 
 class DisplaySheet(SchematicSheet):
-    title = "Display - ILI9488 4.0in 8080 Parallel"
+    title = "Display - ILI9488 3.95in 8080 Parallel"
     page_number = 3
     # A3 (420x297 landscape): the FPC connector block sits at x=260,
     # which is off the right-hand edge of an A4 sheet (210 mm wide) —
@@ -78,7 +78,7 @@ class DisplaySheet(SchematicSheet):
 
     def build(self):
         # Title
-        self.text("DISPLAY - ILI9488 4.0in 320x480", 30, 25, 5, True)
+        self.text("DISPLAY - ILI9488 3.95in 320x480", 30, 25, 5, True)
         self.text(
             "8-bit 8080 parallel interface"
             " (mandatory for SNES emulation speed)", 30, 33,
@@ -92,7 +92,7 @@ class DisplaySheet(SchematicSheet):
         # the physical connector is J4.
         dx, dy = 148, 120
         self.sym(
-            "ST7796S_Module", "DS1", "ILI9488 4.0in 8080",
+            "ST7796S_Module", "DS1", "ILI9488 3.95in 8080",
             dx, dy, range(1, 17),
         )
 

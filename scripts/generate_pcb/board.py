@@ -501,7 +501,7 @@ def _component_placeholders():
     placements.append(("SW16", "SS-12D00G3", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*SPEAKER_ENC)
-    placements.append(("SPK1", "Speaker-22mm", px, py, 0, "B.Cu"))
+    placements.append(("SPK1", "Speaker-28mm", px, py, 0, "B.Cu"))
 
     px, py = enc_to_pcb(*IP5306_ENC)
     placements.append(("U2", "ESOP-8", px, py, 0, "B.Cu"))
@@ -636,7 +636,7 @@ def _component_placeholders():
         "ESOP-8": (-5, 5),
         "SOT-223": (-5, 5),
         "SOT-23-5": (-3, 3),
-        "Speaker-22mm": (-13, 13),
+        "Speaker-28mm": (-13, 13),
         "JST-PH-2P-SMD": (-3, 3),
         "SS-12D00G3": (-4, 4),
         "SMD-4x4x2": (-4, 4),

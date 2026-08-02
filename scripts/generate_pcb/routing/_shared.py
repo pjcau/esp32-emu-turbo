@@ -695,7 +695,7 @@ def _init_pads():
         ("L1", "SMD-4x4x2", *L1, 0, "B"),
         ("L2", "IND-SMD-4.0x4.0", *L2_POS, 0, "B"),
         ("J3", "JST-PH-2P-SMD", *JST, 180, "B"),
-        ("SPK1", "Speaker-22mm", *SPEAKER, 0, "B"),
+        ("SPK1", "Speaker-28mm", *SPEAKER, 0, "B"),
         ("SW16", "SS-12D00G3", *PWR_SW, 0, "B"),
     ]
     for ref, fp_name, cx, cy, rot, lc in components:

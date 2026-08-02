@@ -187,7 +187,7 @@ KNOWN_MAPPINGS = {
     "ss-12d00g3": "slideswitchss-12d00g3",
     "esp32-s3-n16r8": "esp32-s3-wroom-1-n16r8",
     "sd_card_spi": "microsdcardslot",
-    "ili94884.0in8080": "fpc40-pin0.5mmbottomcontact",
+    "ili94883.95in8080": "fpc40-pin0.5mmbottomcontact",
     "fpc-16p-0.5mm": "fpc40-pin0.5mmbottomcontact",  # schematic says 16P but BOM correctly 40-pin
     "red": "redled",
     "green": "greenled",

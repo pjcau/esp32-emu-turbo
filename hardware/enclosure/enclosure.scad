@@ -101,6 +101,10 @@ pwr_sw_x = -40;
 pwr_sw_z = bot_d - 2.0; // Aligned with switch body center below PCB
 
 // === Speaker grille (back panel, left side) ===
+// The driver is the 28mm 8ohm speaker (SPK1, off-board). The grille
+// opening is intentionally smaller than the 28mm frame: it covers the
+// ~22mm radiating cone while the frame seats against the inner face
+// of the back panel around the opening.
 spk_x = -50;
 spk_y = -15;
 spk_diam = 22;

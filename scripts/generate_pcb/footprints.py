@@ -828,8 +828,11 @@ def msk12c02(layer="B"):
     return pads
 
 
-# ── Speaker 22mm ─────────────────────────────────────────────────
-def speaker_22mm(layer="B"):
+# ── Speaker wire pads (28mm 8Ω driver, off-board) ────────────────
+# Two 2.0x3.0mm solder pads for the speaker leads; the pad geometry is
+# independent of the driver diameter. Was named "Speaker-22mm" from an
+# early 22mm driver plan; the BOM part has been the 28mm driver all along.
+def speaker_28mm(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     return [
         _pad("1", "smd", "rect", -9.5, 0, 2.0, 3.0, layers),
@@ -897,7 +900,7 @@ FOOTPRINTS = {
     "R_1206": (passive_1206, "B"),
     "F_1812": (fuse_1812, "B"),
     "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
-    "Speaker-22mm": (speaker_22mm, "B"),
+    "Speaker-28mm": (speaker_28mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),
     "IND-SMD-4.0x4.0": (inductor_4x4_c36409, "B"),
     "Fiducial": (fiducial, "F"),
