@@ -680,17 +680,45 @@ and is six releases stale; the tag is the truth.
   `verify-all`), which plants both a real breach and the exact historical
   false positive; reverting the metric makes 3 of its 10 tests fail.
 
-- **`collision.py` is default-open on pad nets.** `_KNOWN_PAD_NETS`
-  (`collision.py:215`) has 4 hardcoded entries; every other pad is
-  registered with `net=0`, and net=0 pads are *skipped* in collision
-  queries (`collision.py:125`). A pad only acquires a net when the first
-  trace touches it (`collision.py:466`), so a pad the router never targets
-  is invisible to collision detection forever and a trace can be routed
-  straight over it. Contained today only by post-hoc gates
-  (`verify_trace_through_pad`, `short_circuit_analysis`,
-  `analyze_pad_distances`) — all currently green. This class has bitten
-  before. **Fix:** seed pad nets from `routing._PAD_NETS` before routing
-  begins, so the router is default-closed.
+- ~~**`collision.py` is default-open on pad nets**~~ — FIXED 2026-08-02.
+  It is default-closed now, and the way it was closed is the part worth
+  keeping.
+
+  The hole: a pad only acquired a net when the first trace endpoint landed
+  on it, and net-0 pads were *skipped* in queries. A pad the router never
+  targets therefore stayed invisible for the whole run and a trace could be
+  laid straight across it with nothing reported — contained only by the
+  post-hoc gates (`verify_trace_through_pad`, `short_circuit_analysis`,
+  `analyze_pad_distances`).
+
+  `routing.generate_all_traces()` now routes **twice**: a discovery pass
+  whose output is discarded, then the emitted pass, seeded before its first
+  trace with the pad→net map the first pass produced. Net 0 no longer means
+  "not known yet"; it means "unconnected copper", which nothing may
+  overlap. Legitimate because collision results are only appended to
+  `_GRID.violations` and never steer the router — the regenerated
+  `.kicad_pcb` is **byte-identical**, uuids included (the counter is
+  rewound between passes, `P.uid_restore`).
+
+  Closing one default exposed another, which is the reason this entry is
+  longer than the fix: `register_pads` decided F.Cu vs B.Cu from a literal
+  set of front-side refs, and that set omitted the three **fiducials**. So
+  F.Cu fiducials were modelled on B.Cu, where the BTN_START track at
+  x=12.20 runs through FID3 — and the moment net-0 pads stopped being
+  skipped it reported as a 0.425 mm overlap. Not a board defect: FID3 is on
+  F.Cu, the track is on B.Cu, they never meet. The side now comes from
+  `pad_positions.get_pads_and_layers()`, i.e. from the placements, one walk
+  for both halves (a second walk would consume UUIDs and shift every id in
+  the board).
+
+  Net effect on the report: **0 violations, 17 → 21 margin notes.** The
+  four newly visible pairs are 0.155–0.160 mm against the 0.175 mm house
+  target, all above JLCPCB's 0.15 mm minimum — buildable, same class as the
+  17 that were already listed. Guarded by
+  `scripts/test_collision_pad_nets.py` (13 tests, in `verify-all`), which
+  plants each of the three properties: reinstating the net-0 skip fails 2
+  tests, removing the uuid rewind fails 3, and mislabelling FID3's side is
+  required to still reproduce the historical phantom.
 - **`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" → 40-pin`,
   papering over a real schematic/BOM inconsistency. Fix the schematic
   symbol value instead.

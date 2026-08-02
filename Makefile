@@ -74,6 +74,7 @@ VERIFY_ALL_SCRIPTS = \
 	simulate_circuit \
 	spice_power_check \
 	test_claims_ledger \
+	test_collision_pad_nets \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_enclosure_sync \

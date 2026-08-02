@@ -2,6 +2,7 @@
 byte-identical regenerated .kicad_pcb. One domain per module; every helper
 and every constant lives in _shared (original order, so import-time
 execution is unchanged). See routing/__init__.py for the contract."""
+from .. import primitives as P
 from ._shared import (
     NET_ID,
     _GRID,
@@ -9,6 +10,7 @@ from ._shared import (
     _PADS,
     _PAD_NETS,
     _PAD_POS_LOOKUP,
+    _SEED_PAD_NETS,
     _init_keepout_zones,
 )
 from .buttons import _button_pullup_bridges
@@ -36,7 +38,49 @@ def generate_all_traces():
     """Generate all PCB traces and zones.
 
     Returns a single string of KiCad S-expressions.
+
+    Routes the board TWICE, and the reason is the collision detector:
+
+    A pad only learns its net when a trace endpoint lands on it
+    (`_seg`/`_via_net` -> `_GRID.update_pad_net`). So on a single pass every
+    pad starts at net 0, and net-0 pads used to be skipped by collision
+    queries — which made the detector default-OPEN. A pad the router never
+    targets never acquired a net, stayed invisible for the whole run, and a
+    trace could be laid straight across it with nothing reported. The
+    post-hoc gates (verify_trace_through_pad, short_circuit_analysis,
+    analyze_pad_distances) were the only thing standing behind that.
+
+    Pass 1 is a discovery run whose OUTPUT IS DISCARDED; all it is for is
+    the pad->net map it leaves in `_PAD_NETS`. Pass 2 seeds the grid with
+    that map before the first trace is placed, so every routed pad is known
+    from the start and net 0 now means "unconnected copper" — a thing
+    nothing may overlap — rather than "not known yet".
+
+    Three properties this rests on, all checked by
+    scripts/test_collision_pad_nets.py:
+
+    - the pass is free of side effects on the emitted board. The collision
+      result is only appended to `_GRID.violations`; `_seg`/`_via_net` place
+      copper either way. Two consecutive runs are byte-identical.
+    - the UUID counter is rewound between passes (`P.uid_restore`), so the
+      emitted board is unchanged down to the ids.
+    - the discovery pass prints no report. One run, one report.
     """
+    # ── Pass 1: discovery ─────────────────────────────────────────
+    _SEED_PAD_NETS.clear()
+    _uid_mark = P.uid_mark()
+    _route_once(report=False)
+    _discovered = dict(_PAD_NETS)
+
+    # ── Pass 2: the run that is emitted ───────────────────────────
+    P.uid_restore(_uid_mark)
+    _SEED_PAD_NETS.clear()
+    _SEED_PAD_NETS.update(_discovered)
+    return _route_once(report=True)
+
+
+def _route_once(report: bool = True):
+    """One full routing pass. See generate_all_traces for why there are two."""
     # Reset collision grid and pad state for fresh generation.
     #
     # IN PLACE, not rebound. This module and every domain module import
@@ -73,8 +117,9 @@ def generate_all_traces():
     all_parts.extend(_button_pullup_bridges())
     all_parts.extend(_power_zones())
 
-    # Report collision violations
-    _GRID.print_report()
+    # Report collision violations (discovery pass stays silent)
+    if report:
+        _GRID.print_report()
 
     # ── Explicit pad-net assignments ──────────────────────────────
     # Assign nets to pads that connect via zone fill or where the overlapping

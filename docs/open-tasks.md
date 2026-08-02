@@ -15,19 +15,38 @@ Two standing rules from those audits apply to every item below:
 
 ## High priority — real defect classes
 
-### 1. `collision.py` is default-open on pad nets
+### 1. ~~`collision.py` is default-open on pad nets~~ — DONE
 
-`_KNOWN_PAD_NETS` (`collision.py:215`) has 4 hardcoded entries; every other
-pad registers with `net=0`, and net=0 pads are *skipped* in collision
-queries, so a pad the router never targets is invisible to collision
-detection forever and a trace can be routed straight over it. Contained
-today only by post-hoc gates (`verify_trace_through_pad`,
-`short_circuit_analysis`, `analyze_pad_distances`) — all green, but this
-class has bitten before.
+Closed 2026-08-02. `routing.generate_all_traces()` now routes **twice** —
+a discovery pass whose output is discarded, then the emitted pass seeded
+with the pad→net map the first produced — so every routed pad is known
+before the first trace is placed. Net 0 no longer means "not known yet",
+it means "unconnected copper", and the skip that made net-0 pads invisible
+is gone. The regenerated `.kicad_pcb` is **byte-identical**, uuids
+included (the counter is rewound between passes).
 
-**Fix:** seed pad nets from `routing._PAD_NETS` / the datasheet spec map
-before routing begins, so the router is default-closed.
-Source: waiver audit O5 = `docs/known-issues.md` §C.
+Closing that default exposed a second one in the same function:
+`register_pads` decided F.Cu vs B.Cu from a literal set of front-side
+refs, and the set omitted the three fiducials — so F.Cu fiducials sat on
+B.Cu, where the BTN_START track at x=12.20 passes through FID3, and that
+reported as a 0.425 mm overlap. A modelling artefact, not a board defect
+(different layers). The side is now derived from the placements via
+`pad_positions.get_pads_and_layers()`.
+
+Report goes 0 violations / 17 margin notes → **0 violations / 21 margin
+notes**; the four newly visible pairs are 0.155–0.160 mm against the
+0.175 mm house target and all clear JLCPCB's 0.15 mm minimum. Guarded by
+`scripts/test_collision_pad_nets.py` (13 tests, registered in
+`VERIFY_ALL_SCRIPTS` and given an owner rule in `issue_dispatch.py`);
+reinstating the net-0 skip fails 2 of them, removing the uuid rewind
+fails 3. Detail: `docs/known-issues.md` §C.
+
+While adding the owner rule: `test_collision_via_metric` had no
+`ROUTING_EXCEPTIONS` entry and was being ranked `dead-board` by
+`law:via`, unlike every other mutation suite in the file. Both collision
+suites are now declared `blind-spot`, matching `test_order_manifest`,
+`test_enclosure_sync`, `test_test_points`, `test_esd_protection` and
+`test_power_via_ampacity`.
 
 ### 2. ~~SW16 shell-isolation claim~~ — VERIFIED 2026-08-02
 

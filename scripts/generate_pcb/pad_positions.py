@@ -28,8 +28,45 @@ def get_all_pad_positions():
     Returns:
         dict: {ref: {pad_num: (abs_x, abs_y, w, h), ...}, ...}
     """
+    return get_pads_and_layers()[0]
+
+
+def get_pad_layers():
+    """Return {ref: "F.Cu" | "B.Cu"} for every placed footprint.
+
+    See get_pads_and_layers() — prefer that when you need both, because
+    each call here re-runs _component_placeholders().
+    """
+    return get_pads_and_layers()[1]
+
+
+def get_pads_and_layers():
+    """Positions and side for every placed footprint, from ONE placement walk.
+
+    Returns:
+        ({ref: {pad_num: (abs_x, abs_y, w, h)}}, {ref: "F.Cu" | "B.Cu"})
+
+    Both halves come from the same `_component_placeholders()` result, so
+    they cannot disagree — and callers that need both must use this rather
+    than the two single-purpose wrappers, for a reason that is not obvious:
+    `_component_placeholders()` emits footprint S-expressions and therefore
+    CONSUMES UUIDs from the global counter in primitives. Calling it twice
+    per routing pass shifts every uuid in the emitted board, producing a
+    whole-file diff on a change that moves no copper.
+
+    The layer half exists because `collision.register_pads` used to carry
+    its own literal set of front-side refs, and a hand-maintained set goes
+    stale exactly like the pad-net table above it did: the three fiducials
+    are on F.Cu, were missing from that set, and were therefore modelled on
+    B.Cu — where the BTN_START track at x=12.20 runs straight through FID3.
+    That reported as a 0.425 mm overlap the moment net-0 pads stopped being
+    skipped, and it was a modelling artefact, not a board defect. Ask the
+    placements instead of remembering them.
+    """
     _comp_str, placements = _component_placeholders()
     result = {}
+    layers = {ref: ("F.Cu" if "F." in layer else "B.Cu")
+              for ref, _fp, _fx, _fy, _rot, layer in placements}
 
     for ref, fp_name, fx, fy, rot, layer in placements:
         layer_char = "F" if "F." in layer else "B"
@@ -82,7 +119,7 @@ def get_all_pad_positions():
 
         result[ref] = ref_pads
 
-    return result
+    return result, layers
 
 
 def get_pad(pads, ref, pad_num):

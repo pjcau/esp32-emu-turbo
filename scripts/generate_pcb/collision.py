@@ -141,10 +141,16 @@ class SpatialHash:
                     # Same-net: skip (unless barrier)
                     if obs.net != NET_BARRIER and obs.net == exclude_net:
                         continue
-                    # Unassigned pads (net=0): skip — net not yet known,
-                    # cannot determine if same-net or different-net.
-                    if obs.net == 0 and obs.kind == "pad":
-                        continue
+                    # A pad at net 0 used to be SKIPPED here, on the reasoning
+                    # that its net "is not yet known". That made the whole
+                    # detector default-OPEN: a pad the router never targets
+                    # never acquires a net, so it stayed invisible forever and
+                    # a trace could be laid straight across it with nothing
+                    # reported. Pad nets are now seeded from the routed map
+                    # before the first trace is placed (routing._assemble
+                    # generate_all_traces, two passes), so net 0 no longer
+                    # means "unknown" — it means "unconnected copper", which
+                    # nothing may overlap. Default-closed.
                     # AABB overlap test
                     if (xmin < obs.xmax and xmax > obs.xmin and
                             ymin < obs.ymax and ymax > obs.ymin):
@@ -191,7 +197,8 @@ class CollisionGrid:
 
     # ── Pre-population ────────────────────────────────────────
 
-    def register_pads(self, pads_dict: dict, known_pad_nets: dict = None):
+    def register_pads(self, pads_dict: dict, known_pad_nets: dict = None,
+                      pad_layers: dict = None):
         """Register all component pads as obstacles.
 
         Args:
@@ -199,29 +206,29 @@ class CollisionGrid:
                        pad_positions.get_all_pad_positions()
             known_pad_nets: {(ref, pad_num): net_id} for pads whose net must
                        be known BEFORE the first trace reaches them. A pad
-                       left at net 0 is skipped by collision queries, and a
-                       pad seeded with the WRONG net reports its own
-                       same-net trace as a short.
+                       seeded with the WRONG net reports its own same-net
+                       trace as a short; a pad left at net 0 is treated as
+                       unconnected copper, which nothing may overlap.
+            pad_layers: {ref: "F.Cu" | "B.Cu"} from
+                       pad_positions.get_pad_layers(). Refs missing from it
+                       fall back to B.Cu.
 
-        This used to be a hardcoded table inside this function, a second copy
-        of the net map. It went stale: it still said J3 pin 1 was BAT+ (net 5)
-        after routing.py moved it to BAT_IN (net 57) for the reverse-polarity
-        MOSFET, so the BAT_IN trace landing on its own pad was reported as a
-        -0.800mm short on the battery connector. Callers now pass the nets
-        derived from the one map in primitives.NET_ID.
+        Both dicts are DERIVED and passed in, never rebuilt here — this
+        function has now grown a stale private copy of board state twice:
+
+        - the pad-net table said J3 pin 1 was BAT+ (net 5) after routing.py
+          had moved it to BAT_IN (net 57) for the reverse-polarity MOSFET,
+          so the BAT_IN trace landing on its own pad reported as a -0.800 mm
+          short on the battery connector;
+        - the front-side ref set omitted the three fiducials, so F.Cu
+          fiducials were modelled on B.Cu, where the BTN_START track at
+          x=12.20 passes through FID3 — a 0.425 mm "overlap" that is a
+          modelling artefact and not on the board at all.
+
+        Ask the placements and the net map. Do not remember them here.
         """
         known_pad_nets = known_pad_nets or {}
-        # Determine which refs are on F.Cu vs B.Cu
-        fcu_refs = {
-            "SW1", "SW2", "SW3", "SW4", "SW5", "SW6", "SW7", "SW8",
-            "SW9", "SW10", "SW13", "LED1", "LED2",
-            # Diagnostic LED bank — the only RESISTORS on the top side, so
-            # this set is no longer "buttons and LEDs". Omitting a ref here
-            # makes the short detector treat it as B.Cu and report phantom
-            # violations against the real B.Cu copper underneath.
-            "LED3", "LED4", "LED5", "LED6",
-            "R28", "R29", "R30", "R31",
-        }
+        pad_layers = pad_layers or {}
 
         # Skip ESP32 GND thermal pad (U1:41) — it's a 3.9x3.9mm exposed pad
         # that signal traces legitimately cross underneath with solder mask
@@ -235,7 +242,7 @@ class CollisionGrid:
             _skip_pads.add(("J4", _j4p))
 
         for ref, pad_map in pads_dict.items():
-            layer = "F.Cu" if ref in fcu_refs else "B.Cu"
+            layer = pad_layers.get(ref, "B.Cu")
             layer_idx = LAYER_IDX.get(layer, -1)
             if layer_idx < 0:
                 continue
