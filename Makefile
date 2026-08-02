@@ -74,6 +74,7 @@ VERIFY_ALL_SCRIPTS = \
 	simulate_circuit \
 	spice_power_check \
 	test_claims_ledger \
+	test_collision_pad_nets \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_enclosure_sync \
@@ -278,7 +279,7 @@ bench-display-test: ## T3.1 mutation tests — break the controller model on pur
 bench-audio: ## T3.2 — audio chain: high-pass corner, 8-ohm output power, rail current
 	@$(T) bench-audio python3 scripts/vbench/audio.py
 
-bench-sd: ## T3.3 (part) — SD bus wiring, and the DAT2 pad that shares a net with a strapping pin
+bench-sd: ## T3.3 (part) — SD bus wiring, and the socket Cd-pad exposure guard (off-net since R31-HIGH-2)
 	@$(T) bench-sd python3 scripts/vbench/sdcard.py
 
 bench-sdcard: ## T3.3 — the card protocol: CMD0/CMD8/ACMD41 init, CMD17 block reads of a real file, cited currents

@@ -10,7 +10,7 @@ Checks:
 Known exclusions (manual assembly / fiducials / DNP):
   BT1, J2, SPK1 — manual assembly (no PCBA footprint required)
   FID1, FID2, FID3 — fiducials (no electrical nets)
-  R14 — DNP (do not populate)
+  R14 — DNP (do not populate); verified 2026-08-02, see EXCLUDED_REFS
 
 T4 compares EVERY schematic pin of every non-excluded ref. Refs whose
 symbol pin numbering deliberately differs from the footprint pad
@@ -90,6 +90,29 @@ def _cleanup_netlist_tmp():
         pass
 
 # Components excluded from cross-checks (manual assembly / fiducials / DNP)
+#
+# R14 — DNP, and this was independently verified on 2026-08-02 rather than
+# taken from the comment that asserted it. Four sources, none of them each
+# other:
+#
+#   BOM  the 10k 0805 line reads "R3,R4,...,R13,R15", quantity 12. R14 is
+#        the one gap in an otherwise contiguous run.
+#   CPL  0 rows for R14 out of 94.
+#   PCB  the footprint IS placed, but pad 2 carries NO NET, while its
+#        neighbours R13.2 and R15.2 are both on +3V3 — the pull-up leg is
+#        deliberately not routed (generate_pcb/routing/passives.py skips
+#        i=10, generate_pcb/jlcpcb_export.py skips the placement).
+#   WHY  R14 would pull BTN_L = GPIO45 = the VDD_SPI strapping pin up to
+#        +3V3. GPIO45 must be LOW at reset to select 3.3 V VDD_SPI, which
+#        the Octal PSRAM requires; strapped HIGH the module comes up at
+#        1.8 V and the PSRAM is dead. Firmware uses the internal pull-up
+#        after boot instead. This is why the part must NOT be fitted, not
+#        merely why it happens not to be.
+#
+# So the exclusion is safe: R14 exists in the schematic and on the copper
+# but is never assembled. (The schematic symbol is still emitted with
+# `(dnp no)` — see docs/open-tasks.md; that is cosmetic, the BOM and CPL
+# are what the fab obeys.)
 EXCLUDED_REFS = {"BT1", "J2", "SPK1", "FID1", "FID2", "FID3", "R14"}
 
 # Net name prefixes/patterns that are PCB-internal (power flags, unconnected stubs)

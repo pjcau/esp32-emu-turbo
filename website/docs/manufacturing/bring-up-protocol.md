@@ -208,11 +208,20 @@ physically cannot report, and the reason is printed on the skip line:
 
 Two more skips are conditional rather than permanent, and say so in their
 detail field: `sd.cmd0` skips when nothing answers on `SD_MISO`, because
-this revision has **no card-detect line** and therefore no way to tell an
-empty socket from a broken MISO net. Re-run with a known-good card
-inserted; if it still reads `0xFF`, the fault is on the board. Every later
-SD check then skips naming `sd.cmd0` as the reason, so a missing card never
-looks like six independent failures.
+**no card-detect line is read on this revision** and therefore nothing in
+software can tell an empty socket from a broken MISO net. Re-run with a
+known-good card inserted; if it still reads `0xFF`, the fault is on the
+board. Every later SD check then skips naming `sd.cmd0` as the reason, so a
+missing card never looks like six independent failures.
+
+The socket itself is not the reason. The TF-01A **does** have a card-detect
+contact — its drawing labels the pad row (1)…(8) and then **Cd**, so pad 9
+is the socket's detect contact, not a card contact and not DAT2. What this
+revision lacks is a *route* for it: pad 9 is deliberately off-net (the
+BTN_R track used to cross it and was rerouted east of the pad row in
+R31-HIGH-2 — a Cd blade is a switch to the grounded shell, so no signal may
+share it), and no firmware reads it. See
+[the BTN_R regression check](#u6-pad-9-cd-and-btn_r) below.
 
 ---
 
@@ -249,6 +258,32 @@ agreeing is a cross-check rather than a copy.
 in prose but does not mention GPIO46. The pin is handled correctly
 everywhere it matters; only the header comment is silent about it.
 :::
+
+### U6 pad 9 (Cd) and BTN\_R — reroute regression check {#u6-pad-9-cd-and-btn_r}
+
+One extra reading belongs to the GPIO3 line above, and it costs nothing:
+**read `BTN_R` once with the socket empty and once with a card inserted.**
+
+U6 pad 9 is the TF-01A's own card-detect contact (`Cd` on the socket
+drawing) — a blade that mates with the grounded shell, i.e. a switch to
+GND, not a data line. Up to R31 the BTN\_R track crossed that pad and the
+generator declared the overlap same-net, which tied the R shoulder button
+to that switch: pressed-forever in one card state. **R31-HIGH-2 fixed it
+in copper** — the BTN\_R riser detours east of the whole pad row and pad 9
+carries no net. The two readings verify the board in your hands was built
+from post-R31 gerbers:
+
+| `BTN_R`, card inserted, button not pressed | Verdict |
+|---|---|
+| stays HIGH | Reroute present — BTN\_R is independent of card state, as designed |
+| goes LOW | **This board was fabbed from pre-R31 gerbers** (BTN\_R still on pad 9 and the Cd blade grounds it). The R shoulder button is dead whenever a card is inserted; do not ship, refab from the current release |
+
+**Boot is unaffected either way.** GPIO3's strap selects the JTAG signal
+source, and per table 8 (p.15) of the module datasheet the pin is *ignored*
+unless `EFUSE_STRAP_JTAG_SEL` is burned — which the factory default leaves
+unselected. Even on a pre-R31 board a card pulling the pad low cannot
+change how the board boots. It would stop being harmless only if someone
+burned that eFuse, which is another reason not to.
 
 ---
 

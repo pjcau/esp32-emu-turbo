@@ -19,6 +19,23 @@ def uid() -> str:
     return _uid.uid()
 
 
+def uid_mark() -> int:
+    """Current position of the UUID counter, for uid_restore()."""
+    return _uid._n
+
+
+def uid_restore(mark: int) -> None:
+    """Rewind the UUID counter to `mark`.
+
+    routing.generate_all_traces() routes the board twice: once to discover
+    every pad's net, so the collision detector can be seeded default-closed,
+    and once to emit. The discovery pass consumes UUIDs like any other run;
+    without this rewind every id in the emitted board would shift and a
+    change that moves no copper would produce a whole-file diff.
+    """
+    _uid._n = mark
+
+
 def header() -> str:
     return (
         '(kicad_pcb\n'

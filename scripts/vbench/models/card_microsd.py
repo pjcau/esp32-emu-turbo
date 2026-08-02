@@ -34,6 +34,15 @@ So `p.140 sec 7.3.1.4` is Table 7-5, footer 128. Sections are quoted as
 the documents number them, and the section is the load-bearing half of
 every locator: page numbers move between revisions, `7.3.1.4` does not.
 
+## These are the FULL-SIZE SD contact numbers, not microSD's
+
+SanDisk's tables number nine contacts and head every row "SD Card", under
+the sentence *"The host uses a dedicated 9-pin connector to connect to SD
+cards"* (p.17 sec 3.1) — the document reuses the full-size SD tables for a
+microSD part. A microSD card has **eight** contacts, and its numbering is
+7 = DAT0, 8 = DAT1. `PINS` below transcribes what the document prints, so it
+is SD-numbered.
+
 ## The finding this model was written to nail down
 
 `sdcard.py` and the routing generator both rested on one sentence: an SD

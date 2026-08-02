@@ -606,7 +606,9 @@ def tf01a(layer="B"):
 
     # Signal pins 1-9 at y=-5.276, 1.1mm pitch, size 0.500 x 1.300mm
     # DFM: was 0.600mm (gap to shield pad 10 = 0.300mm). Now 0.500mm (gap=0.400mm ✓)
-    # Pin 1 (DAT2) at x=+2.240, descending to pin 9 (DET) at x=-6.560
+    # Pin 1 (DAT2) at x=+2.240, descending to pin 9 (Cd, the socket's own
+    # card-detect contact — the datasheet's PCB-pattern view labels the row
+    # (1)..(8) then "Cd") at x=-6.560
     signal_x = [2.24, 1.14, 0.04, -1.06, -2.16, -3.26, -4.36, -5.46, -6.56]
     for i, x in enumerate(signal_x):
         pads.append(_pad(str(i + 1), "smd", "rect", x, -5.276, 0.5, 1.3,

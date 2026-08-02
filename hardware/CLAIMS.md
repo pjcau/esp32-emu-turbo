@@ -28,12 +28,12 @@ exactly these `- key: value` fields: `status`, `declared`, `claim`,
 
 ## CLAIM-001 — MSK12C02 shell is isolated from the slide terminals
 
-- status: UNVERIFIED
+- status: VERIFIED-ON-DATASHEET
 - declared: 2026-07-31
 - claim: The metal shell/retention tabs of SW16 (MSK12C02 slide switch) are internally isolated from the slide contacts, so net-assigning shell pads 4b/4d to BTN_SELECT is electrically inert.
 - where: scripts/generate_pcb/routing/_assemble.py:110 and hardware/datasheet_specs.py:472 (the justification comments); _PAD_NETS SW16 pads 4b/4d
 - risk-if-false: BTN_SELECT is GPIO0, a strapping pin, and the shell is exposed metal — a shell tied to the slide contacts puts the boot strap on touchable metal 0.025 mm from a live track. Do NOT just remove the _PAD_NETS entries; verify_trace_through_pad hard-blocks while the overlap exists, so a false claim means rerouting the track.
-- evidence: none
+- evidence: VERIFIED 2026-08-02 against hardware/datasheets/SW16_Slide-Switch_C431540.pdf (Shenzhen Shouhan, MSK12C02, spec version A/0, 2015-03-26 — the datasheet is for MSK12C02, so footprints.py's "C431540 = MSK12C02, not SS-12D00G3" comment is right and the SS-12D00G3 dict key is a legacy alias). Two independent statements, both explicit. (1) PDF page 4 (printed "Page 2/8") section 3.2, Insulation Resistance: "Measurement shall be made following application of 100V DC potential, **across terminals, and across terminals and cover**, for one minute" — requirement ≥100 MΩ; repeated in technical note 2 of the outline drawing (PDF page 1) as "绝缘电阻100MΩmin, 100V DC". Section 3.3 adds 250 V AC dielectric withstand across terminals for 1 min with no breakdown. (2) The manufacturer's own circuit diagram (电路图, PDF page 1) draws terminals (1)(2)(3) as the slide contact strip and terminal (4) as a SEPARATE node carrying an earth symbol, joined to nothing — and the mounting reference view (安装参考图) labels all four corner anchor pads (4). The parts list confirms cover and base are distinct parts (6 盖板/cover, phosphor bronze 0.2 mm silver-plated; 2 底座/base, LCP). Residual worth knowing, and NOT part of this claim: the manufacturer draws terminal (4) with an earth symbol, i.e. the cover is intended to be grounded. This board ties 4b/4d to BTN_SELECT instead, which is inert for the switch but does leave GPIO0 reachable through exposed metal — an ESD path, not a short.
 
 ## CLAIM-002 — ESP32-S3 module has an internal pull-up on EN
 

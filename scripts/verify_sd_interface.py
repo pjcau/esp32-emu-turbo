@@ -3,8 +3,15 @@
 
 Verifies:
   1. All 4 SPI signals routed: SD_CLK, SD_MOSI, SD_MISO, SD_CS
-  2. Card detect (CD) signal presence (optional)
+  2. What U6 pad 9 — the socket's Cd (card-detect) contact — is tied to
   3. Write protect (WP) signal presence (optional)
+
+On pad 9, this script used to print "PASS Card detect (CD) connected to
+BTN_R", which read as "this board has a working card-detect feature". It
+does not. Pad 9 is the TF-01A's Cd contact (the datasheet's PCB-pattern
+view labels the row (1)..(8) then "Cd"), and on this board it carries
+BTN_R only because the BTN_R track crosses the pad and _PAD_NETS declares
+the overlap same-net. No firmware reads it. Saying so is the point.
   4. VDD decoupling on U6 (TF-01A)
   5. Pull-up resistors on data lines (SD spec: 10-100k)
 
@@ -32,7 +39,11 @@ SD_SPI_PINS = {
     "SD_CS":   {"u6_pad": "2", "description": "Chip select"},
 }
 U6_VDD_PAD = "4"   # VDD pin on TF-01A
-U6_CD_PAD = "9"    # Card detect pin
+U6_CD_PAD = "9"    # Cd — the socket's card-detect contact (not a card contact)
+
+# Nets that would mean pad 9 is actually being USED as a card-detect input.
+# BTN_R is not one of them: it lands there by trace overlap, not by design.
+CD_FEATURE_NETS = ("SD_CD", "SD_DET", "CARD_DETECT")
 VDD_NET = "+3V3"
 
 
@@ -78,14 +89,26 @@ def analyze_sd_interface(cache):
             results.append(("FAIL", f"{net_name} has no routed segments"))
             fail = True
 
-    # 2. Card detect (CD) — pad 9 on TF-01A
+    # 2. Cd — pad 9 on TF-01A. This is the SOCKET's card-detect contact, not
+    #    a card contact (a microSD card has eight). Report what it is tied
+    #    to; do not call an incidental net a card-detect feature.
     cd_pads = u6_pad_map.get(U6_CD_PAD, [])
     cd_nets = [p["net"] for p in cd_pads if p["net"] != 0]
-    if cd_nets:
-        cd_name = next((n["name"] for n in cache["nets"] if n["id"] == cd_nets[0]), "?")
-        results.append(("PASS", f"Card detect (CD) connected to {cd_name}"))
+    cd_name = (next((n["name"] for n in cache["nets"] if n["id"] == cd_nets[0]), "?")
+               if cd_nets else None)
+    if cd_name in CD_FEATURE_NETS:
+        results.append(("PASS", f"U6 pad 9 (Cd) routed as a card-detect input on {cd_name}"))
+    elif cd_name:
+        results.append(("WARN",
+                        f"U6 pad 9 (Cd, socket card-detect contact) shares net {cd_name} "
+                        f"-- REGRESSION of R31-HIGH-2: the Cd blade is a switch to the "
+                        f"grounded shell, so any net on this pad is grounded in one "
+                        f"card state. The BTN_R riser was rerouted east of the pad row "
+                        f"precisely to leave this pad off-net"))
     else:
-        results.append(("WARN", "No card detect (CD) signal found -- firmware must poll card presence"))
+        results.append(("INFO",
+                        "U6 pad 9 (Cd) unconnected -- no card-detect signal, "
+                        "firmware must poll card presence"))
 
     # 3. Write protect (WP) — not standard on TF-01A
     wp_net = net_map.get("SD_WP") or net_map.get("WP")

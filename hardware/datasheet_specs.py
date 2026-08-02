@@ -295,10 +295,18 @@ COMPONENT_SPECS = {
     # U6 — TF-01A MicroSD Card Slot (C91145)
     # Datasheet: U6_TF-01A_MicroSD_C91145.pdf, page 1
     # Standard MicroSD pinout — eight CARD contacts plus the socket's own
-    # card-detect switch:
+    # card-detect switch. The datasheet's "PCB Layout (Pattern Side)" view
+    # labels the row (1)(2)(3)(4)(5)(6)(7)(8) then **Cd**:
     #   1=DAT2(NC), 2=CS, 3=MOSI, 4=VDD, 5=CLK, 6=GND, 7=MISO, 8=DAT1(NC)
     #   9=CD (socket card-detect spring, NOT a card contact — see pin 9),
     #   10-13=shell GND, NPTH positioning holes
+    #
+    # DO NOT relabel pad 9 "DAT2" again. That mistake came from SanDisk's
+    # pin tables, which are the FULL-SIZE SD tables (9 contacts, rows headed
+    # "SD Card", "the host uses a dedicated 9-pin connector" — p.17 sec 3.1)
+    # laid over this socket's 9 pads. On full-size SD, contact 9 IS DAT2; a
+    # microSD card has eight contacts, so every name past 8 shifted onto a
+    # contact that does not exist. See R31-HIGH-2 for the consequence.
     # ======================================================================
     "U6": {
         "component": "TF-01A MicroSD Card Slot",

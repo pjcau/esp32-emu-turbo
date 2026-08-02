@@ -15,45 +15,106 @@ Two standing rules from those audits apply to every item below:
 
 ## High priority — real defect classes
 
-### 1. `collision.py` is default-open on pad nets
+### 1. ~~`collision.py` is default-open on pad nets~~ — DONE
 
-`_KNOWN_PAD_NETS` (`collision.py:215`) has 4 hardcoded entries; every other
-pad registers with `net=0`, and net=0 pads are *skipped* in collision
-queries, so a pad the router never targets is invisible to collision
-detection forever and a trace can be routed straight over it. Contained
-today only by post-hoc gates (`verify_trace_through_pad`,
-`short_circuit_analysis`, `analyze_pad_distances`) — all green, but this
-class has bitten before.
+Closed 2026-08-02. `routing.generate_all_traces()` now routes **twice** —
+a discovery pass whose output is discarded, then the emitted pass seeded
+with the pad→net map the first produced — so every routed pad is known
+before the first trace is placed. Net 0 no longer means "not known yet",
+it means "unconnected copper", and the skip that made net-0 pads invisible
+is gone. The regenerated `.kicad_pcb` is **byte-identical**, uuids
+included (the counter is rewound between passes).
 
-**Fix:** seed pad nets from `routing._PAD_NETS` / the datasheet spec map
-before routing begins, so the router is default-closed.
-Source: waiver audit O5 = `docs/known-issues.md` §C.
+Closing that default exposed a second one in the same function:
+`register_pads` decided F.Cu vs B.Cu from a literal set of front-side
+refs, and the set omitted the three fiducials — so F.Cu fiducials sat on
+B.Cu, where the BTN_START track at x=12.20 passes through FID3, and that
+reported as a 0.425 mm overlap. A modelling artefact, not a board defect
+(different layers). The side is now derived from the placements via
+`pad_positions.get_pads_and_layers()`.
 
-### 2. SW16 shell-isolation claim — DEADLINE 2026-09-14
+Report goes 0 violations / 17 margin notes → **0 violations / 21 margin
+notes**; the four newly visible pairs are 0.155–0.160 mm against the
+0.175 mm house target and all clear JLCPCB's 0.15 mm minimum. Guarded by
+`scripts/test_collision_pad_nets.py` (13 tests, registered in
+`VERIFY_ALL_SCRIPTS` and given an owner rule in `issue_dispatch.py`);
+reinstating the net-0 skip fails 2 of them, removing the uuid rewind
+fails 3. Detail: `docs/known-issues.md` §C.
 
-`hardware/CLAIMS.md` carries the claim "SW16's shell is internally
-isolated from the contacts" (BTN_SELECT on shell tabs, GPIO0 strap) as
-`UNVERIFIED`. `verify_claims_ledger` turns red 45 days after filing —
-**2026-09-14**. Verify against the switch datasheet (or falsify and fix)
-before that date.
+While adding the owner rule: `test_collision_via_metric` had no
+`ROUTING_EXCEPTIONS` entry and was being ranked `dead-board` by
+`law:via`, unlike every other mutation suite in the file. Both collision
+suites are now declared `blind-spot`, matching `test_order_manifest`,
+`test_enclosure_sync`, `test_test_points`, `test_esd_protection` and
+`test_power_via_ampacity`.
 
-### 3. SD card-detect pad semantics — three sources, three stories
+### 2. ~~SW16 shell-isolation claim~~ — VERIFIED 2026-08-02
 
-Same pad, three contradictory descriptions (found by the 2026-08-02 docs
-audit, deliberately NOT resolved by editing prose — this is a hardware
-question for the pcb-engineer):
+CLAIM-001 is now `VERIFIED-ON-DATASHEET`; the 2026-09-14 deadline is
+retired. `SW16_Slide-Switch_C431540.pdf` states it twice, independently:
 
-- `website/docs/manufacturing/bring-up-protocol.md`: "this revision has
-  **no card-detect line**".
-- `scripts/verify_sd_interface.py`: prints `PASS Card detect (CD) connected
-  to BTN_R` (U6 pad 9 shares a net with GPIO3).
-- `Makefile`: calls the same pad "the DAT2 pad that shares a net with a
-  strapping pin".
+- Section 3.2, PDF page 4 (printed "Page 2/8"): insulation resistance
+  **≥100 MΩ** measured at 100 V DC "**across terminals, and across
+  terminals and cover**", for one minute. Repeated as technical note 2 on
+  the outline drawing. Section 3.3 adds 250 V AC across terminals for one
+  minute with no breakdown.
+- The manufacturer's own circuit diagram (电路图, PDF page 1) draws
+  terminals (1)(2)(3) as the slide contact strip and terminal **(4) as a
+  separate node with an earth symbol, joined to nothing** — and the
+  mounting reference view labels all four corner anchor pads (4).
 
-**Fix:** determine from the TF-01A module datasheet + the `.kicad_pcb` what
-U6 pad 9 physically is (CD switch, DAT2, or NC), then align all three
-sources and the docs to that one answer. Note GPIO3 is a strapping pin —
-whether the pad can pull it at boot matters for the verdict.
+Part identity reconciled while there: the datasheet is for **MSK12C02**
+(Shenzhen Shouhan, spec A/0, 2015-03-26), so `footprints.py`'s comment is
+right and `SS-12D00G3` is a legacy dict key. `schematics.md` said
+SS-12D00G3 and now says MSK12C02.
+
+One residual, recorded in the claim rather than acted on: the drawing
+gives terminal (4) an **earth** symbol — the cover is meant to be
+grounded, and this board ties 4b/4d to BTN_SELECT instead. Inert for the
+switch, but it does leave GPIO0 reachable through exposed metal. That is
+an ESD path, not a short, and no gate covers it.
+
+### 3. ~~SD card-detect pad semantics — three sources, three stories~~ — DONE
+
+Closed 2026-08-02. **U6 pad 9 is the socket's own `Cd` (card-detect)
+contact.** The TF-01A drawing settles it directly:
+`hardware/datasheets/U6_TF-01A_MicroSD_C91145.pdf` p.1, the "PCB Layout
+(Pattern Side)" view, labels the pad row (1)(2)(3)(4)(5)(6)(7)(8) and then
+**Cd**; the parts list is shell ×1 / spring ×1 / contact ×9 / housing ×1.
+It is not DAT2 (that is pad **1**, left unconnected here) and not NC.
+
+Root cause of the three-way split, worth keeping: SanDisk's pin tables are
+the **full-size SD** tables — nine rows, every row headed "SD Card", under
+"the host uses a dedicated 9-pin connector" (p.17 sec 3.1) — and they were
+laid over this socket's nine *pads*. On full-size SD, contact 9 IS DAT2. A
+microSD card has eight contacts, so everything past pad 8 shifted onto a
+part that does not exist. The board's copper never made that mistake: pads
+2/3/4/5/6/7 = CS/MOSI/VDD/CLK/VSS/MISO is correct microSD numbering.
+
+All sources now say one thing: `verify_sd_interface.py` (was `PASS Card
+detect (CD) connected to BTN_R`, now an INFO that names it as the socket's
+contact and says no firmware reads it), `Makefile` `bench-sd`,
+`datasheet_specs.py::U6`, `routing/_assemble.py`, `footprints.py`,
+`vbench/sdcard.py`, `vbench/models/card_microsd.py`, `sdcard_protocol.py`,
+`verify_dfm_v2.py`, `bringup_test/generate.py`, the hardware-audit skill
+checklist, and `bring-up-protocol.md` (which was right that no card-detect
+line is *read*, and now says why).
+
+**Strapping, explicitly:** BTN_R is GPIO3, whose strap selects the JTAG
+signal source and is *ignored* unless `EFUSE_STRAP_JTAG_SEL` is burned
+(module datasheet table 8, p.15; factory default leaves it unselected).
+A card pulling pad 9 low cannot change how this board boots.
+
+**Resolved harder than the doc fix at the same time**: the parallel audit
+round (R31-HIGH-2) reached the same Cd identification independently and
+concluded the copper had to move — the TF-01A datasheet has no NO/NC
+statement for the Cd blade, but *either* polarity grounds BTN_R in one
+card state, so the BTN_R riser was rerouted east of the pad row and U6.9
+is off-net. The residual bench reading (BTN_R empty vs loaded, verdict
+table in `website/docs/manufacturing/bring-up-protocol.md`) is now a
+built-from-post-R31-gerbers regression check, not an open safety question.
+(The Cd claim briefly drafted as CLAIM-006 was superseded by the reroute;
+CLAIM-006 in `hardware/CLAIMS.md` is the R31 Q1-orientation claim.)
 
 ## Medium priority — follow-ups from the ampacity gate (2026-08-01)
 
@@ -90,14 +151,33 @@ metric (real path walk), not the board.
 
 Detail for each lives in `docs/known-issues.md` §C; this is the index.
 
-- **R14 in `verify_netlist_diff.EXCLUDED_REFS`** — documented as DNP but
-  never independently verified. Confirm before trusting the exclusion.
-- **`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" → 40-pin`,
-  papering over a real schematic/BOM inconsistency. Fix the schematic
-  symbol value, then delete the mapping.
-- **`verify_copper_clearance`** reports `loc = (0,0,0,0)` on the
-  `nearest_points` fallback. Does not hide violations, only misplaces
-  them.
+- ~~**R14 in `verify_netlist_diff.EXCLUDED_REFS`**~~ — VERIFIED
+  2026-08-02 from four independent sources (BOM run has one gap at R14,
+  qty 12; 0 of 94 CPL rows; the footprint is placed but pad 2 carries no
+  net while R13.2/R15.2 are on +3V3; and R14 would strap GPIO45 = VDD_SPI
+  HIGH, which kills the Octal PSRAM). Recorded at the exclusion site.
+- ~~**`verify_bom_values.KNOWN_MAPPINGS`** maps `"fpc-16p-0.5mm" →
+  40-pin`~~ — FIXED 2026-08-02. J4's schematic value is `FPC 40-pin 0.5mm
+  Bottom Contact` at source now; the mapping is deleted and the gate
+  passes on a real match (92/92). The symbol still draws 16 pins — that
+  simplification is fine, naming a 16-pin part was not.
+- ~~**`verify_copper_clearance`** reports `loc = (0,0,0,0)`~~ — FIXED
+  2026-08-02. `_locate()` degrades through nearest-points →
+  representative-point → bbox centre and marks approximations with `~`;
+  no path returns zeros, which mattered because (0,0) is a real board
+  coordinate.
+- **`verify_bom_values.KNOWN_MAPPINGS` still maps `"ili94883.95in8080"`
+  onto the same 40-pin BOM comment** — left alone deliberately. That is
+  DS1, the schematic-only logical panel symbol whose physical part IS J4
+  (already `T3_ALLOW`'d in `verify_netlist_diff`), so the two names
+  describe different things on purpose. Not the same defect as the
+  `fpc-16p` entry, which named the wrong part.
+- **J4's schematic symbol is emitted with `(dnp no)` like every other
+  part, and so is R14** — `generate_schematics/kicad_primitives.py` hard-
+  codes `dnp no`, so the schematic cannot express DNP at all. Cosmetic
+  today (the BOM and CPL are what the fab obeys, and R14 is absent from
+  both), but it means a reader of the schematic alone would fit R14 and
+  kill the PSRAM.
 - **`verify_easyeda_footprint._GEOMETRIC_MISMATCH_ALLOWLIST`** still holds
   U2 (90°) and LED2 (180°). Both angles are now *explained* (H4/H6 closed)
   but the allowlist is a tolerance, not a proof — replace with a derived

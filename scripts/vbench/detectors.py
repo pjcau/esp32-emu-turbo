@@ -227,7 +227,7 @@ def _inv_vbus_fragments():
 
 
 def _live_sd_strapping():
-    """The SD socket's DAT2 must be seen sharing a net with a strapping pin."""
+    """The SD socket's Cd pad must be seen sharing a net with a strapping pin."""
     _notes, _shared, exposure, _op, _faults = sdcard.survey()
     hit = [e for e in exposure if e[0] == "9"]
     if not hit:

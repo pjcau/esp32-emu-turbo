@@ -305,6 +305,21 @@ ROUTING_EXCEPTIONS = {
         "software-dev", "/check", "blind-spot",
         "while the ampacity gate's own tests are red, its verdicts on "
         "via sizing are untrustworthy"),
+    # The two collision mutation suites, same shape as every entry above:
+    # "via" and "pad" would hand them the dead-board severity of the copper
+    # they test, but neither suite looks at this board's copper at all —
+    # each plants a synthetic geometry and requires a specific verdict. Red
+    # means the collision detector can no longer be trusted to notice, which
+    # is precisely a tooling blind spot. (test_collision_via_metric had no
+    # entry until 2026-08-02 and was being ranked dead-board by law:via.)
+    "test_collision_via_metric": (
+        "software-dev", "/check", "blind-spot",
+        "while the via-clearance metric's own tests are red, every "
+        "'0 violations' the collision grid prints is unproven"),
+    "test_collision_pad_nets": (
+        "software-dev", "/check", "blind-spot",
+        "while the pad-net seeding's own tests are red, the collision grid "
+        "may be default-open again — silence about pads would mean nothing"),
 }
 
 

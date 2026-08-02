@@ -363,7 +363,7 @@ analog). Test points: U1 pins 8-9-10, or the audio-side filter (R20/R21/C22) nex
 | `I2S_DOUT` at U5 pin 7 ↔ pin 10 | ~0 Ω (same net, by design) |
 
 :::note Log anything unexpected
-Add any beep found here to the [findings table](#5b-current-board-findings--proto-1-2026-07-14)
+Add any beep found here to the [findings table](#5b-proto-1-findings--historical-record-old-ams1117--c2-design)
 with the exact pins, the same way T9/T17 were recorded.
 :::
 

@@ -1035,13 +1035,17 @@ static void chk_sd_cmd0(void)
     sd_xfer(0xFF);
 
     if (r1 == 0xFF) {
-        /* Nothing on MISO. With no card-detect switch wired on this board
-         * there is no way to tell an empty socket from a broken MISO net, and
-         * claiming either would be a guess. */
+        /* Nothing on MISO. The socket HAS a card-detect contact (U6 pad 9,
+         * "Cd" on the TF-01A drawing) but no revision reads it — the pad is
+         * deliberately off-net since the R31-HIGH-2 BTN_R reroute (a Cd
+         * blade is a switch to the grounded shell) — so there is no way to
+         * tell an empty socket from a broken MISO net, and claiming either
+         * would be a guess. */
         BRINGUP_SKIP("no R1 byte on SD_MISO — either the socket is empty or the "
                      "card is not powered/selected. Re-run with a known-good card "
                      "inserted: if it still reads 0xFF the fault is on the board "
-                     "(this revision has no card-detect line to tell them apart)");
+                     "(no card-detect line is read on this revision, so nothing "
+                     "in software can tell the two apart)");
     }
     bringup_detail("CMD0 R1=0x%02x", r1);
     TEST_ASSERT_EQUAL_MESSAGE(0x01, r1, "card answered but not with idle state");

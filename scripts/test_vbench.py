@@ -35,8 +35,8 @@ Covers:
      net stays valid.
   I. audio.py, sdcard.py — the 8 ohm output power must be DERIVED from the
      datasheet's 4 ohm rating rather than quoted, a missing BOM value must be
-     fatal, and the SD socket's DAT2 pad must be detected on a strapping pin's
-     net.
+     fatal, and the SD socket's Cd pad (U6.9) must stay off every net —
+     its return to a strapping pin's net is the R31-HIGH-2 regression.
   J. corpus coverage — every corpus entry must be caught, blinding one of the
      bench's checks must LOWER that count (a coverage number that survives a
      blinded bench measures nothing), an unapplicable mutation must raise

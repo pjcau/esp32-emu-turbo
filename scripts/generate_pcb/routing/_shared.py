@@ -757,6 +757,16 @@ _PADS = {}
 _PAD_NETS = {}          # {(ref, pad_num_str): net_id}
 _PAD_POS_LOOKUP = {}    # {(round_x, round_y): [(ref, num_str), ...]}
 
+# Pad nets known BEFORE the first trace is placed, consumed by _init_pads()
+# when it seeds the collision grid. Filled by _assemble.generate_all_traces
+# from the previous (discovery) pass's _PAD_NETS; empty during that pass.
+#
+# Without it the collision detector was default-OPEN: a pad only acquired a
+# net when a trace endpoint reached it, so a pad the router never targets
+# stayed at net 0 forever — and net-0 pads were skipped in queries. A trace
+# could be laid straight over such a pad with nothing reported.
+_SEED_PAD_NETS = {}     # {(ref, pad_num_str): net_id}
+
 
 def get_pad_nets():
     """Return the (ref, pad_num_str) -> net_id mapping.
@@ -896,20 +906,33 @@ def _init_pads():
 
     # Pre-populate collision grid with pads, slot, edges, mounting holes
     if not _GRID._populated:
-        from ..pad_positions import get_all_pad_positions
+        from ..pad_positions import get_pads_and_layers
         from ..board import MOUNT_HOLES_ENC, enc_to_pcb
-        all_pads = get_all_pad_positions()
+        # One call, not two: _component_placeholders() consumes UUIDs, so a
+        # second walk would shift every uuid in the emitted board.
+        all_pads, pad_layers = get_pads_and_layers()
         # Pads whose net must be seeded before the first trace arrives.
         # Derived from NET_ID, never hardcoded — the previous copy of this
         # table inside collision.py went stale on J3.1 (BAT+ -> BAT_IN) and
         # turned a legitimate same-net connection into a reported short.
+        #
+        # These four are the pads the discovery pass cannot supply: J1.13/14
+        # are duplicate pad NAMES on the shield (the position lookup keeps
+        # one), and J3.1/2 sit under the connector body where no trace
+        # endpoint lands. Everything else comes from _SEED_PAD_NETS below.
         _seed_nets = {
             ("J1", "13"): NET_ID["GND"],    # shield front (duplicate pad name)
             ("J1", "14"): NET_ID["GND"],    # shield rear  (duplicate pad name)
             ("J3", "1"): NET_ID["BAT_IN"],  # JST pin 1 — through Q1 RPP MOSFET
             ("J3", "2"): NET_ID["GND"],     # JST pin 2
         }
-        _GRID.register_pads(all_pads, _seed_nets)
+        # The routed pad->net map from the discovery pass (see
+        # _assemble.generate_all_traces). Empty on the discovery pass itself.
+        # The explicit four above win on conflict: they describe pads the
+        # discovery pass gets wrong, not pads it misses.
+        for _key, _net in _SEED_PAD_NETS.items():
+            _seed_nets.setdefault(_key, _net)
+        _GRID.register_pads(all_pads, _seed_nets, pad_layers)
         _GRID.register_slot()
         _GRID.register_board_edges()
         _GRID.register_mounting_holes(
