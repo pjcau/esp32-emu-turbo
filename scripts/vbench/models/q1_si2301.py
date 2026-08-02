@@ -31,13 +31,22 @@ DOC = "Q1_SI2301CDS-SOT23_C10487.pdf"
 REV = "S10-2430-Rev. C, 25-Oct-10 (document 68741)"
 
 # Page 1, "TO-236 (SOT-23) Top View": 1 = G, 2 = S, 3 = D.
-# On this board Q1.1 = RPP_GATE, Q1.2 = BAT_IN (source, cell side),
-# Q1.3 = BAT+ (drain, IP5306 side) — so conduction is source to drain,
-# which is the normal ON direction for a P-channel high-side switch.
+# On this board Q1.1 = RPP_GATE, Q1.3 = BAT_IN (DRAIN, cell side),
+# Q1.2 = BAT+ (SOURCE, IP5306 side). Conduction in discharge is therefore
+# drain to source — the body diode's own direction — and that is the point
+# rather than an accident: it is the only wiring in which a reversed cell
+# reverse-biases that diode (see the body-diode params below). The board
+# shipped source-on-cell through v4.5.0, which behaves identically under
+# correct polarity and differently only under the fault (R31-HIGH-1).
+#
+# power_in/power_out follow the discharge direction, which is what
+# conflicts.py's _feeds_from_another_rail reads: Q1 has a power_in pin on
+# BAT_IN, so its BAT+ pin is a pass element's output and not a second
+# driver fighting the cell.
 PINS = (
     Pin("1", "G", "in", "p.1 figure 1"),
-    Pin("2", "S", "power_in", "p.1 figure 1"),
-    Pin("3", "D", "power_out", "p.1 figure 1"),
+    Pin("3", "D", "power_in", "p.1 figure 1"),
+    Pin("2", "S", "power_out", "p.1 figure 1"),
 )
 
 Q1 = Model(
@@ -66,7 +75,11 @@ Q1 = Model(
 
         # ── Body diode, page 2 ──────────────────────────────────────────
         # Matters for the reverse-polarity claim: with the cell reversed the
-        # channel is off and this diode is what has to block.
+        # channel is off and this diode is what has to block. It can only
+        # block if the cell is on the DRAIN — a P-channel body diode
+        # conducts D->S, so cell-on-source (the pre-R31-HIGH-1 wiring) sent
+        # the fault current straight through it, and the 1.3 A rating below
+        # was then the only thing between a reversed pack and U2.
         "v_body_diode": Param((0.0, -0.8, -1.2), "V", locator="p.2 table 1"),
         "i_body_diode_max": Param(-1.3, "A", locator="p.2 table 1"),
 

@@ -13,11 +13,11 @@
       "value": 0
     },
     {
-      "name": "the SD socket still shares a pad with a strapping pin",
+      "name": "no SD socket pad shares a net with a strapping pin",
       "quantity": "sd.strapping_exposure",
       "op": "==",
-      "value": 1,
-      "because": "U6.9 (DAT2) sits on BTN_R = GPIO3. Inert only because table 8 leaves GPIO3 ignored at default eFuses \u2014 asserted so a change is noticed."
+      "value": 0,
+      "because": "Was pinned at 1 through v4.5.0: U6.9 sat on BTN_R = GPIO3, held to be inert because table 8 leaves GPIO3 ignored at default eFuses. R31-HIGH-2 found the error under that analysis \u2014 pad 9 is the socket's card-detect spring, not DAT2, so it is a switch to the grounded shell rather than an idle card contact, and no eFuse argument applies to it. The BTN_R riser was rerouted east of the pad row and the pad is off-net. Pinned at exactly 0 so the exposure returning fails here."
     },
     {
       "name": "the panel is strapped for 8-bit 8080",

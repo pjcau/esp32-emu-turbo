@@ -1,35 +1,41 @@
-"""Virtual Bench T3.3 — the SD card's bus, and the pin it shares with a button.
+"""Virtual Bench T3.3 — the SD card's bus, and the pads it shares with signals.
 
 Checks the four SPI signals against the TF-01A socket's pad roles, then asks
-the question the socket's own wiring raises: **U6.9 (DAT2) sits on the BTN_R
-net, and BTN_R is GPIO3 — a strapping pin.**
+which socket pads carry a net they are not a card contact for, and whether
+any of those lands on a strapping pin. Today the answer is none. Getting to
+none took three passes and the last one is the interesting one.
 
-That assignment is deliberate and analysed. The routing generator
-(`generate_pcb/routing/_assemble.py`) records it: the BTN_R track physically
-crosses the U6.8/U6.9 pads, so the pads are given the same net to keep the
-overlap same-net rather than a fab short. The original analysis said "SAFE
-as long as firmware stays in SPI mode", because an SD card tri-states
-DAT1/DAT2 once CMD0 has put it in SPI mode.
+**U6.8 (DAT1) shares SD_MISO, and that is fine.** The routing generator
+(`generate_pcb/routing/_assemble.py`) records why: the SD_MISO track
+physically crosses the pad, so the pad is given the same net to keep the
+overlap same-net rather than a fab short. The card does not drive it,
+because "the extended DAT lines (DAT1-DAT3) are input on power up"
+(SanDisk industrial p.17 sec 3.1, table 3-1 footnote b) and in SPI mode
+contact 8 is RSV (table 3-2, p.18). Note the shape of that argument: it is
+about the power-up window, because the original justification ("the card
+tri-states DAT1/DAT2 once CMD0 selects SPI mode") was both uncited and
+about the wrong window — the GPIO3 strap is latched at reset, before any
+CMD0. Corrected 2026-07-31 by the T3.3 protocol model.
 
-**The strapping sample happens before any of that.** GPIO3 is latched at
-reset, before the boot ROM runs — so "the firmware keeps the card in SPI
-mode" is an argument about the wrong window. In the reset window the card
-has received no CMD0.
+**U6.9 had the same entry, and it should never have had one.** It carried
+BTN_R (= GPIO3, a strapping pin) on the same reasoning, and this module
+used to open by calling that exposure real-but-inert, citing table 8 on
+page 15 of the module datasheet: GPIO3 is ignored unless an eFuse selects
+it (EFUSE_STRAP_JTAG_SEL) and the factory default leaves it unselected.
 
-**And the tri-state claim itself was uncited** — corrected 2026-07-31 by
-the T3.3 protocol model: no held document says CMD0 tri-states anything.
-What the card datasheet actually says is "the extended DAT lines
-(DAT1-DAT3) are input on power up" (SanDisk industrial p.17 sec 3.1,
-table 3-1 footnote b) and that in SPI mode contacts 8/9 are RSV (table
-3-2, p.18). The power-up input state — which covers the reset window — is
-the citable reason U6.9 does not drive BTN_R. Right conclusion, wrong
-mechanism, in two places; both now corrected.
+All of that analysis was about the wrong object. A microSD card has EIGHT
+contacts. The ninth pad on this socket is the card-DETECT spring, which
+mates with the grounded shell — a switch to GND, not an idle data line,
+so no statement about what a card drives applies to it and no eFuse
+argument makes it inert. In one card state (most plausibly card-inserted,
+i.e. throughout gameplay) it grounded BTN_R outright. Fixed as R31-HIGH-2
+by rerouting the BTN_R riser east of the pad row; the pad is off-net and
+`exposure` is now expected to be empty.
 
-Whether that matters is a second question, and the answer today is no, for a
-reason worth writing down: table 8 on page 15 of the module datasheet shows
-GPIO3 is *ignored* unless an eFuse selects it (EFUSE_STRAP_JTAG_SEL), and the
-factory default leaves it unselected. So the exposure is real but currently
-inert — and it stops being inert the day someone burns that eFuse.
+Worth keeping in view: every layer agreed with itself for three passes
+(9709bea removed the pad, 775e9fd restored it, eff85e6 re-justified it)
+because they all inherited one wrong pin identity from the pad above it.
+The socket's datasheet is mechanical-only, so no gate could have known.
 
 ## Where the protocol lives now
 

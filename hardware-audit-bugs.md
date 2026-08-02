@@ -3611,3 +3611,143 @@ and the pre-2026-07-26 pin-13 float) and cannot be reworked in place;
 docs/known-issues.md RESPIN keeps those records. Still owed: one bench
 measurement of the actual panel's backlight current to confirm R27's
 20 R.
+
+## Round 31 Findings (2026-08-02) — first audit of v4.5.0, at `9640bcf`
+
+Run context: main at tag v4.5.0 (diagnostic LED bank merged, docs-audit
+fixes b8bccd5 in), Linux box, local kicad-cli 10.0.5. Layer 1: full
+25-gate suite green (DRC 0/0, ERC 0/0, DFM 124/124, polarity 48/48 with
+the new LED3-6 strict entries, design-intent 364/0/3-warn). Layer 2: 4
+parallel agents over 8 domains; every finding below was independently
+re-verified by the orchestrator against copper/netlist/source before
+being recorded. The dominant theme: green gates prove the as-declared
+topology, and three of the four biggest findings live in the declaration
+layer (a wrong pin identity, a wrong FET orientation both copper-true,
+and an sdkconfig outside every sync gate's perimeter).
+
+Context corrections for the tracker:
+- **R25-HIGH-1 is FIXED on main** since 2026-07-31: LED-A (J4.8) fed
+  from +5V through R27 20R 1206 on net LED_BLA (~90 mA, 0.162 W on a
+  0.25 W part). Owed: one bench current measurement. Boards through
+  v4.3.1 remain as-built with the hard tie.
+- The skill reference `.claude/skills/hardware-audit/references/`
+  `domain-checks.md` is stale on two points (see R31-LOW-11).
+
+### Step 0 gates
+
+| Gate | Result |
+|------|--------|
+| verify_trace_through_pad / trace_crossings | PASS / PASS |
+| verify_copper_clearance | 0 DANGER, 0 WARN |
+| verify_net_connectivity / dangling_copper | PASS / PASS |
+| verify_dfm_v2 | 124/124 |
+| verify_dfa | 9/9 |
+| validate_jlcpcb | 24/24 (1 warn, known) |
+| verify_bom_cpl_pcb | 12/12 |
+| verify_polarity | 48/48 (290 pin-net checks incl. LED3-6) |
+| capabilities / stencil / drill | 12 + 5 + 5+1warn |
+| verify_datasheet_nets / verify_datasheet | 267 PASS / 29/29 |
+| verify_design_intent | 364 PASS / 3 WARN (known) |
+| schematic_pcb_sync / netlist_diff / board_config | PASS / 4/4 / PASS |
+| strapping / decoupling / power_seq / power_paths | 11+1warn / 23 / 29 / PASS |
+| erc_check | 0 critical, 0 warnings |
+| KiCad DRC | 0 violations, 0 unconnected |
+
+### Domain findings
+
+- **Power chain**: 1 HIGH (Q1 orientation) + 1 MED + 1 LOW
+- **Diagnostic LED bank (new)**: electrically clean; 2 LOW (docs)
+- **ESP32 boot**: 1 MED (sdkconfig console) + 2 LOW
+- **Display**: 2 LOW (comment drift)
+- **SD card**: 1 HIGH (pad-9 identity) + 1 MED (stale sdkconfig)
+- **Buttons**: 3 LOW
+- **Audio**: clean (PAM8403 pin map, VREF, DC-block, PDM config all verified)
+- **USB**: clean (polarity end-to-end, TVS line-side, CC, shield verified)
+- **Emulator performance**: 1 HIGH (CPU 160 MHz) + 1 LOW
+
+### Bug list
+
+#### R31-HIGH-1 — Q1 reverse-polarity MOSFET in load-switch orientation: body diode conducts on a reversed cell
+- **Files**: `hardware/datasheet_specs.py:773-783`, `scripts/generate_schematics/sheets/power_supply.py:430-438`, `scripts/vbench/models/q1_si2301.py:33-71`, `.kicad_pcb` Q1 (1=RPP_GATE, 2=BAT_IN, 3=BAT+)
+- **Problem**: Si2301 P-FET wired Source=BAT_IN (battery/J3 side), Drain=BAT+ (IP5306 side), gate grounded via R24. P-FET body diode conducts D→S; with the cell reversed the channel is off but the diode is FORWARD biased — fault current flows through U2's structures and a diode rated 1.3 A. The protection Q1 exists for does nothing; with correct polarity both orientations behave identically, which is why working boards never revealed it (R30 "empirically validated" note falls to exactly that).
+- **Root cause**: Correct RPP is battery on DRAIN, load on SOURCE (body diode conducts in the normal direction and blocks reverse). Declared topology is self-consistent everywhere, so all gates are green — the CLAIMS.md "right copper, wrong decision" class.
+- **Fix**: Swap the two power nets on Q1 (pad 3 = BAT_IN, pad 2 = BAT+); update datasheet_specs, power_supply.py, q1_si2301.py, verify_power_paths model, ampacity source decl, schematics.md; add a CLAIMS entry and a body-diode-direction gate.
+
+#### R31-HIGH-2 — U6 pad 9 is the card-DETECT contact, not DAT2: BTN_R copper-merged with it shorts the R button to GND through the socket switch
+- **Files**: `hardware/datasheet_specs.py:299` (header: "9=CD") **vs** `:320` (entry: "DAT2"), `scripts/generate_pcb/footprints.py:609` ("pin 9 (DET)"), `.kicad_pcb` U6.9 net=BTN_R at (146.56, 61.72)
+- **Problem**: The BTN_R vertical (x=146.85) crosses U6 pad 9 and `_PAD_NETS` assigns the pad net=BTN_R, justified as "DAT2 tri-stated in SPI mode". But a microSD card has 8 contacts — the 9th is the socket's card-detect spring, which mates with the grounded shell. In one card state (most plausibly card-inserted, i.e. during all gameplay) BTN_R/GPIO3 is hard-shorted to GND: R shoulder permanently pressed. GPIO3 strap is benign-low, so not CRIT. The spec file contradicts itself: pin 1 is already DAT2.
+- **Root cause**: 775e9fd removed the pad as NC, eff85e6 restored it same-net to pass the new trace-through-pad gate, and the justification borrowed pad 8's (valid) tri-state argument for a pad that is not a card contact. The TF-01A datasheet is mechanical-only, so no gate could know.
+- **Fix**: Jog the BTN_R vertical east of x≥147.06 near U6; restore U6.9 to no-net; correct the spec entry to "CD/DET". Switch polarity (closed-on-insert vs closed-on-empty) needs one bench continuity check, but either polarity grounds BTN_R in one card state — reroute regardless. **Blocks the v4.5.0 JLCPCB upload.**
+
+#### R31-HIGH-3 — retro-go target sdkconfig uses IDF4 CPU-freq symbols: IDF5 build silently runs at 160 MHz
+- **Files**: `retro-go/components/retro-go/targets/esp32-emu-turbo/sdkconfig:44-45`, `retro-go/rg_tool.py:195-196`, `software/sdkconfig.defaults:7`
+- **Problem**: `CONFIG_ESP32S3_DEFAULT_CPU_FREQ_*` was renamed in IDF 5.0; unknown symbols in a defaults file are silently dropped, so the Kconfig default wins: 160 MHz — a 33% CPU deficit under the SNES-at-240 MHz plan. The build IS IDF5 (PDM API in use).
+- **Root cause**: Copied from the upstream esp32-s3-devkit target, which predates IDF5. The project's own Phase-1/bringup configs use the correct IDF5 name.
+- **Fix**: Add `CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_240=y` + `CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ=240`; clean the `CONFIG_ESP32S3_SPIRAM_SUPPORT` relic (line 56) in the same pass; verify via boot log "cpu freq: 240000000 Hz".
+
+#### R31-MED-1 — retro-go target sdkconfig leaves console on UART0 = GPIO43/44 = SD_MISO/SD_MOSI
+- **Files**: target `sdkconfig` (no CONFIG_ESP_CONSOLE_* line), `scripts/verify_firmware_retrogo_sync.py` (reads config.h only)
+- **Problem**: Phase-1 and bringup both set `CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y` ("no UART GPIOs routed"); the shipping emulator target sets nothing, so IDF defaults to UART0 on GPIO43/44 — the SD data lines. Bootloader/app logs drive SD_MISO until the SPI driver claims the pin; no usable console after that.
+- **Root cause**: devkit copy never revisited; sdkconfig sits outside the sync gate's perimeter — the same hole class R30 closed for config.h.
+- **Fix**: Add the console line to the target sdkconfig; extend verify_firmware_retrogo_sync to assert console + SPIRAM_MODE_OCT in sdkconfig.
+
+#### R31-MED-2 — stale untracked `software/sdkconfig` reverts the console to UART0, regressing R2-MED-3 for local builds
+- **Files**: `software/sdkconfig:1167-1176` (untracked, 2026-02-12) vs `software/sdkconfig.defaults:38` (2026-04-13)
+- **Problem**: idf.py prefers the existing sdkconfig over defaults; this tree builds the Phase-1 app with `CONFIG_ESP_CONSOLE_UART_DEFAULT=y`, UART_NUM=0 (GPIO43/44). Lost logs + silent regression of a recorded fix. Electrically low-risk (card unclocked pre-init; GPIO matrix reassigns later).
+- **Root cause**: generated file predating the fix; nothing regenerates or checks it.
+- **Fix**: Delete sdkconfig/sdkconfig.old (idf.py reconfigure regenerates); optional check that the USB-JTAG choice survives into sdkconfig.
+
+#### R31-MED-3 — LX/BAT+ traces sized & justified at 2.1 A while the ampacity gate requires 4.348 A on the same nets
+- **Files**: `scripts/generate_pcb/routing/_shared.py:35` (W_PWR_HIGH=0.76 "≥2.1A, 10°C rise"), `routing/power.py:797-841`, `scripts/verify_power_via_ampacity.py` output (BAT+/LX required 4.348 A)
+- **Problem**: v4.4.0 sized via barrels to the derived battery-side worst case (4.348 A) but every trace on the same path stays 0.76 mm justified at 2.1 A (~55-60 °C rise at 4.348 A per the repo's own IPC-2221 curve). Two design currents coexist for one net; power.py itself notes no gate compares trace copper to the declared current.
+- **Root cause**: The 4.348 A number arrived with the barrel gate; the trace-width story predates it.
+- **Fix**: Pick one design current, write it as the cited claim, and extend a gate to check trace cross-section against the same declared current as the barrels.
+
+#### R31-MED-4 — MCU sheet GPIO ASSIGNMENT TABLE still prints "GPIO15=BCLK GPIO16=LRCK"
+- **Files**: `scripts/generate_schematics/sheets/mcu.py:326-328`
+- **Problem**: The printed fabrication schematic contradicts the LED_HB circuit drawn 80 mm away on the same sheet (and PDM-only audio, settled R10-LOW-2). Netlist is right — the hand-typed annotation drifted twice.
+- **Root cause**: Free-text table not generated from `config.GPIO_NETS`; no gate reads sheet prose.
+- **Fix**: Regenerate the table from GPIO_NETS (or at minimum: "GPIO17=DOUT (PDM); GPIO15=LED_HB heartbeat; GPIO16 free").
+
+#### R31-LOW-1 — stale "GPIO15/16 unconnected" comments
+`retro-go .../config.h:77-78`, `scripts/generate_pcb/routing/audio.py:53-57` — GPIO15 carries LED_HB since v4.5.0. Reword.
+
+#### R31-LOW-2 — verify_strapping_pins proves button pull-ups by text grep, not copper
+`scripts/verify_strapping_pins.py:98-114,128` — `has_pullup` is a string search; deleting R13 would not fail the gate; test 12 is a tautology. Mitigated by vbench pins.py deriving straps from copper. Fix: derive like `test_en_rc_delay` does.
+
+#### R31-LOW-3 — holding MENU across a reset enters download mode, documented nowhere
+D1 OR-gate makes MENU an alias of the GPIO0 strap (SELECT). One line in board_config.h + first-boot doc.
+
+#### R31-LOW-4 — dead `i==10` branches after the R14 skip
+`scripts/generate_pcb/routing/passives.py:78-81,85-86` — unreachable overrides suggesting R14 gets a +3V3 via. Delete.
+
+#### R31-LOW-5 — schematics.md claims 13 switches have individual RC; SW13 has none by design
+`website/docs/design/schematics.md:387` — 12 of 13 is the truth; MENU borrows START/SELECT's R/C through D1 (R9-MED-4).
+
+#### R31-LOW-6 — firmware comments still say backlight rail is 3V3
+`software/main/board_config.h:45,47`, `software/main/display.c:36-51,112` — rail is +5V via R27 (LED_BLA) since the R25-HIGH-1 fix. Reword.
+
+#### R31-LOW-7 — b8bccd5 remnants: '4.0"' docstring, hidden ST7796S default value, stale managed_components
+`scripts/generate_pcb/routing/display.py:28`, `scripts/generate_schematics/lib_symbols.py:171-173`, untracked `software/managed_components/espressif__esp_lcd_st7796` + `dependencies.lock` (tree lacks the ili9488 component → local display build broken until idf.py re-resolves). Cosmetic/local.
+
+#### R31-LOW-8 — SD derating comment says "~150mm"; routed nets are 170.5-202.9 mm
+`software/main/board_config.h:56`, `sheets/sd_card.py:71-73` — conclusion (20 MHz) unchanged; update the figure.
+
+#### R31-LOW-9 — LED bank called "0603" in two docs; part is 0805 everywhere that matters
+`docs/diagnostic-leds-roadmap.md:28`, `website/docs/rework/diagnostic-leds.md:54` — C19171391 is YLED0805R. s/0603/0805/.
+
+#### R31-LOW-10 — two false IP5306 KEY justification comments
+`sheets/power_supply.py:688` ("SW13/MENU via R16" — SW13 has no path to KEY), `scripts/generate_pcb/board.py:601` ("KEY pull-down" — R16 is a 100k pull-UP to +5V). Correct to: KEY inactive-high via R16, no button drives it; on/off = VIN plug + load-detect.
+
+#### R31-LOW-11 — hardware-audit skill reference is stale on two settled facts
+`.claude/skills/hardware-audit/references/domain-checks.md` — still claims "EN has no RC / R3 does not exist" (tree has R3+C31 on EN) and describes R25-HIGH-1 as open with the +3V3 hard tie (fixed 2026-07-31, R27 from +5V). Future rounds inherit these as false baselines. Update the reference.
+
+**Positive verification highlights** (evidence in agent transcripts, re-checked):
+LED bank electrically clean end-to-end (0.59/1.33 mA per rail, GPIO15
+high-Z at reset with no strap/USB role, no second claimant, ampacity
+gate sees the bank's draw from the netlist, VBUS tap genuinely post-F1);
+menu combo D1 direction correct with RuntimeError guard; GPIO0/45/46/3
+strap states proven on copper; USB polarity/TVS/CC/shield verified
+against the USBLC6 pin map; PAM8403 audio chain verified against the
+official Diodes datasheet incl. the R4-HIGH-3 VREF fix in copper;
+retro-go keymap/GPIO sync gate confirmed to cover the R30 class.

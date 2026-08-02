@@ -36,9 +36,9 @@ every locator: page numbers move between revisions, `7.3.1.4` does not.
 
 ## The finding this model was written to nail down
 
-`sdcard.py` and `routing.py:6055-6085` both rest on one sentence: an SD
-card *"tri-states DAT1/DAT2 once CMD0 has arrived"*, which is why U6.9
-(DAT2) sharing the BTN_R net with GPIO3 — a strapping pin — is safe.
+`sdcard.py` and the routing generator both rested on one sentence: an SD
+card *"tri-states DAT1/DAT2 once CMD0 has arrived"*, which was why U6.8
+and U6.9 sharing the SD_MISO and BTN_R nets was held to be safe.
 
 **Neither document says that.** What they say is better:
 
@@ -49,13 +49,21 @@ card *"tri-states DAT1/DAT2 once CMD0 has arrived"*, which is why U6.9
   extended DAT lines (DAT1-DAT3) are input on power up. They start to
   operate as DAT lines after the SET_BUS_WIDTH"*.
 
-The second is the sentence the strapping analysis actually needed, and it
-is about the **right** window. `sdcard.py` is correct that "the firmware
-keeps the card in SPI mode" is an argument about the wrong window — the
-GPIO3 strap is latched at reset, long before CMD0. The citable answer is
-that the card does not drive DAT2 in that window either, because DAT1-DAT3
-are inputs from power-up until a bus-width command that SPI mode never
-sends. The conclusion survives; the reason it was given for does not.
+The second is the sentence the analysis actually needed, and it is about
+the **right** window: a strap is latched at reset, long before CMD0, so
+"the firmware keeps the card in SPI mode" was reasoning about a window
+that had already closed. For **U6.8 / DAT1** that settles it — the card
+does not drive the pad in the reset window either, because DAT1-DAT3 are
+inputs from power-up until a bus-width command SPI mode never sends.
+
+**For U6.9 it settles nothing, because U6.9 is not a card contact.** A
+microSD card has eight; the socket's ninth pad is its own card-detect
+spring against the grounded shell. Every sentence on this page is about
+what a *card* does, and none of it constrains a mechanical switch. That
+mismatch is R31-HIGH-2: the pad was carrying BTN_R under a card-contact
+justification, and the BTN_R riser has since been rerouted so it carries
+nothing. Nothing in this model licensed that assignment; it was borrowed
+from the pad next door.
 
 Usage:
     from vbench.models.card_microsd import CARD, R1_FLAGS, UNESTABLISHED

@@ -294,9 +294,11 @@ COMPONENT_SPECS = {
     # ======================================================================
     # U6 — TF-01A MicroSD Card Slot (C91145)
     # Datasheet: U6_TF-01A_MicroSD_C91145.pdf, page 1
-    # Standard MicroSD pinout:
+    # Standard MicroSD pinout — eight CARD contacts plus the socket's own
+    # card-detect switch:
     #   1=DAT2(NC), 2=CS, 3=MOSI, 4=VDD, 5=CLK, 6=GND, 7=MISO, 8=DAT1(NC)
-    #   9=CD(card detect, NC), 10-13=shell GND, NPTH positioning holes
+    #   9=CD (socket card-detect spring, NOT a card contact — see pin 9),
+    #   10-13=shell GND, NPTH positioning holes
     # ======================================================================
     "U6": {
         "component": "TF-01A MicroSD Card Slot",
@@ -311,13 +313,25 @@ COMPONENT_SPECS = {
             "5":  {"net": _exact("SD_CLK"),    "function": "CLK — SPI clock", "type": "smd"},
             "6":  {"net": _exact("GND"),       "function": "VSS — ground", "type": "smd"},
             "7":  {"net": _exact("SD_MISO"),   "function": "DAT0/MISO — data out", "type": "smd"},
-            # Pins 8 (DAT1) and 9 (DAT2) are unused in SPI mode — the SD card
-            # tri-states them when CMD1 selects SPI mode. The PCB routes SD_MISO
-            # (x=145.6) and BTN_R (x=146.85) vertical tracks through the DAT1/DAT2
-            # pad positions; _PAD_NETS in routing.py assigns same-net to silence
-            # the trace-through-pad fab short. See commit 9709bea → 775e9fd → eff85e6.
+            # Pin 8 (DAT1) is a card contact unused in SPI mode: the card
+            # holds the extended DAT lines as inputs on power-up
+            # (SDCARD_SanDisk-Industrial-microSD_2016.pdf p.17 table 3-1
+            # note b) and contact 8 is RSV in SPI (table 3-2 p.18). The PCB
+            # runs the SD_MISO vertical (x=145.6) through that pad and
+            # _PAD_NETS assigns same-net so the overlap is not a fab short.
+            #
+            # Pin 9 is NOT a card contact and used to be declared as one.
+            # A microSD card has eight contacts; the socket's ninth pad is
+            # the card-detect spring, which mates with the grounded shell —
+            # i.e. a switch to GND, not an idle data line. The old entry
+            # carried pad 8's tri-state argument and a same-net BTN_R
+            # assignment covering the BTN_R vertical that crossed it, which
+            # put the R shoulder button on a switched ground. Fixed in
+            # R31-HIGH-2: the BTN_R riser now detours east of the pad row
+            # and pad 9 carries no net. See 9709bea → 775e9fd → eff85e6 →
+            # R31-HIGH-2 for how the wrong identity survived three passes.
             "8":  {"net": _any_of("", "SD_MISO"), "function": "DAT1 — unused in SPI, shares copper with SD_MISO trace", "type": "smd"},
-            "9":  {"net": _any_of("", "BTN_R"),   "function": "DAT2 — unused in SPI, shares copper with BTN_R shoulder-button trace", "type": "smd"},
+            "9":  {"net": _unconnected(),         "function": "CD/DET — card-detect spring contact (mates with grounded shell); polarity closed-on-insert vs closed-on-empty unverifiable from the mechanical-only datasheet, bench continuity check owed", "type": "smd"},
             "10": {"net": _exact("GND"),       "function": "Shell/GND", "type": "smd"},
             "11": {"net": _unconnected(),      "function": "Shell (not connected)", "type": "smd"},
             "12": {"net": _exact("GND"),       "function": "Shell/GND", "type": "smd"},
@@ -766,9 +780,18 @@ for _r, _led, _val, _rlcsc, _rail, _why in _DIAG_BANK:
 
 # ======================================================================
 # Q1 — SI2301CDS P-Channel MOSFET (C10487) — Reverse Polarity Protection
-# SOT-23-3: Pin 1=Gate, Pin 2=Source (battery in), Pin 3=Drain (to IP5306)
-# Gate pulled low via R24 (100K to GND) — MOSFET always ON when battery
-# connected with correct polarity. Reverse polarity: body diode blocks.
+# SOT-23-3: Pin 1=Gate, Pin 2=Source (to IP5306), Pin 3=Drain (battery in)
+# Gate pulled low via R24 (100K to GND).
+#
+# THE CELL IS ON THE DRAIN, AND THAT IS THE PROTECTION (R31-HIGH-1).
+# A P-channel body diode conducts drain->source. Correct polarity: the
+# diode forward-biases (the load pre-charges through it), then V_GS =
+# -V_BAT enrichs the channel and the diode is shorted out by ~0.1 ohm.
+# Reversed cell: the diode is reverse-biased AND V_GS is positive, so
+# nothing conducts. Wired the other way round — cell on the source, which
+# is what shipped through v4.5.0 — a reversed cell forward-biases the body
+# diode and the protection does nothing at all. Correct polarity behaves
+# identically in both wirings, which is why no working board revealed it.
 # ======================================================================
 COMPONENT_SPECS["Q1"] = {
     "component": "SI2301CDS P-Channel MOSFET",
@@ -777,8 +800,8 @@ COMPONENT_SPECS["Q1"] = {
     "datasheet_page": 1,
     "pins": {
         "1": {"net": _exact("RPP_GATE"), "function": "Gate — pulled to GND via R24 (always ON)", "type": "smd"},
-        "2": {"net": _exact("BAT_IN"),   "function": "Source — battery connector side (J3 pin 1)", "type": "smd"},
-        "3": {"net": _exact("BAT+"),     "function": "Drain — IP5306 BAT pin side", "type": "smd"},
+        "2": {"net": _exact("BAT+"),     "function": "Source — protected side, IP5306 BAT pin", "type": "smd"},
+        "3": {"net": _exact("BAT_IN"),   "function": "Drain — battery connector side (J3 pin 1); body diode blocks a reversed cell", "type": "smd"},
     },
 }
 

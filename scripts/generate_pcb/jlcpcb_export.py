@@ -471,11 +471,14 @@ def _build_placements():
               "SOT-23", D1_POS[0], D1_POS[1], D1_ROT, "bottom"))
 
     # P-MOSFET reverse polarity protection (v4.0)
-    from scripts.generate_pcb.routing import Q1_POS, R24_POS
+    from scripts.generate_pcb.routing import Q1_POS, Q1_ROT, R24_POS, R24_ROT
+    # Q1_ROT is 180, not 0: the drain has to face the cell (R31-HIGH-1).
+    # That is the same KiCad angle as D1, the board's other SOT-23-3, so
+    # both leave here at cpl 90 through the "^SOT-23" correction.
     p.append(("Q1", "SI2301CDS",
-              "SOT-23", Q1_POS[0], Q1_POS[1], 0, "bottom"))
+              "SOT-23", Q1_POS[0], Q1_POS[1], Q1_ROT, "bottom"))
     p.append(("R24", "100k", "R_0805",
-              R24_POS[0], R24_POS[1], 180, "bottom"))
+              R24_POS[0], R24_POS[1], R24_ROT, "bottom"))
 
     # ── Passive components (back side) ────────────────────────────
     # All passives have >= 3mm center-to-center spacing.

@@ -39,7 +39,7 @@
 | **LED1** | C84256 | LED 0805 red | 0° | — | CORRECT |
 | **LED2** | C19171391 | LED 0805 **red** (was mislabelled green) | 180° | 180° | CORRECT w/ override — **reconfirmed 2026-07-26** from both LED datasheets; the original derivation's "pin 1 = cathode standard" premise was wrong (YONGYUTAI numbers pin 1 = anode), see the correction block below |
 | **D1** | C37704 | BAT54C SOT-23 | **90°** | — | CORRECTED 2026-07-26 — was 270°, which seated no lead at all (3.120 mm off). See the correction block below |
-| **Q1** | C10487 | SI2301CDS SOT-23 | **270°** | — | CORRECTED 2026-07-26 — was 90°, which seated no lead at all (2.933 mm off). See the correction block below |
+| **Q1** | C10487 | SI2301CDS SOT-23 | **90°** | — | CORRECTED twice. 2026-07-26: 90° → 270°, because 90° seated no lead at all (2.933 mm off). 2026-08-02 (R31-HIGH-1): the KiCad placement turned 0° → 180° so the **drain** faces the cell, which carries the CPL angle back to 90°. Seating never distinguished the two — only the netlist does. See both correction blocks below |
 | **U1** | C2913202 | ESP32-S3-WROOM-1 | 0° | — | CORRECT |
 | **U2** | C181692 | IP5306 ESOP-8 | **270°** | — | CORRECTED 2026-07-26 — was 0°, which put 0 of 8 leads on copper. **Confirmed on protos #1 and #2**: chip vertical, pin 1 top-left from the back with USB-C on the lower edge = pad 1 (VIN/VBUS) |
 | **U3** | C78988 | SY8089AAAC buck SOT-23-5 (replaces AMS1117, R25 respin) | 180° | — (family formula) | CORRECT — our land pattern is a verbatim copy of the EasyEDA reference, δ_row = 0, no waiver; see section |
@@ -203,6 +203,22 @@ that pad's net — anchored on U2, whose 270° is confirmed by eye:
 |---|---|---|---|---|---|
 | D1 | 270° | no, 3.120 mm on bare mask | **90°** | yes, 0.187 mm | anodes → BTN_START / BTN_SELECT, common cathode → MENU_K |
 | Q1 | 90° | no, 2.933 mm on bare mask | **270°** | yes, 0.000 mm | G/S/D → RPP_GATE / BAT_IN / BAT+ |
+
+### SUPERSEDED FOR Q1 — 2026-08-02 (R31-HIGH-1)
+
+The 270° row above is right about seating and wrong about the circuit.
+S on BAT_IN puts the cell on the **source**, and a P-channel body diode
+conducts drain→source, so a reversed pack forward-biases that diode and
+Q1 protects nothing. The KiCad placement is now **180°** (CPL **90°**),
+which seats just as exactly, with G/S/D → RPP_GATE / **BAT+** /
+**BAT_IN** — the cell on the drain.
+
+Note what this says about the method used for the whole table: the
+pad-residual test cannot tell a correct FET from a backwards one, because
+both orientations seat at 0.000 mm on a symmetric SOT-23-3 land. Only the
+netlist can, and the netlist agreed with the wrong one for four releases.
+A residual of 0.000 mm is evidence about solderability, never about
+whether the part is doing its job.
 
 Both wanted the same family constant, so the fix was one value in
 `_JLCPCB_ROT_CORRECTIONS` (`^SOT-23`, −90 → +90), not two per-part deltas.

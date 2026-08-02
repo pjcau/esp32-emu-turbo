@@ -546,8 +546,8 @@ def _component_placeholders():
     placements.append(("D1", "SOT-23-3", *routing.D1_POS, routing.D1_ROT, "B.Cu"))
 
     # P-MOSFET reverse polarity protection (v4.0)
-    placements.append(("Q1", "SOT-23-3", *routing.Q1_POS, 0, "B.Cu"))
-    placements.append(("R24", "R_0805", *routing.R24_POS, 180, "B.Cu"))
+    placements.append(("Q1", "SOT-23-3", *routing.Q1_POS, routing.Q1_ROT, "B.Cu"))
+    placements.append(("R24", "R_0805", *routing.R24_POS, routing.R24_ROT, "B.Cu"))
 
     # ── Passive components (B.Cu) ──
     # Positions must match jlcpcb_export.py for CPL/Gerber alignment.

@@ -127,15 +127,22 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "was relocated for R5-CRIT-6 after they were built, and its "
            "anodes were unrouted on every board produced so far."),
     "Q1": (0.0,
-           "SI2301CDS SOT-23-3 (C10487) at cpl=270, KiCad 0. The old cpl=90 "
-           "left every lead on bare mask (2.933 mm); 270 seats exactly "
-           "(0.000 mm) with G/S/D on RPP_GATE / BAT_IN / BAT+, which is the "
-           "reverse-polarity P-MOSFET in series with the cell. "
+           "SI2301CDS SOT-23-3 (C10487) at cpl=90, KiCad 180 — the same "
+           "pair as D1, the board's other SOT-23-3, since R31-HIGH-1 turned "
+           "the package around so the DRAIN faces the cell. The angle moved "
+           "by 180 and the residual did not, which is arithmetic rather "
+           "than luck: the bottom law reads cpl + row_board + row_ee, and "
+           "rotating a part adds the same 180 to both cpl and row_board. "
+           "It seats exactly (0.000 mm) with G/S/D on RPP_GATE / BAT+ / "
+           "BAT_IN, i.e. the cell on the drain, which is the only wiring in "
+           "which the body diode blocks a reversed pack. The previous "
+           "entry's cpl=270 / KiCad 0 seated just as exactly with S and D "
+           "swapped — seating cannot tell the two apart, only the netlist "
+           "can, which is how the defect survived to v4.5.0. "
            "POLARITY_AUDIT.md's 'boards R4-R8 power up through Q1, so its "
-           "polarity is proven' does NOT contradict this: U2 shipped at an "
-           "angle that cannot seat and those same boards charge, because "
-           "JLCPCB corrected it at assembly — confirmed by eye on protos #1 "
-           "and #2. That argument is retired repo-wide."),
+           "polarity is proven' remains retired repo-wide, and R31-HIGH-1 "
+           "is the second thing it got wrong: those boards power up in "
+           "either orientation."),
 }
 
 

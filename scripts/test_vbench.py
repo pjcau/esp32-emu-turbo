@@ -1095,14 +1095,20 @@ def test_phase3_peripherals():
     check("DAT1 is tied to DAT0/MISO, as the design intends",
           "8" in shared and shared["8"][0] == "SD_MISO",
           f"{shared.get('8')}")
-    # The finding: DAT2 shares a net with a strapping pin.
-    check("U6.9 (DAT2) is detected on a strapping pin's net",
-          any(pad == "9" and gpio == "GPIO3"
-              for pad, _role, _net, gpio, _strap in exposure),
-          f"{exposure}")
-    check("and that pin is recorded as having NO internal pull",
-          all(strap["internal"] is None
-              for pad, _r, _n, gpio, strap in exposure if gpio == "GPIO3"))
+    # R31-HIGH-2 removed the finding this pair used to assert. U6.9 carried
+    # BTN_R (= GPIO3, a strapping pin) because the BTN_R riser crossed the
+    # pad and _PAD_NETS made the overlap same-net. Pad 9 is the socket's
+    # card-DETECT spring, not a card contact, so that same-net entry put the
+    # R shoulder button on a switch to the grounded shell. The riser now
+    # detours east of the pad row and the pad carries no net.
+    #
+    # Inverted rather than deleted: the exposure coming back is the
+    # regression worth catching, and an empty list only means something if
+    # something asserts it.
+    check("no U6 pad shares a net with a strapping pin (R31-HIGH-2)",
+          exposure == [], f"{exposure}")
+    check("U6.9 is off-net entirely, not merely off GPIO3",
+          "9" not in shared, f"{shared.get('9')}")
     check("the SD protocol is declared unmodelled, not faked",
           {"init_sequence", "block_read", "timing"} <= set(sdcard.UNMODELLED))
     check("audio.py and sdcard.py both exit 0 on this board",

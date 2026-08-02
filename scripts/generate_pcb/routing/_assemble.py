@@ -93,18 +93,27 @@ def generate_all_traces():
     # REMOVED them thinking they were NC pads — but verify_trace_through_pad
     # then flagged 6 real fab shorts. Restored with explicit safety analysis:
     #
-    # U6.8 (SD DAT1) / U6.9 (SD DAT2): unused in SPI mode. SD_MISO and
-    #   BTN_R tracks physically overlap these pads at the corridor between
-    #   U6 rows. Assigning them to SD_MISO/BTN_R nets makes the overlap
-    #   same-net. Why the card does not drive them: NOT because of any
-    #   CMD1/CMD0 tri-state claim (no held document says that), but because
-    #   "the extended DAT lines (DAT1-DAT3) are input on power up" —
-    #   SDCARD_SanDisk-Industrial-microSD_2016.pdf p.17 sec 3.1 table 3-1
-    #   footnote b — and in SPI mode contacts 8/9 are RSV (table 3-2,
-    #   p.18). The GPIO3 strap is latched at reset, inside the power-up
-    #   window that footnote covers. Mechanism corrected 2026-07-31 by the
-    #   T3.3 protocol model (scripts/vbench/sdcard_protocol.py); the
+    # U6.8 (SD DAT1): unused in SPI mode. The SD_MISO track physically
+    #   overlaps this pad at the corridor between U6's rows; assigning the
+    #   pad to SD_MISO makes the overlap same-net. Why the card does not
+    #   drive it: NOT because of any CMD1/CMD0 tri-state claim (no held
+    #   document says that), but because "the extended DAT lines (DAT1-DAT3)
+    #   are input on power up" — SDCARD_SanDisk-Industrial-microSD_2016.pdf
+    #   p.17 sec 3.1 table 3-1 footnote b — and in SPI mode contact 8 is RSV
+    #   (table 3-2, p.18). The GPIO3 strap is latched at reset, inside the
+    #   power-up window that footnote covers. Mechanism corrected 2026-07-31
+    #   by the T3.3 protocol model (scripts/vbench/sdcard_protocol.py); the
     #   conclusion was right, the cited cause was not.
+    #
+    # U6.9 HAD THE SAME ENTRY AND IT WAS WRONG — see R31-HIGH-2. The
+    #   argument above is about SD card contacts, and pad 9 is not one: a
+    #   microSD card has eight, and this socket's ninth pad is the
+    #   card-DETECT spring, which mates with the grounded shell. Borrowing
+    #   pad 8's (valid) reasoning tied BTN_R/GPIO3 to a switch that grounds
+    #   it in one card state. The BTN_R riser now detours east of the whole
+    #   pad row (routing/buttons.py), the entry is gone, and pad 9 is back
+    #   to no net. Do not reinstate it: a same-net entry here is a claim
+    #   that the pad is inert, and this one is a switch to GND.
     #
     # SW16.4b/4d (shell anchor pads): mechanical retention tabs for the
     #   slide switch body, not electrical slide positions. Per
@@ -120,7 +129,6 @@ def generate_all_traces():
     # `scripts/verify_trace_through_pad.py` is a hard gate and will block
     # release-prep if these overlaps reappear.
     _PAD_NETS[("U6", "8")] = NET_ID["SD_MISO"]
-    _PAD_NETS[("U6", "9")] = NET_ID["BTN_R"]
     _PAD_NETS[("SW16", "4b")] = NET_ID["BTN_SELECT"]
     _PAD_NETS[("SW16", "4d")] = NET_ID["BTN_SELECT"]
 

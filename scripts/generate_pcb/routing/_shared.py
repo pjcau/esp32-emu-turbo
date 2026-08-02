@@ -635,23 +635,57 @@ U4_POS = (90.95, 60.0)
 R22_POS = (90.25, 40.0)   # D+ 22Ω series (between TVS and ESP32 GPIO20)
 R23_POS = (91.65, 38.5)   # D- 22Ω series (between TVS and ESP32 GPIO19, clear of C4 GND via@40.0)
 
-# P-MOSFET reverse polarity protection (v4.0)
-# Q1 (SI2301CDS SOT-23-3): right of J3, above J3.4 mech tab
-# Pin 1=Gate, Pin 2=Source (BAT_IN from J3), Pin 3=Drain (BAT+ to IP5306)
-# At 0deg on B.Cu: pin3 at (qx, qy-1.10), pin2 at (qx-0.95, qy+1.10), pin1 at (qx+0.95, qy+1.10)
-# After B.Cu X-mirror: pin1 at (qx-0.95, qy+1.10), pin2 at (qx+0.95, qy+1.10)
-# Clearance analysis (v5 relocation):
-#   - Drain (85.0, 51.9): GND via (86.80,52.0) gap_x=0.25mm OK; GND via (82.20,51.5) gap_y=0.40mm OK
-#   - Source (84.05, 54.1): BAT_IN horizontal at y=54.1 clears J3.4 (top y=54.95) by 0.55mm
-#   - Gate (85.95, 54.1): RPP_GATE trace at x=86.95 clears BTN_SELECT (x=88.95) by 1.725mm
-#   - BAT+ channel at y=52.5 clears GND via (82.20,51.5) by 0.40mm and (86.80,52.0) by 0.40mm
+# P-MOSFET reverse polarity protection (v4.0; re-oriented for R31-HIGH-1)
+# Q1 (SI2301CDS SOT-23-3): right of J3, above J3.4 mech tab.
+# Pin 1=Gate, Pin 2=Source (BAT+, IP5306 side), Pin 3=Drain (BAT_IN, cell side)
+#
+# THE DRAIN FACES THE CELL AND THAT IS THE WHOLE POINT (R31-HIGH-1).
+# A P-channel body diode conducts D->S. With the cell on the drain, a
+# correctly-inserted cell forward-biases the diode (the load pre-charges
+# through it) and V_GS = -V_BAT then turns the channel on; a REVERSED cell
+# reverse-biases the diode while V_GS is positive, so both the diode and
+# the channel block. Wired the other way round — cell on the source, which
+# is what shipped through v4.5.0 — normal polarity behaves identically,
+# which is exactly why working boards never revealed anything, but a
+# reversed cell forward-biases the body diode and the protection does
+# nothing. Do not "simplify" this back by swapping the nets without also
+# turning the package around.
+#
+# Turning the package around is what Q1_ROT is: at 180 deg the lone drain
+# pad lands on the y=54.1 channel, which is the ONLY corridor from J3 to
+# Q1 (J3.4's mounting tab occupies x 82.60-84.10, y 54.95-58.35 below it,
+# and the BAT+ channel is above it). The two-pad row moves north, so the
+# gate moves north with it — see R24_POS.
+Q1_ROT = 180   # drain (pad 3) faces J3; single import point for board.py,
+               # jlcpcb_export.py and the pad table below
+# Pads at Q1_ROT=180 on B.Cu (X-mirrored):
+#   Gate   (84.05, 51.90)   Source/BAT+ (85.95, 51.90)   Drain/BAT_IN (85.00, 54.10)
+# Clearance analysis:
+#   - Drain (85.0, 54.1): BAT_IN horizontal at y=54.1 clears J3.4 (top 54.95) by 0.55mm
+#   - Source (85.95, 51.9): BAT+ riser clears GND via (86.80,52.0) by 0.25mm
+#   - Gate (84.05, 51.9): BAT+ channel at y=52.9 passes 0.35mm below it
+#   - BAT+ channel at y=52.9 clears GND via (82.20,51.5) by 0.80mm, (86.80,52.0) by 0.25mm
 #   - BAT_IN at y=54.1 clears VBUS B.Cu (starts y=61) and USB_D- B.Cu (starts y=64.58)
 Q1_POS = (85.0, 53.0)    # right of J3, above J3.4 tab — clears all B.Cu verticals
-# R24 (100K 0805): gate pull-down resistor, pin 1=RPP_GATE, pin 2=GND
-# R24 below Q1, between J3.4 tab (right edge 84.10) and GND via (86.80).
-# pad1 RPP_GATE at (86.95, 56.0), pad2 GND at (85.05, 56.0)
-# Clearance: pad2 left edge 84.55, J3.4 right 84.10 → gap 0.45mm OK
-R24_POS = (86.0, 56.0)    # below Q1 gate, between J3.4 and GND vias
+# R24 (100K 0805): gate pull-down resistor, pin 1=RPP_GATE, pin 2=GND.
+#
+# R24 lives NORTH of Q1 and it has to: with the drain turned toward J3 the
+# gate pad moves to the north row, and the BAT+ channel (y=52.9) plus the
+# BAT_IN channel (y=54.1) are two continuous walls of copper between that
+# pad and everything south of the part. The old spot (86.0, 56.0) is on
+# the far side of both.
+#
+# Vertical (90 deg) in the 2.1 mm gap between the C13 and C14 pad columns,
+# which is the only column north of Q1 wide enough. The GND via sits in
+# the one free horizontal band left by the three F.Cu rails that cross
+# this area — BAT+ (y 45.755-46.515), BTN_R (y 47.9-48.1) and +5V
+# (y 48.47-49.23) — namely y 46.99-47.42. Moving R24 by a millimetre in y
+# will put its via on one of those rails.
+#   pad1 RPP_GATE at (85.40, 49.25), pad2 GND at (85.40, 47.35)
+# Clearance: pad edges x 84.75-86.05 → C13.1 (ends 84.45) 0.30mm,
+#            C14.2 (starts 86.55) 0.50mm; GND via 0.25mm to the BTN_R rail
+R24_POS = (85.4, 48.3)   # C13/C14 gap, north of Q1's gate pad
+R24_ROT = 270            # pad 1 (gate) south, toward Q1
 
 
 # ── Exact pad position computation ───────────────────────────────
@@ -781,8 +815,8 @@ def _init_pads():
     _PADS[ref_d1] = _compute_pads("SOT-23-3", pos_d1[0], pos_d1[1], D1_ROT, "B")
 
     # P-MOSFET reverse polarity protection (v4.0)
-    _PADS["Q1"] = _compute_pads("SOT-23-3", Q1_POS[0], Q1_POS[1], 0, "B")
-    _PADS["R24"] = _compute_pads("R_0805", R24_POS[0], R24_POS[1], 180, "B")
+    _PADS["Q1"] = _compute_pads("SOT-23-3", Q1_POS[0], Q1_POS[1], Q1_ROT, "B")
+    _PADS["R24"] = _compute_pads("R_0805", R24_POS[0], R24_POS[1], R24_ROT, "B")
 
     # Key passives with explicit routing
     passive_placements = [

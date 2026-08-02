@@ -428,63 +428,78 @@ class PowerSupplySheet(SchematicSheet):
         jst_minus_y = jst_y + 1.27
 
         # ── Q1 P-MOSFET reverse polarity protection (v4.0) ──
-        # Q1 sits in series on the BAT+ rail between J3 and IP5306.
-        # BAT+ (IP5306 side) → Q1 Drain (pin 3) → Q1 Source (pin 2) → BAT_IN → J3.1
+        # Q1 sits in series on the battery rail between J3 and IP5306:
+        # J3.1 → BAT_IN → Q1 Drain (pin 3) → Q1 Source (pin 2) → BAT+ → IP5306
         # Gate pulled low via R24 100K → MOSFET always ON for correct polarity.
-        # Reverse polarity: body diode blocks, protecting IP5306.
+        #
+        # THE CELL IS ON THE DRAIN (R31-HIGH-1) and the direction is the
+        # entire circuit. A P-channel body diode conducts D->S: with the
+        # cell on the drain a reversed pack reverse-biases it while V_GS is
+        # positive, so nothing conducts. Drawn the other way round — cell on
+        # the source, which is how sheets, specs and copper all agreed
+        # through v4.5.0 — a reversed pack forward-biases that diode and Q1
+        # protects nothing. Both wirings behave identically under correct
+        # polarity, so no working board could ever have shown the
+        # difference.
         q1x, q1y = 210, 92
         self.sym("BAT54C", "Q1", "SI2301CDS", q1x, q1y, ["1", "2", "3"])
         # NOTE: reusing BAT54C symbol footprint (SOT-23-3) for Q1 P-MOSFET
-        # Pin mapping: 1=Gate(bottom-left), 2=Source(bottom-right), 3=Drain(top)
+        # Pin mapping: 1=Gate(bottom-left)=RPP_GATE,
+        #              2=Source(bottom-right)=BAT+, 3=Drain(top)=BAT_IN
         # Two-line annotation ABOVE the symbol with 3mm vertical spacing
         # so the lines don't touch each other or the symbol's Value text.
         self.text("P-MOSFET RPP", q1x + 8, q1y - 26, 1.5)
         self.text("(SI2301CDS)",  q1x - 6, q1y - 12, 1.5)
 
-        # Q1 pin 3 (Drain) at (q1x, q1y - 3.81-ish) — connects to BAT+ (IP5306 side)
-        # Wire BAT+ line from cbat_x to Q1 drain
+        # The BAT+ rail (L1.1, C18.1, U2.6, SW16.1) now ENDS at its own
+        # global label instead of running into Q1's top pin: after
+        # R31-HIGH-1 the top pin is the drain and belongs to BAT_IN, and a
+        # rail arriving 0.62 mm above a pin of a different net is exactly
+        # the kind of near-miss this sheet has been bitten by before. The
+        # three Q1 pins are joined to their nets by global labels, which is
+        # already this sheet's idiom for BAT+, BAT_IN, VBUS and RPP_GATE.
+        #
         # Starts at l1_x, not cbat_x: cbat_x (185) is left of l1_x (190), so
         # this span used to re-draw 5mm of the bat_x->l1_x rail above it.
-        self.wire(l1_x, bat_y, q1x, bat_y)
+        self.wire(l1_x, bat_y, q1x - 10, bat_y)
         # C18 taps the rail mid-span now, so it needs a dot.
         self.junction(cbat_x, bat_y)
-        self.wire(q1x, bat_y, q1x, q1y - 5.08)
-        # Mid-span on the horizontal rail. At (q1x + 2, bat_y - 2) it was
+        # Label sits on the rail's east END. At (q1x + 2, bat_y - 2) it was
         # 2 mm off the horizontal and 2 mm off the vertical, i.e. on neither
         # — so BAT+ came out of the netlist with one node (SW16.1, from
-        # its own global label) while L1.1, C18.1, Q1.3 and U2.6 were
+        # its own global label) while L1.1, C18.1, Q1 and U2.6 were
         # absent. The battery rail was undrawn as far as any gate could see.
         # Global label (see VBUS note); angle=180 extends LEFT — rightward
         # the text lands on Q1's body.
         self.glabel("BAT+", q1x - 10, bat_y, 180)
 
-        # Q1 pin 2 (Source) — connects to BAT_IN → J3.1
-        # Source exits to the right toward JST connector.
-        #
-        # Jog UP to jst_plus_y FIRST, then run horizontally. The previous
-        # route ran horizontally at q1y + 1.27 == 93.27, which is exactly
-        # jst_minus_y — so the wire landed on J3 pin 2 (GND) and the
-        # following vertical welded J3.1, J3.2 and Q1.2 into a single
-        # node. The schematic then described a battery connector with its
-        # + and - shorted together, while the PCB copper was correct
-        # (verify_netlist_diff T4: J3.1 sch='GND' pcb='BAT_IN').
-        self.wire(q1x + 5.08, q1y + 1.27, q1x + 5.08, jst_plus_y)
-        self.wire(q1x + 5.08, jst_plus_y, jst_plus_x, jst_plus_y)
-        # Label must sit ON the segment it names. At q1y - 0.5 it floated
-        # 1.77mm off every wire and renamed nothing — and the correction
-        # that replaced it, jst_plus_y - 1.5, was still 1.5 mm off the same
-        # horizontal, so it renamed nothing either. BAT_IN kept coming out
-        # of the netlist with one node (BT1.1) and both J3.1 and Q1.2 stayed
-        # missing. That is why the T4 mismatch this comment records stopped
-        # being reported: the pins left the netlist, they did not agree.
-        # Placed relative to the wire's right-hand end rather than to Q1:
-        # at q1x + 8 it sits on the wire correctly but lands on C27's
-        # "HF bypass" annotation at (222, 91), which verify_schematic_overlaps
-        # rejects. Anywhere on the span x in [q1x + 5, jst_plus_x] names the
-        # same net, so it goes where there is room.
-        # Global label (see VBUS note): this is the one that names the
-        # Q1->J3 copper run.
-        self.glabel("BAT_IN", jst_plus_x - 20, jst_plus_y, 0)
+        # Q1 pin 3 (Drain, top) — the CELL side, net BAT_IN.
+        # Up out of the pin, then east into clear space; the label goes at
+        # the far end so it does not land on the "(SI2301CDS)" annotation
+        # below-left or on C27's "HF bypass" at (222, 91).
+        self.wire(q1x, q1y - 5.08, q1x, q1y - 8)
+        self.wire(q1x, q1y - 8, q1x + 16, q1y - 8)
+        self.glabel("BAT_IN", q1x + 16, q1y - 8, 0)
+
+        # Q1 pin 2 (Source, bottom-right) — the PROTECTED side, net BAT+.
+        # Exits DOWNWARD. It used to run up to jst_plus_y and east to J3,
+        # back when this pin was the cell side; that route is gone with the
+        # net. Note for anyone re-drawing it: a horizontal at q1y + 1.27 ==
+        # 93.27 is exactly jst_minus_y, so it lands on J3 pin 2 (GND) and
+        # welds J3.1, J3.2 and this pin into one node — a battery connector
+        # with + and - shorted (verify_netlist_diff T4 caught that once).
+        self.wire(q1x + 5.08, q1y + 1.27, q1x + 5.08, q1y + 10)
+        self.glabel("BAT+", q1x + 5.08, q1y + 10, 270)
+
+        # J3.1 → BAT_IN. Label must sit ON the segment it names: at
+        # q1y - 0.5 it once floated 1.77 mm off every wire and renamed
+        # nothing, and the correction that replaced it, jst_plus_y - 1.5,
+        # was still 1.5 mm off the same horizontal. BAT_IN kept coming out
+        # of the netlist with one node (BT1.1) while J3.1 stayed missing.
+        # Anchored at the wire's west END with angle=180 so the text
+        # extends away from the copper it names — same shape as BT1's.
+        self.wire(jst_plus_x - 20, jst_plus_y, jst_plus_x, jst_plus_y)
+        self.glabel("BAT_IN", jst_plus_x - 20, jst_plus_y, 180)
 
         # Q1 pin 1 (Gate) — pulled to GND via R24 (100K)
         r24x, r24y = q1x - 8, q1y + 10

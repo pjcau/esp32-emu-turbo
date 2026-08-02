@@ -234,7 +234,9 @@ def _rail_declarations():
                  cite(U2, i_5v) + " (boost output)"),
         "VBUS": R(i_fuse, v_5v, ("F1.2",), fuse_cite),
         "VBUS_IN": R(i_fuse, v_5v, ("J1.2", "J1.11"), fuse_cite),
-        "BAT+": R(i_bat, v_bat, ("Q1.3",), bat_cite),
+        # Q1.2 is the SOURCE: BAT+ leaves the RPP MOSFET there, because the
+        # cell sits on the drain (R31-HIGH-1).
+        "BAT+": R(i_bat, v_bat, ("Q1.2",), bat_cite),
         "BAT_IN": R(i_bat, v_bat, ("J3.1",),
                     bat_cite + " — same path, upstream of Q1"),
         "LX": R(i_bat, v_bat, ("U2.7",),

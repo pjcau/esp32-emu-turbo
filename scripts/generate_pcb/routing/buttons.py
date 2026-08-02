@@ -1244,7 +1244,43 @@ def _button_traces():
         parts.append(_via_net(sx_r, _sw12_bridge_y1, net_r, size=VIA_TIGHT, drill=VIA_TIGHT_DRILL))
         parts.append(_seg(sx_r, _sw12_bridge_y1, sx_r, _sw12_bridge_y2, "F.Cu", W_SIG, net_r))
         parts.append(_via_net(sx_r, _sw12_bridge_y2, net_r, size=VIA_TIGHT, drill=VIA_TIGHT_DRILL))
-        parts.append(_seg(sx_r, _sw12_bridge_y2, sx_r, chan_y_r, "B.Cu", W_SIG, net_r))
+        # R31-HIGH-2: this column used to run straight from the SW12 bridge
+        # to the channel via at (146.85, 65.29), and on the way it crossed
+        # U6 pad 9 — trace west edge 146.725 against pad east edge 146.81,
+        # an 0.085 mm merge. It was silenced with a same-net _PAD_NETS entry
+        # justified as "DAT2, tri-stated in SPI mode". Pad 9 is not DAT2. A
+        # microSD card has EIGHT contacts; the ninth pad on this socket is
+        # the card-DETECT spring, which mates with the grounded shell. In
+        # one card state that pad is a short to GND, so the same-net trick
+        # was tying the R shoulder button to ground — most plausibly
+        # whenever a card is inserted, i.e. during all gameplay.
+        #
+        # So the copper moves rather than the declaration: east around the
+        # whole pad row and the pad-10 shield tab, through the open lane
+        # between the pad-10 GND stitch (east edge 149.06) and the SD_CLK
+        # column (x=152.5), then back west to the unchanged channel via.
+        # Note the gap between pads 9 and 10 (146.81 -> 147.16, 0.35 mm) is
+        # too narrow to thread — going east means going east of pad 10.
+        # Clearances on the detour (W_SIG half-width 0.125):
+        #   exit y=60.0: U6 pad row top 61.074 -> 0.949mm
+        #   riser x=149.6: pad-10 GND via (148.76) east edge 149.06 -> 0.415mm
+        #                  pad 10 east edge 148.36 -> 1.115mm
+        #                  SD_CLK column west edge 152.40 -> 2.675mm
+        #   return y=64.5: pad 10 bottom 63.274 -> 1.101mm
+        #                  GND via (148.0, 66.5) top 66.20 -> 1.575mm
+        _u6_detour_exit_y = 60.0    # above U6's signal pad row
+        _u6_detour_x = 149.6        # east of the pad-10 shield tab and its via
+        _u6_detour_return_y = 64.5  # below the shield tab, above the channel via
+        parts.append(_seg(sx_r, _sw12_bridge_y2, sx_r, _u6_detour_exit_y,
+                           "B.Cu", W_SIG, net_r))
+        parts.append(_seg(sx_r, _u6_detour_exit_y, _u6_detour_x, _u6_detour_exit_y,
+                           "B.Cu", W_SIG, net_r))
+        parts.append(_seg(_u6_detour_x, _u6_detour_exit_y, _u6_detour_x, _u6_detour_return_y,
+                           "B.Cu", W_SIG, net_r))
+        parts.append(_seg(_u6_detour_x, _u6_detour_return_y, sx_r, _u6_detour_return_y,
+                           "B.Cu", W_SIG, net_r))
+        parts.append(_seg(sx_r, _u6_detour_return_y, sx_r, chan_y_r,
+                           "B.Cu", W_SIG, net_r))
         parts.append(_via_net(sx_r, chan_y_r, net_r, size=VIA_STD, drill=VIA_STD_DRILL))
         # DFM v6: approach_r at x=76.20 with F.Cu L-shape jog to x=66.00.
         # The ESP32 area (x=67-77) is heavily congested: U1:23 pads, SPI vias,

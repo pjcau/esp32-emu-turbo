@@ -457,9 +457,16 @@ _strict("D1", [("1", "BTN_START"), ("2", "BTN_SELECT"), ("3", "MENU_K")])
 # Q1: SI2301CDS P-MOSFET reverse polarity protection (v4.0)
 # ============================================================
 # Pin 1 (Gate) → RPP_GATE (pulled to GND via R24)
-# Pin 2 (Source) → BAT_IN (battery connector side)
-# Pin 3 (Drain) → BAT+ (IP5306 side)
-_strict("Q1", [("1", "RPP_GATE"), ("2", "BAT_IN"), ("3", "BAT+")])
+# Pin 2 (Source) → BAT+ (protected side, IP5306)
+# Pin 3 (Drain) → BAT_IN (battery connector side)
+#
+# The cell on the DRAIN is the whole protection (R31-HIGH-1): a P-channel
+# body diode conducts D->S, so a reversed cell reverse-biases it while V_GS
+# is positive and nothing conducts. Source-on-cell — what shipped through
+# v4.5.0 — leaves that diode forward-biased under exactly the fault it
+# exists to stop. Do not "fix" a failure here by swapping the expectation
+# back; the copper and the package angle are what have to move.
+_strict("Q1", [("1", "RPP_GATE"), ("2", "BAT+"), ("3", "BAT_IN")])
 
 # ============================================================
 # R24: Q1 gate pull-down resistor (100K)

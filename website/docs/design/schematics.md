@@ -186,7 +186,7 @@ and tie LED-A to +3V3.
 ```
 
 **Key design points:**
-- **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail: for a correctly-inserted battery the gate (pulled low by R24) keeps it ON; a reversed battery is blocked by the body diode.
+- **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail, with the **cell on the drain and the IP5306 on the source**. That direction is the protection, not a detail: a P-channel body diode conducts drain→source, so a correctly-inserted cell pre-charges the rail through the diode and then V<sub>GS</sub> = −V<sub>BAT</sub> (gate held at GND by R24) turns the channel on, while a reversed cell reverse-biases the diode *and* holds the channel off. Wired the other way round the part conducts identically in normal use and does nothing at all in the fault — which is why this shipped undetected through v4.5.0 and was fixed as R31-HIGH-1 by turning the package around.
 - **SW16** was intended between battery and IP5306 pin 6 (BAT) — but is **not functional in any revision to date** (see warning below). It does NOT control USB VBUS.
 - **VBUS** reaches IP5306 pin 1 (VIN) through the F1 PTC fuse (J1 → VBUS_IN → F1 → VBUS) — always available when USB is plugged in.
 - **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
@@ -253,7 +253,7 @@ switch, so sliding it changes nothing. Consequences:
 | BAT+ → VBUS | Boost unidirectional | IP5306 boost only drives BAT→VOUT |
 | USB + switch OFF | Physical isolation *(design intent — see SW16 warning; today: unplug J3)* | SW16 would disconnect battery from IP5306 pin 6 |
 | USB + switch ON | Charge-and-play | IP5306 manages both paths internally |
-| Reversed battery | Q1 P-MOSFET RPP | Body diode blocks; gate pull-down R24 keeps Q1 ON only with correct polarity |
+| Reversed battery | Q1 P-MOSFET RPP | Cell on the drain: the body diode is reverse-biased and the R24 gate pull-down leaves V<sub>GS</sub> positive, so channel and diode both block |
 
 ---
 

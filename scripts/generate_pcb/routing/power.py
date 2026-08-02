@@ -1181,70 +1181,104 @@ def _power_traces():
     for _bx in _bat_band1_xs:
         parts.append(_via_net(_bx, _bat_band1_y, n_bat,
                               size=0.85, drill=VIA_PWR_BIG_DRILL))
-    # ── v5.0: BAT+ approach → Q1 drain (P-MOSFET RPP, relocated) ──
-    # Q1 (SI2301CDS SOT-23-3) at (85.0, 53.0) on B.Cu, 0 deg:
-    #   Pin 3 (Drain/BAT+) at (85.0, 51.9)
-    #   Pin 2 (Source/BAT_IN) at (84.05, 54.1)
-    #   Pin 1 (Gate/RPP_GATE) at (85.95, 54.1)
-    # Relocated from (87, 64) to avoid BAT_IN crossing VBUS/USB_D- verticals.
-    # New position is above J3.4 tab (y=54.95), right of J3 (x=80).
-    q1_drain = _pad("Q1", "3")    # (85.0, 51.9) — BAT+ net
-    q1_source = _pad("Q1", "2")   # (84.05, 54.1) — BAT_IN net
-    q1_gate = _pad("Q1", "1")     # (85.95, 54.1) — RPP_GATE net
+    # ── BAT+ approach → Q1 SOURCE (P-MOSFET RPP) ──────────────────
+    # Q1 (SI2301CDS SOT-23-3) at (85.0, 53.0) on B.Cu, Q1_ROT=180:
+    #   Pin 3 (Drain/BAT_IN) at (85.0, 54.1)   — faces J3, the cell side
+    #   Pin 2 (Source/BAT+)  at (85.95, 51.9)  — faces the IP5306 side
+    #   Pin 1 (Gate/RPP_GATE) at (84.05, 51.9)
+    #
+    # R31-HIGH-1: through v4.5.0 this was the other way round — cell on the
+    # source, IP5306 on the drain — and that is not reverse-polarity
+    # protection. The P-channel body diode conducts D->S, so a reversed
+    # cell forward-biased it and fault current flowed anyway, through a
+    # diode rated 1.3 A and through U2's structures. With the cell on the
+    # drain, a reversed cell reverse-biases the diode while V_GS is
+    # positive: diode and channel both block. Correct polarity is
+    # indistinguishable between the two wirings, which is why every board
+    # built so far worked and nothing caught it.
+    #
+    # The copper had to move with the part, not just the net labels: the
+    # y=54.1 channel is the only way in from J3 (J3.4's mounting tab owns
+    # x 82.60-84.10, y 54.95-58.35 directly below Q1), so whichever pad
+    # sits on that channel is the cell-side pad. Turning the package 180
+    # deg is what puts the drain there.
+    q1_drain = _pad("Q1", "3")    # (85.0, 54.1) — BAT_IN net (cell side)
+    q1_source = _pad("Q1", "2")   # (85.95, 51.9) — BAT+ net (IP5306 side)
+    q1_gate = _pad("Q1", "1")     # (84.05, 51.9) — RPP_GATE net
     n_bat_in = NET_ID["BAT_IN"]
     n_rpp_gate = NET_ID["RPP_GATE"]
 
     # Pad net assignments for Q1 and R24
     _PAD_NETS[("Q1", "1")] = n_rpp_gate
-    _PAD_NETS[("Q1", "2")] = n_bat_in
-    _PAD_NETS[("Q1", "3")] = n_bat
+    _PAD_NETS[("Q1", "2")] = n_bat
+    _PAD_NETS[("Q1", "3")] = n_bat_in
     _PAD_NETS[("R24", "1")] = n_rpp_gate
     _PAD_NETS[("R24", "2")] = n_gnd
-    # J3 pin 1 is now BAT_IN (was BAT+)
+    # J3 pin 1 is BAT_IN (pre-RPP), not BAT+
     _PAD_NETS[("J3", "1")] = n_bat_in
 
-    # BAT+ approach → Q1 drain
-    # bat_approach_x=80.01 vertical from via down to y=52.5 (channel),
-    # horizontal RIGHT to Q1 drain x=85.0, short vertical UP to drain y=51.9.
-    # Clearance checks:
-    #   Channel y=52.5: GND via (82.20,51.5) top=51.80, trace bottom=52.12 → gap=0.32mm OK
-    #   Channel y=52.5: GND via (86.80,52.0) at x=86.80 > trace end x=85.0 → CLEAR
-    #   Drain vert x=85.0: GND via (86.80,52.0) gap_x=|85-86.80|-0.30-0.30=1.20mm OK
-    _bat_q1_channel_y = 52.5  # above J3.4 tab (54.95) and button GND vias
+    # BAT+ approach → Q1 source
+    # bat_approach_x=80.01 vertical from via down to y=52.9 (channel),
+    # horizontal RIGHT to x=85.95, short vertical UP to the source y=51.9.
+    # The channel is at 52.9 and not the old 52.5 because the gate pad now
+    # sits at (84.05, 51.9): at 52.5 a 0.6 mm trace (bottom 52.20) would
+    # have overlapped that pad (bottom edge 52.25).
+    # Clearance checks (trace half-width 0.30):
+    #   Channel y=52.9: gate pad (84.05,51.9) bottom 52.25 → gap 0.35mm OK
+    #   Channel y=52.9: GND via (82.20,51.5) bottom 51.80 → gap 0.80mm OK
+    #   Channel y=52.9: GND via (86.80,52.0) west 86.50, trace end 86.25 → 0.25mm OK
+    #   Source riser x=85.95: drain pad (85.0,54.1) east 85.30 → gap 0.35mm OK
+    _bat_q1_channel_y = 52.9  # above J3.4 tab (54.95), below the gate pad
     # Split at the band-1 stitching row so that row's copper shares an
     # endpoint with this column instead of T-ing into the middle of it.
     parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_band1_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_seg(bat_approach_x, _bat_band1_y, bat_approach_x, _bat_q1_channel_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(bat_approach_x, _bat_q1_channel_y, q1_drain[0], _bat_q1_channel_y,
+    parts.append(_seg(bat_approach_x, _bat_q1_channel_y, q1_source[0], _bat_q1_channel_y,
                        "B.Cu", W_PWR, n_bat))
-    parts.append(_seg(q1_drain[0], _bat_q1_channel_y, q1_drain[0], q1_drain[1],
+    parts.append(_seg(q1_source[0], _bat_q1_channel_y, q1_source[0], q1_source[1],
                        "B.Cu", W_PWR, n_bat))
 
-    # BAT_IN: Q1 source → J3 pin 1
-    # Q1 source at (84.05, 54.1), J3.1 at (79.0, 62.5)
+    # BAT_IN: Q1 drain → J3 pin 1
+    # Q1 drain at (85.0, 54.1), J3.1 at (79.0, 62.5)
     # B.Cu horizontal left at y=54.1 (clears J3.4 top 54.95 by 0.55mm),
     # then vertical down to J3.1.
     # Clearance: VBUS B.Cu starts at y=61.0, USB_D- at y=64.58 — both far below.
-    # BAT+ channel at y=52.5: gap = 54.1-52.5-0.30-0.30 = 1.0mm OK
-    parts.append(_seg(q1_source[0], q1_source[1], jst_p[0], q1_source[1],
+    # BAT+ channel at y=52.9: gap = 54.1-52.9-0.30-0.30 = 0.60mm OK
+    parts.append(_seg(q1_drain[0], q1_drain[1], jst_p[0], q1_drain[1],
                        "B.Cu", W_PWR, n_bat_in))
-    parts.append(_seg(jst_p[0], q1_source[1], jst_p[0], jst_p[1],
+    parts.append(_seg(jst_p[0], q1_drain[1], jst_p[0], jst_p[1],
                        "B.Cu", W_PWR, n_bat_in))
 
     # RPP_GATE: Q1 gate → R24 pad 1
-    # Gate at (85.95, 54.1), R24.1 at (85.05, 56.0) [rot=180 on B.Cu]
-    # L-shaped: horizontal stub LEFT to x=85.05, then vertical DOWN to y=56.0
-    r24_1 = _pad("R24", "1")   # RPP_GATE (85.05, 56.0)
-    r24_2 = _pad("R24", "2")   # GND (86.95, 56.0)
-    parts.append(_seg(q1_gate[0], q1_gate[1], r24_1[0], q1_gate[1],
+    # Gate at (84.05, 51.9), R24.1 at (85.40, 49.25) [rot=270 on B.Cu].
+    # R24 moved north of Q1 with the gate pad — the BAT+ channel (52.9)
+    # and the BAT_IN channel (54.1) are two unbroken walls of copper
+    # between this pad and the old R24 spot at (86.0, 56.0).
+    # Z-shaped: north out of the pad into the 0.90 mm corridor between the
+    # C13 pad row (bottom 50.65) and Q1's own pad row (top 51.55), east in
+    # that corridor, then north up the C13/C14 gap into R24.1.
+    # Clearance checks (trace half-width 0.125):
+    #   Corridor y=51.1: C13.1 bottom 50.65 → 0.325mm; Q1 pads top 51.55 → 0.325mm
+    #   Riser x=85.40: C13.1 east 84.45 → 0.825mm; C14.2 west 86.55 → 1.025mm
+    #   Riser x=85.40 vs Q1 source pad (85.65,51.55): diagonal 0.348mm OK
+    _gate_corridor_y = 51.1
+    _gate_riser_x = 85.40
+    r24_1 = _pad("R24", "1")   # RPP_GATE (85.40, 49.25)
+    r24_2 = _pad("R24", "2")   # GND (85.40, 47.35)
+    parts.append(_seg(q1_gate[0], q1_gate[1], q1_gate[0], _gate_corridor_y,
                        "B.Cu", W_SIG, n_rpp_gate))
-    parts.append(_seg(r24_1[0], q1_gate[1], r24_1[0], r24_1[1],
+    parts.append(_seg(q1_gate[0], _gate_corridor_y, _gate_riser_x, _gate_corridor_y,
+                       "B.Cu", W_SIG, n_rpp_gate))
+    parts.append(_seg(_gate_riser_x, _gate_corridor_y, r24_1[0], r24_1[1],
                        "B.Cu", W_SIG, n_rpp_gate))
 
     # R24 pad 2 → GND via-in-pad (connects to In1.Cu GND zone)
-    # Via at R24.2 center (86.95, 56.0): BTN_SELECT (88.95) gap=1.575mm OK
+    # Via at R24.2 centre (85.40, 47.35). Three F.Cu rails cross this area
+    # — BAT+ (y 45.755-46.515), BTN_R (47.9-48.1) and +5V (48.47-49.23) —
+    # and y 46.99-47.42 is the only band between them a 0.60 mm barrel
+    # fits in: 0.535mm to the BAT+ rail, 0.25mm to BTN_R.
     parts.append(_via_net(r24_2[0], r24_2[1], n_gnd,
                           size=VIA_STD, drill=VIA_STD_DRILL))
 

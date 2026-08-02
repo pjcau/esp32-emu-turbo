@@ -38,12 +38,13 @@ SNAP_TOL = 0.05
 # ── Power network definitions ────────────────────────────────────────
 
 # Power sources: net_name -> (ref, pad_num, description)
-# BAT_IN vs BAT+: the battery connects via J3.1 to BAT_IN, then through
-# Q1 (P-MOSFET reverse-polarity protection) to BAT+. Two separate nets,
-# two separate verifications.
+# BAT_IN vs BAT+: the battery connects via J3.1 to BAT_IN, into Q1's DRAIN
+# (pad 3, the cell side — R31-HIGH-1), and leaves Q1's SOURCE (pad 2) as
+# BAT+. Two separate nets, two separate verifications. The pad numbers are
+# the direction claim: reversing them is the reverse-polarity defect.
 POWER_SOURCES = {
     "BAT_IN": ("J3", "1", "Battery connector positive (pre-RPP)"),
-    "BAT+": ("Q1", "3", "Reverse-polarity MOSFET drain (post-RPP)"),
+    "BAT+": ("Q1", "2", "Reverse-polarity MOSFET source (post-RPP)"),
     # R3-HIGH-4 fix (2026-07-31): F1 (PTC fuse) splits the USB input.
     # VBUS_IN carries J1 pad 2 -> F1 pad 1; VBUS proper starts at F1
     # pad 2 and must still reach the IP5306 VIN.
@@ -75,7 +76,7 @@ POWER_SINKS = {
         ("U2", "1", "IP5306 VIN"),
     ],
     "BAT_IN": [
-        ("Q1", "2", "Reverse-polarity MOSFET source"),
+        ("Q1", "3", "Reverse-polarity MOSFET drain"),
     ],
     "BAT+": [
         ("U2", "6", "IP5306 BAT"),
