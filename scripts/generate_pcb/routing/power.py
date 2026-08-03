@@ -816,31 +816,40 @@ def _power_traces():
     #     LX column at x=104.40 (0.37 mm); MH(105,37.5) is 1.40 mm away.
     #   (107.50, 37.90)  — south of C27.2 on the existing VOUT column.
     #     LCD_DC B.Cu at x=108.27 is 0.22 mm away, its via 0.606 mm.
-    # Both land inside the In2.Cu +5V pour (x<109 / y<41 island), which is
-    # the copper the rail actually distributes on. 3 x 0.791 = 2.373 A.
+    # Both land inside the In2.Cu pour, which is the copper the rail
+    # actually distributes on. 3 x 0.791 = 2.373 A.
+    #
+    # SW16 RESPIN: these three barrels now feed the +5V_VOUT sub-island,
+    # not +5V. The boost output no longer reaches the loads through the
+    # plane — it reaches Q2's source, and Q2's drain feeds the +5V plane.
+    # Nothing about the geometry changed, only the net, because the
+    # ampacity argument above is about the barrels and is unaffected by
+    # which of the two 5 V rails they belong to.
+    n_5v_vout = NET_ID["+5V_VOUT"]
     parts.append(_seg(ip_vout[0], ip_vout[1], ip_vout[0] + 0.5, ip_vout[1],
-                       "B.Cu", W_PWR, n_5v))
+                       "B.Cu", W_PWR, n_5v_vout))
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1], ip_vout[0] + 0.5, ip_vout[1] - 1.5,
-                       "B.Cu", W_PWR, n_5v))
+                       "B.Cu", W_PWR, n_5v_vout))
     # R32 (2026-08-03): this barrel used to sit at (107.50, 39.095),
     # inside C27.2's pad after the 0805 land grew to the JLC reference.
     # It cannot step in y — the sibling barrel is 1.195mm south and U2.8's
     # pad 1.5mm north — so it steps WEST along C27.2's own y, off the end
     # of the pad: 0.200mm of hole clearance to C27.2's west edge
     # (106.475), 1.83mm to the nearest different-net copper, and still
-    # inside the In2.Cu +5V island.
+    # inside the In2.Cu island. (The island is +5V_VOUT since the SW16
+    # respin; the geometry argument is unchanged, C27 moved net with it.)
     _vout_via_c = (106.10, ip_vout[1] - 1.5)   # (106.10, 39.095)
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1] - 1.5, _vout_via_c[0], _vout_via_c[1],
-                       "B.Cu", W_PWR, n_5v))
-    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v))
+                       "B.Cu", W_PWR, n_5v_vout))
+    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v_vout))
     _vout_via_w = (105.60, ip_vout[1])          # (105.60, 40.595)
     _vout_via_s = (ip_vout[0] + 0.5, 37.90)     # (107.50, 37.90)
     parts.append(_seg(ip_vout[0], ip_vout[1], _vout_via_w[0], _vout_via_w[1],
-                       "B.Cu", W_PWR, n_5v))
-    parts.append(_via_net(_vout_via_w[0], _vout_via_w[1], n_5v))
+                       "B.Cu", W_PWR, n_5v_vout))
+    parts.append(_via_net(_vout_via_w[0], _vout_via_w[1], n_5v_vout))
     parts.append(_seg(_vout_via_s[0], ip_vout[1] - 1.5, _vout_via_s[0], _vout_via_s[1],
-                       "B.Cu", W_PWR, n_5v))
-    parts.append(_via_net(_vout_via_s[0], _vout_via_s[1], n_5v))
+                       "B.Cu", W_PWR, n_5v_vout))
+    parts.append(_via_net(_vout_via_s[0], _vout_via_s[1], n_5v_vout))
     # U3 buck input: C1 (C_IN) taps the In2.Cu +5V pour through its own via
     # pair; see _buck_traces(). No dedicated VIN via here any more.
 
@@ -1008,35 +1017,44 @@ def _power_traces():
     parts.append(_seg(107.8, CORRIDOR_Y, 116.95, CORRIDOR_Y,
                        "B.Cu", W_BAT_CORRIDOR, n_bat))  # corridor → C18.1 stub
 
-    # ── KEY: IP5306 pin 5 -> R16 pull-up to +5V ─────────────
-    # B.Cu route from KEY pin down to R16 area
+    # ── KEY: IP5306 pin 5 -> C33 wake cap (SW16 respin) ─────────────
+    # This copper is R16's, verbatim. R16 was a 100k pull-up from KEY to
+    # +5V; it is DELETED (see hardware/datasheet_specs.py for the full
+    # argument — in one sentence, on the new LOAD-side +5V it inverts into
+    # a 100k pull-DOWN whenever the switch is OFF and holds KEY asserted).
+    # C33, the 1uF wake cap, takes over the same footprint site, so the KEY
+    # leg keeps R16's proven Z-route and the far leg keeps its via — which
+    # now lands on the PWR_SW F.Cu corridor instead of tapping the +5V pour.
+    #
     # DFM v2: KEY pin at (107, 44.405), pad 4 at (113, 44.405). Direct horizontal crosses pad 4.
-    # Route with Z-shape: R16→down to safe Y, horizontal to KEY X, vertical to KEY pin.
-    r16_p1 = _pad("R16", "1")
-    r16_p2 = _pad("R16", "2")
-    if r16_p2 and ip_key:
-        # R16 pin 2 -> IP5306 KEY (pin 5) via B.Cu Z-route (avoid pad 4 at y=44.405)
+    # Route with Z-shape: C33→down to safe Y, horizontal to KEY X, vertical to KEY pin.
+    c33_p1 = _pad("C33", "1")   # PWR_SW side  (115.95, 52.5)
+    c33_p2 = _pad("C33", "2")   # IP5306_KEY side (114.05, 52.5)
+    n_pwr_sw = NET_ID["PWR_SW"]
+    if c33_p2 and ip_key:
+        # C33 pin 2 -> IP5306 KEY (pin 5) via B.Cu Z-route (avoid pad 4 at y=44.405)
         # DFM: was +1.0 (y=45.405) — crossed GND vertical at x=112.4 (y=43.5-45.5).
         # +2.2 gives y≈46.6, above GND vert top (45.5+0.25=45.75).
         key_safe_y = ip_key[1] + 2.2
-        parts.append(_seg(r16_p2[0], r16_p2[1], r16_p2[0], key_safe_y,
+        parts.append(_seg(c33_p2[0], c33_p2[1], c33_p2[0], key_safe_y,
                            "B.Cu", W_SIG, n_key))
-        parts.append(_seg(r16_p2[0], key_safe_y, ip_key[0], key_safe_y,
+        parts.append(_seg(c33_p2[0], key_safe_y, ip_key[0], key_safe_y,
                            "B.Cu", W_SIG, n_key))
         parts.append(_seg(ip_key[0], key_safe_y, ip_key[0], ip_key[1],
                            "B.Cu", W_SIG, n_key))
-    if r16_p1:
-        # R16 pin 1 -> +5V via (pull-up for always-on)
-        # DFM FIX: via x=114.95 too close to R16[2] pad (gap=0.10mm).
-        # Shift via RIGHT to x=115.25: gap to R16[2] right edge (114.55) =
-        # 115.25-0.30-114.55 = 0.40mm ✓. Gap to C18 pad2 (117.05-0.50=116.55) =
-        # 116.55-115.25-0.45 = 0.85mm ✓.
-        _r16_via_x = r16_p1[0] - 0.70  # 115.25 — clears R16[2] and C18
-        parts.append(_seg(r16_p1[0], r16_p1[1], _r16_via_x, r16_p1[1],
-                           "B.Cu", W_PWR, n_5v))
-        parts.append(_seg(_r16_via_x, r16_p1[1], _r16_via_x, r16_p1[1] + 2,
-                           "B.Cu", W_PWR, n_5v))
-        parts.append(_via_net(_r16_via_x, r16_p1[1] + 2, n_5v))
+    if c33_p1:
+        # C33 pin 1 -> PWR_SW via, the east end of the F.Cu corridor that
+        # carries the switch node across the board (see _pwr_switch_traces).
+        # Position is R16's, and the clearance proof is R16's:
+        # via x=114.95 was too close to the west pad (gap=0.10mm); at
+        # x=115.25 the gap to the west pad's right edge (114.55) is
+        # 115.25-0.30-114.55 = 0.40mm ✓, and to C18 pad2 (117.05-0.50=116.55)
+        # it is 116.55-115.25-0.45 = 0.85mm ✓.
+        _c33_col_x = c33_p1[0] - 0.70  # 115.25 — clears C33[2] and C18
+        parts.append(_seg(c33_p1[0], c33_p1[1], _c33_col_x, c33_p1[1],
+                           "B.Cu", W_SIG, n_pwr_sw))
+        parts.append(_seg(_c33_col_x, c33_p1[1], _c33_col_x, 55.60,
+                           "B.Cu", W_SIG, n_pwr_sw))
 
     # ── +3V3 rail source ──────────────────────────────────────────
     # The +3V3 In2.Cu plane is fed by the buck output via pair placed on the
@@ -1358,46 +1376,74 @@ def _power_traces():
     parts.append(_via_net(_r24_gnd_via_x, r24_2[1], n_gnd,
                           size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # ── Power switch -> BAT+ junction ──────────────────────────
-    # DFM FIX v1: was F.Cu long vertical at x=39.25, y=46.13..70.05.
-    # This crossed D-pad button F.Cu horizontals at y=62,63,64,65.
-    # Fix: use B.Cu for the long vertical — button channels are F.Cu so no conflict.
-    # DFM FIX v2: SPK+ B.Cu vertical at x=39.5 (to SPK1 pad 1) overlaps BAT+ B.Cu at x=39.25.
-    # Gap = |39.5-39.25| - (0.5+0.3)/2 = 0.25-0.40 = -0.15mm OVERLAP (y=46.135..52.5).
-    # Fix: after the via at (sw_com[0], sw_via_y), switch to a separate column x=38.0
-    # for the long B.Cu vertical.  Gap to SPK+ at x=39.5: 1.5-0.40=1.1mm CLEAR.
-    # Note x=38.0 is clear of D-pad buttons (leftmost at x=9.0 area) and LED pads.
-    BAT_COL_X = 38.0  # DFM: separate column for long B.Cu vertical (avoids SPK+ at x=39.5)
-    sw_via_y = sw_com[1] - 2  # short B.Cu stub down from switch pad
-    # R17 (2026-04-12): the vestigial _via_net at (sw_com[0], sw_via_y) was
-    # left over from "DFM FIX v1" (when this leg ran on F.Cu). The current
-    # routing is pure B.Cu — sw_com → (sw_com.x, sw_via_y) → (BAT_COL_X,
-    # sw_via_y) → ... — so the via served no layer transition and KiCad DRC
-    # flagged it as via_dangling. Removed.
+    # ── SW16: the switch node, and the BAT+ stub that is now gone ─────
+    #
+    # WHAT WAS HERE: a W_PWR_HIGH branch of BAT+ that left the rail at
+    # x=80, ran 42 mm west on F.Cu at y=46.135, climbed the x=38 column
+    # and dead-ended on SW16 pad 2. It was the entire electrical
+    # relationship the switch had with the board: pads 1 and 3 carried no
+    # net, so sliding it changed nothing. Deleted, in full — that stub was
+    # the bug, not a wire that needed re-purposing.
+    #
+    # WHAT IS HERE NOW: the same corridor, carrying PWR_SW, the Q2 gate
+    # control node. Three things are deliberate.
+    #
+    #  1. It runs on F.Cu for the long haul. F.Cu references the
+    #     continuous In1.Cu GND pour, so a net that crosses the whole
+    #     board never meets the In2.Cu +5V/+5V_VOUT seam. On B.Cu it
+    #     would cross it, and a seam between two rails that differ by 5 V
+    #     in the OFF state is a real return-path break.
+    #  2. y=54.35 is a MEASURED corridor, not a guess: on F.Cu it is
+    #     clear from x=36 to x=110.3 with nothing in it at all, the only
+    #     unobstructed full-width band on the board. J3's tabs start at
+    #     y=54.95 (0.425 mm below) and the SPK1 pad ends at y=54.0.
+    #  3. It is W_SIG. PWR_SW carries the gate's leakage and R34's 0.8 uA
+    #     — it is a control node, and calling it a power net would put a
+    #     0.5 mm minimum on 70 mm of copper for no reason.
+    SW_COL_X = 38.0    # the freed BAT+ column; SPK+ at x=39.5 is 1.5 mm east
+    PWR_SW_FCU_Y = 54.35
+    sw_via_y = sw_com[1] - 2   # 68.3 — short B.Cu stub north from the pad
     parts.append(_seg(sw_com[0], sw_com[1], sw_com[0], sw_via_y,
-                       "B.Cu", W_PWR_HIGH, n_bat))
-    # B.Cu horizontal from sw_com X to separate column, then long vertical down
-    parts.append(_seg(sw_com[0], sw_via_y, BAT_COL_X, sw_via_y,
-                       "B.Cu", W_PWR_HIGH, n_bat))
-    # R13-CU-CLR FIX (2026-04-11): split vert into 3 pieces — taper to W_PWR
-    # where it passes SPK1.1 pad (x=39.50, y=52.50, 2.0x3.0 → pad AABB
-    # x=38.50..40.50, y=51..54). At W_PWR_HIGH (0.76) the right edge 38.38 had
-    # only 0.12mm gap to pad left edge 38.50 (violation #3 in verify_copper_clearance).
-    # W_PWR (0.60) → right edge 38.30, gap 0.20mm ✓. Keep W_PWR_HIGH elsewhere
-    # for full battery-current rating on long run. Taper band y=50..55 is
-    # purely the SPK1 pad zone. Note sw_via_y ≈68.3 (top), bat_via_y ≈44.9 (bottom).
-    _spk_taper_top = 55.0  # y decreases going down toward bat_via_y
-    _spk_taper_bot = 50.0
-    parts.append(_seg(BAT_COL_X, sw_via_y, BAT_COL_X, _spk_taper_top,
-                       "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(BAT_COL_X, _spk_taper_top, BAT_COL_X, _spk_taper_bot,
-                       "B.Cu", W_PWR, n_bat))
-    parts.append(_seg(BAT_COL_X, _spk_taper_bot, BAT_COL_X, bat_via_y,
-                       "B.Cu", W_PWR_HIGH, n_bat))
-    # F.Cu horizontal from BAT_COL_X to approach via (at bat_via_y level)
-    parts.append(_via_net(BAT_COL_X, bat_via_y, n_bat))
-    parts.append(_seg(BAT_COL_X, bat_via_y, bat_approach_x, bat_via_y,
-                       "F.Cu", W_PWR_HIGH, n_bat))
+                       "B.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(sw_com[0], sw_via_y, SW_COL_X, sw_via_y,
+                       "B.Cu", W_SIG, n_pwr_sw))
+    # B.Cu column north to the corridor. It stays on B.Cu for exactly the
+    # reason the old stub did: the D-pad button channels at y=62..65 are
+    # F.Cu, so this column passes under them. At W_SIG (0.25) the SPK1 pad
+    # taper the old W_PWR_HIGH run needed is unnecessary — right edge
+    # 38.125 against the pad's left edge 38.50 is 0.375 mm.
+    parts.append(_seg(SW_COL_X, sw_via_y, SW_COL_X, PWR_SW_FCU_Y,
+                       "B.Cu", W_SIG, n_pwr_sw))
+    parts.append(_via_net(SW_COL_X, PWR_SW_FCU_Y, n_pwr_sw,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    # The long F.Cu run, split at the R34 drop so both junctions are real
+    # endpoints (verify_dangling_copper measures endpoints, not overlaps).
+    # VBUS's F.Cu column at x=111.0 (y 49.75..61.0) cuts the corridor, so
+    # it ends 1.0 mm short of it and continues on B.Cu — see
+    # _pwr_switch_traces, which picks the net up at this endpoint.
+    _PWR_SW_FCU_END = 110.0
+    # Split at R34's drop: verify_dangling_copper measures ENDPOINTS, not
+    # overlaps, so a branch that T's into the middle of this run reads as
+    # copper ending in air even though it is fabricated connected.
+    _R34_TAP_X = 85.15
+    parts.append(_seg(SW_COL_X, PWR_SW_FCU_Y, _R34_TAP_X, PWR_SW_FCU_Y,
+                       "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(_R34_TAP_X, PWR_SW_FCU_Y, _PWR_SW_FCU_END, PWR_SW_FCU_Y,
+                       "F.Cu", W_SIG, n_pwr_sw))
+
+    # SW16 pad 1 -> GND. This is the ON position: grounding the common
+    # pulls PWR_SW to 0 V, the R32/R33 divider puts Q2's gate 4.55 V below
+    # its source and the load rail comes up. Pad 3 is left OPEN on purpose
+    # — with the throw open, R34 alone defines the node (see R34 below),
+    # which is what keeps the switch down to ONE net across the board.
+    sw_on = _pad("SW16", "1")     # (42.25, 70.3)
+    if sw_on:
+        parts.append(_seg(sw_on[0], sw_on[1], sw_on[0], sw_on[1] - 1.6,
+                           "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(sw_on[0], sw_on[1] - 1.6, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    parts.extend(_pwr_switch_traces())
 
     # USB CC pull-down resistor GND traces are in _usb_traces()
 
@@ -1452,6 +1498,146 @@ def _power_traces():
                         "F.Cu", W_PWR_HIGH, n_5v))
     parts.append(_via_net(_bridge_x_west, _bridge_y, n_5v,
                           size=VIA_STD, drill=VIA_STD_DRILL))
+
+    return parts
+
+
+def _pwr_switch_traces():
+    """Q2 high-side +5V load switch, its gate network and the KEY wake path.
+
+    The rail split, in one picture (B.Cu unless noted):
+
+        U2.8 ==3 vias==> [In2 +5V_VOUT island] ==vias==> Q2.S
+                                                            |
+                              R32 100k --+-- C32 100nF      | channel
+                                         |                  v
+                                    Q2.G-+-- R33 10k --PWR_SW    Q2.D ==vias==> [In2 +5V island] ==> loads
+                                                          |
+                                              R34 4.7M --BAT+
+                                              C33 1uF ---IP5306_KEY
+                                                          |
+                                                       SW16.2 (common)
+                                                       SW16.1 -> GND (ON)
+
+    EVERY B.CU TRACE HERE STAYS ON ONE SIDE OF THE y=45 PLANE SEAM.
+    Q2 straddles it so each pad vias straight down into its own plane;
+    the gate network is entirely north of it; PWR_SW crosses only on
+    F.Cu, which references the continuous In1.Cu GND pour. That is not
+    tidiness — with the switch OFF the two halves of the old +5V rail sit
+    5 V apart, so a B.Cu run crossing the seam would be a genuine broken
+    return path, and verify_reference_plane is right to count them.
+    """
+    parts = []
+    _init_pads()
+    n_5v = NET_ID["+5V"]
+    n_5v_vout = NET_ID["+5V_VOUT"]
+    n_gate = NET_ID["PWR_SW_GATE"]
+    n_pwr_sw = NET_ID["PWR_SW"]
+    n_bat = NET_ID["BAT+"]
+    n_gnd = NET_ID["GND"]
+    n_key = NET_ID["IP5306_KEY"]
+
+    q2_g = _pad("Q2", "1")     # (117.25, 43.90) PWR_SW_GATE
+    q2_s = _pad("Q2", "2")     # (119.15, 43.90) +5V_VOUT
+    q2_d = _pad("Q2", "3")     # (118.20, 46.10) +5V
+    r32_1, r32_2 = _pad("R32", "1"), _pad("R32", "2")
+    c32_1, c32_2 = _pad("C32", "1"), _pad("C32", "2")
+    r33_1, r33_2 = _pad("R33", "1"), _pad("R33", "2")
+    r34_1, r34_2 = _pad("R34", "1"), _pad("R34", "2")
+
+    for ref, pin, net in (
+        ("Q2", "1", n_gate), ("Q2", "2", n_5v_vout), ("Q2", "3", n_5v),
+        ("R32", "1", n_gate), ("R32", "2", n_5v_vout),
+        ("C32", "1", n_gate), ("C32", "2", n_5v_vout),
+        ("R33", "1", n_gate), ("R33", "2", n_pwr_sw),
+        ("R34", "1", n_pwr_sw), ("R34", "2", n_bat),
+        ("C33", "1", n_pwr_sw), ("C33", "2", n_key),
+        ("SW16", "1", n_gnd), ("SW16", "2", n_pwr_sw),
+    ):
+        _PAD_NETS[(ref, pin)] = net
+
+    # ── +5V_VOUT: plane -> Q2 source ──────────────────────────────
+    # The boost's 2 A arrives on the In2 sub-island; these barrels are the
+    # only way back up to the B.Cu source pad, so they carry the whole
+    # rail. Sized the way the BAT+ transition was: 0.85 OD / 0.45 drill is
+    # 0.949 A each, and three of them is 2.847 A against the 2.150 A the
+    # +5V loads take.
+    _s_via_ys = (43.90, 42.85, 41.80)
+    parts.append(_seg(q2_s[0], q2_s[1], q2_s[0], _s_via_ys[-1],
+                       "B.Cu", W_PWR_HIGH, n_5v_vout))
+    for _y in _s_via_ys:
+        parts.append(_via_net(q2_s[0], _y, n_5v_vout, size=0.85, drill=0.45))
+
+    # ── +5V: Q2 drain -> plane ────────────────────────────────────
+    # Same current, same three barrels, on the load side of the seam.
+    # South is the only free direction: BAT+ runs west of the drain at
+    # y=46.1 and the island's east edge is 2.1 mm away.
+    _d_via_ys = (46.10, 47.15, 48.20)
+    parts.append(_seg(q2_d[0], q2_d[1], q2_d[0], _d_via_ys[-1],
+                       "B.Cu", W_PWR_HIGH, n_5v))
+    for _y in _d_via_ys:
+        parts.append(_via_net(q2_d[0], _y, n_5v, size=0.85, drill=0.45))
+
+    # ── Gate node: one straight column at x=117.25 ────────────────
+    # Q2's gate pad and pad 1 of R32, R33 and C32 all sit on this x, so
+    # the gate is a single vertical run. Entirely inside the +5V_VOUT
+    # island — the gate is referenced to the SOURCE, and a gate network
+    # that lost its reference when Q2 opened would float the switch.
+    _GATE_X = q2_g[0]
+    _gate_ys = sorted({q2_g[1], r32_1[1], r33_1[1], c32_1[1]})
+    for _ya, _yb in zip(_gate_ys, _gate_ys[1:]):
+        parts.append(_seg(_GATE_X, _ya, _GATE_X, _yb, "B.Cu", W_SIG, n_gate))
+
+    # ── Gate return: R32.2 and C32.2 -> +5V_VOUT plane ────────────
+    for _p in (r32_2, c32_2):
+        parts.append(_via_net(_p[0], _p[1], n_5v_vout,
+                              size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # ── PWR_SW: corridor -> R34 -> R33 ────────────────────────────
+    # Three obstacles decide this path and each one is a wall, not a
+    # preference:
+    #   * VBUS's F.Cu column at x=111 cuts the y=54.35 corridor, so the
+    #     corridor stops at x=110.0 and steps around L1 on B.Cu.
+    #   * BAT+ runs unbroken on B.Cu at y=46.1 from x=107.8 to 116.95, so
+    #     nothing on B.Cu gets from south to north anywhere near here.
+    #   * the In2 plane seam is at y=45. Crossing it on F.Cu costs
+    #     nothing (F.Cu references the continuous In1 GND pour); crossing
+    #     it on B.Cu would be a real return-path break.
+    # So: B.Cu up to R34, then F.Cu over BAT+ and over the seam to R33.
+    parts.append(_via_net(110.0, 54.35, n_pwr_sw, size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(110.0, 54.35, 110.0, 55.60, "B.Cu", W_SIG, n_pwr_sw))
+    # The east leg picks up C33's wake-cap pad; that column is C33's own.
+    parts.append(_seg(110.0, 55.60, 115.25, 55.60, "B.Cu", W_SIG, n_pwr_sw))
+    # North of BAT+ the net has to be on F.Cu, so it leaves the corridor
+    # again at x=112.95 and climbs to R33.
+    parts.append(_via_net(112.95, 55.60, n_pwr_sw, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    # VBUS's F.Cu run at y=49.75 is the one wall in this column, so the
+    # net ducks under it on B.Cu between y=50.6 and y=48.9. That hop is
+    # entirely inside the +5V island (both ends are south of the y=45
+    # seam), so it crosses no plane boundary either.
+    parts.append(_seg(112.95, 55.60, 112.95, 50.60, "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_via_net(112.95, 50.60, n_pwr_sw, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(112.95, 50.60, 112.95, 48.90, "B.Cu", W_SIG, n_pwr_sw))
+    parts.append(_via_net(112.95, 48.90, n_pwr_sw, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(112.95, 48.90, 112.95, 43.20, "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(112.95, 43.20, r33_2[0], 43.20, "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(r33_2[0], 43.20, r33_2[0], r33_2[1], "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_via_net(r33_2[0], r33_2[1], n_pwr_sw,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # ── R34: PWR_SW tap off the corridor, BAT+ up to Q1's source ──
+    # Pad 1 drops a via straight onto the F.Cu corridor 1.55 mm away; pad 2
+    # climbs to the BAT+ channel at y=52.9, east of where BAT_IN turns off
+    # toward J3 (that run ends at x=85.0, 1.75 mm west of this column).
+    parts.append(_via_net(r34_1[0], r34_1[1], n_pwr_sw,
+                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(r34_1[0], r34_1[1], r34_1[0], 54.35, "F.Cu", W_SIG, n_pwr_sw))
+    # W_PWR and not W_SIG: this leg carries 1.3 uA, but it is BAT+ copper
+    # and BAT+ is a Power High net. Widening 3 mm of trace is cheaper than
+    # an allowlist entry, and an allowlist entry on the battery rail is
+    # exactly the kind of exception that stops being read.
+    parts.append(_seg(r34_2[0], r34_2[1], r34_2[0], 52.90, "B.Cu", W_PWR, n_bat))
+    parts.append(_seg(r34_2[0], 52.90, 85.95, 52.90, "B.Cu", W_PWR, n_bat))
 
     return parts
 
@@ -1531,5 +1717,41 @@ def _power_zones():
     ]
     parts.append(P.zone_fill("In2.Cu", v5_pam_pts, NET_ID["+5V"], "+5V",
                              priority=2))
+
+    # ── +5V_VOUT sub-island (SW16 respin) ─────────────────────────────
+    # Q2 breaks the +5V rail between the IP5306 boost and every load, and
+    # 2 A cannot be woven from U2.8 across to Q2 on B.Cu: the VBUS column
+    # at x=111, U2's own pad ring and the LCD bus box the boost output in
+    # on every side. So the boost output travels east on the PLANE, in its
+    # own island carved out of the +5V pour at a higher priority.
+    #
+    # THE BOUNDARY IS WHERE IT IS BECAUSE NOTHING CROSSES IT.
+    # Every existing B.Cu run in this corner was checked against the two
+    # cut lines before they were chosen:
+    #   y=45, x 105..120.3 — U2's pads and the whole VBUS column
+    #     (110.95, y 35..40.6) sit north of it; BAT+ (y=46.1), the KEY
+    #     run (y=46.605) and everything below sit south. LX leaves the
+    #     island westward at y=41.865, which is the crossing it already
+    #     had at x=105 and is unchanged.
+    #   x=120.3, y 35..45 — R27's backlight pads start at x=120.8 and its
+    #     LED_BLA run is at x=121.7, so the east cut clears both. 120.3 is
+    #     also the furthest east the pour may go and still keep the 0.5 mm
+    #     zone clearance to R27's pad.
+    # The only B.Cu that crosses either line is Q2 itself, which straddles
+    # y=45 on purpose so each pad vias into its own plane.
+    #
+    # The +5V remainder stays ONE piece: the x 120.3..123 strip runs the
+    # full height and ties the y>45 block to the y<45 block east of the
+    # cut. verify_power_net_integrity is the gate that holds this — if a
+    # future edit pinches that strip, +5V resolves into two groups and the
+    # board is dead, which is exactly the R22-CRIT-1 failure above.
+    V5_VOUT_EAST = 120.3
+    V5_VOUT_SOUTH = 45.0
+    v5_vout_pts = [
+        (105, 35), (V5_VOUT_EAST, 35),
+        (V5_VOUT_EAST, V5_VOUT_SOUTH), (105, V5_VOUT_SOUTH),
+    ]
+    parts.append(P.zone_fill("In2.Cu", v5_vout_pts, NET_ID["+5V_VOUT"],
+                             "+5V_VOUT", priority=3))
 
     return parts

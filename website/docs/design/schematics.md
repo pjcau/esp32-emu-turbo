@@ -95,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines.
+USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines. The respin adds the **SW16 power switch network** — Q2 high-side P-MOSFET splitting `+5V_VOUT` from `+5V`, its gate network (R32/R33/C32/R34) and the IP5306 KEY wake cap C33 with the DNP SW17 button.
 
 <div className="schematic-container">
 
@@ -111,7 +111,7 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | J3 | JST PH 2-pin SMD connector | C295747 | LiPo battery connector (surface-mount, no through-holes) | [PDF](/datasheets/J3_JST-PH-2pin_C173752.pdf) — *THT sibling C173752; only the mating dimensions apply* |
 | F1 | PTC resettable fuse | 2 A hold, 1812 (C960026) | VBUS input overcurrent protection: J1 delivers on **VBUS_IN**, the board's VBUS is reached through F1 (R3-HIGH-4 fix, in design since `1c3ded4`) | — |
 | R1, R2 | Resistor | 5.1 kΩ | CC1/CC2 pull-down (UFP identification) | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
-| R16 | Resistor | 100 kΩ | IP5306 KEY pin pull-down | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| ~~R16~~ | Resistor | 100 kΩ | IP5306 KEY **pull-UP to +5V** — it was never a pull-down, and it was off-datasheet from the start (the IP5306 reference schematic shows KEY with a button to GND and an *internal* pull-up, no external one). **DELETED in the respin**; on the new load-side +5V it would invert into a 100 kΩ pull-*down* whenever the switch is OFF, holding KEY asserted. See the caution below | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R17 | Resistor | 1 kΩ | LED1 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | R18 | Resistor | 1 kΩ | LED2 current limiting | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | U2 | IP5306 module | — | LiPo charger + 5V boost (charge-and-play) | [PDF](/datasheets/U2_IP5306_C181692.pdf) |
@@ -121,10 +121,17 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | R22, R23 | Resistor | 22 Ω 0402 (C25092) | USB D+/D− series resistors | — |
 | Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
 | R24 | Resistor | 100 kΩ | Q1 gate pull-down (MOSFET ON for correct polarity) | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| Q2 | P-MOSFET | SI2301CDS SOT-23 (C10487) | **Respin** — high-side power switch on the +5V rail: source on **+5V_VOUT**, drain on **+5V**, gate on **PWR_SW_GATE**. Same part as Q1. The body diode points loads→VOUT, so it blocks in the OFF state | — |
+| R32 | Resistor | 100 kΩ | **Respin** — Q2 gate pull-up, PWR_SW_GATE → +5V_VOUT. Sets the **default state to OFF** | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| R33 | Resistor | 10 kΩ (C17414) | **Respin** — series gate resistor, PWR_SW → PWR_SW_GATE; sets the soft-start slope | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
+| R34 | Resistor | 4.7 MΩ (C193973) | **Respin** — PWR_SW → BAT+. Defines the switch node when the throw is open and keeps C33 pre-charged. **Not 1 MΩ** — see the caution below | — |
+| C32 | Capacitor | 100 nF (C49678) | **Respin** — Q2 gate-source cap, PWR_SW_GATE → +5V_VOUT: soft-start / inrush limiter. (Not to be confused with C31, which is the ESP32 EN reset cap on Sheet 2 and is untouched) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| C33 | Capacitor | 1 µF (C28323) | **Respin** — wake cap, PWR_SW → IP5306_KEY: AC-couples the switch's ON transition into KEY as a low pulse. **Value is BENCH-VALIDATE** | — |
+| SW17 | Tact switch — **DNP** | C318884 | **Respin** — IP5306_KEY → GND, the datasheet-blessed manual wake. Excluded from the CPL and marked DNP in the BOM; the land exists so the C33 RC can be tuned or bypassed on the bench | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
-| SW16 | Slide switch | MSK12C02 (C431540) — the held datasheet is MSK12C02, not the SS-12D00G3 it is often called | Power on/off — **⚠ electrically inert in ANY revision to date (v4.4.0 included), see warning below**; respin plan gates the +5V loads via a high-side P-MOSFET | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
+| SW16 | Slide switch | MSK12C02 (C431540) — the held datasheet is MSK12C02, not the SS-12D00G3 it is often called | Power on/off — **⚠ electrically inert in ANY revision to date (v4.4.0 included)**; the respin gates the +5V loads via a high-side P-MOSFET (Q2) instead, see warning below | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
 | L2 | Inductor | 2.2 µH 2.95 A (C36409) | SY8089 buck output inductor | — |
 | R25 | Resistor | 100 kΩ | Buck feedback divider, upper leg — Vout = 0.6 × (1 + R25/R26) = 3.327 V | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | R26 | Resistor | 22 kΩ (C17560) | Buck feedback divider, lower leg | — |
@@ -133,7 +140,15 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | C30 | Capacitor | 22 µF 1206 MLCC | SY8089 buck **output** — ceramic. (The tantalum C2 that lived here for the AMS1117's ESR window is deleted; it is what destroyed prototype #1, see [the incident](/docs/rework/incident-c2-reversed).) | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 | C17, C18 | Capacitor | 10 µF | IP5306/rail decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C19 | Capacitor | 22 µF | Bulk capacitor on IP5306 VOUT | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
-| C27 | Capacitor | 10 µF | IP5306 VOUT HF decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
+| C27 | Capacitor | 10 µF | IP5306 VOUT HF decoupling — moves to **+5V_VOUT** in the respin (it stays on the IP5306 side of Q2) | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
+
+*Datasheet-filename note:* shared parts reuse the first reference's
+filename, so `R16_100k-0805_C149504.pdf` is the 100 kΩ 0805 sheet for
+**R24, R25 and R32** as well. **R16 itself is deleted in the respin**, so
+the filename is now named after a part that no longer exists — it is kept
+as-is rather than renamed, because three live references link to it and
+the LCSC code (C149504) is what actually identifies the part. Rename it
+only together with all three links.
 
 ### Power Budget
 
@@ -170,90 +185,160 @@ and tie LED-A to +3V3.
 
 ### Power Path Architecture
 
+Topology of the **respin** (branch `respin/sw16-5v-switch`). The battery and
+USB front ends are unchanged; what is new is that the +5V rail is cut between
+the IP5306's VOUT pin and every load by the high-side P-MOSFET **Q2**:
+
 ```
+  MAIN PATH — the switch cuts the load rail only, never the charge path
+
                           ┌─────────────┐
   USB-C ─VBUS_IN─► F1 ────┤ pin 1 (VIN) │
   (5V)            (PTC)   │             │
-                          │   IP5306    │──pin 8 (VOUT)──► +5V ──► SY8089 ──► +3V3
-                          │             │                          (U3)       (ESP32, LCD, SD)
-  Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │
-  (3.7V)   (J3)   (RPP)   │             │──pin 7 (LX)──── L1 ────► BAT+
-                   BAT+   │   pin EP    │
-                          └──────┬──────┘
-                                GND
+                          │   IP5306    │            +5V_VOUT       +5V
+                          │    (U2)     │──pin 8──┬────────► Q2 ──────┬──► SY8089 ──► +3V3
+  Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │ (VOUT)  │       (PMOS)      │     (U3)   (ESP32, LCD, SD)
+  (3.7V)   (J3)   (RPP)   │             │        C27                  ├──► PAM8403 (U5)
+                   BAT+   │             │──pin 7 ── L1 ──► BAT+       └──► R27 ──► backlight
+                          │             │  (LX)
+                          │ pin 5 (KEY) │
+                          └───┬─────┬───┘
+                            KEY     GND
+                              │
+  GATE NETWORK — SW16 does nothing but pull PWR_SW to GND
 
-  SW16 (slide switch): common pin tapped on BAT+ as a stub — throw pins unrouted (see warning)
+                    +5V_VOUT
+                        │
+             ┌──────────┴──────────┐
+            R32 100k             C32 100nF        default = OFF; C32 = soft start
+             │                     │
+             └──────────┬──────────┘
+                        │
+                  PWR_SW_GATE ──────────────────► Q2 gate
+                        │
+                      R33 10k                     τ = (R32‖R33)·C32 = 0.909 ms
+                        │
+      ┌─────────────────┴─────────────────┬──────────────────┐
+      │                                   │                  │
+   SW16 pad 2                        R34 4.7M            C33 1µF
+   (common) = PWR_SW                     │                  │
+      pad 1 = GND  ← ON position        BAT+           IP5306_KEY
+      pad 3 = OPEN                  (defines the node    (wake pulse
+      tabs 4a–4d = mechanical        when the throw       on the ON
+      anchors (4b/4d on BTN_SELECT)  is open)             transition)
 ```
 
 **Key design points:**
 - **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail, with the **cell on the drain and the IP5306 on the source**. That direction is the protection, not a detail: a P-channel body diode conducts drain→source, so a correctly-inserted cell pre-charges the rail through the diode and then V<sub>GS</sub> = −V<sub>BAT</sub> (gate held at GND by R24) turns the channel on, while a reversed cell reverse-biases the diode *and* holds the channel off. Wired the other way round the part conducts identically in normal use and does nothing at all in the fault — which is why this shipped undetected through v4.5.0 and was fixed as R31-HIGH-1 by turning the package around.
-- **SW16** is **not functional in any revision to date** (see warning below). It was originally meant to sit between battery and IP5306 pin 6 (BAT); the respin plan now switches the **+5V output side** instead — see the warning. It does NOT control USB VBUS.
+- **Q2 (SI2301 P-MOSFET, same part as Q1)** is the actual power switch. Its **body diode points loads→VOUT**, so it blocks in the OFF direction; SW16 does nothing but pull the gate node to GND. Sliding to ON gives V<sub>GS</sub> = −4.55 V (fully enhanced); the throw open gives V<sub>GS</sub> = −0.027 V with a cell, −0.104 V with none — against a 0.45 V threshold minimum.
+- **The net split follows the board's existing precedent** — `VBUS_IN` → F1 → `VBUS`, `BAT_IN` → Q1 → `BAT+`, and now **`+5V_VOUT` → Q2 → `+5V`**. `+5V_VOUT` is the upstream net (U2 pin 8, C27, Q2 source, R32/C32); **`+5V` keeps its name and is now the LOAD-side net** (U3, U5, R27, load-side decoupling).
+- **SW16** was originally intended between battery and IP5306 pin 6 (BAT) — that plan is **rejected**, see the caution below. It is **not functional in any revision to date**, and it never controlled USB VBUS.
 - **VBUS** reaches IP5306 pin 1 (VIN) through the F1 PTC fuse (J1 → VBUS_IN → F1 → VBUS) — always available when USB is plugged in.
-- **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery/switch state.
+- **IP5306 passthrough:** when USB is connected, VBUS (5V) passes to VOUT regardless of battery state. In the respin that passthrough lands on **+5V_VOUT**, so Q2 still gates it: USB + switch OFF is a **charge-only** state, not a run state.
+- **Charging is upstream of the switch by construction.** J3 → Q1 → BAT+ → pin 6 and J1 → F1 → VBUS → pin 1 are untouched, which is exactly why OFF can kill the loads without killing the charger.
+- **The MSK12C02's contacts are not in series with the rail, and must not be.** +5V peaks around 1.5–2 A (buck plus PAM8403), well above what a slide switch of this class is rated to break; through the gate divider the contacts carry 217 µA. That is the second reason the switch drives a gate rather than the current — the first being that a switch in the cell path would break charging.
+- **Consequence for debug workflows:** OFF no longer means "system on USB with the battery isolated". With USB plugged in and SW16 OFF the board *only charges* — serial and flash need SW16 ON. Battery isolation for bench work is still "unplug J3".
 - **No backfeed diode needed:** IP5306 charger is internally regulated (CC/CV), boost is unidirectional.
 
-:::caution SW16 does not switch anything — a standing design limitation, not a build defect
-Still true in the current design (v4.4.0): PCB routing connects only the switch
-**common pin (2)** to BAT+ as a stub; throw pins 1/3 are unrouted
+:::caution SW16 does not switch anything on any board built to date — fixed in the respin
+**In every revision to date (v4.4.0 included)**, PCB routing connects only the switch
+**common pin (2)** to BAT+ as a dead stub; throw pins 1/3 are unrouted
 (`hardware/datasheet_specs.py` declares them unconnected). The battery path
 **J3 → Q1 → BAT+ → IP5306 pin 6** is continuous copper that never passes through the
-switch, so sliding it changes nothing. Consequences:
+switch, so sliding it changes nothing. Consequences on those boards:
 
-- Power-state rows with *SW16 = OFF* describe **respin design intent**, not actual
-  behavior on any board built from this design. On the fabricated board every state
-  behaves as if SW16 were ON.
-- To truly isolate the battery (e.g. for bench work), **unplug the J3 battery connector**.
-- System on/off relies on the IP5306 KEY logic (SW13/MENU via R16) and its automatic
-  light-load standby.
-- **Planned respin fix** (tracked in the RESPIN section of
-  [`docs/known-issues.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/known-issues.md)):
-  switch the **+5V output side** — a high-side P-MOSFET between IP5306 VOUT and the
-  loads (SY8089 + PAM8403), its gate pulled to GND through SW16 pins 1–2. Required
-  behavior: **ON powers everything; OFF still lets USB charge the battery; with no
-  battery installed the behavior is identical** (USB passthrough powers the loads
-  when ON). The earlier plan (battery in series through switch pins 1–2) is
-  rejected: it would block charging when OFF, and USB passthrough would keep the
-  system on regardless of the switch. The MSK12C02 contacts must not carry the
-  rail directly — the +5V peaks ~1.5–2 A, above the slide switch's contact rating;
-  through the gate divider they carry ~50 µA.
+- Every power-state row below behaves as its **SW16 = ON** row, whatever the switch
+  is set to.
+- To truly isolate the battery (e.g. for flashing), **unplug the J3 battery connector**.
+- There is no on/off mechanism at all. `IP5306_KEY = {R16.2, U2.5}` — a static
+  100 kΩ pull-up to +5V and *no button* — so the only thing that ever cuts VOUT is
+  the IP5306's automatic light-load standby, which cannot then be woken except by
+  plugging USB in. (The older claim here, *"system on/off relies on the IP5306 KEY
+  logic (SW13/MENU via R16)"*, was **false**: SW13 is the menu button and sits on
+  `MENU_K` → D1 → `BTN_START`/`BTN_SELECT`; it has nothing to do with KEY.)
+
+**Required behaviour** (user spec, decided 2026-08-03) — SW16 **ON**: everything
+powered, from the battery boost or from USB passthrough. SW16 **OFF**: all loads
+dead, *but USB still charges the battery*. **No battery installed**: identical, with
+USB passthrough powering the loads when ON.
+
+**Putting the battery in series with the switch is REJECTED.** That was the plan
+recorded here for months, and it fails for two independent reasons: (1) OFF would
+break the *charge* path too, so the board could not charge with the switch off;
+(2) with USB plugged in, the IP5306's VBUS→VOUT passthrough keeps the system running
+regardless of the battery terminal, so a battery-side switch does not actually switch
+the system off.
+
+**Implemented instead** (branch `respin/sw16-5v-switch`, full derivation in the RESPIN
+section of
+[`docs/known-issues.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/known-issues.md)):
+the +5V rail is broken between the IP5306 VOUT pin and **all** loads by the high-side
+P-MOSFET **Q2** (SI2301, same part as Q1). New net `+5V_VOUT` upstream, `+5V` keeps
+its name on the load side. SW16 pad 2 = `PWR_SW`, pad 1 = GND (the ON position),
+pad 3 open; the dead BAT+ stub is removed. Gate network: **R32** 100 kΩ pull-up to
+`+5V_VOUT` (default OFF), **R33** 10 kΩ in series, **C32** 100 nF gate-source
+(soft start, ~0.9 ms τ → ~167 mA inrush instead of amps), **R34** 4.7 MΩ from `PWR_SW`
+to `BAT+`. R34 is **not** 1 MΩ: at 1 MΩ the no-battery case lands on
+V<sub>GS</sub> = −0.45 V, *exactly* SI2301's threshold minimum, in precisely the
+USB-powered/no-cell/switch-OFF state a bench operator uses most.
+
+**The wake network is mandatory, not polish.** The IP5306 boost auto-shuts down after
+**32 s below a 45 mA load** and restarts only on a KEY press or a USB insertion
+(datasheet V1.32 §10/§12). With SW16 OFF the load behind Q2 is ~0.1 mA, so the boost
+*will* latch off every time — and flipping back to ON must therefore generate a KEY
+press by itself, or the board never comes back on battery. **C33** (1 µF from `PWR_SW`
+into `IP5306_KEY`) couples the ON transition into KEY as a low pulse; KEY is active-low
+with an internal pull-up per the datasheet reference schematic (p.11, fig. 4), and the
+chip stays alive from the cell while the boost is off. The pulse width is τ against
+that *undocumented* internal pull-up, so **the C33 value is BENCH-VALIDATE**; **SW17**
+(a real momentary button to GND, **DNP**) is the fallback and the tuning point.
+**R16 is deleted** — it was off-datasheet from the start, and on the new load-side +5V
+it would invert into a 100 kΩ pull-*down* whenever the switch is OFF, holding KEY
+asserted. `IP5306_KEY` becomes `{U2.5, C33, SW17(DNP)}`.
 :::
 
 ### Power States & Debug
 
-The table describes the **respin topology** (SW16 gates the +5V loads downstream
-of IP5306 VOUT; the VIN→BAT charge path never passes through the switch). On the
-fabricated board the switch is inert, so every state behaves as its *SW16 = ON* row.
+These rows describe the **respin** topology (Q2 gating the +5V loads).
+**On every board fabricated to date the switch is inert, so every state
+behaves as its SW16 = ON row** — see the caution above.
 
 | # | USB | SW16 | Reset | Boot | +3V3 | ESP32 | Charging | Serial | Flash |
 |---|-----|--------|-------|------|------|-------|----------|--------|-------|
-| 1 | No | OFF | — | — | OFF | OFF | No | No | No |
+| 1 | No | **OFF** | — | — | OFF | OFF | No | No | No |
 | 2 | No | ON | — | — | ON | Run | No | No | No |
 | 3 | No | ON | Press | — | ON→OFF→ON | Reset | No | No | No |
-| 4 | **Yes** | OFF | — | — | OFF | OFF | **Yes** | No | No |
+| 4 | **Yes** | **OFF** | — | — | **OFF** | **OFF** | **Yes** | No | No |
 | 5 | **Yes** | ON | — | — | ON | Run | **Yes** | **Yes** | No |
 | 6 | **Yes** | ON | Press | Hold | ON→OFF→ON | **DL mode** | Yes | No | **Yes** |
 
 **State legend:**
-- **#4:** Charge-only — the switch cuts only the +5V loads; the IP5306 keeps charging
-  the cell. Same rows apply with no battery installed (Charging column becomes "—").
-- **#5–6:** Charge-and-play and flashing need **SW16 ON**. For bench work with the
-  battery truly isolated, unplug J3 — backfeed is already handled internally by the
-  IP5306 (see the analysis below), so flashing with the battery connected is safe.
-- **DL mode:** ESP32 download mode (hold BOOT, press+release RST, release BOOT)
+- **#1:** everything dead. Q2 is open and there is no source; the board draws
+  ~0.1 mA of leakage through the gate network.
+- **#4 is charge-only** — the switch cuts *only* the +5V loads. VIN → BAT charging
+  is upstream of Q2 and stays intact, so the cell charges with the whole system
+  powered down. There is no serial and no flashing here: the ESP32 has no rail.
+- **#5 and #6 require SW16 ON.** Serial, flashing and download mode all need the
+  ESP32 powered, and on a respin board that means the switch is ON.
+- **#5:** charge-and-play — the IP5306 charges the battery AND powers the system
+  simultaneously.
+- **DL mode:** ESP32 download mode (hold BOOT, press+release RST, release BOOT).
+- **The switch is not battery isolation.** Q2 opens the load rail, not the cell;
+  true battery isolation is still **unplugging J3**.
+- **With no battery fitted the rows are identical**, with *Charging* read as "—":
+  USB passthrough feeds `+5V_VOUT`, and Q2 decides whether it reaches the loads.
 
 ### Flash & Debug Procedures
 
-**Flash firmware:**
+**Flash firmware (switch ON):**
 1. Connect USB-C cable
-2. Set SW16 to ON (respin topology — OFF cuts the +5V loads, so the ESP32 would be
-   unpowered; on every board to date the switch is inert and either position works).
-   For true battery isolation on the bench, unplug J3.
+2. **Set SW16 to ON.** On a respin board OFF cuts the +5V loads, so the ESP32 has no rail and cannot be flashed at all; on every board built to date both positions work because the switch is inert. For true battery isolation during flashing, unplug J3 — the switch never does that.
 3. Hold **SW14**, press+release **SW15**, release **SW14**
 4. Run `idf.py flash` — ESP32 enters download mode
 5. Press **SW15** to reboot into normal mode
 
 **Serial debug monitor:**
-1. Connect USB-C cable, SW16 ON (respin; both positions work on boards to date)
+1. Connect USB-C cable, SW16 **ON** (on boards built to date either position works — the switch is inert)
 2. Run `idf.py monitor` (115200 baud via USB CDC on GPIO19/20)
 3. Press **SW15** to restart — monitor auto-reconnects
 
@@ -268,7 +353,7 @@ fabricated board the switch is inert, so every state behaves as its *SW16 = ON* 
 |------|-----------|-----------|
 | VBUS → BAT+ | IP5306 internal charger | CC/CV regulated, max 1A |
 | BAT+ → VBUS | Boost unidirectional | IP5306 boost only drives BAT→VOUT |
-| USB + switch OFF | Charge-only *(respin intent — see SW16 warning; today: unplug J3)* | SW16 cuts +5V downstream of VOUT; the VIN→BAT charge path is untouched, so the cell charges with the system off |
+| USB + switch OFF | **Charge-only** (respin) | Q2 opens the +5V loads, so nothing downstream is powered; VIN → BAT charging is upstream of Q2 and untouched, so the cell still charges. This is *not* battery isolation — for that, unplug J3. On boards built to date the switch is inert and this row behaves as the one below |
 | USB + switch ON | Charge-and-play | IP5306 manages both paths internally |
 | Reversed battery | Q1 P-MOSFET RPP | Cell on the drain: the body diode is reverse-biased and the R24 gate pull-down leaves V<sub>GS</sub> positive, so channel and diode both block |
 

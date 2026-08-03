@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Power-net integrity gate — every power net must be ONE piece of copper.
 
-FAILS (exit 1) when any of +3V3 / +5V / GND / VBUS / BAT+ resolves to more
+FAILS (exit 1) when any of +3V3 / +5V / +5V_VOUT / GND / VBUS / BAT+ resolves to more
 than one geometric group on the fabricated board.
 
 Why this gate exists
@@ -64,7 +64,12 @@ from pcb_copper_graph import (  # noqa: E402
 
 # Nets that carry supply current. Every one of these must be a single piece of
 # copper — a second group means some part of the circuit has no source.
-POWER_NETS = ("+3V3", "+5V", "GND", "VBUS", "BAT+")
+# +5V_VOUT joined the list with the SW16 respin: it is the IP5306 boost
+# output upstream of the Q2 high-side load switch, and it is poured as its
+# own In2.Cu sub-island carved out of the +5V pour. That carve-out is
+# exactly the kind of edit that splits a plane (see R22-CRIT-1), so both
+# halves of the rail have to be checked, not just the load side.
+POWER_NETS = ("+3V3", "+5V", "+5V_VOUT", "GND", "VBUS", "BAT+")
 
 WIDTH = 72
 

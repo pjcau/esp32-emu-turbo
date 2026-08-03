@@ -15,6 +15,39 @@ switch cannot cut battery power). Therefore:
   C2-reversed incident was a 0 Ω short on +3V3 — on USB it is
   current-limited by F1 2A; on a 5000 mAh LiPo it is a fire risk);
 - when connecting or disconnecting the battery, unplug USB first.
+
+**This does not change on a respin board.** The `respin/sw16-5v-switch`
+fix puts Q2 on the **+5V load rail**, not on the cell: J3 → Q1 → BAT+ →
+IP5306 pin 6 is still continuous copper in both switch positions, by
+design, because that is what keeps charging alive with the switch OFF.
+So "SW16 OFF" is *never* a substitute for unplugging J3, and connecting
+the battery is still a live operation.
+:::
+
+:::info If your board is from the SW16 respin
+This page is written for a board where the switch does nothing. On a
+board built from `respin/sw16-5v-switch` the switch is real, and it gates
+the +5V loads through the high-side P-MOSFET Q2:
+
+- **SW16 OFF** — every load is dead (5V LED, 3V3 LED, HB LED all dark),
+  but **USB still charges the cell**: the charge path is upstream of Q2.
+  A charging board with a dark LED bank is the *expected* OFF state, not
+  a fault.
+- **SW16 ON** — the loads come up. There is a deliberate ~1.5 ms
+  soft-start ramp (C32 on Q2's gate) that holds inrush to ~167 mA instead
+  of amps, but it is far too fast to see: to the eye the rail is
+  instant.
+- **On battery, flipping to ON also has to wake the IP5306.** Its boost
+  latches off after 32 s under 45 mA, which the OFF state always
+  triggers, so C33 injects a KEY pulse on the ON transition. If a respin
+  board will not start from the cell after being switched off — but does
+  start the moment you plug USB in — that is the C33 wake pulse being too
+  short, and it is the one **BENCH-VALIDATE** value in the design. Fit
+  SW17 (the DNP tact next to KEY) and press it: if the board then starts,
+  the diagnosis is confirmed.
+
+**Keep SW16 ON for the whole session below.** Every stage from 1 onward
+assumes the loads are powered.
 :::
 
 ## What you need
@@ -77,6 +110,12 @@ Plug USB-C. Look at one LED only:
   another cable, then check F1 continuity and the USB-C solder. Nothing
   else on the board is meaningful while VBUS is dark.
 
+**Respin note:** the VBUS LED sits upstream of Q2, so it is lit on USB
+**in both switch positions** — that is the point of the design, and it is
+also the cheapest switch test on the board. Set SW16 OFF: VBUS stays lit
+(USB is still charging) while the 5V and 3V3 LEDs go dark. Set it back to
+ON before Stage 2.
+
 ## Stage 2 — rails, by observation
 
 Still USB only. Read the next two LEDs left to right:
@@ -112,7 +151,11 @@ matters: *did the chip boot?*
 Then connect the same USB to a PC and open the serial port: the
 bring-up firmware prints its 58-check report
 ([protocol](./bring-up-protocol.md)); `BRINGUP-SUMMARY` and
-`BRINGUP-LED` must agree with what the LED shows.
+`BRINGUP-LED` must agree with what the LED shows. **The bring-up firmware
+assumes the board is already powered — it has no model of the power
+switch and never mentions it — so on a respin board it requires SW16 ON;
+with the switch OFF there is no +3V3, the chip never boots, and there is
+no serial port to open.**
 
 ## Stage 4 — battery, at last
 
@@ -129,6 +172,25 @@ Only now, and only if Stage 3 ended green (or Stage 2 ended in the
 4. Re-plug USB with the battery in: LED1/LED2 (the IP5306 charge
    status pair) join in; charging plus running is the charge-and-play
    path. Warm is normal, hot is not.
+
+**Respin boards — the switch earns its two extra checks here**, and this
+is the only stage where they can be made, because both need a cell:
+
+5. **USB in, SW16 OFF → charge-only.** VBUS LED lit, CHG lit, and the 5V
+   / 3V3 / HB LEDs all dark. The cell charges with the system powered
+   down. If 3V3 survives the switch going OFF, Q2 is not switching —
+   suspect its orientation (SOT-23-3, source on `+5V_VOUT`) or a solder
+   bridge across it, and stop before assuming the rest of the board.
+6. **USB out, SW16 OFF for a full minute, then ON → the wake test.** One
+   minute guarantees the IP5306's 32 s light-load shutdown has fired, so
+   this exercises the C33 KEY pulse and nothing else. The board must come
+   back up on the cell alone. If it does not, but comes straight up when
+   USB is plugged in, the wake pulse is short — press SW17 if fitted, and
+   log it: **C33 is the design's one BENCH-VALIDATE value** and this is
+   the measurement that closes it.
+
+Never use the switch to "disconnect the battery" for a rework: it does
+not, by design. Unplug J3.
 
 ## Stage 5 — subsystems, one insertion at a time
 

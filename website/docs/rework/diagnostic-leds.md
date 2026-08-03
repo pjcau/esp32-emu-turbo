@@ -60,6 +60,20 @@ The staged commissioning walk-through that uses this tree end-to-end is
 - Deliberately **no LED on BAT+**: it would drain the battery
   continuously (SW_PWR is not in series on v1 — permanent invariant).
   Battery-side diagnosis stays on the gated test points (BUCK_FB, EN).
+  **This still holds on the SW16 respin**, and for the same reason: the
+  respin's switch transistor Q2 sits on the **+5V load rail**, not on the
+  cell, so BAT+ is live in both switch positions by design — that is what
+  keeps USB charging alive with the switch OFF. A BAT+ LED would burn
+  battery forever there too.
+- **On a respin board the LED bank *is* the switch test.** With the
+  switch OFF, Q2 opens the load rail and the **5V and 3V3 LEDs go dark**
+  (and HB with them, since the chip loses +3V3) — a dark bank on a
+  switched-off board is the expected reading, not a fault. The **VBUS LED
+  stays lit on USB** in both positions, because it sits upstream of Q2
+  and charging is untouched. So: VBUS lit + 5V/3V3 dark = the switch
+  works and the board is in charge-only. VBUS lit + 3V3 still lit with
+  the switch OFF = Q2 is not switching (orientation or a bridge), and
+  that is the first thing to probe.
 - GPIO15 is one of only two truly free pins on this board — the
   unassigned GPIO26-37 belong to the module's flash/octal PSRAM.
 - No enclosure light pipes: these LEDs are read with the case open

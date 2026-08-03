@@ -552,9 +552,26 @@ def _build_placements():
         p.append((ref, "10k", "R_0805",
                   43 + i * 5, 46, 0, "bottom"))
 
-    # R16: IP5306 KEY pull-down (near IP5306/L1)
-    p.append(("R16", "100k", "R_0805",
-              ix + 5, iy + 10, 0, "bottom"))
+    # ── SW16 respin: Q2 high-side +5V load switch + gate network ──
+    # R16 (the old 100k IP5306_KEY pull-up to +5V) is DELETED — on the new
+    # LOAD-side +5V it would have inverted into a pull-DOWN in the OFF
+    # state and held KEY asserted. C33 takes over its site.
+    #
+    # SW17 is deliberately ABSENT from this list. It is the DNP manual KEY
+    # wake button: its footprint and copper exist so the C33 RC can be
+    # bypassed on the bench, but JLCPCB must not populate it, and the CPL
+    # is the file that decides that. It is carried in the BOM marked DNP
+    # (see the DNP block in the BOM writer) and nowhere else.
+    from scripts.generate_pcb.routing import (
+        Q2_POS, Q2_ROT, R32_POS, R32_ROT, C32_POS, C32_ROT,
+        R33_POS, R33_ROT, R34_POS, R34_ROT, C33_POS, C33_ROT,
+    )
+    p.append(("Q2", "SI2301CDS", "SOT-23-3", *Q2_POS, Q2_ROT, "bottom"))
+    p.append(("R32", "22k", "R_0805", *R32_POS, R32_ROT, "bottom"))
+    p.append(("C32", "1uF", "C_0805", *C32_POS, C32_ROT, "bottom"))
+    p.append(("R33", "1k", "R_0805", *R33_POS, R33_ROT, "bottom"))
+    p.append(("R34", "1M", "R_0805", *R34_POS, R34_ROT, "bottom"))
+    p.append(("C33", "1uF", "C_0805", *C33_POS, C33_ROT, "bottom"))
 
     # ── Button debounce caps (y=50, x=43..98, 5mm spacing) ──
     # R9-MED-4: C20 deleted (was on dead BTN_MENU net).

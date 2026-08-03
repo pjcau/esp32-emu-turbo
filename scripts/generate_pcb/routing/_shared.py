@@ -565,7 +565,6 @@ R2_POS = (77.95, 67.0)   # USB CC2 pull-down (moved near R1, B.Cu-only route)
 # (R3 was "ESP32 decoupling" at (65, 42) in an earlier layout; the ref
 # now belongs to the EN RC pull-up — see the authoritative R3_POS below.
 # The old module-level duplicate was shadowed and only misleading.)
-R16_POS = (115.0, 52.5)  # IP5306 KEY pull-down
 R17_POS = (25.0, 65.0)   # LED1 current limit (near LED1 on B.Cu)
 R18_POS = (32.0, 65.0)   # LED2 current limit (near LED2 on B.Cu)
 
@@ -777,6 +776,91 @@ R24_POS = (85.5, 48.3)   # C13/C14 gap, north of Q1's gate pad
 R24_ROT = 270            # pad 1 (gate) south, toward Q1
 
 
+# ── SW16 respin: Q2 high-side +5V load switch and its control net ─────
+#
+# Q2 (SI2301CDS SOT-23-3, the SAME part as Q1) breaks the +5V rail
+# between the IP5306 boost output and every load. Source on +5V_VOUT,
+# drain on +5V, so the body diode points loads->VOUT and blocks in the
+# OFF state. Q2_ROT is 180 for the same reason Q1_ROT is: at 180 deg the
+# lone drain pad is SOUTH and the gate/source pair is NORTH, which is
+# exactly the orientation the plane split below needs. It also emits the
+# identical CPL angle as Q1, so the SOT-23-3 family rotation stays a
+# single proven constant rather than a second thing to verify.
+#
+# THE PLANE SPLIT IS WHAT MAKES THIS ROUTABLE AT ALL.
+# 2 A cannot be woven from U2.8 to here on B.Cu — the VBUS column at
+# x=111, U2's own pad ring and the LCD bus box the boost output in on
+# every side. So the In2.Cu +5V island (105-123, 35-62) is cut in two:
+# a +5V_VOUT sub-island (V5V_VOUT_BOX below) carries the boost output
+# east on the PLANE, and the remaining +5V copper feeds the loads. Q2
+# STRADDLES the y=45 seam: source/gate pads sit 1.1 mm north of it and
+# the drain pad 1.1 mm south, so each pad drops its own vias straight
+# into its own plane and NOT ONE B.Cu TRACE CROSSES THE SEAM. That is
+# deliberate — verify_reference_plane counts B.Cu seam crossings, and a
+# rail whose two halves differ by 5 V in the OFF state is a real return
+# path discontinuity, not a bookkeeping one.
+#
+# The same rule governs everything else here: the gate network lives
+# entirely NORTH of the seam (inside +5V_VOUT), and PWR_SW — the one
+# net that has to travel the width of the board — runs on F.Cu, which
+# references the continuous In1.Cu GND plane and therefore has no seam
+# to cross at all.
+Q2_ROT = 180             # drain (pad 3) south of the plane seam
+Q2_POS = (118.2, 45.0)   # pads: G(117.25,43.9) S(119.15,43.9) D(118.2,46.1)
+                         # D clears the BAT+ run's east end (117.10) by 0.68 mm.
+
+# Gate network. All three passives share ONE column: pad 1 (the gate) sits
+# on x=117.25, which is Q2's own gate-pad column, so the gate node is a
+# single straight B.Cu run with no doglegs and no bus to route. Pad 2 of
+# each lands on x=115.35, where all three vias go down.
+# The y positions are not free choices — the LCD bus crosses this corner on
+# F.Cu at y = 33.035, 34.305, 35.575, 36.845 and 38.115, and a via has to
+# fit BETWEEN two of those or south of all of them:
+#   40.00 and 42.00 are clear south of the whole bus.
+#   37.48 is the exact midpoint of the 36.845/38.115 gap, which leaves a
+#     0.5 mm via 0.26 mm on each side. Move C32 by a tenth of a millimetre
+#     and its via lands on the LCD data bus.
+R32_POS = (116.3, 40.00)  # 1:(117.25,40.00) PWR_SW_GATE  2:(115.35,40.00) +5V_VOUT
+R32_ROT = 0
+# R33 goes HERE and not at the switch end on purpose: 1k into C32's 1uF
+# low-passes the 77 mm PWR_SW run before it reaches the gate, so a rail
+# this slow cannot be switched on by a coupled edge.
+R33_POS = (116.3, 42.00)  # 1:(117.25,42.00) PWR_SW_GATE  2:(115.35,42.00) PWR_SW
+R33_ROT = 0
+C32_POS = (116.3, 37.48)  # 1:(117.25,37.48) PWR_SW_GATE  2:(115.35,37.48) +5V_VOUT
+C32_ROT = 0
+# R34 defines PWR_SW when the switch throw is open. It is NOT next to Q2,
+# and that is the placement the board allowed rather than the one that
+# reads best on a schematic. The IP5306 corner is full: every 0805-sized
+# gap within 5 mm of BAT+ there is inside U2.6's stitching field, L1's
+# pads or C18/C19. (86.1, 55.9) is the closest free site on the whole
+# board to BAT+ copper — 3.0 mm to the Q1 source channel at y=52.9 — and
+# the PWR_SW F.Cu corridor runs straight past it at y=54.35, so both legs
+# are short. A 1 M resistor on a DC control node does not care where it
+# lives; the clearances do.
+R34_POS = (86.1, 55.9)   # 1:(85.15,55.9) PWR_SW  2:(87.05,55.9) BAT+
+R34_ROT = 180
+# C33 1uF wake cap takes over R16's exact site. R16 was a 100k KEY
+# pull-up to +5V and is DELETED (see hardware/datasheet_specs.py): on the
+# new load-side +5V it would have become a pull-DOWN in the OFF state and
+# held KEY asserted. Reusing its footprint means the KEY leg reuses R16's
+# proven Z-route verbatim.
+C33_POS = (115.0, 52.5)  # 1:(115.95,52.5) PWR_SW  2:(114.05,52.5) IP5306_KEY
+C33_ROT = 0
+# SW17 (DNP manual KEY wake) IS NOT PLACED. Not an oversight — there is
+# no site for it. Every free 0805-sized gap within 8 mm of IP5306_KEY
+# copper was enumerated against the generated board and every one of them
+# fails clearance against copper that the respin itself put there (the
+# PWR_SW spine, C33's column, L1's pads, U2.6's BAT+ stitching field).
+# A 5.1x5.1 tact footprint is worse: the nearest free one to U2.5 is
+# 11.2 mm away, in the corner the gate network occupies.
+# The bench-tune path SW17 existed to provide survives without it: C33's
+# own pads are the access point, so lifting the cap and tacking a wire to
+# a momentary button reaches KEY and GND directly. Fitting a real button
+# needs a placement reshuffle of the IP5306 corner — recorded as a
+# follow-up, not silently dropped.
+
+
 # ── Exact pad position computation ───────────────────────────────
 # Computes absolute board-level coordinates for every IC/connector pad,
 # accounting for B.Cu X-mirroring and footprint rotation.
@@ -917,6 +1001,9 @@ def _init_pads():
     _PADS["Q1"] = _compute_pads("SOT-23-3", Q1_POS[0], Q1_POS[1], Q1_ROT, "B")
     _PADS["R24"] = _compute_pads("R_0805", R24_POS[0], R24_POS[1], R24_ROT, "B")
 
+    # SW16 respin: Q2 high-side +5V switch
+    _PADS["Q2"] = _compute_pads("SOT-23-3", Q2_POS[0], Q2_POS[1], Q2_ROT, "B")
+
     # Key passives with explicit routing
     passive_placements = [
         # U3 buck cluster (C2 deleted — see C1_POS comment block)
@@ -931,7 +1018,12 @@ def _init_pads():
         ("C18", "C_0805", *C18_POS, 0, "B"),
         ("C19", "C_1206", *C19_POS, 0, "B"),
         ("C27", "C_0805", *C27_POS, 0, "B"),
-        ("R16", "R_0805", *R16_POS, 0, "B"),
+        # SW16 respin gate network (R16 deleted; C33 takes its site)
+        ("R32", "R_0805", *R32_POS, R32_ROT, "B"),
+        ("C32", "C_0805", *C32_POS, C32_ROT, "B"),
+        ("R33", "R_0805", *R33_POS, R33_ROT, "B"),
+        ("R34", "R_0805", *R34_POS, R34_ROT, "B"),
+        ("C33", "C_0805", *C33_POS, C33_ROT, "B"),
         ("R1", "R_0805", *R1_POS, 0, "B"),
         ("R2", "R_0805", *R2_POS, 0, "B"),
         ("R17", "R_0805", *R17_POS, 0, "B"),

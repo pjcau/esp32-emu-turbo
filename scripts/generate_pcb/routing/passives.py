@@ -379,13 +379,19 @@ def _passive_traces():
     c27_p2 = _pad("C27", "2")
     if c27_p2:
         # Pad 2 (left) → +5V: reuse existing VOUT via at (107.5, 39.09)
+        # SW16 respin: C27 is the IP5306 boost's OWN output capacitor —
+        # 10uF, 2.0 mm from pin 8 — so it belongs UPSTREAM of Q2, on
+        # +5V_VOUT. It has to: with the switch OFF, Q2 opens and this is
+        # the only bulk the boost has left. C19's 22uF stays downstream,
+        # where it damps the soft-start ramp and feeds the loads.
         # R32: the VOUT barrel this taps moved west to (106.10, 39.095)
         # (see power.py) — it had to leave C27.2's pad. The stub follows
-        # it; both ends are +5V so the run crossing the pad is same-net.
+        # it; both ends are +5V_VOUT so the run crossing the pad is
+        # same-net.
         parts.append(_seg(c27_p2[0], c27_p2[1], 106.10, c27_p2[1],
-                          "B.Cu", W_PWR, NET_ID["+5V"]))
+                          "B.Cu", W_PWR, NET_ID["+5V_VOUT"]))
         parts.append(_seg(106.10, c27_p2[1], 106.10, 39.095,
-                          "B.Cu", W_PWR, NET_ID["+5V"]))
+                          "B.Cu", W_PWR, NET_ID["+5V_VOUT"]))
     if c27_p1:
         # Pad 1 (right) → GND via DOWN toward EP pad (same net, no clearance issue)
         parts.append(_seg(c27_p1[0], c27_p1[1], c27_p1[0], c27_p1[1] + 1.5,

@@ -390,38 +390,181 @@ so "v2" meant the *final product phase* in CLAUDE.md and a *release from
 Note `release_jlcpcb/README.md` still heads its history with "v3.2 (current)"
 and is six releases stale; the tag is the truth.
 
-- **SW16 does not switch anything.** Only the common pin
-  (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins
-  1/3 have no net. The path J3 → Q1 → BAT+ → IP5306 pin 6 is continuous
+- **SW16 does not switch anything.** Only the common pin (pad 2) is
+  routed, as a dead stub tap on BAT+ at (39.25, 70.3); throw pins 1/3
+  carry no net. The path J3 → Q1 → BAT+ → IP5306 pin 6 is continuous
   copper that never passes through the switch, so **the switch cannot
-  power the board down**. True isolation on the fabricated board = unplug J3.
+  power the board down** — sliding it changes nothing on any board built
+  to date, and true isolation on the fabricated board = unplug J3.
+  **Fixed in the design 2026-08-03 on branch `respin/sw16-5v-switch`**,
+  and not the way this entry used to prescribe.
 
-  **Respin: switch the +5V OUTPUT side, not the battery.** The required
-  behavior (decided 2026-08-03) is: ON = everything powered; OFF = loads
-  dead but **USB still charges the battery**; no battery installed =
-  identical, USB passthrough powers the loads when ON. The original plan
-  ("route the battery through switch pins 1–2 in series") is **rejected** —
-  it fails both halves: with the cell cut off from IP5306 pin 6, OFF would
-  also block charging, and with USB plugged the IP5306 VIN→VOUT passthrough
-  would keep the system running regardless of the switch.
+  **Load-bearing sentence, do not reword: on the fabricated board *SW16
+  is not in series* with the battery.** `vbench/buttons.py` greps this
+  file for the literal string `"SW16 is not in series"`
+  (`INVARIANT_TEXT`) and `test_vbench.py` T2.3 fails if it is missing —
+  the vbench T2.3 scenario operates the switch, observes that BAT+ and
+  +3V3 do not move, and reports that as *expected* only because this
+  record exists. Same anchor pattern as the EN RC entry below. When the
+  respin copper lands, T2.3's own expectation has to be re-derived
+  (`routed_throws` stops being empty and `common_net` stops being
+  `BAT+`) — that is a `scripts/` change, not a reason to delete this
+  sentence.
 
-  Topology that meets the requirement: leave J3 → Q1 → BAT+ → IP5306 pin 6
-  and J1 → F1 → VIN untouched; break the **+5V rail between IP5306 VOUT and
-  the loads** (SY8089 U3 + PAM8403) with a high-side P-MOSFET (same
-  SI2301 class as Q1), gate pulled to +5V by ~100 kΩ (off), pulled to GND
-  through SW16 pins 1–2 (on). Do **not** put the MSK12C02 contacts in
-  series with the rail itself: the +5V rail peaks ~1.5–2 A (buck +
-  PAM8403), above the small slide switch's contact rating — through the
-  gate divider the contacts carry only ~50 µA. Charge path and
-  no-battery passthrough are unaffected by construction, since both live
-  upstream of the cut.
+  **Required behaviour** (user spec, decided 2026-08-03):
 
-  Consequence for debug workflows: OFF no longer means "system on USB with
-  battery isolated" — with USB plugged and SW16 OFF the board only charges;
-  serial/flash need SW16 ON. Battery isolation for bench work remains
-  "unplug J3". The Power States table in
-  `website/docs/design/schematics.md` is written against THIS topology —
-  keep the two in sync.
+  - **SW16 ON** — everything powered, whether from the battery boost or
+    from USB passthrough.
+  - **SW16 OFF** — all loads dead, *but USB still charges the battery*.
+  - **No battery installed** — identical behaviour; USB passthrough
+    powers the loads when the switch is ON.
+
+  **The obvious fix — battery in series with the switch — is REJECTED.**
+  That was the old plan recorded here, and it fails for two independent
+  reasons, either one fatal on its own: (1) OFF would break the *charge*
+  path as well, so the board could not charge with the switch off, which
+  contradicts the required behaviour above; (2) with USB plugged in the
+  IP5306's VBUS → VOUT passthrough keeps the system running regardless of
+  what the battery terminal is doing, so a battery-side switch does not
+  actually switch the system off. A switch that neither powers down nor
+  charges is worse than the inert one.
+
+  **Implemented instead: the +5V rail is broken between the IP5306 VOUT
+  pin and ALL loads by a high-side P-channel MOSFET.** The battery and
+  USB front ends are untouched — J3 → Q1 → BAT_IN/BAT+ → IP5306 pin 6 and
+  J1 → F1 → VBUS stay exactly as they are, which is what preserves
+  charging in the OFF state.
+
+  **The MSK12C02's contacts are NOT in series with the rail, and must not
+  be.** The +5V rail peaks around 1.5–2 A (buck plus PAM8403), well above
+  what a small slide switch of this class is rated to break. Through the
+  gate divider the contacts carry 217 µA. That is the second reason the
+  switch drives a gate rather than the current — the first being that a
+  switch in the cell path would break charging.
+
+  **Consequence for debug workflows:** OFF no longer means "system on USB
+  with the battery isolated". With USB plugged in and SW16 OFF the board
+  *only charges* — serial and flash need SW16 ON. Battery isolation for
+  bench work is still "unplug J3". The Power States table in
+  [`website/docs/design/schematics.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/website/docs/design/schematics.md)
+  is written against this topology; keep the two in sync.
+
+  The net split follows the precedent already on this board
+  (`VBUS_IN` → F1 → `VBUS`, `BAT_IN` → Q1 → `BAT+`): **`+5V_VOUT`** is
+  the new upstream net (U2 pin 8, C27, Q2 source, the gate pull-up top),
+  and **`+5V` keeps its name as the LOAD-side net** (SY8089 buck U3,
+  PAM8403, backlight R27, load-side decoupling). New nets: `+5V_VOUT`,
+  `PWR_SW` (the switch node), `PWR_SW_GATE` (Q2's gate). `IP5306_KEY`
+  keeps its name.
+
+  | Ref | Part | Value | Function |
+  |-----|------|-------|----------|
+  | Q2 | SI2301CDS P-MOSFET, SOT-23-3, C10487 (**same part as Q1**) | — | High-side switch: source on `+5V_VOUT`, drain on `+5V`, gate on `PWR_SW_GATE`. Body diode points loads→VOUT, so it blocks in OFF |
+  | R32 | 0805, C149504 | 100 kΩ | Gate pull-up, `PWR_SW_GATE` → `+5V_VOUT`. **Default state is OFF** |
+  | R33 | 0805, C17414 | 10 kΩ | Series gate resistor, `PWR_SW` → `PWR_SW_GATE`. Sets the soft-start slope |
+  | C32 | 0805, C49678 | 100 nF | Gate-source cap, `PWR_SW_GATE` → `+5V_VOUT`. Soft-start / inrush limiter |
+  | R34 | 0805, C193973 | 4.7 MΩ | `PWR_SW` → `BAT+`. Defines the switch node in the OFF position and keeps the wake cap pre-charged |
+  | C33 | 0805, C28323 | 1 µF | Wake cap, `PWR_SW` → `IP5306_KEY`. Injects the KEY press when the switch is flipped to ON. **Value is BENCH-VALIDATE** |
+  | SW17 | tact C318884, **DNP** | — | `IP5306_KEY` → GND. Datasheet-blessed manual wake, fitted only if the RC needs tuning. Excluded from the CPL, marked DNP in the BOM |
+
+  Deleted: **R16** (was 100 kΩ, `IP5306_KEY` → `+5V`) — see below.
+
+  *Refdes note:* `C31` is **not** free — it is the ESP32-S3 EN reset cap
+  (R25-CRIT-1, `EN` → GND, asserted by name in `verify_polarity`,
+  `test_strapping_en_rc` and `test_vbench_dynamics`). The switch
+  network's two caps are therefore **C32** (gate) and **C33** (wake).
+
+  **SW16 wiring in the respin:** pad 2 (common) = `PWR_SW`; pad 1 = GND
+  (this is the ON position); **pad 3 is left OPEN**; the four shell tabs
+  4a–4d are unchanged mechanical anchors (4b/4d still sit on
+  `BTN_SELECT`). The dead BAT+ stub is removed.
+
+  **R34 hangs on the common node, not on the OFF throw** — deliberately.
+  With the throw open the node is defined by R34 in *both* switch
+  positions, so the two topologies are electrically identical; the cost
+  is 0.8 µA of standing drain while ON. The reason is routing: putting
+  R34 on the throw would need either a long thin BAT+ branch down to the
+  switch (violating the BAT+ net-class minimum width) or a *second*
+  full-width-of-board net. On the common node R34 sits next to BAT+ at
+  the IP5306 and the switch costs exactly one long net.
+
+  **How it works:**
+
+  - **ON** — pad 2 is shorted to GND, so `PWR_SW` = 0 V. The R32/R33
+    divider puts the gate at 5 × 10k/110k = **0.45 V**, i.e.
+    V<sub>GS</sub> = **−4.55 V**, and Q2 is fully enhanced (the SI2301
+    specifies R<sub>DS(on)</sub> at V<sub>GS</sub> = −4.5 V).
+  - **OFF** — pad 2 floats on its throw and the node is defined only by
+    R34 to BAT+. The chain is `+5V_VOUT` (5 V) − R32 100k − gate − R33
+    10k − `PWR_SW` − R34 4.7M − `BAT+`. With a 3.7 V cell the current is
+    0.27 µA, the gate sits at 4.973 V and V<sub>GS</sub> = −0.027 V; with
+    **no battery** (BAT+ = 0 V) it is 1.04 µA, gate 4.896 V,
+    V<sub>GS</sub> = −0.104 V. The SI2301's V<sub>GS(th)</sub> minimum
+    magnitude is 0.45 V, so the *worst* case still has **4.3× margin**
+    (16× with a cell fitted) and Q2 is off.
+
+    **R34 = 1 MΩ is rejected, and this is not a rounding preference.**
+    R34 was scoped at 1 MΩ; at that value the no-battery case divides to
+    V<sub>GS</sub> = −0.45 V — *exactly* the SI2301's V<sub>GS(th)</sub>
+    minimum, the point at which the part is specified to pass 250 µA.
+    That is an undefined-level failure, and it lands precisely in the
+    USB-powered / no-battery / switch-OFF state a bench operator uses
+    most. Recorded here because it is the kind of value that gets
+    "simplified" back later.
+  - **Soft start** — τ = (R32‖R33) × C32 = 9.09k × 100 nF = 0.909 ms on
+    turn-on. The rail ramps over roughly 1.5 ms, so inrush into the
+    ~50 µF of load-side capacitance (C1 + C30 + PAM decoupling) is
+    C·dV/dt = 50 µF × 5 V / 1.5 ms ≈ **167 mA** instead of several amps.
+    Energy deposited in Q2 during the ramp is ½CV² = 625 µJ.
+  - **Turn-off** — τ = (R32 ‖ (R33+R34)) × C32 = 9.79 ms; Q2 is fully off
+    about 23 ms after the switch moves.
+  - **Quiescent cost** — 45 µA through R32/R33 while ON, 0.8 µA through
+    R34. Negligible against a 5000 mAh cell.
+  - **Q2 thermal margin** — R<sub>DS(on)</sub> 55 mΩ at V<sub>GS</sub> =
+    −4.5 V and 25 °C, about 77 mΩ hot. At the board's worst-case
+    simultaneous +5V budget of 2.15 A that is 0.356 W; with a SOT-23
+    R<sub>θJA</sub> around 200 °C/W the junction reaches roughly 96 °C
+    against a 150 °C limit. At the realistic continuous load (~0.7 A) it
+    is 29 mW and a 6 °C rise. Drop across Q2 is 166 mV at 2.15 A and
+    42 mV at 0.7 A, so the buck still sees well over its dropout.
+
+  **Why the wake network is mandatory, not a nicety.** The IP5306 boost
+  auto-shuts down after 32 s below a 45 mA load and restarts only on a
+  KEY press or a USB insertion (datasheet V1.32 §10/§12; recorded below
+  as R30-MED-3). With SW16 OFF the load behind Q2 is about 0.1 mA, so the
+  boost **will** latch off every single time the switch is turned off.
+  Flipping back to ON therefore has to generate a KEY press by itself, or
+  the board would never come back on battery. KEY polarity is settled
+  from the datasheet reference schematic (page 11, figure 4): the button
+  connects KEY to GND, active low, with an internal pull-up — and the
+  chip stays alive from the cell while the boost is off, so this works
+  with VOUT dead. C33 (1 µF) from the switch node into `IP5306_KEY` does
+  it: flipping to ON snaps `PWR_SW` from ~4.9 V (or ~3.7 V once the boost
+  has latched off) down to 0 V, and the cap couples that step into KEY as
+  a low pulse. The pulse length is τ against the IP5306's *undocumented*
+  internal pull-up, which is exactly why the value is marked
+  BENCH-VALIDATE; the cap recharges through R34 once the boost restarts.
+  **SW17 (DNP) is the fallback and the tuning point.**
+
+  **R16 is deleted**, in this order of justification: (1) it was
+  off-datasheet from the start — the reference schematic shows KEY with a
+  button to GND and an internal pull-up, and *no* external pull-up;
+  (2) on the new load-side `+5V` it would invert into a 100 kΩ
+  pull-**down** the moment the switch is OFF (that rail is then at 0 V),
+  holding KEY asserted continuously, which is actively harmful;
+  (3) re-referencing it to `+5V_VOUT` or `BAT+` would parallel the chip's
+  internal pull-up and could only *shorten* the wake pulse — and the
+  failure mode being guarded against is a pulse that is too short, so any
+  external pull-up moves the design the wrong way; (4) removing it leaves
+  `IP5306_KEY` = {U2.5, C33, SW17(DNP)} — exactly the datasheet topology
+  plus the AC wake injection; (5) it frees the 0805 site next to KEY,
+  which C33 now occupies, so the wake network costs almost no new copper.
+
+  Every board fabricated to date still behaves as described in the first
+  paragraph — the switch is inert, every power state behaves as its ON
+  row, and unplugging J3 remains the only isolation. The deciding test
+  for the one open value is a bench measurement of the C33 wake pulse on
+  a respin proto.
 - **VBUS is fragmented into 3 components** (J1.9 / J1.11 isolated) — a
   documented, functional single-orientation workaround, allowlisted in
   `verify_net_connectivity.ACCEPTED_FRAGMENTATIONS`. Tracked as R5-CRIT-9
@@ -582,18 +725,36 @@ and is six releases stale; the tag is the truth.
   R25 pattern (spec file agreeing with the deviation) no longer applies to
   this pin.
 - **The IP5306 boost auto-shuts down after 32 s below 45 mA, and nothing
-  can wake it** (R30-MED-3, raised 2026-07-31). Datasheet V1.32 p.8/p.10:
-  the boost turns off on sustained light load and restarts only on a KEY
-  press or USB insertion. On this board net `IP5306_KEY` = {R16.2, U2.5} —
-  a static 100 k pull-up, **no button** — so a light-load shutdown on
-  battery is terminal until a cable is plugged in. Today it never triggers
-  only because the running CPU + backlight keep +5V draw above 45 mA; that
-  is an accident, not a design property (and the backlight respin above
-  would thin exactly that margin). **Firmware constraint until the respin:
-  no idle/sleep state may drop +5V draw below 45 mA** — RTC wake is
-  impossible once VOUT cuts. Respin: route KEY to a real button and/or fit
-  a keep-alive bleeder. No gate can see dynamic load; the deciding test is
-  a bench idle-current measurement on a proto.
+  can wake it** (R30-MED-3, raised 2026-07-31). **ADDRESSED IN THE DESIGN
+  2026-08-03** on branch `respin/sw16-5v-switch`. Datasheet V1.32
+  p.8/p.10: the boost turns off on sustained light load and restarts only
+  on a KEY press or USB insertion. On every board fabricated to date net
+  `IP5306_KEY` = {R16.2, U2.5} — a static 100 k pull-up, **no button** —
+  so a light-load shutdown on battery is terminal until a cable is
+  plugged in. Today it never triggers only because the running CPU +
+  backlight keep +5V draw above 45 mA; that is an accident, not a design
+  property (and the backlight respin above would thin exactly that
+  margin). **Firmware constraint on the fabricated boards: no idle/sleep
+  state may drop +5V draw below 45 mA** — RTC wake is impossible once
+  VOUT cuts. That constraint stays historically accurate for anything
+  built through `v4.5.1`.
+
+  What the respin changes is the *"and nothing can wake it"* half, i.e.
+  the "terminal until a cable is plugged in" property is gone: `R16` is
+  **deleted**, so `IP5306_KEY` is no longer a static pull-up dead end,
+  and the net becomes {U2.5, C33, SW17(DNP)} — the datasheet topology
+  plus an AC wake injection. `C33` (1 µF from the `PWR_SW` switch node)
+  couples the switch's ON transition into KEY as a low pulse, and `SW17`
+  (a real momentary button to GND, **DNP**) is the datasheet-blessed
+  manual wake fitted if the RC needs tuning. This is not optional
+  polish — the SW16 fix at the top of this section *guarantees* the
+  32 s/45 mA shutdown fires, because with the switch OFF the load behind
+  Q2 is about 0.1 mA. Full topology in that entry.
+
+  No gate can see dynamic load. The deciding test is still a bench
+  measurement on a proto: idle current on the fabricated boards, and on a
+  respin board the width of the C33 wake pulse against the IP5306's
+  undocumented internal KEY pull-up.
 - **The PDM audio line reaches the PAM8403 with no reconstruction
   low-pass** (R3-MED-2, deferred to the respin since R3 — recorded here
   2026-07-31 because it was previously only in `hardware-audit-bugs.md`

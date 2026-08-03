@@ -195,10 +195,10 @@ COMPONENT_SPECS = {
             "2":  {"net": _unconnected(),        "function": "LED1 — battery indicator 1 (unused)", "type": "smd"},
             "3":  {"net": _unconnected(),        "function": "LED2 — battery indicator 2 (unused)", "type": "smd"},
             "4":  {"net": _unconnected(),        "function": "LED3 — battery indicator 3 (unused)", "type": "smd"},
-            "5":  {"net": _exact("IP5306_KEY"),  "function": "KEY — ON/OFF key input", "type": "smd"},
+            "5":  {"net": _exact("IP5306_KEY"),  "function": "KEY — ON/OFF key input, active low with an internal pull-up (datasheet p.11 fig.4). Driven by the C33 wake cap and, if fitted, the SW17 DNP button", "type": "smd"},
             "6":  {"net": _exact("BAT+"),        "function": "BAT — battery voltage sense", "type": "smd"},
             "7":  {"net": _exact("LX"),          "function": "SW — DCDC switch node (inductor)", "type": "smd"},
-            "8":  {"net": _exact("+5V"),         "function": "VOUT — DCDC 5V output", "type": "smd"},
+            "8":  {"net": _exact("+5V_VOUT"),    "function": "VOUT — DCDC 5V output, upstream of the Q2 high-side switch (SW16 respin)", "type": "smd"},
             "EP": {"net": _exact("GND"),         "function": "PowerPAD — ground", "type": "smd"},
         },
     },
@@ -481,7 +481,15 @@ COMPONENT_SPECS = {
     # Datasheet: SW16_Slide-Switch_C431540.pdf, page 1
     # 3 signal pins + 2 shell NPTHs
     # Circuit diagram: pin 2 is common, connects to 1 or 3 based on position
-    # In our design: pin 2 = BAT+ (battery), pin 1 or 3 = switched output
+    #
+    # SW16 RESPIN (2026-08-03): pin 2 is the gate control node PWR_SW, not
+    # a dead stub on BAT+. Slid toward pin 1 (east, board interior) the
+    # common is shorted to GND, PWR_SW goes to 0 V and Q2 turns the whole
+    # +5V load rail on. Slid the other way the common lands on pin 3,
+    # which is deliberately left OPEN: the node is then defined by R34
+    # (4.7 M to BAT+) alone, so the gate sits within ~0.1 V of the source
+    # and Q2 is off. Putting the pull-up on the common node rather than on
+    # the throw is what keeps the switch to ONE long net across the board.
     # Shell pads (4a-4d) are mechanical anchors
     # ======================================================================
     "SW16": {
@@ -490,9 +498,9 @@ COMPONENT_SPECS = {
         "datasheet": "SW16_Slide-Switch_C431540.pdf",
         "datasheet_page": 1,
         "pins": {
-            "1":  {"net": _unconnected(),  "function": "Position 1 (OFF)", "type": "smd"},
-            "2":  {"net": _exact("BAT+"),  "function": "Common — battery positive", "type": "smd"},
-            "3":  {"net": _unconnected(),  "function": "Position 2 (ON)", "type": "smd"},
+            "1":  {"net": _exact("GND"),     "function": "Throw ON — grounds the common, pulling PWR_SW low so Q2 conducts", "type": "smd"},
+            "2":  {"net": _exact("PWR_SW"),  "function": "Common — Q2 gate control node (via R33)", "type": "smd"},
+            "3":  {"net": _unconnected(),    "function": "Throw OFF — deliberately open; R34 alone then defines PWR_SW", "type": "smd"},
             # Shell/anchor pads 4a-4d are mechanical retention tabs soldered to the
             # switch body. The shell metal is internally isolated from the slide
             # signal terminals (1/2/3). Pads 4b and 4d (right-side) are crossed by
@@ -824,6 +832,187 @@ COMPONENT_SPECS["R24"] = {
         "2": {"net": _exact("GND"),      "function": "Ground (gate pull-down)", "type": "smd"},
     },
 }
+
+
+# ======================================================================
+# SW16 RESPIN — high-side +5V load switch (Q2) and its control network
+#
+# The problem it fixes: SW16 was wired to nothing. Only its common pin
+# was routed, as a dead stub on BAT+, so sliding it changed no copper.
+# Putting the cell in series with the switch — the plan this replaces —
+# would have broken charging in the OFF position AND still left the
+# board running whenever USB was plugged in, because VBUS passes
+# through to the loads. Switching the +5V rail instead satisfies all
+# three required states: ON = powered, OFF = loads dead but USB still
+# charges, no cell fitted = identical behaviour on USB.
+#
+# Q2 is the SAME part as Q1 (SI2301CDS, C10487) on purpose: no new BOM
+# line, no new package family, and the SOT-23-3 CPL rotation is already
+# proven by Q1 and D1.
+#
+# GATE ARITHMETIC (the numbers this design lives or dies on)
+#
+#   ON  — SW16 shorts PWR_SW to GND. The gate divides R32/R33 between
+#         +5V_VOUT and ground: Vg = 5 x 1k/23k = 0.217 V, so
+#         Vgs = -4.78 V. SI2301 characterises Rds(on) = 55 mohm at
+#         Vgs = -4.5 V, so the part is driven past its spec point.
+#
+#   OFF — the throw is open, so the only path is R34 to BAT+:
+#             +5V_VOUT --R32 22k-- G --R33 1k-- PWR_SW --R34 1M-- BAT+
+#         3.7 V cell : I = 1.3/1.023M = 1.271 uA, Vg = 4.972, Vgs = -0.028 V
+#         4.2 V cell : I = 0.8/1.023M = 0.782 uA, Vg = 4.983, Vgs = -0.017 V
+#         no cell    : I = 5.0/1.023M = 4.888 uA, Vg = 4.892, Vgs = -0.108 V
+#         SI2301's Vgs(th) minimum magnitude is 0.45 V, so even the
+#         no-cell case has 4.2x of margin.
+#
+#         R32 IS 22k AND NOT 100k FOR EXACTLY THAT CASE, and this is the
+#         one number in the network that was got wrong first. The OFF
+#         state is a divider, Vgs = -5 x R32/(R32+R33+R34), so the gate
+#         offset is set by the RATIO. At the obvious 100k/10k/1M the
+#         no-cell arithmetic gives Vgs = -0.455 V — sitting ON the
+#         threshold minimum, where the part is specified to pass 250 uA.
+#         That is the "undefined level" failure and it appears only in
+#         the no-battery-plus-USB state, which is the state a bench
+#         operator uses most.
+#         The first fix was to raise R34 to 4.7M. It works arithmetically
+#         and it was wrong for the board: 4.7M 0805 is not a JLCPCB Basic
+#         part, so it would have added an extended-part fee and a feeder
+#         to fix a ratio. Shrinking R32 instead fixes the same ratio with
+#         parts already on this BOM (22k = C17560 = R26, 1k = C17513 =
+#         the LED series resistors) and keeps R34 on the Basic 1M.
+#         It is also better electrically twice over: a 23k gate network
+#         is far harder to disturb than a 110k one, and the ON-state
+#         divider now sits at Vgs = -4.78 V instead of -4.55 V.
+#
+#   SOFT START — tau_on = (R32||R33) x C32 = 957 ohm x 1uF = 957 us.
+#         The rail ramps over roughly 1.5 ms, so the inrush into the
+#         ~50 uF of load-side bulk (C1 + C19 + the PAM decoupling) is
+#         C dV/dt = 50u x 5/1.5m = 167 mA rather than the several amps
+#         a hard switch would draw. Energy deposited in Q2 during the
+#         ramp is 1/2 C V^2 = 625 uJ, spread over 1.5 ms.
+#         C32 is 1uF and not 100nF because the gate network shrank: at
+#         957 ohm a 100nF cap gives tau = 96 us, and a 96 us ramp puts
+#         1.7 A through Q2. The time constant is the specification here,
+#         not the capacitor value.
+#         tau_off = (R32 || (R33+R34)) x C32 = 21.5 ms; Q2 is fully off
+#         about 52 ms after the slider moves.
+#
+#   QUIESCENT — 217 uA through R32/R33 while ON, 1.3 uA through R34.
+#         The ON figure is 0.5 % of the 45 mA the IP5306 already needs to
+#         see to stay out of light-load shutdown, so it changes nothing
+#         that matters; against a 5000 mAh cell it is 0.17 % per day.
+#
+#   THERMAL — Rds(on) 55 mohm at 25 C, ~77 mohm hot. At the board's
+#         worst-case simultaneous +5V budget of 2.15 A that is 0.356 W;
+#         a SOT-23 at ~200 C/W reaches roughly 96 C junction against a
+#         150 C limit. At the realistic continuous load (~0.7 A) it is
+#         29 mW and a 6 C rise. Drop across Q2: 166 mV at 2.15 A,
+#         42 mV at 0.7 A — the buck keeps far more than its dropout.
+#
+# WAKE NETWORK (C33, and why it is not optional)
+#   The IP5306 boost shuts down after 32 s below 45 mA and restarts only
+#   on a KEY press or a USB insertion (R30-MED-3). With SW16 OFF the
+#   load behind Q2 is ~0.1 mA, so the boost WILL latch off every single
+#   time. Flipping back to ON must therefore generate a KEY press by
+#   itself. KEY is active-low with an internal pull-up and the chip
+#   stays alive from the cell while the boost is off (datasheet p.11
+#   fig.4), so a capacitor is enough: C33 couples the PWR_SW step
+#   (~4.9 V, or ~3.7 V once the boost has latched off, down to 0 V)
+#   into KEY as a low pulse, and recharges through R34 afterwards.
+#   The pulse width is tau against the IP5306's UNDOCUMENTED internal
+#   pull-up, so 1 uF is a starting value marked BENCH-VALIDATE; SW17
+#   (DNP) is the datasheet-blessed fallback and the tuning point.
+#
+# R16 IS DELETED. It was a 100k pull-up from KEY to +5V — off-datasheet
+# to begin with (the reference schematic has a button to GND and no
+# external pull-up). On the new LOAD-side +5V it would invert into a
+# 100k pull-DOWN the moment the switch is OFF, holding KEY asserted;
+# and re-referencing it to +5V_VOUT or BAT+ would only parallel the
+# internal pull-up and SHORTEN the wake pulse, which is the one
+# direction the design cannot afford.
+# ======================================================================
+COMPONENT_SPECS["Q2"] = {
+    "component": "SI2301CDS P-Channel MOSFET (+5V high-side load switch)",
+    "lcsc": "C10487",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("PWR_SW_GATE"), "function": "Gate — R32 22k pull-up to source (default OFF), R33 1k to the switch node", "type": "smd"},
+        "2": {"net": _exact("+5V_VOUT"),    "function": "Source — IP5306 VOUT side (always live while the boost runs)", "type": "smd"},
+        "3": {"net": _exact("+5V"),         "function": "Drain — load side; the body diode points loads->VOUT so it blocks in OFF", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["R32"] = {
+    "component": "22K Q2 gate pull-up (default OFF)",
+    "lcsc": "C17560",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("PWR_SW_GATE"), "function": "Q2 gate", "type": "smd"},
+        "2": {"net": _exact("+5V_VOUT"),    "function": "Q2 source — pull-up must return to the SOURCE, not to the load rail", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["R33"] = {
+    "component": "1K Q2 gate series resistor (soft-start slope)",
+    "lcsc": "C17513",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("PWR_SW_GATE"), "function": "Q2 gate", "type": "smd"},
+        "2": {"net": _exact("PWR_SW"),      "function": "Switch node (SW16 common)", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["C32"] = {
+    "component": "1uF Q2 gate-source capacitor (inrush limiter)",
+    "lcsc": "C28323",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("PWR_SW_GATE"), "function": "Q2 gate", "type": "smd"},
+        "2": {"net": _exact("+5V_VOUT"),    "function": "Q2 source", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["R34"] = {
+    "component": "1M pull to BAT+ (defines the node with the throw open)",
+    "lcsc": "C17514",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("PWR_SW"), "function": "Switch node", "type": "smd"},
+        "2": {"net": _exact("BAT+"),   "function": "Cell side — present whenever a cell is fitted, which is what keeps C33 charged", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["C33"] = {
+    "component": "1uF IP5306 KEY wake capacitor (BENCH-VALIDATE)",
+    "lcsc": "C28323",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("PWR_SW"),      "function": "Switch node — the 4.9V->0 step that becomes the KEY press", "type": "smd"},
+        "2": {"net": _exact("IP5306_KEY"),  "function": "IP5306 KEY (active low, internal pull-up)", "type": "smd"},
+    },
+}
+
+COMPONENT_SPECS["SW17"] = {
+    "component": "Tact switch — manual IP5306 KEY wake (DNP, insurance for the C33 RC)",
+    "lcsc": "C318884",
+    "datasheet": "SW1-SW13_Tact-Switch_C318884.pdf",
+    "datasheet_page": 1,
+    "pins": {
+        # Terminal A (pads 1/3, east) is GND; terminal B (pads 2/4, west)
+        # is KEY — west because that is the side the KEY route arrives on.
+        "1": {"net": _exact("GND"),        "function": "Ground — the datasheet reference-schematic wake button", "type": "smd"},
+        "2": {"net": _exact("IP5306_KEY"), "function": "KEY", "type": "smd"},
+        "3": {"net": _exact("GND"),        "function": "Ground (bridged pair)", "type": "smd"},
+        "4": {"net": _exact("IP5306_KEY"), "function": "KEY (bridged pair)", "type": "smd"},
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # Summary

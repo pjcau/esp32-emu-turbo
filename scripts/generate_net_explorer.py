@@ -82,7 +82,11 @@ SECTION_LAW = [
     # its resistor R31 belong to the MCU. Without this ordering R31 ties 1-1
     # between the two sections and the generator refuses to guess.
     ("mcu",      r"^EN$|^LED_HB$|^LED6_RA$"),
-    ("power",    r"^USB_CC|^VBUS(_IN)?$|^BAT|^LX$|^IP5306_|^RPP_|^LED\d+_RA$|^BUCK_"),
+    # PWR_SW / PWR_SW_GATE are the SW16 respin's gate control nodes and
+    # +5V_VOUT is the boost output upstream of the Q2 load switch — all
+    # three are power-tree members, same as RPP_GATE already is.
+    ("power",    r"^USB_CC|^VBUS(_IN)?$|^BAT|^LX$|^IP5306_|^RPP_|^PWR_SW"
+                 r"|^\+5V_VOUT$|^LED\d+_RA$|^BUCK_"),
 ]
 
 # A component follows the majority of its section-owned nets. These refs
@@ -90,7 +94,7 @@ SECTION_LAW = [
 REF_SECTION_OVERRIDES = {
     "U1": "mcu",        # ESP32 module touches every subsystem; it IS the MCU
     "J1": "power",      # USB-C receptacle: its primary role here is charge input
-    "SW16": "power",  # bridges BAT+ to BTN_SELECT, but it is the power switch
+    "SW16": "power",  # respin: pad 2 is PWR_SW, the Q2 gate control node
 }
 
 NO_SECTION_REF = re.compile(r"^FID\d+$")   # fiducials carry no copper

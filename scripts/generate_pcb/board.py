@@ -429,7 +429,12 @@ def _silkscreen_labels():
         ("R17", "1k", 25.0, 65.0, 0, -2.0),
         ("R18", "1k", 32.0, 65.0, 0, -2.0),
         # IP5306 area
-        ("R16", "100k", 115.0, 52.5, 0, -2.0),
+        # SW16 respin gate network (R16 deleted — see the placement block)
+        ("C33", "1uF", 115.0, 52.5, 0, -2.0),
+        ("R32", "22k", 116.3, 40.0, 3.4, 0),
+        ("C32", "1uF", 116.3, 37.48, 3.4, 0),
+        ("R33", "1k", 116.3, 42.0, -3.4, 0),
+        ("R34", "1M", 86.1, 55.9, 0, 2.4),
         ("C17", "10uF", 110.0, 35.0, 4.5, 0),
         ("C18", "10uF", 116.0, 49.0, 0, 2.5),
         ("C19", "22uF", 110.0, 58.5, 0, 2.5),
@@ -616,9 +621,17 @@ def _component_placeholders():
     for i, ref in enumerate(pull_up_refs):
         placements.append((ref, "R_0805", 43 + i * 5, 46, 0, "B.Cu"))
 
-    # IP5306 KEY pull-down
-    ix, iy = enc_to_pcb(*IP5306_ENC)
-    placements.append(("R16", "R_0805", ix + 5, iy + 10, 0, "B.Cu"))
+    # SW16 respin — Q2 high-side +5V load switch and its gate network.
+    # R16 (the old 100k IP5306_KEY pull-up to +5V) is DELETED: on the new
+    # LOAD-side +5V it would invert into a pull-DOWN whenever the switch is
+    # OFF and hold KEY asserted. C33, the wake cap, takes over its exact
+    # footprint site and its routing.
+    placements.append(("Q2", "SOT-23-3", *routing.Q2_POS, routing.Q2_ROT, "B.Cu"))
+    placements.append(("R32", "R_0805", *routing.R32_POS, routing.R32_ROT, "B.Cu"))
+    placements.append(("C32", "C_0805", *routing.C32_POS, routing.C32_ROT, "B.Cu"))
+    placements.append(("R33", "R_0805", *routing.R33_POS, routing.R33_ROT, "B.Cu"))
+    placements.append(("R34", "R_0805", *routing.R34_POS, routing.R34_ROT, "B.Cu"))
+    placements.append(("C33", "C_0805", *routing.C33_POS, routing.C33_ROT, "B.Cu"))
 
     # Debounce caps (y=50, x=43..98, 5mm spacing)
     # R9-MED-4: C20 deleted (was on dead BTN_MENU net).

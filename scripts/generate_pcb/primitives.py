@@ -260,6 +260,25 @@ NET_LIST = [
     (66, "LED4_RA"),
     (67, "LED5_RA"),
     (68, "LED6_RA"),
+    # ── SW16 respin: the +5V rail is now switched ────────────────────
+    # Q2 (SI2301CDS high-side P-MOSFET) sits between the IP5306 boost
+    # output and every +5V load, so the rail is TWO nets exactly like
+    # VBUS_IN -> F1 -> VBUS and BAT_IN -> Q1 -> BAT+:
+    #   +5V_VOUT — upstream, always live whenever the boost runs:
+    #              U2.8 (VOUT), C27.2, Q2 source, R32/C31 gate return.
+    #   +5V      — downstream of Q2, keeps its name so every load, zone
+    #              and gate that already speaks about "+5V" still means
+    #              the rail the loads see.
+    (69, "+5V_VOUT"),
+    # PWR_SW — the switch node. SW16 pad 2 (common) plus R33 (series to
+    # the gate), R34 (4.7M to BAT+, defines the node when the switch is
+    # open) and C32 (1uF wake cap into IP5306_KEY). Carries no load
+    # current at all: it is a control node, not a power path.
+    (70, "PWR_SW"),
+    # PWR_SW_GATE — Q2's gate. Distinct from PWR_SW because R33 is a
+    # series element, same rule as PAM_IN_AC / VBUS_IN. Named after the
+    # RPP_GATE precedent (Q1's gate node).
+    (71, "PWR_SW_GATE"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}
