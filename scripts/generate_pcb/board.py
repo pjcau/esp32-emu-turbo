@@ -357,11 +357,16 @@ def _silkscreen_labels():
     # clears the via rows at y=32.3/33.0 by >=0.5mm.
     parts.append(P.gr_text("IP5306", px, py - 11.75, "B.SilkS", 1.0))
     # U3 buck label: the old spot (px+1.2, py-4.7) = (121.0, 48.8) crossed
-    # the 0.2mm vias at (119.75, 48.75) and (121.7, 48.5). New anchor
-    # (116.75, 47.3) is west of them, clear of the C18.1 pad (x<=117.45)
-    # by 0.25mm and of the FPC slot (x>=125.5 / y<=47.5).
+    # the 0.2mm vias at (119.75, 48.75) and (121.7, 48.5). The next one,
+    # (116.75, 47.3), was clear of C18.1 and the FPC slot — and then the
+    # SW16 respin put Q2 at (118.2, 45.0), whose drain pad reaches down to
+    # y=46.60. A centred 6-character label at 1.0 mm is ~4.3 mm wide, so
+    # it ran east to x=118.9 and came within 0.053 mm of that pad against
+    # a 0.14 mm silkscreen rule. Anchored 2.45 mm further west it ends at
+    # x=116.5, 1.4 mm clear of the pad, and still north of C18 (y>=48.33)
+    # and west of the FPC slot.
     px, py = enc_to_pcb(*BUCK_ENC)
-    parts.append(P.gr_text("SY8089", px - 3.05, py - 6.2, "B.SilkS", 1.0))
+    parts.append(P.gr_text("SY8089", px - 5.5, py - 6.2, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PAM8403_ENC)
     # py-5 = (30.0, 24.5) sat inside the audio via field (rows y=20.5..28.8,
     # hits at (26.825, 24.8) and (28.095, 23.7)). py-10.5 is the first
@@ -632,6 +637,11 @@ def _component_placeholders():
     placements.append(("R33", "R_0805", *routing.R33_POS, routing.R33_ROT, "B.Cu"))
     placements.append(("R34", "R_0805", *routing.R34_POS, routing.R34_ROT, "B.Cu"))
     placements.append(("C33", "C_0805", *routing.C33_POS, routing.C33_ROT, "B.Cu"))
+    # SW17, the manual KEY wake button: the LAND exists on the board, but
+    # the part is DNP and is deliberately absent from the CPL, so JLCPCB
+    # never populates it. Placement argument in routing/_shared.py.
+    placements.append(("SW17", "SW-SMD-2P-TS1088",
+                       *routing.SW17_POS, routing.SW17_ROT, "B.Cu"))
 
     # Debounce caps (y=50, x=43..98, 5mm spacing)
     # R9-MED-4: C20 deleted (was on dead BTN_MENU net).

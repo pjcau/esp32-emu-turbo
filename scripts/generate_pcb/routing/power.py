@@ -7,6 +7,7 @@ from ._shared import (
     BOARD_W,
     DIAG_VBUS_TAP_Y,
     NET_ID,
+    R34_PWR_SW_VIA_X,
     P,
     VIA_MIN,
     VIA_MIN_DRILL,
@@ -864,17 +865,26 @@ def _power_traces():
     # inside the In2.Cu island. (The island is +5V_VOUT since the SW16
     # respin; the geometry argument is unchanged, C27 moved net with it.)
     #
-    # 106.05, not R32's 106.10, because the drill grew with it. R32 placed
-    # this at 106.10 for 0.200mm of hole clearance to C27.2's west edge
-    # (106.475) at a 0.35 drill. At 0.45 the hole radius is 0.225 and the
-    # same centre leaves 0.150mm — exactly verify_via_in_pad's minimum,
-    # i.e. a float comparison deciding a fab rule. Stepping the centre
-    # 0.05mm further west restores the original 0.200mm at the new drill
-    # and costs nothing: the west neighbourhood is empty for 1.8mm.
-    _vout_via_c = (106.05, ip_vout[1] - 1.5)   # (106.05, 39.095)
+    # THIS BARREL KEEPS THE 0.35 DRILL while its two siblings go to 0.45.
+    # It is boxed in on both sides and the box is only 0.35 wide:
+    #   east  — the hole must clear C27.2's west edge (106.475) by 0.15,
+    #           so centre <= 106.475 - 0.15 - r.
+    #   west  — MH(105, 37.5) needs 0.4995 hole-to-hole, so
+    #           hypot(x-105, 1.595) >= 1.25 + r + 0.4995.
+    # At r = 0.175 the window is x in [106.10, 106.126] — one position,
+    # which is exactly where R32 put it. At r = 0.225 the window inverts:
+    # east gives x <= 106.10, west demands x >= 106.164. There is no such
+    # x. Stepping 0.05mm west to "buy back" the pad clearance was tried
+    # and moves it INTO the mounting hole's exclusion (DRC hole_to_hole
+    # 0.4346 against a 0.4995 minimum), which is the trap this note
+    # exists to stop the next person walking into.
+    #
+    # Ampacity does not need it: two 0.949 A barrels plus this 0.791 A
+    # one give 2.689 A across the cut against 2.373 A required, 13% clear.
+    _vout_via_c = (106.10, ip_vout[1] - 1.5)   # (106.10, 39.095)
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1] - 1.5, _vout_via_c[0], _vout_via_c[1],
                        "B.Cu", W_PWR, n_5v_vout))
-    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v_vout, **_VOUT_VIA))
+    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v_vout))
     _vout_via_w = (105.60, ip_vout[1])          # (105.60, 40.595)
     _vout_via_s = (ip_vout[0] + 0.5, 37.90)     # (107.50, 37.90)
     parts.append(_seg(ip_vout[0], ip_vout[1], _vout_via_w[0], _vout_via_w[1],
@@ -1085,11 +1095,51 @@ def _power_traces():
         # x=115.25 the gap to the west pad's right edge (114.55) is
         # 115.25-0.30-114.55 = 0.40mm ✓, and to C18 pad2 (117.05-0.50=116.55)
         # it is 116.55-115.25-0.45 = 0.85mm ✓.
-        _c33_col_x = c33_p1[0] - 0.70  # 115.25 — clears C33[2] and C18
+        # EAST of C33's pad, not west. It was at 115.25 (c33_p1 - 0.70),
+        # which is where SW17's pads now are: the switch is 1.86 mm wide
+        # after its 90 deg rotation, so its pads span x 114.22..116.08 and
+        # a PWR_SW column at 115.25 ran straight over the KEY pad — a
+        # different-net short, caught by short_circuit_analysis.
+        # 116.60 clears the pad's east edge by 0.395 mm and U3's west edge
+        # by 1.35 mm, and the y=55.60 corridor it drops onto passes under
+        # the switch BODY between the two pads (0.92 mm to pad 1, 2.22 mm
+        # to pad 2), which is copper under a component, not copper on it.
+        _c33_col_x = 116.60
         parts.append(_seg(c33_p1[0], c33_p1[1], _c33_col_x, c33_p1[1],
                            "B.Cu", W_SIG, n_pwr_sw))
         parts.append(_seg(_c33_col_x, c33_p1[1], _c33_col_x, 55.60,
                            "B.Cu", W_SIG, n_pwr_sw))
+
+    # ── SW17: the manual KEY wake button (DNP) ────────────────────
+    # It hangs off C33.2, which IS the KEY node, so the branch is 1.9 mm
+    # of copper and KEY grows by nothing that matters. Placement argument
+    # in routing/_shared.py::SW17_POS — in short, a 2-terminal part fits
+    # here and the 5.1x5.1 tact the user buttons use fits nowhere in this
+    # quadrant at all.
+    #
+    # No series resistor, and that is a decision rather than an omission.
+    # A long KEY trace normally wants one because KEY is a high-impedance
+    # sense input, but this node is not high-impedance: C33's 1 uF sits on
+    # it by design, which is orders of magnitude more shunt than a series
+    # R would be protecting. Adding one would also sit in series with the
+    # wake pulse and lengthen the very edge the design needs to stay
+    # sharp.
+    sw17_1 = _pad("SW17", "1")   # (115.15, 54.065) IP5306_KEY
+    sw17_2 = _pad("SW17", "2")   # (115.15, 58.435) GND
+    if sw17_1 and c33_p2:
+        parts.append(_seg(c33_p2[0], c33_p2[1], c33_p2[0], sw17_1[1],
+                           "B.Cu", W_SIG, n_key))
+        parts.append(_seg(c33_p2[0], sw17_1[1], sw17_1[0], sw17_1[1],
+                           "B.Cu", W_SIG, n_key))
+    if sw17_2:
+        # GND straight down into the In1 pour. Off-pad by 1.15 mm so the
+        # hole clears the pad edge (verify_via_in_pad): pad half-height is
+        # 0.615 after the 90 deg rotation, +0.15 rule, +0.25 barrel.
+        _sw17_gnd_y = sw17_2[1] + 1.15
+        parts.append(_seg(sw17_2[0], sw17_2[1], sw17_2[0], _sw17_gnd_y,
+                           "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(sw17_2[0], _sw17_gnd_y, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── +3V3 rail source ──────────────────────────────────────────
     # The +3V3 In2.Cu plane is fed by the buck output via pair placed on the
@@ -1460,7 +1510,7 @@ def _power_traces():
     # Split at R34's drop: verify_dangling_copper measures ENDPOINTS, not
     # overlaps, so a branch that T's into the middle of this run reads as
     # copper ending in air even though it is fabricated connected.
-    _R34_TAP_X = 85.15
+    _R34_TAP_X = R34_PWR_SW_VIA_X
     parts.append(_seg(SW_COL_X, PWR_SW_FCU_Y, _R34_TAP_X, PWR_SW_FCU_Y,
                        "F.Cu", W_SIG, n_pwr_sw))
     parts.append(_seg(_R34_TAP_X, PWR_SW_FCU_Y, _PWR_SW_FCU_END, PWR_SW_FCU_Y,
@@ -1588,6 +1638,7 @@ def _pwr_switch_traces():
         ("R34", "1", n_pwr_sw), ("R34", "2", n_bat),
         ("C33", "1", n_pwr_sw), ("C33", "2", n_key),
         ("SW16", "1", n_gnd), ("SW16", "2", n_pwr_sw),
+        ("SW17", "1", n_key), ("SW17", "2", n_gnd),
     ):
         _PAD_NETS[(ref, pin)] = net
 
@@ -1597,7 +1648,15 @@ def _pwr_switch_traces():
     # rail. Sized the way the BAT+ transition was: 0.85 OD / 0.45 drill is
     # 0.949 A each, and three of them is 2.847 A against the 2.150 A the
     # +5V loads take.
-    _s_via_ys = (43.90, 42.85, 41.80)
+    # NO BARREL SITS ON THE PAD. The first of these used to be at the pad
+    # centre (43.90), which is JLCDFM's "lead to hole distance 0 mm"
+    # DANGER — solder drains down the barrel and starves the joint — and
+    # verify_via_in_pad (landed on main 2026-08-03) is the hard gate for
+    # it. The column simply starts one step further south: the pad is
+    # 1.0 mm tall, so its edge is at 44.40, and 0.15 mm of hole clearance
+    # plus the 0.225 mm barrel radius puts the first legal centre at
+    # 44.775 southward — 42.85 clears it with room to spare.
+    _s_via_ys = (42.85, 41.80, 40.75)
     parts.append(_seg(q2_s[0], q2_s[1], q2_s[0], _s_via_ys[-1],
                        "B.Cu", W_PWR_HIGH, n_5v_vout))
     for _y in _s_via_ys:
@@ -1607,7 +1666,17 @@ def _pwr_switch_traces():
     # Same current, same three barrels, on the load side of the seam.
     # South is the only free direction: BAT+ runs west of the drain at
     # y=46.1 and the island's east edge is 2.1 mm away.
-    _d_via_ys = (46.10, 47.15, 48.20)
+    # Same rule as the source column: the on-pad barrel is gone and the
+    # column starts south of the pad edge. Three barrels are kept, so the
+    # 2.847 A this transition carries is unchanged.
+    # 47.00 / 48.05 / 49.10, a 0.15 mm shift north of the obvious
+    # 47.15/48.20/49.25: VBUS runs on F.Cu with its north edge at y=49.75,
+    # and a 0.85 mm barrel centred at 49.25 reaches 49.675 — 75 um away,
+    # a DANGER in verify_copper_clearance. At 49.10 the barrel edge is
+    # 49.525, so 0.225 mm. The north end still clears Q2.3's pad edge
+    # (46.60) by 0.175 mm of hole, above the 0.15 mm rule, and the 1.05 mm
+    # pitch keeps 0.20 mm of copper between barrels.
+    _d_via_ys = (47.00, 48.05, 49.10)
     parts.append(_seg(q2_d[0], q2_d[1], q2_d[0], _d_via_ys[-1],
                        "B.Cu", W_PWR_HIGH, n_5v))
     for _y in _d_via_ys:
@@ -1624,8 +1693,17 @@ def _pwr_switch_traces():
         parts.append(_seg(_GATE_X, _ya, _GATE_X, _yb, "B.Cu", W_SIG, n_gate))
 
     # ── Gate return: R32.2 and C32.2 -> +5V_VOUT plane ────────────
+    # The barrels step WEST off their pads, for the JLCDFM lead-to-hole
+    # rule (verify_via_in_pad). An 0805 pad is 1.15 mm wide, so its west
+    # edge is 0.575 mm out; 0.15 mm of hole clearance and the 0.15 mm
+    # VIA_MIN barrel radius put the first legal centre 0.875 mm west. 0.95
+    # is used, which is also clear of the KEY corridor east of U2 — that
+    # corridor runs at x=114.05 and these land at 114.40.
+    _GATE_RETURN_DX = 0.95
     for _p in (r32_2, c32_2):
-        parts.append(_via_net(_p[0], _p[1], n_5v_vout,
+        _vx = _p[0] - _GATE_RETURN_DX
+        parts.append(_seg(_p[0], _p[1], _vx, _p[1], "B.Cu", W_SIG, n_5v_vout))
+        parts.append(_via_net(_vx, _p[1], n_5v_vout,
                               size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     # ── PWR_SW: corridor -> R34 -> R33 ────────────────────────────
@@ -1642,7 +1720,7 @@ def _pwr_switch_traces():
     parts.append(_via_net(110.0, 54.35, n_pwr_sw, size=VIA_STD, drill=VIA_STD_DRILL))
     parts.append(_seg(110.0, 54.35, 110.0, 55.60, "B.Cu", W_SIG, n_pwr_sw))
     # The east leg picks up C33's wake-cap pad; that column is C33's own.
-    parts.append(_seg(110.0, 55.60, 115.25, 55.60, "B.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(110.0, 55.60, 116.60, 55.60, "B.Cu", W_SIG, n_pwr_sw))
     # North of BAT+ the net has to be on F.Cu, so it leaves the corridor
     # again at x=112.95 and climbs to R33.
     parts.append(_via_net(112.95, 55.60, n_pwr_sw, size=VIA_MIN, drill=VIA_MIN_DRILL))
@@ -1655,18 +1733,29 @@ def _pwr_switch_traces():
     parts.append(_seg(112.95, 50.60, 112.95, 48.90, "B.Cu", W_SIG, n_pwr_sw))
     parts.append(_via_net(112.95, 48.90, n_pwr_sw, size=VIA_MIN, drill=VIA_MIN_DRILL))
     parts.append(_seg(112.95, 48.90, 112.95, 43.20, "F.Cu", W_SIG, n_pwr_sw))
-    parts.append(_seg(112.95, 43.20, r33_2[0], 43.20, "F.Cu", W_SIG, n_pwr_sw))
-    parts.append(_seg(r33_2[0], 43.20, r33_2[0], r33_2[1], "F.Cu", W_SIG, n_pwr_sw))
-    parts.append(_via_net(r33_2[0], r33_2[1], n_pwr_sw,
+    # The F.Cu run stops 0.95 mm WEST of R33.2 and vias there, then a
+    # short B.Cu stub finishes onto the pad. Landing the barrel on the pad
+    # is the JLCDFM lead-to-hole DANGER (verify_via_in_pad); the same
+    # 0.875 mm arithmetic as the gate returns above applies.
+    _r33_via_x = r33_2[0] - 0.95
+    parts.append(_seg(112.95, 43.20, _r33_via_x, 43.20, "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(_r33_via_x, 43.20, _r33_via_x, r33_2[1], "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_via_net(_r33_via_x, r33_2[1], n_pwr_sw,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(_r33_via_x, r33_2[1], r33_2[0], r33_2[1],
+                       "B.Cu", W_SIG, n_pwr_sw))
 
     # ── R34: PWR_SW tap off the corridor, BAT+ up to Q1's source ──
     # Pad 1 drops a via straight onto the F.Cu corridor 1.55 mm away; pad 2
     # climbs to the BAT+ channel at y=52.9, east of where BAT_IN turns off
     # toward J3 (that run ends at x=85.0, 1.75 mm west of this column).
-    parts.append(_via_net(r34_1[0], r34_1[1], n_pwr_sw,
+    # Barrel 0.95 mm WEST of the pad, not on it (verify_via_in_pad).
+    _r34_via_x = R34_PWR_SW_VIA_X
+    parts.append(_seg(r34_1[0], r34_1[1], _r34_via_x, r34_1[1],
+                       "B.Cu", W_SIG, n_pwr_sw))
+    parts.append(_via_net(_r34_via_x, r34_1[1], n_pwr_sw,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(r34_1[0], r34_1[1], r34_1[0], 54.35, "F.Cu", W_SIG, n_pwr_sw))
+    parts.append(_seg(_r34_via_x, r34_1[1], _r34_via_x, 54.35, "F.Cu", W_SIG, n_pwr_sw))
     # W_PWR and not W_SIG: this leg carries 1.3 uA, but it is BAT+ copper
     # and BAT+ is a Power High net. Widening 3 mm of trace is cheaper than
     # an allowlist entry, and an allowlist entry on the battery rail is

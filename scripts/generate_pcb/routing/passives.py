@@ -386,12 +386,10 @@ def _passive_traces():
         # where it damps the soft-start ramp and feeds the loads.
         # R32: the VOUT barrel this taps moved west, off C27.2's pad (see
         # power.py). The stub follows it; both ends are +5V_VOUT so the
-        # run crossing the pad is same-net. 106.05 rather than R32's
-        # 106.10 because the barrel stepped another 0.05mm west when its
-        # drill grew to 0.45 — power.py::_VOUT_VIA has the arithmetic.
-        parts.append(_seg(c27_p2[0], c27_p2[1], 106.05, c27_p2[1],
+        # run crossing the pad is same-net.
+        parts.append(_seg(c27_p2[0], c27_p2[1], 106.10, c27_p2[1],
                           "B.Cu", W_PWR, NET_ID["+5V_VOUT"]))
-        parts.append(_seg(106.05, c27_p2[1], 106.05, 39.095,
+        parts.append(_seg(106.10, c27_p2[1], 106.10, 39.095,
                           "B.Cu", W_PWR, NET_ID["+5V_VOUT"]))
     if c27_p1:
         # Pad 1 (right) → GND via DOWN toward EP pad (same net, no clearance issue)

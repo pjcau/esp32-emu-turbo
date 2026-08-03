@@ -768,8 +768,34 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(288, 236.19, 288, pwr_sw_y)
         self.wire(288, 243.81, 288, 248)
         self.glabel("IP5306_KEY", 288, 248, 270)
-        self.text("wake pulse", 292, 238, 1.5)
-        self.text("BENCH-VALIDATE", 292, 241, 1.5)
+        self.text("wake pulse", 293, 244, 1.5)
+        self.text("BENCH-VALIDATE", 291, 247, 1.5)
+
+        # ── SW17: the manual KEY wake button (DNP) ──────
+        # Insurance for the C33 RC above. If the coupled pulse turns out
+        # too short against the IP5306's undocumented internal KEY
+        # pull-up, this is the datasheet's own wake topology (p.11 fig.4):
+        # a momentary to GND on an active-low input. The land and its
+        # copper are on the board; the part is marked DO NOT PLACE in the
+        # BOM and is absent from the CPL, which is the file that decides
+        # what JLCPCB populates.
+        #
+        # It is a 2-terminal TS-1088 (C720477) and not the 5.1x5.1 tact
+        # the twelve user buttons use, because a 7.0 x 4.4 tact footprint
+        # has no clearance-legal site anywhere in the IP5306 quadrant —
+        # see routing/_shared.py::SW17_POS for the measurement.
+        self.sym("SW_Push", "SW17", "TS-1088", 310, 240, ["1", "2"], 180)
+        # Annotation BELOW the switch: above it runs into Q2's own
+        # "(SI2301CDS, same as Q1)" line, and the row immediately under
+        # the symbol is its Reference field.
+        self.text("manual KEY wake (DO NOT PLACE)", 300, 252, 1.5)
+        self.text("fit only if the C33 pulse is short", 300, 255, 1.5)
+        # Pin 1 (right after the 180 deg rotation) is the KEY side, which
+        # is the side C33 is on.
+        self.wire(310 + 5.08, 240, 320, 240)
+        self.glabel("IP5306_KEY", 320, 240, 0)
+        self.wire(310 - 5.08, 240, 300, 240)
+        self.gnd(300, 240)
 
         # R33 1k — series gate resistor, between the switch node and the
         # gate. It is what splits PWR_SW from PWR_SW_GATE, the same way R24

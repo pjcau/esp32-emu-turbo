@@ -1009,21 +1009,49 @@ COMPONENT_SPECS["C33"] = {
     },
 }
 
-# SW17 — the DNP manual KEY wake button — HAS NO ENTRY HERE because it is
-# NOT ON THE BOARD. It was specified, and then dropped when the placement
-# was attempted: every free site within reach of IP5306_KEY copper fails
-# clearance against copper the respin itself put there (the PWR_SW spine,
-# C33's column, L1's pads, U2.6's BAT+ stitching field), and the nearest
-# free 5.1x5.1 tact site is 11.2 mm away. See the block comment at
-# scripts/generate_pcb/routing/_shared.py::C33_POS for the enumeration.
+# ======================================================================
+# SW17 — manual IP5306 KEY wake button (DNP)
 #
-# A spec entry for a part with no pads is not documentation, it is a
-# permanently red gate: verify_datasheet_nets reports every declared pin
-# as PAD NOT FOUND. The bench-tune path SW17 was insurance for survives
-# without it — C33's own pads are the access point, so lifting the cap and
-# tacking a wire to a momentary button reaches KEY and GND directly.
-# Fitting a real button needs an IP5306-corner placement reshuffle; that
-# is an open respin decision, recorded in docs/open-tasks.md.
+# Insurance for the C33 wake RC, which is the one BENCH-VALIDATE value in
+# the respin: C33's pulse width runs against the IP5306's UNDOCUMENTED
+# internal KEY pull-up, so if it turns out too short, this button is the
+# datasheet-blessed way to wake the boost by hand (reference schematic
+# p.11 fig.4 shows exactly this: a momentary to GND, active low).
+#
+# NOT the 5.1x5.1 tact the twelve user buttons use, and the reason is a
+# measurement rather than a preference. A 7.0 x 4.4 tact footprint has NO
+# clearance-legal site in the IP5306 quadrant: scanning x 96..130,
+# y 34..68 on B.Cu with every respin part AND every piece of respin
+# copper treated as movable returns sites only north of U2, all of them
+# on the far side of the BAT+ B.Cu run at y=46.1, and the only F.Cu
+# corridor across that run is 0.925 mm wide (U2's pad edge 113.85 to the
+# gate column's 114.775) and already carries PWR_SW.
+#
+# The 2-terminal TS-1088 (C720477) is 5.6 x 3.1 mm of envelope and fits
+# at (115.15, 56.25) rotated 90 deg, 3.9 mm from C33.2 — which IS the KEY
+# node — with NOTHING ELSE MOVED except one PWR_SW column that had to
+# step around it. Two pads also means no bridged pairs to reason about.
+#
+# DNP: the land and its copper exist, the part is in the BOM marked DNP,
+# and it is deliberately ABSENT from the CPL, which is the file that
+# decides what JLCPCB populates.
+#
+# No series resistor in the KEY leg. A long run to a high-impedance sense
+# pin normally wants one, but this node carries C33's 1 uF by design —
+# orders of magnitude more shunt than a series R would be protecting —
+# and a series R would also sit in the wake pulse's own path and blunt
+# the edge the design needs to stay sharp.
+# ======================================================================
+COMPONENT_SPECS["SW17"] = {
+    "component": "SMD momentary switch — manual IP5306 KEY wake (DNP)",
+    "lcsc": "C720477",
+    "datasheet": None,
+    "datasheet_page": 1,
+    "pins": {
+        "1": {"net": _exact("IP5306_KEY"), "function": "KEY — pressing pulls the IP5306's active-low KEY input to ground, the datasheet's own wake topology", "type": "smd"},
+        "2": {"net": _exact("GND"),        "function": "Ground", "type": "smd"},
+    },
+}
 
 
 # ---------------------------------------------------------------------------

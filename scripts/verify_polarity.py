@@ -279,6 +279,10 @@ _strict("R33", [("1", "PWR_SW_GATE"), ("2", "PWR_SW")])
 _strict("C32", [("1", "PWR_SW_GATE"), ("2", "+5V_VOUT")])
 _strict("R34", [("1", "PWR_SW"), ("2", "BAT+")])
 _strict("C33", [("1", "PWR_SW"), ("2", "IP5306_KEY")])
+# SW17 — the DNP manual KEY wake button. The LAND is on the board and the
+# copper is real even though JLCPCB never populates it, so the net
+# assignment is checked like any other: pad 1 to KEY, pad 2 to GND.
+_strict("SW17", [("1", "IP5306_KEY"), ("2", "GND")])
 
 # ============================================================
 # SPK1: Speaker
@@ -759,6 +763,9 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("R34", "2", "BAT+")
         self._check_strict("C33", "1", "PWR_SW")
         self._check_strict("C33", "2", "IP5306_KEY")
+        # SW17 (DNP) shares the KEY node with C33.
+        self._check_strict("SW17", "1", "IP5306_KEY")
+        self._check_strict("SW17", "2", "GND")
 
     def test_speaker(self):
         """SPK1: SPK+/SPK- polarity correct."""

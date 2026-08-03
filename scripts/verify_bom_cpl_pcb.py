@@ -87,6 +87,13 @@ JLCPCB_FOOTPRINTS = {
     # F1 VBUS PTC fuse (C960026): generic 1812 chip land (body 4.73x3.41
     # per the BHFUSE datasheet), same naming convention as R_/C_ chips.
     "F_1812",
+    # SW17 manual KEY wake (C720477, XUNPU TS-1088-AR02016): two-terminal
+    # SMD momentary, land drawn from the EasyEDA package
+    # SW-SMD_L3.9-W3.0-P4.45 (pads 1.230 x 1.860 mm at 4.370 mm pitch,
+    # read off the 10-mil grid). DNP, so JLCPCB never places it — but the
+    # land still has to be a real one, because the whole point is that it
+    # CAN be fitted later.
+    "SW-SMD-2P-TS1088",
 }
 
 PASS = 0
@@ -197,9 +204,34 @@ def main():
 
     # ── 1. BOM ↔ CPL consistency ──
     print("\n── BOM ↔ CPL Consistency ──")
-    diff_bom_cpl = bom_refs - cpl_refs
-    check("All BOM refs in CPL", not diff_bom_cpl,
+    # A part whose BOM comment says DO NOT PLACE is SUPPOSED to be missing
+    # from the CPL — that is the mechanism, not an oversight. The CPL is
+    # the file JLCPCB places from, so "in the BOM, out of the CPL" is
+    # exactly how you say "here is the part, do not fit it". Keeping the
+    # line in the BOM is what makes it sourceable later; dropping it would
+    # lose the LCSC number and leave a bare land nobody can identify.
+    #
+    # The marker is the literal phrase DO NOT PLACE, and NOT the word
+    # "DNP", because this board already uses "DNP" to mean something
+    # different: the diagnostic LEDs and their resistors are commented
+    # "DNP in production", which is a note about a FUTURE build — they are
+    # placed in this one, on purpose, because they are the bring-up
+    # instrumentation. Keying on "DNP" would have declared all eight of
+    # them do-not-place and quietly stopped them being assembled.
+    #
+    # Derived from the comment, not from a ref list: a new do-not-place
+    # part gets this behaviour by saying so, and a part that stops being
+    # do-not-place starts being required in the CPL again on the same edit.
+    dnp_refs = {r for r, e in bom.items()
+                if "DO NOT PLACE" in e["comment"].upper()}
+    diff_bom_cpl = bom_refs - cpl_refs - dnp_refs
+    check("All BOM refs in CPL (except DO NOT PLACE)", not diff_bom_cpl,
           f"missing from CPL: {sorted(diff_bom_cpl)}")
+    # The other direction of the same rule: a do-not-place part appearing
+    # in the CPL would be populated by JLCPCB regardless of the comment.
+    dnp_in_cpl = dnp_refs & cpl_refs
+    check("No DO-NOT-PLACE part is in the CPL", not dnp_in_cpl,
+          f"marked do-not-place but in the CPL: {sorted(dnp_in_cpl)}")
 
     diff_cpl_bom = cpl_refs - bom_refs
     check("All CPL refs in BOM", not diff_cpl_bom,

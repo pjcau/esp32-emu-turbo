@@ -840,6 +840,15 @@ C32_ROT = 0
 # lives; the clearances do.
 R34_POS = (86.1, 55.9)   # 1:(85.15,55.9) PWR_SW  2:(87.05,55.9) BAT+
 R34_ROT = 180
+# Where PWR_SW changes layer on its way to R34.1. NOT on the pad: a barrel
+# in an SMD land is the JLCDFM lead-to-hole DANGER (verify_via_in_pad), so
+# it steps 0.95 mm west — 0.575 of pad half-width, 0.15 of hole clearance,
+# 0.15 of barrel radius, rounded out. The F.Cu corridor is SPLIT here so
+# the drop lands on a real endpoint (verify_dangling_copper measures
+# endpoints, not overlaps); both users read this one number, because when
+# they disagreed the corridor kept its old split at the pad and the new
+# leg drew a second, overlapping run into it — a 0 deg corner.
+R34_PWR_SW_VIA_X = 84.20
 # C33 1uF wake cap takes over R16's exact site. R16 was a 100k KEY
 # pull-up to +5V and is DELETED (see hardware/datasheet_specs.py): on the
 # new load-side +5V it would have become a pull-DOWN in the OFF state and
@@ -847,18 +856,35 @@ R34_ROT = 180
 # proven Z-route verbatim.
 C33_POS = (115.0, 52.5)  # 1:(115.95,52.5) PWR_SW  2:(114.05,52.5) IP5306_KEY
 C33_ROT = 0
-# SW17 (DNP manual KEY wake) IS NOT PLACED. Not an oversight — there is
-# no site for it. Every free 0805-sized gap within 8 mm of IP5306_KEY
-# copper was enumerated against the generated board and every one of them
-# fails clearance against copper that the respin itself put there (the
-# PWR_SW spine, C33's column, L1's pads, U2.6's BAT+ stitching field).
-# A 5.1x5.1 tact footprint is worse: the nearest free one to U2.5 is
-# 11.2 mm away, in the corner the gate network occupies.
-# The bench-tune path SW17 existed to provide survives without it: C33's
-# own pads are the access point, so lifting the cap and tacking a wire to
-# a momentary button reaches KEY and GND directly. Fitting a real button
-# needs a placement reshuffle of the IP5306 corner — recorded as a
-# follow-up, not silently dropped.
+# SW17 — the DNP manual IP5306 KEY wake button. It IS placed now; the
+# note this replaces said there was no site, and that was true of the
+# 5.1x5.1 tact the user buttons use. It is not true of a 2-terminal part.
+#
+# The measurement, so nobody repeats the search: a 7.0 x 4.4 tact
+# footprint has no clearance-legal site anywhere in the IP5306 quadrant.
+# Scanning x 96..130, y 34..68 on B.Cu with every respin part AND every
+# piece of respin copper (+5V_VOUT, PWR_SW, PWR_SW_GATE, IP5306_KEY)
+# treated as movable returns sites only NORTH of U2 — (115.50, 37.75),
+# (117.75, 40.75), (118.00, 38.25) — and every one of them is on the far
+# side of the BAT+ B.Cu run at y=46.1. Getting KEY across that run means
+# F.Cu, and the only F.Cu corridor east of U2 is 0.925 mm wide (U2's pad
+# edge 113.85 to the gate column's 114.775): one trace, and PWR_SW is
+# already in it. So a tact there is not a placement problem, it is a
+# re-plan of the densest corner of the board.
+#
+# The 2-pad TS-1088 (C720477) is 5.6 x 3.1 mm of envelope and fits at
+# (115.15, 56.25) rotated 90 deg, 3.9 mm from C33.2 — which IS the KEY
+# node — with 0.28 mm of clearance and NOTHING ELSE MOVED. C33, L1, C19,
+# C1 and U3 all stay exactly where they are.
+#
+#   pad 1 (north, 115.15, 54.065) = IP5306_KEY, a 1.9 mm stub off C33.2
+#   pad 2 (south, 115.15, 58.435) = GND, straight down into the In1 pour
+#
+# The PWR_SW B.Cu run at y=55.60 passes UNDER the switch body between the
+# two pads. That is fine and it is checked: 0.795 mm to pad 1, 2.1 mm to
+# pad 2.
+SW17_POS = (115.15, 56.25)
+SW17_ROT = 90
 
 
 # ── Exact pad position computation ───────────────────────────────
@@ -1024,6 +1050,8 @@ def _init_pads():
         ("R33", "R_0805", *R33_POS, R33_ROT, "B"),
         ("R34", "R_0805", *R34_POS, R34_ROT, "B"),
         ("C33", "C_0805", *C33_POS, C33_ROT, "B"),
+        # SW17: DNP, so it is a LAND and copper only — never in the CPL.
+        ("SW17", "SW-SMD-2P-TS1088", *SW17_POS, SW17_ROT, "B"),
         ("R1", "R_0805", *R1_POS, 0, "B"),
         ("R2", "R_0805", *R2_POS, 0, "B"),
         ("R17", "R_0805", *R17_POS, 0, "B"),

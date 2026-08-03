@@ -194,6 +194,36 @@ def sw_smd_5_1(layer="F"):
     ]
 
 
+# ── 2-pad SMD momentary switch (XUNPU TS-1088-AR02016, LCSC C720477) ──
+# SW17, the manual IP5306 KEY wake button. DNP in production.
+#
+# NOT the 5.1x5.1 tact (C318884) the twelve user buttons use, and the
+# reason is measured, not preferred: a 7.0 x 4.4 tact footprint has NO
+# clearance-legal site anywhere in the IP5306 quadrant, even with every
+# respin part and every piece of respin copper treated as movable. The
+# only 5.1x5.1 sites on the whole board sit north of U2, on the far side
+# of the BAT+ B.Cu run at y=46.1, in a corridor 0.925 mm wide (between
+# U2's pad edge at 113.85 and the gate column's at 114.775) that PWR_SW
+# already occupies. Reaching one would mean re-planning the densest
+# corner of the board to place a part that is not fitted.
+#
+# This part is 3.9 x 3.0 mm with just TWO terminals, which is what makes
+# it fit: 5.6 x 3.1 mm of envelope, and one pad to KEY, one to GND, with
+# no bridged pairs to reason about.
+#
+# Geometry read from the EasyEDA/LCSC package SW-SMD_L3.9-W3.0-P4.45
+# (10 mil grid): pads 4.8425 x 7.3228 units = 1.230 x 1.860 mm, centres
+# 17.204 units = 4.370 mm apart.
+def sw_smd_2p_ts1088(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    pw, ph = 1.23, 1.86
+    dx = 4.370 / 2
+    return [
+        _pad("1", "smd", "rect", -dx, 0.0, pw, ph, layers),
+        _pad("2", "smd", "rect", dx, 0.0, pw, ph, layers),
+    ]
+
+
 # ── ESOP-8 (IP5306) ──────────────────────────────────────────────
 # 8 pins + exposed pad, 1.27mm pitch
 # DFM: EP reduced from 3.4x3.4 to 3.4x2.8mm so corner signal pads
@@ -959,6 +989,7 @@ FOOTPRINTS = {
     "R_1206": (passive_1206, "B"),
     "F_1812": (fuse_1812, "B"),
     "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
+    "SW-SMD-2P-TS1088": (sw_smd_2p_ts1088, "B"),
     "Speaker-28mm": (speaker_28mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),
     "IND-SMD-4.0x4.0": (inductor_4x4_c36409, "B"),
