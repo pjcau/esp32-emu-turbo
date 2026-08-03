@@ -95,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines. The respin adds the **SW16 power switch network** — Q2 high-side P-MOSFET splitting `+5V_VOUT` from `+5V`, its gate network (R32/R33/C32/R34) and the IP5306 KEY wake cap C33 with the DNP SW17 button.
+USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines. The respin adds the **SW16 power switch network** — Q2 high-side P-MOSFET splitting `+5V_VOUT` from `+5V`, its gate network (R32/R33/C32/R34) and the IP5306 KEY wake cap C33. There is no wake button: SW17 was specified and then dropped for want of a clearance-legal site.
 
 <div className="schematic-container">
 
@@ -122,12 +122,12 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
 | R24 | Resistor | 100 kΩ | Q1 gate pull-down (MOSFET ON for correct polarity) | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
 | Q2 | P-MOSFET | SI2301CDS SOT-23 (C10487) | **Respin** — high-side power switch on the +5V rail: source on **+5V_VOUT**, drain on **+5V**, gate on **PWR_SW_GATE**. Same part as Q1. The body diode points loads→VOUT, so it blocks in the OFF state | — |
-| R32 | Resistor | 100 kΩ | **Respin** — Q2 gate pull-up, PWR_SW_GATE → +5V_VOUT. Sets the **default state to OFF** | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
-| R33 | Resistor | 10 kΩ (C17414) | **Respin** — series gate resistor, PWR_SW → PWR_SW_GATE; sets the soft-start slope | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
-| R34 | Resistor | 4.7 MΩ (C193973) | **Respin** — PWR_SW → BAT+. Defines the switch node when the throw is open and keeps C33 pre-charged. **Not 1 MΩ** — see the caution below | — |
-| C32 | Capacitor | 100 nF (C49678) | **Respin** — Q2 gate-source cap, PWR_SW_GATE → +5V_VOUT: soft-start / inrush limiter. (Not to be confused with C31, which is the ESP32 EN reset cap on Sheet 2 and is untouched) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
+| R32 | Resistor | 22 kΩ (C17560) | **Respin** — Q2 gate pull-up, PWR_SW_GATE → +5V_VOUT. Sets the **default state to OFF**. **Not 100 kΩ** — see the caution below | — |
+| R33 | Resistor | 1 kΩ (C17513) | **Respin** — series gate resistor, PWR_SW → PWR_SW_GATE; sets the soft-start slope | — |
+| R34 | Resistor | 1 MΩ (C17514) | **Respin** — PWR_SW → BAT+. Defines the switch node when the throw is open and keeps C33 pre-charged | — |
+| C32 | Capacitor | 1 µF (C28323) | **Respin** — Q2 gate-source cap, PWR_SW_GATE → +5V_VOUT: soft-start / inrush limiter, τ = 957 µs. (Not to be confused with C31, which is the ESP32 EN reset cap on Sheet 2 and is untouched) | — |
 | C33 | Capacitor | 1 µF (C28323) | **Respin** — wake cap, PWR_SW → IP5306_KEY: AC-couples the switch's ON transition into KEY as a low pulse. **Value is BENCH-VALIDATE** | — |
-| SW17 | Tact switch — **DNP** | C318884 | **Respin** — IP5306_KEY → GND, the datasheet-blessed manual wake. Excluded from the CPL and marked DNP in the BOM; the land exists so the C33 RC can be tuned or bypassed on the bench | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
+| ~~SW17~~ | Tact switch | C318884 | **NOT FITTED.** Specified as the manual KEY wake and then dropped: no site within reach of IP5306_KEY clears the copper the respin added. Bench-tune through C33's own pads instead | — |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
@@ -210,17 +210,17 @@ the IP5306's VOUT pin and every load by the high-side P-MOSFET **Q2**:
                     +5V_VOUT
                         │
              ┌──────────┴──────────┐
-            R32 100k             C32 100nF        default = OFF; C32 = soft start
+            R32 22k              C32 1µF          default = OFF; C32 = soft start
              │                     │
              └──────────┬──────────┘
                         │
                   PWR_SW_GATE ──────────────────► Q2 gate
                         │
-                      R33 10k                     τ = (R32‖R33)·C32 = 0.909 ms
+                      R33 1k                      τ = (R32‖R33)·C32 = 957 µs
                         │
       ┌─────────────────┴─────────────────┬──────────────────┐
       │                                   │                  │
-   SW16 pad 2                        R34 4.7M            C33 1µF
+   SW16 pad 2                         R34 1M              C33 1µF
    (common) = PWR_SW                     │                  │
       pad 1 = GND  ← ON position        BAT+           IP5306_KEY
       pad 3 = OPEN                  (defines the node    (wake pulse
@@ -230,7 +230,7 @@ the IP5306's VOUT pin and every load by the high-side P-MOSFET **Q2**:
 
 **Key design points:**
 - **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail, with the **cell on the drain and the IP5306 on the source**. That direction is the protection, not a detail: a P-channel body diode conducts drain→source, so a correctly-inserted cell pre-charges the rail through the diode and then V<sub>GS</sub> = −V<sub>BAT</sub> (gate held at GND by R24) turns the channel on, while a reversed cell reverse-biases the diode *and* holds the channel off. Wired the other way round the part conducts identically in normal use and does nothing at all in the fault — which is why this shipped undetected through v4.5.0 and was fixed as R31-HIGH-1 by turning the package around.
-- **Q2 (SI2301 P-MOSFET, same part as Q1)** is the actual power switch. Its **body diode points loads→VOUT**, so it blocks in the OFF direction; SW16 does nothing but pull the gate node to GND. Sliding to ON gives V<sub>GS</sub> = −4.55 V (fully enhanced); the throw open gives V<sub>GS</sub> = −0.027 V with a cell, −0.104 V with none — against a 0.45 V threshold minimum.
+- **Q2 (SI2301 P-MOSFET, same part as Q1)** is the actual power switch. Its **body diode points loads→VOUT**, so it blocks in the OFF direction; SW16 does nothing but pull the gate node to GND. Sliding to ON gives V<sub>GS</sub> = −4.78 V (past the −4.5 V the part's R<sub>DS(on)</sub> is specified at); the throw open gives V<sub>GS</sub> = −0.028 V with a cell, −0.108 V with none — against a 0.45 V threshold minimum. vbench T2.3 solves the same network from the netlist and the BOM and gets −4.783 V / −0.025 V.
 - **The net split follows the board's existing precedent** — `VBUS_IN` → F1 → `VBUS`, `BAT_IN` → Q1 → `BAT+`, and now **`+5V_VOUT` → Q2 → `+5V`**. `+5V_VOUT` is the upstream net (U2 pin 8, C27, Q2 source, R32/C32); **`+5V` keeps its name and is now the LOAD-side net** (U3, U5, R27, load-side decoupling).
 - **SW16** was originally intended between battery and IP5306 pin 6 (BAT) — that plan is **rejected**, see the caution below. It is **not functional in any revision to date**, and it never controlled USB VBUS.
 - **VBUS** reaches IP5306 pin 1 (VIN) through the F1 PTC fuse (J1 → VBUS_IN → F1 → VBUS) — always available when USB is plugged in.
@@ -275,12 +275,23 @@ section of
 the +5V rail is broken between the IP5306 VOUT pin and **all** loads by the high-side
 P-MOSFET **Q2** (SI2301, same part as Q1). New net `+5V_VOUT` upstream, `+5V` keeps
 its name on the load side. SW16 pad 2 = `PWR_SW`, pad 1 = GND (the ON position),
-pad 3 open; the dead BAT+ stub is removed. Gate network: **R32** 100 kΩ pull-up to
-`+5V_VOUT` (default OFF), **R33** 10 kΩ in series, **C32** 100 nF gate-source
-(soft start, ~0.9 ms τ → ~167 mA inrush instead of amps), **R34** 4.7 MΩ from `PWR_SW`
-to `BAT+`. R34 is **not** 1 MΩ: at 1 MΩ the no-battery case lands on
-V<sub>GS</sub> = −0.45 V, *exactly* SI2301's threshold minimum, in precisely the
-USB-powered/no-cell/switch-OFF state a bench operator uses most.
+pad 3 open; the dead BAT+ stub is removed. Gate network: **R32** 22 kΩ pull-up to
+`+5V_VOUT` (default OFF), **R33** 1 kΩ in series, **C32** 1 µF gate-source
+(soft start, τ = 957 µs → ~1.5 ms ramp → ~167 mA inrush instead of amps), **R34**
+1 MΩ from `PWR_SW` to `BAT+`.
+
+R32 is **not** 100 kΩ. The OFF state is a divider — V<sub>GS</sub> =
+−5 × R32/(R32+R33+R34) — so the gate offset is set by the *ratio*, and the obvious
+100k/10k/1M lands the no-battery case on V<sub>GS</sub> = −0.455 V, *exactly*
+SI2301's threshold minimum, in precisely the USB-powered/no-cell/switch-OFF state a
+bench operator uses most. Raising R34 to 4.7 MΩ fixes the same ratio and was rejected
+for a different reason: 4.7 M 0805 is not a JLCPCB **Basic** part, so it would buy an
+extended-part fee and a feeder. Shrinking R32 uses parts already on this BOM, keeps
+R34 on the Basic 1 M, and is better electrically twice over — a 23 kΩ gate network is
+far harder to disturb than a 110 kΩ one, and the ON-state divider improves from
+−4.55 V to −4.78 V. C32 grew to 1 µF for the same reason: at 957 Ω a 100 nF cap gives
+τ = 96 µs, and a 96 µs ramp puts about 1.7 A through Q2. **The time constant is the
+specification, not the capacitor value.**
 
 **The wake network is mandatory, not polish.** The IP5306 boost auto-shuts down after
 **32 s below a 45 mA load** and restarts only on a KEY press or a USB insertion
@@ -290,11 +301,16 @@ press by itself, or the board never comes back on battery. **C33** (1 µF from `
 into `IP5306_KEY`) couples the ON transition into KEY as a low pulse; KEY is active-low
 with an internal pull-up per the datasheet reference schematic (p.11, fig. 4), and the
 chip stays alive from the cell while the boost is off. The pulse width is τ against
-that *undocumented* internal pull-up, so **the C33 value is BENCH-VALIDATE**; **SW17**
-(a real momentary button to GND, **DNP**) is the fallback and the tuning point.
+that *undocumented* internal pull-up, so **the C33 value is BENCH-VALIDATE**.
+**SW17 is not fitted**: it was specified as the datasheet-blessed manual wake button
+and then dropped, because no site within reach of `IP5306_KEY` clears the copper the
+respin itself added, and the nearest free 5.1 × 5.1 tact site is 11.2 mm away. The
+tuning point is therefore **C33's own pads** — lift the cap, tack a wire to a
+momentary button, and that reaches KEY and GND directly. Fitting a real button needs
+a placement reshuffle of the IP5306 corner, an open respin decision.
 **R16 is deleted** — it was off-datasheet from the start, and on the new load-side +5V
 it would invert into a 100 kΩ pull-*down* whenever the switch is OFF, holding KEY
-asserted. `IP5306_KEY` becomes `{U2.5, C33, SW17(DNP)}`.
+asserted. `IP5306_KEY` becomes `{U2.5, C33}`.
 :::
 
 ### Power States & Debug

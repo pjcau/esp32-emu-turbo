@@ -146,10 +146,10 @@ LiPo 3.7V 5000mAh
 | C31 | 100nF | EN → GND reset delay | Module datasheet p.28 power-up timing |
 | R4–R13, R15 | 10k | Button pull-ups (11 of 12; R14 is DNP for BTN_L) | Logic HIGH = 3.3V > 2.475V (Vih) |
 | ~~R16~~ | 100k | IP5306 KEY **pull-UP to +5V** — never a pull-down, and it did *not* keep KEY low; it held KEY high. **Deleted in the SW16 respin** | Off-datasheet: the IP5306 reference schematic (p.11 fig. 4) shows KEY with a button to GND and an *internal* pull-up, no external one |
-| Q2 | SI2301 PMOS | **Respin** — high-side switch, +5V_VOUT → +5V; gate on PWR_SW_GATE | V<sub>GS</sub> = −4.55 V ON; −0.027 V (cell) / −0.104 V (no cell) OFF, vs 0.45 V V<sub>GS(th)</sub> min → 4.3× worst-case margin |
-| R32 / R33 / C32 | 100k / 10k / 100nF | **Respin** — Q2 gate network: pull-up to +5V_VOUT (default OFF), series, soft-start | τ = (R32‖R33)·C32 = 0.909 ms → ~1.5 ms ramp → ~167 mA inrush into ~50 µF instead of amps |
-| R34 | 4.7M | **Respin** — PWR_SW → BAT+, defines the switch node with the throw open | **Not 1 MΩ**: at 1 MΩ the no-cell case sits on V<sub>GS</sub> = −0.45 V, exactly the SI2301 threshold minimum |
-| C33 | 1uF | **Respin** — wake cap, PWR_SW → IP5306_KEY | **BENCH-VALIDATE**: pulse width is τ against the IP5306's undocumented internal KEY pull-up. SW17 (DNP) is the fallback |
+| Q2 | SI2301 PMOS | **Respin** — high-side switch, +5V_VOUT → +5V; gate on PWR_SW_GATE | V<sub>GS</sub> = −4.78 V ON; −0.028 V (cell) / −0.108 V (no cell) OFF, vs 0.45 V V<sub>GS(th)</sub> min → 4.2× worst-case margin. vbench T2.3 solves −4.783 / −0.025 V from the netlist |
+| R32 / R33 / C32 | 22k / 1k / 1µF | **Respin** — Q2 gate network: pull-up to +5V_VOUT (default OFF), series, soft-start | τ = (R32‖R33)·C32 = 957 µs → ~1.5 ms ramp → ~167 mA inrush into ~50 µF instead of amps. **R32 is not 100 k**: 100k/10k/1M puts the no-cell OFF state on −0.455 V, the threshold minimum |
+| R34 | 1M | **Respin** — PWR_SW → BAT+, defines the switch node with the throw open | On the **common** node, not the open throw — electrically identical, and it keeps the switch to one net. 4.7 M was rejected: not a JLCPCB Basic part |
+| C33 | 1uF | **Respin** — wake cap, PWR_SW → IP5306_KEY | **BENCH-VALIDATE**: pulse width is τ against the IP5306's undocumented internal KEY pull-up. There is no fallback button — SW17 is not fitted, so bench-tune through C33's own pads |
 | R17, R18 | 1k | LED current limiting | ~1.1–1.3 mA; **both LEDs are red** — C19171391 was mislabelled "green" |
 | R25 / R26 / C29 | 100k / 22k / 22pF | SY8089 feedback divider + feed-forward | Vout = 0.6 × (1 + R25/R26) = 3.327 V |
 | R27 | 20R 1206 | Backlight series resistor, +5V → LED_BLA | ~90 mA into the panel LED string |

@@ -899,10 +899,13 @@ COMPONENT_SPECS["R24"] = {
 #         tau_off = (R32 || (R33+R34)) x C32 = 21.5 ms; Q2 is fully off
 #         about 52 ms after the slider moves.
 #
-#   QUIESCENT — 217 uA through R32/R33 while ON, 1.3 uA through R34.
-#         The ON figure is 0.5 % of the 45 mA the IP5306 already needs to
-#         see to stay out of light-load shutdown, so it changes nothing
-#         that matters; against a 5000 mAh cell it is 0.17 % per day.
+#   QUIESCENT — 217 uA through R32/R33 while ON. R34 carries BAT+/1M,
+#         which is ~3.7 uA while ON (the gate node is grounded then) and
+#         ~1.3 uA in the OFF state, where the whole 23k+1M chain is in
+#         series. The ON figure is 0.5 % of the 45 mA the IP5306 already
+#         needs to see to stay out of light-load shutdown, so it changes
+#         nothing that matters; against a 5000 mAh cell 221 uA is
+#         5.3 mAh/day, about 0.11 % per day.
 #
 #   THERMAL — Rds(on) 55 mohm at 25 C, ~77 mohm hot. At the board's
 #         worst-case simultaneous +5V budget of 2.15 A that is 0.356 W;

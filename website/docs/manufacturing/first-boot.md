@@ -42,9 +42,13 @@ the +5V loads through the high-side P-MOSFET Q2:
   triggers, so C33 injects a KEY pulse on the ON transition. If a respin
   board will not start from the cell after being switched off — but does
   start the moment you plug USB in — that is the C33 wake pulse being too
-  short, and it is the one **BENCH-VALIDATE** value in the design. Fit
-  SW17 (the DNP tact next to KEY) and press it: if the board then starts,
-  the diagnosis is confirmed.
+  short, and it is the one **BENCH-VALIDATE** value in the design. There
+  is no button on the board to confirm it with — SW17 was specified and
+  then dropped for want of a clearance-legal site — so the confirmation
+  is: **lift C33 and tack a wire from its KEY-side pad to GND through a
+  momentary button.** That reaches `IP5306_KEY` and GND directly. If the
+  board then starts on the button, the diagnosis is confirmed and the fix
+  is a larger C33.
 
 **Keep SW16 ON for the whole session below.** Every stage from 1 onward
 assumes the loads are powered.
@@ -185,9 +189,14 @@ is the only stage where they can be made, because both need a cell:
    minute guarantees the IP5306's 32 s light-load shutdown has fired, so
    this exercises the C33 KEY pulse and nothing else. The board must come
    back up on the cell alone. If it does not, but comes straight up when
-   USB is plugged in, the wake pulse is short — press SW17 if fitted, and
-   log it: **C33 is the design's one BENCH-VALIDATE value** and this is
-   the measurement that closes it.
+   USB is plugged in, the wake pulse is short. Log it and take the
+   measurement: scope `IP5306_KEY` against GND across the ON transition
+   and record the pulse width and depth. **C33 is the design's one
+   BENCH-VALIDATE value** and this is the measurement that closes it —
+   its RC runs against the IP5306's undocumented internal KEY pull-up, so
+   the number cannot be derived, only measured. The manual-button check
+   is described in the note above (lift C33, tack a wire); there is no
+   SW17 to press.
 
 Never use the switch to "disconnect the battery" for a rework: it does
 not, by design. Unplug J3.
