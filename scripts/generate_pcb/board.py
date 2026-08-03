@@ -294,7 +294,7 @@ def _silkscreen_labels():
     # other F.Silkscreen item, so an ~18 mm string at 1.2 mm height fits
     # with margin on both sides.
     parts.append(P.gr_text(
-        "CPJ&CP 2026 v2", 110.0, 73.0, "F.SilkS", 1.2,
+        "CPJ&CP 2026 v3", 110.0, 73.0, "F.SilkS", 1.2,
     ))
 
     # ── Back Fab (IC + connector labels, visible in 3D renders) ──
@@ -380,7 +380,7 @@ def _silkscreen_labels():
 
     # Branding (back side, top edge — clear of all vias and components)
     parts.append(P.gr_text(
-        "CPJ&CP 2026 v2", CX, 3.0, "B.SilkS", 1.2,
+        "CPJ&CP 2026 v3", CX, 3.0, "B.SilkS", 1.2,
     ))
 
     # ── Passive component labels (B.Fab) ────────────────────────

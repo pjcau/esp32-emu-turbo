@@ -411,7 +411,7 @@ def test_kicad_drc():
     # Our actual gap is 0.3mm (0.5 - 0.1 - 0.1) which passes JLCPCB.
     check("KiCad DRC: hole_to_hole <= 1", hole <= 1,
           f"got {hole}")
-    # silk_over_copper=2: project text "CPJ&CP 2026 v2" clipped by J1 rear
+    # silk_over_copper=2: project text "CPJ&CP 2026 v3" clipped by J1 rear
     # shield THT pads 13b/14b solder mask openings (cosmetic, not functional).
     check("KiCad DRC: silk issues <= 2",
           silk_copper <= 2 and silk_overlap == 0 and silk_edge == 0,
