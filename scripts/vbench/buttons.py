@@ -6,13 +6,24 @@ they produce. Pressing is fast — the switch shorts the node to ground — so
 the time constant that matters is the rise after release, and it is the one a
 firmware debounce interval has to clear.
 
-T2.3 is the opposite kind of test: `switch_off` must **reproduce** a known
-property of this board rather than report it. SW16 is not in series with the
-battery — only its common pad is routed, as a stub tap on BAT+ — so the switch
-cannot power the board down. The bench asserts that the board stays powered,
-cites the invariant, and fails if the board ever starts behaving like the
-switch works, because that would mean the copper changed under a recorded
-limitation.
+T2.3 operates SW16 and checks what the switch is supposed to do. Since the
+respin it does something: it drives PWR_SW, which through R33 drives the gate
+of Q2, the high-side P-MOSFET between the boost output (`+5V_VOUT`) and every
+load (`+5V`).
+
+The verdict is read off the GATE, not off the rail. The DC solver has no
+MOSFET model, so asking it what the load rail does when Q2 turns off would be
+asking it to invent an answer; the gate network is nothing but resistors and
+the switch, so it is solved exactly. On the ON throw the gate must sit far
+enough below the source to drive the part past its characterised V_gs, and on
+the open throw it must sit close enough to the source to be unambiguously off
+— both thresholds read from the Q2 model, not typed here.
+
+The scenario also asserts what must NOT happen: BAT+ and +3V3 do not move.
+The cell path never passes through this switch, which is the whole point —
+OFF has to leave charging working. On the FABRICATED boards the switch is
+inert altogether (both throws unrouted), and that limitation stays recorded
+in docs/known-issues.md; true isolation on those is unplugging J3.
 
 Usage:
     python3 scripts/vbench/buttons.py
@@ -126,21 +137,43 @@ def survey(board=None, values=None):
     return out
 
 
-def switch_off_scenario():
-    """T2.3 — closing SW16 must NOT remove power. Returns (ok, detail)."""
+def _q2_thresholds():
+    """(V_gs to call Q2 ON, V_gs to call Q2 OFF), from the part's model.
+
+    Both come from the SI2301 model rather than being typed here, so a
+    corrected datasheet reading moves this test with it.
+    """
+    from vbench.models.q1_si2301 import Q1 as SI2301
+    p = SI2301.params
+    # ON: the datasheet characterises R_ds(on) at a stated V_gs. Driving to
+    # at least that magnitude is what "on" means for this part.
+    on = abs(p["v_gs_rds_on"].value)
+    # OFF: below the MINIMUM threshold magnitude the part is specified not
+    # to conduct. The minimum is the pessimistic edge, which is the one an
+    # off-state has to clear.
+    off = abs(p["v_gs_th_min"].value)
+    return on, off, p["v_gs_rds_on"].locator, p["v_gs_th_min"].locator
+
+
+def switch_scenario():
+    """T2.3 — operating SW16 must switch Q2, and must not touch the cell."""
     board = nl.load_board_netlist()
-    values = rails.load_bom_values()
-    powered = rails.operating_point(buttons_pressed=False)
-    switched = rails.operating_point(buttons_pressed=True)
+    off_state = rails.operating_point(buttons_pressed=False)
+    on_state = rails.operating_point(buttons_pressed=True)
 
-    v_before = powered.voltages.get("BAT+")
-    v_after = switched.voltages.get("BAT+")
-    rail_before = powered.voltages.get("+3V3")
-    rail_after = switched.voltages.get("+3V3")
+    def vgs(op):
+        g = op.voltages.get("PWR_SW_GATE")
+        s = op.voltages.get("+5V_VOUT")
+        if g is None or s is None:
+            return None
+        return g - s
 
-    # The physical reason, read from the copper rather than quoted: SW16's
-    # throw pads carry no net, so there is nothing for the common to switch
-    # between.
+    vgs_off = vgs(off_state)
+    vgs_on = vgs(on_state)
+    v_on_needed, v_off_needed, on_loc, off_loc = _q2_thresholds()
+
+    # Read from the copper, not quoted: which of SW16's pads carry a net,
+    # and what the common sits on.
     pads = {p.pad: net for net, pins in board.nets.items()
             for p in pins if p.ref == "SW16"}
     throws = [p for p in ("1", "3") if p in pads]
@@ -151,15 +184,58 @@ def switch_off_scenario():
     except OSError:
         recorded = False
 
-    still_powered = (v_after is not None and rail_after is not None
-                     and abs(v_after - v_before) < 1e-9
-                     and abs(rail_after - rail_before) < 1e-9)
-    return still_powered, {
-        "bat_before": v_before, "bat_after": v_after,
+    bat_before = off_state.voltages.get("BAT+")
+    bat_after = on_state.voltages.get("BAT+")
+    rail_before = off_state.voltages.get("+3V3")
+    rail_after = on_state.voltages.get("+3V3")
+
+    problems = []
+    if vgs_on is None or vgs_off is None:
+        problems.append(
+            "the Q2 gate node did not solve — PWR_SW_GATE or +5V_VOUT is "
+            "missing from the netlist, so the switch cannot be judged")
+    else:
+        if vgs_on > -v_on_needed:
+            problems.append(
+                f"with SW16 on the ON throw the gate reaches only "
+                f"V_gs = {vgs_on:+.3f} V, short of the {-v_on_needed:+.3f} V "
+                f"the part is characterised at ({on_loc}) — Q2 would run in "
+                f"an undefined region instead of hard on")
+        if vgs_off < -v_off_needed:
+            problems.append(
+                f"with the throw open the gate sits at V_gs = {vgs_off:+.3f} "
+                f"V, past the {-v_off_needed:+.3f} V threshold minimum "
+                f"({off_loc}) — Q2 would leak instead of being off")
+    if pads.get("2") != "PWR_SW":
+        problems.append(
+            f"SW16's common (pad 2) is on {pads.get('2')!r}, not PWR_SW — "
+            f"the switch is not driving the gate network")
+    if "1" not in throws:
+        problems.append(
+            "SW16's ON throw (pad 1) carries no net, so nothing grounds the "
+            "gate and the board can never be switched on")
+    if "BAT+" in pads.values():
+        problems.append(
+            "SW16 is back on BAT+: putting the cell through this switch "
+            "breaks charging in the OFF position, which is the design the "
+            "respin rejected")
+    if bat_before is None or abs(bat_after - bat_before) > 1e-9:
+        problems.append(
+            f"operating SW16 moved BAT+ ({bat_before} -> {bat_after}); the "
+            f"cell path must not pass through the switch")
+    if rail_before is None or abs(rail_after - rail_before) > 1e-9:
+        problems.append(
+            f"operating SW16 moved +3V3 ({rail_before} -> {rail_after})")
+
+    return not problems, {
+        "vgs_off": vgs_off, "vgs_on": vgs_on,
+        "v_on_needed": v_on_needed, "v_off_needed": v_off_needed,
+        "bat_before": bat_before, "bat_after": bat_after,
         "rail_before": rail_before, "rail_after": rail_after,
         "routed_throws": throws,
         "common_net": pads.get("2"),
         "recorded": recorded,
+        "problems": problems,
     }
 
 
@@ -210,38 +286,46 @@ def main(argv=None):
         print(f"  second press. This is the number to size it against.")
 
     # ── T2.3 ─────────────────────────────────────────────────────────
-    ok, d = switch_off_scenario()
+    ok, d = switch_scenario()
     print()
     print("=" * 72)
-    print("  Virtual Bench T2.3 — scenario switch_off")
+    print("  Virtual Bench T2.3 — scenario switch (SW16 -> Q2 -> +5V loads)")
     print("=" * 72)
-    print(f"  SW16 common (pad 2) is on : {d['common_net']}")
+    print(f"  SW16 common (pad 2) is on    : {d['common_net']}")
     print(f"  Throw pads carrying a net    : "
           f"{d['routed_throws'] or 'NONE — nothing to switch between'}")
+    if d["vgs_on"] is not None:
+        print(f"  Q2 V_gs, ON throw            : {d['vgs_on']:+.3f} V "
+              f"(needs <= {-d['v_on_needed']:+.3f} V to be hard on)")
+        print(f"  Q2 V_gs, throw open          : {d['vgs_off']:+.3f} V "
+              f"(needs >  {-d['v_off_needed']:+.3f} V to be off)")
     print(f"  BAT+  before / after         : {d['bat_before']:.3f} V / "
           f"{d['bat_after']:.3f} V")
     print(f"  +3V3  before / after         : {d['rail_before']:.3f} V / "
           f"{d['rail_after']:.3f} V")
     print()
     if ok:
-        print("  EXPECTED: the board stays powered with the switch operated.")
-        print("  This is not a bench failure and must never be reported as "
-              "one — only")
-        print("  SW16's common pad is routed, as a stub tap on BAT+, so the "
-              "battery")
-        print("  path J3 -> Q1 -> BAT+ -> U2.6 never passes through the "
-              "switch. True")
-        print("  isolation on the fabricated board is unplugging J3.")
-        print(f"  Invariant recorded in docs/known-issues.md: "
+        print("  The switch works: operating SW16 swings Q2's gate across "
+              "the part's own")
+        print("  characterised drive, and neither BAT+ nor +3V3 moves — the "
+              "cell path does")
+        print("  not pass through the switch, so OFF leaves the IP5306 "
+              "charging.")
+        print("  The load rail itself is NOT read here: the DC solve has no "
+              "MOSFET model,")
+        print("  so the gate network — resistors and the switch, solvable "
+              "exactly — is")
+        print("  what the verdict comes from.")
+        print(f"  FABRICATED-BOARD limitation still recorded in "
+              f"docs/known-issues.md: "
               f"{'yes' if d['recorded'] else 'NO'}")
     else:
-        problems.append(
-            "operating SW16 changed a rail: the copper no longer matches "
-            "the recorded invariant that the switch is not in series")
+        problems.extend(d["problems"])
     if not d["recorded"]:
         problems.append(
             f"docs/known-issues.md no longer records {INVARIANT_TEXT!r}; the "
-            f"bench is reproducing a limitation nothing declares")
+            f"boards already fabricated still have an inert SW16 and the "
+            f"bench has nothing declaring it")
 
     print()
     print("=" * 72)
@@ -251,9 +335,9 @@ def main(argv=None):
             print(f"    {p}")
         print("=" * 72)
         return 1
-    print("  Every button has a computable debounce RC, and switch_off "
-          "reproduces the")
-    print("  documented v1 behaviour instead of reporting it as a defect.")
+    print("  Every button has a computable debounce RC, and operating SW16 "
+          "switches Q2")
+    print("  without disturbing the cell path.")
     print("=" * 72)
     return 0
 

@@ -48,7 +48,19 @@ from vbench.models import require_valid                      # noqa: E402
 from vbench.models.u2_ip5306 import U2, UNESTABLISHED        # noqa: E402
 from vbench.models.u3_sy8089 import U3, v_out_spread         # noqa: E402
 
-BOM = os.path.join(BASE, "release_jlcpcb", "bom.csv")
+# The GENERATED BOM, not the release copy. The bench solves the netlist
+# parsed out of hardware/kicad/esp32-emu-turbo.kicad_pcb, so it has to read
+# the passive values that belong to THAT board; release_jlcpcb/ is a
+# snapshot of the last order and lags every change until a release is cut.
+# This is the repo's own split — verify_gate_coverage.py states it: "the
+# content gates read THESE, while the release_jlcpcb/ copies are owned by
+# the order-manifest integrity gate".
+#
+# The mismatch was invisible while the two files agreed. It stopped being
+# invisible when the SW16 respin added R32/R33/R34: solve_dc found a
+# resistor spanning two nets with no value and refused to guess, which is
+# the correct behaviour and was pointing at the wrong BOM.
+BOM = os.path.join(BASE, "hardware", "kicad", "jlcpcb", "bom.csv")
 
 UNDEFINED = None        # a net with no DC path to any source
 
@@ -355,7 +367,7 @@ def operating_point(on_battery=False, soc=0.5, buttons_pressed=False):
     # design, so BAT+ is held by the battery whether or not USB is plugged
     # in. Only VBUS differs.
     cell = sources.lipo(soc)
-    fixed = {"GND": 0.0, "+5V": v5, divider.out_net: typ,
+    fixed = {"GND": 0.0, "+5V_VOUT": v5, "+5V": v5, divider.out_net: typ,
              "BAT+": cell.v_open, "BAT_IN": cell.v_open}
     if on_battery:
         notes.append("VBUS left floating: no cable in this scenario")
@@ -377,6 +389,21 @@ def operating_point(on_battery=False, soc=0.5, buttons_pressed=False):
         "BAT+ = BAT_IN through Q1; the drop is zero here ONLY because a DC "
         "solve with high-impedance loads carries no current. Load currents "
         "(T1.4) must add I x Rds_on — about 70 mV at the gaming current.")
+    # The same argument, one rail up: +5V is +5V_VOUT *through Q2*, the
+    # SW16 high-side switch, and both are held at the boost output because
+    # a zero-current solve puts no drop across the MOSFET either.
+    #
+    # This does NOT mean the bench thinks the switch does nothing. The
+    # solver has no MOSFET model, so asking it what the load rail does when
+    # Q2 turns off would be asking it to invent an answer. What it CAN do
+    # exactly is solve the gate network, which is nothing but resistors and
+    # the switch itself — and the gate is where the switch's behaviour is
+    # decided. That is what T2.3 reads (see buttons.py::switch_scenario).
+    notes.append(
+        "+5V = +5V_VOUT through Q2 (the SW16 high-side switch); like Q1 "
+        "above, the drop is zero only because this solve carries no "
+        "current. Q2's ON/OFF state is judged from the GATE network, "
+        "which is resistive and exactly solvable, not from this rail.")
     fixed = {n: v for n, v in fixed.items() if n in board.nets}
 
     voltages = solve_dc(board, values, fixed, buttons_pressed)

@@ -1,12 +1,53 @@
 {
   "name": "switch_off",
-  "description": "SW16 operated: the board must STAY powered (v1 invariant)",
-  "setup": {"source": "battery", "soc": 0.5, "buttons_pressed": true},
+  "description": "SW16 operated: Q2's gate must swing, and the cell path must not move",
+  "setup": {
+    "source": "battery",
+    "soc": 0.5,
+    "buttons_pressed": true
+  },
   "assert": [
-    {"name": "the board stays powered with the switch operated",
-     "quantity": "switch_off.stays_powered", "op": "==", "value": true,
-     "because": "docs/known-issues.md RESPIN: only SW16's common pad is routed, so the battery path never passes through the switch. This is reproduced, not reported as a defect."},
-    {"name": "and the reason is derived: no throw pad carries a net",
-     "quantity": "switch_off.throws_routed", "op": "==", "value": 0}
+    {
+      "name": "the switch scenario passes",
+      "quantity": "switch.ok",
+      "op": "==",
+      "value": true,
+      "because": "docs/known-issues.md RESPIN: SW16 drives PWR_SW, which through R33 drives Q2's gate. The scenario checks the gate against the SI2301 model's own drive conditions."
+    },
+    {
+      "name": "SW16's common drives the gate node",
+      "quantity": "switch.common_net",
+      "op": "==",
+      "value": "PWR_SW",
+      "because": "on the fabricated boards this was a dead stub on BAT+, which is why the switch did nothing."
+    },
+    {
+      "name": "exactly one throw is routed (pad 1 = GND = the ON position)",
+      "quantity": "switch.throws_routed",
+      "op": "==",
+      "value": 1,
+      "because": "pad 3 is deliberately open: with the slider there, R34 alone defines the node, which IS the OFF state."
+    },
+    {
+      "name": "the ON throw drives Q2 past its characterised -4.5 V",
+      "quantity": "switch.vgs_on",
+      "op": "<=",
+      "value": -4.5,
+      "because": "the SI2301 specifies R_ds(on) at V_gs = -4.5 V (q1_si2301.py v_gs_rds_on)."
+    },
+    {
+      "name": "the open throw leaves Q2 within 0.1 V of its source",
+      "quantity": "switch.vgs_off",
+      "op": ">=",
+      "value": -0.1,
+      "because": "the threshold minimum magnitude is 0.4 V (q1_si2301.py v_gs_th_min); 22k/1k/1M keeps the worst case at -0.108 V."
+    },
+    {
+      "name": "operating the switch does not move the cell",
+      "quantity": "switch.bat_unchanged",
+      "op": "==",
+      "value": true,
+      "because": "OFF must leave the IP5306 charging \u2014 that is why the +5V rail is switched and not the battery."
+    }
   ]
 }

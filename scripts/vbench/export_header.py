@@ -84,7 +84,7 @@ def derive():
 
     duty, v_out, v_in = thermal.duty_cycle()
     from vbench.transients import r_conduction
-    ok_off, off = buttons.switch_off_scenario()
+    ok_sw, sw = buttons.switch_scenario()
 
     return {
         "pcb_hash": board.pcb_hash,
@@ -113,7 +113,14 @@ def derive():
         "speaker_ohm": audio.SPEAKER_OHM,
         "i_idle": thermal.SCENARIOS[0].i_3v3,
         "i_gaming": thermal.SCENARIOS[1].i_3v3,
-        "switch_not_in_series": ok_off and not off["routed_throws"],
+        # Two separate facts, because the SW16 respin made them differ and
+        # firmware cares about each on its own. The switch now DOES remove
+        # the MCU's supply — it gates +5V through Q2 — while the cell path
+        # still does not run through it, which is what keeps charging alive
+        # in the OFF position.
+        "switch_cuts_5v": ok_sw and sw["routed_throws"] == ["1"]
+                          and sw["common_net"] == "PWR_SW",
+        "switch_in_cell_path": not sw["bat_before"] == sw["bat_after"],
         "calibrated": sources.CALIBRATION,
     }
 
@@ -193,10 +200,19 @@ def render(d):
     w(f"#define VB_AUDIO_I_STANDBY_MA {d['audio_i_standby']*1000:.1f}f\n")
     w(f"#define VB_SPEAKER_OHM {d['speaker_ohm']:.0f}f\n\n")
 
-    w("/* Invariants the simulator must REPRODUCE, not report:\n")
-    w(" * SW16 is not in series — operating it must NOT cut power. */\n")
-    w(f"#define VB_SWITCH_NOT_IN_SERIES "
-      f"{1 if d['switch_not_in_series'] else 0}\n\n")
+    w("/* What SW16 does, since the respin gated +5V behind Q2:\n")
+    w(" * VB_SWITCH_CUTS_5V     - flipping SW16 OFF removes the +5V rail\n")
+    w(" *                         and therefore +3V3 and the MCU. There is\n")
+    w(" *                         no warning and no graceful-shutdown hook:\n")
+    w(" *                         the supply is gone, so anything that must\n")
+    w(" *                         survive a power cut has to be committed\n")
+    w(" *                         before it happens, not on the way down.\n")
+    w(" * VB_SWITCH_IN_CELL_PATH- 0: the cell path does NOT run through the\n")
+    w(" *                         switch, so the IP5306 keeps charging with\n")
+    w(" *                         the console switched off. */\n")
+    w(f"#define VB_SWITCH_CUTS_5V {1 if d['switch_cuts_5v'] else 0}\n")
+    w(f"#define VB_SWITCH_IN_CELL_PATH "
+      f"{1 if d['switch_in_cell_path'] else 0}\n\n")
     w(f'#define VB_CALIBRATION "{d["calibrated"]}" '
       f"/* dc / dc+transient / no — T5.4 */\n")
     return out.getvalue()

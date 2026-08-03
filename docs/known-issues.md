@@ -399,17 +399,22 @@ and is six releases stale; the tag is the truth.
   **Fixed in the design 2026-08-03 on branch `respin/sw16-5v-switch`**,
   and not the way this entry used to prescribe.
 
-  **Load-bearing sentence, do not reword: on the fabricated board *SW16
-  is not in series* with the battery.** `vbench/buttons.py` greps this
-  file for the literal string `"SW16 is not in series"`
-  (`INVARIANT_TEXT`) and `test_vbench.py` T2.3 fails if it is missing —
-  the vbench T2.3 scenario operates the switch, observes that BAT+ and
-  +3V3 do not move, and reports that as *expected* only because this
-  record exists. Same anchor pattern as the EN RC entry below. When the
-  respin copper lands, T2.3's own expectation has to be re-derived
-  (`routed_throws` stops being empty and `common_net` stops being
-  `BAT+`) — that is a `scripts/` change, not a reason to delete this
-  sentence.
+  **Load-bearing sentence, do not reword, and do not let it wrap:
+  on the fabricated board SW16 is not in series with the battery.**
+  `vbench/buttons.py` greps this file for the literal string
+  `"SW16 is not in series"` (`INVARIANT_TEXT`) and `test_vbench.py` T2.3
+  fails if it is missing. Keep it on ONE line: it was wrapped between
+  "SW16" and "is not in series" for a while, and the only thing still
+  satisfying the grep was this paragraph *describing* the grep — the
+  anchor was holding itself up. Same pattern as the EN RC entry below.
+
+  T2.3's own expectation has been re-derived now that the respin copper
+  has landed: `routed_throws` is `['1']` and `common_net` is `PWR_SW`, so
+  the scenario asserts what the switch DOES (it swings Q2's gate from
+  V<sub>GS</sub> = −0.025 V to −4.783 V, solved from the netlist and the
+  BOM) and what it must NOT do (BAT+ and +3V3 do not move — the cell path
+  never runs through this switch). The sentence above still describes the
+  boards already in hand and stays.
 
   **Required behaviour** (user spec, decided 2026-08-03):
 
@@ -460,14 +465,32 @@ and is six releases stale; the tag is the truth.
   | Ref | Part | Value | Function |
   |-----|------|-------|----------|
   | Q2 | SI2301CDS P-MOSFET, SOT-23-3, C10487 (**same part as Q1**) | — | High-side switch: source on `+5V_VOUT`, drain on `+5V`, gate on `PWR_SW_GATE`. Body diode points loads→VOUT, so it blocks in OFF |
-  | R32 | 0805, C149504 | 100 kΩ | Gate pull-up, `PWR_SW_GATE` → `+5V_VOUT`. **Default state is OFF** |
-  | R33 | 0805, C17414 | 10 kΩ | Series gate resistor, `PWR_SW` → `PWR_SW_GATE`. Sets the soft-start slope |
-  | C32 | 0805, C49678 | 100 nF | Gate-source cap, `PWR_SW_GATE` → `+5V_VOUT`. Soft-start / inrush limiter |
-  | R34 | 0805, C193973 | 4.7 MΩ | `PWR_SW` → `BAT+`. Defines the switch node in the OFF position and keeps the wake cap pre-charged |
+  | R32 | 0805, C17560 | 22 kΩ | Gate pull-up, `PWR_SW_GATE` → `+5V_VOUT`. **Default state is OFF.** 22 k and not 100 k — see the OFF arithmetic below |
+  | R33 | 0805, C17513 | 1 kΩ | Series gate resistor, `PWR_SW` → `PWR_SW_GATE`. Sets the soft-start slope |
+  | C32 | 0805, C28323 | 1 µF | Gate-source cap, `PWR_SW_GATE` → `+5V_VOUT`. Soft-start / inrush limiter. The **time constant** is the specification, not the value |
+  | R34 | 0805, C17514 | 1 MΩ | `PWR_SW` → `BAT+`. Defines the switch node in the OFF position and keeps the wake cap pre-charged |
   | C33 | 0805, C28323 | 1 µF | Wake cap, `PWR_SW` → `IP5306_KEY`. Injects the KEY press when the switch is flipped to ON. **Value is BENCH-VALIDATE** |
-  | SW17 | tact C318884, **DNP** | — | `IP5306_KEY` → GND. Datasheet-blessed manual wake, fitted only if the RC needs tuning. Excluded from the CPL, marked DNP in the BOM |
+
+  Every one of these is a JLCPCB **Basic** part already on this BOM:
+  22 k = C17560 (= R26), 1 k = C17513 (= the LED series resistors),
+  1 µF = C28323 (= C23/C24/C25), 1 M = C17514. The switch network adds no
+  extended-part fee and no new feeder.
 
   Deleted: **R16** (was 100 kΩ, `IP5306_KEY` → `+5V`) — see below.
+
+  **SW17 is NOT FITTED.** It was specified here as a DNP manual KEY wake
+  button and then dropped when the placement was attempted: every free
+  site within reach of `IP5306_KEY` copper fails clearance against copper
+  the respin itself added (the `PWR_SW` spine, C33's column, L1's pads,
+  U2.6's BAT+ stitching field), and the nearest free 5.1 × 5.1 tact site
+  is 11.2 mm away, in the corner the gate network now occupies. It is in
+  neither the BOM nor the CPL nor `datasheet_specs.py` — a spec entry for
+  a part with no pads is a permanently red gate, not documentation. The
+  bench-tune path it was insurance for survives through **C33's own
+  pads**: lift the cap and tack a wire to a momentary button and that
+  reaches KEY and GND directly. Fitting a real button needs a placement
+  reshuffle of the IP5306 corner — an **open respin decision**, recorded
+  in `docs/open-tasks.md`, not silently dropped.
 
   *Refdes note:* `C31` is **not** free — it is the ESP32-S3 EN reset cap
   (R25-CRIT-1, `EN` → GND, asserted by name in `verify_polarity`,
@@ -482,7 +505,9 @@ and is six releases stale; the tag is the truth.
   **R34 hangs on the common node, not on the OFF throw** — deliberately.
   With the throw open the node is defined by R34 in *both* switch
   positions, so the two topologies are electrically identical; the cost
-  is 0.8 µA of standing drain while ON. The reason is routing: putting
+  is about 3.7 µA of standing drain while ON (BAT+ ÷ 1 MΩ). The earlier
+  figure of 0.8 µA here was computed against R34 = 4.7 MΩ, a value that
+  is no longer used. The reason is routing: putting
   R34 on the throw would need either a long thin BAT+ branch down to the
   switch (violating the BAT+ net-class minimum width) or a *second*
   full-width-of-board net. On the common node R34 sits next to BAT+ at
@@ -491,35 +516,52 @@ and is six releases stale; the tag is the truth.
   **How it works:**
 
   - **ON** — pad 2 is shorted to GND, so `PWR_SW` = 0 V. The R32/R33
-    divider puts the gate at 5 × 10k/110k = **0.45 V**, i.e.
-    V<sub>GS</sub> = **−4.55 V**, and Q2 is fully enhanced (the SI2301
-    specifies R<sub>DS(on)</sub> at V<sub>GS</sub> = −4.5 V).
+    divider puts the gate at 5 × 1k/23k = **0.217 V**, i.e.
+    V<sub>GS</sub> = **−4.78 V**, so Q2 is driven past the point the
+    SI2301 specifies R<sub>DS(on)</sub> at (V<sub>GS</sub> = −4.5 V).
+    vbench T2.3 solves this from the netlist and the BOM and gets
+    −4.783 V.
   - **OFF** — pad 2 floats on its throw and the node is defined only by
-    R34 to BAT+. The chain is `+5V_VOUT` (5 V) − R32 100k − gate − R33
-    10k − `PWR_SW` − R34 4.7M − `BAT+`. With a 3.7 V cell the current is
-    0.27 µA, the gate sits at 4.973 V and V<sub>GS</sub> = −0.027 V; with
-    **no battery** (BAT+ = 0 V) it is 1.04 µA, gate 4.896 V,
-    V<sub>GS</sub> = −0.104 V. The SI2301's V<sub>GS(th)</sub> minimum
-    magnitude is 0.45 V, so the *worst* case still has **4.3× margin**
-    (16× with a cell fitted) and Q2 is off.
+    R34 to BAT+. The chain is `+5V_VOUT` (5 V) − R32 22k − gate − R33
+    1k − `PWR_SW` − R34 1M − `BAT+`. With a 3.7 V cell the current is
+    1.27 µA, the gate sits at 4.972 V and V<sub>GS</sub> = **−0.028 V**;
+    with **no battery** (BAT+ = 0 V) it is 4.89 µA, gate 4.892 V,
+    V<sub>GS</sub> = **−0.108 V**. The SI2301's V<sub>GS(th)</sub>
+    minimum magnitude is 0.45 V, so the *worst* case still has **4.2×
+    margin** (16× with a cell fitted) and Q2 is off.
 
-    **R34 = 1 MΩ is rejected, and this is not a rounding preference.**
-    R34 was scoped at 1 MΩ; at that value the no-battery case divides to
-    V<sub>GS</sub> = −0.45 V — *exactly* the SI2301's V<sub>GS(th)</sub>
-    minimum, the point at which the part is specified to pass 250 µA.
-    That is an undefined-level failure, and it lands precisely in the
-    USB-powered / no-battery / switch-OFF state a bench operator uses
-    most. Recorded here because it is the kind of value that gets
-    "simplified" back later.
-  - **Soft start** — τ = (R32‖R33) × C32 = 9.09k × 100 nF = 0.909 ms on
-    turn-on. The rail ramps over roughly 1.5 ms, so inrush into the
+    **R32 = 100 kΩ is rejected, and this is not a rounding preference.**
+    The OFF state is a divider — V<sub>GS</sub> = −5 × R32/(R32+R33+R34)
+    — so the gate offset is set by the **ratio**, and the obvious
+    100k/10k/1M lands the no-battery case on V<sub>GS</sub> = −0.455 V:
+    *exactly* the SI2301's V<sub>GS(th)</sub> minimum, the point at which
+    the part is specified to pass 250 µA. That is an undefined-level
+    failure, and it lands precisely in the USB-powered / no-battery /
+    switch-OFF state a bench operator uses most.
+
+    The first fix tried was raising **R34 to 4.7 MΩ**. It works
+    arithmetically and it was wrong for the board: 4.7 M 0805 is not a
+    JLCPCB **Basic** part, so it would have bought an extended-part fee
+    and a feeder to correct a ratio. Shrinking R32 to 22 k fixes the same
+    ratio with parts already on this BOM and keeps R34 on the Basic 1 M.
+    It is also better electrically twice over — a 23 k gate network is far
+    harder to disturb than a 110 k one, and the ON-state divider improves
+    from −4.55 V to −4.78 V. Recorded here because these are exactly the
+    values that get "simplified" back later.
+  - **Soft start** — τ = (R32‖R33) × C32 = 957 Ω × 1 µF = **957 µs** on
+    turn-on. **C32 is 1 µF, not 100 nF, because the gate network shrank
+    with R32:** at 957 Ω a 100 nF cap gives τ = 96 µs, and a 96 µs ramp
+    puts about 1.7 A through Q2. The time constant is the specification
+    here; the capacitor value follows from it. The rail ramps over roughly 1.5 ms, so inrush into the
     ~50 µF of load-side capacitance (C1 + C30 + PAM decoupling) is
     C·dV/dt = 50 µF × 5 V / 1.5 ms ≈ **167 mA** instead of several amps.
     Energy deposited in Q2 during the ramp is ½CV² = 625 µJ.
-  - **Turn-off** — τ = (R32 ‖ (R33+R34)) × C32 = 9.79 ms; Q2 is fully off
-    about 23 ms after the switch moves.
-  - **Quiescent cost** — 45 µA through R32/R33 while ON, 0.8 µA through
-    R34. Negligible against a 5000 mAh cell.
+  - **Turn-off** — τ = (R32 ‖ (R33+R34)) × C32 = 21.5 ms; Q2 is fully off
+    about 52 ms after the switch moves.
+  - **Quiescent cost** — 217 µA through R32/R33 while ON, about 3.7 µA
+    through R34. Against a 5000 mAh cell that is roughly 0.1 % per day,
+    and it is 0.5 % of the 45 mA the IP5306 already has to see to stay
+    out of light-load shutdown, so it changes nothing that matters.
   - **Q2 thermal margin** — R<sub>DS(on)</sub> 55 mΩ at V<sub>GS</sub> =
     −4.5 V and 25 °C, about 77 mΩ hot. At the board's worst-case
     simultaneous +5V budget of 2.15 A that is 0.356 W; with a SOT-23
@@ -544,7 +586,10 @@ and is six releases stale; the tag is the truth.
   a low pulse. The pulse length is τ against the IP5306's *undocumented*
   internal pull-up, which is exactly why the value is marked
   BENCH-VALIDATE; the cap recharges through R34 once the boost restarts.
-  **SW17 (DNP) is the fallback and the tuning point.**
+  **There is no button on this net to fall back on** — SW17 was specified
+  and then dropped for want of a clearance-legal site (above) — so the
+  tuning point is C33's own pads. This is the one respin value that must
+  be settled on the bench before the design can be called finished.
 
   **R16 is deleted**, in this order of justification: (1) it was
   off-datasheet from the start — the reference schematic shows KEY with a
@@ -556,7 +601,7 @@ and is six releases stale; the tag is the truth.
   internal pull-up and could only *shorten* the wake pulse — and the
   failure mode being guarded against is a pulse that is too short, so any
   external pull-up moves the design the wrong way; (4) removing it leaves
-  `IP5306_KEY` = {U2.5, C33, SW17(DNP)} — exactly the datasheet topology
+  `IP5306_KEY` = {U2.5, C33} — the datasheet topology minus its button,
   plus the AC wake injection; (5) it frees the 0805 site next to KEY,
   which C33 now occupies, so the wake network costs almost no new copper.
 
@@ -742,11 +787,12 @@ and is six releases stale; the tag is the truth.
   What the respin changes is the *"and nothing can wake it"* half, i.e.
   the "terminal until a cable is plugged in" property is gone: `R16` is
   **deleted**, so `IP5306_KEY` is no longer a static pull-up dead end,
-  and the net becomes {U2.5, C33, SW17(DNP)} — the datasheet topology
-  plus an AC wake injection. `C33` (1 µF from the `PWR_SW` switch node)
-  couples the switch's ON transition into KEY as a low pulse, and `SW17`
-  (a real momentary button to GND, **DNP**) is the datasheet-blessed
-  manual wake fitted if the RC needs tuning. This is not optional
+  and the net becomes {U2.5, C33} — the datasheet topology minus its
+  button, plus an AC wake injection. `C33` (1 µF from the `PWR_SW` switch
+  node) couples the switch's ON transition into KEY as a low pulse. The
+  datasheet-blessed manual button (`SW17`) is **not fitted** — no
+  clearance-legal site was found for it, see the SW16 entry above — so
+  the bench-tune path is C33's own pads. This is not optional
   polish — the SW16 fix at the top of this section *guarantees* the
   32 s/45 mA shutdown fires, because with the switch OFF the load behind
   Q2 is about 0.1 mA. Full topology in that entry.

@@ -25,9 +25,11 @@
  *            means GPIO0 low, which is Joint Download Boot — the app stops
  *            and the splash says so, exactly like the real chip.
  *
- *   SW16   (P) reproduces the v1 invariant: the switch is NOT in series,
- *            so operating it must NOT cut power. The instrument line says
- *            what happened instead of pretending the board turned off.
+ *   SW16   (P) gates the +5V rail through Q2 (the respin). OFF removes
+ *            +5V, and with it +3V3 and the MCU — there is no warning and
+ *            no graceful-shutdown hook, the supply is simply gone. The
+ *            cell path does NOT run through the switch, so the IP5306
+ *            keeps charging; the instrument line says both.
  *
  *   The instrument strip (T4.4) is the bench test: per-rail voltmeters,
  *   an ammeter, junction temperatures, boot mode — and the calibration
@@ -224,9 +226,10 @@ static void vb_draw_instruments(void) {
              VB_EN_FLOATING ? "FLOATING (R25-CRIT-1)" : "held");
     vb_text(8, ty, line, g_download_mode ? COL_WARN : COL_TXT); ty += 11;
 
-    if (!g_sw_pwr_on && VB_SWITCH_NOT_IN_SERIES)
+    if (!g_sw_pwr_on && VB_SWITCH_CUTS_5V)
         snprintf(line, sizeof line,
-                 "SW16 OFF - BOARD STILL POWERED (switch not in series, v1)");
+                 "SW16 OFF - +5V GATED OFF BY Q2%s",
+                 VB_SWITCH_IN_CELL_PATH ? "" : " (IP5306 STILL CHARGING)");
     else
         snprintf(line, sizeof line, "SW16 %s", g_sw_pwr_on ? "ON" : "OFF");
     vb_text(8, ty, line, g_sw_pwr_on ? COL_TXT : COL_WARN); ty += 11;
@@ -383,8 +386,8 @@ void sim_poll_events(void) {
             if (pressed && sc == SDL_SCANCODE_F3)
                 g_soc = g_soc < 0.95f ? g_soc + 0.05f : 1.0f;
             if (pressed && sc == SDL_SCANCODE_P)
-                g_sw_pwr_on = !g_sw_pwr_on;   /* and NOTHING else happens —
-                                                 the switch is not in series */
+                g_sw_pwr_on = !g_sw_pwr_on;   /* gates +5V through Q2; the
+                                                 cell path is untouched */
             if (pressed && sc == SDL_SCANCODE_F5) {
                 /* reset: sample the strapping pins NOW (table 6, p.14) */
                 bool select_held = (g_btn_state >> 9) & 1;

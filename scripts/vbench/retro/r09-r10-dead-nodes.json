@@ -15,13 +15,13 @@
       ],
       "mutation": {
         "kind": "move_pin",
-        "ref": "R16",
+        "ref": "R32",
         "pin": "1",
         "to_net": "BTN_MENU_DEAD"
       },
-      "must_report": "R16 pin 1 is on a net with no other pin, so it carries no current and its value has no effect on any node voltage",
+      "must_report": "R32 pin 1 is on a net with no other pin, so it carries no current and its value has no effect on any node voltage",
       "expect": "caught",
-      "note": "R19/C20 were deleted from the design after this finding, so the historical part cannot be re-detached. The mutation reproduces the same electrical shape on R16, which is the surviving resistor of that network."
+      "note": "The historical parts cannot be re-detached: R19/C20 were deleted from the design after this finding, and R16 - the stand-in that replaced them - was itself deleted by the SW16 respin (on the new load-side +5V it would have inverted into a pull-DOWN and held IP5306_KEY asserted). The mutation now reproduces the same electrical shape on R32, the Q2 gate pull-up, which is a live two-terminal passive of the same class. What is being tested is the DETECTOR, not the part: strand one pin of any passive and the bench must say so."
     },
     {
       "id": "R10-LOW-2",

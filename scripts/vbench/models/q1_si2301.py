@@ -66,6 +66,20 @@ Q1 = Model(
         # the channel is not guaranteed on — so it is recorded alone rather
         # than padded into a (min, typ, max) triple with an invented middle.
         "v_gs_threshold": Param(-1.0, "V", locator="p.2 table 1"),
+        # The other end of that same min/max pair, recorded once the SW16
+        # respin needed it. An OFF claim is judged against the MINIMUM
+        # threshold magnitude, not the maximum: below the minimum the part
+        # is specified not to conduct, so it is the pessimistic bound an
+        # off-state has to clear. (Used by vbench T2.3, which reads Q2's
+        # gate to decide whether the switch is off.)
+        "v_gs_th_min": Param(-0.4, "V", locator="p.2 table 1"),
+        # The drive the R_ds(on) figures below are measured at. It was
+        # already carried implicitly, in the NAME of r_ds_on_at_4v5, where
+        # nothing could read it. Named so an ON claim can be checked
+        # against the condition the part is actually characterised under
+        # rather than against the threshold, which only says the channel
+        # has started to conduct.
+        "v_gs_rds_on": Param(-4.5, "V", locator="p.2 table 1"),
         "r_ds_on_at_4v5": Param((0.0, 0.090, 0.112), "ohm",
                                 locator="p.2 table 1"),
         "r_ds_on_at_2v5": Param((0.0, 0.110, 0.142), "ohm",

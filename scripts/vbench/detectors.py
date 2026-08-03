@@ -167,12 +167,21 @@ def _live_vb_c28_dnp():
 
 
 def _inv_sw_pwr():
-    ok, detail = buttons.switch_off_scenario()
+    # The invariant this reproduces is about the FABRICATED boards, where
+    # SW16 is inert. What the current design does is a different question,
+    # and buttons.switch_scenario() answers it: the switch must move Q2's
+    # gate and must NOT move the cell. The half that carries over unchanged
+    # is the second one — the battery path does not run through this
+    # switch, then because nothing was routed and now by design.
+    ok, detail = buttons.switch_scenario()
     if not ok:
-        return False, f"operating the switch changed a rail: {detail}"
-    return True, (f"switch_off leaves BAT+ at {detail['bat_after']:.3f} V and "
-                  f"+3V3 at {detail['rail_after']:.3f} V; SW16's throw pads "
-                  f"carry {detail['routed_throws'] or 'no net'}")
+        return False, f"the switch scenario failed: {detail['problems']}"
+    return True, (f"operating SW16 swings Q2's gate from "
+                  f"V_gs = {detail['vgs_off']:+.3f} V to "
+                  f"{detail['vgs_on']:+.3f} V and leaves BAT+ at "
+                  f"{detail['bat_after']:.3f} V, +3V3 at "
+                  f"{detail['rail_after']:.3f} V — the cell path still does "
+                  f"not pass through the switch")
 
 
 def _inv_j4_reversal():

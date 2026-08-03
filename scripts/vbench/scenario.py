@@ -84,9 +84,20 @@ def _quantities(setup):
     q["buttons.with_rc"] = len(with_rc)
     q["buttons.slowest_release_s"] = (
         max((b.t_rise_s for b in with_rc), default=None))
-    ok_off, off = buttons.switch_off_scenario()
-    q["switch_off.stays_powered"] = ok_off
-    q["switch_off.throws_routed"] = len(off["routed_throws"])
+    # SW16 respin: the switch does something now, so the quantities are
+    # about what it does. The gate V_gs is the measurable — the DC solve
+    # has no MOSFET model, so the load rail itself would be an invented
+    # answer, while the gate network is resistors and the switch and is
+    # solved exactly.
+    ok_sw, sw = buttons.switch_scenario()
+    q["switch.ok"] = ok_sw
+    q["switch.throws_routed"] = len(sw["routed_throws"])
+    q["switch.common_net"] = sw["common_net"]
+    q["switch.vgs_on"] = sw["vgs_on"]
+    q["switch.vgs_off"] = sw["vgs_off"]
+    # The cell path must not run through the switch: OFF has to leave the
+    # IP5306 charging.
+    q["switch.bat_unchanged"] = (sw["bat_before"] == sw["bat_after"])
 
     view, _rail = display.panel_view()
     ok_mode, mode, _detail = display.check_interface_mode(view)

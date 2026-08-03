@@ -895,15 +895,32 @@ def test_phase2():
     check("buttons.py exits 0 despite BTN_L having no RC",
           _quiet(buttons.main, []) == 0)
 
-    # T2.3: switch_off must reproduce, not report.
-    ok, detail = buttons.switch_off_scenario()
-    check("switch_off leaves the board powered (SW16 is not in series)", ok,
+    # T2.3: operating SW16 must switch Q2, and must leave the cell alone.
+    ok, detail = buttons.switch_scenario()
+    check("switch scenario passes", ok, f"{detail['problems']}")
+    check("SW16's common drives the gate node, and one throw is grounded",
+          detail["common_net"] == "PWR_SW"
+          and detail["routed_throws"] == ["1"],
           f"{detail}")
-    check("the reason is derived: SW16's throw pads carry no net",
-          detail["routed_throws"] == [] and detail["common_net"] == "BAT+",
-          f"{detail}")
-    check("the invariant is still recorded in docs/known-issues.md",
-          detail["recorded"])
+    # The numbers, not just the verdict. These are solved from the netlist
+    # and the BOM, so they are an independent check on the gate-network
+    # arithmetic written down in hardware/datasheet_specs.py (-4.78 V ON,
+    # -0.028 V OFF on a 3.7 V cell). If R32 ever drifts back toward 100k
+    # the OFF figure walks into the threshold and this fails.
+    check("ON throw drives Q2 past its characterised -4.5 V",
+          detail["vgs_on"] is not None
+          and abs(detail["vgs_on"] - (-4.783)) < 0.01,
+          f"V_gs(on) = {detail['vgs_on']}")
+    check("open throw leaves Q2 within 0.1 V of its source",
+          detail["vgs_off"] is not None and abs(detail["vgs_off"]) < 0.1,
+          f"V_gs(off) = {detail['vgs_off']}")
+    # SW16 must NOT be back on the cell: that design breaks charging in the
+    # OFF position, which is why the respin gates +5V instead.
+    check("the cell path does not pass through SW16",
+          detail["bat_before"] == detail["bat_after"],
+          f"BAT+ {detail['bat_before']} -> {detail['bat_after']}")
+    check("the fabricated-board limitation is still recorded in "
+          "docs/known-issues.md", detail["recorded"])
 
 
 # ── H. Phase 3: the display, seen from the panel ────────────────────
@@ -1296,8 +1313,10 @@ def test_header():
           d["boot_mode"] == "SPI Boot" and d["vdd_spi"] == 3.3)
     check("EN is exported as driven (R25-CRIT-1 fixed: RC fitted)",
           d["en_floating"] is False)
-    check("the switch-not-in-series invariant is exported",
-          d["switch_not_in_series"] is True)
+    check("the header exports that SW16 now cuts the +5V rail",
+          d["switch_cuts_5v"] is True)
+    check("and that the cell path still does not run through it",
+          d["switch_in_cell_path"] is False)
     check("the header admits it is uncalibrated",
           d["calibrated"] == "no")
 
@@ -1334,8 +1353,13 @@ def test_header():
           "a derived number is hardcoded in the C — it belongs in the header")
     check("the HAL routes pixels through the derived bus map",
           "VB_LCD_BUS_MAP" in hal and "vb_bus_px" in hal)
-    check("the HAL reproduces the switch invariant rather than cutting power",
-          "VB_SWITCH_NOT_IN_SERIES" in hal)
+    # Both macros, and by NAME: the HAL used to reference
+    # VB_SWITCH_NOT_IN_SERIES, which the respin removed from the header.
+    # Nothing noticed, because this check only reads the source — so the
+    # C would not have compiled and the test would still have been green.
+    check("the HAL reads the switch's behaviour from the header",
+          "VB_SWITCH_CUTS_5V" in hal and "VB_SWITCH_IN_CELL_PATH" in hal
+          and "VB_SWITCH_NOT_IN_SERIES" not in hal)
 
 
 def test_phase5_plan_mutations():
