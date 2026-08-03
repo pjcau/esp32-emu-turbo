@@ -150,8 +150,23 @@ def _i2s_traces():
         # SHORT FIX: SPK+ B.Cu vertical moved from x=39.5 to x=40.0 to clear
         # R20[1]/R21[1]/C21[1] GND pads (right edge=39.45). At x=40.0:
         # trace left edge = 40.0 - 0.15 = 39.85, gap to pad edge = 0.40mm ✓
-        # Short B.Cu horizontal jog at speaker pad (sy) from x=40.0 to sx=39.5.
-        spk_col_x = 40.0  # was sx (39.5); shifted right for pad clearance
+        #
+        # REFERENCE-PLANE FIX: x=40.0 landed the whole 31 mm vertical INSIDE the
+        # In2.Cu plane gap. The PAM +5V island ends at x=39.60 and +3V3 resumes
+        # at x=40.15, so a trace centred on 40.0 has no reference copper beneath
+        # it for its entire length — a 27.5 mm slot driven by a class-D output
+        # (verify_reference_plane). Moved to x=40.90, over solid +3V3 for the
+        # full y=21.5..52.5 run. Clearances at x=40.90 (w=0.30, edges 40.75/41.05):
+        #   R20[1]/R21[1]/C21[1] GND pads (right edge 39.45):   1.30mm ✓
+        #   +5V via (39.00, 48.85) OD 0.60 (right edge 39.30):  1.45mm ✓
+        #   +3V3 via (41.80, 44.50) OD 0.60 (left edge 41.50):  0.45mm ✓
+        #   +3V3 B.Cu vert x=41.80 w=0.25 (left edge 41.675):   0.625mm ✓
+        #   GND via (41.80, 52.00) OD 0.60 (left edge 41.50):   0.45mm ✓
+        #   GND B.Cu vert x=41.80 w=0.20 (left edge 41.70):     0.65mm ✓
+        # The jog at the speaker pad grows from 0.5mm to 1.4mm and crosses the
+        # plane gap once, perpendicular — the unavoidable cost of a pad that
+        # sits inside the +5V island, and 20x shorter than the run it replaces.
+        spk_col_x = 40.9  # was 40.0; moved out of the In2.Cu +5V/+3V3 plane gap
         parts.append(_seg(ox, oy, col_x, oy, "B.Cu", W_AUDIO, n_spk_p))  # horiz left
         parts.append(_seg(col_x, oy, col_x, mid_y, "B.Cu", W_AUDIO, n_spk_p))  # vert up
         parts.append(_via_net(col_x, mid_y, n_spk_p, size=VIA_STD, drill=VIA_STD_DRILL))
@@ -439,7 +454,7 @@ def _pam_passive_traces():
     #
     # Lane choice — the far pads (C21.1, R20.1, R21.1) all sit at x=38.95:
     #   * x=38.95 vertical R20.1(26.5) → R21.1(32.5) is clear. SPK+ B.Cu runs
-    #     at x=40.00 w=0.3 (left edge 39.85) → gap 0.80mm. +5V B.Cu at x=38.00
+    #     at x=40.90 w=0.3 (left edge 40.75) → gap 1.70mm. +5V B.Cu at x=38.00
     #     w=0.5 (right edge 38.25) → gap 0.60mm. Nothing crosses that span:
     #     PAM_IN_AC B.Cu horiz at y=28.00 stops at x=37.05, and the y=32.50
     #     PAM_IN_AC leg is on F.Cu.

@@ -164,7 +164,14 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
        Each trace gets unique x_left/x_right columns (0.75mm pitch) so
        B.Cu verticals don't overlap.
 
-    Returns a list of segment/via S-expressions.
+       A strategy-B detour may also HAND BACK at detour_y instead of
+       climbing to y (see _exit_at_detour): the right-hand B.Cu vertical
+       is dropped and the F.Cu run resumes at the detour level. Same via
+       count, and the caller continues from the returned exit y.
+
+    Returns (parts, exit_y): the segment/via S-expressions, and the Y at
+    which the trace is back on `layer` at x2. exit_y is y for every route
+    except an exit-at-detour strategy-B detour.
     """
     lo_x, hi_x = min(x1, x2), max(x1, x2)
     parts = []
@@ -191,24 +198,46 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
         trace_inside_drill = abs(y - cy) < min_dist
 
         if not trace_inside_drill:
-            # Strategy A: LAYER SWAP — B.Cu horizontal at same Y under NPTH.
-            # Via column positions: just outside keepout circle.
+            # Strategy A: NORTH JOG — stay on `layer`, step over the keepout.
+            #
+            # This used to be a LAYER SWAP: via down, B.Cu horizontal at the
+            # same Y under the NPTH, via back up. Its only user is LCD_WR at
+            # y=35.575, and that B.Cu span crossed the In2.Cu +3V3/+5V seam at
+            # x=105.05 — the display's write strobe losing its return plane
+            # halfway through the pulse (verify_reference_plane FAIL). The
+            # layer swap also drove B.Cu straight through the keepout it was
+            # supposed to respect, and cost two vias.
+            #
+            # The trace is outside the drill+clearance zone by definition here,
+            # so it only has to clear the (larger) keepout radius. Jogging north
+            # on the same layer does that with no vias and no reference change
+            # at all: F.Cu references the solid In1.Cu GND pour throughout.
+            #
+            # Columns stay where the old vias were, so the horizontal extent is
+            # unchanged and the vertical legs sit 2.65mm from the hole centre,
+            # clear of the 2.35mm keepout+halfwidth radius.
             x_left = round(cx - cr - via_r - 0.15, 2)
             x_right = round(cx + cr + via_r + 0.15, 2)
+            # North of the keepout circle by half a trace width plus 0.15mm.
+            # LCD_WR: 37.5 - 2.25 - 0.10 - 0.15 = 35.00, which leaves 0.495mm
+            # to the LCD_RST lane at y=34.305 (edges 34.405 / 34.90) and clears
+            # BTN_START's F.Cu at y=34.94 by x (it stops at x=100.45).
+            jog_y = round(cy - cr - width / 2 - 0.15, 3)
 
-            # Verify x boundaries are within segment span
-            if x_left <= lo_x or x_right >= hi_x:
+            # Verify x boundaries are within segment span, and that jogging
+            # north is actually a step away from the hole.
+            if x_left <= lo_x or x_right >= hi_x or jog_y >= y:
                 continue
 
-            # 1. F.Cu horizontal from x1 to x_left at y
+            # 1. Horizontal from x1 to x_left at y
             parts.append(_seg(x1, y, x_left, y, layer, width, net))
-            # 2. Via F.Cu -> B.Cu at (x_left, y)
-            parts.append(_via_net(x_left, y, net, size=via_sz, drill=via_dr))
-            # 3. B.Cu horizontal from x_left to x_right at y
-            parts.append(_seg(x_left, y, x_right, y, "B.Cu", width, net))
-            # 4. Via B.Cu -> F.Cu at (x_right, y)
-            parts.append(_via_net(x_right, y, net, size=via_sz, drill=via_dr))
-            # 5. F.Cu horizontal from x_right to x2 at y
+            # 2. Vertical north to the jog level
+            parts.append(_seg(x_left, y, x_left, jog_y, layer, width, net))
+            # 3. Horizontal across the keepout at the jog level
+            parts.append(_seg(x_left, jog_y, x_right, jog_y, layer, width, net))
+            # 4. Vertical back south to the lane
+            parts.append(_seg(x_right, jog_y, x_right, y, layer, width, net))
+            # 5. Horizontal from x_right to x2 at y
             parts.append(_seg(x_right, y, x2, y, layer, width, net))
         else:
             # Strategy B: ALL-B.Cu DETOUR — only 2 vias, full detour on B.Cu.
@@ -308,6 +337,24 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
             _detour_ys = [33.00, 34.60, 32.30]
             detour_y = _detour_ys[min(south_idx, 2)]
 
+            # Where the detour hands the trace back to `layer`.
+            #
+            # idx2 is LCD_D4, and its lane y=36.21 is 1.21mm SOUTH of the
+            # +5V island on In2.Cu (island top edge y=35.00, x=105..123).
+            # Climbing back to that lane at x_right=111.80 put a B.Cu
+            # vertical straight through the +3V3/+5V seam, and the caller's
+            # col_x vertical at x=115.20 then crossed back — two return-path
+            # breaks on the fastest bus on the board (verify_reference_plane
+            # FAIL). detour_y=32.30 is north of the island everywhere, so
+            # handing back there keeps every B.Cu millimetre of LCD_D4 over
+            # solid +3V3. The right-hand B.Cu vertical disappears and its via
+            # simply moves north with the hand-off — via count unchanged.
+            #
+            # idx0/idx1 keep the classic climb-back: their lanes are needed
+            # further south and the crossing analysis above is written for it.
+            _exit_at_detour = [False, False, True]
+            exit_at_detour = _exit_at_detour[min(south_idx, 2)]
+
             # Verify x boundaries are within segment span
             if x_left <= lo_x or x_right >= hi_x:
                 continue
@@ -320,17 +367,25 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
             parts.append(_seg(x_left, y, x_left, detour_y, "B.Cu", width, net))
             # 4. B.Cu horizontal from x_left to x_right at detour_y
             parts.append(_seg(x_left, detour_y, x_right, detour_y, "B.Cu", width, net))
+            if exit_at_detour:
+                # 5. Via B.Cu -> F.Cu at (x_right, detour_y)
+                parts.append(_via_net(x_right, detour_y, net,
+                                      size=via_sz, drill=via_dr))
+                # 6. F.Cu horizontal from x_right to x2 at detour_y
+                parts.append(_seg(x_right, detour_y, x2, detour_y,
+                                  layer, width, net))
+                return parts, detour_y
             # 5. B.Cu vertical from detour_y to y at x_right
             parts.append(_seg(x_right, detour_y, x_right, y, "B.Cu", width, net))
             # 6. Via B.Cu -> F.Cu at (x_right, y)
             parts.append(_via_net(x_right, y, net, size=via_sz, drill=via_dr))
             # 7. F.Cu horizontal from x_right to x2 at y
             parts.append(_seg(x_right, y, x2, y, layer, width, net))
-        return parts
+        return parts, y
 
     # No keepout crossed: single segment
     parts.append(_seg(x1, y, x2, y, layer, width, net))
-    return parts
+    return parts, y
 
 
 def _crosses_slot(x1, y1, x2, y2):

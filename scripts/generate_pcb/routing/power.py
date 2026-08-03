@@ -1362,7 +1362,7 @@ def _power_traces():
     # +5V island can be pulled back from x=42 to x=39.6, freeing the R4
     # pull-up +3V3 via at (41.80, 44.50) that the island used to trap.
     # Clearances at the new via (39.0, 48.85), OD 0.60 → edge radius 0.30:
-    #   SPK+ B.Cu vert x=40.00 (w=0.30, left edge 39.85): gap 0.55mm ✓
+    #   SPK+ B.Cu vert x=40.90 (w=0.30, left edge 40.75): gap 1.45mm ✓
     #   BAT+ B.Cu vert x=38.00 (w=0.76, right edge 38.38): gap 0.32mm ✓
     #   SPK1 pad 1 (39.5, 52.5) 2.0x3.0 (top edge 51.00):  gap 1.85mm ✓
     #   BAT+ via (38.00, 46.135) OD 0.90: centre dist 2.89mm − 0.75 = 2.14mm ✓

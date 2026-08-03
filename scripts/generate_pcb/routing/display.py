@@ -20,8 +20,6 @@ from ._shared import (
 )
 
 
-
-
 def _display_traces():
     """8080 display bus: ESP32 -> FPC-40P connector.
 
@@ -235,9 +233,10 @@ def _display_traces():
                 parts.append(_via_net(epx, stagger_y, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
 
                 # 2. F.Cu horizontal to col_x (detour around mounting holes)
-                parts.extend(_mh_detour_h(epx, stagger_y, col_x,
-                                          "F.Cu", W_DATA, net))
-                parts.append(_via_net(col_x, stagger_y, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
+                _detour, lane_y = _mh_detour_h(epx, stagger_y, col_x,
+                                               "F.Cu", W_DATA, net)
+                parts.extend(_detour)
+                parts.append(_via_net(col_x, lane_y, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
         else:
             # Side pins: horizontal stub right to via
             via1_x = epx + 2.0  # DFM: was 1.5 (too close to col_x vias)
@@ -246,18 +245,21 @@ def _display_traces():
             parts.append(_via_net(via1_x, epy, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
 
             # F.Cu horizontal to col_x (detour around mounting holes)
-            parts.extend(_mh_detour_h(via1_x, epy, col_x,
-                                      "F.Cu", W_DATA, net))
-            parts.append(_via_net(col_x, epy, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
+            _detour, lane_y = _mh_detour_h(via1_x, epy, col_x,
+                                           "F.Cu", W_DATA, net)
+            parts.extend(_detour)
+            parts.append(_via_net(col_x, lane_y, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
 
         # 3. B.Cu vertical up to bypass level (above slot)
         # For via_inside_gnd signals: col_x via is at escape_y (not stagger_y)
+        # Otherwise the mounting-hole detour decides where the trace arrives at
+        # col_x: a detour that hands back at its detour_y (see _mh_detour_h)
+        # leaves the col_x via north of the lane, and this vertical must start
+        # from there or it would be drawn from a point the trace never reaches.
         if is_bottom and via_inside_gnd:
             from_y = escape_y
-        elif is_bottom:
-            from_y = stagger_y
         else:
-            from_y = epy
+            from_y = lane_y
         parts.append(_seg(col_x, from_y, col_x, bypass_y,
                           "B.Cu", W_DATA, net))
         parts.append(_via_net(col_x, bypass_y, net, size=VIA_MIN, drill=VIA_MIN_DRILL))
