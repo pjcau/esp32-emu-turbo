@@ -88,10 +88,9 @@ telemetry, the bring-up firmware is the multimeter (roadmap layer 5).
      Test: USB out, SW16 OFF for a full minute (that guarantees the 32 s
      light-load shutdown has fired), then ON. The board must come back up
      on the cell alone. If it only starts when USB is plugged in, the
-     pulse is too short → larger C33. There is no SW17 to press — it was
-     dropped for want of a clearance-legal site — so the manual check is
-     to lift C33 and tack a wire from its KEY-side pad to GND through a
-     momentary button.
+     pulse is too short → larger C33. To separate "pulse too short" from
+     "wake path dead", fit **SW17** — the do-not-place momentary beside
+     C33 on the KEY node, C720477 — and press it.
    - **Q1 orientation** (CLAIM-006). Visual, not electrical: SOT-23's
      2+1 lead pattern is not 180°-symmetric, so a wrongly-rotated Q1
      cannot seat on the lands. Confirm on the Phase A preview and again
@@ -99,7 +98,7 @@ telemetry, the bring-up firmware is the multimeter (roadmap layer 5).
    - **U3 `BUCK_FB` = 0.600 V**, the buck's own reference showing the
      divider is doing what `R25/R26` say it does.
    Batch them: they are one trip to the board, and the C33 result is what
-   decides the open SW17 placement question in `docs/open-tasks.md`.
+   decides whether SW17 has to be populated on the next build.
 
 ## Output
 

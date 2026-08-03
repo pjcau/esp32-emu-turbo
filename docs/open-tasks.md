@@ -200,17 +200,12 @@ Detail for each lives in `docs/known-issues.md` §C; this is the index.
   GND directly. Same trip to the bench as the other first-article
   readings on a respin proto — the Q1 orientation check (CLAIM-006) and
   the U3 `BUCK_FB` = 0.600 V reading — so batch all three.
-- **SW17 (a real manual KEY wake button) — open respin decision.** It was
-  specified as insurance for the C33 RC above and then dropped: every free
-  site within reach of `IP5306_KEY` copper fails clearance against copper
-  the respin itself added (the `PWR_SW` spine, C33's column, L1's pads,
-  U2.6's BAT+ stitching field), and the nearest free 5.1 × 5.1 tact site
-  is 11.2 mm away, in the corner the gate network now occupies. Fitting
-  one needs a **placement reshuffle of the IP5306 corner**, which is a
-  layout decision, not a tweak. Decide it *after* the C33 measurement
-  above: if the wake pulse is comfortable, the button is not needed at
-  all. It is in no BOM, no CPL and no spec file, deliberately — a spec
-  entry for a part with no pads is a permanently red gate.
+- **Whether SW17 has to be populated — decided by the C33 measurement
+  above, not before it.** The button is now ON the board as a
+  **DO NOT PLACE** land (C720477, a 2-pad SMD momentary at
+  (115.15, 56.25) rot 90, on the KEY node next to C33), so populating it
+  is a BOM/CPL edit rather than a layout change. If the wake pulse
+  measures comfortable, it stays unpopulated and costs nothing.
 
 ## Already closed — do not redo
 

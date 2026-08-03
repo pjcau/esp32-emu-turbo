@@ -43,12 +43,11 @@ the +5V loads through the high-side P-MOSFET Q2:
   board will not start from the cell after being switched off — but does
   start the moment you plug USB in — that is the C33 wake pulse being too
   short, and it is the one **BENCH-VALIDATE** value in the design. There
-  is no button on the board to confirm it with — SW17 was specified and
-  then dropped for want of a clearance-legal site — so the confirmation
-  is: **lift C33 and tack a wire from its KEY-side pad to GND through a
-  momentary button.** That reaches `IP5306_KEY` and GND directly. If the
-  board then starts on the button, the diagnosis is confirmed and the fix
-  is a larger C33.
+  confirmation is **SW17**, the do-not-place momentary sitting next to
+  C33 on the KEY node: solder one on and press it. If the board starts on
+  the button but not on the switch, the diagnosis is confirmed and the
+  fix is a larger C33. (SW17 is C720477; it is in the BOM marked DO NOT
+  PLACE, so it ships unpopulated and the land is there waiting.)
 
 **Keep SW16 ON for the whole session below.** Every stage from 1 onward
 assumes the loads are powered.
@@ -194,9 +193,10 @@ is the only stage where they can be made, because both need a cell:
    and record the pulse width and depth. **C33 is the design's one
    BENCH-VALIDATE value** and this is the measurement that closes it —
    its RC runs against the IP5306's undocumented internal KEY pull-up, so
-   the number cannot be derived, only measured. The manual-button check
-   is described in the note above (lift C33, tack a wire); there is no
-   SW17 to press.
+   the number cannot be derived, only measured. To separate a short pulse
+   from a dead wake path, fit **SW17** (the do-not-place momentary beside
+   C33) and press it: if that wakes the board, the path is fine and only
+   the pulse is short.
 
 Never use the switch to "disconnect the battery" for a rework: it does
 not, by design. Unplug J3.

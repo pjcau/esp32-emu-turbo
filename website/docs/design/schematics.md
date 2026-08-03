@@ -95,7 +95,7 @@ make render-schematics    # Export SVG + PDF
 
 ## Sheet 1 — Power Supply
 
-USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines. The respin adds the **SW16 power switch network** — Q2 high-side P-MOSFET splitting `+5V_VOUT` from `+5V`, its gate network (R32/R33/C32/R34) and the IP5306 KEY wake cap C33. There is no wake button: SW17 was specified and then dropped for want of a clearance-legal site.
+USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306 charge-and-play module, SY8089AAAC synchronous buck regulator (L2 + C30 + R25/R26 feedback divider), Q1 battery reverse-polarity protection, and USBLC6 ESD protection + series resistors on the USB data lines. The respin adds the **SW16 power switch network** — Q2 high-side P-MOSFET splitting `+5V_VOUT` from `+5V`, its gate network (R32/R33/C32/R34) and the IP5306 KEY wake cap C33. It also fits **SW17**, a do-not-place manual wake button on the KEY node.
 
 <div className="schematic-container">
 
@@ -127,7 +127,7 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | R34 | Resistor | 1 MΩ (C17514) | **Respin** — PWR_SW → BAT+. Defines the switch node when the throw is open and keeps C33 pre-charged | — |
 | C32 | Capacitor | 1 µF (C28323) | **Respin** — Q2 gate-source cap, PWR_SW_GATE → +5V_VOUT: soft-start / inrush limiter, τ = 957 µs. (Not to be confused with C31, which is the ESP32 EN reset cap on Sheet 2 and is untouched) | — |
 | C33 | Capacitor | 1 µF (C28323) | **Respin** — wake cap, PWR_SW → IP5306_KEY: AC-couples the switch's ON transition into KEY as a low pulse. **Value is BENCH-VALIDATE** | — |
-| ~~SW17~~ | Tact switch | C318884 | **NOT FITTED.** Specified as the manual KEY wake and then dropped: no site within reach of IP5306_KEY clears the copper the respin added. Bench-tune through C33's own pads instead | — |
+| SW17 | 2-pad SMD momentary — **DO NOT PLACE** | C720477 | **Respin** — IP5306_KEY → GND, the datasheet-blessed manual wake, at (115.15, 56.25) rot 90. In the BOM so it can be sourced, out of the CPL so JLCPCB never fits it. Deliberately **not** the 5.1×5.1 tact: that footprint has no clearance-legal site in this quadrant | — |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
 | LED2 | Red LED | 0805 | Second power indicator (+3V3, always on). **C19171391 is red** (YLED0805R, 615–630 nm) — it was mislabelled "green" in BOM and docs | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
@@ -302,12 +302,17 @@ into `IP5306_KEY`) couples the ON transition into KEY as a low pulse; KEY is act
 with an internal pull-up per the datasheet reference schematic (p.11, fig. 4), and the
 chip stays alive from the cell while the boost is off. The pulse width is τ against
 that *undocumented* internal pull-up, so **the C33 value is BENCH-VALIDATE**.
-**SW17 is not fitted**: it was specified as the datasheet-blessed manual wake button
-and then dropped, because no site within reach of `IP5306_KEY` clears the copper the
-respin itself added, and the nearest free 5.1 × 5.1 tact site is 11.2 mm away. The
-tuning point is therefore **C33's own pads** — lift the cap, tack a wire to a
-momentary button, and that reaches KEY and GND directly. Fitting a real button needs
-a placement reshuffle of the IP5306 corner, an open respin decision.
+**SW17 is the fallback and the tuning point.** It is a 2-terminal SMD momentary
+(C720477) at (115.15, 56.25) rot 90, 3.9 mm from C33.2 — which *is* the KEY node —
+marked **DO NOT PLACE**: the land and copper are on the board, the part is in the BOM
+so it can be sourced, and it is absent from the CPL so JLCPCB never fits it. It is
+deliberately **not** the 5.1 × 5.1 tact the user buttons use: a 7.0 × 4.4 footprint
+has no clearance-legal site anywhere in the IP5306 quadrant, even with every respin
+part and every piece of respin copper treated as movable — the only sites are north
+of U2, past the BAT+ B.Cu run at y = 46.1, and the one F.Cu corridor across it is
+0.925 mm wide and already carries `PWR_SW`. There is **no series resistor** in the
+KEY leg: C33's 1 µF already dominates that node's impedance, and an R would sit in
+the wake pulse's own path.
 **R16 is deleted** — it was off-datasheet from the start, and on the new load-side +5V
 it would invert into a 100 kΩ pull-*down* whenever the switch is OFF, holding KEY
 asserted. `IP5306_KEY` becomes `{U2.5, C33}`.

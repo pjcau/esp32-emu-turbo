@@ -478,19 +478,40 @@ and is six releases stale; the tag is the truth.
 
   Deleted: **R16** (was 100 kΩ, `IP5306_KEY` → `+5V`) — see below.
 
-  **SW17 is NOT FITTED.** It was specified here as a DNP manual KEY wake
-  button and then dropped when the placement was attempted: every free
-  site within reach of `IP5306_KEY` copper fails clearance against copper
-  the respin itself added (the `PWR_SW` spine, C33's column, L1's pads,
-  U2.6's BAT+ stitching field), and the nearest free 5.1 × 5.1 tact site
-  is 11.2 mm away, in the corner the gate network now occupies. It is in
-  neither the BOM nor the CPL nor `datasheet_specs.py` — a spec entry for
-  a part with no pads is a permanently red gate, not documentation. The
-  bench-tune path it was insurance for survives through **C33's own
-  pads**: lift the cap and tack a wire to a momentary button and that
-  reaches KEY and GND directly. Fitting a real button needs a placement
-  reshuffle of the IP5306 corner — an **open respin decision**, recorded
-  in `docs/open-tasks.md`, not silently dropped.
+  **SW17 IS FITTED**, as a **DO NOT PLACE** land — the board carries the
+  footprint and its copper, the BOM carries the part so it can be
+  sourced, and the CPL does not, which is the file that decides what
+  JLCPCB populates.
+
+  | Ref | Part | Function |
+  |-----|------|----------|
+  | SW17 | XUNPU TS-1088-AR02016, **C720477**, 2-pad SMD momentary, **DO NOT PLACE** | `IP5306_KEY` → GND at (115.15, 56.25) rot 90. The datasheet's own wake topology (p.11 fig.4): a momentary to an active-low input |
+
+  **It is deliberately not the 5.1 × 5.1 tact the twelve user buttons
+  use**, and that is a measurement rather than a preference. Scanning
+  x 96…130, y 34…68 on B.Cu for a 7.0 × 4.4 tact footprint — with every
+  respin part *and* every piece of respin copper (`+5V_VOUT`, `PWR_SW`,
+  `PWR_SW_GATE`, `IP5306_KEY`) treated as movable — returns sites only
+  **north of U2**, and every one of them is on the far side of the BAT+
+  B.Cu run at y = 46.1. Crossing that run means F.Cu, and the only F.Cu
+  corridor east of U2 is **0.925 mm wide** (U2's pad edge at 113.85 to
+  the gate column's at 114.775): one trace, and `PWR_SW` is already in
+  it. A tact there is not a placement problem, it is a re-plan of the
+  densest corner of the board.
+
+  A **2-terminal** switch is 5.6 × 3.1 mm of envelope and fits 3.9 mm
+  from C33.2 — which *is* the KEY node — with **nothing else moved**.
+  C33, L1, C19, C1 and U3 all stay exactly where they are. One `PWR_SW`
+  column stepped from x = 115.25 to 116.60, because the switch's pads are
+  1.86 mm wide after its 90° rotation and the old column ran straight
+  over the KEY pad; `short_circuit_analysis` caught that as the
+  different-net short it was.
+
+  **No series resistor in the KEY leg.** A long run to a high-impedance
+  sense pin normally wants one, but this node carries C33's 1 µF by
+  design — orders of magnitude more shunt than a series R would be
+  providing — and an R would also sit in the wake pulse's own path and
+  blunt the edge the design needs to keep sharp.
 
   *Refdes note:* `C31` is **not** free — it is the ESP32-S3 EN reset cap
   (R25-CRIT-1, `EN` → GND, asserted by name in `verify_polarity`,
@@ -586,10 +607,11 @@ and is six releases stale; the tag is the truth.
   a low pulse. The pulse length is τ against the IP5306's *undocumented*
   internal pull-up, which is exactly why the value is marked
   BENCH-VALIDATE; the cap recharges through R34 once the boost restarts.
-  **There is no button on this net to fall back on** — SW17 was specified
-  and then dropped for want of a clearance-legal site (above) — so the
-  tuning point is C33's own pads. This is the one respin value that must
-  be settled on the bench before the design can be called finished.
+  **SW17 is the fallback and the tuning point**: fit the do-not-place
+  land next to C33 and press it. If the board wakes on the button but not
+  on the switch, the coupled pulse is too short and C33 needs to grow.
+  This is the one respin value that must be settled on the bench before
+  the design can be called finished.
 
   **R16 is deleted**, in this order of justification: (1) it was
   off-datasheet from the start — the reference schematic shows KEY with a
@@ -787,12 +809,11 @@ and is six releases stale; the tag is the truth.
   What the respin changes is the *"and nothing can wake it"* half, i.e.
   the "terminal until a cable is plugged in" property is gone: `R16` is
   **deleted**, so `IP5306_KEY` is no longer a static pull-up dead end,
-  and the net becomes {U2.5, C33} — the datasheet topology minus its
-  button, plus an AC wake injection. `C33` (1 µF from the `PWR_SW` switch
-  node) couples the switch's ON transition into KEY as a low pulse. The
-  datasheet-blessed manual button (`SW17`) is **not fitted** — no
-  clearance-legal site was found for it, see the SW16 entry above — so
-  the bench-tune path is C33's own pads. This is not optional
+  and the net becomes {U2.5, C33, SW17(DO NOT PLACE)} — exactly the
+  datasheet topology plus an AC wake injection. `C33` (1 µF from the
+  `PWR_SW` switch node) couples the switch's ON transition into KEY as a
+  low pulse, and `SW17` is a real momentary to GND on the same node,
+  fitted only if the RC needs tuning. This is not optional
   polish — the SW16 fix at the top of this section *guarantees* the
   32 s/45 mA shutdown fires, because with the switch OFF the load behind
   Q2 is about 0.1 mA. Full topology in that entry.
