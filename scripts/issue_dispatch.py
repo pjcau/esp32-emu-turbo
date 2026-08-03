@@ -201,6 +201,19 @@ ROUTING_LAW = [
      "degraded",  "impedance error degrades margin, not connectivity"),
     ("resonance",  "signal integrity",        "pcb-engineer", "/pcb-optimize",
      "degraded",  "a resonance is a margin problem"),
+    ("crosstalk",  "signal integrity",        "pcb-engineer", "/pcb-routing",
+     "degraded",  "a coupled edge glitches the victim's margin, not its "
+                  "connectivity"),
+    ("plane",      "return path",             "pcb-engineer", "/pcb-routing",
+     "degraded",  "a signal crossing a plane split still arrives — its "
+                  "return current radiates the long way round"),
+    ("length",     "signal integrity",        "pcb-engineer", "/pcb-routing",
+     "degraded",  "skew eats timing margin before it breaks the link"),
+    # Placed before "via" on purpose: verify_via_discontinuity is an SI
+    # heuristic, and law:via would mis-rank it as a dead-board fab issue.
+    ("discontinuity", "signal integrity",     "pcb-engineer", "/pcb-routing",
+     "degraded",  "a via discontinuity reflects energy, it does not open "
+                  "the net"),
     ("return_path", "return path",            "pcb-engineer", "/pcb-routing",
      "degraded",  "a broken return path costs margin and radiates; the "
                   "signal still arrives"),

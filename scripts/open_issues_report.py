@@ -61,6 +61,17 @@ GATES = [
     ("verify_enclosure_sync",
      "the printed shell no longer matches the board (outline, holes, "
      "cutouts, battery, or Z-stack)"),
+    ("verify_crosstalk",
+     "a timing-critical net co-runs inside the 3W band with an aggressor"),
+    ("verify_reference_plane",
+     "a signal trace crosses a reference-plane split or an unexcused "
+     "void — its return current detours and radiates"),
+    ("verify_length_match",
+     "a bus member or pair leg took a different path across the board "
+     "(skew beyond the derived budget)"),
+    ("verify_via_discontinuity",
+     "a high-speed net spends more vias than its return-path budget, "
+     "or a differential pair's legs disagree"),
 ]
 
 TIMEOUT_S = 30

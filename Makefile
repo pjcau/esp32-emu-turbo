@@ -106,6 +106,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_copper_clearance \
 	verify_context_budget \
 	verify_cpl_rotation_law \
+	verify_crosstalk \
 	verify_datasheet \
 	verify_datasheet_nets \
 	verify_decoupling_adequacy \
@@ -126,6 +127,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_isolation \
 	verify_jlcpcb_capabilities \
 	verify_jlcpcb_via_rules \
+	verify_length_match \
 	verify_memory \
 	verify_net_class_widths \
 	verify_net_explorer_fresh \
@@ -140,6 +142,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_power_paths \
 	verify_power_resonance \
 	verify_power_sequence \
+	verify_reference_plane \
 	verify_schematic_crossings \
 	verify_schematic_label_attach \
 	verify_schematic_pcb \
@@ -158,6 +161,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_usb_impedance \
 	verify_usb_impedance_stackup \
 	verify_usb_return_path \
+	verify_via_discontinuity \
 	verify_via_in_pad \
 	verify_zone_connectivity \
 	verify_schematic_overlaps \

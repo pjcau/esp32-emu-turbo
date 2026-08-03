@@ -12,6 +12,8 @@ Automated test battery that validates the entire design before PCB manufacturing
 
 :::tip Workflow Guide
 For a visual overview of **when** to run each verification skill and how they fit into the design → verify → fix → release pipeline, see the [Agent & Skill Workflow Guide](/docs/development/workflow-guide).
+
+For the map of **all 99 gates** grouped by the failure class they prevent, plus the EMC coverage grid, see the [Production Test Map](/docs/manufacturing/production-test-map).
 :::
 
 ```bash
@@ -600,6 +602,40 @@ plus the pre-payment 3D-preview check; see
 
 ---
 
+## 8. EMC / Signal-Integrity Gates
+
+Four gates extend the suite from "does the copper connect" to "does it stay quiet
+at speed". They join the 95 gates already in the Makefile's `VERIFY_ALL_SCRIPTS`,
+bringing the suite to **99**.
+
+| Gate | Checks |
+|------|--------|
+| `verify_crosstalk` | Parallel runs between aggressor and victim nets against the 3W spacing rule, coupled-length weighted |
+| `verify_reference_plane` | Signals crossing a gap or void in the plane directly beneath them — the return current has nowhere to follow |
+| `verify_length_match` | Intra-pair and intra-bus skew, scored against the edge rate the net actually carries |
+| `verify_via_discontinuity` | Via count and stub length on high-speed nets, where each transition reflects energy |
+
+**Thresholds are derived, never hardcoded.** Each gate computes its limit from the
+board it is looking at — the stackup's dielectric height and trace geometry, the
+net's signalling rate, the layer pair a via spans. A number typed into the script
+would go stale the first time the stackup or a net class changed, and would then
+pass a board it no longer describes.
+
+**WARN vs FAIL.** These gates report *degraded*, not *dead-board*: a coupled edge
+or a skewed pair still arrives, it just arrives with less margin. So a finding
+outside the derived limit is a **FAIL** (blocking) only where the geometry is
+unambiguous — a signal over a plane void, a stub beyond the reflection budget.
+Findings that depend on an assumption the board cannot confirm — the real edge
+rate of a GPIO, a coupling length near the boundary — are **WARN**: reported with
+their evidence, non-blocking, and left for review. The rule is that a gate blocks
+only what it can prove.
+
+For the full picture — all 99 gates by failure class, the EMC coverage grid, and
+how the network grew release by release — see the
+[Production Test Map](/docs/manufacturing/production-test-map).
+
+---
+
 ## Running Verification
 
 ### Fast commands (recommended)
@@ -641,7 +677,7 @@ The `--run` mode automatically:
 ### Full verification suite
 
 ```bash
-make verify-all    # DRC + simulation + consistency + short circuit
+make verify-all    # all 99 gates — DRC, DFM/DFA, ERC, simulation, EMC, consistency, release integrity
 ```
 
 Or individually:

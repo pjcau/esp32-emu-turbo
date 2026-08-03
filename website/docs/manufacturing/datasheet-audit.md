@@ -1,7 +1,7 @@
 ---
 id: datasheet-audit
 title: Datasheet vs PCB Audit Report
-sidebar_position: 4
+sidebar_position: 5
 ---
 
 # Datasheet vs PCB Audit Report

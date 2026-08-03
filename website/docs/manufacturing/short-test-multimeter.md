@@ -1,7 +1,7 @@
 ---
 id: short-test-multimeter
 title: "Short-Circuit Test Bible (Multimeter)"
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Short-Circuit Test Bible

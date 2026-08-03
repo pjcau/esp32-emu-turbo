@@ -1,7 +1,7 @@
 ---
 id: bring-up-protocol
 title: First Power-On Bring-Up Protocol
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # First Power-On Bring-Up Protocol
