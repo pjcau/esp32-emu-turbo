@@ -58,7 +58,7 @@ The staged commissioning walk-through that uses this tree end-to-end is
   marks them, the footprints stay for rework, and a shipped handheld
   does not spend ~4 mA of battery on them.
 - Deliberately **no LED on BAT+**: it would drain the battery
-  continuously (SW_PWR is not in series on v1 — permanent invariant).
+  continuously (SW16 is not in series with the cell — permanent invariant).
   Battery-side diagnosis stays on the gated test points (BUCK_FB, EN).
   **This still holds on the SW16 respin**, and for the same reason: the
   respin's switch transistor Q2 sits on the **+5V load rail**, not on the

@@ -8,8 +8,8 @@ only after the circuit has proven itself on USB power alone.
 
 :::danger Battery safety — read before starting
 **Connecting the battery is always a LIVE operation on this board**:
-SW_PWR is not in series with the cell (permanent v1 invariant — the
-switch cannot cut battery power). Therefore:
+SW16 is not in series with the cell (permanent invariant, respin
+included — the switch cannot cut battery power). Therefore:
 - battery is the LAST thing connected, never the first;
 - never connect a battery to a board with a suspected short (the
   C2-reversed incident was a 0 Ω short on +3V3 — on USB it is

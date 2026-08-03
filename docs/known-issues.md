@@ -399,14 +399,22 @@ and is six releases stale; the tag is the truth.
   **Fixed in the design 2026-08-03 on branch `respin/sw16-5v-switch`**,
   and not the way this entry used to prescribe.
 
-  **Load-bearing sentence, do not reword, and do not let it wrap:
-  on the fabricated board SW16 is not in series with the battery.**
-  `vbench/buttons.py` greps this file for the literal string
-  `"SW16 is not in series"` (`INVARIANT_TEXT`) and `test_vbench.py` T2.3
-  fails if it is missing. Keep it on ONE line: it was wrapped between
-  "SW16" and "is not in series" for a while, and the only thing still
-  satisfying the grep was this paragraph *describing* the grep — the
+  **The load-bearing sentence is the bold opener of this bullet above:
+  "SW16 does not switch anything". Do not reword it, and do not let it
+  wrap.** `vbench/buttons.py` greps this file for that literal string
+  (`INVARIANT_TEXT`, line 54), `scripts/vbench/retro/invariants.json`
+  pins the same text as its `source_match`, and `test_vbench.py` T2.3
+  fails if it goes missing. Keep it on ONE line — the anchor has already
+  been broken once by a line wrap, and back then the only thing still
+  satisfying the grep was the paragraph *describing* the grep, so the
   anchor was holding itself up. Same pattern as the EN RC entry below.
+
+  (The anchor used to be `"SW16 is not in series"`. It was retired when
+  the respin copper landed, because on a respin board the sentence
+  describing the *cell* path is no longer the fact T2.3 turns on. The
+  statement below is still true of every fabricated board — it is simply
+  no longer what any gate greps for: **on the fabricated board SW16 is
+  not in series with the battery.**)
 
   T2.3's own expectation has been re-derived now that the respin copper
   has landed: `routed_throws` is `['1']` and `common_net` is `PWR_SW`, so

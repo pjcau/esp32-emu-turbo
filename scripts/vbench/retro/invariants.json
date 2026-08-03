@@ -78,7 +78,7 @@
       "id": "INV-VBUS-FRAGMENTS",
       "round": 0,
       "title": "VBUS is three copper components on the fabricated board",
-      "source": "docs/known-issues.md:635",
+      "source": "docs/known-issues.md:643",
       "source_match": "VBUS is fragmented into 3 components",
       "phase": 1,
       "classes": [

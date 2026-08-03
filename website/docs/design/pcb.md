@@ -350,7 +350,7 @@ The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom s
 | Ref     | Component          | Side          | Location                 | Notes                  |
 | ------- | ------------------ | ------------- | ------------------------ | ---------------------- |
 | **U7**  | ESP32-S3-MINI-1-N8 | B.Cu (bottom) | Near PAM8403 (left area) | SPI slave + I2S output |
-| C32,C33 | 100nF 0805         | B.Cu (bottom) | Adjacent to U7           | Decoupling (C1–C31 are taken on v1) |
+| C34,C35 | 100nF 0805         | B.Cu (bottom) | Adjacent to U7           | Decoupling (C1–C33 are taken on v1 — C32/C33 are the SW16 respin's gate and wake caps) |
 
 ### v2 Routing Changes
 

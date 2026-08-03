@@ -583,10 +583,10 @@ ESP32-S3-MINI-1-N8 audio coprocessor with SPI slave interface to the main ESP32-
 | Ref | Component | Value | Purpose |
 |-----|-----------|-------|---------|
 | U7 | ESP32-S3-MINI-1-N8 | Module | Audio coprocessor (SPC700 + I2S) |
-| C32 | Capacitor | 100 nF | 3V3 decoupling |
-| C33 | Capacitor | 100 nF | EN decoupling |
+| C34 | Capacitor | 100 nF | 3V3 decoupling |
+| C35 | Capacitor | 100 nF | EN decoupling |
 
-*(References C1–C31 are all taken on the v1 board — C28 is a DNP placeholder, C29 is the buck feed-forward, C30 the buck output and C31 the EN reset cap — so the coprocessor starts at **C32**.)*
+*(References C1–C33 are all taken on the v1 board — C28 is a DNP placeholder, C29 is the buck feed-forward, C30 the buck output, C31 the EN reset cap, and **C32/C33 are the SW16 respin's gate and wake caps** — so the coprocessor starts at **C34**.)*
 
 ### SPI Bus (Main ESP32-S3 → Coprocessor)
 

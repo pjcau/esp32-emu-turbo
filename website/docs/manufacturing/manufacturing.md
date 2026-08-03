@@ -72,7 +72,6 @@ The bottom side hosts the main circuitry:
 | **SW11, SW12** | SMT tactile (L, R shoulder) | C318884       | SW-SMD    |
 | R1, R2         | 5.1k (USB-C CC)             | C27834        | R_0805    |
 | R4–R13,R15     | 10k (pull-ups)              | C17414        | R_0805    |
-| R16            | 100k                        | C149504       | R_0805    |
 | R17, R18       | 1k                          | C17513        | R_0805    |
 | R20, R21       | 20k (PAM8403 INL/INR bias to VREF) | C4328   | R_0805    |
 | C17, C18, C27  | 10uF                        | C15850        | C_0805    |
@@ -82,8 +81,20 @@ The bottom side hosts the main circuitry:
 | C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
 | C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
 | R22,R23 / R24 / R25 / R26 / R27 | 22R USB / 100k gate / 100k FB / 22k FB / 20R backlight | C25092 / C149504 / C149504 / C17560 / C17955 | R_0402 / R_0805 / R_1206 |
+| **Q2** | SI2301CDS P-MOSFET — SW16 respin high-side switch, `+5V_VOUT` → `+5V` | C10487 | SOT-23 |
+| R32 / R33 / R34 | 22k gate pull-up / 1k series gate / 1M `PWR_SW`→`BAT+` | C17560 / C17513 / C17514 | R_0805 |
+| C32 / C33      | 1uF Q2 gate soft-start / 1uF `IP5306_KEY` wake cap | C28323 | C_0805 |
+| SW17           | TS-1088 momentary, `IP5306_KEY` → GND — **DO NOT PLACE** (in the BOM so it can be sourced, absent from the CPL) | C720477 | SW-SMD-2P-TS1088 |
 
-**Total SMT components:** 32 unique part types, 85 individual placements.
+**Total SMT components:** 37 unique part types, 99 BOM placements — 98 of which
+JLCPCB actually fits, since SW17 is do-not-place and therefore carries no CPL row.
+
+:::note R16 no longer exists
+The 100 kΩ `IP5306_KEY` pull-up was **deleted** in the SW16 respin — it was
+off-datasheet from the start, and on the new load-side `+5V` it would invert into
+a pull-*down* whenever the switch is OFF, holding KEY asserted. C33 now occupies
+that 0805 site. See the [SW16 respin section](/docs/design/schematics#power-states--debug).
+:::
 
 :::note C2 no longer exists
 The 22 µF tantalum on the old AMS1117 output was **deleted** with the move to the
@@ -192,9 +203,9 @@ The v2 PCB adds an **ESP32-S3-MINI-1-N8** audio coprocessor module (see [Phase 5
 | Ref     | Component               | JLCPCB Part # | Footprint            |  Qty |
 | :------ | :---------------------- | :------------ | :------------------- | ---: |
 | **U7**  | ESP32-S3-MINI-1-N8      | C2913206      | Module (15.4×20.5mm) |    1 |
-| C32,C33 | 100nF 0805 (decoupling) | C49678        | C_0805               |    2 |
+| C34,C35 | 100nF 0805 (decoupling) | C49678        | C_0805               |    2 |
 
-(C1–C31 are all in use on the v1 board, so the coprocessor's caps start at C32.)
+(C1–C33 are all in use on the v1 board — C32/C33 are the SW16 respin's gate and wake caps — so the coprocessor's caps start at C34.)
 
 ### v2 Cost Impact
 

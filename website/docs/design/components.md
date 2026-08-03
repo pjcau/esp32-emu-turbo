@@ -312,9 +312,9 @@ The v2 PCB adds an ESP32-S3-MINI-1-N8 as a dedicated audio coprocessor (see [Pha
 | Ref | Component | Package | LCSC | Class | Unit cost |
 |-----|-----------|---------|------|-------|-----------|
 | U7 | ESP32-S3-MINI-1-N8 | Module (15.4×20.5mm) | C2913206 | Extended | $3.25 |
-| C32,C33 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
+| C34,C35 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
 
-**v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything. (References C26–C31 are already taken on the v1 board, so the coprocessor's decoupling caps are **C32/C33**.)
+**v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything. (References C26–C33 are already taken on the v1 board — C32/C33 are the SW16 respin's gate and wake caps — so the coprocessor's decoupling caps are **C34/C35**.)
 
 **v2 estimated PCBA cost:** ~$215 for 5 boards (~$43/board).
 

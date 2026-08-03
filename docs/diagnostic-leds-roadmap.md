@@ -37,8 +37,9 @@ to the module's flash/octal PSRAM — only GPIO15 and GPIO16 are real.
 - **prototype-only / DNP in production**: BOM comment marks them; the
   constant drain (~3-4 mA total) is acceptable on the bench, not in the
   shipped handheld. Footprints stay for rework.
-- No LED on BAT+ (constant battery drain; SW_PWR is not in series —
-  permanent v1 invariant). BUCK_FB/EN stay multimeter-only via their
+- No LED on BAT+ (constant battery drain; SW16 is not in series —
+  permanent invariant, and the respin keeps it that way: Q2 switches the
+  +5V load rail, not the cell). BUCK_FB/EN stay multimeter-only via their
   gated test points.
 - Heartbeat firmware contract (bringup_test): 1 Hz steady = alive;
   N blinks + pause = subsystem N failed (2=SD, 3=display, 4=audio,
