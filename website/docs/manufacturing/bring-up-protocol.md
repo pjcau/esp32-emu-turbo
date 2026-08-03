@@ -40,9 +40,9 @@ what caught the v4.3.1 rotation failure:
    per component.
 2. On arrival, run **phase B**: photograph each side and compare against
    the render.
-3. Only then follow the
-   [short-circuit test bible](./short-test-multimeter.md) as far as your
-   tools allow, and plug the USB-C cable in.
+3. Only then run the unpowered continuity checks (multimeter, USB-C
+   unplugged, battery disconnected) as far as your tools allow, and plug
+   the USB-C cable in.
 
 If the board draws no current or the USB device never enumerates, the
 firmware never gets to speak. That failure mode is covered by
@@ -290,6 +290,5 @@ burned that eFuse, which is another reason not to.
 ## Related
 
 - [`/first-article-check`](https://github.com/pjcau/esp32-emu-turbo/blob/main/.claude/skills/first-article-check/SKILL.md) — the photographic protocol that runs before this one
-- [Short-circuit test bible](./short-test-multimeter.md) — the manual checks for when a multimeter *is* available
 - [Incident: v4.3.1 rotations](../rework/incident-v431-rotations.md) — the failure class this layer exists to catch earlier
 - [ESP32 firmware](../software/firmware.md) — the application these drivers ship in

@@ -475,8 +475,10 @@ def usb_c_16p(layer="B"):
     #      and it is backed by hardware, not by argument: prototype #1 was
     #      fabricated and assembled from this exact footprint revision
     #      (commit caf2b2c, 2026-04-13) and J1 soldered down cleanly —
-    #      see website/docs/manufacturing/short-test-multimeter.md,
-    #      "USB-C (J1) ... solder OK". The front tab therefore physically
+    #      see the short-circuit test log ("USB-C (J1) ... solder OK";
+    #      page removed 2026-08-03, in git history as
+    #      website/docs/manufacturing/short-test-multimeter.md).
+    #      The front tab therefore physically
     #      passes a 0.65 x 1.60 mm slot. Widening it to the datasheet's
     #      1.70 mm would buy assembly float we have measured we do not
     #      need, at the cost of 0.05 mm of ring we demonstrably do.
