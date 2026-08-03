@@ -93,7 +93,11 @@ def _spi_traces():
         # Old 0.6/0.3: ring = 0.15mm < 0.175mm (fails DFM annular ring test).
         _SPI_VIA = VIA_STD    # AR=(0.60-0.20)/2=0.20mm ✓
         _SPI_DRILL = VIA_STD_DRILL
-        shared_via_x = 72.2   # between ESP32 pad (71.25+0.35=71.60) and approach cols
+        # R32 (2026-08-03): 72.2 -> 72.35. The module's pads end at
+        # x=72.00, so a 0.20mm hole at 72.20 sat 0.10mm from the pad edge
+        # — under verify_via_in_pad's 0.15mm floor. 72.35 gives 0.25mm and
+        # still leaves 0.42mm to LCD_BL's B.Cu column at x=73.02.
+        shared_via_x = 72.35  # between ESP32 pad (71.25+0.35=71.60) and approach cols
         # escape_x: 1.0mm pitch avoids LCD_RST stagger via at (79.36,33.04).
         # Old 1.3mm pitch: escape_x[3]=78.9, AABB overlap with LCD_RST via at (79.36,33.04) = -0.11mm.
         # New 1.0mm pitch: escape_x[3]=78.0, x gap to LCD_RST via left edge (78.91) = 0.61mm ✓.

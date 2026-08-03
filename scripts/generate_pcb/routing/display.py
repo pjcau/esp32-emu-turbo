@@ -349,34 +349,48 @@ def _display_traces():
     # Gap to col3: 133.45-133.10=0.35, minus drill_r(0.10)+trace_hw(0.10)=0.15mm OK.
     # Gap to col4: 133.80-133.45=0.35, minus 0.10+0.10=0.15mm OK.
     # B.Cu stub from pad (133.71) to via (133.45): horizontal, does not cross cols.
-    # FPC GND/power vias between approach columns 3 (x=133.10) and 4 (x=133.80).
+    # FPC GND/power escape column.
     # JLCPCB requires drill ≥ 0.20mm / size ≥ 0.46mm for annular ring ≥ 0.13mm.
-    # Tight corridor: approach cols at x=133.10 (w=0.2, edge 133.20) and x=134.10 (w=0.2, edge 134.00).
-    # VIA_MIN (0.46mm, r=0.23): gap to 133.20 = 133.60-0.23-133.20 = 0.17mm ≥ 0.15mm ✓
-    #                           gap to 134.00 = 134.00-133.60-0.23 = 0.17mm ≥ 0.15mm ✓
-    # VIA_TIGHT (0.55mm, r=0.275): gap = 0.125mm < 0.15mm VIOLATION.
-    VIA_X_PWR = 133.60
+    #
+    # R32 (2026-08-03): was 133.60, i.e. INSIDE the contact column
+    # (pads span x=132.912..134.212). Every via there had its hole on or
+    # within 0.1mm of a contact pad — the JLCDFM "lead to hole distance
+    # 0mm" DANGER, and unfixable in place: the contacts are on a 0.5mm
+    # pitch with 0.2mm between pads, so no hole can keep
+    # verify_via_in_pad's 0.15mm from both neighbours.
+    #
+    # The column therefore moves WEST, out of the contact field entirely,
+    # into the corridor between LCD_D7's vertical (x=131.70, east edge
+    # 131.80) and the pads' west edge. That corridor admits a via centre
+    # in x = [132.18, 132.532]; 132.45 sits inside it with 0.42mm to
+    # LCD_D7 and 0.232mm of copper / 0.232mm of hole clearance to the
+    # contacts. Each pin keeps a short B.Cu stub west to the column,
+    # exactly like pin 16 has done since 2026-04-10.
+    VIA_X_PWR = 132.45
     VIA_PWR_SIZE = 0.46        # custom: fits between LCD approach traces (0.17mm gap)
     VIA_PWR_DRILL = VIA_MIN_DRILL
 
     # Pin 40 (y=25.75): move via UP to separate from +3V3 pin 39 (y=26.25)
-    # DFM FIX: was -0.5 (y=25.25), bottom edge=24.975, FPC pad 42 top=25.06 → overlap 0.085mm.
-    # At -0.25 (y=25.50): bottom edge=25.225, gap to pad 42 top=0.165mm ≥ 0.15mm ✓
-    # Gap to pin 39 via (y=26.25): |26.25-25.50|-0.275-0.275=0.20mm > 0.15mm ✓
+    # R32: with the column out at x=132.45 the old constraint (FPC mount
+    # pad 42, x=135.038..137.538) no longer reaches it, and the binding
+    # rule is via-to-via against pin 39's barrel at y=26.25. -0.55 gives
+    # 1.05mm centre-to-centre = 0.59mm of copper and 0.85mm of hole
+    # separation, comfortably past JLCPCB's 0.5mm hole-to-hole floor.
     for pin in [40]:
         pos = _fpc_display_pin(pin)
         if pos:
             px, py = pos[0], pos[1]
-            via_y = py - 0.25  # y=25.50 — clear of FPC mounting pad 42
+            via_y = py - 0.55  # y=25.20 — 1.05mm clear of the pin-39 barrel
             parts.append(_seg(px, py, VIA_X_PWR, py, "B.Cu", W_PWR_LOW, n_gnd))
             parts.append(_seg(VIA_X_PWR, py, VIA_X_PWR, via_y, "B.Cu", W_PWR_LOW, n_gnd))
             parts.append(_via_net(VIA_X_PWR, via_y, n_gnd,
                                   size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
 
-    # Pin 37 (y=27.25) + pin 36 (y=27.75): via near pin 37 position, stub from 36.
-    # DFM FIX: via at (VIA_X_PWR, py37=27.25) had gap=0.125mm to +3V3 stub above (y=26.75).
-    # Offset via DOWN 0.15mm to y=27.40: gap = 27.40-0.225-26.75-0.15 = 0.275mm ≥ 0.15mm ✓
-    # Check gap to pin 35 via at py35=28.25: |28.25-27.40|-0.225-0.225 = 0.40mm > 0.25mm ✓
+    # Pin 37 (y=27.25) + pin 36 (y=27.75): via at the pin's own y.
+    # The old +0.15 offset dodged the +3V3 stub that shared x=133.60;
+    # R32 moved the column west to x=132.45, where the barrels stack at
+    # y=25.20 / 26.25 / 27.25 / 28.25 — 1.00mm apart at the tightest,
+    # so no offset is needed and none is applied.
     pos37 = _fpc_display_pin(37)
     pos36 = _fpc_display_pin(36)
     # DFM: use 0.25mm width for FPC GND/+3V3 stubs near approach columns.
@@ -385,10 +399,10 @@ def _display_traces():
     W_FPC_PWR = 0.25
     if pos37:
         px37, py37 = pos37[0], pos37[1]
-        gnd_37_via_y = py37 + 0.15  # y=27.40 — offset down for +3V3 clearance
+        # The barrel lands at the end of the escape stub, so there is no
+        # vertical jog left to emit.
         parts.append(_seg(px37, py37, VIA_X_PWR, py37, "B.Cu", W_FPC_PWR, n_gnd))
-        parts.append(_seg(VIA_X_PWR, py37, VIA_X_PWR, gnd_37_via_y, "B.Cu", W_FPC_PWR, n_gnd))
-        parts.append(_via_net(VIA_X_PWR, gnd_37_via_y, n_gnd,
+        parts.append(_via_net(VIA_X_PWR, py37, n_gnd,
                               size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
     if pos36 and pos37:
         px36, py36 = pos36[0], pos36[1]
@@ -440,7 +454,12 @@ def _display_traces():
         # - v3: nudged further LEFT to stub_x=132.60. Via right edge = 132.90.
         #       Gap to J4 pad left edge (133.212) = 0.312mm ≥ 0.15 clearance ✓.
         #       Gap to pads at y=42.75/43.25/43.75/44.25: all ≥ 0.3mm ✓.
-        stub_x = VIA_X_PWR - 1.0  # 132.60 (was 133.00, now +0.3mm further clear)
+        # R32: was VIA_X_PWR - 1.0 = 132.60 while the column sat at
+        # 133.60. The contact pads now reach west to x=132.912, which
+        # left that via 0.082mm of copper — a verify_copper_clearance
+        # DANGER. It joins the escape column instead: 0.232mm to the
+        # contacts, 0.57mm to the +3V3 vertical that moved to x=131.50.
+        stub_x = VIA_X_PWR  # 132.45 — the west escape column
         vx2 = 143.50  # right of net32 vert at x=142.80 (gap=0.70-0.23-0.15=0.32mm)
         vy = 50.25
         # DFM FIX (KiBot external): via at (133.0, 43.25) gap=0.14mm to J4:35
@@ -502,13 +521,21 @@ def _display_traces():
     pos39 = _fpc_display_pin(39)
     if pos39:
         px39, py39 = pos39[0], pos39[1]
-        # DFM FIX (KiBot external): via at (133.60, 26.25) gap=0.195mm to J4:1
-        # (GND) at y=25.75. Shift via UP to y+0.15=26.40 for gap=0.375mm ✓
-        # (shift DOWN toward pin 40 via at y=25.50 would cause via-via gap issue)
-        via_y39 = py39 + 0.15
+        # R32: the old +0.15 offset dodged J4:1's pad while the column
+        # sat at x=133.60, inside the contact field. From x=132.45 the
+        # nearest different-net pad corner (132.912, 25.90) is 0.579mm
+        # away — 0.349mm of copper, 0.479mm of hole — so the barrel sits
+        # on the pin's own y and stays 1.00-1.05mm from its neighbours.
+        # R32b: the barrel steps 0.20mm SOUTH of the pin's own y. On the
+        # pin's y its annulus came within 0.120mm of pin 40's GND escape
+        # stub at y=25.75 — under JLCPCB's 0.127mm floor. 0.20mm gives
+        # 0.32mm, and the barrel keeps 0.365mm of hole clearance to pad 2,
+        # 1.25mm to the GND barrel at y=25.20 and 0.80mm to the one at
+        # 27.25.
+        _via_y39 = py39 + 0.20
         parts.append(_seg(px39, py39, VIA_X_PWR, py39, "B.Cu", W_FPC_PWR, n_3v3))
-        parts.append(_seg(VIA_X_PWR, py39, VIA_X_PWR, via_y39, "B.Cu", W_FPC_PWR, n_3v3))
-        parts.append(_via_net(VIA_X_PWR, via_y39, n_3v3,
+        parts.append(_seg(VIA_X_PWR, py39, VIA_X_PWR, _via_y39, "B.Cu", W_FPC_PWR, n_3v3))
+        parts.append(_via_net(VIA_X_PWR, _via_y39, n_3v3,
                               size=VIA_PWR_SIZE, drill=VIA_PWR_DRILL))
     if pos38 and pos39:
         px38, py38 = pos38[0], pos38[1]
@@ -603,11 +630,11 @@ def _display_traces():
         # slot's west edge, and OVER the slot's north edge at y=22.3:
         #   LED_BLA: R27 pad 1 (121.7, 44.0) B.Cu north to y=41.3, east
         #     to x=124.75, north past the slot's top edge to a via at
-        #     (124.75, 22.3), F.Cu east to x=132.5 (the B.Cu route is
+        #     (124.75, 22.3), F.Cu east to x=130.5 (the B.Cu route is
         #     blocked by the net31 vertical at x=130.42, y>=20.65), F.Cu
-        #     south to the legacy via position (132.5, 29.25) — between
-        #     LCD_D7 (131.80) and the J4 GND stubs (133.58) — B.Cu to
-        #     J4 pad 8.
+        #     south to y=29.25 and east to the legacy via position
+        #     (132.5, 29.25) — between LCD_D7 (131.80) and the FPC pads
+        #     (132.912) — B.Cu to J4 pad 8.
         #   +5V: R27 pad 2 (121.7, 47.0) drops straight south into the
         #     In2 +5V island tap via at (121.7, 48.5) — 1.3 mm inside
         #     the island's east boundary at x=123 (R22-CRIT-1: never
@@ -624,8 +651,9 @@ def _display_traces():
         #   F.Cu y=22.3 x=124.75..132.5: slot top edge 1.05; LCD F.Cu
         #     verticals start x=135.2; net12/13 F.Cu horizontals
         #     y=20.5/21.5 end x=111.9/113.0
-        #   F.Cu x=132.5 y=22.3->29.25: +3V3 via (133.6, 26.4) dx=1.1;
-        #     GND via (133.6, 25.5) dx=1.1
+        #   F.Cu x=130.5 y=22.3->29.25 (R32, was x=132.5): FPC power
+        #     barrels at x=132.45 dx=1.95; BTN_A F.Cu y=20.65 dy=1.65;
+        #     BTN_Y F.Cu y=30.65 dy=1.40
         #   via (121.7, 48.5): C18 pads (116.0, 49.0) 5.7 mm; GND via
         #     (122.4, 51.8) 3.4 mm
         px, py = pos_bl[0], pos_bl[1]
@@ -650,9 +678,23 @@ def _display_traces():
                               "B.Cu", W_PWR_LOW, n_bla))
             parts.append(_via_net(corridor_x, 22.3, n_bla,
                                   size=VIA_MIN, drill=VIA_MIN_DRILL))
-            parts.append(_seg(corridor_x, 22.3, via_x, 22.3,
+            # R32: the F.Cu descent used to run straight down x=132.5,
+            # which is exactly where the FPC power vias moved when they
+            # left the contact column (VIA_X_PWR 133.60 -> 132.45). A
+            # via is copper on EVERY layer, so the GND barrel at
+            # (132.45, 25.20) and the +3V3 barrel at (132.45, 26.25) sat
+            # on top of this trace — two 0.0mm F.Cu shorts. The descent
+            # now runs 2.0mm further west at x=130.50, where the only
+            # F.Cu neighbours are BTN_A at y=20.65 (1.65mm north of the
+            # top corner) and BTN_Y at y=30.65 (1.40mm south of the
+            # bottom one), and steps back east at y=29.25 to the
+            # unchanged B.Cu transition via at (132.5, 29.25).
+            _bla_descent_x = 130.50
+            parts.append(_seg(corridor_x, 22.3, _bla_descent_x, 22.3,
                               "F.Cu", W_PWR_LOW, n_bla))
-            parts.append(_seg(via_x, 22.3, via_x, py,
+            parts.append(_seg(_bla_descent_x, 22.3, _bla_descent_x, py,
+                              "F.Cu", W_PWR_LOW, n_bla))
+            parts.append(_seg(_bla_descent_x, py, via_x, py,
                               "F.Cu", W_PWR_LOW, n_bla))
             # R27 pad 2 -> +5V island tap via
             parts.append(_seg(r27_p2[0], r27_p2[1], r27_p2[0], 48.5,
@@ -677,7 +719,12 @@ def _display_traces():
         # Clearance: main component row at y=52 has button pull-up vias
         # at x=46.80..96.80 (far from x=132). Q1 pads at (84-86, 52-54)
         # on B.Cu — 46mm away, no conflict.
-        vx, vy = 132.0, 52.0  # main +3V3 zone (was 50.25 — orphan island)
+        # R32: x 132.0 -> 131.5. The pin-5 GND escape via moved into the
+        # x=132.45 column and this vertical's east edge was at 132.15,
+        # 0.12mm away. At 131.50 the gap is 0.57mm, and the corridor west
+        # of it is empty down to BTN_A's vertical at x=130.42 (east edge
+        # 130.545, 0.805mm clear).
+        vx, vy = 131.5, 52.0  # main +3V3 zone (was 50.25 — orphan island)
         parts.append(_via_net(vx, vy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         # DFM FIX: pin 6 (42.75) stubs to pin 7 (42.25), then routes LEFT.
         # This avoids a collinear overlap (pin6→safe_y duplicated by pin7→pin6 stub).
@@ -692,7 +739,7 @@ def _display_traces():
         parts.append(_seg(vx, py7, vx, vy, "B.Cu", W_PWR_LOW, n_3v3))
     elif pos6:
         px6, py6 = pos6[0], pos6[1]
-        vx, vy = 132.0, 50.25
+        vx, vy = 131.5, 50.25
         parts.append(_via_net(vx, vy, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(px6, py6, vx, py6, "B.Cu", W_PWR_LOW, n_3v3))
         parts.append(_seg(vx, py6, vx, vy, "B.Cu", W_PWR_LOW, n_3v3))

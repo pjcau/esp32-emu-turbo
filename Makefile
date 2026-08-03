@@ -101,6 +101,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_bom_values \
 	verify_bringup_fresh \
 	verify_claims_ledger \
+	verify_component_bodies \
 	verify_component_connectivity \
 	verify_copper_balance \
 	verify_copper_clearance \
@@ -135,6 +136,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_netlist_diff \
 	verify_netlist_vs_kicad \
 	verify_order_manifest \
+	verify_pad_land \
 	verify_polarity \
 	verify_rpp_polarity \
 	verify_power_net_integrity \
@@ -150,6 +152,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_schematic_pin_connectivity \
 	verify_sd_interface \
 	verify_signal_chain_complete \
+	verify_silk_holes \
 	verify_stackup \
 	verify_stencil_aperture \
 	verify_strapping_pins \

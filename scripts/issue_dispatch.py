@@ -193,6 +193,9 @@ ROUTING_LAW = [
      "dead-board", "the yield loss lands on every unit, not one"),
     ("stencil",    "assembly process",        "pcb-engineer", "/dfm-fix",
      "degraded",  "aperture ratio shifts paste volume, not net topology"),
+    ("silk",       "silkscreen legibility",   "pcb-engineer", "/dfm-fix",
+     "cosmetic",  "ink over a hole or a pad is illegible or prints on "
+                  "copper; the circuit underneath still works"),
     ("width",      "trace sizing",            "pcb-engineer", "/pcb-routing",
      "degraded",  "an undersized trace carries current, just hotter"),
     ("thermal",    "thermal",                 "pcb-engineer", "/pcb-optimize",

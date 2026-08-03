@@ -285,20 +285,34 @@ def _passive_traces():
         #
         # Fix: route C17.1 SOUTH instead to reach the existing VBUS F.Cu/B.Cu
         # transition via at (111.00, 40.095). Route:
-        #   B.Cu (110.95, 35.00) → (110.95, 40.095) vertical 5.1mm
-        #   B.Cu (110.95, 40.095) → (111.00, 40.095) short 0.05mm stub
+        #   B.Cu (c17_p1.x, 35.00) → (c17_p1.x, 40.095) vertical 5.1mm
+        #   B.Cu (c17_p1.x, 40.095) → (111.00, 40.095) jog, when the pad
+        #   does not already sit on the via's column.
         # The stub endpoint touches the existing VBUS via which provides
         # the F.Cu↔B.Cu layer transition. No new vias needed.
         #
-        # Clearances along the vertical at x=110.95, y=[35, 40.095]:
-        #   - LCD_D4 B.Cu vert at x=111.50 (w=0.20): dx=0.55, gap = 0.55-0.275-0.10 = 0.175mm ✓
+        # R32: growing the 0805 land to the JLC reference (±0.95 → ±1.00
+        # centres) put pad 1 at exactly x=111.00, which turned that jog
+        # into a zero-length segment — _seg() rejects those outright, so
+        # it is emitted only when it has a real length. The pad now sits
+        # on the via's own column, so on this board it is skipped.
+        #
+        # The vertical also narrowed 0.55 → 0.50 with that move: at
+        # x=111.00 a 0.55mm trace would have come within 0.125mm of
+        # LCD_D4. 0.50 is the floor for VBUS's Power-High net class
+        # (verify_net_class_widths) and leaves exactly 0.15mm.
+        #
+        # Clearances along the vertical at x=111.00, y=[35, 40.095]:
+        #   - LCD_D4 B.Cu vert at x=111.50 (w=0.20): dx=0.50, gap = 0.50-0.25-0.10 = 0.150mm ✓
         #   - U2.1 VBUS pad at (113, 40.59): same net, no clearance issue
         #   - EP (110, 42.5 y_max=43.9): 3.8mm south of our endpoint → clear
         #   - No other B.Cu traces on x≈111 between y=35 and y=40
+        _c17_vbus_via_x = 111.00
         parts.append(_seg(c17_p1[0], c17_p1[1], c17_p1[0], 40.095,
-                          "B.Cu", 0.55, NET_ID["VBUS"]))
-        parts.append(_seg(c17_p1[0], 40.095, 111.00, 40.095,
-                          "B.Cu", 0.55, NET_ID["VBUS"]))
+                          "B.Cu", 0.50, NET_ID["VBUS"]))
+        if abs(c17_p1[0] - _c17_vbus_via_x) > 1e-9:
+            parts.append(_seg(c17_p1[0], 40.095, _c17_vbus_via_x, 40.095,
+                              "B.Cu", 0.50, NET_ID["VBUS"]))
     if c17_p2:
         parts.append(_seg(c17_p2[0], c17_p2[1], c17_p2[0], c17_p2[1] + 2.7,
                           "B.Cu", W_PWR_LOW, n_gnd))
@@ -349,11 +363,13 @@ def _passive_traces():
                           "B.Cu", W_PWR, NET_ID["+5V"]))
         parts.append(_via_net(safe_x, c19_p1[1] - 2, NET_ID["+5V"], size=VIA_STD, drill=VIA_STD_DRILL))
     if c19_p2:
-        # FIX: reduce Y offset from +2 to +1.0 to clear VBUS horiz @y=61.
-        # Via @(108.5,59.5): top=59.95, VBUS bottom=60.75, gap=0.80mm ✓
-        parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 1.0,
+        # FIX: reduce Y offset from +2 to clear VBUS horiz @y=61.
+        # R32: +1.0 put the hole exactly on C19.2's edge (the 1206 land is
+        # 1.8mm tall, half-height 0.9). +1.30 gives 0.30mm of hole
+        # clearance and still leaves 0.52mm to the VBUS F.Cu at y=61.0.
+        parts.append(_seg(c19_p2[0], c19_p2[1], c19_p2[0], c19_p2[1] + 1.30,
                           "B.Cu", W_PWR, n_gnd))
-        parts.append(_via_net(c19_p2[0], c19_p2[1] + 1.0, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(c19_p2[0], c19_p2[1] + 1.30, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # C27 near IP5306 VOUT: HF decoupling at (109, 39), 2.6mm from pin 8.
     # C_0805 pad layout: pad 1 at RIGHT (x+0.95), pad 2 at LEFT (x-0.95).
@@ -363,9 +379,12 @@ def _passive_traces():
     c27_p2 = _pad("C27", "2")
     if c27_p2:
         # Pad 2 (left) → +5V: reuse existing VOUT via at (107.5, 39.09)
-        parts.append(_seg(c27_p2[0], c27_p2[1], 107.5, c27_p2[1],
+        # R32: the VOUT barrel this taps moved west to (106.10, 39.095)
+        # (see power.py) — it had to leave C27.2's pad. The stub follows
+        # it; both ends are +5V so the run crossing the pad is same-net.
+        parts.append(_seg(c27_p2[0], c27_p2[1], 106.10, c27_p2[1],
                           "B.Cu", W_PWR, NET_ID["+5V"]))
-        parts.append(_seg(107.5, c27_p2[1], 107.5, 39.09,
+        parts.append(_seg(106.10, c27_p2[1], 106.10, 39.095,
                           "B.Cu", W_PWR, NET_ID["+5V"]))
     if c27_p1:
         # Pad 1 (right) → GND via DOWN toward EP pad (same net, no clearance issue)
@@ -421,7 +440,11 @@ def _led_traces():
                           "F.Cu", W_SIG, n_ra))
 
         # LED pad 1/Cathode (F.Cu, LEFT) → GND via
-        gnd_via_x = led_p1[0] - 0.7
+        # R32: 0.7 -> 0.90. The 0805 land grew to the JLC reference and its
+        # half-width is now 0.60, so a 0.70mm offset put the hole 0.025mm
+        # from the pad edge. 0.90 restores 0.225mm; nearest different-net
+        # copper is 1.55mm away, so the extra 0.2mm costs nothing.
+        gnd_via_x = led_p1[0] - 0.90
         parts.append(_seg(led_p1[0], led_p1[1], gnd_via_x, led_p1[1],
                           "F.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(gnd_via_x, led_p1[1], n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))

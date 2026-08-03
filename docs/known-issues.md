@@ -390,12 +390,38 @@ so "v2" meant the *final product phase* in CLAUDE.md and a *release from
 Note `release_jlcpcb/README.md` still heads its history with "v3.2 (current)"
 and is six releases stale; the tag is the truth.
 
-- **SW16 is not in series with the battery.** Only the common pin
+- **SW16 does not switch anything.** Only the common pin
   (pad 2) is routed, as a stub tap on BAT+ at (39.25, 70.3); throw pins
   1/3 have no net. The path J3 → Q1 → BAT+ → IP5306 pin 6 is continuous
   copper that never passes through the switch, so **the switch cannot
-  power the board down**. True isolation on the fabricated board = unplug J3. Respin: route the
-  battery through switch pins 1–2.
+  power the board down**. True isolation on the fabricated board = unplug J3.
+
+  **Respin: switch the +5V OUTPUT side, not the battery.** The required
+  behavior (decided 2026-08-03) is: ON = everything powered; OFF = loads
+  dead but **USB still charges the battery**; no battery installed =
+  identical, USB passthrough powers the loads when ON. The original plan
+  ("route the battery through switch pins 1–2 in series") is **rejected** —
+  it fails both halves: with the cell cut off from IP5306 pin 6, OFF would
+  also block charging, and with USB plugged the IP5306 VIN→VOUT passthrough
+  would keep the system running regardless of the switch.
+
+  Topology that meets the requirement: leave J3 → Q1 → BAT+ → IP5306 pin 6
+  and J1 → F1 → VIN untouched; break the **+5V rail between IP5306 VOUT and
+  the loads** (SY8089 U3 + PAM8403) with a high-side P-MOSFET (same
+  SI2301 class as Q1), gate pulled to +5V by ~100 kΩ (off), pulled to GND
+  through SW16 pins 1–2 (on). Do **not** put the MSK12C02 contacts in
+  series with the rail itself: the +5V rail peaks ~1.5–2 A (buck +
+  PAM8403), above the small slide switch's contact rating — through the
+  gate divider the contacts carry only ~50 µA. Charge path and
+  no-battery passthrough are unaffected by construction, since both live
+  upstream of the cut.
+
+  Consequence for debug workflows: OFF no longer means "system on USB with
+  battery isolated" — with USB plugged and SW16 OFF the board only charges;
+  serial/flash need SW16 ON. Battery isolation for bench work remains
+  "unplug J3". The Power States table in
+  `website/docs/design/schematics.md` is written against THIS topology —
+  keep the two in sync.
 - **VBUS is fragmented into 3 components** (J1.9 / J1.11 isolated) — a
   documented, functional single-orientation workaround, allowlisted in
   `verify_net_connectivity.ACCEPTED_FRAGMENTATIONS`. Tracked as R5-CRIT-9

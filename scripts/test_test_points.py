@@ -6,8 +6,9 @@ only worth anything if each verdict class is proven reachable:
 
     T1  a REQUIRED_SIGNALS net absent from the board  -> exit 2
     T2  MIN_PAD_DIM raised beyond every pad (nothing probeable) -> exit 1
-    T3  the fine-pitch INFO branch stays advisory: USB_D+/- limited
-        access must NOT fail the run
+    T3  the fine-pitch INFO branch stays advisory: a signal whose only
+        probeable copper is below FINE_PITCH_DIM must be reported and
+        must NOT fail the run
     T4  the real board at HEAD                         -> exit 0
 """
 
@@ -67,12 +68,26 @@ def main() -> int:
         vtp.MIN_PAD_DIM = real_min_pad
         vtp.MIN_VIA_DRILL = 0.45
 
-    # T3 + T4: at HEAD the fine-pitch USB pads are INFO, not FAIL, and
-    # the run is green
+    # T3: the fine-pitch branch must be advisory, not fatal.
+    # This used to read the branch straight off HEAD, because USB_D+/-
+    # landed on U4's 0.60x0.70 SOT-23-6 pads. R32 grew that land to the
+    # JLC reference (0.60x1.00) and no required signal is fine-pitch any
+    # more — so reading it off the board silently stopped testing
+    # anything. Raise the bar instead: at 1.2mm the USB pads fall into
+    # the branch, and the run must still be green.
+    real_fine = vtp.FINE_PITCH_DIM
+    try:
+        vtp.FINE_PITCH_DIM = 1.2
+        rc, out = run()
+        check("T3 fine-pitch stays advisory",
+              "fine-pitch" in out and rc == 0,
+              "INFO branch present, rc=0" if "fine-pitch" in out
+              else f"no INFO line (rc={rc})")
+    finally:
+        vtp.FINE_PITCH_DIM = real_fine
+
+    # T4: the real board at HEAD
     rc, out = run()
-    check("T3 fine-pitch stays advisory",
-          "fine-pitch" in out and rc == 0,
-          "INFO branch present" if "fine-pitch" in out else "no INFO line")
     check("T4 real board passes", rc == 0, f"rc={rc}")
 
     print("-" * 72)

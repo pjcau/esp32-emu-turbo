@@ -314,13 +314,20 @@ def _i2s_traces():
         #   PAM_VREF B.Cu at x=34.45 — stay left
         #   OUTL+ at y≈24.9, OUTL- at y≈34.3 — place between
         # Place 3 vias in a column at x=26.5 (between SPK+ and IC center):
-        #   y=27.0, y=29.5, y=32.0 — spanning the IC vertically
+        #   y=28.25, y=29.5, y=30.75 — spanning the IC vertically
         # Gap to SPK+ B.Cu (x=24.50, w=0.3): 26.5-24.50-0.15-0.30=1.55mm ✓
         # Gap to pin 2 via (x=28.095): |28.095-26.5|-0.30-0.30=0.995mm ✓
+        #
+        # R32 (2026-08-03): the end vias used to sit at y=27.0 and 32.0,
+        # 0.075mm INSIDE U5's pin-2 / pin-15 pads — the JLCDFM "lead to
+        # hole distance 0mm" DANGER. The column now stops 0.675mm short
+        # of each pad row (rows span y=26.025..27.575 and
+        # 31.425..32.975), giving 0.575mm of hole clearance, and the
+        # three barrels stay 1.25mm apart.
         _pam_therm_vias = [
-            (26.5, 27.0),   # near PGND pin 2 area
+            (26.5, 28.25),  # near PGND pin 2 area
             (26.5, 29.5),   # IC center Y
-            (26.5, 32.0),   # near PGND pin 15 area
+            (26.5, 30.75),  # near PGND pin 15 area
         ]
         for idx, (tvx, tvy) in enumerate(_pam_therm_vias):
             parts.append(_via_net(tvx, tvy, n_gnd,
@@ -396,11 +403,28 @@ def _pam_passive_traces():
         # BTN_RIGHT runs B.Cu vert at x=34.20 from y=30.65 downward.
         # Route: INR (33.175,32.2) → via to F.Cu → F.Cu horiz to R21 pad2 x
         # → via back to B.Cu at R21 pad2.
-        parts.append(_via_net(pam_inr[0], pam_inr[1], n_pam_in, size=VIA_STD, drill=VIA_STD_DRILL))
+        # R32 (2026-08-03): both barrels used to sit on their pads'
+        # centres (U5.10 at 32.20, R21.2 at 32.50) — two JLCDFM "lead to
+        # hole" DANGERs. The F.Cu bridge drops 1.4mm SOUTH of the pin
+        # row first, which is the only free direction: U5.9/U5.11 box the
+        # via in on x, and north is BTN_RIGHT's F.Cu at y=30.65. Each pad
+        # keeps a short B.Cu stub down to its barrel.
+        #   (33.175, 33.60): 0.525mm of hole clearance to U5.10,
+        #     0.670mm of copper to U5.11's GND drop at x=31.91
+        #   (37.05, 33.60): 0.325mm of hole clearance to R21.2,
+        #     1.43mm to BTN_RIGHT's B.Cu vertical at x=35.20
+        _pam_in_bridge_y = 33.60
         parts.append(_seg(pam_inr[0], pam_inr[1],
-                          r21_p2[0], r21_p2[1],
+                          pam_inr[0], _pam_in_bridge_y, "B.Cu", W_DATA, n_pam_in))
+        parts.append(_via_net(pam_inr[0], _pam_in_bridge_y, n_pam_in,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(pam_inr[0], _pam_in_bridge_y,
+                          r21_p2[0], _pam_in_bridge_y,
                           "F.Cu", W_DATA, n_pam_in))
-        parts.append(_via_net(r21_p2[0], r21_p2[1], n_pam_in, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_via_net(r21_p2[0], _pam_in_bridge_y, n_pam_in,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(r21_p2[0], _pam_in_bridge_y,
+                          r21_p2[0], r21_p2[1], "B.Cu", W_DATA, n_pam_in))
         # R21 pad 1 (far pad) is the BIAS side — PAM_VREF, not GND.
         # Built in the VREF bias rail below, together with R20. See R4-HIGH-3.
 
@@ -496,28 +520,48 @@ def _pam_passive_traces():
     c23_p2 = _pad("C23", "2")
     if pam_vdd6 and c23_p1 and c23_p2:
         bridge_y = 25.8  # above top pin row (26.8) with clearance
-        # B.Cu: vert up from VDD pin 6 to bridge_y
+        # R32: the WEST end of this bridge needs its own y. U5.6's pad
+        # grew nothing, but the rule did: at y=25.80 the barrel's hole sat
+        # 0.125mm from the pad edge (26.025), under verify_via_in_pad's
+        # 0.15mm floor. 25.65 gives 0.275mm. The EAST end cannot follow
+        # it down — PAM_VREF's B.Cu runs at y=25.20 and a barrel at
+        # (38.00, 25.65) would come within 0.10mm of it — so the F.Cu
+        # bridge takes a 0.15mm rise over its 6.1mm span instead.
+        bridge_y_w = 25.65
+        # B.Cu: vert up from VDD pin 6 to bridge_y_w
         parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
-                          pam_vdd6[0], bridge_y,
+                          pam_vdd6[0], bridge_y_w,
                           "B.Cu", W_PWR, n_5v))
         # Via to F.Cu (VIA_MIN for R20 pad clearance)
-        parts.append(_via_net(pam_vdd6[0], bridge_y, n_5v, size=VIA_MIN, drill=VIA_MIN_DRILL))
+        parts.append(_via_net(pam_vdd6[0], bridge_y_w, n_5v, size=0.46, drill=VIA_MIN_DRILL))
         # F.Cu: horiz right to C23 column (crosses PAM_IN_AC B.Cu vert safely)
-        parts.append(_seg(pam_vdd6[0], bridge_y,
+        parts.append(_seg(pam_vdd6[0], bridge_y_w,
                           c23_p1[0], bridge_y,
                           "F.Cu", 0.50, n_5v))
         # Via back to B.Cu (VIA_MIN for R20 pad clearance)
-        parts.append(_via_net(c23_p1[0], bridge_y, n_5v, size=VIA_MIN, drill=VIA_MIN_DRILL))
-        # B.Cu: vert down to C23 pad 1 — 0.50mm fits between R20 pads
-        # (gap=0.20mm to each pad ≥ 0.175mm target)
+        # R32: VIA_MIN (0.50) -> 0.46. R20's 0805 pads grew to the JLC
+        # reference and their inner edges moved to 37.625 / 38.375, leaving
+        # this barrel 0.125mm — under JLCPCB's 0.127mm floor. 0.46mm gives
+        # 0.145mm on both sides.
+        parts.append(_via_net(c23_p1[0], bridge_y, n_5v, size=0.46, drill=VIA_MIN_DRILL))
+        # B.Cu: vert down to C23 pad 1 — R32: 0.50 -> 0.45. R20's 0805
+        # pads grew to the JLC reference (inner edges 37.625 / 38.375) and
+        # a 0.50mm trace left 0.125mm each side, under JLCPCB's 0.127mm
+        # floor. 0.45mm gives 0.15mm and is still well above the Power
+        # net class's 0.25mm minimum.
         parts.append(_seg(c23_p1[0], bridge_y,
                           c23_p1[0], c23_p1[1],
-                          "B.Cu", 0.50, n_5v))
-        # GND stub from C23 pad 2: go DOWN 0.5mm then via
+                          "B.Cu", 0.45, n_5v))
+        # GND stub from C23 pad 2: go DOWN then via.
+        # R32: 0.5 -> 0.95. The 0805 land grew to the JLC reference and
+        # its half-height is now 0.575, so a 0.5mm stub put the hole
+        # inside the pad. 0.95 leaves 0.275mm of hole clearance, and the
+        # barrel still keeps 0.267mm to R21's pads at y=31.825.
+        _GND_DROP = 0.95
         parts.append(_seg(c23_p2[0], c23_p2[1],
-                          c23_p2[0], c23_p2[1] + 0.5,
+                          c23_p2[0], c23_p2[1] + _GND_DROP,
                           "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(c23_p2[0], c23_p2[1] + 0.5,
+        parts.append(_via_net(c23_p2[0], c23_p2[1] + _GND_DROP,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── C24: PVDD (pin 4) decoupling → GND via
@@ -531,11 +575,11 @@ def _pam_passive_traces():
         parts.append(_seg(pam_pvdd4[0], pam_pvdd4[1],
                           c24_p2[0], c24_p2[1],
                           "B.Cu", W_PWR, n_5v))
-        # GND via above C24 pad 1
+        # GND via above C24 pad 1 (R32: 0.5 -> 0.95, see C23 above)
         parts.append(_seg(c24_p1[0], c24_p1[1],
-                          c24_p1[0], c24_p1[1] - 0.5,
+                          c24_p1[0], c24_p1[1] - 0.95,
                           "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(c24_p1[0], c24_p1[1] - 0.5,
+        parts.append(_via_net(c24_p1[0], c24_p1[1] - 0.95,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── C25: PVDD (pin 13) decoupling → GND via
@@ -564,11 +608,11 @@ def _pam_passive_traces():
         parts.append(_seg(pam_pvdd13[0], c25_p1[1],
                           c25_p1[0], c25_p1[1],
                           "B.Cu", W_PWR, n_5v))
-        # GND via below C25 pad 2
+        # GND via below C25 pad 2 (R32: 0.5 -> 0.95, see C23 above)
         parts.append(_seg(c25_p2[0], c25_p2[1],
-                          c25_p2[0], c25_p2[1] + 0.5,
+                          c25_p2[0], c25_p2[1] + 0.95,
                           "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(c25_p2[0], c25_p2[1] + 0.5,
+        parts.append(_via_net(c25_p2[0], c25_p2[1] + 0.95,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     return parts

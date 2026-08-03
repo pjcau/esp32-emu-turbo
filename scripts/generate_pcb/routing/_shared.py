@@ -324,7 +324,13 @@ def _mh_detour_h(x1, y, x2, layer, width, net):
             #     idx1 L-vert x=101.55 y=[34.60,36.845]: 32.30 not in range. OK
             #     idx1 R-vert x=108.20 y=[34.60,36.845]: 32.30 not in range. OK
             _left_cols = [101.03, 101.60, 99.50]  # DFM: idx0 at 101.03: gap to BTN_START@100.45 = 0.155mm ✓, idx1 at 101.60: gap to LCD_CS vert@101.03 = 0.17mm ✓
-            _right_cols = [110.00, 108.27, 111.80]  # DFM: idx1 at 108.27: gap to MH detour via@107.70 = 0.17mm ✓. idx2 at 111.80 (was 111.50): clears C17[1] right edge (111.45) by 0.25mm ✓
+            # R32: idx1 108.27 -> 108.24. C17's 0805 land grew to the JLC
+            # reference and pad 2's west edge moved to 108.475, leaving this
+            # column 0.105mm — under JLCPCB's 0.127mm floor. The column is
+            # boxed in: the MH detour via at 107.70 (r=0.30) bounds it at
+            # 108.227 and C17.2 at 108.248, so 108.24 is the only place it
+            # fits — 0.140mm west, 0.135mm east.
+            _right_cols = [110.00, 108.24, 111.80]  # DFM: idx2 at 111.80 (was 111.50): clears C17[1] right edge by 0.175mm ✓
             x_left = _left_cols[min(south_idx, 2)]
             x_right = _right_cols[min(south_idx, 2)]
 
@@ -462,7 +468,14 @@ IP5306 = enc(30, -5)      # (110.0, 42.5)  — moved left
 BUCK = enc(39.8, -16.0)   # (119.8, 53.5)
 PAM8403 = enc(-50, 8)     # (30.0, 29.5)
 L1 = enc(30, -15)         # (110.0, 52.5)  — near IP5306
-JST = enc(0, -25)         # (80.0, 62.5) — moved 5mm closer to USB-C (J1)
+JST = enc(-0.25, -25)     # (79.75, 62.5) — moved 5mm closer to USB-C (J1);
+                          # R32: 0.25mm further WEST. Two things need it:
+                          # F1's 1812 body overlapped J3's housing by
+                          # 0.430mm (verify_component_bodies), and J3's
+                          # signal pads grew to the 3.4mm JST land, which
+                          # only clears the USB_D- via at (79.75, 64.525)
+                          # when the 1.0mm inter-pad channel is centred on
+                          # it. F1 takes the other 0.45mm of the split.
 SPEAKER = enc(-50, -15)   # (30.0, 52.5)
 PWR_SW = enc(-40, -34.5)  # (40.0, 72.0) — bottom edge, left of USB-C
 
@@ -543,7 +556,12 @@ DEBOUNCE_REFS = [f"C{i}" for i in range(5, 17)]
 
 # Power passives (synced with board.py placements)
 R1_POS = (74.0, 67.0)    # USB CC1 pull-down (ux-6, uy-5)
-R2_POS = (78.0, 67.0)    # USB CC2 pull-down (moved near R1, B.Cu-only route)
+R2_POS = (77.95, 67.0)   # USB CC2 pull-down (moved near R1, B.Cu-only route)
+                         # R32: 78.0 -> 77.95. The 0805 land grew to the JLC
+                         # reference width and R2.1's east edge came within
+                         # 0.125mm of the USB_D- B.Cu column at x=79.75, which
+                         # is pinned to J1 pad 7 and cannot move. 0.05mm west
+                         # restores 0.175mm.
 # (R3 was "ESP32 decoupling" at (65, 42) in an earlier layout; the ref
 # now belongs to the EN RC pull-up — see the authoritative R3_POS below.
 # The old module-level duplicate was shadowed and only misleading.)
@@ -618,7 +636,10 @@ C30_POS = (127.8, 58.9)  # C_OUT 22uF 1206 MLCC, rot 90 (pad1 +3V3 north, pad2 G
 # which physical pad carries number 1 — the layout below is unaffected.
 R25_POS = (118.0, 63.4)  # FB divider upper 100k, rot 180 (pad1 west = +3V3)
 C29_POS = (118.0, 60.3)  # 22pF feed-forward across R25, rot 180 (same pad sides)
-R26_POS = (121.2, 63.4)  # FB divider lower 22k, rot 180 (pad1 west = BUCK_FB)
+R26_POS = (121.35, 63.4) # FB divider lower 22k, rot 180 (pad1 west = BUCK_FB)
+                         # R32: 121.2 -> 121.35. With the wider 0805 land the
+                         # R25.2/R26.1 pad gap fell to 0.150mm, under JLCPCB's
+                         # 0.25mm SMD pad-to-pad matrix; 0.30mm now.
                          # x was 121.1: 3.10mm centres on two 0805s leaves only
                          # 3.10 - 1.45 - 1.45 = 0.20mm of copper gap, under
                          # JLCPCB's published 0.25mm minimum for 0805<->0805.
@@ -660,10 +681,18 @@ R27_POS = (121.7, 45.5)
 # the J1 side (pads 2/11, the reversibility loop, the B.Cu riser at
 # x=82.4) becomes net VBUS_IN; U2.1 / U4.5 / C17.1 stay VBUS. Placed
 # rot 0 in the pocket between the J3 mech tab (J3.4 top y=58.35, 0.35mm
-# pad-pad gap) and U4 (pads at x>=89.7, 0.75 mm gap); pad 1 west =
-# VBUS_IN from the riser, pad 2 east = VBUS via a new via at
-# (88.0, 59.3) onto the F.Cu leg that already feeds U4.5/U2.
-F1_POS = (85.8, 60.6)
+# pad-pad gap) and U4 (pads at x>=89.7, 0.30 mm gap); pad 1 west =
+# VBUS_IN from the riser, pad 2 east = VBUS via the via cluster in the
+# fuse's own inter-pad channel (see routing/power.py).
+#
+# R32 (2026-08-03): x 85.8 -> 86.25. verify_component_bodies measured
+# F1's 1812 body 0.430mm INSIDE J3's connector housing — the JLCDFM
+# "component collision" DANGER. 0.68mm of separation is needed for the
+# 0.25mm rule; J3 gives 0.25 (it has the D- via to stay centred on) and
+# F1 gives 0.45. East is the only free direction for F1: U4 cannot move
+# (its pins ARE the D+/D- approach columns at x=90.25/91.65), so the
+# 0.75mm F1-pad-to-U4-pad gap pays for the move and ends at 0.30mm.
+F1_POS = (86.25, 60.6)
 C17_POS = (110.0, 35.0)  # IP5306 cap
 C18_POS = (116.0, 49.0)  # IP5306 BAT decoupling — moved closer: 10.7mm from pin 6 (was 15.4mm)
 C19_POS = (110.0, 58.5)  # IP5306 VOUT bulk cap (lx, ly+6) — kept as bulk, C27 handles HF
@@ -739,7 +768,12 @@ Q1_POS = (85.0, 53.0)    # right of J3, above J3.4 tab — clears all B.Cu verti
 #   pad1 RPP_GATE at (85.40, 49.25), pad2 GND at (85.40, 47.35)
 # Clearance: pad edges x 84.75-86.05 → C13.1 (ends 84.45) 0.30mm,
 #            C14.2 (starts 86.55) 0.50mm; GND via 0.25mm to the BTN_R rail
-R24_POS = (85.4, 48.3)   # C13/C14 gap, north of Q1's gate pad
+R24_POS = (85.5, 48.3)   # C13/C14 gap, north of Q1's gate pad
+                         # R32: 85.4 -> 85.5. The wider 0805 land closed the
+                         # gap to C13.1/R12.1 (west) to 0.200/0.224mm, under
+                         # JLCPCB's 0.25mm matrix. The window is only
+                         # [85.45, 85.55] — C14.2/R13.2 bound it at x=86.475 —
+                         # so 85.5 is the centre of it: 0.30mm west, 0.30mm east.
 R24_ROT = 270            # pad 1 (gate) south, toward Q1
 
 

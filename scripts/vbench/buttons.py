@@ -40,7 +40,7 @@ from vbench.models.u1_esp32s3 import STRAPPING_DEFAULTS       # noqa: E402
 V_IH_FRACTION = 0.70
 
 INVARIANT_DOC = os.path.join(BASE, "docs", "known-issues.md")
-INVARIANT_TEXT = "SW16 is not in series"
+INVARIANT_TEXT = "SW16 does not switch anything"
 
 Button = collections.namedtuple(
     "Button", "net switch pullup r_ohm cap c_farad tau_s t_rise_s note "

@@ -38,6 +38,14 @@ ERROR = 0
 
 MIN_PAD_DIM = 0.5       # mm — minimum pad dimension for probing
 MIN_VIA_DRILL = 0.45    # mm — minimum via drill for test probe
+# mm — a pad this big on either axis takes a normal probe tip; below it
+# on BOTH axes the signal is reachable but only with a micro probe, which
+# is an INFO, never a failure. Named (rather than inline) so
+# test_test_points.py can reach that branch by mutation: after R32 grew
+# U4's SOT-23-6 land to 0.60x1.00 no required signal on this board is
+# fine-pitch any more, and a branch only the board can trigger is a
+# branch that stops being tested the moment the board improves.
+FINE_PITCH_DIM = 1.0
 
 # Required test points by category.
 # Every entry carries one line of WHY it earns a probe point — which bring-up
@@ -150,7 +158,7 @@ def main():
                           f"{best['w']:.1f}x{best['h']:.1f}mm "
                           f"on {best['layer']}")
 
-                if best["w"] >= 1.0 or best["h"] >= 1.0:
+                if best["w"] >= FINE_PITCH_DIM or best["h"] >= FINE_PITCH_DIM:
                     check_pass(f"{sig}: {detail}")
                 else:
                     check_info(f"{sig}: {detail} (fine-pitch, use micro probe)")

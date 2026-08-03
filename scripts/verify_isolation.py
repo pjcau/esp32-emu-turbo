@@ -60,7 +60,9 @@ CHECKS: list[tuple[str, str]] = [
     ("verify_trace_crossings",      "segments merging on one layer"),
     ("verify_copper_clearance",     "copper-to-copper below fab minimum"),
     ("analyze_pad_distances",       "pad-to-pad / pad-to-via spacing"),
-    ("verify_via_in_pad",           "via inside a different-net SMD pad"),
+    # --diff-net-only: this gate's verdict must mean "shorted"; the same
+    # gate's same-net solderability class fails verify-all on its own.
+    ("verify_via_in_pad --diff-net-only", "via inside a different-net SMD pad"),
     ("verify_zone_connectivity",    "vias/THT pads reaching the zone fill"),
     ("verify_power_net_integrity",  "each power net is ONE copper group"),
     ("verify_net_connectivity",     "per-net union-find over the copper"),
@@ -72,12 +74,13 @@ CHECKS: list[tuple[str, str]] = [
 
 
 def run(name: str, verbose: bool) -> tuple[str, int, float, str]:
-    path = BASE / "scripts" / f"{name}.py"
+    script, *args = name.split()
+    path = BASE / "scripts" / f"{script}.py"
     if not path.exists():
         return (name, 127, 0.0, f"missing: {path.relative_to(BASE)}")
     t0 = time.monotonic()
     proc = subprocess.run(
-        [sys.executable, str(path)],
+        [sys.executable, str(path), *args],
         capture_output=True, text=True, cwd=str(BASE),
     )
     out = (proc.stdout or "") + (proc.stderr or "")

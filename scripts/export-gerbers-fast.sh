@@ -33,10 +33,15 @@ echo "==> Step 1: Filling zones via Docker (pcbnew API)..."
 # Step 2+3: Local kicad-cli (no Docker overhead)
 if command -v kicad-cli &>/dev/null; then
     echo "==> Step 2: Exporting Gerbers (local kicad-cli)..."
+    # NOTE: no --subtract-soldermask. That option emits clear-polarity (LPC)
+    # flashes on the silk layers for every mask opening near silk; JLCDFM's
+    # checker ignores polarity and reported each one as a "silkscreen to
+    # hole 0mm" DANGER (41 of the 53 findings in the 2026-08-03 report were
+    # these artifacts). Source silk is instead kept clear of holes and mask
+    # openings by scripts/verify_silk_holes.py in verify-all.
     kicad-cli pcb export gerbers \
         --output "$GERBER_DIR/" \
         --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts" \
-        --subtract-soldermask \
         --use-drill-file-origin \
         "$KICAD_DIR/$PCB_FILE"
 
@@ -55,7 +60,7 @@ else
         kicad-pcb pcb export gerbers \
         --output /gerbers/ \
         --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts" \
-        --subtract-soldermask --use-drill-file-origin \
+        --use-drill-file-origin \
         "/project/$PCB_FILE"
 
     docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \

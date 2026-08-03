@@ -38,7 +38,6 @@ docker compose -f "$PROJECT_ROOT/docker-compose.yml" run --rm \
     pcb export gerbers \
     --output /gerbers/ \
     --layers "F.Cu,In1.Cu,In2.Cu,B.Cu,F.Paste,B.Paste,F.SilkS,B.SilkS,F.Mask,B.Mask,Edge.Cuts" \
-    --subtract-soldermask \
     --use-drill-file-origin \
     "/project/$PCB_FILE"
 

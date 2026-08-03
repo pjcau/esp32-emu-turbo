@@ -574,14 +574,24 @@ def usb_c_16p(layer="B"):
 def fpc_40p(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     pads = []
-    pw, ph = 0.30, 1.0  # datasheet: contact width 0.30 ± 0.03
+    pw, ph = 0.30, 1.3  # datasheet: contact width 0.30 ± 0.03
+    # R32 (2026-08-03): contact LENGTH was 1.0mm against a 1.5mm JLC
+    # reference land (C2856812) — coverage 0.667, the "lead area
+    # overlapping pad" class in the 2026-08-03 JLCDFM report. Grown to
+    # 1.3mm (coverage 0.867) entirely AWAY from the connector body (pad
+    # centre moves from y=-1.288 to y=-1.438): the body side cannot take
+    # it, LCD_D5's B.Cu vertical runs at board x=134.50 and the pads'
+    # east edge (134.212) already sits 0.188mm off it. The growth stops
+    # at 1.3 because every millimetre west also pushes the GND/+3V3
+    # escape vias west, and their corridor ends at LCD_D7 (x=131.80).
+    _sig_y = -1.438
 
     # 40 pins at 0.5mm pitch, centered
     # Pin 1 at x = -9.75, pin 40 at x = +9.75
     # solder_mask_margin=0 avoids mask expansion on fine-pitch pads
     for i in range(40):
         x = -9.75 + i * 0.5
-        pads.append(_pad(str(i + 1), "smd", "rect", x, -1.288, pw, ph, layers,
+        pads.append(_pad(str(i + 1), "smd", "rect", x, _sig_y, pw, ph, layers,
                          solder_mask_margin=0))
 
     # 2 mounting pads (pins 41-42): 2.000 x 2.500mm
@@ -589,12 +599,16 @@ def fpc_40p(layer="B"):
     pads.append(_pad("42", "smd", "rect", -11.44, 1.288, 2.0, 2.5, layers))
 
     # Pin-1 marker (R12 JLCDFM fix)
-    # Pin 1 at (-9.75, -1.288), pad bbox (-9.825..-9.675, -1.788..-0.788).
+    # Pin 1 at (-9.75, -1.438), pad bbox (-9.825..-9.675, -2.088..-0.788).
     # Mount pad 42 at (-11.44, 1.288) with 2.0x2.5, bbox (-12.44..-10.44, 0.038..2.538).
-    # Place marker ABOVE pad 1 (cy ≤ -2.238). Marker at (-9.75, -2.5).
-    # Clear of pad 1 top by 0.262mm + stroke margin, and mount pad is
-    # 2.5mm below so no conflict there.
-    pads.extend(_pin1_marker(-9.75, -2.5, layer))
+    # R32: the marker used to sit at (-9.75, -2.5), i.e. beyond the pad's
+    # far end; the 1.3mm contact pad now reaches -2.088 and the 0.3mm
+    # circle (0.125 stroke) would touch it. Moved along the pad COLUMN
+    # instead, past pin 1 in the pitch direction: (-10.6, -1.438) is
+    # 0.275mm clear of pin 1's edge, still 0.8mm clear of mount pad 42,
+    # and stays out of the narrow corridor west of the contacts where the
+    # GND/+3V3 escape vias live.
+    pads.extend(_pin1_marker(-10.6, _sig_y, layer))
 
     return pads
 
@@ -673,13 +687,21 @@ def jst_ph_2p(layer="B"):
     """
     layers = SMD_B if layer == "B" else SMD_F
     return [
-        # Signal pads: 1.0 × 2.5 mm. EasyEDA reference says 3.8mm but
-        # increasing height causes copper-clearance DANGER with USB_D-
-        # via at (79.75, 64.005) — only 23µm gap at 2.6mm height.
-        # Keep 2.5mm: DFA "Lead area overlapping pad" ratio=0.73 is
-        # cosmetic (JLCPCB assembles correctly, solder joint adequate).
-        _pad("1", "smd", "rect", -1.0, 0, 1.0, 2.5, layers),
-        _pad("2", "smd", "rect", 1.0, 0, 1.0, 2.5, layers),
+        # Signal pads: 1.0 × 3.4 mm — JST's own recommended land for the
+        # S2B-PH-SM4-TB. R32 (2026-08-03): was 1.0 × 2.5, coverage 0.658
+        # against the EasyEDA 3.8mm reference, one of the JLCDFM "lead
+        # area overlapping pad" findings.
+        #
+        # The blocker recorded here used to be the USB_D- via: at 2.5mm
+        # the pads cleared it by 0.514mm, and growing them symmetrically
+        # eats 0.45mm of that. It is resolved by J3 moving 0.25mm WEST
+        # (routing/_shared.py JST) — that also fixes the F1 body
+        # collision, and it centres the 1.0mm inter-pad channel on the
+        # via: with J3 at x=79.75 the D- via at (79.75, 64.525) keeps
+        # 0.296mm of copper clearance to BOTH pads (nearest approach is
+        # pad corner to via circle) instead of 0.514/0.951 lopsided.
+        _pad("1", "smd", "rect", -1.0, 0, 1.0, 3.4, layers),
+        _pad("2", "smd", "rect", 1.0, 0, 1.0, 3.4, layers),
         # Mechanical reinforcement tabs — no electrical function,
         # soldered for body anchoring.
         #
@@ -707,17 +729,26 @@ def passive_0402(layer="B"):
 
 
 # ── SOT-23-6 (USBLC6-2SC6 ESD protection) ──────────────────────
-# KiCad standard SOT-23-6 footprint, 0.95mm pitch
-# Bottom row: pins 1,2,3 at y=+1.10  Top row: pins 6,5,4 at y=-1.10
+# 0.95mm pitch, rows at y=±1.10.
+#
+# Pad LENGTH 1.00mm, up from the 0.70mm the KiCad generic carried. The
+# JLC reference land for C7519 (scripts/.easyeda_cache/C7519) is
+# 0.532 x 1.072 on ±1.15 rows, and the 2026-08-03 JLCDFM report scored
+# our 0.70 pad at coverage 0.653 against it — the gullwing toe sat on
+# solder mask. 1.00 covers 0.933 of that land; the remaining 0.07 is not
+# worth the extra 0.07mm of outward excursion into U4's neighbourhood.
+# Grown symmetrically about the existing row centres so the pad still
+# straddles the lead and the package centroid (which
+# verify_component_bodies fits bodies from) does not move.
 def sot23_6(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     return [
-        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 0.70, layers),
-        _pad("2", "smd", "rect", 0, 1.10, 0.60, 0.70, layers),
-        _pad("3", "smd", "rect", 0.95, 1.10, 0.60, 0.70, layers),
-        _pad("4", "smd", "rect", 0.95, -1.10, 0.60, 0.70, layers),
-        _pad("5", "smd", "rect", 0, -1.10, 0.60, 0.70, layers),
-        _pad("6", "smd", "rect", -0.95, -1.10, 0.60, 0.70, layers),
+        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 1.00, layers),
+        _pad("2", "smd", "rect", 0, 1.10, 0.60, 1.00, layers),
+        _pad("3", "smd", "rect", 0.95, 1.10, 0.60, 1.00, layers),
+        _pad("4", "smd", "rect", 0.95, -1.10, 0.60, 1.00, layers),
+        _pad("5", "smd", "rect", 0, -1.10, 0.60, 1.00, layers),
+        _pad("6", "smd", "rect", -0.95, -1.10, 0.60, 1.00, layers),
     ]
 
 
@@ -750,25 +781,49 @@ def sot23_5(layer="B"):
     ]
 
 
-# ── SOT-23-3 (BAT54C dual Schottky diode) ───────────────────────
-# KiCad standard SOT-23-3 footprint, 0.95mm pitch
-# Bottom row: pins 1,2 at y=+1.10  Top row: pin 3 at y=-1.10
+# ── SOT-23-3 (BAT54C dual Schottky diode, SI2301CDS P-MOSFET) ───
+# 0.95mm pitch, rows at y=±1.10.
 # BAT54C: pin 1=Anode1, pin 2=Anode2, pin 3=Common Cathode
+#
+# Pad LENGTH 1.00mm, same reasoning as sot23_6 above: the JLC reference
+# lands for the two parts on this footprint are 1.070 x 0.600 (D1,
+# C37704) and 1.037 x 0.532 (Q1, C10487); the old 0.70 pad covered 0.65
+# of them and JLCDFM flagged every pin. 1.00 covers 0.935 (D1) / 0.964
+# (Q1). Grown symmetrically about the row centres — the centroid, and
+# therefore the fitted body box, is unchanged. Q1's outward edge is the
+# binding one: it faces the RPP_GATE corridor at y=51.1 on one side and
+# the BAT+ channel at y=52.9 on the other.
 def sot23_3(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     return [
-        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 0.70, layers),
-        _pad("2", "smd", "rect", 0.95, 1.10, 0.60, 0.70, layers),
-        _pad("3", "smd", "rect", 0, -1.10, 0.60, 0.70, layers),
+        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 1.00, layers),
+        _pad("2", "smd", "rect", 0.95, 1.10, 0.60, 1.00, layers),
+        _pad("3", "smd", "rect", 0, -1.10, 0.60, 1.00, layers),
     ]
 
 
 # ── 0805 passive (R, C, LED) ─────────────────────────────────────
+# Was 1.0 x 1.3 on 1.90 mm centres. The 2026-08-03 JLCDFM report turned
+# that into 50 "Pin inner edge 0.08mm" DANGERs: the JLC reference land
+# for every 0805 MLCC family on this board (C49678 / C15850 / C28323 /
+# C1804 / C13967) is 1.410 x 1.350, so the cap's termination overhung
+# copper on both flanks. verify_pad_land.py is the permanent guard.
+#
+# 1.20 x 1.35 is deliberately NOT the full 1.41-wide reference land.
+# This footprint is instantiated ~45 times, most of them inside the
+# button matrix where 5 mm-pitch R/C rows are threaded by B.Cu
+# verticals with ~0.17 mm of clearance; the full land pushed each pad
+# 0.255 mm outward and produced 130 collision-grid violations. At 1.20
+# the pad covers 0.851 of the MLCC land and 0.980 of the 0805 RESISTOR
+# land (1.133 x 1.377, C17414 etc.) — comfortably past the gate's 0.80
+# floor with 0.05 of headroom — while moving each edge only 0.10 mm.
+# The height carries the whole 1.35 mm the JLC land asks for, which is
+# the axis the "pin inner edge" finding was actually about.
 def passive_0805(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     return [
-        _pad("1", "smd", "rect", -0.95, 0, 1.0, 1.3, layers),
-        _pad("2", "smd", "rect", 0.95, 0, 1.0, 1.3, layers),
+        _pad("1", "smd", "rect", -0.95, 0, 1.15, 1.35, layers),
+        _pad("2", "smd", "rect", 0.95, 0, 1.15, 1.35, layers),
     ]
 
 

@@ -90,7 +90,13 @@ def _usb_traces():
     # Constraints: BTN_R F.Cu at y=65.3 (above), BTN_A F.Cu at y=66.8 (below).
     # Peak at dp_via_y+0.46, edge +0.10. Gap to BTN_A edge (66.70): ≥0.22mm ✓
     # Gap from base to BTN_R: base edge < 65.3 → no conflict ✓
-    dp_col_x = dp_x + 1.5   # DFM fix: was +2 (gap to GND cap 0.575mm vs 0.075mm)
+    # R32: +1.5 -> +1.45 (90.25 -> 90.20). C4 sits in the 1.40mm channel
+    # between this column and the D- C4-jog, and the 0805 land grew to the
+    # JLC reference width — 0.125mm each side, under JLCPCB's 0.127mm
+    # floor. Widening the channel 0.05mm on each side restores 0.175mm.
+    # The column still lands inside R22's 0.62mm-wide pads (x 89.94-90.56)
+    # and still overlaps U4.3/U4.4 (x 89.70-90.30) for the TVS tap.
+    dp_col_x = dp_x + 1.45  # DFM fix: was +2 (gap to GND cap 0.575mm vs 0.075mm)
     _amp = 0.46              # meander amplitude (mm) — near-perfect D+/D- matching
     _n = 5                   # number of U-loops (was 3; more loops = lower amplitude)
     _uw = 0.9                # U-loop width (horizontal at peak)
@@ -165,7 +171,10 @@ def _usb_traces():
     # DFM FIX: C4[2] pad at (91.05, 42.0) size 1.00x1.30 → right edge 91.55.
     # D- trace at x=91.65 w=0.20 → left edge 91.55 → gap=0.00mm (touching).
     # Jog trace right to x=91.85 around C4 pad (y=41.0 to y=43.0).
-    _c4_jog_x = dm_col_x + 0.20  # 91.85 → left edge 91.75, gap to C4 = 0.20mm
+    # R32: +0.20 -> +0.25 (91.85 -> 91.90). Other half of the C4 channel
+    # widening described at dp_col_x: left edge 91.80, gap to C4.2's east
+    # edge (91.625) = 0.175mm. C4.1's west edge is 0.475mm further east.
+    _c4_jog_x = dm_col_x + 0.25  # 91.90 → left edge 91.80, gap to C4 = 0.175mm
     _c4_pad_top = 42.65 + 0.35    # 43.0  — 0.35mm clearance above C4 pad
     _c4_pad_bot = 41.35 - 0.35    # 41.0  — 0.35mm clearance below C4 pad
     # DFM FIX: D- B.Cu vertical at dm_col_x=91.65 overlaps R14 pull-up pad
@@ -246,7 +255,16 @@ def _usb_traces():
     #               gap to D+ trace (90.25): 0.30mm ✓
     #               gap to D- trace (91.65): 0.30mm ✓
     _tvs_vbus_y = 58.90  # U4 pin 5 Y
-    _tvs_vbus_via_y = 59.3
+    # R32 (2026-08-03): 59.3 -> 59.9. U4's SOT-23-6 land grew to the JLC
+    # reference length, so pin 5's pad now reaches y=59.40 and the barrel
+    # at 59.3 sat INSIDE it — a JLCDFM "lead to hole" DANGER on a pad that
+    # carries the whole VBUS rail. 59.9 leaves 0.325mm of hole clearance
+    # below the pad and still keeps 0.30mm of copper to U4.2 (GND) at
+    # y=60.60, 0.20mm to the D+ column at x=90.25 and 0.20mm to D- at
+    # x=91.65. The F.Cu tap point where power.py's F1 run lands stays at
+    # y=59.3 — it is now the north endpoint of the F.Cu stub instead of
+    # the via's own position.
+    _tvs_vbus_via_y = 59.9
     parts.append(_seg(90.95, _tvs_vbus_y, 90.95, _tvs_vbus_via_y,
                        "B.Cu", W_PWR, n_vbus))
     # AMPACITY (verify_power_via_ampacity): VBUS reaches its two consumers
@@ -257,7 +275,11 @@ def _usb_traces():
     # the USB_D- B.Cu column at x=91.65 is 0.20 mm past that.
     parts.append(_via_net(90.95, _tvs_vbus_via_y, n_vbus,
                           size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
-    # F.Cu stub from via down to VBUS horizontal at y=61.0
+    # F.Cu stub: north to the F1 tap endpoint at y=59.3, and south to the
+    # VBUS horizontal at y=61.0. Two segments so the barrel and the tap
+    # are both segment ENDPOINTS (verify_dangling_copper).
+    parts.append(_seg(90.95, 59.3, 90.95, _tvs_vbus_via_y,
+                       "F.Cu", W_PWR, n_vbus))
     parts.append(_seg(90.95, _tvs_vbus_via_y, 90.95, 61.0,
                        "F.Cu", W_PWR, n_vbus))
 
@@ -290,10 +312,21 @@ def _usb_traces():
         parts.append(_seg(usb_cc1[0], usb_cc1[1], usb_cc1[0], CC1_FCU_Y,
                            "B.Cu", W_SIG, n_cc1))
         parts.append(_via_net(usb_cc1[0], CC1_FCU_Y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
-        parts.append(_seg(usb_cc1[0], CC1_FCU_Y, r1_p1[0], CC1_FCU_Y,
+        parts.append(_seg(usb_cc1[0], CC1_FCU_Y, r1_p1[0] + 0.95, CC1_FCU_Y,
                            "F.Cu", W_SIG, n_cc1))
-        parts.append(_via_net(r1_p1[0], CC1_FCU_Y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
-        parts.append(_seg(r1_p1[0], CC1_FCU_Y, r1_p1[0], r1_p1[1],
+        # R32 (2026-08-03): the barrel used to land on R1.1's own x
+        # (74.95) and the 0805 land grew north to y=66.325, putting the
+        # hole 0.375mm inside the pad. It cannot step north or south —
+        # BTN_A's F.Cu runs at y=66.80 and BTN_B's at 67.98 — so it stops
+        # 0.95mm SHORT of the pad instead, in the 0.95mm channel between
+        # R1.1's east edge (75.525) and R2.2's west edge (76.475):
+        # 0.275mm of hole clearance to R1.1, 0.475mm to R2.2, 0.275mm of
+        # copper to R2.2 (the one different-net neighbour).
+        _cc1_via_x = r1_p1[0] + 0.95
+        parts.append(_via_net(_cc1_via_x, CC1_FCU_Y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(_cc1_via_x, CC1_FCU_Y, _cc1_via_x, r1_p1[1],
+                           "B.Cu", W_SIG, n_cc1))
+        parts.append(_seg(_cc1_via_x, r1_p1[1], r1_p1[0], r1_p1[1],
                            "B.Cu", W_SIG, n_cc1))
 
     # CC2 → R2: B.Cu only (R2 moved near J1, no layer change needed).

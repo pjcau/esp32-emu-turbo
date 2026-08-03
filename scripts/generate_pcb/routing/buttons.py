@@ -974,8 +974,29 @@ def _button_traces():
                 # violation at y=45.35). Also handles the stagger horizontal
                 # above. Stub length ~6.35mm; 0.18mm trace for a button
                 # signal is well within W_DATA (0.20) budget.
+                #
+                # R32 (2026-08-03): the taper alone stopped being enough
+                # once the 0805 land grew to the JLC reference width —
+                # C3.1's east edge moved 68.025→71.075 side to 71.075 and
+                # left 0.085mm, a verify_copper_clearance DANGER. The stub
+                # now steps 0.15mm EAST while it passes C3's pad row
+                # (y=41.325..42.675), which buys 0.235mm there. It steps
+                # back before y=41.0 so the run into the ESP32 pad at
+                # x=71.25 is unchanged, and the step band stays clear of
+                # R10.2 (pad row starts at y=45.325).
                 _TAPER_W = 0.18
-                parts.append(_seg(epx, stagger_y, epx, epy,
+                _c3_step_x = epx + 0.15
+                _c3_step_top = 43.0    # C3 pads start at y=41.325
+                _c3_step_bot = 41.0    # ... and end at y=42.675
+                parts.append(_seg(epx, stagger_y, epx, _c3_step_top,
+                                  "B.Cu", _TAPER_W, net))
+                parts.append(_seg(epx, _c3_step_top, _c3_step_x, _c3_step_top,
+                                  "B.Cu", _TAPER_W, net))
+                parts.append(_seg(_c3_step_x, _c3_step_top, _c3_step_x, _c3_step_bot,
+                                  "B.Cu", _TAPER_W, net))
+                parts.append(_seg(_c3_step_x, _c3_step_bot, epx, _c3_step_bot,
+                                  "B.Cu", _TAPER_W, net))
+                parts.append(_seg(epx, _c3_step_bot, epx, epy,
                                   "B.Cu", _TAPER_W, net))
             else:
                 parts.append(_seg(epx, stagger_y, epx, epy,
@@ -991,24 +1012,59 @@ def _button_traces():
                                       "B.Cu", W_SIG, net))
             else:
                 # R13-CU-CLR FIX (2026-04-12): BTN_UP (SW1) approach column
-                # vert at x=ax=67.83 squeezes between R9.2/C10.2 pads (right
-                # edge 67.55, left gap 0.155mm) and C3.2 GND pad (left edge
-                # 68.10, right gap 0.145mm = violation #6).
-                # Taper the y-band across C3 from W_SIG (0.25) to 0.18 (hw=0.09):
-                #   Right edge 67.92 → gap to C3.2 = 0.18mm ✓
-                #   Left edge  67.74 → gap to R9.2 = 0.19mm ✓
-                # C3 pad y-range: 41.35..42.65. Taper band y=[40.8, 43.2].
+                # vert at x=ax=67.83 squeezes between R9.2/C10.2 pads and
+                # C3.2's GND pad. Taper the y-band across C3 from W_SIG
+                # (0.25) to 0.18 (hw=0.09).
+                # C3 pad y-range: 41.325..42.675. Taper band y=[40.8, 43.2].
+                #   Right edge 67.92 → gap to C3.2 (west edge 68.025) = 0.105mm
+                #   Left edge  67.74 → nothing west of it until x≈67.0
+                #
+                # R32 (2026-08-03): the 0805 land grew to the JLC reference
+                # width (1.0 → 1.15), which moved R9.2 / C10.2's east edge
+                # from 67.55 to 67.625 and left the full-width column only
+                # 0.080mm away — a verify_copper_clearance DANGER. The
+                # column now steps EAST to the centre of that channel
+                # while it crosses the two 0805 rows: R9/C10's pads bound
+                # it at 67.625 (pad 2) and 68.375 (pad 1), so x=68.00 is
+                # 0.25mm clear on both sides. It steps back afterwards so
+                # the south bridge via and the button pad tap keep their
+                # proven x.
                 if b["ref"] == "SW1":  # BTN_UP
                     _c3_y_top = 40.8
                     _c3_y_bot = 43.2
+                    _rows_y_top = 44.9    # above R9's pad row (45.325)
+                    _rows_y_bot = 51.1    # below C10's pad row (50.675)
+                    _rows_x = 68.00       # centred in the 0.75mm pad channel
+                    # R32: the taper also steps 0.15mm WEST across C3.
+                    # C3.2's pad grew to the JLC reference land and its
+                    # west edge moved to 68.025, leaving the 0.18mm taper
+                    # 0.105mm — under JLCPCB's 0.127mm floor. Nothing sits
+                    # west of x=67.6 in this y band, so the step is free
+                    # and buys 0.255mm.
+                    _c3_x = ax - 0.15     # 67.68
                     _TAPER_W = 0.18
                     y_lo, y_hi = min(cy, epy), max(cy, epy)
                     if y_lo < _c3_y_top < y_hi:
                         parts.append(_seg(ax, y_lo, ax, _c3_y_top,
                                           "B.Cu", W_SIG, net))
-                        parts.append(_seg(ax, _c3_y_top, ax, _c3_y_bot,
+                        parts.append(_seg(ax, _c3_y_top, _c3_x, _c3_y_top,
                                           "B.Cu", _TAPER_W, net))
-                        parts.append(_seg(ax, _c3_y_bot, ax, y_hi,
+                        parts.append(_seg(_c3_x, _c3_y_top, _c3_x, _c3_y_bot,
+                                          "B.Cu", _TAPER_W, net))
+                        parts.append(_seg(_c3_x, _c3_y_bot, ax, _c3_y_bot,
+                                          "B.Cu", _TAPER_W, net))
+                        parts.append(_seg(ax, _c3_y_bot, ax, _rows_y_top,
+                                          "B.Cu", W_SIG, net))
+                        # Step east across the R9/C10 rows and back.
+                        # The jog horizontals sit 0.30mm clear of the
+                        # nearest pad edge (45.325 / 50.675).
+                        parts.append(_seg(ax, _rows_y_top, _rows_x, _rows_y_top,
+                                          "B.Cu", W_SIG, net))
+                        parts.append(_seg(_rows_x, _rows_y_top, _rows_x, _rows_y_bot,
+                                          "B.Cu", W_SIG, net))
+                        parts.append(_seg(_rows_x, _rows_y_bot, ax, _rows_y_bot,
+                                          "B.Cu", W_SIG, net))
+                        parts.append(_seg(ax, _rows_y_bot, ax, y_hi,
                                           "B.Cu", W_SIG, net))
                     else:
                         parts.extend(_pu_jog_vert(ax, cy, epy, W_SIG, net))
@@ -1166,7 +1222,10 @@ def _button_traces():
     # pad right edge (64.45).  Need ≥0.15mm gap.  At 64.75: left edge=64.65,
     # gap to pad=64.65-64.45=0.20mm ✓.  Gap to BTN_DOWN vert at 65.55:
     # 65.55-0.125-(64.75+0.10)=0.575mm ✓.
-    approach_l = 64.75
+    # R32: 64.75 -> 64.80. The 0805 land grew to the JLC reference, moving
+    # R8.1/C9.1's east edge to 64.525 and leaving 0.125mm. BTN_DOWN's
+    # vertical at x=65.55 is 0.525mm east, so the 0.05mm step is free.
+    approach_l = 64.80
     parts.append(_seg(sx_l, chan_y_l, approach_l, chan_y_l,
                        "F.Cu", W_DATA, net_l))
     parts.append(_via_net(approach_l, chan_y_l, net_l, size=_BTN_L_VIA, drill=_BTN_L_VIA_DRILL))
@@ -1182,7 +1241,15 @@ def _button_traces():
                        "F.Cu", W_DATA, net_l))
     parts.append(_seg(approach_l, btn_l_fcu_y, epx_l, btn_l_fcu_y,
                        "F.Cu", W_DATA, net_l))
-    parts.append(_seg(epx_l, btn_l_fcu_y, epx_l, epy_l,
+    # R32 (2026-08-03): the F.Cu used to run all the way down to epy_l and
+    # drop a barrel on U1.26's pad centre. That is the JLCDFM "lead to hole
+    # distance 0mm" DANGER — a hole under a module castellation wicks the
+    # joint dry. The module's pads are 1.27mm apart in y, so the barrel
+    # steps NORTH off the pad's top edge (39.25) instead: 0.250mm of hole
+    # clearance, 0.592mm of copper to U1.25 and 0.715mm to U1.27, and the
+    # last 1.1mm into the pad runs on B.Cu.
+    _btn_l_via_y = 38.90
+    parts.append(_seg(epx_l, btn_l_fcu_y, epx_l, _btn_l_via_y,
                        "F.Cu", W_DATA, net_l))
     # R6 FIX (2026-04-10): missing via-in-pad at U1:26 (GPIO45, B.Cu).
     # Without this via, the F.Cu trace ends at (epx_l, epy_l) on the wrong
@@ -1191,7 +1258,9 @@ def _button_traces():
     # verify_net_connectivity.py: BTN_L showed U1.26 as an isolated
     # component. via-in-pad on a 0.9x1.5mm SMD pad is acceptable for an
     # ESP32-S3 module (solder-mask-defined pad, standard assembly practice).
-    parts.append(_via_net(epx_l, epy_l, net_l, size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_via_net(epx_l, _btn_l_via_y, net_l, size=VIA_STD, drill=VIA_STD_DRILL))
+    parts.append(_seg(epx_l, _btn_l_via_y, epx_l, epy_l,
+                       "B.Cu", W_DATA, net_l))
     # GND via on opposite shoulder pad
     # DFM: was 1mm offset — via ring at 14.15-0.45=13.70, pad right=13.15+0.45=13.60, gap=0.10mm danger.
     # Use 1.5mm: via at 14.65, ring left=14.20, pad right=13.60, gap=0.60mm clear.
@@ -1714,7 +1783,12 @@ def _button_pullup_bridges():
     # Landing the via at y=41.50 drops BTN_B onto the main F.Cu horizontal at
     # (45.55, 41.50)-(73.25, 41.50) so the T-junction is an explicit layer
     # change, not a dead-end trace endpoint.
-    parts.append(_via_net(69.55, 41.50, n_btn_b, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    # R32: VIA_MIN (0.50) -> 0.46. This barrel is centred in the channel
+    # between C3's two pads; the 0805 land grew to the JLC reference and
+    # the channel narrowed to 0.75mm, leaving 0.125mm each side at 0.50mm
+    # OD — under JLCPCB's 0.127mm floor. 0.46mm (AR 0.13mm, JLCPCB min)
+    # gives 0.145mm each side without moving anything.
+    parts.append(_via_net(69.55, 41.50, n_btn_b, size=0.46, drill=VIA_MIN_DRILL))
 
     # BTN_X: R10.1@(73.95, 46) → existing BTN_X F.Cu↔B.Cu via at (73.555, 42.70)
     # Use the existing via (west end of the (73.56, 42.70)-(75.56, 42.70) segment)

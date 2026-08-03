@@ -417,37 +417,64 @@ def _power_traces():
                            "B.Cu", W_PWR, n_vbus_in))
         parts.append(_seg(f1_p1[0], vbus_fcu_y, f1_p1[0], f1_p1[1],
                            "B.Cu", W_PWR, n_vbus_in))
-        # 3b. F1 pad 2 -> VBUS: B.Cu south stub, via, F.Cu east to the
-        #     U4-tap vertical's endpoint at (90.95, 59.3) — landing on the
-        #     endpoint keeps the junction visible to
+        # 3b. F1 pad 2 -> VBUS: B.Cu south stub, via cluster, F.Cu east to
+        #     the U4-tap vertical's endpoint at (90.95, 59.3) — landing on
+        #     the endpoint keeps the junction visible to
         #     verify_dangling_copper (same rule as the U4-tap split
         #     below).
-        #     Clearances: stub x=88.0 edge 88.3 vs BTN_SELECT via
-        #     (88.95, 58.0) edge 88.72 -> 0.42; via (88.0, 59.3) 1.3 mm
-        #     from F1 pad 2 centre and 1.25 mm from U4.4's pad edge.
         #
+        #     R32 (2026-08-03): all three barrels used to sit on the
+        #     y=59.3 row at x = f1_p2, 86.90, 85.80, and the first two had
+        #     their HOLES inside / 0.025mm off F1 pad 2's copper — the
+        #     JLCDFM "lead to hole distance 0mm" DANGER (solder drains
+        #     down the barrel and starves the fuse joint). verify_via_in_pad
+        #     is the permanent guard: every hole edge must clear every SMD
+        #     pad by >= 0.15mm.
+        #
+        #     The barrels moved into F1's own inter-pad channel, which is
+        #     2.50mm wide (pad 1 ends x=85.00, pad 2 starts x=87.50) and
+        #     empty on both layers — the only copper crossing this pocket
+        #     is BTN_L / BTN_SELECT F.Cu at y=57.5 / 58.0, both south of
+        #     the cluster. That channel admits a via centre in
+        #     x = [85.65, 87.175]: 0.45 (barrel radius) + 0.20 (clearance
+        #     to the DIFFERENT-net VBUS_IN pad 1) on the west, 0.95 + 0.15
+        #     + 0.175 (hole rule against pad 2) on the east. 1.525mm of
+        #     window will not hold three barrels at the 1.10mm pitch that
+        #     0.90mm annuli need, so the third one steps north instead of
+        #     making a fourth column:
+        #       (85.90, 59.30) — 0.45mm B.Cu clearance to F1.1's pad edge,
+        #         hole 0.725mm clear of it.
+        #       (87.00, 59.30) — hole 0.325mm clear of F1.2's pad edge.
+        #       (85.90, 60.40) — 1.10mm north of the first, under the fuse
+        #         body where both layers are free; 0.45mm clearance to
+        #         F1.1, 1.60mm to F1.2.
+        #     Nearest pair 1.10mm apart => 0.20mm copper, 0.75mm hole.
         #     AMPACITY (verify_power_via_ampacity): F1 is the source of
-        #     this net and everything downstream of it — U2.1 and the U4
-        #     TVS — sits on F.Cu, so this single barrel carried the fuse's
-        #     whole 2 A hold current on 0.791 A of copper. The stub now
-        #     runs 2.20 mm further WEST along y=59.3 on both layers and
-        #     carries two more 0.35 mm barrels. West is the only free
-        #     direction: east is U4's pad field and the BTN_SELECT via at
-        #     (88.95, 58.0), north is the F1 body, south is U4.
-        #       (86.90, 59.30) — F1.1 pad (VBUS_IN, different net!) ends at
-        #         x=84.55, so 0.80 mm of B.Cu clearance; BTN_SELECT F.Cu at
-        #         y=58.0 is 0.75 mm below.
-        #       (85.80, 59.30) — 0.80 mm from that same F1.1 pad edge.
-        #     via-to-via copper 1.10 - 0.90 = 0.20 mm ✓. 3 x 0.791 = 2.373 A.
-        _f1_vbus_via_xs = (f1_p2[0], 86.90, 85.80)
-        parts.append(_seg(f1_p2[0], f1_p2[1], f1_p2[0], 59.3,
+        #     this net and everything downstream — U2.1 and the U4 TVS —
+        #     sits on F.Cu, so this cut carries the fuse's whole 2 A hold
+        #     current. 3 x 0.35mm barrels = 3 x 0.791 = 2.373 A, unchanged
+        #     by the move.
+        _F1_VIA_ROW_Y = 59.3
+        _F1_VIA_W_X = 85.90          # west barrel, on the row
+        _F1_VIA_E_X = 87.00          # east barrel, on the row
+        _F1_VIA_N = (85.90, 60.40)   # third barrel, stepped north
+        parts.append(_seg(f1_p2[0], f1_p2[1], f1_p2[0], _F1_VIA_ROW_Y,
                            "B.Cu", W_PWR, n_vbus))
-        for _vx in _f1_vbus_via_xs:
-            parts.append(_via_net(_vx, 59.3, n_vbus))
-        for _xa, _xb in zip(_f1_vbus_via_xs, _f1_vbus_via_xs[1:]):
-            parts.append(_seg(_xa, 59.3, _xb, 59.3, "B.Cu", W_PWR, n_vbus))
-            parts.append(_seg(_xa, 59.3, _xb, 59.3, "F.Cu", W_PWR_HIGH, n_vbus))
-        parts.append(_seg(f1_p2[0], 59.3, 90.95, 59.3,
+        parts.append(_seg(f1_p2[0], _F1_VIA_ROW_Y, _F1_VIA_E_X, _F1_VIA_ROW_Y,
+                           "B.Cu", W_PWR, n_vbus))
+        parts.append(_seg(_F1_VIA_E_X, _F1_VIA_ROW_Y, _F1_VIA_W_X, _F1_VIA_ROW_Y,
+                           "B.Cu", W_PWR, n_vbus))
+        parts.append(_seg(_F1_VIA_W_X, _F1_VIA_ROW_Y, *_F1_VIA_N,
+                           "B.Cu", W_PWR, n_vbus))
+        for _vx, _vy in ((_F1_VIA_W_X, _F1_VIA_ROW_Y),
+                         (_F1_VIA_E_X, _F1_VIA_ROW_Y), _F1_VIA_N):
+            parts.append(_via_net(_vx, _vy, n_vbus))
+        # F.Cu mirrors the cluster and carries VBUS east to the U4 tap.
+        parts.append(_seg(_F1_VIA_W_X, _F1_VIA_ROW_Y, *_F1_VIA_N,
+                           "F.Cu", W_PWR_HIGH, n_vbus))
+        parts.append(_seg(_F1_VIA_W_X, _F1_VIA_ROW_Y, _F1_VIA_E_X, _F1_VIA_ROW_Y,
+                           "F.Cu", W_PWR_HIGH, n_vbus))
+        parts.append(_seg(_F1_VIA_E_X, _F1_VIA_ROW_Y, 90.95, _F1_VIA_ROW_Y,
                            "F.Cu", W_PWR_HIGH, n_vbus))
     # 4. F.Cu horizontal to IP5306 approach column, starting at the U4
     #    tap. Historical note (still load-bearing): this run used to start
@@ -535,7 +562,10 @@ def _power_traces():
     # BTN_A-BTN_B corridor (needed for CC1 F.Cu routing at y=67.2).
     # Via at y=66.0: gap to BTN_A(y=66.8) = 66.8-0.125-(66.0+0.25)=0.425mm ✓
     #               gap to BTN_R(y=65.4) = 66.0-0.25-(65.4+0.10)=0.25mm ✓
-    usb_gnd_via_y = 66.2  # above BTN_A(66.8), clears CC1 F.Cu at y=67.4 and BTN_R via(76.20,65.40)
+    # R32: 66.2 -> 66.0. R2.2's 0805 land grew north to y=66.325 and left
+    # the hole 0.025mm from it; 66.0 restores 0.225mm. The clearances the
+    # note above quotes were computed for y=66.0 in the first place.
+    usb_gnd_via_y = 66.0  # above BTN_A(66.8), clears CC1 F.Cu at y=67.4 and BTN_R via(76.20,65.40)
     parts.append(_via_net(usb_gnd[0], usb_gnd_via_y, n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
 
     # B.Cu stubs from IC GND pads to vias
@@ -716,14 +746,31 @@ def _power_traces():
         # Solution: drop via directly at pad (via-in-pad). The 0.46mm via fits within
         # the 0.6mm x 1.3mm pad. Via connects B.Cu pad to In2.Cu +3V3 zone.
         # Pin 4 at x≈141.06 is outside +5V island (x=105-140), so In2.Cu = +3V3 ✓
-        parts.append(_via_net(sd_vdd[0], sd_vdd[1], n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
+        # R32 (2026-08-03): via-in-pad is exactly the JLCDFM "lead to hole
+        # distance 0mm" DANGER — solder wicks down the barrel and starves
+        # the card socket's VDD joint. The barrel steps 1.176mm SOUTH
+        # instead, past the pad's bottom edge (62.374), on a stub that
+        # threads the only free lane: SD_MOSI's post-slot column at
+        # x=141.50 is absent between y=60.0 and 63.5 (it jogs west to
+        # 139.41 there), so x=141.06 is clear. Hole clearance 0.426mm to
+        # the pad, copper 0.200mm to SD_MOSI's y=63.5 jog.
+        _sd_vdd_via_y = sd_vdd[1] + 1.176   # 62.90
+        parts.append(_seg(sd_vdd[0], sd_vdd[1], sd_vdd[0], _sd_vdd_via_y,
+                          "B.Cu", W_SIG, n_3v3))
+        parts.append(_via_net(sd_vdd[0], _sd_vdd_via_y, n_3v3, size=VIA_STD, drill=VIA_STD_DRILL))
 
     if sd_vss:
         # GND to SD VSS (pin 6): via-in-pad to reach In1.Cu GND zone.
         # DFM: BTN_B trace at x=142.80 is 0.46mm from pin 6 at x=143.26.
         # Any B.Cu stub would collide. Via-in-pad avoids routing entirely.
         # 0.46mm via fits within the 0.6mm x 1.3mm pad.
-        parts.append(_via_net(sd_vss[0], sd_vss[1], n_gnd, size=VIA_MIN, drill=VIA_MIN_DRILL))
+        # R32: same via-in-pad finding as pin 4 above. The barrel steps
+        # SOUTH to y=62.90, keeping 0.426mm of hole clearance to the pad
+        # and 0.200mm of copper to BTN_B's B.Cu column at x=142.71.
+        _sd_vss_via_y = sd_vss[1] + 1.176   # 62.90
+        parts.append(_seg(sd_vss[0], sd_vss[1], sd_vss[0], _sd_vss_via_y,
+                          "B.Cu", W_SIG, n_gnd))
+        parts.append(_via_net(sd_vss[0], _sd_vss_via_y, n_gnd, size=VIA_MIN, drill=VIA_MIN_DRILL))
 
     if sd_sh10:
         # GND via near shield pin 10 (front-left, x≈147.76, y≈62.57).
@@ -775,7 +822,17 @@ def _power_traces():
                        "B.Cu", W_PWR, n_5v))
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1], ip_vout[0] + 0.5, ip_vout[1] - 1.5,
                        "B.Cu", W_PWR, n_5v))
-    parts.append(_via_net(ip_vout[0] + 0.5, ip_vout[1] - 1.5, n_5v))
+    # R32 (2026-08-03): this barrel used to sit at (107.50, 39.095),
+    # inside C27.2's pad after the 0805 land grew to the JLC reference.
+    # It cannot step in y — the sibling barrel is 1.195mm south and U2.8's
+    # pad 1.5mm north — so it steps WEST along C27.2's own y, off the end
+    # of the pad: 0.200mm of hole clearance to C27.2's west edge
+    # (106.475), 1.83mm to the nearest different-net copper, and still
+    # inside the In2.Cu +5V island.
+    _vout_via_c = (106.10, ip_vout[1] - 1.5)   # (106.10, 39.095)
+    parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1] - 1.5, _vout_via_c[0], _vout_via_c[1],
+                       "B.Cu", W_PWR, n_5v))
+    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v))
     _vout_via_w = (105.60, ip_vout[1])          # (105.60, 40.595)
     _vout_via_s = (ip_vout[0] + 0.5, 37.90)     # (107.50, 37.90)
     parts.append(_seg(ip_vout[0], ip_vout[1], _vout_via_w[0], _vout_via_w[1],
@@ -996,16 +1053,20 @@ def _power_traces():
     _V3_VIA_SIZE = 0.46   # custom: fits between LCD_D6/D7 with 0.17mm gap (AR=0.13mm ≥ JLCPCB min)
     esp_3v3 = _pad("U1", "2")  # pin 2 = +3V3 power input
     if esp_3v3:
-        # DFM FIX: was via at (88.75, 21.0) — B.Cu vertical from pin 2 DOWN passed
-        # through pin 1 (GND pad at 88.75, 22.24). Fix: place via ABOVE pin 2
-        # at (88.75, 24.0). This overlaps pin 2 pad (+3V3 = same net = OK).
-        # Gap to pin 3 (NC) at y=24.78: 24.33-24.23 = 0.10mm ≥ 0.10mm ✓
-        # Short B.Cu stub UP from pin 2 center to via.
-        # Via overlaps pin 2 (same net, OK). Gap to pin 3: 24.33-23.93=0.40mm ✓
-        _3v3_via_y = esp_3v3[1] + 0.19  # 23.70 — same-net via-in-pad on pin 2, far from pin 3
-        parts.append(_seg(esp_3v3[0], esp_3v3[1], esp_3v3[0], _3v3_via_y,
+        # R32 (2026-08-03): the barrel used to sit ON pin 2's pad at
+        # (88.75, 23.70) — same net, so no short, but JLCDFM counts it as
+        # "lead to hole distance 0mm": solder drains down the hole and
+        # starves the module's +3V3 joint. The module's castellated pads
+        # are stacked at 1.27mm pitch (pin 1 at 22.24, pin 3 at 24.78),
+        # so there is no room to step along y; the barrel goes EAST
+        # instead, off the end of the 1.5mm-wide pad.
+        #   (89.90, 23.51): 0.300mm of hole clearance to pin 2's east
+        #   edge (89.50), 0.682mm of copper to pins 1 and 3, 1.07mm to
+        #   the GND barrel at (91.50, 23.45).
+        _3v3_via_x = esp_3v3[0] + 1.15   # 89.90
+        parts.append(_seg(esp_3v3[0], esp_3v3[1], _3v3_via_x, esp_3v3[1],
                            "B.Cu", W_PWR, n_3v3))
-        parts.append(_via_net(esp_3v3[0], _3v3_via_y, n_3v3,
+        parts.append(_via_net(_3v3_via_x, esp_3v3[1], n_3v3,
                               size=_V3_VIA_SIZE, drill=VIA_MIN_DRILL))
 
     # ── BAT+: IP5306 -> JST battery connector ─────────────────
@@ -1122,7 +1183,14 @@ def _power_traces():
     #   R11.1 pad right edge: 78.95+0.50=79.45 → gap 79.76-79.45=0.31 mm ✓
     #   J3[2] pad left edge:  80.50-0.60=80.00? No, J3 is ~1.20x1.40 THT
     #     J3[2] left edge ≈ 80.50 → gap 80.50-80.26=0.24 mm ✓ (>0.20)
-    bat_approach_x = 80.01
+    # R32: 80.01 -> 80.08. The 0805 land grew to the JLC reference and
+    # R11.1 / C12.1's east edge moved to 79.525, leaving this 0.76mm-wide
+    # run 0.105mm of clearance. The window east is narrow: the band-0
+    # barrel at x=80.90 (r=0.40) exists on the INNER layers too, where
+    # this approach via's 0.25mm annulus is the only other copper, so
+    # x <= 80.10 keeps those two annuli 0.15mm apart. 80.08 sits in
+    # [80.055, 80.10]: 0.175mm to the pads, 0.17mm to the band-0 annulus.
+    bat_approach_x = 80.08
     # Split at the U2.6 stitching field's west column so that field's
     # copper shares an endpoint with this corridor (verify_dangling_copper).
     parts.append(_seg(bat_col_x, bat_via_y, _bat_stitch_x2, bat_via_y,
@@ -1264,7 +1332,7 @@ def _power_traces():
     #   Riser x=85.40: C13.1 east 84.45 → 0.825mm; C14.2 west 86.55 → 1.025mm
     #   Riser x=85.40 vs Q1 source pad (85.65,51.55): diagonal 0.348mm OK
     _gate_corridor_y = 51.1
-    _gate_riser_x = 85.40
+    _gate_riser_x = 85.50   # R32: follows R24_POS, which moved 0.1mm east
     r24_1 = _pad("R24", "1")   # RPP_GATE (85.40, 49.25)
     r24_2 = _pad("R24", "2")   # GND (85.40, 47.35)
     parts.append(_seg(q1_gate[0], q1_gate[1], q1_gate[0], _gate_corridor_y,
@@ -1274,12 +1342,20 @@ def _power_traces():
     parts.append(_seg(_gate_riser_x, _gate_corridor_y, r24_1[0], r24_1[1],
                        "B.Cu", W_SIG, n_rpp_gate))
 
-    # R24 pad 2 → GND via-in-pad (connects to In1.Cu GND zone)
-    # Via at R24.2 centre (85.40, 47.35). Three F.Cu rails cross this area
-    # — BAT+ (y 45.755-46.515), BTN_R (47.9-48.1) and +5V (48.47-49.23) —
-    # and y 46.99-47.42 is the only band between them a 0.60 mm barrel
-    # fits in: 0.535mm to the BAT+ rail, 0.25mm to BTN_R.
-    parts.append(_via_net(r24_2[0], r24_2[1], n_gnd,
+    # R24 pad 2 → GND via (connects to In1.Cu GND zone)
+    #
+    # R32 (2026-08-03): the barrel used to sit on R24.2's centre. Three
+    # F.Cu rails cross this area — BAT+ (y 45.755-46.515), BTN_R
+    # (47.9-48.1) and +5V (48.47-49.23) — so y is pinned to the
+    # 46.99-47.42 band and the barrel cannot leave the pad vertically.
+    # It steps EAST instead, 1.00mm along the pad's own y: the hole then
+    # clears R24.2's east edge (86.075) by 0.225mm, R13.2's pad corner by
+    # 0.579mm, and the barrel keeps 0.25mm to the BTN_R rail. R24.1
+    # (RPP_GATE, the one different-net neighbour) stays 1.06mm away.
+    _r24_gnd_via_x = r24_2[0] + 1.00
+    parts.append(_seg(r24_2[0], r24_2[1], _r24_gnd_via_x, r24_2[1],
+                      "B.Cu", W_SIG, n_gnd))
+    parts.append(_via_net(_r24_gnd_via_x, r24_2[1], n_gnd,
                           size=VIA_STD, drill=VIA_STD_DRILL))
 
     # ── Power switch -> BAT+ junction ──────────────────────────

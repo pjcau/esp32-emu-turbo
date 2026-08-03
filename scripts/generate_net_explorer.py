@@ -170,11 +170,17 @@ def clearance_report(cache):
         merged = CC.merge_by_net(feats)
         gaps = CC.find_gaps(merged, nets, threshold=CC.GAP_WARN)
         rows = []
-        for gap, na, nb, ax, ay, bx, by in gaps:
+        # find_gaps rows are 8-tuples; the last flag says whether the
+        # approach point is exact or an approximation (see _locate).
+        # Unpacking only 7 raised TypeError, but the board has shipped
+        # with an empty gap list, so the loop body never ran and the
+        # mismatch stayed invisible until a regression produced one.
+        for gap, na, nb, ax, ay, bx, by, exact in gaps:
             rows.append({
                 "layer": layer, "gap": round(gap, 4),
                 "a": na, "b": nb,
                 "x": round((ax + bx) / 2, 3), "y": round((ay + by) / 2, 3),
+                "approx": not exact,
                 "severity": "danger" if gap < CC.GAP_DANGER else "warn",
                 # find_gaps labels one side "<net> (same-net)" when the two
                 # sub-polygons carry the same net — a fab dry-film risk,

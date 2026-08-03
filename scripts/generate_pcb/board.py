@@ -156,7 +156,10 @@ PAM8403_ENC = (-50, 8)
 INDUCTOR_ENC = (30, -15)
 # JST PH battery connector (center, below passives, back)
 # SMD version (C295747) — pads on B.Cu only, no through-hole
-JST_BAT_ENC = (0, -25)
+# R32 (2026-08-03): 0 -> -0.25 (pcb x 80.00 -> 79.75). Must stay equal to
+# routing._shared.JST, which drives the pad-position table; the reason
+# for the move is documented there.
+JST_BAT_ENC = (-0.25, -25)
 # Reset and Boot buttons (back side, right of USB-C — dev kit style)
 RESET_ENC = (15, -28)     # EN pin to GND — hardware reset
 BOOT_ENC = (25, -28)      # GPIO0 to GND — download mode when held during reset
@@ -265,7 +268,11 @@ def _silkscreen_labels():
     # anode pad (KiCad silk_overlap x2). Below the button the band is
     # empty: the nearest F.Cu is the BTN_A run at y=66.8, which stops at
     # x=130.4, and U6 underneath is on B.Cu so it cannot clip front silk.
-    parts.append(P.gr_text("MENU", px, py + 3.8, "F.SilkS", 1.0))
+    # At py+3.8 (142.0, 65.5) the glyph strokes crossed the 0.2mm vias at
+    # (139.96, 66) and (141.5, 66) — JLCDFM silk-to-hole 0mm. (px-2.5,
+    # py+5.8) sits between the via rows at y=66 and y=67.5/68 with
+    # >=0.5mm hole clearance for the whole string.
+    parts.append(P.gr_text("MENU", px - 2.5, py + 5.8, "F.SilkS", 1.0))
     px, py = enc_to_pcb(*LED_CHARGE_ENC)
     parts.append(P.gr_text("CHG", px, py + 3, "F.SilkS", 1.0))
     px, py = enc_to_pcb(*LED_FULL_ENC)
@@ -346,16 +353,25 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*ESP32_ENC)
     parts.append(P.gr_text("ESP32-S3", px, py - 16, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*IP5306_ENC)
-    parts.append(P.gr_text("IP5306", px, py - 10, "B.SilkS", 1.0))
-    # U3 buck label: placed north of the SOT-23-5 in the clear band
-    # y≈48.8 (C18.1 pad ends at x=117.45, FPC slot at x≥125.5 / y≤47.5).
+    # py-10 put the glyphs on the 0.2mm via at (111.8, 32.3); py-11.75
+    # clears the via rows at y=32.3/33.0 by >=0.5mm.
+    parts.append(P.gr_text("IP5306", px, py - 11.75, "B.SilkS", 1.0))
+    # U3 buck label: the old spot (px+1.2, py-4.7) = (121.0, 48.8) crossed
+    # the 0.2mm vias at (119.75, 48.75) and (121.7, 48.5). New anchor
+    # (116.75, 47.3) is west of them, clear of the C18.1 pad (x<=117.45)
+    # by 0.25mm and of the FPC slot (x>=125.5 / y<=47.5).
     px, py = enc_to_pcb(*BUCK_ENC)
-    parts.append(P.gr_text("SY8089", px + 1.2, py - 4.7, "B.SilkS", 1.0))
+    parts.append(P.gr_text("SY8089", px - 3.05, py - 6.2, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PAM8403_ENC)
-    parts.append(P.gr_text("PAM8403", px, py - 5, "B.SilkS", 1.0))
+    # py-5 = (30.0, 24.5) sat inside the audio via field (rows y=20.5..28.8,
+    # hits at (26.825, 24.8) and (28.095, 23.7)). py-10.5 is the first
+    # via-free band north of the amp with >=0.5mm hole clearance.
+    parts.append(P.gr_text("PAM8403", px - 2.25, py - 10.5, "B.SilkS", 1.0))
     # Connectors
     px, py = enc_to_pcb(*USBC_ENC)
-    parts.append(P.gr_text("USB-C", px, py - 6, "B.SilkS", 1.0))
+    # Centered (py-6) the glyphs crossed the 0.2mm via at (79.75, 64.525);
+    # px+4.5 shifts the label east of the via cluster (74.9..81.3, y=63.8..67.4).
+    parts.append(P.gr_text("USB-C", px + 4.5, py - 6, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*SD_ENC)
     parts.append(P.gr_text("SD", px, py - 8, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*JST_BAT_ENC)
@@ -367,7 +383,9 @@ def _silkscreen_labels():
     # 1.35mm from the nearest hole and 0.25mm clear of the C12/C13 pads.
     parts.append(P.gr_text("BATT", px, py - 13.9, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*FPC_ENC)
-    parts.append(P.gr_text("LCD", px, py - 14, "B.SilkS", 1.0))
+    # py-14 = (135.0, 21.5) clipped the 0.2mm via at (135.2, 22.2);
+    # py-14.75 clears the via rows at y=22.2/22.48 by >=0.5mm.
+    parts.append(P.gr_text("LCD", px, py - 14.75, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
     parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 1.0))
     # Speaker + shoulder buttons
@@ -378,9 +396,11 @@ def _silkscreen_labels():
     px, py = enc_to_pcb(*SHOULDER_R_ENC)
     parts.append(P.gr_text("R", px, py + 5, "B.SilkS", 1.0))
 
-    # Branding (back side, top edge — clear of all vias and components)
+    # Branding (back side, top edge). At y=3.0 the string crossed the
+    # diagonal 0.2mm via run at (76, 2.2)/(77, 2.9)/(78, 3.6); y=5.25 is
+    # below that run with >=0.5mm hole clearance across the full width.
     parts.append(P.gr_text(
-        "CPJ&CP 2026 v3", CX, 3.0, "B.SilkS", 1.2,
+        "CPJ&CP 2026 v3", CX, 5.25, "B.SilkS", 1.2,
     ))
 
     # ── Passive component labels (B.Fab) ────────────────────────
