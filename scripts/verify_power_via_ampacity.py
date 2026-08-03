@@ -230,8 +230,23 @@ def _rail_declarations():
     return {
         "+3V3": R(i_3v3.value, v_3v3, ("L2.1",),
                   cite(U3, i_3v3) + " (buck output through L2)"),
-        "+5V": R(i_5v.value, v_5v, ("U2.8",),
-                 cite(U2, i_5v) + " (boost output)"),
+        # The SW16 respin split the 5 V rail in two at the Q2 high-side
+        # switch. Both halves carry the SAME current — they are the same
+        # series path, and a switch in it does not reduce what flows — so
+        # both are declared against the boost's rated maximum. What changes
+        # is where each one is FED FROM, and that is the part this gate
+        # measures: +5V_VOUT starts at the IP5306's VOUT pad, +5V no longer
+        # does. It starts at Q2's DRAIN, so every amp the loads draw now
+        # crosses the vias between Q2.3 and the load pour rather than the
+        # vias at U2.8. Leaving the source declared as U2.8 would have had
+        # this gate measure a via cut the current no longer passes through.
+        "+5V_VOUT": R(i_5v.value, v_5v, ("U2.8",),
+                      cite(U2, i_5v) + " (boost output, upstream of the Q2 "
+                      "high-side switch — same series path as +5V, so the "
+                      "same rated current)"),
+        "+5V": R(i_5v.value, v_5v, ("Q2.3",),
+                 cite(U2, i_5v) + " (boost output, downstream of Q2: the "
+                 "switch is in series, so it passes the full rated current)"),
         "VBUS": R(i_fuse, v_5v, ("F1.2",), fuse_cite),
         "VBUS_IN": R(i_fuse, v_5v, ("J1.2", "J1.11"), fuse_cite),
         # Q1.2 is the SOURCE: BAT+ leaves the RPP MOSFET there, because the

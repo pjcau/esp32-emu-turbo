@@ -32,10 +32,16 @@ THERMAL_THRESHOLD = 0.6    # thermal_gap 0.5mm + 0.1mm tolerance
 WARN_THRESHOLD = 1.0       # between 0.6-1.0 -> WARN, above -> FAIL
 
 # Zone net -> inner layer mapping
+# +5V_VOUT is the boost-output side of the Q2 high-side switch (SW16
+# respin). Its In2.Cu sub-island is the ONLY copper joining Q2's source
+# to U2.8 and C27 — the pads via straight down into it — so leaving it
+# out of this map would leave the respin's three plane vias unchecked by
+# the one gate that proves a via actually lands in the fill.
 ZONE_NET_LAYERS = {
     "GND": ["In1.Cu"],
     "+3V3": ["In2.Cu"],
     "+5V": ["In2.Cu"],
+    "+5V_VOUT": ["In2.Cu"],
 }
 
 PASS = 0

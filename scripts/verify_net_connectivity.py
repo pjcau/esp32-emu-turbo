@@ -68,6 +68,7 @@ Usage:
 
 import math
 import os
+import re
 import sys
 from collections import defaultdict
 
@@ -86,9 +87,34 @@ PCB_FILE = os.path.join(BASE, "hardware", "kicad", "esp32-emu-turbo.kicad_pcb")
 # NOT an exemption list — these nets are checked, just by a zone-aware code
 # path. --skip-zones is the debugging escape hatch, not a pass condition.
 #
-# If you add a new pour zone in routing/power.py::_power_zones(), add the net name
-# here so its fill is taken into account.
-ZONE_FILLED_NETS = {"GND", "+3V3", "+5V"}
+# READ FROM THE BOARD, not typed here. This used to be the literal set
+# {GND, +3V3, +5V} with a comment asking whoever adds a pour to remember to
+# extend it. The SW16 respin is what that comment was worth: it added a
+# +5V_VOUT pour on In2.Cu, and because the set had not been extended, the
+# three plane vias under Q2/R32/C32 were graded against the trace-only
+# graph, came out as four disconnected islands, and this gate reported a
+# fragmented net on copper that is in fact one continuous pour. A pour the
+# gate does not know about produces a FALSE RED here and — worse, in the
+# other direction — a net that silently loses its pour would keep passing
+# on the strength of a name still listed. Deriving from the zone blocks
+# makes both impossible.
+def zone_filled_nets(pcb_path=PCB_FILE):
+    """Net names that have at least one pour zone on this board.
+
+    Uses the same s-expression block splitter the zone-aware analysis
+    itself runs on, so the two cannot disagree about what a zone is.
+    """
+    with open(pcb_path, errors="replace") as fh:
+        src = fh.read()
+    names = set()
+    for z in CG.blocks(src, "(zone"):
+        m = re.search(r'\(net_name "([^"]*)"\)', z)
+        if m and m.group(1):
+            names.add(m.group(1))
+    return names
+
+
+ZONE_FILLED_NETS = zone_filled_nets()
 
 # ─── Accepted fragmentations (technical debt, not failures) ─────────
 #

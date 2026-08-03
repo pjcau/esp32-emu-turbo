@@ -540,14 +540,33 @@ def test_T6_power_chain(net_pads, ref_pads):
     check("T6", "BAT_IN reaches P-MOSFET drain (Q1)", "Q1" in batin_comps,
           f"BAT_IN components: {sorted(batin_comps)}")
 
-    # +5V must reach: U2 (VOUT), U3 (VIN), U5 (PAM8403 VDD)
+    # The 5 V rail is TWO nets since the SW16 respin, in series through the
+    # Q2 high-side switch: U2.8 -> +5V_VOUT -> Q2 -> +5V -> the loads. The
+    # chain is checked hop by hop, the same shape as VBUS_IN -> F1 -> VBUS
+    # above, because the failure worth catching is a hop that goes missing
+    # — a load left on the upstream net is a load the switch cannot turn
+    # off, and that is invisible if you only ask "is it on a 5 V net".
+    v5_vout_comps = set(r for r, _ in net_pads.get("+5V_VOUT", []))
     v5_comps = set(r for r, _ in net_pads.get("+5V", []))
-    check("T6", "+5V reaches IP5306 VOUT (U2)", "U2" in v5_comps,
+    check("T6", "+5V_VOUT starts at IP5306 VOUT (U2)", "U2" in v5_vout_comps,
+          f"+5V_VOUT components: {sorted(v5_vout_comps)}")
+    check("T6", "+5V_VOUT reaches the Q2 high-side switch",
+          "Q2" in v5_vout_comps,
+          f"+5V_VOUT components: {sorted(v5_vout_comps)}")
+    check("T6", "+5V starts at the Q2 high-side switch", "Q2" in v5_comps,
           f"+5V components: {sorted(v5_comps)}")
     check("T6", "+5V reaches SY8089 IN (U3)", "U3" in v5_comps,
           f"+5V components: {sorted(v5_comps)}")
     check("T6", "+5V reaches PAM8403 (U5)", "U5" in v5_comps,
           f"+5V components: {sorted(v5_comps)}")
+    # No load may sit on the upstream net: anything there is powered
+    # whatever the switch is doing. C27 decouples the boost output and the
+    # gate network returns to the source, so those are the only refs
+    # allowed besides U2 and Q2 themselves.
+    upstream_extra = v5_vout_comps - {"U2", "Q2", "C27", "R32", "C32"}
+    check("T6", "nothing but the boost, Q2 and its gate network sits "
+                "upstream of the switch", not upstream_extra,
+          f"unswitchable load(s) on +5V_VOUT: {sorted(upstream_extra)}")
 
     # +3V3 must reach: U3 (VOUT), U1 (ESP32), J4 (FPC display), U6 (SD)
     v33_comps = set(r for r, _ in net_pads.get("+3V3", []))
@@ -1092,10 +1111,23 @@ def test_T22_power_rail_decoupling(ref_pads, net_pads):
     # Expected decoupling capacitors per power stage:
     #   (ref, description, expected_net_on_pad1_or_pad2)
     DECOUPLING_MAP = {
-        "IP5306 VOUT": {
-            "caps": ["C19", "C27"],
+        # The SW16 respin split the 5 V rail at the Q2 high-side switch, and
+        # the two decoupling caps landed on opposite sides of it. That is
+        # deliberate, so they are checked as two stages rather than one:
+        # a single entry would have to accept either rail for either cap,
+        # which is exactly the mistake worth catching (C27 on the load side
+        # leaves the boost output undecoupled; C19 on the boost side leaves
+        # the loads with no bulk to draw inrush from).
+        "IP5306 VOUT (upstream of Q2)": {
+            "caps": ["C27"],
+            "rail": "+5V_VOUT",
+            "desc": "C27 (10uF HF) decouples the boost output itself",
+        },
+        "+5V load rail (downstream of Q2)": {
+            "caps": ["C19"],
             "rail": "+5V",
-            "desc": "C19 (22uF bulk) + C27 (10uF HF)",
+            "desc": "C19 (22uF bulk) sits where the inrush happens, on the "
+                    "rail Q2 switches",
         },
         "SY8089 buck": {
             "caps": ["C1", "C30"],

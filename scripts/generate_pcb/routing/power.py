@@ -817,15 +817,41 @@ def _power_traces():
     #   (107.50, 37.90)  — south of C27.2 on the existing VOUT column.
     #     LCD_DC B.Cu at x=108.27 is 0.22 mm away, its via 0.606 mm.
     # Both land inside the In2.Cu pour, which is the copper the rail
-    # actually distributes on. 3 x 0.791 = 2.373 A.
+    # actually distributes on. (These were 0.35-drill barrels at
+    # 3 x 0.791 = 2.373 A when this note was written; see the respin
+    # block below for why they are 0.45 now.)
     #
     # SW16 RESPIN: these three barrels now feed the +5V_VOUT sub-island,
     # not +5V. The boost output no longer reaches the loads through the
     # plane — it reaches Q2's source, and Q2's drain feeds the +5V plane.
-    # Nothing about the geometry changed, only the net, because the
-    # ampacity argument above is about the barrels and is unaffected by
-    # which of the two 5 V rails they belong to.
+    # The geometry is unchanged; the DRILL is not, and here is why.
+    #
+    # The three-barrel count above was sized against 2.150 A, the sum of
+    # what the +5V LOADS take. That was the right number while U2.8 fed
+    # the loads through the pour: the pour is the rail, and current that
+    # never reaches a load never crosses these vias. It stopped being the
+    # right number when Q2 went in. This escape is now a two-terminal
+    # series link — U2.8 to Q2's source and nothing else — so it must
+    # carry whatever the boost can deliver, 2.400 A rated (minus the
+    # 0.227 mA the gate network sips), not what today's load list adds up
+    # to. verify_power_via_ampacity computes exactly that and put the cut
+    # at 2.373 A against 2.373 A required: 99%, a fail by a rounding error
+    # and the kind of margin that is fine on the bench at 200 mA and is
+    # the fuse at rated current.
+    #
+    # Fixed by widening the DRILL 0.35 -> 0.45 on all three, keeping the
+    # 0.9 mm pad. Capacity goes as the barrel's plated area, so this buys
+    # 0.791 -> 0.949 A each, 2.847 A across the cut, 20% clear of the
+    # requirement. Widening the drill and not the pad is what makes it
+    # free: every clearance measured for these three sites in the notes
+    # above is a PAD-edge distance and none of them moves. 0.9/0.45 is
+    # already this board's large-via size (Q2's own plane vias use it),
+    # and the 0.225 mm annular ring is well inside JLCPCB's minimum.
+    # Adding a fourth barrel instead was tried first and rejected: the
+    # only clearance-legal site left in this corner is (107.05, 36.70),
+    # which clears MH(105, 37.5) by 0.000 mm.
     n_5v_vout = NET_ID["+5V_VOUT"]
+    _VOUT_VIA = dict(size=0.9, drill=0.45)
     parts.append(_seg(ip_vout[0], ip_vout[1], ip_vout[0] + 0.5, ip_vout[1],
                        "B.Cu", W_PWR, n_5v_vout))
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1], ip_vout[0] + 0.5, ip_vout[1] - 1.5,
@@ -834,22 +860,31 @@ def _power_traces():
     # inside C27.2's pad after the 0805 land grew to the JLC reference.
     # It cannot step in y — the sibling barrel is 1.195mm south and U2.8's
     # pad 1.5mm north — so it steps WEST along C27.2's own y, off the end
-    # of the pad: 0.200mm of hole clearance to C27.2's west edge
-    # (106.475), 1.83mm to the nearest different-net copper, and still
+    # of the pad, 1.83mm from the nearest different-net copper and still
     # inside the In2.Cu island. (The island is +5V_VOUT since the SW16
     # respin; the geometry argument is unchanged, C27 moved net with it.)
-    _vout_via_c = (106.10, ip_vout[1] - 1.5)   # (106.10, 39.095)
+    #
+    # 106.05, not R32's 106.10, because the drill grew with it. R32 placed
+    # this at 106.10 for 0.200mm of hole clearance to C27.2's west edge
+    # (106.475) at a 0.35 drill. At 0.45 the hole radius is 0.225 and the
+    # same centre leaves 0.150mm — exactly verify_via_in_pad's minimum,
+    # i.e. a float comparison deciding a fab rule. Stepping the centre
+    # 0.05mm further west restores the original 0.200mm at the new drill
+    # and costs nothing: the west neighbourhood is empty for 1.8mm.
+    _vout_via_c = (106.05, ip_vout[1] - 1.5)   # (106.05, 39.095)
     parts.append(_seg(ip_vout[0] + 0.5, ip_vout[1] - 1.5, _vout_via_c[0], _vout_via_c[1],
                        "B.Cu", W_PWR, n_5v_vout))
-    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v_vout))
+    parts.append(_via_net(_vout_via_c[0], _vout_via_c[1], n_5v_vout, **_VOUT_VIA))
     _vout_via_w = (105.60, ip_vout[1])          # (105.60, 40.595)
     _vout_via_s = (ip_vout[0] + 0.5, 37.90)     # (107.50, 37.90)
     parts.append(_seg(ip_vout[0], ip_vout[1], _vout_via_w[0], _vout_via_w[1],
                        "B.Cu", W_PWR, n_5v_vout))
-    parts.append(_via_net(_vout_via_w[0], _vout_via_w[1], n_5v_vout))
+    parts.append(_via_net(_vout_via_w[0], _vout_via_w[1], n_5v_vout,
+                          **_VOUT_VIA))
     parts.append(_seg(_vout_via_s[0], ip_vout[1] - 1.5, _vout_via_s[0], _vout_via_s[1],
                        "B.Cu", W_PWR, n_5v_vout))
-    parts.append(_via_net(_vout_via_s[0], _vout_via_s[1], n_5v_vout))
+    parts.append(_via_net(_vout_via_s[0], _vout_via_s[1], n_5v_vout,
+                          **_VOUT_VIA))
     # U3 buck input: C1 (C_IN) taps the In2.Cu +5V pour through its own via
     # pair; see _buck_traces(). No dedicated VIN via here any more.
 

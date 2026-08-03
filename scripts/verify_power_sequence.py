@@ -9,7 +9,7 @@ Verifies that the power-up sequence is safe and meets timing requirements:
   5. Power path: BAT+ -> IP5306 -> +5V -> SY8089 -> +3V3 -> ESP32
 
 Power-up sequence (expected):
-  T0:  Battery connects (BAT+ via SW16)
+  T0:  Battery connects (BAT+ direct; SW16 gates +5V via Q2)
   T1:  IP5306 boots, boost converter starts (+5V ramps)
   T2:  +5V stable -> SY8089 regulates (+3V3 ramps)
   T3:  +3V3 stable -> EN pin rises through RC (R3/C3, tau=1ms)
@@ -97,11 +97,14 @@ def test_power_chain_topology():
     else:
         check("IP5306 VIN pad found", False)
 
-    # 2. IP5306 VOUT (pin 8) should be on +5V net
+    # 2. IP5306 VOUT (pin 8) is the UPSTREAM half of the 5 V rail. Since
+    # the SW16 respin it is +5V_VOUT, not +5V: Q2 sits between the boost
+    # output and the loads, and the loads keep the name +5V. Expecting
+    # +5V here would pass only on a board where Q2 had been shorted out.
     ip_vout = _get_pad(cache, "U2", "8")
     if ip_vout:
-        n5v_id = net_map.get("+5V", -1)
-        check("IP5306 VOUT (pin 8) on +5V net",
+        n5v_id = net_map.get("+5V_VOUT", -1)
+        check("IP5306 VOUT (pin 8) on +5V_VOUT net (upstream of Q2)",
               ip_vout["net"] == n5v_id,
               f"net={ip_vout['net']}, expected +5V={n5v_id}")
     else:
@@ -267,27 +270,58 @@ def test_no_early_power():
 
 
 def test_power_switch_position():
-    """Test 14: Power switch is between battery and IP5306."""
+    """Test 14: the power switch gates the +5V loads, not the cell.
+
+    SW16 is NOT in the battery path and must not be. Breaking the cell
+    there fails the requirement twice over: OFF would stop charging as
+    well as the loads, and with USB plugged in the VBUS passthrough keeps
+    the board running anyway. The switch instead drives PWR_SW, which
+    through R33 drives the gate of Q2, the high-side P-MOSFET between the
+    boost output (+5V_VOUT) and every load (+5V). Sliding to the ON throw
+    grounds the common, pulls the gate 4.78 V below the source and Q2
+    conducts; on the other throw the pin is open and R34 alone holds the
+    node at BAT+, so V_gs collapses to ~0.1 V and Q2 is off.
+
+    Three things have to be true on the copper for that to work, and each
+    is checked separately because each fails differently:
+      - the common carries PWR_SW (not a dead stub on BAT+, which is the
+        v1 defect this respin exists to fix),
+      - one throw is grounded (without it nothing ever turns on),
+      - the cell path does NOT pass through the switch (if it does,
+        charging dies in the OFF position).
+    """
     print("\n-- Power Switch Position --")
     cache = load_cache(PCB_FILE)
     net_map = {n["name"]: n["id"] for n in cache["nets"]}
 
-    # SW16 should switch BAT+ to IP5306
-    # Common pin connects to one rail, switched pin to the other
-    sw_pads = [p for p in cache["pads"] if p["ref"] == "SW16"]
-    if sw_pads:
-        sw_nets = set(p["net"] for p in sw_pads if p["net"] != 0)
-        bat_id = net_map.get("BAT+", -1)
-        vbus_id = net_map.get("VBUS", -1)
-
-        # SW16 connects BAT+ to VBUS (or to IP5306 VIN)
-        has_bat = bat_id in sw_nets
-        has_vbus = vbus_id in sw_nets
-        check("Power switch connects BAT+ rail",
-              has_bat or has_vbus,
-              f"switch nets: {sw_nets}, BAT+={bat_id}, VBUS={vbus_id}")
-    else:
+    sw_pads = {p["num"]: p["net"] for p in cache["pads"] if p["ref"] == "SW16"}
+    if not sw_pads:
         check("Power switch found in PCB", False)
+        return
+
+    pwr_sw_id = net_map.get("PWR_SW", -1)
+    gnd_id = net_map.get("GND", -1)
+    bat_id = net_map.get("BAT+", -1)
+    sw_nets = set(n for n in sw_pads.values() if n != 0)
+
+    check("Power switch common (pad 2) drives the Q2 gate node PWR_SW",
+          sw_pads.get("2") == pwr_sw_id,
+          f"pad 2 net={sw_pads.get('2')}, PWR_SW={pwr_sw_id}")
+    check("Power switch ON throw (pad 1) is grounded",
+          sw_pads.get("1") == gnd_id,
+          f"pad 1 net={sw_pads.get('1')}, GND={gnd_id}")
+    check("Power switch is NOT in the battery path (charging survives OFF)",
+          bat_id not in sw_nets,
+          f"switch nets: {sw_nets}, BAT+={bat_id}")
+
+    # And the thing the switch actually operates: Q2 must bridge the two
+    # halves of the 5 V rail. A Q2 with both power pads on one net is a
+    # switch that has been shorted out.
+    q2 = {p["num"]: p["net"] for p in cache["pads"] if p["ref"] == "Q2"}
+    check("Q2 bridges +5V_VOUT (source) to +5V (drain)",
+          q2.get("2") == net_map.get("+5V_VOUT", -1)
+          and q2.get("3") == net_map.get("+5V", -2),
+          f"Q2 pads: {q2}")
 
 
 def test_gnd_continuity():
@@ -371,8 +405,9 @@ def test_power_sequence_summary():
     """Test 19: Power sequence summary."""
     print("\n-- Power Sequence Summary --")
     info("Expected boot sequence",
-         "BAT+ -> SW16 -> IP5306(boost) -> +5V -> SY8089(buck) -> +3V3 -> "
-         "R3/C3(RC delay) -> EN rises -> ESP32 boot")
+         "BAT+ -> IP5306(boost) -> +5V_VOUT -> Q2 (gated by SW16) -> +5V "
+         "-> SY8089(buck) -> +3V3 -> R3/C3(RC delay) -> EN rises -> "
+         "ESP32 boot")
     check("Power topology verified (upstream -> downstream ordering)", True)
 
 

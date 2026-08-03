@@ -195,7 +195,7 @@ COMPONENT_SPECS = {
             "2":  {"net": _unconnected(),        "function": "LED1 — battery indicator 1 (unused)", "type": "smd"},
             "3":  {"net": _unconnected(),        "function": "LED2 — battery indicator 2 (unused)", "type": "smd"},
             "4":  {"net": _unconnected(),        "function": "LED3 — battery indicator 3 (unused)", "type": "smd"},
-            "5":  {"net": _exact("IP5306_KEY"),  "function": "KEY — ON/OFF key input, active low with an internal pull-up (datasheet p.11 fig.4). Driven by the C33 wake cap and, if fitted, the SW17 DNP button", "type": "smd"},
+            "5":  {"net": _exact("IP5306_KEY"),  "function": "KEY — ON/OFF key input, active low with an internal pull-up (datasheet p.11 fig.4). Driven by the C33 wake cap; there is no button on this net (SW17 was specified and then dropped for want of a clearance-legal site)", "type": "smd"},
             "6":  {"net": _exact("BAT+"),        "function": "BAT — battery voltage sense", "type": "smd"},
             "7":  {"net": _exact("LX"),          "function": "SW — DCDC switch node (inductor)", "type": "smd"},
             "8":  {"net": _exact("+5V_VOUT"),    "function": "VOUT — DCDC 5V output, upstream of the Q2 high-side switch (SW16 respin)", "type": "smd"},
@@ -487,9 +487,11 @@ COMPONENT_SPECS = {
     # common is shorted to GND, PWR_SW goes to 0 V and Q2 turns the whole
     # +5V load rail on. Slid the other way the common lands on pin 3,
     # which is deliberately left OPEN: the node is then defined by R34
-    # (4.7 M to BAT+) alone, so the gate sits within ~0.1 V of the source
-    # and Q2 is off. Putting the pull-up on the common node rather than on
-    # the throw is what keeps the switch to ONE long net across the board.
+    # (1 M to BAT+) alone, so the gate sits within ~0.1 V of the source
+    # and Q2 is off. R34 sits on the COMMON node, not on the open throw —
+    # electrically identical, since with the throw open the common IS the
+    # only node R34 can reach, and it keeps the switch to ONE long net
+    # across the board instead of two.
     # Shell pads (4a-4d) are mechanical anchors
     # ======================================================================
     "SW16": {
@@ -920,8 +922,14 @@ COMPONENT_SPECS["R24"] = {
 #   (~4.9 V, or ~3.7 V once the boost has latched off, down to 0 V)
 #   into KEY as a low pulse, and recharges through R34 afterwards.
 #   The pulse width is tau against the IP5306's UNDOCUMENTED internal
-#   pull-up, so 1 uF is a starting value marked BENCH-VALIDATE; SW17
-#   (DNP) is the datasheet-blessed fallback and the tuning point.
+#   pull-up, so 1 uF is a starting value marked BENCH-VALIDATE. There is
+#   no button on the net to fall back on: SW17 was specified as the
+#   datasheet-blessed manual wake and then dropped, because no site
+#   within reach of IP5306_KEY clears the copper the respin itself
+#   added. The tuning point is therefore C33's own pads — lift the cap
+#   and tack a wire to a momentary button, which reaches KEY and GND
+#   directly. This is the one respin value that must be settled on the
+#   bench before the design can be called finished.
 #
 # R16 IS DELETED. It was a 100k pull-up from KEY to +5V — off-datasheet
 # to begin with (the reference schematic has a button to GND and no
@@ -998,20 +1006,21 @@ COMPONENT_SPECS["C33"] = {
     },
 }
 
-COMPONENT_SPECS["SW17"] = {
-    "component": "Tact switch — manual IP5306 KEY wake (DNP, insurance for the C33 RC)",
-    "lcsc": "C318884",
-    "datasheet": "SW1-SW13_Tact-Switch_C318884.pdf",
-    "datasheet_page": 1,
-    "pins": {
-        # Terminal A (pads 1/3, east) is GND; terminal B (pads 2/4, west)
-        # is KEY — west because that is the side the KEY route arrives on.
-        "1": {"net": _exact("GND"),        "function": "Ground — the datasheet reference-schematic wake button", "type": "smd"},
-        "2": {"net": _exact("IP5306_KEY"), "function": "KEY", "type": "smd"},
-        "3": {"net": _exact("GND"),        "function": "Ground (bridged pair)", "type": "smd"},
-        "4": {"net": _exact("IP5306_KEY"), "function": "KEY (bridged pair)", "type": "smd"},
-    },
-}
+# SW17 — the DNP manual KEY wake button — HAS NO ENTRY HERE because it is
+# NOT ON THE BOARD. It was specified, and then dropped when the placement
+# was attempted: every free site within reach of IP5306_KEY copper fails
+# clearance against copper the respin itself put there (the PWR_SW spine,
+# C33's column, L1's pads, U2.6's BAT+ stitching field), and the nearest
+# free 5.1x5.1 tact site is 11.2 mm away. See the block comment at
+# scripts/generate_pcb/routing/_shared.py::C33_POS for the enumeration.
+#
+# A spec entry for a part with no pads is not documentation, it is a
+# permanently red gate: verify_datasheet_nets reports every declared pin
+# as PAD NOT FOUND. The bench-tune path SW17 was insurance for survives
+# without it — C33's own pads are the access point, so lifting the cap and
+# tacking a wire to a momentary button reaches KEY and GND directly.
+# Fitting a real button needs an IP5306-corner placement reshuffle; that
+# is an open respin decision, recorded in docs/open-tasks.md.
 
 
 # ---------------------------------------------------------------------------

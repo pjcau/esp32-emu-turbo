@@ -3685,9 +3685,19 @@ def test_jlcdfm_unconnected_via():
     for p in pads:
         connection_points.add((round(p["x"], 2), round(p["y"], 2)))
 
-    # GND stitching vias (net 1) are intentionally unconnected in the raw PCB.
-    # They connect to the In1.Cu GND plane via zone fill (run separately).
-    GND_NET = 1
+    # A via on a POURED net is not unconnected — it reaches its net through
+    # the zone fill, which this check does not parse. That was already true
+    # of the GND stitching vias, and it was encoded as the literal `net == 1`.
+    # The SW16 respin broke that shortcut: Q2 straddles the In2.Cu seam
+    # between the +5V_VOUT sub-island and the +5V load pour precisely so
+    # each of its pads vias into its own plane, so the respin's plane vias
+    # are the design working and the hardcoded net number reported two of
+    # them as violations. The exemption is now what it always meant — "this
+    # net has copper poured for it" — read from the board's own zones.
+    # It is not a hole: verify_zone_connectivity is the gate that proves
+    # each of these vias actually lands inside the fill, and it now covers
+    # +5V_VOUT too.
+    poured_nets = {z["net"] for z in _get_cache()["zones"]}
 
     violations = []
     for v in vias:
@@ -3702,8 +3712,8 @@ def test_jlcdfm_unconnected_via():
                 connected = True
                 break
         if not connected:
-            # GND stitching vias connect via zone fill, not traces
-            if v.get("net") == GND_NET:
+            # Vias on a poured net connect through the zone fill, not traces
+            if v.get("net") in poured_nets:
                 continue
             violations.append(
                 f"via@({v['x']:.2f},{v['y']:.2f}) net{v['net']} "

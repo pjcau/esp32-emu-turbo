@@ -4,7 +4,7 @@
 Verifies the 4-layer stackup follows JLCPCB conventions:
   F.Cu  (Layer 1): Signal + components — no power/GND zones
   In1.Cu (Layer 2): GND plane — all zones must be GND only
-  In2.Cu (Layer 3): Power plane — zones must be +3V3, +5V, or VBUS only
+  In2.Cu (Layer 3): Power plane — zones must be +3V3, +5V, +5V_VOUT or VBUS only
   B.Cu  (Layer 4): Signal + components — no power/GND zones
 
 Also checks that no signal traces exist on inner layers (In1.Cu, In2.Cu).
@@ -25,10 +25,16 @@ from pcb_cache import load_cache
 # ── Expected stackup assignments ────────────────────────────────
 # Inner layer zone net assignments
 IN1_ALLOWED_NETS = {"GND"}
-IN2_ALLOWED_NETS = {"+3V3", "+5V", "VBUS"}
+# +5V_VOUT is the IP5306 boost output UPSTREAM of the Q2 high-side switch
+# (SW16 respin). It is a power rail in every sense the layer convention
+# cares about — 5 V, 2 A class, a plane pour — and it is on In2.Cu for the
+# reason planes exist: 2 A cannot be woven from U2.8 to Q2 on B.Cu. The
+# In2 +5V island is cut at y=45 so that Q2 straddles the seam with one
+# via per pad. Downstream of Q2 the rail keeps the name +5V.
+IN2_ALLOWED_NETS = {"+3V3", "+5V", "+5V_VOUT", "VBUS"}
 
 # Power/GND nets that should NOT have large zones on signal layers
-POWER_GND_NETS = {"GND", "+3V3", "+5V", "VBUS", "BAT+"}
+POWER_GND_NETS = {"GND", "+3V3", "+5V", "+5V_VOUT", "VBUS", "BAT+"}
 
 PASS = 0
 FAIL = 0

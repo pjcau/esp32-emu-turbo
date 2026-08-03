@@ -130,21 +130,31 @@ def test_audio_chain(net_refs, name_to_id, id_to_name):
 
 
 def test_power_chain(net_refs, name_to_id, id_to_name):
-    """3. Power chain: BAT+ -> SW16 -> IP5306 -> AMS1117 -> 3V3."""
+    """3. Power chain: BAT+ -> IP5306 -> +5V_VOUT -> Q2/SW16 -> +5V -> SY8089 -> 3V3."""
     print("\n── Power Chain ──")
 
     # Battery to Q1 MOSFET (reverse polarity protection) via BAT_IN
     # J3.1 is on BAT_IN; Q1 bridges BAT_IN → BAT+, entering on its DRAIN
     # so the body diode blocks a reversed cell (R31-HIGH-1).
     verify_chain("Battery input", "BAT_IN", ["J3", "Q1"], net_refs, name_to_id, id_to_name)
-    # Q1 source to switch to IP5306 via BAT+
-    verify_chain("Battery power", "BAT+", ["Q1", "SW16", "U2"], net_refs, name_to_id, id_to_name)
+    # Q1 source to IP5306 via BAT+. SW16 is NOT on this net any more, and
+    # its absence is the respin: the switch used to hang off BAT+ as a dead
+    # stub with both throws unrouted, which is exactly why it did nothing.
+    # It now sits on PWR_SW and gates the +5V loads through Q2, so the cell
+    # path stays continuous copper and charging keeps working with the
+    # console switched off. R34 is the 1M that holds PWR_SW at BAT+ while
+    # the throw is open.
+    verify_chain("Battery power", "BAT+", ["Q1", "R34", "U2"], net_refs, name_to_id, id_to_name)
 
     # IP5306 inductor
     verify_chain("Boost", "LX", ["L1", "U2"], net_refs, name_to_id, id_to_name)
 
-    # IP5306 output (+5V) to U3 buck input
-    verify_chain("5V rail", "+5V", ["U2", "U3"], net_refs, name_to_id, id_to_name)
+    # IP5306 output to the U3 buck input, in the two hops the respin made
+    # of it: U2.8 feeds +5V_VOUT, Q2 passes it to +5V, the loads hang off
+    # +5V. U2 is deliberately NOT expected on +5V — if it ever reappears
+    # there, Q2 has been shorted out and the switch does nothing again.
+    verify_chain("5V rail (boost side)", "+5V_VOUT", ["U2", "Q2"], net_refs, name_to_id, id_to_name)
+    verify_chain("5V rail (load side)", "+5V", ["Q2", "U3"], net_refs, name_to_id, id_to_name)
 
     # U3 buck switch node to the output inductor
     verify_chain("Buck switch", "BUCK_LX", ["U3", "L2"], net_refs, name_to_id, id_to_name)
@@ -262,8 +272,21 @@ def test_dedicated_pins(net_refs, name_to_id, id_to_name):
     verify_chain("USB CC1", "USB_CC1", ["J1", "R1"], net_refs, name_to_id, id_to_name)
     verify_chain("USB CC2", "USB_CC2", ["J1", "R2"], net_refs, name_to_id, id_to_name)
 
-    # IP5306 KEY pin (pull-down via R16)
-    verify_chain("IP5306 KEY", "IP5306_KEY", ["U2", "R16"], net_refs, name_to_id, id_to_name)
+    # IP5306 KEY pin. R16 (the 100k pull-up to +5V) is deleted: on the
+    # respin's load-side +5V it would have become a pull-DOWN with the
+    # switch OFF and held KEY asserted. What drives KEY now is C33, which
+    # couples the PWR_SW 5V->0 step in as a wake press — the boost latches
+    # off after 32 s below 45 mA and with the loads gated off it always
+    # will, so turning the switch on has to generate that press itself.
+    verify_chain("IP5306 KEY", "IP5306_KEY", ["U2", "C33"], net_refs, name_to_id, id_to_name)
+
+    # The Q2 high-side switch chain, hop by hop (SW16 respin).
+    verify_chain("Q2 gate", "PWR_SW_GATE", ["Q2", "R32", "R33", "C32"],
+                 net_refs, name_to_id, id_to_name)
+    verify_chain("SW16 switch node", "PWR_SW", ["SW16", "R33", "R34", "C33"],
+                 net_refs, name_to_id, id_to_name)
+    verify_chain("boost output", "+5V_VOUT", ["U2", "Q2", "C27", "R32", "C32"],
+                 net_refs, name_to_id, id_to_name)
 
     # LED indicator chains
     verify_chain("LED1", "LED1_RA", ["LED1", "R17"], net_refs, name_to_id, id_to_name)

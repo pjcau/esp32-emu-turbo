@@ -35,4 +35,3 @@ SI2301CDS P-Channel MOSFET,"Q1,Q2",SOT-23,C10487,2
 "5.1k 0805 (bring-up diagnostic, DNP in production)","R28,R29",R_0805,C27834,2
 "1k 0805 (bring-up diagnostic, DNP in production)","R30,R31",R_0805,C17513,2
 1M 0805,R34,R_0805,C17514,1
-"SMT Tact Switch 5.1x5.1mm (SW17: DNP, manual IP5306 KEY wake)",SW17,SW-SMD-5.1x5.1,C318884,1

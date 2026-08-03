@@ -135,7 +135,9 @@ _strict("U2", [
     ("5", "IP5306_KEY"),
     ("6", "BAT+"),
     ("7", "LX"),
-    ("8", "+5V"),
+    # VOUT is the UPSTREAM side of the Q2 high-side switch (SW16 respin).
+    # The load rail keeps the name +5V and starts at Q2's drain.
+    ("8", "+5V_VOUT"),
     ("EP", "GND"),
 ])
 
@@ -255,9 +257,28 @@ _zone("J4", [
 ])
 
 # ============================================================
-# SW16: Power slide switch
+# SW16: Power slide switch — the Q2 gate control, NOT the battery
 # ============================================================
-_strict("SW16", [("2", "BAT+")])
+# Pad 2 is the common and carries PWR_SW, the node that drives Q2's gate
+# through R33. Pad 1 is the ON throw and grounds it. Pad 3 is the OFF
+# throw and is deliberately open — R34 alone then defines the node, which
+# is why there is no expectation for it here.
+_strict("SW16", [("1", "GND"), ("2", "PWR_SW")])
+
+# ============================================================
+# Q2 + gate network: the +5V high-side load switch (SW16 respin)
+# ============================================================
+# The pull-up R32 and the gate-source cap C32 must return to the SOURCE
+# (+5V_VOUT), not to the load rail: referenced to +5V they would follow
+# the drain down as Q2 turns off and never reach V_gs = 0, so the switch
+# could not hold itself off. That is the one wiring mistake this block
+# exists to catch, so both are strict.
+_strict("Q2", [("1", "PWR_SW_GATE"), ("2", "+5V_VOUT"), ("3", "+5V")])
+_strict("R32", [("1", "PWR_SW_GATE"), ("2", "+5V_VOUT")])
+_strict("R33", [("1", "PWR_SW_GATE"), ("2", "PWR_SW")])
+_strict("C32", [("1", "PWR_SW_GATE"), ("2", "+5V_VOUT")])
+_strict("R34", [("1", "PWR_SW"), ("2", "BAT+")])
+_strict("C33", [("1", "PWR_SW"), ("2", "IP5306_KEY")])
 
 # ============================================================
 # SPK1: Speaker
@@ -341,10 +362,10 @@ _strict("U4", [
 _strict("R22", [("1", "USB_DP_MCU"), ("2", "USB_D+")])
 _strict("R23", [("1", "USB_DM_MCU"), ("2", "USB_D-")])
 
-# ============================================================
-# R16: IP5306 KEY pull-down
-# ============================================================
-_strict("R16", [("1", "+5V"), ("2", "IP5306_KEY")])
+# R16 (the 100k IP5306_KEY pull-up to +5V) HAS NO EXPECTATION because it
+# no longer exists. On the respin's load-side +5V it would have become a
+# pull-DOWN whenever the switch was OFF and held KEY asserted. C33 took
+# over its footprint site; the KEY expectations now live in the Q2 block.
 
 # ============================================================
 # R17, R18: LED current-limiting resistors
@@ -398,7 +419,10 @@ _strict("C26", [("1", "+3V3"), ("2", "GND")])
 _strict("C17", [("1", "VBUS"), ("2", "GND")])
 _strict("C18", [("1", "BAT+"), ("2", "GND")])
 _strict("C19", [("1", "+5V"), ("2", "GND")])
-_strict("C27", [("1", "GND"), ("2", "+5V")])  # VOUT HF decoupling near IP5306
+# C27 decouples the boost output itself, so it stays UPSTREAM of Q2 with
+# U2.8. C19 (the VOUT bulk) is downstream on the load rail, where the
+# inrush it has to supply actually happens.
+_strict("C27", [("1", "GND"), ("2", "+5V_VOUT")])
 
 # ============================================================
 # C21-C25: PAM8403 decoupling capacitors
@@ -619,9 +643,9 @@ class PolarityVerificationTest(unittest.TestCase):
         # reservation was retired (R10-LOW-2); PDM uses only DOUT.
 
     def test_ip5306_polarity(self):
-        """U2 (IP5306): VIN=VBUS, VOUT=+5V, EP=GND."""
+        """U2 (IP5306): VIN=VBUS, VOUT=+5V_VOUT (upstream of Q2), EP=GND."""
         self._check_strict("U2", "1", "VBUS")
-        self._check_strict("U2", "8", "+5V")
+        self._check_strict("U2", "8", "+5V_VOUT")
         self._check_strict("U2", "EP", "GND")
 
     def test_ip5306_signals(self):
@@ -717,8 +741,24 @@ class PolarityVerificationTest(unittest.TestCase):
             self._check_zone_ok("J4", pin, "+3V3")
 
     def test_power_switch(self):
-        """SW16: common pin connected to BAT+."""
-        self._check_strict("SW16", "2", "BAT+")
+        """SW16: common drives the Q2 gate node; the ON throw grounds it."""
+        self._check_strict("SW16", "2", "PWR_SW")
+        self._check_strict("SW16", "1", "GND")
+
+    def test_high_side_switch(self):
+        """Q2 and its gate network: the +5V load switch (SW16 respin)."""
+        self._check_strict("Q2", "1", "PWR_SW_GATE")
+        self._check_strict("Q2", "2", "+5V_VOUT")
+        self._check_strict("Q2", "3", "+5V")
+        # R32/C32 must return to the SOURCE, not the load rail — on +5V
+        # they would follow the drain down and Q2 could never hold off.
+        self._check_strict("R32", "2", "+5V_VOUT")
+        self._check_strict("C32", "2", "+5V_VOUT")
+        self._check_strict("R33", "2", "PWR_SW")
+        self._check_strict("R34", "1", "PWR_SW")
+        self._check_strict("R34", "2", "BAT+")
+        self._check_strict("C33", "1", "PWR_SW")
+        self._check_strict("C33", "2", "IP5306_KEY")
 
     def test_speaker(self):
         """SPK1: SPK+/SPK- polarity correct."""
@@ -736,11 +776,6 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("R1", "2", "GND")
         self._check_strict("R2", "1", "USB_CC2")
         self._check_strict("R2", "2", "GND")
-
-    def test_key_pulldown_resistor(self):
-        """R16: IP5306 KEY pull-up to +5V."""
-        self._check_strict("R16", "1", "+5V")
-        self._check_strict("R16", "2", "IP5306_KEY")
 
     def test_led_resistors_power(self):
         """R17/R18: +3V3 on pad 2 (B.Cu left, toward LED anode)."""
@@ -764,7 +799,7 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("C19", "1", "+5V")
         self._check_strict("C19", "2", "GND")
         self._check_strict("C27", "1", "GND")
-        self._check_strict("C27", "2", "+5V")
+        self._check_strict("C27", "2", "+5V_VOUT")
 
     def test_leds_gnd(self):
         """LED1/LED2: cathode (pad 1) connected to GND per NCD0805R1 datasheet."""
