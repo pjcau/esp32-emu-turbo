@@ -788,8 +788,13 @@ class PowerSupplySheet(SchematicSheet):
         # Annotation BELOW the switch: above it runs into Q2's own
         # "(SI2301CDS, same as Q1)" line, and the row immediately under
         # the symbol is its Reference field.
-        self.text("manual KEY wake (DO NOT PLACE)", 300, 252, 1.5)
-        self.text("fit only if the C33 pulse is short", 300, 255, 1.5)
+        # South-west of the symbol. Straight below it runs into the
+        # sheet's title block (x>=297, y>=255), which the overlap gate
+        # does not model — so it looked clean and printed over the title;
+        # and at y=252 it landed on the BAT+ / IP5306_KEY labels hanging
+        # down off R34 and C33. y=260 is below both and west of the block.
+        self.text("manual KEY wake (DO NOT PLACE)", 258, 260, 1.5)
+        self.text("fit only if the C33 pulse is short", 258, 263, 1.5)
         # Pin 1 (right after the 180 deg rotation) is the KEY side, which
         # is the side C33 is on.
         self.wire(310 + 5.08, 240, 320, 240)
