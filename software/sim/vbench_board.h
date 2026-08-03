@@ -9,7 +9,7 @@
 #pragma once
 
 /* Fingerprint of the .kicad_pcb this was derived from. */
-#define VB_PCB_HASH "sha256:b9960e32287a06bf2feaec90931cd30864ffdf8eaeb695ff0ed2a7f2c59a179f"
+#define VB_PCB_HASH "sha256:8cee2b1659e8f88f6fc7c753c5e6739636608dc51d9fa8efacde8ecf1ad58f26"
 
 /* Rails — rails.py: +3V3 = V_REF*(1+R25/R26) from the real divider;
  * spread is V_REF's own tolerance (SY8089 AN p.4). +5V is the
@@ -77,8 +77,17 @@ static const unsigned char VB_LCD_BUS_MAP[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 #define VB_AUDIO_I_STANDBY_MA 6.3f
 #define VB_SPEAKER_OHM 8f
 
-/* Invariants the simulator must REPRODUCE, not report:
- * SW16 is not in series — operating it must NOT cut power. */
-#define VB_SWITCH_NOT_IN_SERIES 1
+/* What SW16 does, since the respin gated +5V behind Q2:
+ * VB_SWITCH_CUTS_5V     - flipping SW16 OFF removes the +5V rail
+ *                         and therefore +3V3 and the MCU. There is
+ *                         no warning and no graceful-shutdown hook:
+ *                         the supply is gone, so anything that must
+ *                         survive a power cut has to be committed
+ *                         before it happens, not on the way down.
+ * VB_SWITCH_IN_CELL_PATH- 0: the cell path does NOT run through the
+ *                         switch, so the IP5306 keeps charging with
+ *                         the console switched off. */
+#define VB_SWITCH_CUTS_5V 1
+#define VB_SWITCH_IN_CELL_PATH 0
 
 #define VB_CALIBRATION "no" /* dc / dc+transient / no — T5.4 */
