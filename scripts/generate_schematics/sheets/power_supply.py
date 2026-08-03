@@ -295,39 +295,31 @@ class PowerSupplySheet(SchematicSheet):
         # wire's end, and at l1_x it sat on L1's body.
         self.glabel("LX", l1_x - 6, sw_y, 0)
 
-        # ---- VOUT -> +5V rail ----
-        # Route VOUT up then right to avoid L1
+        # ---- VOUT -> +5V_VOUT rail ----
+        # Route VOUT up then right to avoid L1.
+        #
+        # SW16 RESPIN: this rail is +5V_VOUT, the BOOST OUTPUT, and it stops
+        # at Q2's source. The loads keep the name +5V and start at Q2's
+        # drain, so every sheet, zone and gate that already speaks about
+        # +5V still means the rail the loads see. Same shape as
+        # VBUS_IN -> F1 -> VBUS and BAT_IN -> Q1 -> BAT+ elsewhere on this
+        # sheet. The switch block itself is drawn in its own zone below.
+        #
+        # C19 (the 22uF bulk) LEFT this rail with the split: bulk belongs
+        # where the inrush is drawn, which is the load side of the switch,
+        # and it is drawn next to Q2 now. C27 (10uF HF) stays here, because
+        # what it decouples is the boost output itself.
         vout_turn_y = 70
+
+        # C27: HF decoupling (10uF) near VOUT, and now the only tap on the
+        # upstream rail.
+        c27_x = 227
+        c27_y = 78
         self.wire(vout_x, vout_y, vout_x, vout_turn_y)
-
-        # COUT (C19, 22uF) on VOUT rail
-        cout_x = 205
-        cout_y = 78
-        # Rail drawn ONCE, up to the first tap. It used to run to x=215 and
-        # then be redrawn 205->227 and 215->225, so ~20mm of the rail was
-        # two or three wires of ink stacked on each other.
-        self.wire(vout_x, vout_turn_y, cout_x, vout_turn_y)
-        self.sym(
-            "C", "C19", "22uF",
-            cout_x, cout_y, ["1", "2"],
-        )
-        # Short label placed above the cap so it does not crowd C27 to
-        # its right or the Q1/C18 cluster below.
-        self.text(
-            "VOUT bulk",
-            cout_x - 3, cout_y - 8, 1.5,
-        )
-        self.wire(
-            cout_x, vout_turn_y, cout_x, cout_y - 3.81,
-        )
-        self.gnd(cout_x, cout_y + 8)
-        self.wire(cout_x, cout_y + 3.81, cout_x, cout_y + 8)
-
-        # C27: HF decoupling (10uF) near VOUT
-        # Placed with extra horizontal gap from C19 so its label does
-        # not run into "VOUT bulk" above C19.
-        c27_x = cout_x + 22
-        c27_y = cout_y
+        # Rail drawn ONCE, end to end. It used to run to x=215 and then be
+        # redrawn 205->227 and 215->225, so ~20mm of the rail was two or
+        # three wires of ink stacked on each other.
+        self.wire(vout_x, vout_turn_y, c27_x, vout_turn_y)
         # Placed at 180 deg: the C_0805 land for C27 on the board has
         # pad 1 on the GND side and pad 2 on the +5V side (routing.py
         # _c27 block: pad 1 -> GND via, pad 2 -> VOUT via), the opposite
@@ -336,31 +328,27 @@ class PowerSupplySheet(SchematicSheet):
         # bottom/GND terminal, so schematic and PCB agree on which pad
         # is which.
         self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"], angle=180)
-        # BELOW the cap, not above: above at c27_x-3 collided with the +5V
-        # rail label, and shifting it left ran it into "VOUT bulk" over C19.
-        # Underneath is empty (the GND symbol prints no visible text).
+        # BELOW the cap, not above: above at c27_x-3 collided with the rail
+        # label. Underneath is empty (the GND symbol prints no visible text).
         self.text("HF bypass", c27_x - 5, c27_y + 13, 1.5)
-        self.wire(cout_x, vout_turn_y, c27_x, vout_turn_y)
         self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
         self.gnd(c27_x, c27_y + 8)
         self.wire(c27_x, c27_y + 3.81, c27_x, c27_y + 8)
 
-        # +5V power symbol and global label
-        self.v5(215, vout_turn_y - 5)
-        self.wire(215, vout_turn_y - 5, 215, vout_turn_y)
-        # Junction: this vertical lands mid-span on the cout_x->c27_x rail.
-        self.junction(215, vout_turn_y)
-        # Label sits on the rail's own right-hand end (c27_x), so no extra
-        # wire is needed — the 215->225 stub duplicated the rail underneath.
-        self.glabel("+5V", c27_x, vout_turn_y, 0, "output")
+        # The rail's name, on its own east END so no extra wire is needed.
+        # There is no +5V power SYMBOL here any more: the symbol would put
+        # the load rail's name on the boost output, which is the one thing
+        # the split exists to keep apart. It moved to the switch block,
+        # onto Q2's drain.
+        self.glabel("+5V_VOUT", c27_x, vout_turn_y, 0, "output")
 
-        # NOTE: PWR_FLAG on +5V was REMOVED because IP5306 VOUT (pin 8) is
-        # already typed as `power_out` in the library symbol, so it
-        # already drives the +5V net. Adding PWR_FLAG here created a
-        # second power-output pin on the same net and caused ERC
-        # "Pins of type Power output and Power output are connected"
-        # (the pre-existing R4 critical). IP5306 VOUT alone satisfies
-        # KiCad's "power input must be driven" requirement on +5V.
+        # NOTE: no PWR_FLAG here. IP5306 VOUT (pin 8) is typed `power_out`
+        # in the library symbol, so it already drives this net. Adding a
+        # flag would create a second power-output pin on it and cause ERC
+        # "Pins of type Power output and Power output are connected". The
+        # LOAD rail is a different story — nothing of power-out type sits
+        # on +5V now that Q2's passive pins are in the way — so that one
+        # does get a flag, in the switch block below.
 
         # ---- CBAT (C18, 10uF) on BAT line ----
         # Moved further down and slightly right of R16 (was cbat_x=198,
@@ -380,36 +368,23 @@ class PowerSupplySheet(SchematicSheet):
         self.gnd(cbat_x, cbat_y + 8)
         self.wire(cbat_x, cbat_y + 3.81, cbat_x, cbat_y + 8)
 
-        # ---- KEY pull-up (R16 100k to +5V, always-on) ----
-        r16_x = 182
-        # 76.5, threading two constraints half a millimetre apart:
-        #   * at 76.0 the Reference field (y-5) landed on the +5V rail
-        #     junction at y=70 — verify_schematic_overlaps.py.
-        #   * at 79.0 the KEY link stub (y+3.81, then 3.81 further) reached
-        #     y=86.6 and crossed the IP5306 wire at y=85 —
-        #     verify_schematic_crossings.py.
-        # 76.5 puts the Reference at 71.5 (0.365mm clear of the junction) and
-        # the stub end at 84.1 (0.88mm clear of the y=85 wire).
-        r16_y = 72
-        self.sym("R", "R16", "100k", r16_x, r16_y, ["1", "2"])
-        self.text("Always-on", r16_x + 3, r16_y - 3, 1.5)
-        # R16 pin1 (top) -> +5V by TAPPING the rail, not by a second
-        # power symbol. The old stub ran from a redundant +5V symbol at
-        # y=68 down to the pin and crossed the +5V rail at (182, 70) —
-        # same net, so harmless electrically, but it drew as a crossing.
-        self.wire(r16_x, vout_turn_y, r16_x, r16_y - 3.81)
-        self.junction(r16_x, vout_turn_y)
-        # R16 pin2 (bottom) -> KEY BY LABEL, not by wire.
-        # The orthogonal route went down x=182 from y=79.81 to y=90.08 and
-        # crossed the IP5306 lines at y=85.00 and y=87.54 on the way.
-        # GLOBAL label, and named IP5306_KEY to match the board's net.
-        # A local label is scoped to the sheet, so KiCad exported it as
-        # "/Power Supply/KEY" while the PCB called the same node
-        # IP5306_KEY — two of the T4 pin-to-net mismatches, plus the T1
-        # "schematic net missing from PCB" failure, for one naming slip.
-        self.link("IP5306_KEY", r16_x, r16_y + 3.81, 270, glob=True)
-# Points UP, not right: a rightward stub extends the KEY horizontal
-        # past x=185, where C18's tap crosses it (see the CBAT comment).
+        # ---- IP5306 KEY ----
+        # R16 (a 100k pull-up from KEY to +5V) IS DELETED. It was
+        # off-datasheet to begin with — the reference schematic has a button
+        # to GND and no external pull-up — and on the respin's LOAD-side +5V
+        # it would have inverted into a 100k pull-DOWN the moment the switch
+        # went OFF, holding KEY asserted. Re-referencing it to +5V_VOUT or
+        # BAT+ would only parallel the IP5306's internal pull-up and SHORTEN
+        # the wake pulse, which is the one direction this design cannot
+        # afford. C33 (in the switch block) drives KEY now, and it took over
+        # R16's footprint site and its routing on the board.
+        #
+        # KEY leaves by label. Points UP, not right: a rightward stub
+        # extends the KEY horizontal past x=185, where C18's tap crosses it
+        # (see the CBAT comment). GLOBAL, and named IP5306_KEY to match the
+        # board's net — a local label is scoped to the sheet, so KiCad
+        # exported it as "/Power Supply/KEY" while the PCB called the same
+        # node IP5306_KEY.
         self.link("IP5306_KEY", key_x, key_y, 90, glob=True)
 
         # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
@@ -683,34 +658,208 @@ class PowerSupplySheet(SchematicSheet):
                   195, 269, 1.8)
 
         # ═══════════════════════════════════════════════
-        # POWER SWITCH (moved to its own zone on the right column of
-        # the A3 sheet — previously at (30, 160) where its long help
-        # text overlapped C1 / U3 (AMS1117) / C2 at the same y=160.)
+        # POWER SWITCH — SW16 gating the +5V loads through Q2
+        #
+        # SW16 was electrically inert on every board built to date: only
+        # its common pin was routed, as a dead stub on BAT+, and its throws
+        # carried no net, so sliding it changed no copper at all.
+        #
+        # Putting the CELL in series with it — the obvious fix — fails the
+        # requirement twice: OFF would break charging as well as the loads,
+        # and with USB plugged in the VBUS passthrough keeps the board
+        # running anyway. So the +5V rail is switched instead, which gives
+        # all three states that are actually wanted: ON = powered,
+        # OFF = loads dead but USB still charges, no cell fitted =
+        # identical behaviour on USB.
+        #
+        # Q2 (SI2301CDS, C10487 — the SAME part as Q1, so no new BOM line
+        # and no new package family) breaks the rail between the boost
+        # output and every load. SW16 does not carry rail current at all
+        # now; it carries the GATE, which is why a slide switch rated for
+        # signal levels is the right part for it.
+        #
+        #   ON  : the common is grounded, the gate divides R32/R33 to
+        #         0.217 V, V_gs = -4.78 V, and Q2 is driven past its
+        #         characterised -4.5 V spec point.
+        #   OFF : the throw is open and R34 alone defines the node, so
+        #         V_gs collapses to -0.028 V on a 3.7 V cell and -0.108 V
+        #         with no cell fitted at all. See datasheet_specs.py for
+        #         why R32 is 22k and not the obvious 100k: at 100k/10k/1M
+        #         the no-cell case lands on -0.455 V, which IS the SI2301
+        #         threshold minimum, in the USB-powered no-battery state a
+        #         bench operator uses most.
         # ═══════════════════════════════════════════════
-        sw_x, sw_y = 285, 200
-        self.text("POWER SWITCH", sw_x - 5, sw_y - 12, 2.54, True)
+        sw_x, sw_y = 256, 232
+        # The title sits at y<=188. Below that the two "+5V_VOUT" gate-return
+        # labels rise off R32/C32 to y=191, and a 50-character subtitle at
+        # 1.8 mm is 61 mm long — it reaches x=307 and runs straight through
+        # both of them (verify_schematic_overlaps).
+        self.text("POWER SWITCH", 246, 178, 2.54, True)
+        self.text("SW16 -> Q2 high-side switch on the +5V load rail",
+                  246, 184, 1.8)
+        self.text("IP5306 keeps charging with the console switched off",
+                  246, 188, 1.8)
+
+        # ── SW16 ────────────────────────────────────────
         # Value kept as "SS-12D00G3" to match the CPL/footprint key (legacy
-        # name); the actual part is MSK12C02 (LCSC C431540) — noted as text
-        # below. Renaming the footprint key across routing/footprints/CPL is
-        # a v2 cleanup item.
-        self.sym("SW_Push", "SW16", "SS-12D00G3", sw_x, sw_y, ["1", "2"])
-        self.text("Actual part: MSK12C02 (LCSC C431540)", sw_x - 5, sw_y + 14, 1.5)
-        # v1 AS-BUILT: only the switch COMMON pin (pad 2) is routed — it taps
-        # the BAT+ net as a stub. Throw pins 1/3 are unrouted (see
-        # hardware/datasheet_specs.py::SW16), so the slide switch does NOT
-        # break the battery path: J3 -> Q1 -> BAT+ -> IP5306 pin 6 is
-        # continuous copper. Power on/off relies on the IP5306 KEY logic
-        # (SW13/MENU via R16) and its automatic light-load standby.
-        # v2 respin: route the battery through pins 1-2 in series.
-        self.glabel("BAT+", sw_x - 12, sw_y, 180, "input")
-        self.wire(sw_x - 5.08, sw_y, sw_x - 12, sw_y)
-        # Explicit no-connect on pin 2: the throw side is deliberately
-        # unrouted on v1 (see block comment above). The nc marker states
-        # that intent to ERC instead of leaving a bare pin.
-        self.nc(sw_x + 5.08, sw_y)
-        self.text("N.C. (v1: throw pins unrouted)", sw_x + 7, sw_y, 1.5)
-        self.text("!! v1 as-built: NOT in series - cannot disconnect battery", sw_x - 5, sw_y + 8, 1.5)
-        self.text("Power on/off = IP5306 KEY + auto-standby. v2: wire pins 1-2 in series.", sw_x - 5, sw_y + 11, 1.5)
+        # name); the actual part is MSK12C02 (LCSC C431540).
+        #
+        # Drawn at 180 deg so pin 1 — which is the board's pad 2, the
+        # COMMON — lands on the RIGHT, facing the gate network it drives.
+        # Unrotated the common exits west and the whole block reads
+        # backwards. The switch body is symmetric, so the drawing is
+        # unchanged.
+        self.sym("SW_Push", "SW16", "SS-12D00G3", sw_x, sw_y, ["1", "2"], 180)
+        self.text("MSK12C02 (C431540)", sw_x - 9, sw_y + 9, 1.5)
+        # Pin 2 == board pad 1, the ON throw: it grounds the common.
+        self.wire(sw_x - 5.08, sw_y, sw_x - 10, sw_y)
+        self.gnd(sw_x - 10, sw_y)
+        # The board's pad 3 (the other throw) is deliberately left OPEN and
+        # so has no pin here — the 2-pin symbol is the whole switch as far
+        # as this circuit is concerned. With the slider on that side the
+        # node is defined by R34 alone, which is exactly the OFF state.
+
+        # ── PWR_SW: the switch node ─────────────────────
+        pwr_sw_y = sw_y
+        gate_y = 215
+        self.wire(sw_x + 5.08, pwr_sw_y, 267, pwr_sw_y)
+        self.wire(267, pwr_sw_y, 288, pwr_sw_y)
+        self.junction(267, pwr_sw_y)
+        # Name it. Both ends of the spine are taken (SW16's pin and C33's
+        # corner), so the label goes on a stub of its own, pointing UP into
+        # the empty band between the two spines. An unnamed node here is
+        # not cosmetic: KiCad exports it as "Net-(C33-Pad1)" and every
+        # schematic-vs-PCB pin comparison on SW16, R33, R34 and C33 fails
+        # against the board's PWR_SW.
+        self.wire(283, pwr_sw_y, 283, 227)
+        self.junction(283, pwr_sw_y)
+        self.glabel("PWR_SW", 283, 227, 90)
+
+        # R34 1M — holds PWR_SW at BAT+ while the throw is open, which is
+        # what defines the OFF state, and it also keeps C33 charged ready
+        # for the next wake pulse. It sits on the COMMON node rather than
+        # on the open throw: with the throw open the common is the only
+        # node it could reach either way, so the two positions are
+        # electrically identical, and this one keeps the switch to ONE net
+        # across the board instead of two. It costs 0.8 uA while ON.
+        self.sym("R", "R34", "1M", 277, 240, ["1", "2"])
+        self.wire(277, 236.19, 277, pwr_sw_y)
+        self.junction(277, pwr_sw_y)
+        self.wire(277, 243.81, 277, 248)
+        self.glabel("BAT+", 277, 248, 270)
+
+        # C33 1uF — the wake cap, and it is not optional. The IP5306 boost
+        # shuts down after 32 s below 45 mA and restarts only on a KEY
+        # press or a USB insertion (R30-MED-3); with the loads gated off
+        # the draw is ~0.1 mA, so it WILL latch off every single time.
+        # Flipping back to ON therefore has to generate a KEY press by
+        # itself. KEY is active-low with an internal pull-up and the chip
+        # stays alive from the cell while the boost is off, so a capacitor
+        # is enough: C33 couples the PWR_SW 5V->0 step in as a low pulse
+        # and recharges through R34 afterwards.
+        #
+        # BENCH-VALIDATE: the pulse width is tau against the IP5306's
+        # UNDOCUMENTED internal pull-up, so 1uF is a starting value. There
+        # is no button on this net to fall back on — SW17 was specified and
+        # then dropped for want of a clearance-legal site — so the tuning
+        # point is C33's own pads: lift the cap, tack a wire to a momentary
+        # button, and that reaches KEY and GND directly.
+        self.sym("C", "C33", "1uF", 288, 240, ["1", "2"])
+        self.wire(288, 236.19, 288, pwr_sw_y)
+        self.wire(288, 243.81, 288, 248)
+        self.glabel("IP5306_KEY", 288, 248, 270)
+        self.text("wake pulse", 292, 238, 1.5)
+        self.text("BENCH-VALIDATE", 292, 241, 1.5)
+
+        # R33 1k — series gate resistor, between the switch node and the
+        # gate. It is what splits PWR_SW from PWR_SW_GATE, the same way R24
+        # splits RPP_GATE off Q1's gate.
+        self.sym("R", "R33", "1k", 267, 222, ["1", "2"])
+        self.wire(267, 225.81, 267, pwr_sw_y)
+        self.wire(267, 218.19, 267, gate_y)
+        self.junction(267, gate_y)
+
+        # ── PWR_SW_GATE: Q2's gate node ─────────────────
+        self.wire(262, gate_y, 287.92, gate_y)
+        self.glabel("PWR_SW_GATE", 262, gate_y, 180)
+
+        # R32 22k pull-up and C32 1uF gate-source, BOTH returning to the
+        # SOURCE (+5V_VOUT) and not to the load rail. Referenced to +5V
+        # they would follow the drain down as Q2 turned off and never reach
+        # V_gs = 0, so the switch could not hold itself off — that is the
+        # one wiring mistake in this block that would look right and behave
+        # wrongly, and verify_polarity holds both to it.
+        #
+        # C32 is 1uF, not 100nF, because the gate network shrank when R32
+        # became 22k: tau_on = (R32||R33) x C32 = 957 ohm x 1uF = 957 us,
+        # so the rail ramps over ~1.5 ms and the inrush into the ~50 uF of
+        # load-side bulk is ~167 mA instead of amps. At 100nF the same
+        # 957 ohm gives 96 us and puts 1.7 A through Q2. The TIME CONSTANT
+        # is the specification here, not the capacitor value.
+        #
+        # Both at 180 deg: hung upward from the gate node, the default
+        # orientation would put pin 1 on the +5V_VOUT end, and the board
+        # has pad 1 on the gate. Rotating the (vertically symmetric)
+        # symbols keeps the drawing identical while making pin 1 the
+        # bottom terminal — the same trick C27 uses above.
+        self.sym("C", "C32", "1uF", 272, 206, ["1", "2"], angle=180)
+        self.wire(272, 209.81, 272, gate_y)
+        self.junction(272, gate_y)
+        self.wire(272, 202.19, 272, 198)
+        self.glabel("+5V_VOUT", 272, 198, 90)
+
+        self.sym("R", "R32", "22k", 282, 206, ["1", "2"], angle=180)
+        self.wire(282, 209.81, 282, gate_y)
+        self.junction(282, gate_y)
+        self.wire(282, 202.19, 282, 198)
+        self.glabel("+5V_VOUT", 282, 198, 90)
+
+        # ── Q2 ──────────────────────────────────────────
+        # Reusing the BAT54C symbol footprint (SOT-23-3), exactly as Q1
+        # does. Pin mapping: 1 = Gate (bottom-left), 2 = Source
+        # (bottom-right), 3 = Drain (top).
+        #
+        # The SOURCE is the boost side and the DRAIN is the load side, and
+        # for a P-channel that direction is the whole part. The body diode
+        # conducts D->S, so pointing it loads->boost means it BLOCKS in the
+        # OFF state; wired the other way round the loads would stay powered
+        # through the diode whatever the gate did.
+        q2x, q2y = 293, 213.73
+        self.sym("BAT54C", "Q2", "SI2301CDS", q2x, q2y, ["1", "2", "3"])
+        # Annotation pushed east of the source stub: at q2x+6 it sat on the
+        # "+5V_VOUT" label hanging off pin 2.
+        self.text("P-MOSFET load switch", q2x + 12, q2y + 14, 1.5)
+        self.text("(SI2301CDS, same as Q1)", q2x + 12, q2y + 17, 1.5)
+
+        # Pin 2 (Source, bottom-right) -> +5V_VOUT. Exits DOWNWARD: run
+        # east and it draws as one straight line through the transistor,
+        # collinear with the gate node on the other side.
+        self.wire(q2x + 5.08, q2y + 1.27, q2x + 5.08, 222)
+        self.glabel("+5V_VOUT", q2x + 5.08, 222, 270)
+
+        # Pin 3 (Drain, top) -> the +5V LOAD rail.
+        self.wire(q2x, q2y - 5.08, q2x, 204)
+        self.wire(q2x, 204, 315, 204)
+        self.glabel("+5V", 315, 204, 0, "output")
+
+        # PWR_FLAG on +5V. The load rail is produced THROUGH Q2, whose
+        # symbol pins are passive, so no power-output pin sits on it and
+        # ERC reports every +5V power-input pin as undriven — the same
+        # situation as VBUS behind F1 and +3V3 behind L2. One flag per net,
+        # here at its source. +5V_VOUT must NOT get one: IP5306 VOUT is
+        # already power_out.
+        self.flag(300, 198)
+        self.wire(300, 198, 300, 204)
+        self.junction(300, 204)
+
+        # C19 22uF — the load-rail bulk. It used to hang off the VOUT rail
+        # next to C27; it belongs on THIS side of the switch, because the
+        # inrush it has to supply is drawn by the loads when Q2 turns on.
+        self.sym("C", "C19", "22uF", 309, 212, ["1", "2"])
+        self.wire(309, 208.19, 309, 204)
+        self.junction(309, 204)
+        self.gnd(309, 220)
+        self.wire(309, 215.81, 309, 220)
 
         # ═══════════════════════════════════════════════
         # CHARGING LEDs (driven by IP5306 LED outputs)
@@ -822,8 +971,7 @@ class PowerSupplySheet(SchematicSheet):
             30, ny + 18,
         )
         self.text(
-            "- KEY pulled to +5V via 100k"
-            " for always-on operation",
+            "- KEY driven by C33 wake pulse (R16 100k pull-up DELETED)",
             30, ny + 24,
         )
         self.text(
