@@ -83,7 +83,8 @@ The bottom side hosts the main circuitry:
 | R22,R23 / R24 / R25 / R26 / R27 | 22R USB / 100k gate / 100k FB / 22k FB / 20R backlight | C25092 / C149504 / C149504 / C17560 / C17955 | R_0402 / R_0805 / R_1206 |
 | **Q2** | SI2301CDS P-MOSFET — SW16 respin high-side switch, `+5V_VOUT` → `+5V` | C10487 | SOT-23 |
 | R32 / R33 / R34 | 22k gate pull-up / 1k series gate / 1M `PWR_SW`→`BAT+` | C17560 / C17513 / C17514 | R_0805 |
-| C32 / C33      | 1uF Q2 gate soft-start / 1uF `IP5306_KEY` wake cap | C28323 | C_0805 |
+| C32            | 1uF Q2 gate soft-start | C28323 | C_0805 |
+| C33            | 4.7uF `IP5306_KEY` wake cap (BENCH-VALIDATE) | C1779 | C_0805 |
 | SW17           | TS-1088 momentary, `IP5306_KEY` → GND — **DO NOT PLACE** (in the BOM so it can be sourced, absent from the CPL) | C720477 | SW-SMD-2P-TS1088 |
 
 **Total SMT components:** 37 unique part types, 99 BOM placements — 98 of which

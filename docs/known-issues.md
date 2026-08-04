@@ -477,7 +477,7 @@ and is six releases stale; the tag is the truth.
   | R33 | 0805, C17513 | 1 kΩ | Series gate resistor, `PWR_SW` → `PWR_SW_GATE`. Sets the soft-start slope |
   | C32 | 0805, C28323 | 1 µF | Gate-source cap, `PWR_SW_GATE` → `+5V_VOUT`. Soft-start / inrush limiter. The **time constant** is the specification, not the value |
   | R34 | 0805, C17514 | 1 MΩ | `PWR_SW` → `BAT+`. Defines the switch node in the OFF position and keeps the wake cap pre-charged |
-  | C33 | 0805, C28323 | 1 µF | Wake cap, `PWR_SW` → `IP5306_KEY`. Injects the KEY press when the switch is flipped to ON. **Value is BENCH-VALIDATE** |
+  | C33 | 0805, C1779 | 4.7 µF | Wake cap, `PWR_SW` → `IP5306_KEY`. Injects the KEY press when the switch is flipped to ON. **Value is BENCH-VALIDATE** — sized for the 50 ms–2 s press window: press ≈ 0.7 τ, so 4.7 µF tolerates an internal pull-up of ≈ 15 k–600 kΩ where the first-cut 1 µF needed ≥ 70 kΩ |
 
   Every one of these is a JLCPCB **Basic** part already on this BOM:
   22 k = C17560 (= R26), 1 k = C17513 (= the LED series resistors),
@@ -516,7 +516,7 @@ and is six releases stale; the tag is the truth.
   different-net short it was.
 
   **No series resistor in the KEY leg.** A long run to a high-impedance
-  sense pin normally wants one, but this node carries C33's 1 µF by
+  sense pin normally wants one, but this node carries C33's 4.7 µF by
   design — orders of magnitude more shunt than a series R would be
   providing — and an R would also sit in the wake pulse's own path and
   blunt the edge the design needs to keep sharp.
@@ -609,7 +609,7 @@ and is six releases stale; the tag is the truth.
   from the datasheet reference schematic (page 11, figure 4): the button
   connects KEY to GND, active low, with an internal pull-up — and the
   chip stays alive from the cell while the boost is off, so this works
-  with VOUT dead. C33 (1 µF) from the switch node into `IP5306_KEY` does
+  with VOUT dead. C33 (4.7 µF) from the switch node into `IP5306_KEY` does
   it: flipping to ON snaps `PWR_SW` from ~4.9 V (or ~3.7 V once the boost
   has latched off) down to 0 V, and the cap couples that step into KEY as
   a low pulse. The pulse length is τ against the IP5306's *undocumented*
@@ -818,7 +818,7 @@ and is six releases stale; the tag is the truth.
   the "terminal until a cable is plugged in" property is gone: `R16` is
   **deleted**, so `IP5306_KEY` is no longer a static pull-up dead end,
   and the net becomes {U2.5, C33, SW17(DO NOT PLACE)} — exactly the
-  datasheet topology plus an AC wake injection. `C33` (1 µF from the
+  datasheet topology plus an AC wake injection. `C33` (4.7 µF from the
   `PWR_SW` switch node) couples the switch's ON transition into KEY as a
   low pulse, and `SW17` is a real momentary to GND on the same node,
   fitted only if the RC needs tuning. This is not optional

@@ -999,8 +999,8 @@ COMPONENT_SPECS["R34"] = {
 }
 
 COMPONENT_SPECS["C33"] = {
-    "component": "1uF IP5306 KEY wake capacitor (BENCH-VALIDATE)",
-    "lcsc": "C28323",
+    "component": "4.7uF IP5306 KEY wake capacitor (BENCH-VALIDATE)",
+    "lcsc": "C1779",
     "datasheet": None,
     "datasheet_page": 1,
     "pins": {

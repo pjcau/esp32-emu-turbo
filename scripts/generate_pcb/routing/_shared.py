@@ -849,7 +849,7 @@ R34_ROT = 180
 # they disagreed the corridor kept its old split at the pad and the new
 # leg drew a second, overlapping run into it — a 0 deg corner.
 R34_PWR_SW_VIA_X = 84.20
-# C33 1uF wake cap takes over R16's exact site. R16 was a 100k KEY
+# C33 4.7uF wake cap takes over R16's exact site. R16 was a 100k KEY
 # pull-up to +5V and is DELETED (see hardware/datasheet_specs.py): on the
 # new load-side +5V it would have become a pull-DOWN in the OFF state and
 # held KEY asserted. Reusing its footprint means the KEY leg reuses R16's

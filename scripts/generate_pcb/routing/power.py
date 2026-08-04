@@ -1067,7 +1067,7 @@ def _power_traces():
     # +5V; it is DELETED (see hardware/datasheet_specs.py for the full
     # argument — in one sentence, on the new LOAD-side +5V it inverts into
     # a 100k pull-DOWN whenever the switch is OFF and holds KEY asserted).
-    # C33, the 1uF wake cap, takes over the same footprint site, so the KEY
+    # C33, the 4.7uF wake cap, takes over the same footprint site, so the KEY
     # leg keeps R16's proven Z-route and the far leg keeps its via — which
     # now lands on the PWR_SW F.Cu corridor instead of tapping the +5V pour.
     #
@@ -1598,8 +1598,8 @@ def _pwr_switch_traces():
                                          |                  v
                                     Q2.G-+-- R33 10k --PWR_SW    Q2.D ==vias==> [In2 +5V island] ==> loads
                                                           |
-                                              R34 4.7M --BAT+
-                                              C33 1uF ---IP5306_KEY
+                                              R34 1M ----BAT+
+                                              C33 4.7uF -IP5306_KEY
                                                           |
                                                        SW16.2 (common)
                                                        SW16.1 -> GND (ON)

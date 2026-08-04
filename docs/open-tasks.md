@@ -190,7 +190,7 @@ Detail for each lives in `docs/known-issues.md` §C; this is the index.
   only. Unblocks if instruments ever arrive; until then the bring-up
   firmware (`software/bringup_test/`) is the measuring device.
 - **C33 wake RC — the one BENCH-VALIDATE value in the SW16 respin**
-  (branch `respin/sw16-5v-switch`). C33 is 1 µF from the `PWR_SW` switch
+  (branch `respin/sw16-5v-switch`). C33 is 4.7 µF from the `PWR_SW` switch
   node into `IP5306_KEY`; the pulse it injects on turn-on is τ against
   the IP5306's *undocumented* internal KEY pull-up, so the datasheet
   cannot settle it and no gate can see it. Measure the pulse width on a

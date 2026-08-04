@@ -748,7 +748,7 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(277, 243.81, 277, 248)
         self.glabel("BAT+", 277, 248, 270)
 
-        # C33 1uF — the wake cap, and it is not optional. The IP5306 boost
+        # C33 4.7uF — the wake cap, and it is not optional. The IP5306 boost
         # shuts down after 32 s below 45 mA and restarts only on a KEY
         # press or a USB insertion (R30-MED-3); with the loads gated off
         # the draw is ~0.1 mA, so it WILL latch off every single time.
@@ -759,12 +759,16 @@ class PowerSupplySheet(SchematicSheet):
         # and recharges through R34 afterwards.
         #
         # BENCH-VALIDATE: the pulse width is tau against the IP5306's
-        # UNDOCUMENTED internal pull-up, so 1uF is a starting value. There
-        # is no button on this net to fall back on — SW17 was specified and
-        # then dropped for want of a clearance-legal site — so the tuning
-        # point is C33's own pads: lift the cap, tack a wire to a momentary
-        # button, and that reaches KEY and GND directly.
-        self.sym("C", "C33", "1uF", 288, 240, ["1", "2"])
+        # UNDOCUMENTED internal pull-up. The chip accepts a press of
+        # 50 ms..2 s (shorter is ignored, longer is a "long press" that
+        # does NOT start the boost), and the press the cap synthesizes
+        # lasts ~0.7*tau. That window makes 4.7uF the right size: it is
+        # safe for an internal pull-up anywhere in ~15k..600k, where the
+        # original 1uF needed >= ~70k to register at all. Community
+        # practice (GPIO through 1-1.2k held low ~100 ms) confirms the
+        # press model. Fallback if the value still misses: SW17, the DNP
+        # momentary right next to C33, reaches KEY/GND directly.
+        self.sym("C", "C33", "4.7uF", 288, 240, ["1", "2"])
         self.wire(288, 236.19, 288, pwr_sw_y)
         self.wire(288, 243.81, 288, 248)
         self.glabel("IP5306_KEY", 288, 248, 270)

@@ -571,7 +571,7 @@ def _build_placements():
     p.append(("C32", "1uF", "C_0805", *C32_POS, C32_ROT, "bottom"))
     p.append(("R33", "1k", "R_0805", *R33_POS, R33_ROT, "bottom"))
     p.append(("R34", "1M", "R_0805", *R34_POS, R34_ROT, "bottom"))
-    p.append(("C33", "1uF", "C_0805", *C33_POS, C33_ROT, "bottom"))
+    p.append(("C33", "4.7uF", "C_0805", *C33_POS, C33_ROT, "bottom"))
 
     # ── Button debounce caps (y=50, x=43..98, 5mm spacing) ──
     # R9-MED-4: C20 deleted (was on dead BTN_MENU net).

@@ -126,7 +126,7 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | R33 | Resistor | 1 kΩ (C17513) | **Respin** — series gate resistor, PWR_SW → PWR_SW_GATE; sets the soft-start slope | — |
 | R34 | Resistor | 1 MΩ (C17514) | **Respin** — PWR_SW → BAT+. Defines the switch node when the throw is open and keeps C33 pre-charged | — |
 | C32 | Capacitor | 1 µF (C28323) | **Respin** — Q2 gate-source cap, PWR_SW_GATE → +5V_VOUT: soft-start / inrush limiter, τ = 957 µs. (Not to be confused with C31, which is the ESP32 EN reset cap on Sheet 2 and is untouched) | — |
-| C33 | Capacitor | 1 µF (C28323) | **Respin** — wake cap, PWR_SW → IP5306_KEY: AC-couples the switch's ON transition into KEY as a low pulse. **Value is BENCH-VALIDATE** | — |
+| C33 | Capacitor | 4.7 µF (C1779) | **Respin** — wake cap, PWR_SW → IP5306_KEY: AC-couples the switch's ON transition into KEY as a low pulse. **Value is BENCH-VALIDATE** (sized for the 50 ms–2 s press window, see below) | — |
 | SW17 | 2-pad SMD momentary — **DO NOT PLACE** | C720477 | **Respin** — IP5306_KEY → GND, the datasheet-blessed manual wake, at (115.15, 56.25) rot 90. In the BOM so it can be sourced, out of the CPL so JLCPCB never fits it. Deliberately **not** the 5.1×5.1 tact: that footprint has no clearance-legal site in this quadrant | — |
 | L1 | Inductor | 1 µH 4.5A | IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | LED1 | Red LED | 0805 | Power indicator (+3V3, always on — U2's LED pins are NC on this board) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
@@ -220,7 +220,7 @@ the IP5306's VOUT pin and every load by the high-side P-MOSFET **Q2**:
                         │
       ┌─────────────────┴─────────────────┬──────────────────┐
       │                                   │                  │
-   SW16 pad 2                         R34 1M              C33 1µF
+   SW16 pad 2                         R34 1M              C33 4.7µF
    (common) = PWR_SW                     │                  │
       pad 1 = GND  ← ON position        BAT+           IP5306_KEY
       pad 3 = OPEN                  (defines the node    (wake pulse
@@ -297,11 +297,16 @@ specification, not the capacitor value.**
 **32 s below a 45 mA load** and restarts only on a KEY press or a USB insertion
 (datasheet V1.32 §10/§12). With SW16 OFF the load behind Q2 is ~0.1 mA, so the boost
 *will* latch off every time — and flipping back to ON must therefore generate a KEY
-press by itself, or the board never comes back on battery. **C33** (1 µF from `PWR_SW`
+press by itself, or the board never comes back on battery. **C33** (4.7 µF from `PWR_SW`
 into `IP5306_KEY`) couples the ON transition into KEY as a low pulse; KEY is active-low
 with an internal pull-up per the datasheet reference schematic (p.11, fig. 4), and the
 chip stays alive from the cell while the boost is off. The pulse width is τ against
-that *undocumented* internal pull-up, so **the C33 value is BENCH-VALIDATE**.
+that *undocumented* internal pull-up, so **the C33 value is BENCH-VALIDATE**. Sizing:
+the chip accepts a press of 50 ms–2 s (shorter is ignored; longer is a "long press",
+which does *not* start the boost), and the synthesized press lasts ≈ 0.7 τ — so
+4.7 µF is safe for an internal pull-up anywhere in ≈ 15 kΩ–600 kΩ, where the first-cut
+1 µF needed ≥ ≈ 70 kΩ to register at all. Community practice (driving KEY low through
+1–1.2 kΩ for ~100 ms as the standard auto-shutdown workaround) confirms the press model.
 **SW17 is the fallback and the tuning point.** It is a 2-terminal SMD momentary
 (C720477) at (115.15, 56.25) rot 90, 3.9 mm from C33.2 — which *is* the KEY node —
 marked **DO NOT PLACE**: the land and copper are on the board, the part is in the BOM
@@ -311,7 +316,7 @@ has no clearance-legal site anywhere in the IP5306 quadrant, even with every res
 part and every piece of respin copper treated as movable — the only sites are north
 of U2, past the BAT+ B.Cu run at y = 46.1, and the one F.Cu corridor across it is
 0.925 mm wide and already carries `PWR_SW`. There is **no series resistor** in the
-KEY leg: C33's 1 µF already dominates that node's impedance, and an R would sit in
+KEY leg: C33's 4.7 µF already dominates that node's impedance, and an R would sit in
 the wake pulse's own path.
 **R16 is deleted** — it was off-datasheet from the start, and on the new load-side +5V
 it would invert into a 100 kΩ pull-*down* whenever the switch is OFF, holding KEY
