@@ -10,7 +10,7 @@ Run the full verification suite. All checks must pass before release.
 
 1. **DFM + DFA suite** — `/verify`
    - `python3 scripts/verify_dfm_v2.py` — 115 manufacturing tests (pad spacing, clearance, drill sizes, soldermask, silkscreen, copper pours, trace widths)
-   - `python3 scripts/verify_dfa.py` — 9 assembly tests (component polarity, tombstone risk, solderability)
+   - `python3 scripts/verify_dfa.py` — assembly tests (component polarity, tombstone risk, solderability, DNP/CPL consistency; prints its own count)
 
 2. **Native DRC** — `/drc-native`
    - `kicad-cli pcb drc` with JLCPCB `.kicad_dru` rules.

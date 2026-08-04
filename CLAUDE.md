@@ -86,7 +86,7 @@ Cross-agent sync points: `config.py` ↔ `board_config.h` (GPIO),
 | PreCompact | (before compaction) | Saves session state backup to `.claude/backups/` |
 | Stop | (after response) | Auto-runs DFM verification if PCB files changed |
 
-**MANDATORY**: After ANY change to PCB generator, footprints, routing, BOM, CPL, or JLCPCB export files, you MUST run `python3 scripts/verify_dfa.py` and confirm all 9 checks pass before committing.
+**MANDATORY**: After ANY change to PCB generator, footprints, routing, BOM, CPL, or JLCPCB export files, you MUST run `python3 scripts/verify_dfa.py` and confirm ALL its checks pass before committing (the script prints its own count — 10 as of the SW17 DNP rule).
 
 Config: `.claude/settings.json` (hooks section)
 
@@ -130,7 +130,7 @@ The full list is `make help`; only the high-traffic ones here.
 |--------|-------------|
 | `make fast-check` | Full pipeline with local kicad-cli (~5s) |
 | `make verify-fast` | Quick DFM check only (~1.4s; prints its own test count) |
-| `make verify-dfa` | Quick DFA check (9 assembly tests) |
+| `make verify-dfa` | Quick DFA check (assembly tests; prints its own count) |
 | `make verify-power-nets` | Power-net integrity gate — +3V3/+5V/GND/VBUS/BAT+ must each be ONE piece of copper (catches split-plane dead boards; no allowlist) |
 | `make validate-jlcpcb` | JLCPCB manufacturing validation (drill, edge, copper, gerbers) |
 | `make export-gerbers-fast` | Gerbers via local kicad-cli + Docker zone fill |

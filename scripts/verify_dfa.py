@@ -127,15 +127,33 @@ def test_bom_cpl_consistency():
     bom_refs = set(bom.keys())
     cpl_refs = set(cpl.keys())
 
+    # DNP parts are documented in the BOM (with an LCSC id, so they CAN be
+    # fitted later) but must have no placement data — JLC assembles from the
+    # CPL. The safety property is therefore inverted for them: present in
+    # BOM, absent from CPL.
+    dnp_refs = {
+        des for des, row in bom.items()
+        if "DO NOT PLACE" in str(row).upper()
+    }
+
     # Find mismatches
-    in_bom_not_cpl = bom_refs - cpl_refs
+    in_bom_not_cpl = bom_refs - cpl_refs - dnp_refs
     in_cpl_not_bom = cpl_refs - bom_refs
+    dnp_in_cpl = dnp_refs & cpl_refs
 
     check(
         "All BOM designators have CPL entries",
         len(in_bom_not_cpl) == 0,
         f"missing in CPL: {sorted(in_bom_not_cpl)}" if in_bom_not_cpl else "",
     )
+
+    check(
+        "DNP parts stay out of the CPL",
+        len(dnp_in_cpl) == 0,
+        f"DNP but would be placed: {sorted(dnp_in_cpl)}" if dnp_in_cpl else "",
+    )
+    if dnp_refs:
+        print(f"    DNP (BOM-only, by design): {sorted(dnp_refs)}")
 
     check(
         "All CPL designators have BOM entries",
