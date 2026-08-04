@@ -35,4 +35,4 @@ SI2301CDS P-Channel MOSFET,"Q1,Q2",SOT-23,C10487,2
 "5.1k 0805 (bring-up diagnostic, DNP in production)","R28,R29",R_0805,C27834,2
 "1k 0805 (bring-up diagnostic, DNP in production)","R30,R31",R_0805,C17513,2
 1M 0805,R34,R_0805,C17514,1
-"SMD Momentary Switch 3.9x3.0mm TS-1088 (DO NOT PLACE - manual IP5306 KEY wake, fit only if the C33 RC needs it)",SW17,SW-SMD-2P-TS1088,C720477,1
+"TS-1088 (SMD momentary switch 3.9x3.0mm; DO NOT PLACE - manual IP5306 KEY wake, fit only if the C33 RC needs it)",SW17,SW-SMD-2P-TS1088,C720477,1

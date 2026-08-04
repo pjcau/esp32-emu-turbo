@@ -143,6 +143,18 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "polarity is proven' remains retired repo-wide, and R31-HIGH-1 "
            "is the second thing it got wrong: those boards power up in "
            "either orientation."),
+    "Q2": (0.0,
+           "SI2301CDS SOT-23-3 (C10487) at cpl=90 — the SAME part, layer, "
+           "footprint and placement transform as Q1 (rot 180 baked into the "
+           "pads + B-mirror), so the same (row_board + row_ee) mod 180 = 90 "
+           "arithmetic puts it in this list; the SW16-respin merge added "
+           "the part but not the entry. Convention-free check: at 90 it "
+           "seats exactly (0.000 mm) with G/S/D on PWR_SW_GATE / +5V_VOUT "
+           "/ +5V — source on the boost output, drain on the loads, which "
+           "is the only wiring in which the body diode blocks loads->VOUT "
+           "when SW16 is OFF (the whole point of the high-side switch; "
+           "vbench T2.3 reads the same nets off Q2's model). The law's 270 "
+           "puts the single leg where the pair is and does not assemble."),
 }
 
 

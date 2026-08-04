@@ -191,10 +191,11 @@ def f_cpl_missing(sb: Path):
 
 def f_bom_value(sb: Path):
     # R26 is the buck feedback divider's lower leg: Vout = 0.6*(1 + R25/R26),
-    # so a wrong value here silently reprograms the 3V3 rail
-    _sub(sb / BOM, r"^22k 0805,R26,", "47k 0805,R26,", count=1,
+    # so a wrong value here silently reprograms the 3V3 rail. Since the SW16
+    # respin the row is shared with R32 (Q2's gate pull-up, also 22k).
+    _sub(sb / BOM, r'^22k 0805,"R26,R32",', '47k 0805,"R26,R32",', count=1,
          flags=re.MULTILINE)
-    return "R26 22k -> 47k in the BOM — the 3V3 rail silently reprogrammed"
+    return "R26/R32 22k -> 47k in the BOM — the 3V3 rail silently reprogrammed"
 
 
 def f_release_drift(sb: Path):
