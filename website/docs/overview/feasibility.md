@@ -22,10 +22,10 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
 
 ```
                          +------------------+
-                         |                  |
-    USB-C ──────────────>│   IP5306 Module  │──── 5V rail
-                         │  (charge+boost)  │
-                         +--------+---------+
+                         |                  |  +5V_VOUT  +------+  +5V
+    USB-C ──────────────>│   IP5306 Module  │───────────| Q2   |───── (loads)
+                         │  (charge+boost)  │  SW16 ──► | PMOS |
+                         +--------+---------+  (gate)   +------+
                                   |
                           +-------+-------+
                           |               |

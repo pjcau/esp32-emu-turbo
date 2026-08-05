@@ -43,6 +43,12 @@ what caught the v4.3.1 rotation failure:
 3. Only then run the unpowered continuity checks (multimeter, USB-C
    unplugged, battery disconnected) as far as your tools allow, and plug
    the USB-C cable in.
+4. **On a respin board, set SW16 to ON before expecting anything to run.**
+   The switch gates every +5V load through Q2: with SW16 OFF the ESP32 has
+   no rail, USB only charges, and the bring-up firmware never boots — a
+   dark board with the switch OFF is not a fault. (On every board
+   fabricated before the respin the switch is inert and either position
+   works.)
 
 If the board draws no current or the USB device never enumerates, the
 firmware never gets to speak. That failure mode is covered by

@@ -58,20 +58,26 @@ make render-schematics    # Export SVG + PDF
 
 ```
                          ┌──────────────────┐
-                         │                  │
-    USB-C ──────────────>│   IP5306 Module  │──── 5V rail
-                         │  (charge+boost)  │
-                         └────────┬─────────┘
-                                  │
-                          ┌───────┴───────┐
-                          │               │
-                    ┌─────┴─────┐   ┌─────┴──────┐
-                    │ LiPo Batt │   │  SY8089    │
-                    │ 3.7V      │   │ 5V -> 3.3V │
-                    │ 5000 mAh  │   └─────┬──────┘
-                    │ (105080)  │         │
-                    └───────────┘         │ 3.3V
-                                          │
+                         │                  │   +5V_VOUT
+    USB-C ──────────────>│   IP5306 Module  │──────────────────┐
+                         │  (charge+boost)  │                  │
+                         └────────┬─────────┘                  ▼
+                                  │ BAT+                ┌────────────┐
+                          ┌───────┴───────┐             │ Q2 SI2301  │
+                          │ Q1 SI2301 RPP │   gate ────►│ high-side  │
+                          ├───────────────┤   SW16 +    │ P-MOSFET   │
+                          │ LiPo Batt     │   R32/R33/  └─────┬──────┘
+                          │ 3.7V 5000 mAh │   C32 net;        │
+                          │ (105080)      │   C33 → KEY       │
+                          └───────────────┘   (wake)          │
+                                                              │ +5V (loads)
+                                          ┌────────────────────┼─────────┐
+                                          │                    │         │
+                                    ┌─────┴──────┐       PAM8403 (U5)  R27 →
+                                    │  SY8089    │       + speaker     backlight
+                                    │ 5V -> 3.3V │
+                                    └─────┬──────┘
+                                          │ 3.3V
                               ┌───────────┴───────────┐
                               │   ESP32-S3-WROOM-1    │
                               │   N16R8 (240MHz ×2)   │
@@ -89,6 +95,9 @@ make render-schematics    # Export SVG + PDF
                                    │(D-/D+) │  │  -1 (v2)     │
                                    └────────┘  │  I2S → Audio │
                                                └──────────────┘
+
+  SW16 OFF: Q2 open → all +5V loads dead, USB still charges the cell.
+  SW16 ON:  C33 couples a wake pulse into IP5306 KEY, Q2 closes.
 ```
 
 ---

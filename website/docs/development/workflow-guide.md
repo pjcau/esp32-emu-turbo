@@ -245,12 +245,12 @@ After release:
     |
     '-- Layer 2: Domain-by-domain prose review (8 domains)
         |
-        |-- Step 1: Power chain (USB-C -> IP5306 -> SY8089 -> ESP32)
+        |-- Step 1: Power chain (USB-C -> IP5306 -> Q2 switch -> SY8089 -> ESP32)
         |-- Step 2: ESP32 boot (strapping pins, PSRAM mode)
         |-- Step 3: Display (ILI9488 8080 parallel, FPC)
         |-- Step 4: Audio (I2S PDM -> PAM8403 -> speaker)
         |-- Step 5: SD card (SPI 1-bit, TF-01A)
-        |-- Step 6: Buttons (12 + menu combo D1 + power switch)
+        |-- Step 6: Buttons (12 + menu combo D1; SW16 belongs to Step 1 since the respin)
         |-- Step 7: USB (native FS, CC pull-downs, ESD TVS)
         '-- Step 8: Emulator performance (PSRAM, DMA, LCD)
 

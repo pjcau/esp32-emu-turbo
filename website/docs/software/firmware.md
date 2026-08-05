@@ -22,7 +22,7 @@ Standalone ESP-IDF v5.x project in `software/` that validates all hardware befor
 | 1.4 | SD card (SPI mode) | `esp_vfs_fat_sdspi_mount`, FAT32, ROM directory scanner | ✅ Done |
 | 1.5 | 12-button input | GPIO polling @ 1ms, bitmask API, HW RC debounce | ✅ Done |
 | 1.6 | Audio output | `i2s_pdm_tx` PDM sigma-delta 32kHz 16-bit mono, 440Hz test tone. Only DOUT (GPIO17) is routed — BCLK/LRCK unused; the PAM8403 input RC network reconstructs the analog signal. | ✅ Done |
-| 1.7 | Power management | IP5306 I2C (0x75), battery %, charge status | ✅ Done |
+| 1.7 | Power management | **Not available on this board**: the IP5306's I2C is not routed (GPIO33/34 belong to the Octal PSRAM — see `board_config.h`). Charge state is the on-board LED only; `power.c` survives as a stub | ⚠️ N/A on hardware |
 
 ### Firmware project structure
 
@@ -39,7 +39,7 @@ software/
     ├── input.c/h               12 buttons, active-low, bitmask polling
     ├── sdcard.c/h              SPI @ 20MHz, FAT32, ROM listing
     ├── audio.c/h               I2S PDM TX (sigma-delta) → PAM8403 amplifier
-    └── power.c/h               IP5306 I2C battery level + charge status
+    └── power.c/h               stub — IP5306 I2C is NOT routed on this PCB (GPIO33/34 = Octal PSRAM)
 ```
 
 ### Build & flash (Docker)
@@ -62,7 +62,7 @@ Native ESP-IDF is also supported — see [`software/README.md`](https://github.c
 ### Test sequence on boot
 
 1. Display shows color bars for 3 seconds (verifies 8-bit data bus)
-2. IP5306 battery % and charge status (serial log)
+2. Power status line in the serial log (IP5306 I2C is not routed — no battery %/charge readout; charge state is the on-board LED only)
 3. All 12 button GPIOs initialized
 4. SD card mounted, ROM directories scanned
 5. 440 Hz test tone plays for 2 seconds

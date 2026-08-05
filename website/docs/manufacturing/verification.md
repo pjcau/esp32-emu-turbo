@@ -114,17 +114,17 @@ page is the single place the number is computed.
 ```
 LiPo 3.7V 5000mAh
   |
-  +--[IP5306 boost]--> +5V (387mA max)
-  |    |
-  |    +--[SY8089 buck]--> +3V3 (2A max)
-  |    |    |-- ESP32-S3 (200mA)
-  |    |    |-- Display (100mA)
-  |    |    +-- SD card (30mA)
-  |    |
-  |    +-- PAM8403 (50mA)
-  |    +-- LEDs (2.4mA)
+  +--[IP5306 boost]--> +5V_VOUT --[Q2 PMOS]--> +5V (387mA max)
+  |                       ^                     |
+  |          SW16 -> PWR_SW -> R33 ->           +--[SY8089 buck]--> +3V3 (2A max)
+  |          PWR_SW_GATE (R32/C32 to VOUT,      |    |-- ESP32-S3 (200mA)
+  |          C33 wake pulse -> IP5306_KEY)      |    |-- Display (100mA)
+  |                                             |    +-- SD card (30mA)
+  |                                             |
+  |                                             +-- PAM8403 (50mA)
+  |                                             +-- LEDs (2.4mA)
   |
-  +--[USB-C VBUS]--> charge input (1A max)
+  +--[USB-C VBUS]--> charge input (1A max)  (upstream of Q2: charges with SW16 OFF)
 ```
 
 ### Signal Timing
@@ -299,7 +299,7 @@ The I2S_BCLK / I2S_LRCK net reservation (nets 24/25) was retired on 2026-07-26 (
 | — | USB_CC1 | 48 | 3 | 0 | OK |
 | — | USB_CC2 | 49 | 3 | 2 | OK |
 
-### Power (5/5 routed)
+### Power (10/10 routed)
 
 | Signal | Net | Segments | Vias | Status |
 |:-------|:----|:---------|:-----|:-------|
@@ -309,6 +309,10 @@ The I2S_BCLK / I2S_LRCK net reservation (nets 24/25) was retired on 2026-07-26 (
 | +3V3 | 4 | 26 | 21 | OK |
 | BAT+ | 5 | 12 | 6 | OK |
 | LX | 46 | 3 | 0 | OK |
+| +5V_VOUT | 69 | 10 | 8 | OK |
+| PWR_SW | 70 | 17 | 7 | OK |
+| PWR_SW_GATE | 71 | 3 | 0 | OK |
+| IP5306_KEY | 47 | 5 | 0 | OK |
 
 ### Summary
 

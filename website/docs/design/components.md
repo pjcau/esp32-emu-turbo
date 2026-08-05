@@ -163,11 +163,14 @@ is computed.
 
 :::info Power architecture
 ```
-USB-C -> [IP5306] -> 5V -> [SY8089 buck] -> 3.3V -> ESP32-S3
-            |
-       [LiPo Battery]
+USB-C -> [IP5306] -> +5V_VOUT -> [Q2 PMOS] -> +5V -> [SY8089 buck] -> 3.3V -> ESP32-S3
+            |                        ^
+       [LiPo Battery]           SW16 (gate)
 ```
-The IP5306 manages battery charge/discharge and provides a stable 5V output. The SY8089AAAC synchronous buck steps it down to 3.3V at ~93% efficiency. A linear regulator was used up to v1: at 5V in / 3.3V out it can only ever be 66% efficient, dissipating ~0.46W typical and ~1.0W at peak inside a sealed enclosure. The buck dissipates ~0.07W for the same load.
+The IP5306 manages battery charge/discharge and provides a stable 5V output on
+`+5V_VOUT`. Since the SW16 respin, the high-side P-MOSFET **Q2** separates that
+boost output from the `+5V` load rail: SW16 only drives Q2's gate, so OFF kills
+every load while USB charging (upstream of Q2) keeps working. The SY8089AAAC synchronous buck steps it down to 3.3V at ~93% efficiency. A linear regulator was used up to v1: at 5V in / 3.3V out it can only ever be 66% efficient, dissipating ~0.46W typical and ~1.0W at peak inside a sealed enclosure. The buck dissipates ~0.07W for the same load.
 :::
 
 ---
@@ -272,37 +275,37 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 | J1 | USB-C 16-pin | `USB-C-SMD-16P` | [C2765186](https://www.lcsc.com/product-detail/C2765186.html) | 1 | USB-C receptacle, 16-pin | [PDF](/datasheets/J1_USB-C-16pin_C2765186.pdf) |
 | U6 | Micro SD Card Slot | `TF-01A` | [C91145](https://www.lcsc.com/product-detail/C91145.html) | 1 | microSD slot (TF-01A) — ROM storage | [PDF](/datasheets/U6_TF-01A_MicroSD_C91145.pdf) |
 | J3 | JST PH 2-pin SMD | `JST-PH-2P-SMD` | [C295747](https://www.lcsc.com/product-detail/C295747.html) | 1 | JST PH battery connector | — |
-| LED1 | Red LED 0805 | `LED_0805` | [C84256](https://www.lcsc.com/product-detail/C84256.html) | 1 | red LED — charging indicator | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
-| LED2 | Red LED 0805 | `LED_0805` | [C19171391](https://www.lcsc.com/product-detail/C19171391.html) | 1 | green LED — fully-charged indicator | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
+| LED1 | Red LED 0805 | `LED_0805` | [C84256](https://www.lcsc.com/product-detail/C84256.html) | 1 | red LED (LED1) — power indicator on +3V3 (U2's LED pins are NC) | [PDF](/datasheets/LED1_Red-LED-0805_C84256.pdf) |
+| LED2 | Red LED 0805 | `LED_0805` | [C19171391](https://www.lcsc.com/product-detail/C19171391.html) | 1 | red LED — LED2 power indicator / LED3-6 diagnostics; YLED0805R is red despite the old 'green' label | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
 | L1 | 1uH 4.5A Inductor | `SMD-4x4x2mm` | [C280579](https://www.lcsc.com/product-detail/C280579.html) | 1 | L1 — IP5306 boost inductor | [PDF](/datasheets/L1_1uH-Inductor_C280579.pdf) |
 | L2 | 2.2uH 2.95A Inductor | `IND-SMD-4.0x4.0` | [C36409](https://www.lcsc.com/product-detail/C36409.html) | 1 | L2 — SY8089 buck output inductor | — |
 | R1,R2 | 5.1k 0805 | `R_0805` | [C27834](https://www.lcsc.com/product-detail/C27834.html) | 2 | CC1/CC2 pull-downs — USB-C UFP detection | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
 | R3,R4,R5,R6,R7,R8,R9,R10,R11,R12,R13,R15 | 10k 0805 | `R_0805` | [C17414](https://www.lcsc.com/product-detail/C17414.html) | 12 | button pull-ups + R3 EN pull-up (R25-CRIT-1 fix) | [PDF](/datasheets/R3-R15_10k-0805_C17414.pdf) |
 | R20,R21 | 20k 0805 | `R_0805` | [C4328](https://www.lcsc.com/product-detail/C4328.html) | 2 | PAM8403 INL/INR input bias | — |
-| R24,R25 | 100k 0805 | `R_0805` | [C149504](https://www.lcsc.com/product-detail/C149504.html) | 2 | R16 KEY pull-up, R24 Q1 gate, R25 buck feedback (upper) | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
-| R26,R32 | 22k 0805 | `R_0805` | [C17560](https://www.lcsc.com/product-detail/C17560.html) | 2 | R26 — buck feedback divider (lower) | — |
+| R24,R25 | 100k 0805 | `R_0805` | [C149504](https://www.lcsc.com/product-detail/C149504.html) | 2 | R24 Q1 gate pull-down, R25 buck feedback (upper) — R16 deleted in the SW16 respin | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
+| R26,R32 | 22k 0805 | `R_0805` | [C17560](https://www.lcsc.com/product-detail/C17560.html) | 2 | R26 buck feedback (lower), R32 Q2 gate pull-up (default OFF) | — |
 | C29 | 22pF 0805 C0G | `C_0805` | [C1804](https://www.lcsc.com/product-detail/C1804.html) | 1 | C29 — buck feedback feedforward | — |
-| R17,R18,R33 | 1k 0805 | `R_0805` | [C17513](https://www.lcsc.com/product-detail/C17513.html) | 3 | LED series resistors | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
+| R17,R18,R33 | 1k 0805 | `R_0805` | [C17513](https://www.lcsc.com/product-detail/C17513.html) | 3 | R17/R18 LED series resistors + R33 Q2 series gate resistor (soft-start slope) | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | C3,C4,C5,C6,C7,C8,C9,C10,C11,C12,C13,C14,C15,C16,C21,C26,C31 | 100nF 0805 | `C_0805` | [C49678](https://www.lcsc.com/product-detail/C49678.html) | 17 | decoupling + C31 EN reset cap (R25-CRIT-1 fix) | [PDF](/datasheets/C3-C16_100nF-0805_C49678.pdf) |
 | C22 | 0.47uF 0805 | `C_0805` | [C13967](https://www.lcsc.com/product-detail/C13967.html) | 1 | C22 — DC-blocking into PAM8403 | — |
-| C23,C24,C25,C32 | 1uF 0805 | `C_0805` | [C28323](https://www.lcsc.com/product-detail/C28323.html) | 4 | PAM8403 VDD/PVDD decoupling | — |
-| C33 | 4.7uF 0805 | `C_0805` | [C1779](https://www.lcsc.com/product-detail/C1779.html) | 1 |  | — |
+| C23,C24,C25,C32 | 1uF 0805 | `C_0805` | [C28323](https://www.lcsc.com/product-detail/C28323.html) | 4 | PAM8403 VDD/PVDD decoupling + C32 Q2 gate-source soft-start cap | — |
+| C33 | 4.7uF 0805 | `C_0805` | [C1779](https://www.lcsc.com/product-detail/C1779.html) | 1 | C33 — IP5306 KEY wake cap (couples the SW16 ON transition into KEY) | — |
 | C17,C18,C27 | 10uF 0805 | `C_0805` | [C15850](https://www.lcsc.com/product-detail/C15850.html) | 3 | bulk decoupling | [PDF](/datasheets/C1-C18_10uF-0805_C15850.pdf) |
 | C1,C19,C30 | 22uF 1206 MLCC | `C_1206` | [C12891](https://www.lcsc.com/product-detail/C12891.html) | 3 | C1 buck input, C19 boost output, C30 buck output | [PDF](/datasheets/C2-C19_22uF-1206_C12891.pdf) |
 | SW1,SW2,SW3,SW4,SW5,SW6,SW7,SW8,SW9,SW10,SW11,SW12,SW13,SW15,SW14 | SMT Tact Switch 5.1x5.1mm | `SW-SMD-5.1x5.1` | [C318884](https://www.lcsc.com/product-detail/C318884.html) | 15 | tact switches — D-pad, ABXY, Start/Select, L/R, Menu, RST, BOOT | [PDF](/datasheets/SW1-SW13_Tact-Switch_C318884.pdf) |
 | J4 | FPC 40-pin 0.5mm Bottom Contact | `FPC-40P-0.5mm` | [C2856812](https://www.lcsc.com/product-detail/C2856812.html) | 1 | FPC 40-pin 0.5 mm — ILI9488 display | [PDF](/datasheets/J4_FPC-40pin-0.5mm_C2856812.pdf) |
-| SW16 | Slide Switch SS-12D00G3 | `SS-12D00G3` | [C431540](https://www.lcsc.com/product-detail/C431540.html) | 1 | SS-12D00G3 slide switch (SW16) | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
+| SW16 | Slide Switch SS-12D00G3 | `SS-12D00G3` | [C431540](https://www.lcsc.com/product-detail/C431540.html) | 1 | SW16 slide switch (MSK12C02) — drives Q2's gate; carries no rail current | [PDF](/datasheets/SW16_Slide-Switch_C431540.pdf) |
 | U4 | USBLC6-2SC6 USB ESD TVS | `SOT-23-6` | [C7519](https://www.lcsc.com/product-detail/C7519.html) | 1 | USBLC6-2SC6 — USB ESD/TVS protection | — |
 | R22,R23 | 22R 0402 | `R_0402` | [C25092](https://www.lcsc.com/product-detail/C25092.html) | 2 | USB D+/D- series termination | — |
 | R27 | 20R 1206 | `R_1206` | [C17955](https://www.lcsc.com/product-detail/C17955.html) | 1 | R27 — backlight series resistor, +5V -> LED_BLA (R25-HIGH-1 fix) | — |
 | F1 | PTC Resettable Fuse 2A 1812 | `F_1812` | [C960026](https://www.lcsc.com/product-detail/C960026.html) | 1 | F1 — VBUS PTC fuse, 2A hold / 4A trip (R3-HIGH-4 fix) | — |
 | D1 | BAT54C Dual Schottky Diode | `SOT-23` | [C37704](https://www.lcsc.com/product-detail/C37704.html) | 1 | BAT54C — dual Schottky, menu-combo diode OR | — |
-| Q1,Q2 | SI2301CDS P-Channel MOSFET | `SOT-23` | [C10487](https://www.lcsc.com/product-detail/C10487.html) | 2 | SI2301CDS — P-MOSFET reverse-battery protection | — |
-| LED3,LED4,LED5,LED6 | Red LED 0805 (bring-up diagnostic, DNP in production) | `LED_0805` | [C19171391](https://www.lcsc.com/product-detail/C19171391.html) | 4 | green LED — fully-charged indicator | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
+| Q1,Q2 | SI2301CDS P-Channel MOSFET | `SOT-23` | [C10487](https://www.lcsc.com/product-detail/C10487.html) | 2 | SI2301CDS — Q1 reverse-battery protection, Q2 +5V high-side load switch (SW16 respin) | — |
+| LED3,LED4,LED5,LED6 | Red LED 0805 (bring-up diagnostic, DNP in production) | `LED_0805` | [C19171391](https://www.lcsc.com/product-detail/C19171391.html) | 4 | red LED — LED2 power indicator / LED3-6 diagnostics; YLED0805R is red despite the old 'green' label | [PDF](/datasheets/LED2_Red-LED-0805_C19171391.pdf) |
 | R28,R29 | 5.1k 0805 (bring-up diagnostic, DNP in production) | `R_0805` | [C27834](https://www.lcsc.com/product-detail/C27834.html) | 2 | CC1/CC2 pull-downs — USB-C UFP detection | [PDF](/datasheets/R1-R2_5.1k-0805_C27834.pdf) |
-| R30,R31 | 1k 0805 (bring-up diagnostic, DNP in production) | `R_0805` | [C17513](https://www.lcsc.com/product-detail/C17513.html) | 2 | LED series resistors | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
+| R30,R31 | 1k 0805 (bring-up diagnostic, DNP in production) | `R_0805` | [C17513](https://www.lcsc.com/product-detail/C17513.html) | 2 | R17/R18 LED series resistors + R33 Q2 series gate resistor (soft-start slope) | [PDF](/datasheets/R17-R18_1k-0805_C17513.pdf) |
 | R34 | 1M 0805 | `R_0805` | [C17514](https://www.lcsc.com/product-detail/C17514.html) | 1 |  | — |
-| SW17 | TS-1088 (SMD momentary switch 3.9x3.0mm; DO NOT PLACE - manual IP5306 KEY wake, fit only if the C33 RC needs it) | `SW-SMD-2P-TS1088` | [C720477](https://www.lcsc.com/product-detail/C720477.html) | 1 |  | — |
+| SW17 | TS-1088 (SMD momentary switch 3.9x3.0mm; DO NOT PLACE - manual IP5306 KEY wake, fit only if the C33 RC needs it) | `SW-SMD-2P-TS1088` | [C720477](https://www.lcsc.com/product-detail/C720477.html) | 1 | SW17 — manual KEY wake, DO NOT PLACE (fit only if the C33 pulse is short) | — |
 
 <!-- BOM:END -->
 
