@@ -181,5 +181,6 @@ class SchematicSheet:
     def flag(self, x, y):
         self.parts.append(self.ctx.pwr_flag(x, y))
 
-    def sym(self, lib, ref, val, x, y, pins, angle=0):
-        self.parts.append(self.ctx.symbol(lib, ref, val, x, y, pins, angle))
+    def sym(self, lib, ref, val, x, y, pins, angle=0, fields=None):
+        self.parts.append(
+            self.ctx.symbol(lib, ref, val, x, y, pins, angle, fields))

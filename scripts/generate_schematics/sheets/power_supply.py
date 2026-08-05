@@ -15,7 +15,7 @@ class PowerSupplySheet(SchematicSheet):
     needed_symbols = [
         "USB_C", "IP5306", "SY8089AAAC", "Conn_JST_PH_2",
         "Battery", "C", "R", "L", "SW_Push", "LED",
-        "USBLC6_2SC6", "BAT54C", "PWR_FLAG",
+        "USBLC6_2SC6", "PMOS_SOT23", "PWR_FLAG",
     ]
 
     def build(self):
@@ -30,7 +30,10 @@ class PowerSupplySheet(SchematicSheet):
         # USB-C CONNECTOR (left side)
         # ═══════════════════════════════════════════════
         ux, uy = 50, 85
-        self.sym("USB_C", "J1", "USB_C", ux, uy, range(1, 7))
+        # Value stacked ABOVE with the reference: at the default y+_fo it
+        # printed across the GND pin-6 number below the body.
+        self.sym("USB_C", "J1", "USB_C", ux, uy, range(1, 7),
+                 fields={"ref": (0, -10.6), "val": (0, -8.4)})
 
         # Pin world positions (local y inverted):
         #   VBUS: (ux+7.62, uy-3.81)
@@ -44,10 +47,12 @@ class PowerSupplySheet(SchematicSheet):
         vbus_y = uy - 3.81
 
         # D+ / D- labels exiting USB-C (pre-protection nets)
-        self.glabel("USB_D+", ux - 12, uy - 3.81, 180)
-        self.wire(ux - 7.62, uy - 3.81, ux - 12, uy - 3.81)
-        self.glabel("USB_D-", ux - 12, uy, 180)
-        self.wire(ux - 7.62, uy, ux - 12, uy)
+        # Stubs long enough that the label text clears the D+/D- pin
+        # numbers just inside the connector body.
+        self.glabel("USB_D+", ux - 15, uy - 3.81, 180)
+        self.wire(ux - 7.62, uy - 3.81, ux - 15, uy - 3.81)
+        self.glabel("USB_D-", ux - 15, uy, 180)
+        self.wire(ux - 7.62, uy, ux - 15, uy)
 
         # ── USB ESD protection (R4-HIGH-1 fix) ──
         # The PCB (scripts/generate_pcb/routing.py) places USBLC6-2SC6
@@ -65,7 +70,12 @@ class PowerSupplySheet(SchematicSheet):
         # well clear of the CHARGING LEDs (x>=250) and of the AMS1117
         # regulator row (y>=190) below.
         u4x, u4y = 60, 140
-        self.sym("USBLC6_2SC6", "U4", "USBLC6-2SC6", u4x, u4y, range(1, 7))
+        # Reference pushed up-left of the pin-5 (VBUS, top) stub and its
+        # number; Value offset right of the pin-2 (GND, bottom) stub — the
+        # centred defaults printed across both pin numbers.
+        self.sym("USBLC6_2SC6", "U4", "USBLC6-2SC6", u4x, u4y, range(1, 7),
+                 fields={"ref": (-4.6, -8.4, "right"),
+                         "val": (1.6, 9.2, "left")})
         self.text("USB ESD TVS", u4x - 20, u4y - 16, 1.5)
         # The USBLC6_2SC6 library symbol in this generator uses the
         # simple 6-pin pad layout (pins on the left/right edges). We
@@ -128,8 +138,10 @@ class PowerSupplySheet(SchematicSheet):
         # The "R" symbol has pin 1 on top and pin 2 at the bottom, so the
         # MCU-side label goes above and the connector-side label below.
         r22x, r22y = u4x + 30, u4y - 6
+        # No "D+ 22Ω" annotation text: the side-placed Value ("22") plus the
+        # USB_DP_MCU/USB_D+ labels on the stubs already say everything the
+        # text said, and the text sat exactly where the Value now prints.
         self.sym("R", "R22", "22",  r22x, r22y, ["1", "2"])
-        self.text("D+ 22Ω", r22x + 4, r22y, 1.5)
         self.wire(r22x, r22y - 3.81, r22x, r22y - 8)
         self.glabel("USB_DP_MCU", r22x, r22y - 8, 90)
         self.wire(r22x, r22y + 3.81, r22x, r22y + 8)
@@ -137,7 +149,6 @@ class PowerSupplySheet(SchematicSheet):
 
         r23x, r23y = u4x + 46, u4y - 6
         self.sym("R", "R23", "22",  r23x, r23y, ["1", "2"])
-        self.text("D- 22Ω", r23x + 4, r23y, 1.5)
         self.wire(r23x, r23y - 3.81, r23x, r23y - 8)
         self.glabel("USB_DM_MCU", r23x, r23y - 8, 90)
         self.wire(r23x, r23y + 3.81, r23x, r23y + 8)
@@ -176,9 +187,13 @@ class PowerSupplySheet(SchematicSheet):
         # IP5306 BARE IC (eSOP-8)
         # ═══════════════════════════════════════════════
         ipx, ipy = 160, 85
+        # Both fields stacked ABOVE the body (no pins leave the top edge):
+        # the default Value position below printed across the GND pin-9
+        # number.
         self.sym(
             "IP5306", "U2", "IP5306",
             ipx, ipy, range(1, 10),
+            fields={"ref": (0, -12.2), "val": (0, -9.9)},
         )
 
         # IP5306 pin world positions:
@@ -252,7 +267,9 @@ class PowerSupplySheet(SchematicSheet):
         for led_y in [ipy - 2.54, ipy, ipy + 2.54]:
             self.nc(led1_x - 2, led_y)
             self.wire(led1_x, led_y, led1_x - 2, led_y)
-        self.text("NC (LED1-3)", ipx - 22, ipy - 4, 1.5)
+        # Left of the NC markers and clear of the LED1 pin-2 number, which
+        # the previous (ipx - 22, ipy - 4) anchor ran straight into.
+        self.text("NC (LED1-3)", ipx - 26, ipy - 6.5, 1.5)
 
         # ---- IP5306 GND ----
         self.gnd(ipx, gnd_ip_y + 4)
@@ -275,7 +292,7 @@ class PowerSupplySheet(SchematicSheet):
         # symmetric two-terminal part whose pad 1 is at the other end; the
         # body is a symmetric rectangle, so the sheet looks identical.
         self.sym("L", "L1", "1uH", l1_x, l1_y, ["1", "2"], 180)
-        self.text("1uH >4.5A", l1_x + 3, l1_y - 3, 1.5)
+        self.text(">4.5A sat, shielded", l1_x + 3, l1_y - 6.5, 1.5)
         # After the rotation: pin 2 (top) at (l1_x, l1_y - 3.81)
         #                     pin 1 (bottom) at (l1_x, l1_y + 3.81)
         # BAT -> L1 bottom: horizontal then vertical
@@ -328,9 +345,10 @@ class PowerSupplySheet(SchematicSheet):
         # bottom/GND terminal, so schematic and PCB agree on which pad
         # is which.
         self.sym("C", "C27", "10uF", c27_x, c27_y, ["1", "2"], angle=180)
-        # BELOW the cap, not above: above at c27_x-3 collided with the rail
-        # label. Underneath is empty (the GND symbol prints no visible text).
-        self.text("HF bypass", c27_x - 5, c27_y + 13, 1.5)
+        # East of the cap, above Q1's BAT_IN exit: below at c27_x-5 it ran
+        # into Q1's side-placed Value, above at c27_x-3 it collided with
+        # the rail label.
+        self.text("HF bypass", c27_x + 4, c27_y + 9.5, 1.5)
         self.wire(c27_x, vout_turn_y, c27_x, c27_y - 3.81)
         self.gnd(c27_x, c27_y + 8)
         self.wire(c27_x, c27_y + 3.81, c27_x, c27_y + 8)
@@ -360,9 +378,10 @@ class PowerSupplySheet(SchematicSheet):
         cbat_x = 185
         cbat_y = 108
         self.sym("C", "C18", "10uF", cbat_x, cbat_y, ["1", "2"])
-        # Label placed to the LEFT of the cap to keep the right side
-        # (which points toward Q1/J3) completely clear.
-        self.text("BAT bypass", cbat_x - 16, cbat_y - 8, 1.5)
+        # Between the IP5306_KEY label column (x<=171.5, hanging down off
+        # U2's KEY pin) and C18's own body — the old cbat_x-16 anchor now
+        # sits inside that label's text run.
+        self.text("BAT bypass", cbat_x - 11, cbat_y - 8, 1.5)
         # Tee down from BAT wire at y=bat_y
         self.wire(cbat_x, bat_y, cbat_x, cbat_y - 3.81)
         self.gnd(cbat_x, cbat_y + 8)
@@ -379,22 +398,28 @@ class PowerSupplySheet(SchematicSheet):
         # afford. C33 (in the switch block) drives KEY now, and it took over
         # R16's footprint site and its routing on the board.
         #
-        # KEY leaves by label. Points UP, not right: a rightward stub
-        # extends the KEY horizontal past x=185, where C18's tap crosses it
-        # (see the CBAT comment). GLOBAL, and named IP5306_KEY to match the
-        # board's net — a local label is scoped to the sheet, so KiCad
-        # exported it as "/Power Supply/KEY" while the PCB called the same
-        # node IP5306_KEY.
-        self.link("IP5306_KEY", key_x, key_y, 90, glob=True)
+        # KEY leaves by label. Points DOWN: rightward the stub extends the
+        # KEY horizontal past x=185, where C18's tap crosses it (see the
+        # CBAT comment), and UP the rotated label text ran the length of
+        # U2's right edge, printing across the SW pin name and the pin 7/8
+        # numbers (verify_schematic_overlaps: "SW × IP5306_KEY"). Below the
+        # KEY pin is empty down to R24's zone at y=104. GLOBAL, and named
+        # IP5306_KEY to match the board's net — a local label is scoped to
+        # the sheet, so KiCad exported it as "/Power Supply/KEY" while the
+        # PCB called the same node IP5306_KEY.
+        self.link("IP5306_KEY", key_x, key_y, 270, glob=True)
 
         # ---- Battery: JST PH connector + Q1 P-MOSFET RPP + Battery symbol ----
         # JST PH 2-pin connector — pushed further right on A3 landscape
         # so the JST/BT1 pair have room to breathe and the Q1 label
         # cluster doesn't run into them.
         jst_x, jst_y = 268, 92
+        # Value nudged right+down: centred it printed across the pin-1
+        # number on the connector's left edge.
         self.sym(
             "Conn_JST_PH_2", "J3", "JST PH 2-pin",
             jst_x, jst_y, ["1", "2"],
+            fields={"val": (2.0, 8.0, "left")},
         )
         # JST pin1 "+" at (jst_x - 6.35, jst_y - 1.27)
         # JST pin2 "-" at (jst_x - 6.35, jst_y + 1.27)
@@ -417,14 +442,17 @@ class PowerSupplySheet(SchematicSheet):
         # polarity, so no working board could ever have shown the
         # difference.
         q1x, q1y = 210, 92
-        self.sym("BAT54C", "Q1", "SI2301CDS", q1x, q1y, ["1", "2", "3"])
-        # NOTE: reusing BAT54C symbol footprint (SOT-23-3) for Q1 P-MOSFET
-        # Pin mapping: 1=Gate(bottom-left)=RPP_GATE,
-        #              2=Source(bottom-right)=BAT+, 3=Drain(top)=BAT_IN
-        # Two-line annotation ABOVE the symbol with 3mm vertical spacing
-        # so the lines don't touch each other or the symbol's Value text.
+        # PMOS_SOT23 replaces the BAT54C stand-in: same pin coordinates
+        # (1=Gate left, 2=Source right, 3=Drain top — wires unchanged), but
+        # the artwork is now actually a P-MOSFET instead of a dual Schottky,
+        # which is what a reviewer sees. Fields to the RIGHT of the body:
+        # centred above/below they collided with the pin-3 number and the
+        # RPP_GATE label. The Value already names the part, so the old
+        # "(SI2301CDS)" annotation text is gone.
+        self.sym("PMOS_SOT23", "Q1", "SI2301CDS", q1x, q1y, ["1", "2", "3"],
+                 fields={"ref": (6.9, -3.2, "left"),
+                         "val": (6.9, -0.8, "left")})
         self.text("P-MOSFET RPP", q1x + 8, q1y - 26, 1.5)
-        self.text("(SI2301CDS)",  q1x - 6, q1y - 12, 1.5)
 
         # The BAT+ rail (L1.1, C18.1, U2.6, SW16.1) now ENDS at its own
         # global label instead of running into Q1's top pin: after
@@ -490,7 +518,9 @@ class PowerSupplySheet(SchematicSheet):
         # GLOBAL label so the net exports as "RPP_GATE", not
         # "/Power Supply/RPP_GATE". angle=180 extends the text LEFT —
         # rightward it lands on Q1's symbol body.
-        self.glabel("RPP_GATE", r24x, q1y + 1.27, 180)
+        # Mid-span on R24's own vertical, 3 mm below the corner: on the
+        # horizontal run the label text reached Q1's pin-1 number.
+        self.glabel("RPP_GATE", r24x, q1y + 3.5, 180)
         # R24 pin 2 to GND
         self.gnd(r24x, r24y + 8)
         self.wire(r24x, r24y + 3.81, r24x, r24y + 8)
@@ -502,20 +532,21 @@ class PowerSupplySheet(SchematicSheet):
         # Battery symbol (off-board representation) — pushed further
         # right to match the moved JST connector.
         bt_x, bt_y = 315, 90
+        # The two annotation texts that used to repeat the Value ("105080",
+        # "3.7V 5000mAh") are gone: they sat exactly where the side-placed
+        # Value prints now, and the cell code lives in the docs table.
         self.sym(
             "Battery", "BT1", "LiPo 3.7V 5000mAh",
             bt_x, bt_y, ["1", "2"],
         )
-        self.text("105080", bt_x + 5, bt_y - 3, 1.5)
-        self.text("3.7V 5000mAh", bt_x + 5, bt_y + 1, 1.5)
         # BT1 pin "+" at (bt_x, bt_y - 3.81)
         # BT1 pin "-" at (bt_x, bt_y + 3.81)
         # J3 <-> BT1 continuity comes from the BAT_IN global labels (one
         # on the Q1->J3 run, one here). The old extra stub at jst_x+3.81
         # started on no pin — J3's pins are both on its LEFT side — and
         # dangled for as long as it existed (ERC unconnected_wire_endpoint).
-        self.glabel("BAT_IN", bt_x - 5, bt_y - 3.81, 180)
-        self.wire(bt_x - 5, bt_y - 3.81, bt_x, bt_y - 3.81)
+        self.glabel("BAT_IN", bt_x - 8, bt_y - 3.81, 180)
+        self.wire(bt_x - 8, bt_y - 3.81, bt_x, bt_y - 3.81)
         # Battery GND
         self.gnd(bt_x, bt_y + 8)
         self.wire(bt_x, bt_y + 3.81, bt_x, bt_y + 8)
@@ -545,8 +576,12 @@ class PowerSupplySheet(SchematicSheet):
         en_y = u3y + 2.54     # world Y of the EN pin (local -2.54)
 
         c1x, c1y = 75, 206.27
-        self.sym("C", "C1", "22uF", c1x, c1y, ["1", "2"])
-        self.text("C_IN", c1x - 11, c1y - 2, 1.5)
+        # Fields on the LEFT: the +5V power symbol feeding U3's EN pin sits
+        # right of this cap and the side-placed defaults printed into it.
+        self.sym("C", "C1", "22uF", c1x, c1y, ["1", "2"],
+                 fields={"ref": (-2.9, -1.8, "right"),
+                         "val": (-2.9, 1.8, "right")})
+        self.text("C_IN", c1x - 11, c1y - 6, 1.5)
         self.v5(c1x, 196)
         self.wire(c1x, 196, c1x, in_y)           # +5V rail down to C1 pin 1
         self.wire(c1x, in_y, u3x - 8.89, in_y)   # +5V rail across to U3 IN
@@ -554,9 +589,12 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(c1x, c1y + 3.81, c1x, 216)
 
         # ── SY8089AAAC ──────────────────────────────────────────
+        # Fields stacked ABOVE (no pins on the top edge): the default
+        # Value position printed across the GND pin-2 number below.
         self.sym(
             "SY8089AAAC", "U3", "SY8089AAAC",
             u3x, u3y, ["1", "2", "3", "4", "5"],
+            fields={"ref": (0, -9.7), "val": (0, -7.4)},
         )
         # EN tied high to the input rail. Datasheet: "Pull high (>1.5V) to
         # turn on. Do not float." EN abs-max is Vin+0.6V, so a hard tie to
@@ -564,7 +602,7 @@ class PowerSupplySheet(SchematicSheet):
         # is only needed when EN is driven from a high-impedance source.
         self.v5(80, en_y)
         self.wire(80, en_y, u3x - 8.89, en_y)
-        self.text("EN tied to VIN (always on)", 46, en_y - 11, 1.5)
+        self.text("EN tied to VIN (always on)", 40, en_y - 11, 1.5)
         # GND
         self.gnd(u3x, u3y + 15)
         self.wire(u3x, u3y + 7.62, u3x, u3y + 15)
@@ -572,7 +610,9 @@ class PowerSupplySheet(SchematicSheet):
         # ── Switch node -> inductor ─────────────────────────────
         l2x, l2y = 125, 206.27
         self.sym("L", "L2", "2.2uH", l2x, l2y, ["1", "2"])
-        self.text("Isat 2.95A", l2x + 4, l2y + 2, 1.5)
+        # Above the inductor: at l2x+4 it sat exactly where the side-placed
+        # Value ("2.2uH") prints now.
+        self.text("Isat 2.95A", l2x + 2, l2y - 6.5, 1.5)
         # LX -> L2 pin 2. The horizontal run is split at x=117 so the
         # BUCK_LX global label sits on a wire ENDPOINT (a floating label
         # would leave the net unnamed and break the schematic<->PCB net
@@ -592,7 +632,7 @@ class PowerSupplySheet(SchematicSheet):
         # reversed, and 2.9 ohm ESR is unusable at 1MHz anyway.
         c30x, c30y = 150, 206.27
         self.sym("C", "C30", "22uF", c30x, c30y, ["1", "2"])
-        self.text("C_OUT (MLCC)", c30x + 4, c30y - 2, 1.5)
+        self.text("C_OUT (MLCC)", c30x + 1, c30y - 6.5, 1.5)
         self.wire(l2x, in_y, c30x, in_y)          # L2 pin 1 -> C30 pin 1
         self.gnd(c30x, 216)
         self.wire(c30x, c30y + 3.81, c30x, 216)
@@ -772,8 +812,11 @@ class PowerSupplySheet(SchematicSheet):
         self.wire(288, 236.19, 288, pwr_sw_y)
         self.wire(288, 243.81, 288, 248)
         self.glabel("IP5306_KEY", 288, 248, 270)
-        self.text("wake pulse", 293, 244, 1.5)
-        self.text("BENCH-VALIDATE", 291, 247, 1.5)
+        # East of C33 and clear of both the side-placed Value and the
+        # IP5306_KEY label hanging below — the old anchors printed across
+        # both (verify_schematic_overlaps: "IP5306_KEY × BENCH-VALIDATE").
+        self.text("wake pulse", 294, 244.5, 1.5)
+        self.text("BENCH-VALIDATE", 294, 247.5, 1.5)
 
         # ── SW17: the manual KEY wake button (DNP) ──────
         # Insurance for the C33 RC above. If the coupled pulse turns out
@@ -860,11 +903,16 @@ class PowerSupplySheet(SchematicSheet):
         # OFF state; wired the other way round the loads would stay powered
         # through the diode whatever the gate did.
         q2x, q2y = 293, 213.73
-        self.sym("BAT54C", "Q2", "SI2301CDS", q2x, q2y, ["1", "2", "3"])
+        # PMOS_SOT23 — same pin coordinates as the BAT54C stand-in it
+        # replaces (wires unchanged), real transistor artwork. Fields to the
+        # right, above the pin-2 stub's top end.
+        self.sym("PMOS_SOT23", "Q2", "SI2301CDS", q2x, q2y, ["1", "2", "3"],
+                 fields={"ref": (6.9, -4.6, "left"),
+                         "val": (6.9, -2.2, "left")})
         # Annotation pushed east of the source stub: at q2x+6 it sat on the
         # "+5V_VOUT" label hanging off pin 2.
         self.text("P-MOSFET load switch", q2x + 12, q2y + 14, 1.5)
-        self.text("(SI2301CDS, same as Q1)", q2x + 12, q2y + 17, 1.5)
+        self.text("(same part as Q1)", q2x + 12, q2y + 17, 1.5)
 
         # Pin 2 (Source, bottom-right) -> +5V_VOUT. Exits DOWNWARD: run
         # east and it draws as one straight line through the transistor,
@@ -890,11 +938,13 @@ class PowerSupplySheet(SchematicSheet):
         # C19 22uF — the load-rail bulk. It used to hang off the VOUT rail
         # next to C27; it belongs on THIS side of the switch, because the
         # inrush it has to supply is drawn by the loads when Q2 turns on.
-        self.sym("C", "C19", "22uF", 309, 212, ["1", "2"])
-        self.wire(309, 208.19, 309, 204)
-        self.junction(309, 204)
-        self.gnd(309, 220)
-        self.wire(309, 215.81, 309, 220)
+        # At x=309 the cap's plates sat under Q2's side-placed Value text;
+        # x=313 clears it and stays left of the +5V rail label at 315.
+        self.sym("C", "C19", "22uF", 313, 212, ["1", "2"])
+        self.wire(313, 208.19, 313, 204)
+        self.junction(313, 204)
+        self.gnd(313, 220)
+        self.wire(313, 215.81, 313, 220)
 
         # ═══════════════════════════════════════════════
         # CHARGING LEDs (driven by IP5306 LED outputs)

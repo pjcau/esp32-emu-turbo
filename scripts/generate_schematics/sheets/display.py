@@ -173,8 +173,11 @@ class DisplaySheet(SchematicSheet):
 
         # --- FPC Connector (physical connector on PCB back) ---
         fpc_x, fpc_y = 260, 120
-        self.text("FPC RIBBON CONNECTOR (J4)", fpc_x - 15, fpc_y - 25, 2, True)
-        self.text("(40P on PCB, 16 active signals shown)", fpc_x - 45, fpc_y - 23, 1.5)
+        # Two clearly separated lines, both ABOVE J4's reference field —
+        # the old anchors printed the subtitle through both the title and
+        # the "J4" text (verify_schematic_overlaps).
+        self.text("FPC RIBBON CONNECTOR (J4)", fpc_x - 25, fpc_y - 28, 2, True)
+        self.text("(40P on PCB, 16 active signals shown)", fpc_x - 25, fpc_y - 24.5, 1.5)
         # 16 PINS DRAWN, 40-PIN VALUE, and both are deliberate: the symbol is
         # a simplification of the drawing, the value names the part that is
         # actually fitted (C2856812, the BOM's "FPC 40-pin 0.5mm Bottom

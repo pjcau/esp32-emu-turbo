@@ -168,6 +168,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_via_in_pad \
 	verify_zone_connectivity \
 	verify_schematic_overlaps \
+	verify_schematic_render_overlaps \
 	verify_zone_fill_sanity
 
 verify-all: ## Run every pass/fail verification script (fails if any check fails)
@@ -328,6 +329,9 @@ verify-isolation: ## Isolation gate — 13 checks: connected where intended, iso
 
 verify-sch-overlaps: ## Fail when a label, junction or text overlaps another item (unreadable schematic)
 	@$(T) verify-sch-overlaps python3 scripts/verify_schematic_overlaps.py
+
+verify-sch-render-overlaps: ## Fail when two RENDERED schematic text runs overlap (kicad-cli SVG ground truth)
+	@$(T) verify-sch-render-overlaps python3 scripts/verify_schematic_render_overlaps.py
 
 verify-easyeda: ## Verify every BOM footprint vs EasyEDA reference (catches pad-1 rotation/polarity bugs before JLCPCB)
 	@$(T) verify-easyeda python3 scripts/verify_easyeda_footprint.py

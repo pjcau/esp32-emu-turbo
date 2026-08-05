@@ -155,7 +155,10 @@ class ControlsSheet(SchematicSheet):
         #   2 = Anode 2 → BTN_SELECT
         #   3 = Common cathode → MENU_K
         dx, dy = mx + 40, my + 18
-        self.sym("BAT54C", "D1", "BAT54C", dx, dy, ["1", "2", "3"])
+        # Reference nudged up-right: centred above the body it printed on
+        # the pin-3 number, and the MENU_K label column runs at x<=171.
+        self.sym("BAT54C", "D1", "BAT54C", dx, dy, ["1", "2", "3"],
+                 fields={"ref": (2.2, -6.6, "left")})
         # Annotation moved to the right of the symbol so it does not
         # cover pin 3's stub / MENU_K glabel above D1.
         self.text("MENU combo", dx + 12, dy - 4, 1.5)

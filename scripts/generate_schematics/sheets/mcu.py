@@ -38,7 +38,12 @@ class MCUSheet(SchematicSheet):
 
         # ESP32 centered on A3 landscape
         MCU_X, MCU_Y = 200, 170
-        self.sym("ESP32-S3-WROOM-1", "U1", "ESP32-S3-N16R8", MCU_X, MCU_Y, range(1, 42))
+        # Value stacked ABOVE with the reference (no pins leave the top
+        # edge): at the default y+_fo it printed across the GND pin 40/41
+        # numbers below the module.
+        self.sym("ESP32-S3-WROOM-1", "U1", "ESP32-S3-N16R8", MCU_X, MCU_Y,
+                 range(1, 42),
+                 fields={"ref": (0, -43.8), "val": (0, -41.4)})
 
         px_l = MCU_X - 15.24  # left pin edge
         px_r = MCU_X + 15.24  # right pin edge
@@ -197,9 +202,18 @@ class MCUSheet(SchematicSheet):
         self.text("to enter download mode", sw_boot_x - 15, sw_boot_y + 21, 1.5)
 
         # --- Decoupling cap (100nF near 3V3) ---
-        c_dec_x = px_l - 15
+        # The three decoupling caps sit at ~11 mm pitch (C4, C3) with C26
+        # lifted 9 mm above the row — at the old 7 mm single-row pitch each
+        # cap's Value printed across its neighbour's pin numbers, and the
+        # +3V3 rail has no room to grow westward (R3's column is at
+        # px_l-34.5). All three carry their fields on the LEFT: on a
+        # 180-rotated symbol KiCad mirrors justification, so "left" renders
+        # right-justified ending at the anchor.
+        _cfields = {"ref": (-2.0, -1.8, "left"), "val": (-2.0, 1.8, "left")}
+        c_dec_x = px_l - 14
         c_dec_y = MCU_Y - 45  # above 3V3 pins
-        self.sym("C", "C4", "100nF", c_dec_x, c_dec_y, ["1", "2"], angle=180)
+        self.sym("C", "C4", "100nF", c_dec_x, c_dec_y, ["1", "2"], angle=180,
+                 fields=_cfields)
         # Stop on the pin-1 +3V3 line and tap it, instead of running past
         # it down to pwr2_y: the old wire crossed that line at (169.76,
         # 131.90) and then lay on top of the pwr2->pwr riser for its last
@@ -209,7 +223,7 @@ class MCUSheet(SchematicSheet):
         self.junction(c_dec_x, pwr_y)
         self.gnd(c_dec_x, c_dec_y - 10)
         self.wire(c_dec_x, c_dec_y - 3.81, c_dec_x, c_dec_y - 10)
-        self.text("Decoupling", c_dec_x - 15, c_dec_y, 1.5)
+        self.text("Decoupling", c_dec_x - 2, c_dec_y - 15, 1.5)
 
         # --- C3: second ESP32 decoupling cap (100nF) ---
         # C3 is drawn here, not on EN, because that is what the board has:
@@ -226,25 +240,30 @@ class MCUSheet(SchematicSheet):
         # (starts at px_r = 215.24): pin 1 floated in empty space, and one
         # step further right would have shorted +3V3 into LCD_CS. First
         # real finding of the ERC gate.
-        c3_x = c_dec_x + 7
+        c3_x = c_dec_x + 11
         c3_y = c_dec_y
-        self.sym("C", "C3", "100nF", c3_x, c3_y, ["1", "2"], angle=180)
+        self.sym("C", "C3", "100nF", c3_x, c3_y, ["1", "2"], angle=180,
+                 fields=_cfields)
         self.wire(c3_x, c3_y + 3.81, c3_x, pwr_y)
         self.junction(c3_x, pwr_y)
         self.gnd(c3_x, c3_y - 10)
         self.wire(c3_x, c3_y - 3.81, c3_x, c3_y - 10)
-        # Caption above the gnd row: at c3_x + 4 it collided with C26's
-        # "VDD bypass" caption and C26's body once C3 moved left.
-        self.text("Decoupling 2", c3_x - 3, c3_y - 15, 1.5)
+        # One caption covers the C4/C3 pair — two captions at this pitch
+        # collide with each other.
 
         # --- C26: Additional VDD bypass (100nF, close to pin 2) ---
-        c26_x = c_dec_x + 15
-        c26_y = c_dec_y
+        c26_x = px_l
+        c26_y = c_dec_y - 11
+        # Lifted 9 mm above the C4/C3 row: at this height the module has
+        # no pins (its top edge is lower), so the default right-side
+        # fields have clear space, and C3's gnd riser passes west of them.
         self.sym("C", "C26", "100nF", c26_x, c26_y, ["1", "2"], angle=180)
         self.wire(c26_x, c26_y + 3.81, c26_x, pwr2_y)
         self.gnd(c26_x, c26_y - 10)
         self.wire(c26_x, c26_y - 3.81, c26_x, c26_y - 10)
-        self.text("VDD bypass", c26_x + 4, c26_y, 1.5)
+        # Above the cap, clear of the side-placed fields (which extend
+        # right of the body at y±1.8) and of U1's stacked reference.
+        self.text("VDD bypass", c26_x + 4.5, c26_y - 6.5, 1.5)
 
         # --- GND pins (40, 41) at bottom ---
         self.wire(MCU_X, MCU_Y + 41.91, MCU_X, MCU_Y + 48)

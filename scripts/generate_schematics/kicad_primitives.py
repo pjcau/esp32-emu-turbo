@@ -195,8 +195,85 @@ class KiCadContext:
             f' (uuid "{self.uid()}"))\n'
         )
 
+    # Two-pin primitives whose pins leave VERTICALLY (top/bottom) in the
+    # unrotated orientation, and ones whose pins leave HORIZONTALLY. Field
+    # placement (below) keys off this: text belongs on the side the pins
+    # are NOT on.
+    _VPINS_2 = {"R", "C", "L", "Battery"}
+    _HPINS_2 = {"LED", "SW_Push"}
+
+    def _field_positions(self, lib, x, y, angle, fields):
+        """(ref_at, val_at) placements for a symbol's two visible fields.
+
+        Each is (fx, fy, justify) with justify in (None, "left", "right");
+        None means KiCad's default centre anchoring.
+
+        Default policy, driven by verify_schematic_overlaps findings:
+        - Two-pin VERTICAL parts (R/C/L/Battery upright): fields BESIDE the
+          body, left-justified. Centred above/below they land exactly on
+          the pin-number digits ("1" × "R24" thirty-five times over).
+        - The same parts ROTATED 90/270 (pins horizontal): above/below.
+        - LED (pins horizontal): both fields STACKED ABOVE — the space
+          below an LED is where this project hangs its net-label stubs.
+        - SW_Push: reference above the lever, value below the body.
+        - Everything else (multi-pin ICs): centred above/below the body,
+          clear of it by 2 mm — the pre-existing behaviour.
+
+        ``fields`` overrides per call: {"ref": (dx, dy[, justify]),
+        "val": (dx, dy[, justify])} in sheet coordinates (y grows down).
+        """
+        from .lib_symbols import body_half_height, body_half_width
+        _fo = max(5.0, body_half_height(lib) + 2.0)
+        ref_at = (x, y - _fo, None)
+        val_at = (x, y + _fo, None)
+        if lib in self._VPINS_2:
+            side = body_half_width(lib) + 1.1
+            if angle % 180 == 0:
+                # KiCad MIRRORS field justification when the symbol is
+                # rotated 180 deg (the text stays upright, so left/right
+                # swap). Emit the justification that RENDERS as
+                # left-extending-from-anchor in both orientations.
+                j = "right" if angle % 360 == 180 else "left"
+                ref_at = (x + side, y - 1.8, j)
+                val_at = (x + side, y + 1.8, j)
+            else:
+                up = body_half_width(lib) + 2.3
+                ref_at = (x, y - up, None)
+                val_at = (x, y + up, None)
+        elif lib == "LED":
+            ref_at = (x, y - 5.0, None)
+            val_at = (x, y - 2.8, None)
+        elif lib == "SW_Push":
+            if angle % 360 == 180:
+                # Flipped: the lever points DOWN, so the free side is the
+                # TOP — but the pin numbers stay above the stubs, so both
+                # fields must clear y-0.8 as well.
+                ref_at = (x, y - 5.2, None)
+                val_at = (x, y - 3.1, None)
+            elif angle % 180 == 0:
+                ref_at = (x, y - 4.3, None)
+                val_at = (x, y + 2.8, None)
+            else:
+                # Rotated: pins leave top/bottom, so the fields go BESIDE
+                # the body — centred above they land on the pin-1 number.
+                side = body_half_height(lib) + 1.1
+                ref_at = (x + side, y - 1.8, "left")
+                val_at = (x + side, y + 1.8, "left")
+        if fields:
+            for key, cur in (("ref", ref_at), ("val", val_at)):
+                ov = fields.get(key)
+                if ov:
+                    j = ov[2] if len(ov) > 2 else None
+                    cur = (x + ov[0], y + ov[1], j)
+                if key == "ref":
+                    ref_at = cur
+                else:
+                    val_at = cur
+        return ref_at, val_at
+
     def symbol(self, lib: str, ref: str, val: str,
-               x: float, y: float, pins: list, angle: int = 0) -> str:
+               x: float, y: float, pins: list, angle: int = 0,
+               fields: dict | None = None) -> str:
         """Place a symbol instance.
 
         ``angle`` rotates the symbol body (KiCad convention: CCW degrees).
@@ -206,23 +283,31 @@ class KiCadContext:
         R/C symbol looks identical but swaps which end is pin 1, which is
         exactly what is needed when the footprint on the board has pad 1
         on the opposite end from the default symbol orientation.
+
+        ``fields`` optionally overrides where the Reference/Value text is
+        printed — see _field_positions for the default policy and format.
         """
-        # Keep the Reference/Value fields OUTSIDE the drawn body. The old
-        # fixed +-5mm printed them across the outline of anything taller --
-        # U3 (body +-5.08) and U6 (+-6.35) both had their Value struck
-        # through the component. Derived from the symbol's own graphics, so a
-        # symbol that grows pushes its labels out by itself.
-        from .lib_symbols import LIB_NICKNAME, body_half_height
+        # Keep the Reference/Value fields OUTSIDE the drawn body AND clear
+        # of the pin-number digits. Positions come from _field_positions;
+        # placement is derived from the symbol's own graphics, so a symbol
+        # that grows pushes its labels out by itself.
+        from .lib_symbols import LIB_NICKNAME
         x, y = snap(x), snap(y)
-        _fo = max(5.0, body_half_height(lib) + 2.0)
+        (rx, ry, rj), (vx, vy, vj) = self._field_positions(
+            lib, x, y, angle, fields)
+
+        def _eff(justify):
+            j = f' (justify {justify})' if justify else ''
+            return f' (effects (font (size 1.27 1.27)){j})'
+
         s = (
             f'  (symbol (lib_id "{LIB_NICKNAME}:{lib}") (at {x} {y} {angle}) (unit 1)'
             f' (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)'
             f' (uuid "{self.uid()}")'
-            f' (property "Reference" "{ref}" (at {x} {y - _fo} 0)'
-            f' (effects (font (size 1.27 1.27))))'
-            f' (property "Value" "{val}" (at {x} {y + _fo} 0)'
-            f' (effects (font (size 1.27 1.27))))'
+            f' (property "Reference" "{ref}" (at {round(rx, 2)} {round(ry, 2)} 0)'
+            f'{_eff(rj)})'
+            f' (property "Value" "{val}" (at {round(vx, 2)} {round(vy, 2)} 0)'
+            f'{_eff(vj)})'
         )
         for p in pins:
             s += f' (pin "{p}" (uuid "{self.uid()}"))'

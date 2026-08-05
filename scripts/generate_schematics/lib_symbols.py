@@ -53,7 +53,11 @@ _SYMBOL_ESP32 = """    (symbol "ESP32-S3-WROOM-1" (pin_names (offset 1.016)) (in
         (pin bidirectional line (at 15.24 -10.16 180) (length 2.54) (name "GPIO1" (effects (font (size 1.016 1.016)))) (number "38" (effects (font (size 1.016 1.016)))))
         (pin bidirectional line (at 15.24 -12.7 180) (length 2.54) (name "GPIO2" (effects (font (size 1.016 1.016)))) (number "39" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 0 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "40" (effects (font (size 1.016 1.016)))))
-        (pin power_in line (at 2.54 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "41" (effects (font (size 1.016 1.016)))))))\n"""
+        (pin power_in line (at 2.54 -41.91 90) (length 2.54) (name "~" (effects (font (size 1.016 1.016)))) (number "41" (effects (font (size 1.016 1.016)))))))\n"""
+# Pin 41's NAME is "~" (blank), not "GND": pins 40 and 41 sit 2.54 mm apart
+# and both names printed inside the body overlapped into unreadable ink
+# (verify_schematic_overlaps caught "GND × GND"). The pin NUMBER, type
+# (power_in) and net are untouched — one visible GND name covers the pair.
 
 _SYMBOL_SY8089 = """    (symbol "SY8089AAAC" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
@@ -311,6 +315,35 @@ _SYMBOL_BAT54C = """    (symbol "BAT54C" (pin_names (offset 1.016) hide) (in_bom
         (pin passive line (at 5.08 -1.27 180) (length 2.54) (name "2" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
         (pin passive line (at 0 5.08 270) (length 2.54) (name "3" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
 
+# P-channel MOSFET, SOT-23 (SI2301CDS) — used by Q1 (battery reverse-polarity
+# protection) and Q2 (the SW16 respin's +5V high-side load switch). The pin
+# COORDINATES are identical to BAT54C's, because Q1/Q2 were originally drawn
+# with that dual-diode symbol as a stand-in and every wire on sheet 01 lands
+# on these exact points; only the ARTWORK changed (a diode pair drawn where a
+# transistor sits is exactly the kind of "graphic that doesn't add up" a
+# reviewer stumbles on). Numbers follow the SOT-23 pads:
+#   1 = Gate  (enters left,  y=-1.27 local)
+#   2 = Source (enters right, y=-1.27 local)
+#   3 = Drain (enters top,   x=0 local)
+# Arrow drawn on the source lead pointing AWAY from the channel = P-channel
+# (KiCad Q_PMOS convention).
+_SYMBOL_PMOS = """    (symbol "PMOS_SOT23" (pin_names (offset 0.508) hide) (in_bom yes) (on_board yes)
+      (property "Reference" "Q" (at 0 5.08 0) (effects (font (size 1.27 1.27))))
+      (property "Value" "PMOS" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
+      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
+      (symbol "PMOS_SOT23_0_1"
+        (polyline (pts (xy -1.27 -2.032) (xy -1.27 0.762)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -0.635 -2.286) (xy -0.635 1.016)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -2.54 -1.27) (xy -1.27 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -0.635 -1.27) (xy 2.54 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy -0.635 0.762) (xy 0 0.762) (xy 0 2.54)) (stroke (width 0.254) (type default)) (fill (type none)))
+        (polyline (pts (xy 0.508 -0.889) (xy 1.27 -1.27) (xy 0.508 -1.651) (xy 0.508 -0.889)) (stroke (width 0.254) (type default)) (fill (type outline))))
+      (symbol "PMOS_SOT23_1_1"
+        (pin input line (at -5.08 -1.27 0) (length 2.54) (name "G" (effects (font (size 0.889 0.889)))) (number "1" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 5.08 -1.27 180) (length 2.54) (name "S" (effects (font (size 0.889 0.889)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 0 5.08 270) (length 2.54) (name "D" (effects (font (size 0.889 0.889)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
+
 _SYMBOL_USBLC6_2SC6 = """    (symbol "USBLC6_2SC6" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
       (property "Value" "USBLC6-2SC6" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
@@ -376,6 +409,7 @@ SYMBOLS: dict[str, str] = {
     "PSP_Joystick": _SYMBOL_JOYSTICK,
     "LED": _SYMBOL_LED,
     "BAT54C": _SYMBOL_BAT54C,
+    "PMOS_SOT23": _SYMBOL_PMOS,
     "USBLC6_2SC6": _SYMBOL_USBLC6_2SC6,
     "FPC_16P": _SYMBOL_FPC_16P,
     "PWR_FLAG": _SYMBOL_PWR_FLAG,
@@ -472,3 +506,26 @@ def body_half_height(name: str) -> float:
         cy, rr = float(c.group(1)), float(c.group(2))
         ys += [cy - rr, cy + rr]
     return max((abs(y) for y in ys), default=0.0)
+
+
+def body_half_width(name: str) -> float:
+    """Half-width of a symbol's drawn body, in mm (0 if it has no graphics).
+
+    Sister of body_half_height, for the sideways direction: field text placed
+    BESIDE a two-pin part (see kicad_primitives.symbol) must clear the body's
+    widest graphic — for "C" that is the 2.032 mm capacitor plates, twice the
+    rectangle width of "R".
+    """
+    src = SYMBOLS.get(name)
+    if not src:
+        return 0.0
+    xs = []
+    for m in re.finditer(r"\(rectangle \(start ([\d.\-]+) [\d.\-]+\) \(end ([\d.\-]+) [\d.\-]+\)", src):
+        xs += [float(m.group(1)), float(m.group(2))]
+    for pl in re.finditer(r"\(polyline\s*\(pts((?:\s*\(xy [\d.\-]+ [\d.\-]+\))+)\)", src):
+        for xy in re.finditer(r"\(xy ([\d.\-]+) [\d.\-]+\)", pl.group(1)):
+            xs.append(float(xy.group(1)))
+    for c in re.finditer(r"\(circle \(center ([\d.\-]+) [\d.\-]+\) \(radius ([\d.\-]+)\)", src):
+        cx, rr = float(c.group(1)), float(c.group(2))
+        xs += [cx - rr, cx + rr]
+    return max((abs(x) for x in xs), default=0.0)

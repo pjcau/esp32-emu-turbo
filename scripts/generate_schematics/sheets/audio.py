@@ -118,7 +118,7 @@ class AudioSheet(SchematicSheet):
         # stub so the label text runs into open sheet instead of over
         # the capacitor's own reference designator.
         self.glabel("PAM_VREF", ax + 10.16, c21y - 10, 180, "output")
-        self.text("VREF bypass (pin 8)", c21x + 5, c21y)
+        self.text("VREF bypass (pin 8)", c21x + 9.5, c21y)
 
         # DC-blocking capacitor (C22, 0.47uF) — input coupling.
         # Series DC-block. C22.1 = I2S_DOUT (ESP32 PDM TX side),
@@ -141,8 +141,9 @@ class AudioSheet(SchematicSheet):
         self.glabel("I2S_DOUT", c22x - 12, c22y, 180, "input")
         self.wire(c22x + 3.81, c22y, c22x + 12, c22y)
         self.glabel("PAM_IN_AC", c22x + 12, c22y, 0, "output")
+        # Anchored further left so the run ends before C23's plates.
         self.text("DC-block (in series, I2S_DOUT -> PAM_IN_AC)",
-                  c22x - 14, c22y - 7, 1.5)
+                  c22x - 26, c22y - 8.5, 1.5)
 
         # INL bias resistor (R20, 20k) — biases INL node to VREF (pin 8),
         # NOT to GND. R4-HIGH-3: PAM8403 single-ended app circuit per
@@ -178,7 +179,9 @@ class AudioSheet(SchematicSheet):
         # Bottom terminal goes to PAM_VREF (net 50) via a named label stub.
         self.wire(r20x, r20y + 3.81, r20x, r20y + 8)
         self.glabel("PAM_VREF", r20x, r20y + 8, 0, "input")
-        self.text("INL bias -> PAM_VREF", r20x - 26, r20y + 8, 1.5)
+        # Down-left of the resistor, below R21's PAM_IN_AC label line —
+        # every same-row anchor printed through one glabel or another.
+        self.text("INL bias -> PAM_VREF", r20x - 30, r20y + 15.5, 1.5)
 
         # INR bias resistor (R21, 20k) — biases INR node to VREF (pin 8).
         # Same rationale as R20 — see R4-HIGH-3.
@@ -197,7 +200,8 @@ class AudioSheet(SchematicSheet):
         # Bottom terminal goes to PAM_VREF (net 50) via a named label stub.
         self.wire(r21x, r21y + 3.81, r21x, r21y + 8)
         self.glabel("PAM_VREF", r21x, r21y + 8, 0, "input")
-        self.text("INR bias -> PAM_VREF", r21x - 26, r21y + 8, 1.5)
+        # Same offset as R20's note, same reason.
+        self.text("INR bias -> PAM_VREF", r21x - 30, r21y + 15.5, 1.5)
         self.text("R20/R21 bias the amplifier inputs to PAM_VREF (R4-HIGH-3).",
                   r21x - 12, r21y + 18, 1.5)
 
