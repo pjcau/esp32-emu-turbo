@@ -38,7 +38,7 @@ a broken power chain, or a drifted schematic is not worth auditing in
 prose.
 
 ```bash
-cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
+cd /home/pjonny/Documents/myProjects/esp32-emu-turbo
 
 # ── Fab-short gate (MOST IMPORTANT) ──────────────────────────────
 # Catches netted traces physically crossing unnetted pads (the v3.3
@@ -147,9 +147,11 @@ check lists (power chain, ESP32 boot, display, audio, SD, buttons,
 USB, emulator performance) live in
 `references/domain-checks.md` — read one domain at a time while
 working it, then move to the next. Each list names the sources to
-cross-check and the as-built limitations that must NOT be re-raised
-(EN without RC, SW16 not in series, backlight R25-HIGH-1,
-J4's 41−N pin reversal).
+cross-check and the as-built decisions that must NOT be re-raised
+(J4's 41−N pin reversal, U6 pad-8 sharing the SD_MISO copper). The old
+"EN without RC", "SW16 not in series" and "backlight R25-HIGH-1"
+limitations were all FIXED in the design (2026-07-31 .. 2026-08-04
+SW16 respin) — verify them, don't inherit them as open.
 
 ## Report format
 

@@ -340,11 +340,11 @@ class MCUSheet(SchematicSheet):
         ty += 5
         self.text("GPIO12=CS  GPIO13=RST  GPIO14=DC", tx, ty)
         ty += 5
-        self.text("GPIO46=WR  (RD/BL tied +3V3 on FPC)", tx, ty)
+        self.text("GPIO46=WR  (RD tied +3V3; BL +5V via R27)", tx, ty)
         ty += 8
-        self.text("Audio (I2S):", tx, ty, 2, True)
+        self.text("Audio (PDM TX):", tx, ty, 2, True)
         ty += 5
-        self.text("GPIO15=BCLK  GPIO16=LRCK  GPIO17=DOUT", tx, ty)
+        self.text("GPIO17=DOUT  GPIO15=LED_HB  GPIO16 free", tx, ty)
         ty += 8
         self.text("SD Card (SPI):", tx, ty, 2, True)
         ty += 5

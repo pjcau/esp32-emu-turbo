@@ -3751,3 +3751,123 @@ strap states proven on copper; USB polarity/TVS/CC/shield verified
 against the USBLC6 pin map; PAM8403 audio chain verified against the
 official Diodes datasheet incl. the R4-HIGH-3 VREF fix in copper;
 retro-go keymap/GPIO sync gate confirmed to cover the R30 class.
+
+## Round 32 Findings (2026-08-05) — first audit of the merged SW16 respin, at `c98287a`
+
+First full audit since the SW16 respin landed on main (a95ea9f) and the
+five follow-up commits (merge-tail gate fixes, C33 1→4.7 µF, 6 via moves
+for KiBot netclass DRC, zero rendered text overlaps, power-path doc
+alignment). Layer 1 is fully clean; Layer 2 found **no new electrical
+findings** — the respin's power-switch block (SW16 → R33 → Q2 gate,
+R32/C32 returned to +5V_VOUT, R34/C33 wake network) checks out in both
+schematic and copper, and the R25-HIGH-1 backlight fix (R27 20R from
+load-side +5V on net LED_BLA) is confirmed end-to-end in
+datasheet_specs, schematic, routing and BOM.
+
+### Step 0 gates
+
+| Gate | Expected | Actual | Status |
+|------|----------|--------|--------|
+| Fab shorts (`verify_trace_through_pad`) | 0 overlaps | 1 passed, 0 failed | PASS |
+| Trace crossings (`verify_trace_crossings`) | 0 crossings | 1 passed, 0 failed | PASS |
+| Copper clearance (`verify_copper_clearance`) | 0 DANGER | 0 DANGER, 4 WARN (B.Cu 0.135 mm) | PASS |
+| Net connectivity (`verify_net_connectivity`) | 0 failed | 0 failed | PASS |
+| DFM (`verify_dfm_v2`) | all | 124/124 | PASS |
+| DFA (`verify_dfa`) | all | 10/10 (SW17 DNP rule incl.) | PASS |
+| JLCPCB (`validate_jlcpcb`) | all | 24/24, 1 warn | PASS |
+| BOM/CPL/PCB (`verify_bom_cpl_pcb`) | all | 13/13 | PASS |
+| Polarity (`verify_polarity`) | 48/48 | 48/48 (304 pin-net checks) | PASS |
+| JLCPCB capabilities | 12/12 | 12/12 | PASS |
+| Stencil aperture | all | 5/5 | PASS |
+| Drill standards | all | 5/5, 1 warn | PASS |
+| Datasheet nets (`verify_datasheet_nets`) | all | ALL CHECKS PASSED | PASS |
+| Datasheet physical (`verify_datasheet`) | 29/29 | 29 tests OK | PASS |
+| Design intent (`verify_design_intent`) | all | 367/367, 3 warn | PASS |
+| R4 sync guard (`verify_schematic_pcb_sync`) | PASS | PASS (52 specs agree) | PASS |
+| Netlist diff (`verify_netlist_diff`) | 4/4 | 4/4 | PASS |
+| Board config sync (`generate_board_config --check`) | OK | OK | PASS |
+| Strapping pins (`verify_strapping_pins`) | all | 11/12 + 1 warn (R14 DNP, by design) | PASS |
+| Decoupling adequacy | 23/23 | 23/23 | PASS |
+| Power sequence | all | 32/32 | PASS |
+| Power paths | all | 10/10 + 11 info (zone-dependent) | PASS |
+| Power via ampacity | all | 15/15 transitions, 10 nets | PASS |
+| ERC (`erc_check`) | 0 critical | 0 critical, 0 warnings | PASS |
+| KiCad DRC (`--severity-all --all-track-errors`) | 0 | 0 violations, 0 unconnected, 0 parity | PASS |
+
+### Domain findings
+
+- **Power chain**: 0 new. SW16 respin verified in prose for the first
+  time since merge: ON gate divider 5 V·1k/23k → V_gs = −4.78 V (past the
+  −4.5 V spec point); OFF V_gs = −0.028 V (3.7 V cell) / −0.108 V
+  (no cell — the R32=22k-not-100k argument holds); R32/C32 return to
+  +5V_VOUT (source), not +5V — the one wiring that would look right and
+  fail is absent. Q1 RPP direction correct post-R31-HIGH-1 (cell on
+  drain). C33 = 4.7 µF matches 3859dfe; BENCH-VALIDATE flag present, SW17
+  fallback drawn, in BOM as DO-NOT-PLACE, absent from CPL (gated).
+  BAT+ ampacity: 5.114 A available vs 4.348 A required.
+- **ESP32 boot**: 0 new. R14 skip proven in routing; EN now carries
+  R3 10k + C31 100nF (R25-CRIT-1 fix confirmed in tree — the skill
+  reference still denies it, see R31-LOW-11); `CONFIG_SPIRAM_MODE_OCT=y`
+  + 80 MHz in all sdkconfig.defaults.
+- **Display**: 0 new electrical. IM[2:0]=011 settled R29 against the
+  panel's own table; LED_BLA now on the **load-side** +5V (post-Q2), so
+  the backlight correctly dies with SW16 OFF — the respin did not
+  accidentally leave it on the boost side. One **new stale-text
+  instance** (R32-LOW-1 below).
+- **Audio**: 0. `audio.c` uses `i2s_pdm_tx_config_t`, `.clk =
+  I2S_GPIO_UNUSED`, only DOUT (GPIO17) on copper.
+- **SD card**: 0. Pad 8 same-net-as-MISO acceptance and pad 9 off-net
+  (R31-HIGH-2) both hold; Cd-polarity bench continuity check still owed.
+- **Buttons**: 0. SW17 DNP rule enforced by verify_dfa.
+- **USB**: 0. Impedance gate PASS; return-path gate 3 advisory WARNs
+  (22 segments > 5 mm from a GND via) — acceptable at FS 12 Mbps,
+  unchanged class.
+- **Emulator performance**: 0. Octal PSRAM @ 80 MHz, esp_lcd i80 panel
+  driver, PDM DMA audio.
+
+### Bug list
+
+#### R32-LOW-1 — mcu.py GPIO table prints "(RD/BL tied +3V3 on FPC)"; BL is +5V via R27 since the R25-HIGH-1 fix
+- **Files**: `scripts/generate_schematics/sheets/mcu.py:343`
+- **Problem**: The printed fabrication schematic's GPIO ASSIGNMENT TABLE
+  says both RD and BL are tied to +3V3. RD is (FPC pin 12); BL has been
+  fed from load-side +5V through R27 20R (net LED_BLA) since 2026-07-31.
+  Same free-text-drift class as R31-MED-4, new instance not cited there.
+- **Root cause**: identical to R31-MED-4 — hand-typed table, no gate
+  reads sheet prose.
+- **Fix**: fold into the R31-MED-4 regeneration (table from
+  `config.GPIO_NETS` + net notes), or reword to "RD tied +3V3, BL +5V
+  via R27".
+
+### Still open from R31 (re-verified in this tree)
+
+| Finding | Status at c98287a |
+|---------|-------------------|
+| R31-MED-2 stale `software/sdkconfig` (UART0 console) | **Still present** — `CONFIG_ESP_CONSOLE_UART_DEFAULT=y` at line 1167, `sdkconfig.old` too |
+| R31-MED-3 LX/BAT+ traces justified at 2.1 A vs 4.348 A gate requirement | **Still open** — `_shared.py:35` comment unchanged; ampacity gate covers barrels only |
+| R31-MED-4 GPIO table "GPIO15=BCLK GPIO16=LRCK" | **FIXED 2026-08-05 (this round)** — table now reads "Audio (PDM TX): GPIO17=DOUT GPIO15=LED_HB GPIO16 free"; schematic regenerated, verify-all 103/103 |
+| R31-LOW-6 board_config.h + display.c backlight "3V3" comments | **FIXED 2026-08-05 (this round)** — all five comment sites now say load-side +5V via R27 (LED_BLA) |
+| R31-LOW-11 stale hardware-audit domain-checks reference | **FIXED 2026-08-05 (this round)** — EN bullet rewritten to the R3+C31 truth, backlight bullet to the R27/LED_BLA truth; SKILL.md "must NOT re-raise" list updated (SW16/EN/backlight moved to verify-don't-inherit) and the stale macOS cd path corrected |
+
+### Fixes applied in this round
+
+- **R32-LOW-1 — FIXED 2026-08-05**: `mcu.py:343` now prints "GPIO46=WR
+  (RD tied +3V3; BL +5V via R27)".
+- R31-MED-4, R31-LOW-6, R31-LOW-11 — see table above.
+- Post-fix: `make generate-schematic` re-run, `verify_dfa` 10/10,
+  `make verify-all` **103/103** (incl. the render-overlap gate on the
+  regenerated MCU sheet).
+
+### Watch items (not findings)
+
+- 4 × 0.135 mm B.Cu copper gaps (e.g. +3V3 vs BTN_SELECT at 72.62,45.33;
+  GND vs LCD_DC at 108.47,34.60) — above the 0.09 mm absolute minimum,
+  below the 0.15 mm JLCDFM-preferred line. If the next JLCDFM upload
+  flags them as mask-aperture Dangers, they graduate to findings.
+- Board changed after the c0ebe7a1 release set (4d0749e via moves,
+  cabf74d schematic art) — **the JLC upload must be regenerated and
+  re-uploaded before payment** (already tracked in project memory).
+- Bench items owed on first article: C33 wake-pulse width vs the
+  IP5306's undocumented KEY pull-up (SW17 is the fallback), SD pad 9
+  Cd-spring polarity continuity check, R27 backlight current
+  measurement on the actual panel.

@@ -33,8 +33,9 @@ static const char *TAG = "display";
 
 static esp_lcd_panel_handle_t s_panel = NULL;
 
-/* Backlight is hardwired to 3V3 via resistor on PCB — no GPIO control.
- * display_set_backlight() is a no-op for API compatibility. */
+/* Backlight is hardwired on PCB: load-side +5V via R27 20R (net LED_BLA)
+ * — no GPIO control. display_set_backlight() is a no-op for API
+ * compatibility. */
 void display_set_backlight(uint8_t brightness)
 {
     (void)brightness;
@@ -47,8 +48,7 @@ esp_err_t display_init(void)
 {
     ESP_LOGI(TAG, "Initializing ILI9488 8-bit i80 parallel display");
 
-    /* Backlight PWM — start OFF before display init */
-    /* Backlight: no init needed (hardwired to 3V3 on PCB) */
+    /* Backlight: no init needed (hardwired to +5V via R27 on PCB) */
 
     /* Configure the i80 bus */
     esp_lcd_i80_bus_handle_t i80_bus = NULL;
@@ -109,7 +109,7 @@ esp_err_t display_init(void)
     /* Clear to black */
     display_fill(0x0000);
 
-    /* Backlight is always on (hardwired to 3V3 on PCB) */
+    /* Backlight is always on while SW16 is ON (hardwired to +5V via R27) */
 
     ESP_LOGI(TAG, "Display initialized: %dx%d, %d-bit i80 @ %d MHz",
              LCD_H_RES, LCD_V_RES, LCD_BIT_WIDTH, LCD_CLK_HZ / 1000000);

@@ -18,11 +18,13 @@ Check:
 - L1 inductor placement and LX trace width (≥ 0.76 mm for 2.1 A boost)
 - VBAT sense resistor divider (if present)
 - Every bypass cap has short path to its pin pair
-- **EN on the ESP32 has no RC and no pull-up** — `R3` does not exist (absent
-  from BOM and PCB) and `C3` is a plain +3V3 decoupling cap. `EN` carries
-  exactly two pads: `U1.3` and `SW15` pad 1. The WROOM-1 does *not*
-  integrate an EN pull-up; that claim was retired in `74c196e`. RESPIN item,
-  not a finding to re-raise — see `docs/known-issues.md`
+- **EN RC network — FIXED 2026-07-31 (R25-CRIT-1)**: `R3` (10k, EN → +3V3)
+  and `C31` (100nF, EN → GND) sit on the EN trace right of `U1.3`
+  (`routing/_shared.py` R3_POS/C31_POS). `C3` is a plain +3V3 decoupling
+  cap, unrelated to EN. `EN` carries `U1.3`, `SW15.1`, `R3.1`, `C31.1`.
+  The WROOM-1 does *not* integrate an EN pull-up (settled in `74c196e`).
+  Gated by `verify_strapping_pins` (`test_en_rc_delay`) — verify, don't
+  re-raise the old "EN has no RC" baseline (it was true until 2026-07-31)
 - U3 buck loop: `C1` (C_IN) tight to U3 IN/GND, `C30` (C_OUT) tight to L2's
   output pad, `BUCK_LX` node kept small. **`C2` no longer exists** — the
   22 µF tantalum was deleted because a 1 MHz buck needs a low-ESR MLCC
@@ -70,16 +72,13 @@ Check:
 - LCD_WR / LCD_DC / LCD_CS all on GPIO capable of 40+ MHz. **`LCD_RD` is not
   a net and reaches no GPIO** — FPC pin 12 is hard-tied to +3V3 (read strobe
   disabled, the display is write-only)
-- Backlight: **`LCD_BL` is not a net either.** FPC pin 33 (LED-A) is
-  hard-tied to +3V3 — always-on, **no PWM and no series resistor**. That
-  missing resistor is **open finding R25-HIGH-1**, not a settled choice: the
-  panel datasheet (quoted in `components.md`) specifies that pin as "+3V3
-  *via resistor*, always-on" for 8 chip white LEDs at Vf 2.9–3.3 V, and the
-  string currently sits straight across the rail. Three design-side sources
-  assert the hard tie instead (`datasheet_specs.py:395`, `display.py:55`,
-  `display.c:41`) — treat all three as the same unverified claim. Needs a
-  decision (resistor value or a driver) before any layout work.
-  Both names are retired gaps (ids 18/19) in `primitives.NET_LIST`
+- Backlight — **R25-HIGH-1 FIXED 2026-07-31**: FPC pin 33 (LED-A) is fed
+  from the **load-side +5V** (post-Q2, so it dies with SW16 OFF) through
+  R27 (20R 1206) on net `LED_BLA` (~90 mA defined); LED-K (pins 34-36)
+  to GND. Always-on while switched on, no PWM, no GPIO. One bench
+  measurement of the actual panel current is still owed on first article.
+  `LCD_BL`/`LCD_RD` remain retired gaps (ids 18/19) in
+  `primitives.NET_LIST` — the real backlight net is named `LED_BLA`
 - FPC connector orientation vs enclosure cable routing
 
 ## Step 4 — Audio audit (manual)

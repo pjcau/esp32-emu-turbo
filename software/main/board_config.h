@@ -42,9 +42,8 @@
                                          * datasheet — a cross-check, not a
                                          * copy. Testable after boot only. */
 /* LCD_RD: tied HIGH on PCB (no GPIO needed, no read-back from ILI9488) */
-/* LCD_BL: tied to 3V3 on PCB via resistor (always-on backlight) */
-
-/* Backlight: always-on (tied to 3V3 on PCB), no PWM control */
+/* LCD_BL: fed from load-side +5V via R27 20R (net LED_BLA, ~90 mA) —
+ * always-on while SW16 is ON, no PWM control, no GPIO */
 
 /* ── SD Card: SPI mode ────────────────────────────────────────────── */
 
