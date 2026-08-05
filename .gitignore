@@ -118,3 +118,7 @@ software/.cache/
 
 # vbench compiled binary (built locally from software/sim/)
 software/sim/emu-turbo-bench
+
+# DRC output artifacts (regenerated on demand by verify_dfm_v2 / drc_native)
+hardware/kicad/drc-edge-guard.json
+hardware/kicad/drc-report.json

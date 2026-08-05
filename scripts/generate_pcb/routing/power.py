@@ -7,6 +7,7 @@ from ._shared import (
     BOARD_W,
     DIAG_VBUS_TAP_Y,
     NET_ID,
+    R34_PWR_SW_VIA_OD,
     R34_PWR_SW_VIA_X,
     P,
     VIA_MIN,
@@ -1314,29 +1315,46 @@ def _power_traces():
     # widened instead of the hole, in two places:
     #
     #   band 0, on the existing corridor at y=46.135 — one more barrel
-    #     0.89 mm east at (80.90). R12.2 (+3V3) starts at x=81.55, leaving
-    #     a 0.25 mm ring gap; the B.Cu stub between the two vias reaches
-    #     x=81.28, 0.27 mm short of that pad. 0.80 OD / 0.35 -> 0.791 A.
+    #     0.80 mm east at (80.88), squeezed from both sides. R12.2 (+3V3)
+    #     starts at x=81.475 and wants the 0.2 mm netclass clearance; the
+    #     0.50 mm approach ring at x=80.08 wants 0.15 mm of copper (a
+    #     drc_check rule that does not care that both are BAT+). Those two
+    #     leave room for OD <= 0.795, so 0.76: 0.215 mm to the pad, 0.17 mm
+    #     to the approach ring. Ampacity is set by the plated barrel wall,
+    #     so the 0.35 drill still carries its 0.791 A. The B.Cu stub
+    #     between the two vias reaches x=81.26, 0.215 mm short of the pad.
     #
-    #   band 1, a second F.Cu/B.Cu overlap 1.14 mm north at y=47.275 —
-    #     four barrels. This band is 0.95 mm tall and that is not a choice:
-    #     R11/R12's pads end at y=46.65 below it and BTN_R's F.Cu channel
-    #     runs at y=48.0 above it, so a 0.85 OD ring centred at 47.275
-    #     clears both by 0.25 mm and nothing larger fits. Sideways it is
-    #     bounded by the BTN_Y (x=78.95) and BTN_START (x=83.95) B.Cu
-    #     columns. Drill 0.45 rather than 0.35 buys 0.949 A per barrel and
-    #     is what puts the rail comfortably over its requirement — the
-    #     four 0.35 mm barrels this band would otherwise hold come to
-    #     4.482 A total, a 3% margin, and this is the battery.
+    #   band 1, a second F.Cu/B.Cu overlap 1.165 mm north at y=47.30 —
+    #     four barrels. The band's height is not a choice: R11/R12's pads
+    #     end at y=46.675 below it and BTN_R's F.Cu channel runs at y=48.0
+    #     above it, so a 0.78 OD ring centred at 47.30 clears the pads by
+    #     0.235 mm and the channel by 0.21 mm, and nothing larger fits.
+    #     Sideways it is bounded by the BTN_Y (x=78.95) and BTN_START
+    #     (x=83.95) B.Cu columns. Drill 0.45 rather than 0.35 buys 0.949 A
+    #     per barrel and is what puts the rail comfortably over its
+    #     requirement — the four 0.35 mm barrels this band would otherwise
+    #     hold come to 4.482 A total, a 3% margin, and this is the battery.
+    #     Ampacity is set by the plated barrel wall, so trimming the ring
+    #     0.85 -> 0.78 costs none of it; the annular ring is still 0.165 mm
+    #     against JLCPCB's 0.13 mm minimum.
     #
     # 0.527 + 0.791 + 4 x 0.949 = 5.114 A against 4.348 A required.
-    _bat_band0_via_x = 80.90
-    _bat_band1_y = 47.275
+    #
+    # Both numbers moved in the 0.2 mm netclass sweep. The geometry above
+    # was worked out against R11/R12 lands of 1.0 x 1.3 — x from 81.55,
+    # y to 46.65 — and the 0805 footprint has since moved to the JLC
+    # reference 1.15 x 1.35, x from 81.475 and y to 46.675. Both barrels
+    # were sitting 0.175 mm from R12.2 as a result, and both comments
+    # still claimed the 0.25 mm they had been designed for.
+    _bat_band0_via_x = 80.88
+    _bat_band0_od = 0.76
+    _bat_band1_y = 47.30
+    _bat_band1_od = 0.78
     _bat_band1_xs = (79.725, 80.750, 81.775, 82.800)
     parts.append(_seg(bat_approach_x, bat_via_y, _bat_band0_via_x, bat_via_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
     parts.append(_via_net(_bat_band0_via_x, bat_via_y, n_bat,
-                          size=VIA_PWR_TIGHT, drill=VIA_PWR_DRILL))
+                          size=_bat_band0_od, drill=VIA_PWR_DRILL))
     # Riser to band 1: B.Cu already runs north from the via (the Q1 column
     # below), so only F.Cu needs one. Both bands are chained through
     # bat_approach_x so every segment ends on a via or on another
@@ -1351,7 +1369,7 @@ def _power_traces():
                                _layer, W_PWR_HIGH, n_bat))
     for _bx in _bat_band1_xs:
         parts.append(_via_net(_bx, _bat_band1_y, n_bat,
-                              size=0.85, drill=VIA_PWR_BIG_DRILL))
+                              size=_bat_band1_od, drill=VIA_PWR_BIG_DRILL))
     # ── BAT+ approach → Q1 SOURCE (P-MOSFET RPP) ──────────────────
     # Q1 (SI2301CDS SOT-23-3) at (85.0, 53.0) on B.Cu, Q1_ROT=180:
     #   Pin 3 (Drain/BAT_IN) at (85.0, 54.1)   — faces J3, the cell side
@@ -1754,7 +1772,7 @@ def _pwr_switch_traces():
     parts.append(_seg(r34_1[0], r34_1[1], _r34_via_x, r34_1[1],
                        "B.Cu", W_SIG, n_pwr_sw))
     parts.append(_via_net(_r34_via_x, r34_1[1], n_pwr_sw,
-                          size=VIA_MIN, drill=VIA_MIN_DRILL))
+                          size=R34_PWR_SW_VIA_OD, drill=VIA_MIN_DRILL))
     parts.append(_seg(_r34_via_x, r34_1[1], _r34_via_x, 54.35, "F.Cu", W_SIG, n_pwr_sw))
     # W_PWR and not W_SIG: this leg carries 1.3 uA, but it is BAT+ copper
     # and BAT+ is a Power High net. Widening 3 mm of trace is cheaper than

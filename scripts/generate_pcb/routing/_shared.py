@@ -842,13 +842,22 @@ R34_POS = (86.1, 55.9)   # 1:(85.15,55.9) PWR_SW  2:(87.05,55.9) BAT+
 R34_ROT = 180
 # Where PWR_SW changes layer on its way to R34.1. NOT on the pad: a barrel
 # in an SMD land is the JLCDFM lead-to-hole DANGER (verify_via_in_pad), so
-# it steps 0.95 mm west — 0.575 of pad half-width, 0.15 of hole clearance,
-# 0.15 of barrel radius, rounded out. The F.Cu corridor is SPLIT here so
-# the drop lands on a real endpoint (verify_dangling_copper measures
-# endpoints, not overlaps); both users read this one number, because when
-# they disagreed the corridor kept its old split at the pad and the new
-# leg drew a second, overlapping run into it — a 0 deg corner.
-R34_PWR_SW_VIA_X = 84.20
+# it steps west of it. The F.Cu corridor is SPLIT here so the drop lands on
+# a real endpoint (verify_dangling_copper measures endpoints, not overlaps);
+# both users read this one number, because when they disagreed the corridor
+# kept its old split at the pad and the new leg drew a second, overlapping
+# run into it — a 0 deg corner.
+#
+# The window is 0.045 mm wide and both walls are hard. West is J3.4, the
+# JST-PH mounting tab, which carries no net and therefore takes the full
+# Default-netclass 0.2 mm from a barrel: its land ends at x=83.85, so a
+# 0.46 mm ring needs x >= 84.28. East is R34.1's own land starting at
+# x=84.575, and verify_via_in_pad wants 0.15 mm of hole clearance even on
+# its own net, so x <= 84.325. 84.20 sat outside on the west side — 0.10 mm
+# from the tab — because the value was derived from a transcribed tab box
+# (82.60..84.10) that was 0.25 mm wider than the footprint's real one.
+R34_PWR_SW_VIA_X = 84.30
+R34_PWR_SW_VIA_OD = 0.46
 # C33 4.7uF wake cap takes over R16's exact site. R16 was a 100k KEY
 # pull-up to +5V and is DELETED (see hardware/datasheet_specs.py): on the
 # new load-side +5V it would have become a pull-DOWN in the OFF state and
@@ -949,6 +958,19 @@ def _compute_pads(fp_name, cx, cy, rot, layer_char):
 
 # Precomputed pad positions for all routed components
 _PADS = {}
+
+# True pad rectangles, {(ref, num_str): (xmin, ymin, xmax, ymax)}. Filled by
+# _init_pads() from the SAME placement walk that seeds the collision grid,
+# because get_all_pad_positions() consumes UUIDs and must not be called twice
+# (see pad_positions.get_pads_and_layers).
+#
+# It exists because six vias shipped under KiCad's 0.2 mm netclass clearance
+# at once: every one of them had its neighbouring pad's box transcribed into a
+# comment as a literal, the 0805 land later grew from 1.0 x 1.3 to the JLC
+# reference 1.15 x 1.35, and none of the literals moved. Every clearance
+# computed against them came out 0.075 mm optimistic in x and 0.025 mm in y,
+# which is the whole of the margin those vias had. Ask the footprint.
+_PAD_BOXES = {}
 
 # Pad-to-net registry: auto-populated by _seg() and _via_net() when
 # a segment/via endpoint matches a known pad position. Used by board.py
@@ -1120,6 +1142,13 @@ def _init_pads():
         # One call, not two: _component_placeholders() consumes UUIDs, so a
         # second walk would shift every uuid in the emitted board.
         all_pads, pad_layers = get_pads_and_layers()
+        for _ref, _pad_map in all_pads.items():
+            for _num, _tup in _pad_map.items():
+                if len(_tup) == 4:
+                    _px, _py, _pw, _ph = _tup
+                    _PAD_BOXES[(_ref, str(_num))] = (
+                        _px - _pw / 2, _py - _ph / 2,
+                        _px + _pw / 2, _py + _ph / 2)
         # Pads whose net must be seeded before the first trace arrives.
         # Derived from NET_ID, never hardcoded — the previous copy of this
         # table inside collision.py went stale on J3.1 (BAT+ -> BAT_IN) and
@@ -1152,6 +1181,15 @@ def _pad(ref, num):
     """Return absolute (x, y) for a component pad."""
     _init_pads()
     return _PADS.get(ref, {}).get(str(num), None)
+
+
+def _pad_box(ref, num):
+    """Return (xmin, ymin, xmax, ymax) for a component pad, or None.
+
+    The measured rectangle, not a transcribed one — see _PAD_BOXES.
+    """
+    _init_pads()
+    return _PAD_BOXES.get((ref, str(num)), None)
 
 
 def _esp_pin(gpio):

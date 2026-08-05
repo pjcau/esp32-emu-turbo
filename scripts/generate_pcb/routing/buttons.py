@@ -41,12 +41,18 @@ from ._shared import (
     _esp_pin,
     _init_pads,
     _pad,
+    _pad_box,
     _pu_jog_vert,
     _seg,
     _via_net,
 )
 
-
+# Where BTN_B's B.Cu run out of the C3 channel rejoins its own F.Cu stagger
+# horizontal. Read by both producers — the stagger loop, which splits the
+# horizontal here, and _bottom_button_r_traces(), which drops the stub onto
+# it — because when the two disagreed the stub landed mid-segment and read
+# as dangling copper.
+BTN_B_TAP_X = 69.55
 
 
 def _button_traces():
@@ -840,6 +846,11 @@ def _button_traces():
             #   gap = sqrt(0.15^2+0.20^2) = 0.25mm ≥ 0.25mm (just barely!) ✓
             # BTN_SELECT ne=69.25 does NOT trigger LCD_BL or BTN_UP_VX push — that's correct.
             BTN_UP_VX = 70.45  # +3V3 B.Cu vert / via column reference
+            # The layer change normally happens on the stagger lane itself.
+            # A button whose channel is too tight there may pull it off the
+            # lane (see BTN_SELECT below); jog segments are then emitted on
+            # both layers so the lane geometry stays as it is.
+            _ne_via_y = stagger_y
             if epx < CX:
                 _ne = epx - 2.0
                 # LCD_BL B.Cu vert (x=73.015) ends at y=40.0 → at stagger_y>40, no conflict.
@@ -920,7 +931,13 @@ def _button_traces():
                 #   dx=73.05-0.23-(72.05+0.275)=72.82-72.325=0.495mm ✓
                 _ne_via_size = VIA_STD
                 _ne_via_drill = VIA_STD_DRILL
-                R10_PAD_AABB = (73.45, 45.35, 74.45, 46.65)  # R10 pad 1
+                # MEASURED, not transcribed. The literal that used to sit
+                # here — (73.45, 45.35, 74.45, 46.65) — described the 1.0 x
+                # 1.3 land R10 had before the 0805 footprint moved to the
+                # JLC reference. Every shift computed off it was 0.075 mm
+                # optimistic in x, which is how the barrel below ended up
+                # 0.1819 mm from the pad against a 0.2 mm netclass rule.
+                R10_PAD_AABB = _pad_box("R10", "1")
                 _ne_r = VIA_STD / 2
                 _ne_box = (_ne - _ne_r, stagger_y - _ne_r,
                            _ne + _ne_r, stagger_y + _ne_r)
@@ -930,22 +947,29 @@ def _button_traces():
                           _ne_box[1] - R10_PAD_AABB[3])
                 _r10_gap = _m.sqrt(_dx**2 + _dy**2)
                 if _r10_gap < 0.15:
-                    # Switch to VIA_MIN and shift X left
-                    _ne_via_size = VIA_MIN
-                    _ne_via_drill = VIA_MIN_DRILL
-                    _ne_r_min = VIA_MIN / 2  # 0.25 (VIA_MIN is 0.50mm)
-                    _ne = R10_PAD_AABB[0] - _ne_r_min - 0.17  # 73.03
-                    # R12 JLCDFM fix (2026-04-11): original code assumed
-                    # VIA_MIN was 0.46 (comment at line 3725 is wrong — it
-                    # is actually 0.50). At 0.50mm OD the via at (73.03,
-                    # 45.10) had only 0.150mm gap to the BTN_X B.Cu
-                    # vertical at x=73.56. Shrink to a true 0.46mm via
-                    # here: 0.53 - 0.23 - 0.125 = 0.175mm ✓. Only applies
-                    # to BTN_SELECT (stagger_y=45.10) — other bottom
-                    # buttons' stagger vias live at y=41.5/42.7/43.9
-                    # where _r10_gap is ≥2mm so this branch is not taken.
+                    # The channel between R10's two pads is 0.75 mm wide and
+                    # no legal barrel fits in it: KiCad resolves via-to-pad
+                    # against the Default netclass at 0.2 mm (the .kicad_dru
+                    # relaxation to 0.09 mm is conditioned on A.Type ==
+                    # 'track'), so the ring may be at most 0.35 mm OD —
+                    # under the 0.45 mm via floor the same .kicad_dru sets.
+                    # Shrinking the barrel, which is what every previous fix
+                    # here did, therefore cannot succeed.
+                    #
+                    # Centre it in the channel and drop it 0.5 mm SOUTH of
+                    # the stagger lane instead, clear of the pad row
+                    # entirely: from (73.00, 44.60) the nearest pad corner
+                    # is sqrt(0.375^2 + 0.725^2) = 0.816 mm away, so a
+                    # 0.46 mm ring keeps 0.586 mm. The lane itself does not
+                    # move — the F.Cu approach still arrives at stagger_y
+                    # (0.175 mm from the +3V3 via at (70.45, 44.50), which
+                    # is the binding constraint up there) and short jogs on
+                    # both layers carry the transition down and back.
                     _ne_via_size = 0.46
                     _ne_via_drill = 0.20
+                    _r10_box = _pad_box("R10", "2")
+                    _ne = round((_r10_box[2] + R10_PAD_AABB[0]) / 2, 3)  # 73.00
+                    _ne_via_y = 44.60
                 near_epx = _ne
             else:
                 # DFM v3: BTN_R approach via@(91.0,37.48) vs near_epx via@(90.0,37.48): gap=0.1mm.
@@ -955,9 +979,28 @@ def _button_traces():
                 near_epx = epx + 3.0   # DFM: was +2.0 (0.1mm gap to approach via)
                 _ne_via_size = VIA_STD
                 _ne_via_drill = VIA_STD_DRILL
-            parts.append(_seg(ax, stagger_y, near_epx, stagger_y,
-                              "F.Cu", W_SIG, net))
-            parts.append(_via_net(near_epx, stagger_y, net, size=_ne_via_size, drill=_ne_via_drill))
+            # BTN_B's escape from the C3 channel drops an F.Cu stub onto
+            # this horizontal at BTN_B_TAP_X. Split it there: dangling-copper
+            # counts segment ENDPOINTS, so a stub that merely crosses another
+            # segment's interior reads as copper stopping in the air.
+            _taps = [x for x in (BTN_B_TAP_X,)
+                     if net == NET_ID["BTN_B"]
+                     and min(ax, near_epx) < x < max(ax, near_epx)]
+            _nodes = [ax] + sorted(_taps, reverse=ax > near_epx) + [near_epx]
+            for _xa, _xb in zip(_nodes, _nodes[1:]):
+                parts.append(_seg(_xa, stagger_y, _xb, stagger_y,
+                                  "F.Cu", W_SIG, net))
+            if abs(_ne_via_y - stagger_y) > 1e-6:
+                # Layer change pulled off the lane — jog down on F.Cu, land
+                # the barrel, jog back up on B.Cu so the horizontal below
+                # still starts at (near_epx, stagger_y).
+                parts.append(_seg(near_epx, stagger_y, near_epx, _ne_via_y,
+                                  "F.Cu", W_SIG, net))
+            parts.append(_via_net(near_epx, _ne_via_y, net,
+                                  size=_ne_via_size, drill=_ne_via_drill))
+            if abs(_ne_via_y - stagger_y) > 1e-6:
+                parts.append(_seg(near_epx, _ne_via_y, near_epx, stagger_y,
+                                  "B.Cu", W_SIG, net))
             # B.Cu: horizontal to pad X, then vertical to pad Y (no extra via)
             # R13-CU-CLR FIX (2026-04-12): BTN_SELECT (SW10) B.Cu horizontal
             # at y=stagger_y=45.10 passes R10.2 +3V3 pad bottom (y=45.35)
@@ -1756,39 +1799,35 @@ def _button_pullup_bridges():
     # the via+pad clearance (0.23+0.50+0.20=0.93 mm centre-to-centre on each side)
     # is bigger than the gap.
     #
-    # Proper fix: instead of descending south to y=41.50 (between C3.1/C3.2 at
-    # y=42.00), route the B.Cu vertical EAST around C3 on the right side. Use
-    # x=69.55 (midway between C3.2 right edge 69.10 and C3.1 left edge 70.00)
-    # ONLY above C3 (y > 41.35 → north of pad top 41.35). Then jog EAST to x=72.00
-    # BELOW C3 on F.Cu at y=41.50. Actually simpler: descend to y=41.50 between
-    # the pads on B.Cu, and place the via AT y=40.85 (north of C3 pads which end
-    # at y=41.35). This clears both C3 pads.
-    #   Via at (69.55, 40.85): dy to C3.2 (y=41.35 pad top)=0.50; dx=0.95. Gap
-    #   = sqrt(0.95² + 0.50²) - 0.23 - (hypot from pad corner) ≈ plenty.
-    #   Actual edge gap: dx=69.55-69.10=0.45 (via left to C3.2 right), dy=41.35-40.85-0.23=0.27. If we're above-right of C3.2, use min of edge distances:
-    #   via to C3.2 nearest corner (69.10, 41.35): dist=sqrt(0.45²+0.50²)=0.674, gap=0.674-0.23=0.444 mm ✓
-    #   via to C3.1 nearest corner (70.00, 41.35): dist=sqrt(0.45²+0.50²)=0.674, gap=0.444 mm ✓
-    # F.Cu main at y=41.50 — vertical on B.Cu comes down to y=41.50 to meet it,
-    # but the main trace y=41.50 passes UNDER C3 pads (C3 on B.Cu, main on F.Cu).
-    # Landing the via at y=40.85 means the B.Cu vertical stub stops there and a
-    # via connects to F.Cu; the F.Cu main trace at y=41.50 is 0.65 mm south,
-    # so we'd need additional F.Cu routing via→trace.
-    # Simpler: put the via at y=40.85, then F.Cu stub from via (F.Cu side) down
-    # to the main BTN_B F.Cu trace at (69.55, 41.50). This F.Cu vertical is 0.65 mm
-    # long, checks clearance to C3 only on F.Cu (C3 pads are B.Cu, so no F.Cu
-    # conflict).
+    # The barrel does NOT fit in that channel and no via size makes it fit.
+    # C3's JLC reference 0805 land is 1.15 x 1.35, so the pads own
+    # x <= 69.175 and x >= 69.925 — a 0.75 mm channel. KiCad resolves
+    # via-to-pad against the Default netclass (0.2 mm; the 0.09 mm relaxation
+    # in the .kicad_dru is conditioned on A.Type == 'track' and never applies
+    # to a barrel), which needs OD + 0.4 <= 0.75, i.e. OD <= 0.35 — below the
+    # 0.45 mm JLCPCB via floor the same .kicad_dru enforces. Successive
+    # shrinks (0.50 -> 0.46) bought margin against the 0.127 mm copper floor
+    # and were still 0.145 mm from both pads, which is what CI reported.
+    #
+    # So the via leaves the channel: the B.Cu vertical runs on through it
+    # (a 0.25 mm track keeps 0.25 mm each side and tracks answer to the
+    # 0.09 mm rule anyway) and surfaces 0.65 mm NORTH of C3's pads, where
+    # the nearest copper is a pad corner at
+    # sqrt(0.375^2 + 0.475^2) = 0.605 mm — 0.305 mm clear at VIA_STD's
+    # 0.60 mm OD, which also restores the 0.20 mm annular ring the 0.46 mm
+    # barrel had given up. An F.Cu stub then drops the 0.65 mm south onto
+    # the main BTN_B horizontal at y=41.50, on F.Cu the whole way, where
+    # C3's bottom-side pads are not in the picture at all.
     n_btn_b = NET_ID["BTN_B"]
-    parts.append(_seg(68.95, 46.00, 69.55, 46.00, "B.Cu", W_SIG, n_btn_b))  # horiz within R9.1 pad
-    parts.append(_seg(69.55, 46.00, 69.55, 41.50, "B.Cu", W_SIG, n_btn_b))  # vertical — midway between C3 pads (gap 0.325 mm each side)
-    # Landing the via at y=41.50 drops BTN_B onto the main F.Cu horizontal at
-    # (45.55, 41.50)-(73.25, 41.50) so the T-junction is an explicit layer
-    # change, not a dead-end trace endpoint.
-    # R32: VIA_MIN (0.50) -> 0.46. This barrel is centred in the channel
-    # between C3's two pads; the 0805 land grew to the JLC reference and
-    # the channel narrowed to 0.75mm, leaving 0.125mm each side at 0.50mm
-    # OD — under JLCPCB's 0.127mm floor. 0.46mm (AR 0.13mm, JLCPCB min)
-    # gives 0.145mm each side without moving anything.
-    parts.append(_via_net(69.55, 41.50, n_btn_b, size=0.46, drill=VIA_MIN_DRILL))
+    _b_x = BTN_B_TAP_X
+    _b_via_y = 40.85
+    parts.append(_seg(68.95, 46.00, _b_x, 46.00, "B.Cu", W_SIG, n_btn_b))  # horiz within R9.1 pad
+    parts.append(_seg(_b_x, 46.00, _b_x, _b_via_y, "B.Cu", W_SIG, n_btn_b))  # vertical — through the C3 channel, 0.25 mm each side
+    parts.append(_via_net(_b_x, _b_via_y, n_btn_b,
+                          size=VIA_STD, drill=VIA_STD_DRILL))
+    # F.Cu stub down onto the main horizontal at y=41.50, which the stagger
+    # loop splits at BTN_B_TAP_X so this lands on a real endpoint.
+    parts.append(_seg(_b_x, _b_via_y, _b_x, 41.50, "F.Cu", W_SIG, n_btn_b))
 
     # BTN_X: R10.1@(73.95, 46) → existing BTN_X F.Cu↔B.Cu via at (73.555, 42.70)
     # Use the existing via (west end of the (73.56, 42.70)-(75.56, 42.70) segment)

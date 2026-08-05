@@ -538,18 +538,39 @@ def _pam_passive_traces():
         parts.append(_seg(pam_vdd6[0], bridge_y_w,
                           c23_p1[0], bridge_y,
                           "F.Cu", 0.50, n_5v))
-        # Via back to B.Cu (VIA_MIN for R20 pad clearance)
-        # R32: VIA_MIN (0.50) -> 0.46. R20's 0805 pads grew to the JLC
-        # reference and their inner edges moved to 37.625 / 38.375, leaving
-        # this barrel 0.125mm — under JLCPCB's 0.127mm floor. 0.46mm gives
-        # 0.145mm on both sides.
-        parts.append(_via_net(c23_p1[0], bridge_y, n_5v, size=0.46, drill=VIA_MIN_DRILL))
-        # B.Cu: vert down to C23 pad 1 — R32: 0.50 -> 0.45. R20's 0805
-        # pads grew to the JLC reference (inner edges 37.625 / 38.375) and
-        # a 0.50mm trace left 0.125mm each side, under JLCPCB's 0.127mm
-        # floor. 0.45mm gives 0.15mm and is still well above the Power
-        # net class's 0.25mm minimum.
+        # The barrel stays on F.Cu until it is PAST R20's pad row.
+        #
+        # It used to land at (38.00, 25.80), in the 0.75 mm channel between
+        # R20's two pads — and no legal barrel fits there. KiCad resolves
+        # via-to-pad against the Default netclass at 0.2 mm (the .kicad_dru
+        # relaxation to 0.09 mm is conditioned on A.Type == 'track' and
+        # never reaches a via), so the ring may be at most 0.35 mm OD,
+        # under the 0.45 mm via floor the same .kicad_dru sets. Shrinking it
+        # 0.50 -> 0.46 bought clearance against the 0.127 mm copper floor
+        # and left it 0.1458 mm from both pads, which is what CI reported.
+        # Sliding it north instead runs into PAM_VREF's B.Cu at y=25.20:
+        # the hole-to-track rule needs 0.254 mm, so y >= 25.654, while the
+        # pads need y <= 25.614. There is no position in that channel.
+        #
+        # So the F.Cu bridge carries on SOUTH first, past the pad row, and
+        # changes layer in the 0.80 mm gap between R20's lands (which end at
+        # y=27.175) and C23's own (which start at y=27.975). That gap is
+        # bounded at both ends and by different rules: the 0.46 mm ring
+        # needs 0.2 mm from R20's pad CORNER, y >= 27.605, and the hole
+        # needs verify_via_in_pad's 0.15 mm from C23.1's edge even though
+        # C23.1 is the same net, y <= 27.725. 27.68 sits mid-window at
+        # 0.399 mm and 0.195 mm.
+        #
+        # This also takes the 0.45 mm B.Cu run out of the channel — the one
+        # that had 0.15 mm on each side — leaving only the 0.75 mm of empty
+        # B.Cu between C23.1 and the barrel.
+        _bridge_drop_y = 27.68
         parts.append(_seg(c23_p1[0], bridge_y,
+                          c23_p1[0], _bridge_drop_y,
+                          "F.Cu", 0.50, n_5v))
+        parts.append(_via_net(c23_p1[0], _bridge_drop_y, n_5v,
+                              size=0.46, drill=VIA_MIN_DRILL))
+        parts.append(_seg(c23_p1[0], _bridge_drop_y,
                           c23_p1[0], c23_p1[1],
                           "B.Cu", 0.45, n_5v))
         # GND stub from C23 pad 2: go DOWN then via.
