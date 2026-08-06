@@ -120,6 +120,14 @@ def _passive_traces():
             via_x_db = cx - 1.05  # 76.95 — clears BTN_R vert
         if i == 8:
             via_x_db = cx - 0.80  # 82.20 — clears BAT+ B.Cu vert at x=81.0 (gap=0.52mm ✓)
+        if i == 9:
+            # 86.95, not 86.80 (R32): the sot23_3 pad growth for the
+            # AO3401A land moved Q1.2's east edge from 86.25 to 86.35,
+            # and at 86.80 this ring's west edge (86.50) left 0.15 mm —
+            # KiBot's 0.2 mm netclass red, invisible to the local fab
+            # gates. At 86.95 the ring clears the pad by 0.30 and stays
+            # 0.40 clear of the BAT+ R34 riser's round cap at (87.05,53).
+            via_x_db = cx - 1.05
         if i == 10:
             via_x_db = cx - 0.80  # 92.20 — clears USB_D- vert at x=91.65
         parts.append(_seg(cx - 0.95, cy, via_x_db, cy,
