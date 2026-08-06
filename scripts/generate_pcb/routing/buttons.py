@@ -1863,8 +1863,13 @@ def _button_pullup_bridges():
     # connected without an explicit stub. y=47 is clear of BAT+ F.Cu at
     # y=46.135 (via top=46.77, BAT+ bot=46.515 → gap 0.255mm ✓).
     n_btn_r = NET_ID["BTN_R"]
-    parts.append(_via_net(98.95, 47.00, n_btn_r, size=VIA_MIN, drill=VIA_MIN_DRILL))
-    parts.append(_seg(98.95, 47.00, 98.95, 48.00, "F.Cu", W_SIG, n_btn_r))
+    # y=47.35, not 47.00 (R32): the BAT+ F.Cu feed at y=46.13 widened to
+    # 1.10 (bottom edge 46.68) for trace ampacity; at 47.00 this ring's
+    # top edge (46.75) left only 0.07 mm. Still on the same B.Cu vertical
+    # (y=46..50), ring 0.42 clear of the feed and 0.275 of the F.Cu
+    # horizontal it drops from.
+    parts.append(_via_net(98.95, 47.35, n_btn_r, size=VIA_MIN, drill=VIA_MIN_DRILL))
+    parts.append(_seg(98.95, 47.35, 98.95, 48.00, "F.Cu", W_SIG, n_btn_r))
     parts.append(_seg(98.95, 48.00, 87.985, 48.00, "F.Cu", W_SIG, n_btn_r))
 
     # ── MEDIUM: BTN_START ──

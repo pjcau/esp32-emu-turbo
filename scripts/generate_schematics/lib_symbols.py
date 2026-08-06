@@ -315,7 +315,7 @@ _SYMBOL_BAT54C = """    (symbol "BAT54C" (pin_names (offset 1.016) hide) (in_bom
         (pin passive line (at 5.08 -1.27 180) (length 2.54) (name "2" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
         (pin passive line (at 0 5.08 270) (length 2.54) (name "3" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
 
-# P-channel MOSFET, SOT-23 (SI2301CDS) — used by Q1 (battery reverse-polarity
+# P-channel MOSFET, SOT-23 (AO3401A) — used by Q1 (battery reverse-polarity
 # protection) and Q2 (the SW16 respin's +5V high-side load switch). The pin
 # COORDINATES are identical to BAT54C's, because Q1/Q2 were originally drawn
 # with that dual-diode symbol as a stand-in and every wire on sheet 01 lands

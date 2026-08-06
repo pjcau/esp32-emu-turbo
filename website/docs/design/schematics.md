@@ -63,8 +63,8 @@ make render-schematics    # Export SVG + PDF
                          │  (charge+boost)  │                  │
                          └────────┬─────────┘                  ▼
                                   │ BAT+                ┌────────────┐
-                          ┌───────┴───────┐             │ Q2 SI2301  │
-                          │ Q1 SI2301 RPP │   gate ────►│ high-side  │
+                          ┌───────┴───────┐             │ Q2 AO3401A │
+                          │ Q1 AO3401A RPP│   gate ────►│ high-side  │
                           ├───────────────┤   SW16 +    │ P-MOSFET   │
                           │ LiPo Batt     │   R32/R33/  └─────┬──────┘
                           │ 3.7V 5000 mAh │   C32 net;        │
@@ -128,9 +128,9 @@ USB-C input with CC pull-downs, F1 resettable PTC fuse on the VBUS input, IP5306
 | U3 | Buck regulator | SY8089AAAC | 5V to 3.3V, 2A max, ~93% | [PDF](/datasheets/U3_SY8089AAAC_C78988.pdf) |
 | U4 | USB ESD TVS | USBLC6-2SC6 SOT-23-6 (C7519) | USB D+/D− ESD protection | — |
 | R22, R23 | Resistor | 22 Ω 0402 (C25092) | USB D+/D− series resistors | — |
-| Q1 | P-MOSFET | SI2301CDS SOT-23 (C10487) | Battery reverse-polarity protection (BAT_IN → BAT+) | — |
+| Q1 | P-MOSFET | AO3401A SOT-23 (C15127) | Battery reverse-polarity protection (BAT_IN → BAT+). R32: replaced SI2301CDS, rated below the battery-path current | — |
 | R24 | Resistor | 100 kΩ | Q1 gate pull-down (MOSFET ON for correct polarity) | [PDF](/datasheets/R16_100k-0805_C149504.pdf) |
-| Q2 | P-MOSFET | SI2301CDS SOT-23 (C10487) | **Respin** — high-side power switch on the +5V rail: source on **+5V_VOUT**, drain on **+5V**, gate on **PWR_SW_GATE**. Same part as Q1. The body diode points loads→VOUT, so it blocks in the OFF state | — |
+| Q2 | P-MOSFET | AO3401A SOT-23 (C15127) | **Respin** — high-side power switch on the +5V rail: source on **+5V_VOUT**, drain on **+5V**, gate on **PWR_SW_GATE**. Same part as Q1. The body diode points loads→VOUT, so it blocks in the OFF state | — |
 | R32 | Resistor | 22 kΩ (C17560) | **Respin** — Q2 gate pull-up, PWR_SW_GATE → +5V_VOUT. Sets the **default state to OFF**. **Not 100 kΩ** — see the caution below | — |
 | R33 | Resistor | 1 kΩ (C17513) | **Respin** — series gate resistor, PWR_SW → PWR_SW_GATE; sets the soft-start slope | — |
 | R34 | Resistor | 1 MΩ (C17514) | **Respin** — PWR_SW → BAT+. Defines the switch node when the throw is open and keeps C33 pre-charged | — |
@@ -238,8 +238,8 @@ the IP5306's VOUT pin and every load by the high-side P-MOSFET **Q2**:
 ```
 
 **Key design points:**
-- **Q1 (SI2301 P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail, with the **cell on the drain and the IP5306 on the source**. That direction is the protection, not a detail: a P-channel body diode conducts drain→source, so a correctly-inserted cell pre-charges the rail through the diode and then V<sub>GS</sub> = −V<sub>BAT</sub> (gate held at GND by R24) turns the channel on, while a reversed cell reverse-biases the diode *and* holds the channel off. Wired the other way round the part conducts identically in normal use and does nothing at all in the fault — which is why this shipped undetected through v4.5.0 and was fixed as R31-HIGH-1 by turning the package around.
-- **Q2 (SI2301 P-MOSFET, same part as Q1)** is the actual power switch. Its **body diode points loads→VOUT**, so it blocks in the OFF direction; SW16 does nothing but pull the gate node to GND. Sliding to ON gives V<sub>GS</sub> = −4.78 V (past the −4.5 V the part's R<sub>DS(on)</sub> is specified at); the throw open gives V<sub>GS</sub> = −0.028 V with a cell, −0.108 V with none — against a 0.45 V threshold minimum. vbench T2.3 solves the same network from the netlist and the BOM and gets −4.783 V / −0.025 V.
+- **Q1 (AO3401A P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail, with the **cell on the drain and the IP5306 on the source**. That direction is the protection, not a detail: a P-channel body diode conducts drain→source, so a correctly-inserted cell pre-charges the rail through the diode and then V<sub>GS</sub> = −V<sub>BAT</sub> (gate held at GND by R24) turns the channel on, while a reversed cell reverse-biases the diode *and* holds the channel off. Wired the other way round the part conducts identically in normal use and does nothing at all in the fault — which is why this shipped undetected through v4.5.0 and was fixed as R31-HIGH-1 by turning the package around.
+- **Q2 (AO3401A P-MOSFET, same part as Q1)** is the actual power switch. Its **body diode points loads→VOUT**, so it blocks in the OFF direction; SW16 does nothing but pull the gate node to GND. Sliding to ON gives V<sub>GS</sub> = −4.78 V (past the −4.5 V the part's R<sub>DS(on)</sub> is specified at); the throw open gives V<sub>GS</sub> = −0.028 V with a cell, −0.108 V with none — against a 0.5 V threshold minimum. vbench T2.3 solves the same network from the netlist and the BOM and gets −4.783 V / −0.025 V.
 - **The net split follows the board's existing precedent** — `VBUS_IN` → F1 → `VBUS`, `BAT_IN` → Q1 → `BAT+`, and now **`+5V_VOUT` → Q2 → `+5V`**. `+5V_VOUT` is the upstream net (U2 pin 8, C27, Q2 source, R32/C32); **`+5V` keeps its name and is now the LOAD-side net** (U3, U5, R27, load-side decoupling).
 - **SW16** was originally intended between battery and IP5306 pin 6 (BAT) — that plan is **rejected**, see the caution below. It is **not functional in any revision to date**, and it never controlled USB VBUS.
 - **VBUS** reaches IP5306 pin 1 (VIN) through the F1 PTC fuse (J1 → VBUS_IN → F1 → VBUS) — always available when USB is plugged in.
@@ -282,7 +282,7 @@ the system off.
 section of
 [`docs/known-issues.md`](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/known-issues.md)):
 the +5V rail is broken between the IP5306 VOUT pin and **all** loads by the high-side
-P-MOSFET **Q2** (SI2301, same part as Q1). New net `+5V_VOUT` upstream, `+5V` keeps
+P-MOSFET **Q2** (AO3401A, same part as Q1). New net `+5V_VOUT` upstream, `+5V` keeps
 its name on the load side. SW16 pad 2 = `PWR_SW`, pad 1 = GND (the ON position),
 pad 3 open; the dead BAT+ stub is removed. Gate network: **R32** 22 kΩ pull-up to
 `+5V_VOUT` (default OFF), **R33** 1 kΩ in series, **C32** 1 µF gate-source
@@ -292,7 +292,7 @@ pad 3 open; the dead BAT+ stub is removed. Gate network: **R32** 22 kΩ pull-up 
 R32 is **not** 100 kΩ. The OFF state is a divider — V<sub>GS</sub> =
 −5 × R32/(R32+R33+R34) — so the gate offset is set by the *ratio*, and the obvious
 100k/10k/1M lands the no-battery case on V<sub>GS</sub> = −0.455 V, *exactly*
-SI2301's threshold minimum, in precisely the USB-powered/no-cell/switch-OFF state a
+the P-MOSFET's threshold-minimum region, in precisely the USB-powered/no-cell/switch-OFF state a
 bench operator uses most. Raising R34 to 4.7 MΩ fixes the same ratio and was rejected
 for a different reason: 4.7 M 0805 is not a JLCPCB **Basic** part, so it would buy an
 extended-part fee and a feeder. Shrinking R32 uses parts already on this BOM, keeps

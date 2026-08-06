@@ -140,11 +140,11 @@ def survey(board=None, values=None):
 def _q2_thresholds():
     """(V_gs to call Q2 ON, V_gs to call Q2 OFF), from the part's model.
 
-    Both come from the SI2301 model rather than being typed here, so a
+    Both come from the AO3401A model rather than being typed here, so a
     corrected datasheet reading moves this test with it.
     """
-    from vbench.models.q1_si2301 import Q1 as SI2301
-    p = SI2301.params
+    from vbench.models.q1_ao3401a import Q1 as PMOS
+    p = PMOS.params
     # ON: the datasheet characterises R_ds(on) at a stated V_gs. Driving to
     # at least that magnitude is what "on" means for this part.
     on = abs(p["v_gs_rds_on"].value)

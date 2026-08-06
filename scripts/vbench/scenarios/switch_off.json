@@ -12,7 +12,7 @@
       "quantity": "switch.ok",
       "op": "==",
       "value": true,
-      "because": "docs/known-issues.md RESPIN: SW16 drives PWR_SW, which through R33 drives Q2's gate. The scenario checks the gate against the SI2301 model's own drive conditions."
+      "because": "docs/known-issues.md RESPIN: SW16 drives PWR_SW, which through R33 drives Q2's gate. The scenario checks the gate against the AO3401A model's own drive conditions."
     },
     {
       "name": "SW16's common drives the gate node",
@@ -33,7 +33,7 @@
       "quantity": "switch.vgs_on",
       "op": "<=",
       "value": -4.5,
-      "because": "the SI2301 specifies R_ds(on) at V_gs = -4.5 V (q1_si2301.py v_gs_rds_on)."
+      "because": "the AO3401A specifies R_ds(on) at V_gs = -4.5 V (q1_ao3401a.py v_gs_rds_on)."
     },
     {
       "name": "the open throw leaves Q2 within 0.1 V of its source",

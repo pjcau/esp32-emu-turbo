@@ -21,10 +21,13 @@ Checks:
   T4  SD SPI pins match SD_MOSI/MISO/CLK/CS
   T5  SD SPI clock is the board-validated 20 MHz, not HIGHSPEED
   T6  audio is the PDM driver on I2S_DOUT; ext/int DAC off; no BCK/WS
-  T7  LCD i80 pins match; no RD/BCKL define (both are +3V3 hard-ties)
+  T7  LCD i80 pins match; no RD/BCKL define (RD is a +3V3 hard-tie, the
+      backlight is a fixed +5V-via-R27 feed — neither has a GPIO)
   T8  no RG define lands on PSRAM (26-37) or USB (19/20) pins
   T9  every GPIO the target claims exists in GPIO_NETS (i.e. is routed)
   T10 the target sdkconfig sets CPU freq / console / PSRAM mode, IDF5 names
+  T11 a generated software/sdkconfig (if present) does not contradict
+      sdkconfig.defaults on console/PSRAM — R31-MED-2's stale-file class
 
 Round 31 found the same perimeter hole one file over: this gate read
 config.h only, so the target's sdkconfig — handed to the build as
@@ -217,6 +220,40 @@ def main():
                   f"{os.path.relpath(SDKCONFIG, BASE)} still has {hits} — "
                   f"{renamed_to}; the IDF4 name is dropped silently, so this "
                   f"line configures NOTHING")
+
+    print("── T11: Phase-1 app generated sdkconfig (R31-MED-2 class) ──")
+    # idf.py prefers an existing sdkconfig over sdkconfig.defaults, so a
+    # stale generated file silently reverts every defaults-only choice.
+    # R31-MED-2: a 2026-02 software/sdkconfig predating the USB-JTAG
+    # console fix built the Phase-1 app with the console on UART0 =
+    # GPIO43/44 = SD_MISO/SD_MOSI. The file is gitignored, so only a
+    # gate that reads the live tree can see it. Absent file = PASS
+    # (idf.py regenerates from defaults, which T11 also re-asserts here).
+    app_defaults = os.path.join(BASE, "software", "sdkconfig.defaults")
+    app_sdkconfig = os.path.join(BASE, "software", "sdkconfig")
+    APP_MUST_AGREE = [
+        ("CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y",
+         "console falls back to UART0 = GPIO43/44 = SD_MISO/SD_MOSI "
+         "(R2-MED-3, regressed once as R31-MED-2)"),
+        ("CONFIG_SPIRAM_MODE_OCT=y",
+         "N16R8 PSRAM is Octal; Quad mode leaves the 8 MB unusable"),
+    ]
+    defaults_active = {ln.strip() for ln in open(app_defaults)
+                       if ln.strip() and not ln.lstrip().startswith("#")}
+    for setting, why in APP_MUST_AGREE:
+        check(f"[T11] defaults carry {setting}", setting in defaults_active,
+              f"MISSING from software/sdkconfig.defaults — {why}")
+    if os.path.exists(app_sdkconfig):
+        app_active = {ln.strip() for ln in open(app_sdkconfig)
+                      if ln.strip() and not ln.lstrip().startswith("#")}
+        for setting, why in APP_MUST_AGREE:
+            check(f"[T11] generated sdkconfig keeps {setting}",
+                  setting in app_active,
+                  f"software/sdkconfig (generated, gitignored) contradicts "
+                  f"sdkconfig.defaults — {why}. Delete it and let idf.py "
+                  f"regenerate")
+    else:
+        check("[T11] no stale generated software/sdkconfig", True)
 
     print("=" * 60)
     print(f"Results: {PASS} passed, {FAIL} failed")

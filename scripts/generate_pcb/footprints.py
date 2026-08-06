@@ -811,24 +811,31 @@ def sot23_5(layer="B"):
     ]
 
 
-# ── SOT-23-3 (BAT54C dual Schottky diode, SI2301CDS P-MOSFET) ───
+# ── SOT-23-3 (BAT54C dual Schottky diode, AO3401A P-MOSFET) ───
 # 0.95mm pitch, rows at y=±1.10.
 # BAT54C: pin 1=Anode1, pin 2=Anode2, pin 3=Common Cathode
 #
 # Pad LENGTH 1.00mm, same reasoning as sot23_6 above: the JLC reference
 # lands for the two parts on this footprint are 1.070 x 0.600 (D1,
-# C37704) and 1.037 x 0.532 (Q1, C10487); the old 0.70 pad covered 0.65
-# of them and JLCDFM flagged every pin. 1.00 covers 0.935 (D1) / 0.964
-# (Q1). Grown symmetrically about the row centres — the centroid, and
-# therefore the fitted body box, is unchanged. Q1's outward edge is the
-# binding one: it faces the RPP_GATE corridor at y=51.1 on one side and
-# the BAT+ channel at y=52.9 on the other.
+# C37704) and — since the R32 part swap — 1.000 x 0.800 (Q1/Q2,
+# AO3401A C15127; the old SI2301CDS C10487 land was 1.037 x 0.532).
+# Pad WIDTH is 0.80 for the same reason (R32): at the old 0.60 the
+# AO3401A land's short axis was covered 0.75 with a 0.20 mm deficit and
+# verify_pad_land flagged all six Q pins. 0.80 covers it fully, leaves
+# 1.10 mm between the pin-1/pin-2 pads at the 0.95 pitch (x2 = 1.90 mm
+# centres), and over-covers D1's 0.600-wide land, which the gate
+# permits. Grown symmetrically about the row centres — the centroid,
+# and therefore the fitted body box, is unchanged. Q1's outward edge is
+# the binding one: it faces the RPP_GATE corridor at y=51.1 on one side
+# and the (R32-widened) BAT+ channel at y=53.0 on the other; the
+# channel's 0.20 clearances were derived against the 1.00 mm pad
+# HEIGHT, which this growth does not touch.
 def sot23_3(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     return [
-        _pad("1", "smd", "rect", -0.95, 1.10, 0.60, 1.00, layers),
-        _pad("2", "smd", "rect", 0.95, 1.10, 0.60, 1.00, layers),
-        _pad("3", "smd", "rect", 0, -1.10, 0.60, 1.00, layers),
+        _pad("1", "smd", "rect", -0.95, 1.10, 0.80, 1.00, layers),
+        _pad("2", "smd", "rect", 0.95, 1.10, 0.80, 1.00, layers),
+        _pad("3", "smd", "rect", 0, -1.10, 0.80, 1.00, layers),
     ]
 
 

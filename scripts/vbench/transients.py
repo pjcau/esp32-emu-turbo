@@ -61,7 +61,7 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 from vbench import netlist as nl                             # noqa: E402
 from vbench import rails, sources                            # noqa: E402
 from vbench.models import require_valid                      # noqa: E402
-from vbench.models.q1_si2301 import Q1, r_ds_on              # noqa: E402
+from vbench.models.q1_ao3401a import Q1, r_ds_on              # noqa: E402
 from vbench.models.u2_ip5306 import U2                       # noqa: E402
 from vbench.models.u3_sy8089 import U3, v_out_spread         # noqa: E402
 

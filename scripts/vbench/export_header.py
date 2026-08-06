@@ -33,7 +33,7 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 from vbench import audio, buttons, display, rails, sources, thermal  # noqa: E402
 from vbench import netlist as nl                                      # noqa: E402
 from vbench import pins as pinmod                                     # noqa: E402
-from vbench.models.q1_si2301 import Q1, r_ds_on                       # noqa: E402
+from vbench.models.q1_ao3401a import Q1, r_ds_on                       # noqa: E402
 from vbench.models.u1_esp32s3 import (                                # noqa: E402
     U1, boot_mode, vdd_spi_voltage)
 from vbench.models.u3_sy8089 import U3                                # noqa: E402

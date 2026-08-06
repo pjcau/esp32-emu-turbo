@@ -3871,3 +3871,88 @@ datasheet_specs, schematic, routing and BOM.
   IP5306's undocumented KEY pull-up (SW17 is the fallback), SD pad 9
   Cd-spring polarity continuity check, R27 backlight current
   measurement on the actual panel.
+
+## Round 32 Addendum (2026-08-06) — the battery path, measured end to end
+
+Follow-through on R31-MED-2/MED-3, which surfaced one genuinely new
+finding and closed with a part swap, a copper-widening sweep, and a new
+permanent gate.
+
+### R32-HIGH-1 — series P-MOSFETs rated below the battery-path current (FIXED)
+- **Files**: `scripts/vbench/models/q1_si2301.py` (deleted),
+  `hardware/datasheet_specs.py` Q1/Q2, BOM/CPL
+- **Problem**: every amp of BAT_IN/BAT+/LX flows through Q1's channel
+  (and the +5V rail through Q2), but the SI2301CDS is cited at
+  **−2.3 A @25 °C / −1.8 A @70 °C** continuous (its own model,
+  p.1 table 2) — below both the derived worst case (4.348 A) and the
+  realistic sustained draw at rated boost output (~3.5 A at a nominal
+  cell). The barrel-ampacity gate sized vias to 4.348 A while the
+  series transistor could not carry it; no gate compares rail current
+  to series-element ratings (still true — noted as a gap).
+- **Root cause**: part chosen for the RPP role (v4.0) before the SW16
+  respin put the same part in the full-current +5V path and before any
+  current derivation existed.
+- **Fix (landed)**: Q1/Q2 → **AO3401A** (C15127, JLC Basic, SOT-23
+  drop-in): −4.0 A/−3.2 A continuous, Rds(on) 47/60 mΩ @ −4.5 V
+  (roughly half), body diode −2 A (was −1.3 A), Vgs(th) min −0.5 V so
+  every SW16 OFF-margin argument survives with more room (no-cell
+  margin 4.6×, was 4.2×). New cited model
+  `scripts/vbench/models/q1_ao3401a.py` (datasheet
+  `Q1_AO3401A-SOT23_C15127.pdf`, Rev 3.1 Dec 2023, fetched from AOS);
+  vbench 200/200; `sot23_3()` pads grown 0.60→0.80 wide to cover the
+  AO3401A's 1.00×0.80 JLC reference land (verify_pad_land).
+
+### R31-MED-3 — CLOSED: one design current, both copper gates judge it
+- New permanent gate **`scripts/verify_power_trace_ampacity.py`** —
+  feature-level max-flow over segments (IPC-2221 per-layer curves,
+  1 oz/0.5 oz stackup), zones/pads uncapacitated, vias at the barrel
+  gate's own `via_ampacity()`. Shares `_rail_declarations()` with the
+  barrel gate, so one cited current per net. Land-pattern-neck and
+  soldered-THT refinements documented in the module docstring.
+  Wired into `VERIFY_ALL_SCRIPTS` (suite now 104) and
+  `issue_dispatch` (pcb-engineer, degraded, D2 argument).
+- **Copper widened to the corridor maxima** (0.2 mm netclass
+  clearance): BAT+ channel 0.60→0.80 + column 0.76→0.90 @x=80.18 +
+  the 24 mm F.Cu feed 0.76→1.10 (BTN_R drop via moved 47.00→47.35);
+  BAT_IN horizontal 0.60→1.10 @y=54.20 + J3.1 riser 0.60→1.10;
+  LX 0.76→0.90 (column, capped by the 0.25 mm LX-vs-BAT+ rule) and
+  1.10 (jogs/exit).
+- **Measured after the sweep** (max-flow @10 °C → rise at 4.348 A):
+  BAT+ 2.034 A → 56 °C · BAT_IN 2.563 A → 33 °C · LX 2.216 A → 46 °C.
+  The Q1 quadrant is fenced (button-RC lands, J3.4 tab, RPP_GATE, the
+  PWR_SW F.Cu wall); nothing wider fits without moving components.
+  Gate limit is 20 °C globally with a per-net `TRACE_DT_EXCEPTIONS`
+  table (60/36/50 °C) that prints its reasons on every run and flags
+  itself stale if a respin widens the copper. **First-article thermal
+  probe of the Q1 corridor at forced full load is OWED** — the
+  ceilings are declared limits, not blessings. The 4.348 A figure is
+  itself a stacked corner (rated boost output at the 3.0 V cell floor;
+  3.52 A at a nominal cell → BAT+ ~36 °C), and IPC-2221 reads ~2×
+  conservative against IPC-2152 for short runs.
+- `W_PWR_HIGH`'s "≥2.1 A" annotation (the original two-current story)
+  retired in `routing/_shared.py`; widths are class floors, currents
+  live in `_rail_declarations()`.
+
+### R31-MED-2 — CLOSED
+Stale `software/sdkconfig`/`sdkconfig.old` deleted;
+`verify_firmware_retrogo_sync` grew **T11**: sdkconfig.defaults must
+carry the USB-JTAG console + Octal PSRAM lines, and any generated
+`software/sdkconfig` present in the tree must not contradict them
+(63/63). The T7 docstring's stale "BCKL +3V3 hard-tie" wording fixed.
+
+### Also fixed while in the file
+- `datasheet_specs.py` SW16-respin prose was stale twice over: C33
+  described as "1 uF starting value" (it is 4.7 µF since 3859dfe) and
+  SW17 described as "specified and then dropped" in two places (it is
+  on the board as a TS-1088 DNP land). Both rewritten; U2.5's KEY pin
+  function now names SW17 as the fallback.
+- `verify_crosstalk.py` COUPLING_SEARCH_MM 4.0→5.0 (the 1.10 mm
+  copper's 3W reach outgrew the prefilter; its own runtime assert
+  caught it).
+
+### Order-set consequence
+gerbers + BOM (**C15127 replaces C10487**) + CPL regenerated, copied
+to `release_jlcpcb/`, extracted gerbers refreshed, gerber e-test
+PASS, new `order-manifest` written. **This set supersedes c0ebe7a1's**
+— the pending JLC re-upload must use it; paying against any earlier
+upload ships the undersized SI2301 and the 90 °C battery corridor.

@@ -371,7 +371,7 @@ class PowerSupplySheet(SchematicSheet):
         # ---- CBAT (C18, 10uF) on BAT line ----
         # Moved further down and slightly right of R16 (was cbat_x=198,
         # causing "BAT decoupling" text to run into Q1's "P-MOSFET RPP /
-        # SI2301CDS" labels). The new tap (185, 87.54) sits between R16
+        # AO3401A" labels). The new tap (185, 87.54) sits between R16
         # at x=182 and Q1 at x=210 — clear of both the KEY horizontal
         # wire (which runs at y=90.08 from x=170.16 to x=182) and the
         # Q1 label cluster.
@@ -448,8 +448,8 @@ class PowerSupplySheet(SchematicSheet):
         # which is what a reviewer sees. Fields to the RIGHT of the body:
         # centred above/below they collided with the pin-3 number and the
         # RPP_GATE label. The Value already names the part, so the old
-        # "(SI2301CDS)" annotation text is gone.
-        self.sym("PMOS_SOT23", "Q1", "SI2301CDS", q1x, q1y, ["1", "2", "3"],
+        # annotation text repeating the part number is gone.
+        self.sym("PMOS_SOT23", "Q1", "AO3401A", q1x, q1y, ["1", "2", "3"],
                  fields={"ref": (6.9, -3.2, "left"),
                          "val": (6.9, -0.8, "left")})
         self.text("P-MOSFET RPP", q1x + 8, q1y - 26, 1.5)
@@ -478,7 +478,7 @@ class PowerSupplySheet(SchematicSheet):
 
         # Q1 pin 3 (Drain, top) — the CELL side, net BAT_IN.
         # Up out of the pin, then east into clear space; the label goes at
-        # the far end so it does not land on the "(SI2301CDS)" annotation
+        # the far end so it does not land on the value annotation
         # below-left or on C27's "HF bypass" at (222, 91).
         self.wire(q1x, q1y - 5.08, q1x, q1y - 8)
         self.wire(q1x, q1y - 8, q1x + 16, q1y - 8)
@@ -712,7 +712,7 @@ class PowerSupplySheet(SchematicSheet):
         # OFF = loads dead but USB still charges, no cell fitted =
         # identical behaviour on USB.
         #
-        # Q2 (SI2301CDS, C10487 — the SAME part as Q1, so no new BOM line
+        # Q2 (AO3401A, C15127 — the SAME part as Q1, so no new BOM line
         # and no new package family) breaks the rail between the boost
         # output and every load. SW16 does not carry rail current at all
         # now; it carries the GATE, which is why a slide switch rated for
@@ -833,7 +833,7 @@ class PowerSupplySheet(SchematicSheet):
         # see routing/_shared.py::SW17_POS for the measurement.
         self.sym("SW_Push", "SW17", "TS-1088", 310, 240, ["1", "2"], 180)
         # Annotation BELOW the switch: above it runs into Q2's own
-        # "(SI2301CDS, same as Q1)" line, and the row immediately under
+        # "(same as Q1)" line, and the row immediately under
         # the symbol is its Reference field.
         # South-west of the symbol. Straight below it runs into the
         # sheet's title block (x>=297, y>=255), which the overlap gate
@@ -906,7 +906,7 @@ class PowerSupplySheet(SchematicSheet):
         # PMOS_SOT23 — same pin coordinates as the BAT54C stand-in it
         # replaces (wires unchanged), real transistor artwork. Fields to the
         # right, above the pin-2 stub's top end.
-        self.sym("PMOS_SOT23", "Q2", "SI2301CDS", q2x, q2y, ["1", "2", "3"],
+        self.sym("PMOS_SOT23", "Q2", "AO3401A", q2x, q2y, ["1", "2", "3"],
                  fields={"ref": (6.9, -4.6, "left"),
                          "val": (6.9, -2.2, "left")})
         # Annotation pushed east of the source stub: at q2x+6 it sat on the

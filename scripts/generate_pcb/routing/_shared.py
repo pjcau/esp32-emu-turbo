@@ -31,8 +31,19 @@ from ..collision import CollisionGrid
 _GRID = CollisionGrid()
 
 # ── Trace widths ──────────────────────────────────────────────────
-W_PWR = 0.6
-W_PWR_HIGH = 0.76     # High-current power: VBUS, BAT+, LX (≥2.1A, 1oz Cu, 10°C rise)
+# These are the CLASS FLOORS, not per-net current ratings. The single
+# design current per net lives in verify_power_via_ampacity's
+# _rail_declarations() (cited from the component models), and BOTH
+# copper gates judge against it: barrels in verify_power_via_ampacity,
+# trace cross-sections in verify_power_trace_ampacity (IPC-2221, 20 degC
+# limit, per-net TRACE_DT_EXCEPTIONS for corridor-capped nets). The old
+# "≥2.1A" annotation here was R31-MED-3: a second, smaller design
+# current that no gate checked — retired in R32. Segments that must
+# carry more than a floor's worth are widened in place (see the R32
+# widening blocks in power.py: BAT+ channel 0.80, BAT_IN 1.10,
+# LX 0.90/1.10, BAT+ F.Cu feed 1.10).
+W_PWR = 0.6           # Power class floor (~1.65 A at 1 oz, dT 10 degC)
+W_PWR_HIGH = 0.76     # Power High class floor (~1.96 A at 1 oz, dT 10 degC)
 W_PWR_LOW = 0.30      # Light power stubs: +3V3/GND short cap-to-via runs (~0.5A)
 W_SIG = 0.25
 # Diagnostic VBUS branch: the 'Power High' class floor, not the current it
@@ -719,7 +730,7 @@ R22_POS = (90.25, 40.0)   # D+ 22Ω series (between TVS and ESP32 GPIO20)
 R23_POS = (91.65, 38.5)   # D- 22Ω series (between TVS and ESP32 GPIO19, clear of C4 GND via@40.0)
 
 # P-MOSFET reverse polarity protection (v4.0; re-oriented for R31-HIGH-1)
-# Q1 (SI2301CDS SOT-23-3): right of J3, above J3.4 mech tab.
+# Q1 (AO3401A SOT-23-3): right of J3, above J3.4 mech tab.
 # Pin 1=Gate, Pin 2=Source (BAT+, IP5306 side), Pin 3=Drain (BAT_IN, cell side)
 #
 # THE DRAIN FACES THE CELL AND THAT IS THE WHOLE POINT (R31-HIGH-1).
@@ -778,7 +789,7 @@ R24_ROT = 270            # pad 1 (gate) south, toward Q1
 
 # ── SW16 respin: Q2 high-side +5V load switch and its control net ─────
 #
-# Q2 (SI2301CDS SOT-23-3, the SAME part as Q1) breaks the +5V rail
+# Q2 (AO3401A SOT-23-3, the SAME part as Q1) breaks the +5V rail
 # between the IP5306 boost output and every load. Source on +5V_VOUT,
 # drain on +5V, so the body diode points loads->VOUT and blocks in the
 # OFF state. Q2_ROT is 180 for the same reason Q1_ROT is: at 180 deg the

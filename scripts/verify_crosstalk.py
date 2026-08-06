@@ -135,7 +135,10 @@ CLOSE_CORUN_WARN_MM = 10.0
 # least CLOSE_GAP_W * (widest signal trace) + that trace's own half-widths, or
 # the prefilter would silently hide pairs the verdict law cares about. Asserted
 # against the real board at runtime by _check_search_radius().
-COUPLING_SEARCH_MM = 4.0
+# 5.0, not 4.0, since the R32 trace-ampacity widenings: the widest
+# non-plane trace is now the 1.10 mm BAT+/LX copper, whose 3W reach is
+# 4.40 mm. Only affects candidate count (speed), never verdicts.
+COUPLING_SEARCH_MM = 5.0
 
 # Uniform grid cell for the candidate search, mm. Only affects speed.
 GRID_CELL_MM = 5.0

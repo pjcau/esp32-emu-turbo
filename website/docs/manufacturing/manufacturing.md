@@ -67,7 +67,7 @@ The bottom side hosts the main circuitry:
 | **L1**         | 1uH 4.5A inductor           | C280579       | SMD-4x    |
 | **L2**         | 2.2uH 2.95A buck inductor   | C36409        | IND-SMD-4.0x4.0 |
 | **U4**         | USBLC6-2SC6 USB ESD TVS     | C7519         | SOT-23-6  |
-| **Q1 / D1 / F1** | RPP MOSFET / BAT54C / 2A PTC fuse | C10487 / C37704 / C960026 | SOT-23 / SOT-23 / 1812 |
+| **Q1 / D1 / F1** | RPP MOSFET / BAT54C / 2A PTC fuse | C15127 / C37704 / C960026 | SOT-23 / SOT-23 / 1812 |
 | **SW16**     | Slide switch (power)        | C431540       | SS-12D0   |
 | **SW11, SW12** | SMT tactile (L, R shoulder) | C318884       | SW-SMD    |
 | R1, R2         | 5.1k (USB-C CC)             | C27834        | R_0805    |
@@ -81,7 +81,7 @@ The bottom side hosts the main circuitry:
 | C22            | 0.47uF (PAM8403 DC-block)   | C13967        | C_0805    |
 | C23–C25        | 1uF (PAM8403 VDD/PVDD)      | C28323        | C_0805    |
 | R22,R23 / R24 / R25 / R26 / R27 | 22R USB / 100k gate / 100k FB / 22k FB / 20R backlight | C25092 / C149504 / C149504 / C17560 / C17955 | R_0402 / R_0805 / R_1206 |
-| **Q2** | SI2301CDS P-MOSFET — SW16 respin high-side switch, `+5V_VOUT` → `+5V` | C10487 | SOT-23 |
+| **Q2** | AO3401A P-MOSFET — SW16 respin high-side switch, `+5V_VOUT` → `+5V` | C15127 | SOT-23 |
 | R32 / R33 / R34 | 22k gate pull-up / 1k series gate / 1M `PWR_SW`→`BAT+` | C17560 / C17513 / C17514 | R_0805 |
 | C32            | 1uF Q2 gate soft-start | C28323 | C_0805 |
 | C33            | 4.7uF `IP5306_KEY` wake cap (BENCH-VALIDATE) | C1779 | C_0805 |

@@ -19,9 +19,9 @@ Where the numbers come from:
   datasheet also cites theta_JA = 110 degC/W for SOP-16 (p.3), so U5 gets
   a junction temperature; the limit is the cited 140 degC OTP trip (p.8),
   which is where the silicon itself turns the outputs off.
-* **Q1 (Si2301CDS)** — `I^2 * Rds_on`, on-resistance cited, using the
-  steady-state theta_JA of 175 degC/W from note d rather than the 120/145
-  pair, which the table qualifies as "<= 5 s". A handheld is steady state.
+* **Q1 (AO3401A)** — `I^2 * Rds_on`, on-resistance cited, using the
+  steady-state theta_JA of 125 degC/W (max) rather than the 70/90 pair,
+  which the table qualifies as "t <= 10s". A handheld is steady state.
 * **U2 (IP5306)** — computable ON BATTERY since 2026-07-31: the official
   V1.32 cites "up to 92%" boost efficiency (p.2) and theta_JA = 50 degC/W
   (p.7), so `P = P_5V_out * (1/0.92 - 1)` — a LOWER bound, because 92% is
@@ -37,7 +37,7 @@ room.
 
 theta_JA and copper: each datasheet states the board it measured on — 2" x 2"
 FR-4 with 2 oz copper and thermal vias for the SY8089 (page 4, note 2), 1" x
-1" FR-4 for the Si2301 (page 1, note b). This board gives both parts less
+1" 2 oz FR-4 for the AO3401A (page 1, note A). This board gives both parts less
 copper than that, so the real theta_JA is **worse** than the cited figure and
 these junction temperatures are optimistic. No correction factor is applied,
 because a factor picked without measuring the actual copper area would be a
@@ -59,7 +59,7 @@ sys.path.insert(0, BASE)
 sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 from vbench.models import require_valid                      # noqa: E402
-from vbench.models.q1_si2301 import Q1, r_ds_on              # noqa: E402
+from vbench.models.q1_ao3401a import Q1, r_ds_on              # noqa: E402
 from vbench.models.u2_ip5306 import U2                       # noqa: E402
 from vbench.models.u3_sy8089 import U3, v_out_spread         # noqa: E402
 from vbench.models.u5_pam8403 import U5                      # noqa: E402
@@ -77,7 +77,7 @@ SAFE_MARGIN = 25.0
 COPPER_CAVEAT = (
     "theta_JA is the datasheet's figure, measured on more copper than this "
     "board gives (SY8089: 2\"x2\" 2oz with thermal vias, page 4 note 2; "
-    "Si2301: 1\"x1\", page 1 note b). Real theta_JA is higher, so every Tj "
+    "AO3401A: 1\"x1\" 2oz, page 1 note A). Real theta_JA is higher, so every Tj "
     "below is optimistic. No correction is applied because a factor chosen "
     "without measuring the board's copper would have no source.")
 

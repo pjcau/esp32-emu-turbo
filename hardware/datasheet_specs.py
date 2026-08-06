@@ -195,7 +195,7 @@ COMPONENT_SPECS = {
             "2":  {"net": _unconnected(),        "function": "LED1 — battery indicator 1 (unused)", "type": "smd"},
             "3":  {"net": _unconnected(),        "function": "LED2 — battery indicator 2 (unused)", "type": "smd"},
             "4":  {"net": _unconnected(),        "function": "LED3 — battery indicator 3 (unused)", "type": "smd"},
-            "5":  {"net": _exact("IP5306_KEY"),  "function": "KEY — ON/OFF key input, active low with an internal pull-up (datasheet p.11 fig.4). Driven by the C33 wake cap; there is no button on this net (SW17 was specified and then dropped for want of a clearance-legal site)", "type": "smd"},
+            "5":  {"net": _exact("IP5306_KEY"),  "function": "KEY — ON/OFF key input, active low with an internal pull-up (datasheet p.11 fig.4). Driven by the C33 wake cap; SW17 (TS-1088, DNP) sits on this net as the manual fallback", "type": "smd"},
             "6":  {"net": _exact("BAT+"),        "function": "BAT — battery voltage sense", "type": "smd"},
             "7":  {"net": _exact("LX"),          "function": "SW — DCDC switch node (inductor)", "type": "smd"},
             "8":  {"net": _exact("+5V_VOUT"),    "function": "VOUT — DCDC 5V output, upstream of the Q2 high-side switch (SW16 respin)", "type": "smd"},
@@ -797,7 +797,13 @@ for _r, _led, _val, _rlcsc, _rail, _why in _DIAG_BANK:
 
 
 # ======================================================================
-# Q1 — SI2301CDS P-Channel MOSFET (C10487) — Reverse Polarity Protection
+# Q1 — AO3401A P-Channel MOSFET (C15127) — Reverse Polarity Protection
+# R32 audit: replaced the SI2301CDS (C10487), whose cited continuous
+# rating (-2.3 A at 25 C, -1.8 A at 70 C) sat below both the derived
+# worst-case cell current (4.348 A) and the realistic sustained draw at
+# rated boost output. AO3401A: -4.0 A / -3.2 A, Rds(on) roughly halved,
+# body diode -2 A (was -1.3 A). Same SOT-23 pinout — drop-in, no
+# routing change. Cited model: scripts/vbench/models/q1_ao3401a.py.
 # SOT-23-3: Pin 1=Gate, Pin 2=Source (to IP5306), Pin 3=Drain (battery in)
 # Gate pulled low via R24 (100K to GND).
 #
@@ -812,9 +818,9 @@ for _r, _led, _val, _rlcsc, _rail, _why in _DIAG_BANK:
 # identically in both wirings, which is why no working board revealed it.
 # ======================================================================
 COMPONENT_SPECS["Q1"] = {
-    "component": "SI2301CDS P-Channel MOSFET",
-    "lcsc": "C10487",
-    "datasheet": None,
+    "component": "AO3401A P-Channel MOSFET",
+    "lcsc": "C15127",
+    "datasheet": "Q1_AO3401A-SOT23_C15127.pdf",
     "datasheet_page": 1,
     "pins": {
         "1": {"net": _exact("RPP_GATE"), "function": "Gate — pulled to GND via R24 (always ON)", "type": "smd"},
@@ -848,7 +854,7 @@ COMPONENT_SPECS["R24"] = {
 # three required states: ON = powered, OFF = loads dead but USB still
 # charges, no cell fitted = identical behaviour on USB.
 #
-# Q2 is the SAME part as Q1 (SI2301CDS, C10487) on purpose: no new BOM
+# Q2 is the SAME part as Q1 (AO3401A, C15127) on purpose: no new BOM
 # line, no new package family, and the SOT-23-3 CPL rotation is already
 # proven by Q1 and D1.
 #
@@ -856,23 +862,25 @@ COMPONENT_SPECS["R24"] = {
 #
 #   ON  — SW16 shorts PWR_SW to GND. The gate divides R32/R33 between
 #         +5V_VOUT and ground: Vg = 5 x 1k/23k = 0.217 V, so
-#         Vgs = -4.78 V. SI2301 characterises Rds(on) = 55 mohm at
-#         Vgs = -4.5 V, so the part is driven past its spec point.
+#         Vgs = -4.78 V. AO3401A characterises Rds(on) = 47 mohm typ /
+#         60 mohm max at Vgs = -4.5 V (p.2), so the part is driven past
+#         its spec point.
 #
 #   OFF — the throw is open, so the only path is R34 to BAT+:
 #             +5V_VOUT --R32 22k-- G --R33 1k-- PWR_SW --R34 1M-- BAT+
 #         3.7 V cell : I = 1.3/1.023M = 1.271 uA, Vg = 4.972, Vgs = -0.028 V
 #         4.2 V cell : I = 0.8/1.023M = 0.782 uA, Vg = 4.983, Vgs = -0.017 V
 #         no cell    : I = 5.0/1.023M = 4.888 uA, Vg = 4.892, Vgs = -0.108 V
-#         SI2301's Vgs(th) minimum magnitude is 0.45 V, so even the
-#         no-cell case has 4.2x of margin.
+#         AO3401A's Vgs(th) minimum magnitude is 0.5 V (p.2), so even
+#         the no-cell case has 4.6x of margin.
 #
 #         R32 IS 22k AND NOT 100k FOR EXACTLY THAT CASE, and this is the
 #         one number in the network that was got wrong first. The OFF
 #         state is a divider, Vgs = -5 x R32/(R32+R33+R34), so the gate
 #         offset is set by the RATIO. At the obvious 100k/10k/1M the
-#         no-cell arithmetic gives Vgs = -0.455 V — sitting ON the
-#         threshold minimum, where the part is specified to pass 250 uA.
+#         no-cell arithmetic gives Vgs = -0.455 V — within 10% of the
+#         0.5 V threshold minimum, where conduction begins (250 uA at
+#         threshold per the EC table).
 #         That is the "undefined level" failure and it appears only in
 #         the no-battery-plus-USB state, which is the state a bench
 #         operator uses most.
@@ -907,12 +915,14 @@ COMPONENT_SPECS["R24"] = {
 #         nothing that matters; against a 5000 mAh cell 221 uA is
 #         5.3 mAh/day, about 0.11 % per day.
 #
-#   THERMAL — Rds(on) 55 mohm at 25 C, ~77 mohm hot. At the board's
-#         worst-case simultaneous +5V budget of 2.15 A that is 0.356 W;
-#         a SOT-23 at ~200 C/W reaches roughly 96 C junction against a
-#         150 C limit. At the realistic continuous load (~0.7 A) it is
-#         29 mW and a 6 C rise. Drop across Q2: 166 mV at 2.15 A,
-#         42 mV at 0.7 A — the buck keeps far more than its dropout.
+#   THERMAL — Rds(on) 60 mohm max at Vgs = -4.5 V, 75 mohm max hot
+#         (Tj 125 C row, p.2). At the board's worst-case simultaneous
+#         +5V budget of 2.15 A that is 0.347 W; at the cited 125 C/W
+#         steady-state theta_JA that is a 43 C rise — about 83 C
+#         junction from a 40 C enclosure, against a 150 C limit. At
+#         the realistic continuous load (~0.7 A) it is 29 mW and a
+#         4 C rise. Drop across Q2: 129 mV at 2.15 A, 42 mV at 0.7 A
+#         — the buck keeps far more than its dropout.
 #
 # WAKE NETWORK (C33, and why it is not optional)
 #   The IP5306 boost shuts down after 32 s below 45 mA and restarts only
@@ -925,14 +935,13 @@ COMPONENT_SPECS["R24"] = {
 #   (~4.9 V, or ~3.7 V once the boost has latched off, down to 0 V)
 #   into KEY as a low pulse, and recharges through R34 afterwards.
 #   The pulse width is tau against the IP5306's UNDOCUMENTED internal
-#   pull-up, so 1 uF is a starting value marked BENCH-VALIDATE. There is
-#   no button on the net to fall back on: SW17 was specified as the
-#   datasheet-blessed manual wake and then dropped, because no site
-#   within reach of IP5306_KEY clears the copper the respin itself
-#   added. The tuning point is therefore C33's own pads — lift the cap
-#   and tack a wire to a momentary button, which reaches KEY and GND
-#   directly. This is the one respin value that must be settled on the
-#   bench before the design can be called finished.
+#   pull-up, so C33 = 4.7 uF (sized for the 50 ms..2 s press window, see
+#   the power_supply.py sheet note) is marked BENCH-VALIDATE. The
+#   fallback is SW17 — a TS-1088 2-terminal momentary on the KEY/GND
+#   pair, on the board as a DNP land (the 5.1x5.1 tact had no
+#   clearance-legal site; the smaller TS-1088 does). Fit it only if
+#   the coupled pulse misses the window. This is the one respin value
+#   that must be settled on the bench before the design is finished.
 #
 # R16 IS DELETED. It was a 100k pull-up from KEY to +5V — off-datasheet
 # to begin with (the reference schematic has a button to GND and no
@@ -943,9 +952,9 @@ COMPONENT_SPECS["R24"] = {
 # direction the design cannot afford.
 # ======================================================================
 COMPONENT_SPECS["Q2"] = {
-    "component": "SI2301CDS P-Channel MOSFET (+5V high-side load switch)",
-    "lcsc": "C10487",
-    "datasheet": None,
+    "component": "AO3401A P-Channel MOSFET (+5V high-side load switch)",
+    "lcsc": "C15127",
+    "datasheet": "Q1_AO3401A-SOT23_C15127.pdf",
     "datasheet_page": 1,
     "pins": {
         "1": {"net": _exact("PWR_SW_GATE"), "function": "Gate — R32 22k pull-up to source (default OFF), R33 1k to the switch node", "type": "smd"},

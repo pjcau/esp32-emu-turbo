@@ -949,8 +949,23 @@ def _power_traces():
     # At 2.1A the IPC-2221 rise goes from ~18°C (0.60) to ~12°C (0.76), and
     # the switch-node loop area drops with it.
     lx_col_x = ip_sw[0] - 2.60   # x=104.40 (was 104.55; see the 0.25mm rule above)
+    # R32 TRACE-AMPACITY WIDENING (verify_power_trace_ampacity): LX
+    # carries the full cell current and measured 1.960 A at dT 10 degC
+    # per IPC-2221 at 0.76 mm — a 61 degC rise at the derived 4.348 A
+    # corner. Corridor maxima at the 0.2 mm netclass clearance:
+    #   exit horizontal w=1.10 (edges 41.32..42.42): U2.8 pad bottom
+    #     40.89 → 0.43 · U2.6 pad top 42.83 → 0.41
+    #   column w=0.90 (edges 103.95..104.85): BAT+ vertical left edge
+    #     105.12 → 0.27, still over the 0.25 mm LX-vs-BAT+ rule
+    #   jog legs w=1.10: BTN_SELECT vertical right edge 102.125 → 0.325
+    #     (x=103 leg) · BAT+ band vias ring x=103.85 → 0.30
+    # Residual rise is declared in the gate's TRACE_DT exception table —
+    # deliberately NOT recovered with an F.Cu parallel band, which would
+    # double the 1 MHz boost switch-node copper (datasheet rule 3).
+    _LX_HZ_W = 1.10
+    _LX_COL_W = 0.90
     parts.append(_seg(ip_sw[0], ip_sw[1], lx_col_x, ip_sw[1],
-                       "B.Cu", W_PWR_HIGH, n_lx))
+                       "B.Cu", _LX_HZ_W, n_lx))
     # Legacy jog at x=103.00 (preserved).
     # R9-MED-4 (2026-04-11): R19 (was at 103.95, 46.0) and C20 (was at
     # 103.95, 50.0) were deleted along with the dead BTN_MENU net. The
@@ -963,17 +978,17 @@ def _power_traces():
     _lx_jog_y_bot = 44.5  # below ex-R19 placement row
     _lx_jog_y_top = 51.5  # above ex-C20 placement row
     parts.append(_seg(lx_col_x, ip_sw[1], lx_col_x, _lx_jog_y_bot,
-                       "B.Cu", W_PWR_HIGH, n_lx))   # max 0.79 — the binding segment
+                       "B.Cu", _LX_COL_W, n_lx))  # 0.90: the 0.25 rule's max
     parts.append(_seg(lx_col_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_bot,
-                       "B.Cu", W_PWR_HIGH, n_lx))
+                       "B.Cu", _LX_HZ_W, n_lx))
     parts.append(_seg(_lx_jog_x, _lx_jog_y_bot, _lx_jog_x, _lx_jog_y_top,
-                       "B.Cu", W_PWR_HIGH, n_lx))
+                       "B.Cu", _LX_HZ_W, n_lx))
     parts.append(_seg(_lx_jog_x, _lx_jog_y_top, lx_col_x, _lx_jog_y_top,
-                       "B.Cu", W_PWR_HIGH, n_lx))
+                       "B.Cu", _LX_HZ_W, n_lx))
     parts.append(_seg(lx_col_x, _lx_jog_y_top, lx_col_x, l1_2[1],
-                       "B.Cu", W_PWR_HIGH, n_lx))
+                       "B.Cu", _LX_HZ_W, n_lx))
     parts.append(_seg(lx_col_x, l1_2[1], l1_2[0], l1_2[1],
-                       "B.Cu", W_PWR_HIGH, n_lx))
+                       "B.Cu", _LX_HZ_W, n_lx))
 
     # ── BAT+ side of L1: L1 pin 1 to BAT+ network ─────────────
     # R6 FIX (2026-04-10): the previous version created a B.Cu stub
@@ -1299,8 +1314,14 @@ def _power_traces():
     # copper shares an endpoint with this corridor (verify_dangling_copper).
     parts.append(_seg(bat_col_x, bat_via_y, _bat_stitch_x2, bat_via_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
+    # R32 trace-ampacity: the long west leg is the ONLY copper carrying
+    # BAT+ between the stitch field and the Q1 quadrant (no B.Cu twin
+    # west of x=82.80), so at 0.76 it capped the whole rail at 1.96 A.
+    # 1.10 mm (edges 45.58..46.68) clears: +3V3 via rings at y<=44.80 by
+    # 0.78, the BTN_R drop via (moved to y=47.35 in buttons.py for this)
+    # by 0.42, the BTN_R F.Cu horizontal at y=48 by 1.20.
     parts.append(_seg(_bat_stitch_x2, bat_via_y, bat_approach_x, bat_via_y,
-                       "F.Cu", W_PWR_HIGH, n_bat))
+                       "F.Cu", 1.10, n_bat))
     parts.append(_via_net(bat_approach_x, bat_via_y, n_bat,
                           size=VIA_MIN, drill=VIA_MIN_DRILL))
     #
@@ -1362,7 +1383,15 @@ def _power_traces():
     # rule both measure endpoints, not overlaps.
     parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_band1_y,
                        "F.Cu", W_PWR_HIGH, n_bat))
-    _bat_band1_nodes = sorted(set(_bat_band1_xs) | {bat_approach_x})
+    # R32 trace-ampacity: the Q1 vertical below recentred to x=80.18 so it
+    # could widen to 0.90 (C12.1's pad right edge at 79.525 caps a 0.76
+    # at the old x=80.08 to exactly 0.175 of gap; at 80.18/0.90 the gap is
+    # 0.205, clear of the 0.2 mm netclass). Adding the new x to the node
+    # chain splits the band segment under it, so its top endpoint lands on
+    # a segment boundary (verify_dangling_copper measures endpoints).
+    _bat_q1_col_x = 80.18
+    _bat_band1_nodes = sorted(set(_bat_band1_xs)
+                              | {bat_approach_x, _bat_q1_col_x})
     for _layer in ("F.Cu", "B.Cu"):
         for _xa, _xb in zip(_bat_band1_nodes, _bat_band1_nodes[1:]):
             parts.append(_seg(_xa, _bat_band1_y, _xb, _bat_band1_y,
@@ -1371,7 +1400,7 @@ def _power_traces():
         parts.append(_via_net(_bx, _bat_band1_y, n_bat,
                               size=_bat_band1_od, drill=VIA_PWR_BIG_DRILL))
     # ── BAT+ approach → Q1 SOURCE (P-MOSFET RPP) ──────────────────
-    # Q1 (SI2301CDS SOT-23-3) at (85.0, 53.0) on B.Cu, Q1_ROT=180:
+    # Q1 (AO3401A SOT-23-3) at (85.0, 53.0) on B.Cu, Q1_ROT=180:
     #   Pin 3 (Drain/BAT_IN) at (85.0, 54.1)   — faces J3, the cell side
     #   Pin 2 (Source/BAT+)  at (85.95, 51.9)  — faces the IP5306 side
     #   Pin 1 (Gate/RPP_GATE) at (84.05, 51.9)
@@ -1417,28 +1446,67 @@ def _power_traces():
     #   Channel y=52.9: GND via (82.20,51.5) bottom 51.80 → gap 0.80mm OK
     #   Channel y=52.9: GND via (86.80,52.0) west 86.50, trace end 86.25 → 0.25mm OK
     #   Source riser x=85.95: drain pad (85.0,54.1) east 85.30 → gap 0.35mm OK
-    _bat_q1_channel_y = 52.9  # above J3.4 tab (54.95), below the gate pad
-    # Split at the band-1 stitching row so that row's copper shares an
-    # endpoint with this column instead of T-ing into the middle of it.
+    # R32 TRACE-AMPACITY WIDENING (verify_power_trace_ampacity). The
+    # whole battery current crosses this quadrant, and at W_PWR the
+    # channel measured 1.651 A on the IPC-2221 curve at dT 10 degC —
+    # a 90 degC rise at the derived 4.348 A corner. The quadrant is
+    # fenced (gate pad above, drain pad and J3.4 tab below, the button
+    # RC ladder west, R24/C14 east), so these are the corridor MAXIMA
+    # at the 0.2 mm netclass clearance, not a chosen current rating;
+    # the residual rise is declared per net in the gate's TRACE_DT
+    # exception table.
+    #
+    # Channel y=53.00, w=0.80 (edges 52.60..53.40):
+    #   gate pad (84.05,51.9) bottom 52.40      → 0.20 (the cap above)
+    #   drain pad (85.0,54.1) top 53.60         → 0.20 (the cap below)
+    #   GND via (82.20,51.5) ring bottom 51.80  → 0.80
+    #   GND via (86.80,52.0): nearest approach from the (85.95,52.60)
+    #     corner to the r=0.30 ring              → 0.74
+    _bat_q1_channel_y = 53.00
+    _BAT_CHANNEL_W = 0.80
+    # Q1 column w=0.90 at x=_bat_q1_col_x (edges 79.73..80.63):
+    #   C12.1 pad right 79.525 → 0.205 · C13.2 pad left 81.475 → 0.845
+    #   band-1 via ring (79.725,47.30) overlaps the column — same net.
+    _BAT_COL_W = 0.90
     parts.append(_seg(bat_approach_x, bat_via_y, bat_approach_x, _bat_band1_y,
                        "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(bat_approach_x, _bat_band1_y, bat_approach_x, _bat_q1_channel_y,
-                       "B.Cu", W_PWR_HIGH, n_bat))
-    parts.append(_seg(bat_approach_x, _bat_q1_channel_y, q1_source[0], _bat_q1_channel_y,
-                       "B.Cu", W_PWR, n_bat))
+    # The column's bottom endpoint SHARES the channel's west endpoint
+    # (verify_dangling_copper measures endpoints, not overlaps). KiCad
+    # tracks are ROUND-capped, so the 0.45 tip radius reaches y=53.45 —
+    # which is why the BAT_IN horizontal below sits at 54.20, not 54.175:
+    # its top edge (53.65) keeps 0.20 from this tip.
+    parts.append(_seg(_bat_q1_col_x, _bat_band1_y, _bat_q1_col_x,
+                       _bat_q1_channel_y,
+                       "B.Cu", _BAT_COL_W, n_bat))
+    parts.append(_seg(_bat_q1_col_x, _bat_q1_channel_y, q1_source[0], _bat_q1_channel_y,
+                       "B.Cu", _BAT_CHANNEL_W, n_bat))
+    # Source riser stays at the pad's own 0.60 width — it is a land-
+    # pattern neck (< PAD_HALO_MM from Q1.2), judged by the AO3401A's
+    # 4 A lead rating, not the trace curve.
     parts.append(_seg(q1_source[0], _bat_q1_channel_y, q1_source[0], q1_source[1],
                        "B.Cu", W_PWR, n_bat))
 
-    # BAT_IN: Q1 drain → J3 pin 1
-    # Q1 drain at (85.0, 54.1), J3.1 at (79.0, 62.5)
-    # B.Cu horizontal left at y=54.1 (clears J3.4 top 54.95 by 0.55mm),
-    # then vertical down to J3.1.
-    # Clearance: VBUS B.Cu starts at y=61.0, USB_D- at y=64.58 — both far below.
-    # BAT+ channel at y=52.9: gap = 54.1-52.9-0.30-0.30 = 0.60mm OK
-    parts.append(_seg(q1_drain[0], q1_drain[1], jst_p[0], q1_drain[1],
+    # BAT_IN: Q1 drain → J3 pin 1 (R32 widening, same argument)
+    # Horizontal y=54.20, w=1.10 (edges 53.65..54.75):
+    #   BAT+ channel bottom 53.40 → 0.25; the BAT+ column's round tip
+    #     (reaches y=53.45 at x=80.18, see above) → 0.20
+    #   J3.4 tab top 54.95 → 0.20
+    #   east end (85.0) inside the drain pad copper (endpoint lands on it)
+    # Riser x=78.75 (J3.1's own column), w=1.10 (edges 78.20..79.30):
+    #   J3.3 tab right 77.15 → 1.05 · J3.2 pad left 80.25 → 0.95
+    _BAT_IN_HZ_Y = 54.20
+    _BAT_IN_HZ_W = 1.10
+    _BAT_IN_RISER_W = 1.10
+    parts.append(_seg(q1_drain[0], _BAT_IN_HZ_Y, jst_p[0], _BAT_IN_HZ_Y,
+                       "B.Cu", _BAT_IN_HZ_W, n_bat_in))
+    # Landing stub onto the drain pad CENTRE: the horizontal's own east
+    # endpoint (85.0, 54.20) lies inside the pad copper but on no pad
+    # anchor, which both the JLCDFM dead-end rule and verify_power_paths
+    # measure by endpoint. 0.1 mm at pad width, entirely within the pad.
+    parts.append(_seg(q1_drain[0], _BAT_IN_HZ_Y, q1_drain[0], q1_drain[1],
                        "B.Cu", W_PWR, n_bat_in))
-    parts.append(_seg(jst_p[0], q1_drain[1], jst_p[0], jst_p[1],
-                       "B.Cu", W_PWR, n_bat_in))
+    parts.append(_seg(jst_p[0], _BAT_IN_HZ_Y, jst_p[0], jst_p[1],
+                       "B.Cu", _BAT_IN_RISER_W, n_bat_in))
 
     # RPP_GATE: Q1 gate → R24 pad 1
     # Gate at (84.05, 51.9), R24.1 at (85.40, 49.25) [rot=270 on B.Cu].
@@ -1778,8 +1846,10 @@ def _pwr_switch_traces():
     # and BAT+ is a Power High net. Widening 3 mm of trace is cheaper than
     # an allowlist entry, and an allowlist entry on the battery rail is
     # exactly the kind of exception that stops being read.
-    parts.append(_seg(r34_2[0], r34_2[1], r34_2[0], 52.90, "B.Cu", W_PWR, n_bat))
-    parts.append(_seg(r34_2[0], 52.90, 85.95, 52.90, "B.Cu", W_PWR, n_bat))
+    # y follows the R32-widened channel centreline (53.00) so the stub's
+    # west end shares the channel/riser endpoint at (85.95, 53.00).
+    parts.append(_seg(r34_2[0], r34_2[1], r34_2[0], 53.00, "B.Cu", W_PWR, n_bat))
+    parts.append(_seg(r34_2[0], 53.00, 85.95, 53.00, "B.Cu", W_PWR, n_bat))
 
     return parts
 

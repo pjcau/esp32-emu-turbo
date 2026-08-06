@@ -127,7 +127,7 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "was relocated for R5-CRIT-6 after they were built, and its "
            "anodes were unrouted on every board produced so far."),
     "Q1": (0.0,
-           "SI2301CDS SOT-23-3 (C10487) at cpl=90, KiCad 180 — the same "
+           "AO3401A SOT-23-3 (C15127) at cpl=90, KiCad 180 — the same "
            "pair as D1, the board's other SOT-23-3, since R31-HIGH-1 turned "
            "the package around so the DRAIN faces the cell. The angle moved "
            "by 180 and the residual did not, which is arithmetic rather "
@@ -144,7 +144,7 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "is the second thing it got wrong: those boards power up in "
            "either orientation."),
     "Q2": (0.0,
-           "SI2301CDS SOT-23-3 (C10487) at cpl=90 — the SAME part, layer, "
+           "AO3401A SOT-23-3 (C15127) at cpl=90 — the SAME part, layer, "
            "footprint and placement transform as Q1 (rot 180 baked into the "
            "pads + B-mirror), so the same (row_board + row_ee) mod 180 = 90 "
            "arithmetic puts it in this list; the SW16-respin merge added "

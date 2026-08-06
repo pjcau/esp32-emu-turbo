@@ -110,7 +110,7 @@ drifts, so it is never hand-edited. The headline parts:
 | J3         | JST PH 2-pin SMD (battery) | C295747  | 1   |
 | J4         | FPC 40-pin 0.5mm (display) | C2856812 | 1   |
 | L1 / L2    | 1µH boost / 2.2µH buck inductor | C280579 / C36409 | 1 each |
-| Q1, Q2     | SI2301CDS P-MOSFET (Q1 battery RPP, Q2 +5V load switch) | C10487 | 2 |
+| Q1, Q2     | AO3401A P-MOSFET (Q1 battery RPP, Q2 +5V load switch) | C15127 | 2 |
 | D1 / F1    | Menu-combo Schottky / VBUS PTC | C37704 / C960026 | 1 each |
 | LED1, LED2 | Red LED 0805 (**both** are plain +3V3 power indicators) | C84256, C19171391 | 2 |
 | SW1–SW17   | 15× SMT tact switch + 1× slide switch (MSK12C02) + 1× TS-1088 (**DNP**) | C318884, C431540, C720477 | 17 |

@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(BASE, "scripts"))
 
 from vbench import netlist as nl                             # noqa: E402
 from vbench import rails                                     # noqa: E402
-from vbench.models.q1_si2301 import Q1                       # noqa: E402
+from vbench.models.q1_ao3401a import Q1                       # noqa: E402
 from vbench.models.u2_ip5306 import U2                       # noqa: E402
 from vbench.models.u3_sy8089 import U3                       # noqa: E402
 from vbench.models.u5_pam8403 import U5                      # noqa: E402

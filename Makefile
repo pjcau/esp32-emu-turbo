@@ -140,6 +140,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_polarity \
 	verify_rpp_polarity \
 	verify_power_net_integrity \
+	verify_power_trace_ampacity \
 	verify_power_via_ampacity \
 	verify_power_paths \
 	verify_power_resonance \

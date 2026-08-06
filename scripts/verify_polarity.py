@@ -482,7 +482,7 @@ _strict("LED6", [("1", "GND"), ("2", "LED6_RA")])
 _strict("D1", [("1", "BTN_START"), ("2", "BTN_SELECT"), ("3", "MENU_K")])
 
 # ============================================================
-# Q1: SI2301CDS P-MOSFET reverse polarity protection (v4.0)
+# Q1: AO3401A P-MOSFET reverse polarity protection (v4.0; AO3401A since R32)
 # ============================================================
 # Pin 1 (Gate) → RPP_GATE (pulled to GND via R24)
 # Pin 2 (Source) → BAT+ (protected side, IP5306)

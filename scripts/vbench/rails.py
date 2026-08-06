@@ -381,7 +381,7 @@ def operating_point(on_battery=False, soc=0.5, buttons_pressed=False):
     # this DC solve has: every consumer is a high-impedance pin, so no
     # current flows and Q1's I*Rds_on drop is zero. It stops being exact the
     # moment load currents enter the model, which is T1.4's job — Q1's
-    # on-resistance is already cited in models/q1_si2301.py, and at the
+    # on-resistance is already cited in models/q1_ao3401a.py, and at the
     # gaming current it is worth about 70 mV. conflicts.py found this by
     # flagging Q1.3 as a second driver on BAT+, which it is not; the model
     # was wrong, not the board.

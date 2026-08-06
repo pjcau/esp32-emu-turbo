@@ -602,7 +602,7 @@ def test_phase1():
 def test_thermal():
     print("\nE. thermal.py / Q1 and U5 models")
     from vbench import thermal
-    from vbench.models.q1_si2301 import Q1, r_ds_on
+    from vbench.models.q1_ao3401a import Q1, r_ds_on
     from vbench.models.u5_pam8403 import U5
 
     for model in (Q1, U5):
@@ -617,10 +617,10 @@ def test_thermal():
     # Q1's on-resistance must come from a table row, never from interpolation
     # between two rows.
     check("Q1 uses the -4.5 V row only when the gate drive reaches it",
-          r_ds_on(-4.5) == 0.112 and r_ds_on(-5.0) == 0.112,
+          r_ds_on(-4.5) == 0.060 and r_ds_on(-5.0) == 0.060,
           f"got {r_ds_on(-4.5)}, {r_ds_on(-5.0)}")
     check("Q1 falls back to the conservative -2.5 V row in between",
-          r_ds_on(-3.83) == 0.142, f"got {r_ds_on(-3.83)}")
+          r_ds_on(-3.83) == 0.085, f"got {r_ds_on(-3.83)}")
     try:
         r_ds_on(-0.5)
         check("Q1 refuses an on-resistance below its threshold", False,
@@ -634,10 +634,10 @@ def test_thermal():
     except ValueError:
         check("Q1 rejects a positive V_GS on a P-channel part", True)
 
-    # The steady-state figure, not the <=5 s one. A handheld is steady state.
-    check("Q1's thermal figure is the steady-state 175 degC/W, not 120/145",
-          Q1.params["theta_ja_steady_state"].value == 175.0
-          and Q1.params["theta_ja_5s"].value == (0.0, 120.0, 145.0))
+    # The steady-state figure, not the <=10 s one. A handheld is steady state.
+    check("Q1's thermal figure is the steady-state 125 degC/W, not 70/90",
+          Q1.params["theta_ja_steady_state"].value == 125.0
+          and Q1.params["theta_ja_10s"].value == (0.0, 70.0, 90.0))
 
     # The duty cycle must come from the derived rail, not from 3.3/5.
     d, v_out, v_in = thermal.duty_cycle()

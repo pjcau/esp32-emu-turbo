@@ -49,7 +49,7 @@ _ROLES = {
     "C2856812": "FPC 40-pin 0.5 mm — ILI9488 display",
     "C7519": "USBLC6-2SC6 — USB ESD/TVS protection",
     "C37704": "BAT54C — dual Schottky, menu-combo diode OR",
-    "C10487": "SI2301CDS — Q1 reverse-battery protection, Q2 +5V high-side load switch (SW16 respin)",
+    "C15127": "AO3401A — Q1 reverse-battery protection, Q2 +5V high-side load switch (R32: replaced SI2301CDS C10487, whose 2.3 A rating sat below the battery-path current)",
     "C431540": "SW16 slide switch (MSK12C02) — drives Q2's gate; carries no rail current",
     "C318884": "tact switches — D-pad, ABXY, Start/Select, L/R, Menu, RST, BOOT",
     "C84256": "red LED (LED1) — power indicator on +3V3 (U2's LED pins are NC)",

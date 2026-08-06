@@ -53,7 +53,7 @@ _JLCPCB_ROT_CORRECTIONS = [
     # SOT-23-6 as well subtracts a rotation that was never there.
     #
     # Measured, not argued — the two parts differ only in this term:
-    #     Q1  SOT-23-3  C10487  row_board=180  row_ee=270  cpl=90  OK
+    #     Q1  SOT-23-3  C15127  row_board=180  row_ee=270  cpl=90  OK
     #     U4  SOT-23-6  C7519   row_board=180  row_ee=  0  cpl=90  FAIL
     # Same row_board, row_ee exactly 90 apart, so one blanket correction
     # cannot be right for both. Dropping to the default 180 moves U4's
@@ -93,7 +93,7 @@ _JLCPCB_ROT_CORRECTIONS = [
     #     lead on bare mask (3.120 mm). At 90 the part seats (0.187 mm) with
     #     the two anodes on BTN_START / BTN_SELECT and the common cathode on
     #     MENU_K — which is the diode-OR the schematic draws.
-    #   Q1 (SI2301CDS, C10487) at KiCad 0: -90 emitted 90, also all-on-mask
+    #   Q1 (P-MOSFET SOT-23-3, was C10487) at KiCad 0: -90 emitted 90, also all-on-mask
     #     (2.933 mm). At 270 it seats exactly (0.000 mm) with G/S/D on
     #     RPP_GATE / BAT_IN / BAT+.
     #
@@ -193,7 +193,8 @@ _JLCPCB_ROT_DELTAS = {
     # relocating D1 for R5-CRIT-6.
     #   Old state: KiCad rot 0° + override 270°.
     #
-    #   The reference part is Q1 (SI2301CDS, C10487) and ONLY Q1:
+    #   The reference part is Q1 (P-MOSFET SOT-23-3; C10487 at the time,
+    #   same package as today's AO3401A C15127) and ONLY Q1:
     #     * same library footprint — both use footprints.sot23_3()
     #     * same layer (bottom) and same KiCad rotation (0°) as D1 was
     #     * same EasyEDA land pattern, confirmed by LIVE refetch (the
@@ -205,7 +206,7 @@ _JLCPCB_ROT_DELTAS = {
     #   aligned, pin numbering PRESERVED (max pad error vs sot23_3()):
     #             rot   0°      90°       180°     270°
     #     C37704       2.210   0.187 ✓   2.210    3.120  mm
-    #     C10487       2.074   0.000 ✓   2.074    2.933  mm
+    #     C10487 (Q1)  2.074   0.000 ✓   2.074    2.933  mm
     #   Both land on the same 90°, and no pin PERMUTATION is required — so
     #   this is a drawing-convention difference between EasyEDA's library
     #   and ours, NOT a polarity defect. (Derived independently twice.)
@@ -475,7 +476,7 @@ def _build_placements():
     # Q1_ROT is 180, not 0: the drain has to face the cell (R31-HIGH-1).
     # That is the same KiCad angle as D1, the board's other SOT-23-3, so
     # both leave here at cpl 90 through the "^SOT-23" correction.
-    p.append(("Q1", "SI2301CDS",
+    p.append(("Q1", "AO3401A",
               "SOT-23", Q1_POS[0], Q1_POS[1], Q1_ROT, "bottom"))
     p.append(("R24", "100k", "R_0805",
               R24_POS[0], R24_POS[1], R24_ROT, "bottom"))
@@ -566,7 +567,7 @@ def _build_placements():
         Q2_POS, Q2_ROT, R32_POS, R32_ROT, C32_POS, C32_ROT,
         R33_POS, R33_ROT, R34_POS, R34_ROT, C33_POS, C33_ROT,
     )
-    p.append(("Q2", "SI2301CDS", "SOT-23-3", *Q2_POS, Q2_ROT, "bottom"))
+    p.append(("Q2", "AO3401A", "SOT-23-3", *Q2_POS, Q2_ROT, "bottom"))
     p.append(("R32", "22k", "R_0805", *R32_POS, R32_ROT, "bottom"))
     p.append(("C32", "1uF", "C_0805", *C32_POS, C32_ROT, "bottom"))
     p.append(("R33", "1k", "R_0805", *R33_POS, R33_ROT, "bottom"))

@@ -9,7 +9,7 @@
 #pragma once
 
 /* Fingerprint of the .kicad_pcb this was derived from. */
-#define VB_PCB_HASH "sha256:8ef57defe99cd4ad50b479e73f4ccd9a639deed0fd5d4c98a296fdca21c954a6"
+#define VB_PCB_HASH "sha256:de2844664452fe972bfe8dfef08c72e3a36d803c6bf64f38b1d82539c40a967d"
 
 /* Rails — rails.py: +3V3 = V_REF*(1+R25/R26) from the real divider;
  * spread is V_REF's own tolerance (SY8089 AN p.4). +5V is the
@@ -65,8 +65,8 @@ static const unsigned char VB_LCD_BUS_MAP[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 #define VB_U3_R_COND_MOHM 100
 #define VB_U3_THETA_JA 170.0f
 #define VB_U3_TJ_MAX_C 125.0f
-#define VB_Q1_THETA_JA 175.0f
-#define VB_Q1_RDSON_MOHM 142
+#define VB_Q1_THETA_JA 125.0f
+#define VB_Q1_RDSON_MOHM 85
 #define VB_I_IDLE_MA 150
 #define VB_I_GAMING_MA 430
 

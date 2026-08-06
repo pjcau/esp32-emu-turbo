@@ -261,7 +261,7 @@ NET_LIST = [
     (67, "LED5_RA"),
     (68, "LED6_RA"),
     # ── SW16 respin: the +5V rail is now switched ────────────────────
-    # Q2 (SI2301CDS high-side P-MOSFET) sits between the IP5306 boost
+    # Q2 (AO3401A high-side P-MOSFET) sits between the IP5306 boost
     # output and every +5V load, so the rail is TWO nets exactly like
     # VBUS_IN -> F1 -> VBUS and BAT_IN -> Q1 -> BAT+:
     #   +5V_VOUT — upstream, always live whenever the boost runs:

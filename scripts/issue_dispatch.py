@@ -316,6 +316,13 @@ ROUTING_EXCEPTIONS = {
         "pcb-engineer", "/pcb-routing", "degraded",
         "a starved layer transition runs hot and ages the barrel; it "
         "degrades margin before it kills the board"),
+    # Same D2 argument one feature class over: an undersized trace also
+    # carries the current — hot — rather than opening the net.
+    "verify_power_trace_ampacity": (
+        "pcb-engineer", "/pcb-routing", "degraded",
+        "starved trace copper runs hot at rated load and cooks the "
+        "laminate before anything reads as broken; it degrades margin "
+        "before it kills the board"),
     # And its mutation suite is a tooling blind spot, like the others.
     "test_power_via_ampacity": (
         "software-dev", "/check", "blind-spot",
