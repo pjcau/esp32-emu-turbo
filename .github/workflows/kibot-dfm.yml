@@ -10,6 +10,13 @@ on:
     paths:
       - 'hardware/kicad/**'
       - '.github/workflows/kibot-dfm.yml'
+  # Manual trigger: the d450403 push (R32 copper widening) started no
+  # workflow run at all — pushes made with certain credentials do not
+  # trigger push events, and this gate is the one DRC that cannot run
+  # locally (0.2 mm netclass, the 4d0749e blind spot). This makes it
+  # runnable on demand so a silent no-run can never leave the board
+  # unverified again.
+  workflow_dispatch:
 
 permissions:
   contents: read
