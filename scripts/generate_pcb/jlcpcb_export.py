@@ -535,7 +535,7 @@ def _build_placements():
     # (hold 2A / trip 4A — the IP5306 charges at ~2A from a 5V source).
     from scripts.generate_pcb.routing import F1_POS
     p.append(("F1", "2A", "F_1812",
-              F1_POS[0], F1_POS[1], 180, "bottom"))
+              F1_POS[0], F1_POS[1], 270, "bottom"))
 
     # LED current-limiting resistors (B.Cu, above LEDs on F.Cu)
     # Must match board.py: R17 at (25, 65), R18 at (32, 65)

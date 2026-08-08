@@ -986,3 +986,31 @@ The verification pipeline uses a **hybrid local + Docker** approach for speed:
 | Connectivity | Python (local) | 0.15s |
 
 Container runtime: **OrbStack** (drop-in Docker Desktop replacement, 16x faster container startup).
+
+## Accepted JLCDFM findings (reference for report diffing)
+
+Every JLCDFM upload produces the same set of Warnings (and one
+3D-artifact Danger) that are **known, reasoned and accepted**. When a
+new report arrives, diff it against this table: anything NOT listed
+here is a real finding; anything listed needs no action. Baseline:
+the 2026-08-08 report on the v4.6.x set.
+
+| JLCDFM finding | Count | Why it is accepted |
+|---|---|---|
+| Lead to hole distance 0 mm (J1 pegs) | 1 Danger | Our NPTH is the **datasheet's** Ø0.65 ("Ø0.65(2X)", pegs Ø0.50 → 0.075/side); the EasyEDA reference uses 0.70 and JLC's 3D peg model touches a 0.65 hole. R21 rule: datasheet over EasyEDA (see `footprints.py` and the C2 tantalum lesson). Pegs are plastic; no solder joint involved. |
+| Pin inner edge 0.03 mm | 50 Danger | JLC's own 3D lead models poke 0.03 mm past the pad inner edges on the fine-pitch connectors (J4/U6 class). Our lands are rigid-fit-proven equal to JLC's *own reference footprints* (`verify_easyeda_footprint`, 97 OK) — their 3D disagrees with their 2D by a tolerance-level amount. |
+| Annular ring 0.13 mm | ~100 Warning | The 0.46/0.20 via family: (0.46−0.20)/2 = 0.13 = JLCPCB's published minimum, used deliberately where corridors are tight. |
+| Fiducial null | 3 Warning | No fiducials by design — JLC panelizes and adds their own rail fiducials for this board size. |
+| Slot width 0.65 mm | 4 Warning | J1 shield slots: R20 chose 0.65 (min millable 0.61; datasheet says 0.60 which JLC cannot mill). |
+| Silkscreen to pad 0.15 mm | 4 Warning | At the 0.15 mm gate floor (`verify_dfm_v2` silk-to-pad test). |
+| Component clipped by outline | 3 Warning | J1 / U6 / SW16 are **edge-mount by design** (declared in `verify_component_bodies.EDGE_MOUNT`); the mouths must protrude. |
+| Component spacing 0.28 mm | 1 Warning | U2/C27 decoupling pair — HF bypass must be tight to the pin; 0.43 mm in our 2D model, JLC's 3D shaves it to 0.28. |
+| Lead area overlapping pad 0.02 mm | ~45 Warning | Same 3D-vs-2D tolerance class as "pin inner edge", on the castellated/fine-pitch parts. |
+
+The four **Dangers the 2026-08-08 report found that were real** — pad
+spacing 0.08 (F1 via-ring sliver), component collision 0 mm (J3/F1
+housings) — were fixed at source (F1 rotated vertical, via cluster
+re-laid) and each class is now gated locally:
+`verify_copper_clearance` category 2b (same-net slit, morphological
+closing) and `verify_component_bodies` connector-3D margin (+0.30 mm
+per connector housing).

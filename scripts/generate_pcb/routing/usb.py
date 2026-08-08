@@ -278,8 +278,8 @@ def _usb_traces():
     # F.Cu stub: north to the F1 tap endpoint at y=59.3, and south to the
     # VBUS horizontal at y=61.0. Two segments so the barrel and the tap
     # are both segment ENDPOINTS (verify_dangling_copper).
-    parts.append(_seg(90.95, 59.3, 90.95, _tvs_vbus_via_y,
-                       "F.Cu", W_PWR, n_vbus))
+    # (the 59.3 -> 59.9 F.Cu leg is gone: power.py's F1 row now lands
+    # directly on this via at y=59.9 — R32 JLCDFM round 2, F1 vertical)
     parts.append(_seg(90.95, _tvs_vbus_via_y, 90.95, 61.0,
                        "F.Cu", W_PWR, n_vbus))
 
@@ -323,7 +323,14 @@ def _usb_traces():
         # 0.275mm of hole clearance to R1.1, 0.475mm to R2.2, 0.275mm of
         # copper to R2.2 (the one different-net neighbour).
         _cc1_via_x = r1_p1[0] + 0.95
-        parts.append(_via_net(_cc1_via_x, CC1_FCU_Y, n_cc1, size=VIA_STD, drill=VIA_STD_DRILL))
+        # 0.46 OD, not VIA_STD (0.60): at 0.60 the ring's west edge
+        # (75.60) sat 0.075mm from R1.1's east edge (75.525) — same net,
+        # joined only through the B.Cu stub below, so the copper carried
+        # a 44um SLIT (verify_copper_clearance category 2b / JLCDFM
+        # dry-film class). At 0.46 the gap is 0.145mm; annular ring
+        # (0.46-0.20)/2 = 0.13 = the JLCPCB minimum, same custom size
+        # the +3V3 ESP32 via already uses.
+        parts.append(_via_net(_cc1_via_x, CC1_FCU_Y, n_cc1, size=0.46, drill=VIA_MIN_DRILL))
         parts.append(_seg(_cc1_via_x, CC1_FCU_Y, _cc1_via_x, r1_p1[1],
                            "B.Cu", W_SIG, n_cc1))
         parts.append(_seg(_cc1_via_x, r1_p1[1], r1_p1[0], r1_p1[1],

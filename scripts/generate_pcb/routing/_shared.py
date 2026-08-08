@@ -695,14 +695,20 @@ R27_POS = (121.7, 45.5)
 # VBUS_IN from the riser, pad 2 east = VBUS via the via cluster in the
 # fuse's own inter-pad channel (see routing/power.py).
 #
-# R32 (2026-08-03): x 85.8 -> 86.25. verify_component_bodies measured
-# F1's 1812 body 0.430mm INSIDE J3's connector housing — the JLCDFM
-# "component collision" DANGER. 0.68mm of separation is needed for the
-# 0.25mm rule; J3 gives 0.25 (it has the D- via to stay centred on) and
-# F1 gives 0.45. East is the only free direction for F1: U4 cannot move
-# (its pins ARE the D+/D- approach columns at x=90.25/91.65), so the
-# 0.75mm F1-pad-to-U4-pad gap pays for the move and ends at 0.30mm.
-F1_POS = (86.25, 60.6)
+# R32 (2026-08-03): x 85.8 -> 86.25 bought 0.27mm of body gap to J3 —
+# and the 2026-08-08 JLCDFM report on that geometry STILL said
+# "component collision 0mm": JLC judges the connector's 3D housing,
+# which is wider than the 2D reference outline our body gate fits
+# (J3 measured >= 0.27mm wider). Translation cannot fix it — F1 is
+# sandwiched (J3 housing west, U4 0.30mm east of pad 2, U4 immovable:
+# its pins ARE the D+/D- approach columns) — so F1 is ROTATED 90 deg:
+# the 1812 body presents 3.41mm across instead of 4.73, giving 0.70mm
+# to J3's 2D outline (>= 0.55 required with the connector-3D margin in
+# verify_component_bodies) and 1.69mm to U4. Pads land at
+# (86.10, 62.50) (pad 1, south, VBUS_IN — faces the USB riser) and
+# (86.10, 58.10) (pad 2, north, VBUS); the via cluster moves into the
+# rotated fuse's inter-pad channel at y=59.90 (routing/power.py).
+F1_POS = (86.10, 60.3)
 C17_POS = (110.0, 35.0)  # IP5306 cap
 C18_POS = (116.0, 49.0)  # IP5306 BAT decoupling — moved closer: 10.7mm from pin 6 (was 15.4mm)
 C19_POS = (110.0, 58.5)  # IP5306 VOUT bulk cap (lx, ly+6) — kept as bulk, C27 handles HF
@@ -1120,7 +1126,7 @@ def _init_pads():
         # Backlight series resistor (R25-HIGH-1 respin fix)
         ("R27", "R_1206", *R27_POS, 90, "B"),
         # VBUS PTC fuse (R3-HIGH-4 fix)
-        ("F1", "F_1812", *F1_POS, 180, "B"),
+        ("F1", "F_1812", *F1_POS, 270, "B"),
         # USB ESD protection
         ("U4", "SOT-23-6", *U4_POS, 0, "B"),
         ("R22", "R_0402", *R22_POS, 90, "B"),

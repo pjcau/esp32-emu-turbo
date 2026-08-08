@@ -36,6 +36,24 @@ CACHE = BASE / "scripts" / ".easyeda_cache"
 
 MIN_BODY_CLR = 0.25   # mm between same-side bodies (board's tightest
                       # legitimate pair, C27/U2, sits at 0.43)
+
+# Connector-housing 3D margin (2026-08-08 JLCDFM round on v4.6.0). The
+# 2D reference outline this gate fits UNDERESTIMATES a molded connector
+# housing: J3 sat 0.27mm from F1 by this gate's own measure and JLC's
+# SMT DFM — which judges the part's 3D body — reported "component
+# collision 0mm". The delta is a property of the part class, not of one
+# placement, so connector-class refs carry a per-body margin here:
+# their effective outline is inflated by this amount on every side
+# before the clearance test. Chip passives and molded SMD ICs measure
+# true to their 2D outline (JLC's own "component spacing" warning for
+# U2/C27 read 0.28 vs our 0.43 — consistent with ~0.07 per body, well
+# inside MIN_BODY_CLR) and get no margin.
+CONNECTOR_3D_MARGIN = 0.30            # >= the measured J3 delta (0.27)
+CONNECTOR_REFS = {"J1", "J3", "J4", "U6"}
+
+
+def _margin(ref):
+    return CONNECTOR_3D_MARGIN if ref in CONNECTOR_REFS else 0.0
 FIT_ERR_MAX = 0.50    # mm — reject a reference fit worse than this.
                       # 0.5 keeps parts whose land pattern differs
                       # slightly from JLC's (F1: 0.35) while rejecting
@@ -275,7 +293,8 @@ def main():
     for ref, lcsc, why in unfit:
         print(f"        skip {ref} ({lcsc}): {why}")
 
-    # 1. pairwise same-side clearance
+    # 1. pairwise same-side clearance, with the connector-3D margin:
+    #    required = MIN_BODY_CLR + margin(a) + margin(b).
     refs = sorted(bodies)
     hits = []
     for i, r1 in enumerate(refs):
@@ -284,11 +303,14 @@ def main():
             if b1["layer"] != b2["layer"]:
                 continue
             gap = box_gap(b1["box"], b2["box"])
-            if gap < MIN_BODY_CLR:
-                hits.append((r1, r2, gap, b1["layer"]))
-    detail = "; ".join(f"{a}/{b} {g:.3f}mm ({l})" for a, b, g, l in
+            need = MIN_BODY_CLR + _margin(r1) + _margin(r2)
+            if gap < need:
+                hits.append((r1, r2, gap, need, b1["layer"]))
+    detail = "; ".join(f"{a}/{b} {g:.3f}mm < {n:.2f} ({l})"
+                       for a, b, g, n, l in
                        sorted(hits, key=lambda h: h[2])[:6])
-    check(f"body-to-body clearance >= {MIN_BODY_CLR}mm (same side)",
+    check(f"body-to-body clearance >= {MIN_BODY_CLR}mm "
+          f"(+{CONNECTOR_3D_MARGIN} per connector housing, same side)",
           not hits, f"{len(hits)} pairs: {detail}")
 
     # 2. board edge — bodies from the fit; edge-mount pad containment

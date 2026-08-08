@@ -605,7 +605,7 @@ def _component_placeholders():
     placements.append(("R27", "R_1206", *routing.R27_POS, 90, "B.Cu"))
 
     # VBUS PTC fuse (R3-HIGH-4 fix): J1 -> VBUS_IN -> F1 -> VBUS
-    placements.append(("F1", "F_1812", *routing.F1_POS, 180, "B.Cu"))
+    placements.append(("F1", "F_1812", *routing.F1_POS, 270, "B.Cu"))
 
     # LED current-limiting resistors (B.Cu, near LEDs on F.Cu)
     placements.append(("R17", "R_0805", 25, 65, 0, "B.Cu"))

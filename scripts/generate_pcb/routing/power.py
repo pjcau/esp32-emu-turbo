@@ -412,71 +412,55 @@ def _power_traces():
     # 3. B.Cu east from the riser bottom into F1 pad 1 (the old via to
     #    F.Cu at (82.4, 61.0) is gone — the connector side stays entirely
     #    on B.Cu now).
-    f1_p1 = _pad("F1", "1")   # (83.6, 60.6)
-    f1_p2 = _pad("F1", "2")   # (88.0, 60.6)
+    f1_p1 = _pad("F1", "1")   # (86.10, 62.50) — SOUTH pad, VBUS_IN
+    f1_p2 = _pad("F1", "2")   # (86.10, 58.10) — NORTH pad, VBUS
     if f1_p1 and f1_p2:
+        # R32 JLCDFM round 2 (2026-08-08): F1 is VERTICAL now (see
+        # _shared.F1_POS). VBUS_IN runs the y=61.0 row east from the
+        # riser and drops into the south pad's centre; pad top edge is
+        # 61.55, so the row (edges 60.70..61.30) clears it by 0.25 and
+        # clears J3.2's pad (x <= 81.25) in x entirely.
         parts.append(_seg(vbus_fcu_start_x, vbus_fcu_y, f1_p1[0], vbus_fcu_y,
                            "B.Cu", W_PWR, n_vbus_in))
         parts.append(_seg(f1_p1[0], vbus_fcu_y, f1_p1[0], f1_p1[1],
                            "B.Cu", W_PWR, n_vbus_in))
-        # 3b. F1 pad 2 -> VBUS: B.Cu south stub, via cluster, F.Cu east to
-        #     the U4-tap vertical's endpoint at (90.95, 59.3) — landing on
-        #     the endpoint keeps the junction visible to
-        #     verify_dangling_copper (same rule as the U4-tap split
-        #     below).
+        # 3b. F1 pad 2 (north) -> VBUS: B.Cu stub south into the rotated
+        #     fuse's inter-pad channel (y 59.05..61.55, full 3.8mm pad
+        #     width of x room), a 3-barrel row at y=59.90, and F.Cu east
+        #     landing ON the U4 TVS VBUS via at (90.95, 59.90) — endpoint
+        #     on a via, so verify_dangling_copper sees the junction.
         #
-        #     R32 (2026-08-03): all three barrels used to sit on the
-        #     y=59.3 row at x = f1_p2, 86.90, 85.80, and the first two had
-        #     their HOLES inside / 0.025mm off F1 pad 2's copper — the
-        #     JLCDFM "lead to hole distance 0mm" DANGER (solder drains
-        #     down the barrel and starves the fuse joint). verify_via_in_pad
-        #     is the permanent guard: every hole edge must clear every SMD
-        #     pad by >= 0.15mm.
-        #
-        #     The barrels moved into F1's own inter-pad channel, which is
-        #     2.50mm wide (pad 1 ends x=85.00, pad 2 starts x=87.50) and
-        #     empty on both layers — the only copper crossing this pocket
-        #     is BTN_L / BTN_SELECT F.Cu at y=57.5 / 58.0, both south of
-        #     the cluster. That channel admits a via centre in
-        #     x = [85.65, 87.175]: 0.45 (barrel radius) + 0.20 (clearance
-        #     to the DIFFERENT-net VBUS_IN pad 1) on the west, 0.95 + 0.15
-        #     + 0.175 (hole rule against pad 2) on the east. 1.525mm of
-        #     window will not hold three barrels at the 1.10mm pitch that
-        #     0.90mm annuli need, so the third one steps north instead of
-        #     making a fourth column:
-        #       (85.90, 59.30) — 0.45mm B.Cu clearance to F1.1's pad edge,
-        #         hole 0.725mm clear of it.
-        #       (87.00, 59.30) — hole 0.325mm clear of F1.2's pad edge.
-        #       (85.90, 60.40) — 1.10mm north of the first, under the fuse
-        #         body where both layers are free; 0.45mm clearance to
-        #         F1.1, 1.60mm to F1.2.
-        #     Nearest pair 1.10mm apart => 0.20mm copper, 0.75mm hole.
-        #     AMPACITY (verify_power_via_ampacity): F1 is the source of
-        #     this net and everything downstream — U2.1 and the U4 TVS —
-        #     sits on F.Cu, so this cut carries the fuse's whole 2 A hold
-        #     current. 3 x 0.35mm barrels = 3 x 0.791 = 2.373 A, unchanged
-        #     by the move.
-        _F1_VIA_ROW_Y = 59.3
-        _F1_VIA_W_X = 85.90          # west barrel, on the row
-        _F1_VIA_E_X = 87.00          # east barrel, on the row
-        _F1_VIA_N = (85.90, 60.40)   # third barrel, stepped north
+        #     Row geometry (0.90 OD / 0.35 drill, ring r=0.45):
+        #       ring top edge 59.45 vs pad 2 bottom edge 59.05  -> 0.40
+        #       hole top edge 59.675 vs pad 2 bottom edge       -> 0.625
+        #         (verify_via_in_pad rule >= 0.15)
+        #       ring bottom 60.35 vs VBUS_IN row top edge 60.70 -> 0.35
+        #       ring bottom 60.35 vs pad 1 top edge 61.55       -> 1.20
+        #       west ring (85.00): J3.4 tab east edge 83.85     -> 0.70
+        #       east ring (87.20): BTN_SELECT B.Cu col 88.825   -> 1.175
+        #       ring-to-ring at 1.10mm pitch: 0.20mm of surface  — above
+        #         the 0.127mm same-net sliver limit
+        #         (verify_copper_clearance), which is what killed the old
+        #         horizontal cluster: its east ring sat 0.05mm off pad
+        #         2's edge and JLCDFM flagged the sliver as
+        #         "pad spacing 0.08mm" DANGER.
+        #     AMPACITY: 3 x 0.35mm barrels = 2.373 A vs the fuse's 2 A
+        #     hold current, unchanged.
+        _F1_VIA_ROW_Y = 59.90
+        _F1_VIA_XS = (85.00, 86.10, 87.20)
         parts.append(_seg(f1_p2[0], f1_p2[1], f1_p2[0], _F1_VIA_ROW_Y,
                            "B.Cu", W_PWR, n_vbus))
-        parts.append(_seg(f1_p2[0], _F1_VIA_ROW_Y, _F1_VIA_E_X, _F1_VIA_ROW_Y,
+        parts.append(_seg(_F1_VIA_XS[0], _F1_VIA_ROW_Y, f1_p2[0], _F1_VIA_ROW_Y,
                            "B.Cu", W_PWR, n_vbus))
-        parts.append(_seg(_F1_VIA_E_X, _F1_VIA_ROW_Y, _F1_VIA_W_X, _F1_VIA_ROW_Y,
+        parts.append(_seg(f1_p2[0], _F1_VIA_ROW_Y, _F1_VIA_XS[2], _F1_VIA_ROW_Y,
                            "B.Cu", W_PWR, n_vbus))
-        parts.append(_seg(_F1_VIA_W_X, _F1_VIA_ROW_Y, *_F1_VIA_N,
-                           "B.Cu", W_PWR, n_vbus))
-        for _vx, _vy in ((_F1_VIA_W_X, _F1_VIA_ROW_Y),
-                         (_F1_VIA_E_X, _F1_VIA_ROW_Y), _F1_VIA_N):
-            parts.append(_via_net(_vx, _vy, n_vbus))
-        # F.Cu mirrors the cluster and carries VBUS east to the U4 tap.
-        parts.append(_seg(_F1_VIA_W_X, _F1_VIA_ROW_Y, *_F1_VIA_N,
+        for _vx in _F1_VIA_XS:
+            parts.append(_via_net(_vx, _F1_VIA_ROW_Y, n_vbus))
+        # F.Cu mirrors the row and carries VBUS east over the USB_D+
+        # B.Cu column (different layer) to the U4 tap via.
+        parts.append(_seg(_F1_VIA_XS[0], _F1_VIA_ROW_Y, _F1_VIA_XS[2], _F1_VIA_ROW_Y,
                            "F.Cu", W_PWR_HIGH, n_vbus))
-        parts.append(_seg(_F1_VIA_W_X, _F1_VIA_ROW_Y, _F1_VIA_E_X, _F1_VIA_ROW_Y,
-                           "F.Cu", W_PWR_HIGH, n_vbus))
-        parts.append(_seg(_F1_VIA_E_X, _F1_VIA_ROW_Y, 90.95, _F1_VIA_ROW_Y,
+        parts.append(_seg(_F1_VIA_XS[2], _F1_VIA_ROW_Y, 90.95, _F1_VIA_ROW_Y,
                            "F.Cu", W_PWR_HIGH, n_vbus))
     # 4. F.Cu horizontal to IP5306 approach column, starting at the U4
     #    tap. Historical note (still load-bearing): this run used to start
@@ -486,8 +470,8 @@ def _power_traces():
     #    the board was fabricated connected — but a mid-segment T has no
     #    shared endpoint, so verify_dangling_copper read the TVS stub as
     #    copper ending in air. The tap is a real endpoint now; with F1 in
-    #    series, VBUS reaches this run through the U4-tap vertical
-    #    (90.95, 59.3 -> 61.0).
+    #    series, VBUS reaches this run through the U4 VBUS via at
+    #    (90.95, 59.9) and its F.Cu leg down to this row (usb.py).
     _u4_vbus_tap_x = 90.95
     parts.append(_seg(_u4_vbus_tap_x, vbus_fcu_y, ip_vbus_via_x, vbus_fcu_y,
                        "F.Cu", W_PWR_HIGH, n_vbus))
@@ -1143,9 +1127,23 @@ def _power_traces():
     sw17_1 = _pad("SW17", "1")   # (115.15, 54.065) IP5306_KEY
     sw17_2 = _pad("SW17", "2")   # (115.15, 58.435) GND
     if sw17_1 and c33_p2:
-        parts.append(_seg(c33_p2[0], c33_p2[1], c33_p2[0], sw17_1[1],
+        # Column at 113.90, NOT c33_p2[0] (114.05): at 114.05 the
+        # vertical's east edge (114.175) ran 0.045mm from SW17.1's pad
+        # west edge (114.22) — connected only through the corner, so the
+        # union carried a 38um same-net SLIT (verify_copper_clearance
+        # category 2b, the JLCDFM dry-film class). At 113.90 the gap is
+        # 0.195mm and the top endpoint still lands on C33.2's pad copper
+        # (pad spans x 113.475..114.625).
+        _sw17_col_x = 113.90
+        # Landing stub onto C33.2's pad ANCHOR — the shifted column's top
+        # endpoint lies inside the pad copper but on no anchor, which the
+        # JLCDFM dead-end rule measures by endpoint (same fix as the
+        # BAT_IN drain stub).
+        parts.append(_seg(c33_p2[0], c33_p2[1], _sw17_col_x, c33_p2[1],
                            "B.Cu", W_SIG, n_key))
-        parts.append(_seg(c33_p2[0], sw17_1[1], sw17_1[0], sw17_1[1],
+        parts.append(_seg(_sw17_col_x, c33_p2[1], _sw17_col_x, sw17_1[1],
+                           "B.Cu", W_SIG, n_key))
+        parts.append(_seg(_sw17_col_x, sw17_1[1], sw17_1[0], sw17_1[1],
                            "B.Cu", W_SIG, n_key))
     if sw17_2:
         # GND straight down into the In1 pour. Off-pad by 1.15 mm so the

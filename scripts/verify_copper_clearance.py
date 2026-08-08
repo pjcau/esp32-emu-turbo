@@ -275,6 +275,40 @@ def find_gaps(merged, nets, threshold=GAP_WARN):
                         + _locate(subs[i], subs[j])
                     )
 
+    # Category 2b: narrow SLITS inside one connected polygon — the case
+    # 2a structurally cannot see. Implemented 2026-08-08 after JLCDFM
+    # flagged "pad spacing 0.08mm" DANGER on v4.6.0: F1's via ring sat
+    # 0.05mm from F1.2's pad while both touched the connecting trace, so
+    # the union was ONE polygon with a 0.05mm slit — no sub-polygon
+    # pair, category 2a silent, and the etch/dry-film risk identical.
+    #
+    # Morphological closing: dilate-then-erode by SLIVER_MAX/2 fills any
+    # internal gap narrower than SLIVER_MAX; whatever area the closing
+    # ADDS is a slit. Concave corner fillets add ~0.001mm² each and stay
+    # under the area floor; a real slit (0.05 x 1mm = 0.05mm²) does not.
+    SLIVER_MAX = 0.127        # 5 mil — dry-film survival minimum
+    SLIVER_AREA_MIN = 0.008   # mm² — ignores corner-fillet artifacts
+    for key, (geom, _) in merged.items():
+        net_name = nets.get(key, str(key)) if isinstance(key, int) else key
+        closed = geom.buffer(SLIVER_MAX / 2).buffer(-SLIVER_MAX / 2)
+        slits = closed.difference(geom)
+        pieces = (list(slits.geoms)
+                  if slits.geom_type in ("MultiPolygon",
+                                         "GeometryCollection")
+                  else [slits])
+        for s in pieces:
+            if s.is_empty or s.geom_type != "Polygon":
+                continue
+            if s.area < SLIVER_AREA_MIN:
+                continue
+            c = s.centroid
+            # Width estimate: area / (perimeter/2) for a long thin slit.
+            w = 2 * s.area / max(s.exterior.length, 1e-9)
+            violations.append(
+                (min(w, SLIVER_MAX - 1e-3),
+                 f"{net_name} (same-net slit {s.area:.3f}mm²)", net_name,
+                 c.x, c.y, c.x, c.y, True))
+
     return violations
 
 
