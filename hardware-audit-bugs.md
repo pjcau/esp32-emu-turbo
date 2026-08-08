@@ -3956,3 +3956,46 @@ to `release_jlcpcb/`, extracted gerbers refreshed, gerber e-test
 PASS, new `order-manifest` written. **This set supersedes c0ebe7a1's**
 — the pending JLC re-upload must use it; paying against any earlier
 upload ships the undersized SI2301 and the 90 °C battery corridor.
+
+## Round 32 Addendum 2 (2026-08-08) — first JLCDFM contact with v4.6.0
+
+JLCDFM returned 4 Danger classes on the v4.6.0 upload. Root-caused all
+four; two were real, two are JLC 3D artifacts. Per-class general rules,
+not instance fixes (user directive).
+
+### R32-DFM-1 — J3/F1 body collision (REAL, fixed): the 2D outline lies about connector housings
+The 2026-08-03 fix moved F1 to 0.27mm of J3 clearance BY OUR GATE'S OWN
+MEASURE — and JLC's SMT DFM, which judges the 3D housing, still said
+0mm. Translation impossible (U4 0.30mm east, immovable); **F1 rotated
+vertical** at (86.10, 60.3), rot 270 (pad 1/VBUS_IN south), via cluster
+re-laid at y=59.90 landing on U4's VBUS via. GENERAL RULE:
+`verify_component_bodies` CONNECTOR_3D_MARGIN=+0.30mm for J1/J3/J4/U6.
+
+### R32-DFM-2 — same-net sliver at F1 (REAL, fixed): category 2a cannot see slits
+F1's east via ring sat 0.05mm from its own pad, joined only through the
+trace — ONE polygon with a slit, invisible to the sub-polygon pairwise
+check. GENERAL RULE: `verify_copper_clearance` category 2b
+(morphological closing, SLIVER_MAX=0.127mm). Immediately caught 2 more
+slits JLC never itemized: C33→SW17 column vs SW17.1 (38um; column moved
+to x=113.90 + landing stub) and CC1 via ring vs R1.1 (44um; via
+0.60→0.46 OD). Two landing-stub lessons reinforced: an endpoint inside
+pad copper but off the anchor point re-fails the JLCDFM dead-end rule.
+
+### R32-DFM-3 — J1 peg lead-to-hole 0mm (ARTIFACT, documented)
+Our NPTH is the datasheet's 0.65 (R21: datasheet over EasyEDA; pegs are
+0.50 plastic); JLC's 3D peg assumes their 0.70 hole. Accepted.
+
+### R32-DFM-4 — pin inner edge 0.03mm x50 (ARTIFACT, documented)
+JLC 3D leads vs their own 2D reference lands on the fine-pitch
+connectors; our lands are rigid-fit-equal to those references
+(verify_easyeda_footprint, 97 OK). Accepted.
+
+All recurring warnings + both artifact classes now live in the
+"Accepted JLCDFM findings" table (manufacturing/verification.md) —
+future reports are DIFFED against it, not re-derived.
+
+Order set: v4.6.1 (gerbers md5 26b62cd8) supersedes v4.6.0's. Suite
+105/105 (verify_copper_clearance cat-2b + body 3D margin included);
+KiBot CI green at 95a4dd8. Note for ops: a verify-all wall-clock of
+~5h on 2026-08-08 was host suspend mid-run, not a hung gate — the same
+suite completes in 217s.
