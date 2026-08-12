@@ -467,7 +467,7 @@ The 8080 parallel mode writes a full pixel (16-bit RGB565) in 2 bus cycles. SPI 
 
 ## Sheet 4 — Audio
 
-I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker.
+I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker, plus a 3.5mm headphone jack (J5) with hardware speaker auto-mute.
 
 <div className="schematic-container">
 
@@ -485,10 +485,24 @@ I2S output from ESP32-S3 to PAM8403 Class-D amplifier driving a 28mm 8Ω speaker
 | C23, C24, C25 | Capacitor | 1 µF (C28323) | VDD and PVDD decoupling caps | — |
 | R20, R21 | Resistor | 20 kΩ (C4328) | Bias resistors on INL/INR to **VREF** (pin 8), not GND | — |
 | LS1 | Speaker | 28mm 8Ω 0.5W | Mono output | — |
+| J5 | Headphone jack | PJ-327A (C19712376) | 3.5mm stereo jack, bottom edge; tip switch = plug detect | — |
+| R35, R36 | Resistor | 150 Ω / 470 Ω (C17471/C17710) | PDM level divider feeding the headphone chain | — |
+| C34 | Capacitor | 47 nF (C53134) | PDM carrier low-pass (~30 kHz) on HP_FILT | — |
+| C35 | Capacitor | 47 µF (C16780) | AC coupling HP_FILT → HP_AC | — |
+| R39 | Resistor | 4.7 kΩ (C17673) | DC bleed — parks tip/ring at 0 V | — |
+| R37, R38 | Resistor | 33 Ω (C17634) | Per-channel series into tip (HP_L) and ring (HP_R) | — |
+| R40 | Resistor | 220 kΩ (C17556) | JACK_DET pull-up to +3V3 | — |
+| Q3 | MOSFET | 2N7002 (C8545) | Open drain on PAM8403 MUTE (auto-mute) | — |
 
 :::note
 The PAM8403 is powered from the +5V rail for maximum headroom. Only one channel is used for mono audio. ESP32-S3 I2S with DMA provides low-CPU-overhead audio streaming. The passive components (C21–C25, R20–R21) follow the PAM8403 datasheet application circuit for proper biasing, DC blocking, and power supply decoupling.
 :::
+
+### Headphone jack and auto-mute
+
+The headphone feed is a **passive line-out tapped from I2S_DOUT upstream of the PAM8403** — the amplifier's filterless BTL outputs must never reach a ground-referenced jack (SPK− is not ground). R35/R36 divide the 3.3 Vpp PDM stream, C34 rolls off the PDM carrier, C35 AC-couples it, and R37/R38 fan the mono signal to both plug channels (~0.45 Vpp at 32 Ω — earbud level; a true DAC + headphone driver arrives with the v2 audio coprocessor).
+
+Muting is purely mechanical/electrical, no firmware involved: pin 6 of the PJ-327A is the tip's **normally-closed rest contact**. Unplugged, it ties Q3's gate to the tip's ~0 V DC (audio peaks stay under the 2N7002's minimum V<sub>GS(th)</sub>, so no chatter). Inserting a plug opens the contact, R40 pulls JACK_DET to +3V3, and Q3's open drain pulls the PAM8403 **MUTE** pin (SOP-16 pin 5, internal pull-up) low — the speaker mutes, the headphones play. Removing the plug reverses it.
 
 ---
 
