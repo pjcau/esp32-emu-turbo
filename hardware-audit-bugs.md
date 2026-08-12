@@ -4138,3 +4138,50 @@ semantics).
   re-upload, every C19171391 green mark must sit on the GND side
   (board-left in top view); LED1's mark stays the open question of its
   own model texture — inspect with parts deselected.
+
+## Round 34 Findings (2026-08-12, evening) — v4.6.2 post-LED-fix re-audit
+
+Re-audit requested after the R33-MED-2 fix landed (tag v4.6.2). Copper
+is byte-identical to v4.6.1 modulo gerber date comments (verified by
+tag-to-tag diff); the change surface is the CPL emission alone, so
+Layer 2 ran as a delta review on that surface plus re-affirmation of
+the Round 33 domain results.
+
+### Step 0 gates — all 25 PASS on v4.6.2
+
+Same table as Round 33 with three deltas, all expected:
+- verify_dfa 10/10 (the LED-consistency check now passes on the
+  synced release CPL);
+- verify_easyeda_footprint: 92 OK, 0 FAIL, **5 PENDING** (LED2-6
+  first-article validation entries — by design), 1 REVIEW (J4,
+  pre-existing documented override);
+- everything else identical: trace/crossing/clearance/connectivity
+  clean, dfm 124/124, polarity 304/304, datasheet nets all pass,
+  design intent all pass, strapping 11+1warn (R14 DNP by design),
+  decoupling 23/23, power sequence 32/32, power paths 10+11info,
+  power-nets 6/6 single group, ERC 0/0, DRC 0 violations
+  0 unconnected.
+
+### Layer 2 — delta review
+
+- **CPL blast radius**: `git diff v4.6.1..v4.6.2 -- release_jlcpcb/`
+  touches exactly the five LED rows (180 -> 0). BOM diff empty. No
+  other component's emitted rotation moved.
+- **Rotation-semantics surface**: the removed deltas were the last
+  entries in _JLCPCB_ROT_DELTAS except J4's (which is independently
+  anchored by its two convention-free checks: cable-side assertion in
+  verify_dfm_v2 and the 42-pad rigid-fit). No other part relies on the
+  falsified pin-number-alignment premise.
+- **All other domains**: unchanged copper + unchanged firmware ⇒
+  Round 33 findings stand as-is (LCD skew 7.89 mm, PDM TX audio, Q2
+  gate arithmetic re-derived, R33-LOW-1 USB stitching advisory).
+
+### Bug list
+
+None. No new findings; R33-MED-2 is fixed and gated
+(_PENDING_VALIDATION); carried open items are unchanged: LED2-6
+first-article power-up test, C33 wake RC, Q1-corridor thermal probe,
+R33-LOW-1 (advisory).
+
+Pre-payment state: order must use the v4.6.2 cpl.csv (md5 4c2a0640);
+viewer check = every C19171391 green mark on the GND side.
