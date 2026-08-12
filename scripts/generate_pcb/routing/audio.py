@@ -215,21 +215,15 @@ def _i2s_traces():
         parts.append(_via_net(sx, mid_y, n_spk_m, size=VIA_STD, drill=VIA_STD_DRILL))
         parts.append(_seg(sx, mid_y, sx, sy, "B.Cu", W_AUDIO, n_spk_m))
 
-    # ── PAM8403 +5V: chain on each row, single via per row
-    # Top row (y=34.15): VDD(6) → MUTE(5) → PVDD(4), via from VDD(6)
-    # VDD pin 6 at x=28.095, safe from BTN_RIGHT at x=31.0
-    # PVDD pin 4 at x=30.635 too close to BTN_RIGHT for a direct via
+    # ── PAM8403 +5V: one via per PVDD/VDD pin group
+    # Top row: VDD(6) and PVDD(4) each reach +5V independently — pin 6
+    # through its own via (below), pin 4 through the PVDD4→PVDD13
+    # bridge. The historic VDD(6)→MUTE(5)→PVDD(4) strap that carried
+    # +5V ACROSS the MUTE pad is GONE: pin 5 now carries PAM_MUTE (the
+    # J5 headphone-jack auto-mute line, see _headphone_traces), so
+    # nothing may touch it with +5V.
     pam_vdd6 = _pad("U5", "6")
-    pam_mute = _pad("U5", "5")
     pam_pvdd4 = _pad("U5", "4")
-    if pam_vdd6 and pam_mute:
-        parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
-                          pam_mute[0], pam_mute[1],
-                          "B.Cu", W_PWR, n_5v))
-    if pam_mute and pam_pvdd4:
-        parts.append(_seg(pam_mute[0], pam_mute[1],
-                          pam_pvdd4[0], pam_pvdd4[1],
-                          "B.Cu", W_PWR, n_5v))
     if pam_vdd6:
         via_y = pam_vdd6[1] + 2.0  # outward from IC (downward = larger y)
         parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
@@ -635,5 +629,259 @@ def _pam_passive_traces():
                           "B.Cu", W_PWR_LOW, n_gnd))
         parts.append(_via_net(c25_p2[0], c25_p2[1] + 0.95,
                               n_gnd, size=VIA_STD, drill=VIA_STD_DRILL))
+
+    return parts
+
+
+def _headphone_traces():
+    """Headphone jack (J5 PJ-327A) line-out + PAM8403 auto-mute.
+
+    Signal chain (all values on sheet 04):
+      I2S_DOUT --R35(150R)--> HP_FILT [R36 470R + C34 47nF to GND]
+        --C35(47uF)--> HP_AC [R39 4.7k bleed]
+        --R37/R38(33R)--> HP_L / HP_R --> J5 tip / ring
+    Mute chain: J5.6 (tip NC contact) + R40 220k pull-up to +3V3 ->
+      Q3 gate; Q3 drain -> PAM_MUTE (U5.5); Q3 source -> GND.
+
+    Geography (see _shared.J5_POS comment): filter in the empty NORTH
+    pocket (x 44..52.5, y 17..41), tapping the I2S_DOUT F.Cu rail at
+    y=18; HP_AC rides the ONE free button-matrix window (x=50.5,
+    between the R5/R6 and C6/C7 pad columns) down to P1; R37/R38 in
+    P1; R40/Q3 in P2a; PAM_MUTE exits U5.5 north to y=22.5 and crosses
+    the board on F.Cu (the B.Cu button walls make a bottom-half B.Cu
+    traverse impossible), then drops down the P2a window at x=55.95.
+
+    Every clearance below was computed against the wall/row inventory
+    in _shared.J5_POS's comment; the tightest figures are quoted where
+    they occur.
+    """
+    parts = []
+    _init_pads()
+
+    n_gnd = NET_ID["GND"]
+    n_3v3 = NET_ID["+3V3"]
+    n_dout = NET_ID["I2S_DOUT"]
+    n_filt = NET_ID["HP_FILT"]
+    n_ac = NET_ID["HP_AC"]
+    n_l = NET_ID["HP_L"]
+    n_r = NET_ID["HP_R"]
+    n_det = NET_ID["JACK_DET"]
+    n_mute = NET_ID["PAM_MUTE"]
+
+    # ── I2S_DOUT tap: T off the F.Cu mountain rail (y=18) ─────────
+    # The rail spans x 26.825..87.7; a via at (47.0, 18.0) drops the
+    # branch to B.Cu, straight down the empty north pocket to R35.1.
+    r35_1 = _pad("R35", "1")   # (47.0, 26.05) north pad
+    r35_2 = _pad("R35", "2")   # (47.0, 27.95) south pad = HP_FILT
+    if r35_1 and r35_2:
+        parts.append(_via_net(47.0, 18.0, n_dout,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(47.0, 18.0, r35_1[0], r35_1[1],
+                          "B.Cu", W_DATA, n_dout))
+
+    # ── HP_FILT: R35.2 -> R36.1 / C34.1 / C35.1 ───────────────────
+    r36_1 = _pad("R36", "1")   # (47.0, 29.45)
+    r36_2 = _pad("R36", "2")   # (47.0, 31.35) = GND
+    c34_1 = _pad("C34", "1")   # (49.3, 29.45)
+    c34_2 = _pad("C34", "2")   # (49.3, 31.35) = GND
+    c35_1 = _pad("C35", "1")   # (51.5, 32.45)
+    c35_2 = _pad("C35", "2")   # (51.5, 34.35) = HP_AC
+    if r35_2 and r36_1 and c34_1 and c35_1:
+        _bus_y = 28.6
+        parts.append(_seg(r35_2[0], r35_2[1], r35_2[0], _bus_y,
+                          "B.Cu", W_DATA, n_filt))
+        parts.append(_seg(r35_2[0], _bus_y, c34_1[0], _bus_y,
+                          "B.Cu", W_DATA, n_filt))
+        parts.append(_seg(c34_1[0], _bus_y, c35_1[0], _bus_y,
+                          "B.Cu", W_DATA, n_filt))
+        parts.append(_seg(r36_1[0], _bus_y, r36_1[0], r36_1[1],
+                          "B.Cu", W_DATA, n_filt))
+        parts.append(_seg(c34_1[0], _bus_y, c34_1[0], c34_1[1],
+                          "B.Cu", W_DATA, n_filt))
+        parts.append(_seg(c35_1[0], _bus_y, c35_1[0], c35_1[1],
+                          "B.Cu", W_DATA, n_filt))
+    # GND legs of the two shunts — own via each, holes 2.3mm apart.
+    if r36_2:
+        parts.append(_seg(r36_2[0], r36_2[1], r36_2[0], 32.5,
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(r36_2[0], 32.5, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+    if c34_2:
+        parts.append(_seg(c34_2[0], c34_2[1], c34_2[0], 32.5,
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(c34_2[0], 32.5, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── HP_AC: C35.2 -> R39.1, then down the x=50.5 window to P1 ──
+    r39_1 = _pad("R39", "1")   # (49.3, 35.45)
+    r39_2 = _pad("R39", "2")   # (49.3, 37.35) = GND
+    r37_1 = _pad("R37", "1")   # (48.45, 57.2) east pad
+    r37_2 = _pad("R37", "2")   # (46.55, 57.2) west pad = HP_L
+    r38_1 = _pad("R38", "1")   # (50.25, 57.2) west pad
+    r38_2 = _pad("R38", "2")   # (52.15, 57.2) east pad = HP_R
+    if c35_2 and r39_1 and r37_1 and r38_1:
+        _ac_y = r39_1[1]  # 35.45
+        parts.append(_seg(c35_2[0], c35_2[1], c35_2[0], _ac_y,
+                          "B.Cu", W_DATA, n_ac))
+        # Split at x=50.5 so the descent T-junction is an
+        # endpoint-to-endpoint meet (the dead-end gate rejects a branch
+        # that starts mid-span of another segment).
+        parts.append(_seg(c35_2[0], _ac_y, 50.5, _ac_y,
+                          "B.Cu", W_DATA, n_ac))
+        parts.append(_seg(50.5, _ac_y, r39_1[0], _ac_y,
+                          "B.Cu", W_DATA, n_ac))
+        # Descent: T at x=50.5 — the only pad-column window in the
+        # button matrix (R5/R6 pad edges 49.525/51.475, 0.875mm each
+        # side of the 0.2mm trace).
+        parts.append(_seg(50.5, _ac_y, 50.5, r37_1[1],
+                          "B.Cu", W_DATA, n_ac))
+        # Feed row: R37.1 (east pad) .. through R38.1 (west pad) to
+        # the descent foot.
+        parts.append(_seg(r37_1[0], r37_1[1], r38_1[0], r38_1[1],
+                          "B.Cu", W_DATA, n_ac))
+        parts.append(_seg(r38_1[0], r38_1[1], 50.5, r37_1[1],
+                          "B.Cu", W_DATA, n_ac))
+    if r39_2:
+        parts.append(_seg(r39_2[0], r39_2[1], r39_2[0], 38.5,
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(r39_2[0], 38.5, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── HP_L: R37.2 -> J5.2 (tip) ─────────────────────────────────
+    # Straight down the empty west half of P1, then east into the pad
+    # through its top edge. The y=64.9 horizontal shares its y with the
+    # BTN_RIGHT jog in buttons.py — that one is F.Cu, this is B.Cu.
+    j5_2 = _pad("J5", "2")     # (48.5, 65.61)
+    if r37_2 and j5_2:
+        parts.append(_seg(r37_2[0], r37_2[1], r37_2[0], 64.9,
+                          "B.Cu", W_DATA, n_l))
+        parts.append(_seg(r37_2[0], 64.9, j5_2[0], 64.9,
+                          "B.Cu", W_DATA, n_l))
+        parts.append(_seg(j5_2[0], 64.9, j5_2[0], j5_2[1],
+                          "B.Cu", W_DATA, n_l))
+
+    # ── HP_R: R38.2 -> J5.5 (ring) ────────────────────────────────
+    # South past the jack's west NPTH hole (x=50.7 keeps 1.30mm to the
+    # hole centre, rule needs 1.00), east through the corridor UNDER
+    # the BTN_A/BTN_RIGHT wall ends (they stop at y 66.8/65.6), north
+    # into the ring pad.
+    j5_5 = _pad("J5", "5")     # (55.5, 69.70)
+    if r38_2 and j5_5:
+        parts.append(_seg(r38_2[0], r38_2[1], r38_2[0], 62.5,
+                          "B.Cu", W_DATA, n_r))
+        parts.append(_seg(r38_2[0], 62.5, 50.7, 62.5,
+                          "B.Cu", W_DATA, n_r))
+        parts.append(_seg(50.7, 62.5, 50.7, 68.2,
+                          "B.Cu", W_DATA, n_r))
+        parts.append(_seg(50.7, 68.2, j5_5[0], 68.2,
+                          "B.Cu", W_DATA, n_r))
+        parts.append(_seg(j5_5[0], 68.2, j5_5[0], j5_5[1],
+                          "B.Cu", W_DATA, n_r))
+
+    # ── J5.3 (sleeve) -> GND ──────────────────────────────────────
+    # Via west of the pad, in the F-highway gap between the BTN_Y
+    # (71.56) and BTN_L (73.42) rows; the hole keeps 0.185mm to the
+    # pad edge (verify_via_in_pad floor 0.15).
+    j5_3 = _pad("J5", "3")     # (48.5, 72.70)
+    if j5_3:
+        parts.append(_seg(j5_3[0], j5_3[1], 46.75, j5_3[1],
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(46.75, j5_3[1], n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── JACK_DET: J5.6 + R40.2 + Q3 gate ──────────────────────────
+    j5_6 = _pad("J5", "6")     # (55.5, 64.01)
+    r40_1 = _pad("R40", "1")   # (54.6, 56.65) north = +3V3
+    r40_2 = _pad("R40", "2")   # (54.6, 58.55) south
+    q3_g = _pad("Q3", "1")     # (53.9, 62.45)
+    q3_s = _pad("Q3", "2")     # (53.9, 60.55)
+    q3_d = _pad("Q3", "3")     # (56.1, 61.5)
+    if r40_2 and q3_g and j5_6:
+        # R40.2 south, sidestep to x=54.9 (0.4mm east of the Q3 G/S
+        # pad column, 0.6mm west of the D pad), down to y=62.8, gate
+        # branch west at y=62.45 (the vertical is SPLIT there — the
+        # dead-end gate rejects mid-span branches), pad-6 entry east at
+        # y=62.8 (the pad's north edge is 63.11).
+        parts.append(_seg(r40_2[0], r40_2[1], r40_2[0], 59.0,
+                          "B.Cu", W_DATA, n_det))
+        parts.append(_seg(r40_2[0], 59.0, 54.9, 59.0,
+                          "B.Cu", W_DATA, n_det))
+        parts.append(_seg(54.9, 59.0, 54.9, q3_g[1],
+                          "B.Cu", W_DATA, n_det))
+        parts.append(_seg(54.9, q3_g[1], 54.9, 62.8,
+                          "B.Cu", W_DATA, n_det))
+        parts.append(_seg(54.9, q3_g[1], q3_g[0], q3_g[1],
+                          "B.Cu", W_DATA, n_det))
+        parts.append(_seg(54.9, 62.8, j5_6[0], 62.8,
+                          "B.Cu", W_DATA, n_det))
+        parts.append(_seg(j5_6[0], 62.8, j5_6[0], j5_6[1],
+                          "B.Cu", W_DATA, n_det))
+    # R40.1 -> +3V3 plane via (In2 is continuous +3V3 here). NORTH of
+    # the whole F-row block (BTN rows y 55.0..58.0 AND the PWR_SW run
+    # at y=54.35 leave no window below): straight up R40's own column
+    # to (54.6, 53.6) — 0.40mm ring gap to the PWR_SW row, 0.275mm to
+    # the BTN_LEFT stub trace. VIA_MIN because the corridor is tight.
+    if r40_1:
+        parts.append(_seg(r40_1[0], r40_1[1], r40_1[0], 53.6,
+                          "B.Cu", W_DATA, n_3v3))
+        parts.append(_via_net(r40_1[0], 53.6, n_3v3,
+                              size=VIA_MIN, drill=VIA_MIN_DRILL))
+
+    # ── Q3 source -> GND via ──────────────────────────────────────
+    # Position is triple-constrained: at (53.9, 59.6) the barrel sat
+    # 0.176mm from R40.2 (JACK_DET; 0.2mm netclass via-pad rule), and
+    # at (53.75, 59.9) the hole sat 0.15mm from Q3.2's own land
+    # (verify_via_in_pad's JLC lead-to-hole floor). (53.75, 59.75)
+    # clears both: hole 0.25mm from Q3.2, ring 0.253mm from R40.2.
+    if q3_s:
+        parts.append(_seg(q3_s[0], q3_s[1], 53.75, q3_s[1],
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_seg(53.75, q3_s[1], 53.75, 59.75,
+                          "B.Cu", W_PWR_LOW, n_gnd))
+        parts.append(_via_net(53.75, 59.75, n_gnd,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+
+    # ── PAM_MUTE: U5.5 -> Q3 drain ────────────────────────────────
+    # U5.5 exits NORTH to y=22.5 (the C21/C24 caps bound the row
+    # below), crosses the board on F.Cu — between the SPK+ (y=21.5)
+    # and SPK- (y=23.7) F.Cu runs, parallel to both — and drops down
+    # the second P2a window lane (x=55.95; the JACK_DET/+3V3 copper
+    # stays >=0.52mm west of it) to the drain pad.
+    pam_mute = _pad("U5", "5")
+    if pam_mute and q3_d:
+        _mute_y = 22.5
+        _lane_x = 55.95     # the R6/R7 pad-column window (54.53..56.48)
+        parts.append(_seg(pam_mute[0], pam_mute[1],
+                          pam_mute[0], _mute_y,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_via_net(pam_mute[0], _mute_y, n_mute,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+        parts.append(_seg(pam_mute[0], _mute_y, _lane_x, _mute_y,
+                          "F.Cu", W_DATA, n_mute))
+        parts.append(_via_net(_lane_x, _mute_y, n_mute,
+                              size=VIA_STD, drill=VIA_STD_DRILL))
+        # Down the lane with two jogs:
+        #  - around MH(55.0, 37.5): east to x=56.75 for y 35.2..39.8
+        #    (0.40mm to the keepout, 1.13mm to the BTN_RIGHT wall);
+        #  - at y=53.2, east to x=57.3 for the final drop, so the
+        #    JACK_DET network west of it (R40.2 exit at x=54.9) is
+        #    never crossed. x=57.3 keeps 0.575mm to the wall and
+        #    0.25mm to J5 pad 6's east edge.
+        parts.append(_seg(_lane_x, _mute_y, _lane_x, 35.2,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(_lane_x, 35.2, 56.75, 35.2,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(56.75, 35.2, 56.75, 39.8,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(56.75, 39.8, _lane_x, 39.8,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(_lane_x, 39.8, _lane_x, 53.2,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(_lane_x, 53.2, 57.3, 53.2,
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(57.3, 53.2, 57.3, q3_d[1],
+                          "B.Cu", W_DATA, n_mute))
+        parts.append(_seg(57.3, q3_d[1], q3_d[0], q3_d[1],
+                          "B.Cu", W_DATA, n_mute))
 
     return parts

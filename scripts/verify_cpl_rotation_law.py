@@ -155,6 +155,18 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "when SW16 is OFF (the whole point of the high-side switch; "
            "vbench T2.3 reads the same nets off Q2's model). The law's 270 "
            "puts the single leg where the pair is and does not assemble."),
+    "Q3": (0.0,
+           "2N7002 SOT-23-3 (C8545) at cpl=180, KiCad 270 — the third "
+           "SOT-23-3 and the same EasyEDA column-frame as Q1/Q2/D1, so it "
+           "inherits their family arithmetic: rotating the package adds "
+           "the same delta to cpl and to row_board, and Q3 is Q1 rotated "
+           "+90 (KiCad 270 vs 180), hence cpl = 90 + 90 = 180. The "
+           "rotation exists because the J5 headphone-jack pocket needs "
+           "the G/S pad column WEST and the drain pad EAST "
+           "(routing/_shared.py::Q3_POS). The law's 0 is 180 out and, as "
+           "for every SOT-23-3, puts the single leg where the pair is — "
+           "it does not assemble. Verify on the JLC 3D preview at order "
+           "time (first-article-check, SOT-23 family)."),
 }
 
 

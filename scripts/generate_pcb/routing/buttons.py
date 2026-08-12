@@ -782,6 +782,50 @@ def _button_traces():
                                    "F.Cu", W_J1_BYPASS, net))
                 _cursor = _wx1
             parts.append(_seg(_cursor, cy, _hi, cy, "F.Cu", W_SIG, net))
+        elif b["ref"] == "SW4":
+            # BTN_RIGHT (cy=65.6) — jog around the J5 headphone jack's
+            # north NPTH locating hole at (52.0, 65.9), Ø1.3: straight
+            # through, the hole would be drilled through the trace. The
+            # jog rises to y=64.8 at W_DATA (0.20mm): 0.35mm from the
+            # hole edge (validate_jlcpcb NPTH rule wants 0.30) and
+            # 0.175mm to the BTN_LEFT channel at y=64.4. A W_SIG jog
+            # cannot satisfy both bounds at once. F.Cu only, no vias.
+            _hp_jog_y = 64.8
+            _hp_x0, _hp_x1 = 50.4, 53.6
+            parts.append(_seg(vx, cy, _hp_x0, cy, "F.Cu", W_SIG, net))
+            parts.append(_seg(_hp_x0, cy, _hp_x0, _hp_jog_y,
+                              "F.Cu", W_DATA, net))
+            parts.append(_seg(_hp_x0, _hp_jog_y, _hp_x1, _hp_jog_y,
+                              "F.Cu", W_DATA, net))
+            parts.append(_seg(_hp_x1, _hp_jog_y, _hp_x1, cy,
+                              "F.Cu", W_DATA, net))
+            parts.append(_seg(_hp_x1, cy, ax, cy, "F.Cu", W_SIG, net))
+        elif b["ref"] == "SW8":
+            # BTN_Y (cy=71.55) — the J5 south NPTH hole at (52.0, 72.0)
+            # leaves only 0.11mm from the trace edge to the hole edge
+            # (rule 0.254), and the F rows above (BTN_X, 70.81) and
+            # below (BTN_L, 73.42) leave no F.Cu window wide enough to
+            # jog. Dive to B.Cu instead and pass BETWEEN the jack's two
+            # NPTH holes at y=69.0 — the BTN_A/BTN_RIGHT B.Cu walls end
+            # at y 66.8/65.6, so the B.Cu strip there is free (the
+            # HP_R run at y=68.2 stays 0.6mm north). Via edges: 0.83mm
+            # hole-to-hole to the NPTH, 0.20mm ring to the J5 pad 4
+            # land, 0.40mm ring to the BTN_X channel.
+            _dive_x0, _dive_x1 = 50.55, 53.6
+            _dive_y = 69.0
+            _dw, _dv = min(vx, ax), max(vx, ax)
+            parts.append(_seg(_dv, cy, _dive_x1, cy, "F.Cu", W_SIG, net))
+            parts.append(_via_net(_dive_x1, cy, net,
+                                  size=_btn_via_sz, drill=_btn_via_drill))
+            parts.append(_seg(_dive_x1, cy, _dive_x1, _dive_y,
+                              "B.Cu", W_SIG, net))
+            parts.append(_seg(_dive_x1, _dive_y, _dive_x0, _dive_y,
+                              "B.Cu", W_SIG, net))
+            parts.append(_seg(_dive_x0, _dive_y, _dive_x0, cy,
+                              "B.Cu", W_SIG, net))
+            parts.append(_via_net(_dive_x0, cy, net,
+                                  size=_btn_via_sz, drill=_btn_via_drill))
+            parts.append(_seg(_dive_x0, cy, _dw, cy, "F.Cu", W_SIG, net))
         else:
             parts.append(_seg(vx, cy, ax, cy, "F.Cu", W_SIG, net))
         parts.append(_via_net(ax, cy, net, size=_btn_via_sz, drill=_btn_via_drill))

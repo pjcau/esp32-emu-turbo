@@ -1,18 +1,18 @@
 {
-  "generatedAt": "2026-08-08",
-  "gitHead": "8271417",
+  "generatedAt": "2026-08-12",
+  "gitHead": "3ce32fb",
   "files": {
     "gerbers.zip": {
-      "sha256": "631328b2a3b8f1b780dc6dd9de898105fc59cdedc06f12fc52b646e5b5ed3195",
-      "bytes": 272915
+      "sha256": "1a9a50b41e6c6df62ddda925753abaafa9b3d303c36c67f54186cf8c2d5ff9e6",
+      "bytes": 283061
     },
     "bom.csv": {
-      "sha256": "e98f0ad5eaee803efdacbe6f1a541a7a532ee76375019f3a29c0aeac15054c3b",
-      "bytes": 2007
+      "sha256": "99aa528c3da3a85cd77b3b8605a34d25cd80c156d67ec0f5eeb087c86b3c6671",
+      "bytes": 2325
     },
     "cpl.csv": {
-      "sha256": "682fa6eec992d3433ac979bba3b4d1e0c3f82c38e405fec3ac4e699d8a309c8a",
-      "bytes": 4462
+      "sha256": "1554c4a8cd41bf2c80aea615065c82db6e9bdd10f1e6d58280a1e8f10771634d",
+      "bytes": 4898
     }
   }
 }

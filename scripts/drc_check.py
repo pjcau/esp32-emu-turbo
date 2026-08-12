@@ -394,6 +394,7 @@ UNPUBLISHED_PACKAGE_FAMILIES = {
     "JST-PH-2P-SMD",      # connector
     "TF-01A",             # micro-SD socket
     "SS-12D00G3",         # slide switch
+    "PJ-327A",            # 3.5mm headphone jack (connector)
     "SW-SMD-5.1x5.1",     # tact switch
     "SMD-4x4x2",          # shielded power inductor (L1)
     "IND-SMD-4.0x4.0",    # shielded power inductor (L2, SY8089 buck output) —

@@ -100,6 +100,13 @@ sd_z = bot_d - 1.5;     // Aligned with SD module center below PCB
 pwr_sw_x = -40;
 pwr_sw_z = bot_d - 2.0; // Aligned with switch body center below PCB
 
+// === Headphone jack (bottom edge, between power switch and USB-C) ===
+// J5 PJ-327A — KiCad (52, 74.9) → enc (-28, bottom edge). Body 4.4mm
+// tall on the PCB back side; barrel Ø5.0 protrudes 1.3mm into the
+// wall, so the Ø6.5 hole both nests the barrel and passes the plug.
+hp_jack_x = -28;
+hp_jack_z = bot_d - 2.2; // Barrel axis: PCB back face minus body/2
+
 // === Speaker grille (back panel, left side) ===
 // The driver is the 28mm 8ohm speaker (SPK1, off-board). The grille
 // opening is intentionally smaller than the 28mm frame: it covers the
@@ -298,6 +305,11 @@ module bottom_shell() {
         rotate([90, 0, 0])
         power_switch_cutout(8, 4, wall + 2);
 
+        // Headphone jack cutout (bottom edge, right of power switch)
+        translate([hp_jack_x, -body_h/2, hp_jack_z])
+        rotate([90, 0, 0])
+        headphone_jack_cutout(6.5, wall + 2);
+
         // Speaker grille (back face, z=0)
         translate([spk_x, spk_y, 0])
         speaker_grille(spk_diam, 1.5, 3.5, wall + 1);
@@ -444,6 +456,16 @@ module pcb_model() {
     color([0.5, 0.5, 0.5])
     translate([pwr_sw_x, -pcb_h/2 + 3, pcb_d])
     cube([8, 4, 2], center=true);
+
+    // Headphone jack J5 — KiCad (52, 74.9) → enc (-28, bottom edge),
+    // body 8.8 x 11.0 x 4.4 on the PCB back, barrel toward the wall
+    color([0.35, 0.35, 0.35]) {
+        translate([hp_jack_x, -pcb_h/2 + 5.6, -2.2])
+        cube([8.8, 11.0, 4.4], center=true);
+        translate([hp_jack_x, -pcb_h/2 - 0.65, -2.2])
+        rotate([90, 0, 0])
+        cylinder(h=1.3, d=5.0, center=true, $fn=24);
+    }
 
     // IP5306 power management IC — KiCad (110, 42.5) → enc (30, -5)
     color([0.15, 0.15, 0.15])

@@ -264,7 +264,10 @@ COMPONENT_SPECS = {
     # OUTL+/OUTL- are left floating — PAM8403 datasheet app note allows
     # unused BTL outputs to float; both amplifiers are still biased and
     # consume ~2mA quiescent each (negligible on a handheld battery).
-    # SHDN tied high (+5V) for always-on; MUTE tied high (+5V) for unmuted.
+    # SHDN tied high (+5V) for always-on. MUTE carries PAM_MUTE since
+    # the J5 headphone jack: the pin has an internal pull-up (datasheet
+    # pin table — may float = unmuted) and Q3's open drain pulls it low
+    # when a plug is inserted, muting the speaker.
     # ======================================================================
     "U5": {
         "component": "PAM8403 Class-D Audio Amplifier",
@@ -276,7 +279,7 @@ COMPONENT_SPECS = {
             "2":  {"net": _exact("GND"),        "function": "PGND — power ground", "type": "smd"},
             "3":  {"net": _unconnected(),       "function": "OUTL- — left channel - (floating, only right channel wired to speaker)", "type": "smd"},
             "4":  {"net": _exact("+5V"),        "function": "PVDD — power supply", "type": "smd"},
-            "5":  {"net": _exact("+5V"),        "function": "MUTE — active low, tied high (unmuted)", "type": "smd"},
+            "5":  {"net": _exact("PAM_MUTE"),   "function": "MUTE — active low, internal pull-up; pulled low by Q3 when a headphone plug is in J5", "type": "smd"},
             "6":  {"net": _exact("+5V"),        "function": "VDD — analog power supply", "type": "smd"},
             "7":  {"net": _exact("PAM_IN_AC"),  "function": "INL — left audio input (AC-coupled through C22)", "type": "smd"},
             "8":  {"net": _any_of("PAM_VREF", ""),  "function": "VREF — internal reference (bypass cap C21 to GND)", "type": "smd"},
@@ -288,6 +291,46 @@ COMPONENT_SPECS = {
             "14": {"net": _exact("SPK-"),       "function": "OUTR- — right channel - (speaker -)", "type": "smd"},
             "15": {"net": _exact("GND"),        "function": "PGND — power ground", "type": "smd"},
             "16": {"net": _exact("SPK+"),       "function": "OUTR+ — right channel + (speaker +)", "type": "smd"},
+        },
+    },
+
+    # ======================================================================
+    # J5 — HOOYA PJ-327A 3.5mm headphone jack (C19712376)
+    # Datasheet: fetched from LCSC 2026-08-12 (drawing rev A1 2020.6.23).
+    # Pin roles from the plug-travel diagram: the tip zone touches pin 2,
+    # the ring zone pin 5, the sleeve zone pin 3; pins 6 and 4 are the
+    # normally-closed REST contacts of 2 and 5 (continuity 2-6 and 5-4
+    # with no plug; both open when a plug is inserted). Pin 6 is the
+    # jack-detect input for the Q3 auto-mute; pin 4 is unused.
+    # ======================================================================
+    "J5": {
+        "component": "PJ-327A 3.5mm Headphone Jack",
+        "lcsc": "C19712376",
+        "datasheet": "J5_PJ-327A_C19712376.pdf",
+        "datasheet_page": 1,
+        "pins": {
+            "2": {"net": _exact("HP_L"),     "function": "TIP — left channel (mono feed via R37)", "type": "smd"},
+            "3": {"net": _exact("GND"),      "function": "SLEEVE — ground", "type": "smd"},
+            "4": {"net": _unconnected(),     "function": "RING rest contact (NC switch, unused)", "type": "smd"},
+            "5": {"net": _exact("HP_R"),     "function": "RING — right channel (mono feed via R38)", "type": "smd"},
+            "6": {"net": _exact("JACK_DET"), "function": "TIP rest contact — opens on plug insert (auto-mute detect)", "type": "smd"},
+        },
+    },
+
+    # ======================================================================
+    # Q3 — 2N7002 N-channel MOSFET (C8545), headphone auto-mute driver
+    # Gate = JACK_DET (R40 220k pull-up to +3V3; the closed tip switch
+    # parks it at ~0V when unplugged). Open drain on PAM_MUTE.
+    # ======================================================================
+    "Q3": {
+        "component": "2N7002 N-Channel MOSFET",
+        "lcsc": "C8545",
+        "datasheet": "Q3_2N7002_C8545.pdf",
+        "datasheet_page": 1,
+        "pins": {
+            "1": {"net": _exact("JACK_DET"), "function": "Gate — jack detect node", "type": "smd"},
+            "2": {"net": _exact("GND"),      "function": "Source", "type": "smd"},
+            "3": {"net": _exact("PAM_MUTE"), "function": "Drain — open-drain mute pull-down", "type": "smd"},
         },
     },
 

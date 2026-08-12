@@ -202,6 +202,7 @@ _U5_MAP = {
     "3": ("7", "10"),              # AUDIO_IN -> INL + INR (bridged mono)
     "4": ("16",),                  # SPK+ -> OUTR+
     "5": ("14",),                  # SPK- -> OUTR-
+    "6": ("5",),                   # MUTE -> pad 5 (PAM_MUTE, J5 auto-mute)
 }
 
 # U6 — SD_Module 6-pin symbol -> TF-01A micro-SD land.

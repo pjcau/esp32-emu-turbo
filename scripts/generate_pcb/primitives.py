@@ -279,6 +279,34 @@ NET_LIST = [
     # series element, same rule as PAM_IN_AC / VBUS_IN. Named after the
     # RPP_GATE precedent (Q1's gate node).
     (71, "PWR_SW_GATE"),
+    # ── Headphone jack (J5 PJ-327A) + speaker auto-mute ──────────────
+    # Passive line-out tap of the PDM output, entirely upstream of the
+    # PAM8403 (its BTL outputs must NEVER reach a ground-referenced
+    # jack). Series elements make distinct nets — same rule as
+    # PAM_IN_AC / VBUS_IN:
+    #   HP_FILT  — after R35 (series from I2S_DOUT): R36 attenuator +
+    #              C34 PDM low-pass live here. R35/R36 divide 3.3Vpp PDM
+    #              to headphone level; C34 rolls off the PDM carrier.
+    (72, "HP_FILT"),
+    #   HP_AC    — after C35 (AC coupling): R39 bleed defines 0V DC,
+    #              R37/R38 fan the mono signal to both jack channels.
+    (73, "HP_AC"),
+    #   HP_L/R   — after the R37/R38 series resistors: jack tip / ring.
+    (74, "HP_L"),
+    (75, "HP_R"),
+    #   JACK_DET — J5 pin 6 (the tip's normally-closed switch contact)
+    #              + R40 + Q3's gate. Closed (unplugged): tied to the
+    #              tip's ~0V DC through R37+R39, so Q3 stays off — the
+    #              worst-case audio peak on the tip (±0.46V) stays well
+    #              under the 2N7002's 1.0V minimum Vgs(th), which is why
+    #              no gate RC is needed. Open (plugged): R40 pulls the
+    #              gate to +3V3 and Q3 mutes the PAM8403.
+    (76, "JACK_DET"),
+    #   PAM_MUTE — U5 pin 5, freed from its +5V strap. Q3's open drain
+    #              pulls it low when a plug is present; the PAM8403's
+    #              internal pull-up keeps it high (unmuted) otherwise
+    #              (datasheet: MUTE active-low, may float).
+    (77, "PAM_MUTE"),
 ]
 
 NET_ID = {name: nid for nid, name in NET_LIST}
