@@ -1068,3 +1068,25 @@ one:
    the CPL if it changed.
 
 If this file and `make open-issues` ever disagree, the command is right.
+
+> **H6 ADDENDUM (2026-08-12) — the override itself was the bug after all,**
+> **for the reason neither prior derivation used.** The 2026-07-26 closure
+> fixed the datasheet facts (pin ① = anode on YONGYUTAI, no author error)
+> but kept the 180° CPL delta via a new premise: "opposite pin-1
+> conventions force a 180° delta". That premise assumes the machine aligns
+> THEIR pin number 1 onto OUR pad number 1 — but no term in the CPL
+> pipeline reads pad numbers (see the J4 convention notes in
+> jlcpcb_export.py: kicad-jlcpcb-tools and KiBot both implement pure
+> geometric frame transforms). Pin numbers are labels; both vendors put
+> the physical cathode at the same (-x) end of their library zero, so no
+> compensation was ever needed. With 180° applied, all five C19171391
+> LEDs seat with the cathode on the LEDn_RA (anode) net — reverse-biased
+> and dark. Caught 2026-08-12 during /first-article-check phase A on the
+> v4.6.1 order preview: the viewer (fidelity anchored by U2's
+> proto-confirmed ESOP-8 orientation) rendered every green cathode mark
+> on the anode side. Deltas removed; LED2-6 now tracked in
+> verify_easyeda_footprint._PENDING_VALIDATION until the first v4.6.2
+> article lights them. Lesson recorded: a conclusion that survives its
+> premise flipping (the gate text argued pin①=cathode, H6 argued
+> pin①=anode, both "derived" 180°) was never derived from the premise at
+> all.

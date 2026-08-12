@@ -243,43 +243,45 @@ _JLCPCB_ROT_DELTAS = {
     #   (EasyEDA could not be re-fetched live: the API returns HTTP 403 for
     #   every LCSC id, so scripts/.easyeda_cache/ cannot be repopulated —
     #   POLARITY_AUDIT.md is the archived copy of that reference.)
-    "LED2": 180, # RED LED 0805 (C19171391, YONGYUTAI YLED0805R — sold as "green" in this
-                 # BOM for months; the part is red, 615-630 nm, and so is its datasheet).
-                 #
-                 # H6 CLOSED 2026-07-26 by both manufacturer datasheets, now in
-                 # hardware/datasheets/. Nothing about this footprint is "inverted":
-                 # the two LED vendors simply NUMBER their pins oppositely.
-                 #   LED1 C84256  (NationStar NCD0805R1): mark = cathode = pin 1.
-                 #     Cache: pad 1 x=-1.10, silk feature mean x=-0.57 — same end.
-                 #   LED2 C19171391 (YONGYUTAI YLED0805R): datasheet p.1 draws pin 1
-                 #     with a "+" (ANODE); green mark at pin 2 = cathode. Cache: pad 1
-                 #     x=+1.05, silk feature mean x=-0.38 — opposite ends, as the
-                 #     manufacturer intends.
-                 # Board copper (both LEDs, identical): pad 1 = GND -> needs cathode;
-                 # pad 2 = LED_RA -> R -> +3V3 -> needs anode. Identical placements
-                 # (rot 0, Top), so the opposite pin-1 conventions force a 180° CPL
-                 # delta: LED1 = 0°, LED2 = 180°. This override IS that delta.
-                 # The "aligns by 3D model" alternative collapses: within C19171391's
-                 # own EasyEDA part, the model colour patch (142.7°) and the silk
-                 # (178.3°) both sit at the pad-2/cathode end — the frames agree.
-                 # The pad-number frame itself is hardware-anchored by U2 (protos
-                 # #1/#2). Prediction for proto #1 (built from the pre-fix CPL,
-                 # LED2 at 0°): LED2 is reversed and stays dark — and it is NOT
-                 # confounded by battery state, because U2's LED pins are NC and
-                 # both LEDs are plain +3V3 power indicators.
+    # "LED2".."LED6" (C19171391) deltas REMOVED 2026-08-12 — the 180 was
+    # the fourth wrong derivation of H6, and phase A on the v4.6.1 order
+    # preview caught it before payment.
     #
-    # LED3-LED6 are the SAME PART as LED2 (C19171391) in the SAME placement
-    # (rot 0, Top) on the SAME copper convention (pad 1 = GND = cathode,
-    # pad 2 = LEDn_RA = anode), so they inherit LED2's delta verbatim. This
-    # is the "sweep the whole family" rule from the v4.3.1 rotation
-    # post-mortem: one member of a package family being misrotated means
-    # every member must be re-derived, and conversely a member that shares
-    # part number, footprint, side and pad-net convention must share the
-    # override. Omitting these four would ship four LEDs that never light.
-    "LED3": 180,
-    "LED4": 180,
-    "LED5": 180,
-    "LED6": 180,
+    # What every derivation agreed on (and the cache proves): at the
+    # part's own library zero the PHYSICAL CATHODE (green mark, silk
+    # notch, model colour patch) is on the LEFT (-x) end. Our copper
+    # wants the cathode on the LEFT pad (GND) for every LED_0805 on this
+    # board. So the part is already correct at the family formula's 0°.
+    #
+    # The 180 rested on "opposite pin-1 conventions force a 180° CPL
+    # delta". That premise silently assumes the machine aligns THEIR pin
+    # number 1 onto OUR pad number 1. Nothing in the chain does that:
+    # the CPL angle is a rigid rotation of the part from its library
+    # zero (the same purely geometric semantics the J4 entry above
+    # documents for kicad-jlcpcb-tools and KiBot — no term in the
+    # formula reads our pad numbers, which exist only to bind nets in
+    # KiCad). Pin NUMBERS are labels; only geometry is assembled. The
+    # two vendors number the same physical layout oppositely, so the
+    # numbering difference needs NO compensation — with 180 applied the
+    # cathode lands on LEDn_RA (the anode net) and all five LEDs are
+    # reverse-biased and dark.
+    #
+    # Evidence chain (2026-08-12, hardware-audit-bugs.md R33 phase A):
+    #   1. Cache geometry: C19171391 pad2/cathode at x=-1.05, silk and
+    #      3D colour patch at the same -x end (H6's own table).
+    #   2. JLC order-preview render at CPL 180 shows the green cathode
+    #      mark on the +x / LEDn_RA end for LED2-LED6 — the composed
+    #      their-zero + CPL-angle frame, i.e. what the machine builds.
+    #   3. The viewer's fidelity is hardware-anchored by U2: its render
+    #      reproduces the proto #1/#2-confirmed ESOP-8 orientation.
+    #   4. The two prior 180 justifications contradict each other on the
+    #      datasheet (gate: "pin 1 = cathode, author error" vs H6: "pin
+    #      1 = anode, no error") while agreeing on the number — a
+    #      conclusion that survives its premise flipping is not derived.
+    # Empirical confirmation pending on the first v4.6.2 article:
+    # verify_easyeda_footprint._PENDING_VALIDATION carries the LED2-6
+    # entries and the exact power-up test. If they come back dark, the
+    # delta returns AND this comment gets a fifth chapter.
 }
 
 # Diagnostic-LED series resistors. Both values were ALREADY on the BOM, so
