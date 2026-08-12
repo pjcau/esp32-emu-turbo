@@ -25,6 +25,7 @@ skills:
   - pad-analysis
   - jlcpcb-alignment
   - pcba-render
+  - jlcdfm-upload
 ---
 
 # PCB Engineer — ESP32 Emu Turbo
