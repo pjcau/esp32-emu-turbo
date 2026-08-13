@@ -4,9 +4,10 @@ from ..sheet_base import SchematicSheet
 
 
 class AudioSheet(SchematicSheet):
-    title = "Audio - I2S -> PAM8403 -> Speaker"
+    title = "Audio - I2S -> PAM8403 -> Speaker + Headphone Jack"
     page_number = 4
-    needed_symbols = ["PAM8403_Module", "Speaker", "C", "R"]
+    needed_symbols = ["PAM8403_Module", "Speaker", "C", "R",
+                      "AudioJack_PJ327A", "NMOS_SOT23"]
 
     def build(self):
         # Title
@@ -240,6 +241,123 @@ class AudioSheet(SchematicSheet):
         self.gnd(c25x, c25y + 8)
         self.wire(c25x, c25y + 3.81, c25x, c25y + 8)
         self.text("PVDD-bot", c25x - 5, c25y + 14, 1.5)
+
+        # ── Headphone jack (J5) + speaker auto-mute ─────────────────
+        # Passive line-out: the PDM output is tapped UPSTREAM of the
+        # PAM8403 (its filterless BTL outputs must never reach a
+        # ground-referenced jack — SPK- is not ground). R35/R36 divide
+        # the 3.3Vpp PDM stream to headphone level, C34 low-passes the
+        # PDM carrier (~30 kHz corner), C35 AC-couples, R39 bleeds the
+        # DC so tip/ring idle at 0 V, R37/R38 fan the mono signal to
+        # both plug channels.
+        self.text("HEADPHONE OUT + AUTO-MUTE", 200, 46, 3.0, True)
+        self.text("Passive line-out from PDM (pre-amplifier tap)",
+                  200, 52, 1.5)
+
+        hp_y = 62
+        # NOTE on label placement: kicad-cli renders a glabel's text as a
+        # HORIZONTAL run centred on the anchor regardless of the stored
+        # angle, so every label on this row is positioned so its
+        # half-width clears the neighbouring pin-number digits
+        # (verify_schematic_render_overlaps measures the real SVG).
+        self.glabel("I2S_DOUT", 199, hp_y, 90, "input")
+        self.wire(199, hp_y, 204.19, hp_y)
+        # angle=90: pin 1 west (upstream), pin 2 east — the same
+        # convention every horizontal part in this section uses, and the
+        # PCB routes each pad to the matching net.
+        self.sym("R", "R35", "150R", 208, hp_y, ["1", "2"], angle=90)
+        # HP_FILT: R35.2 -> C35.1, with R36 attenuator + C34 PDM filter
+        # hanging off the run.
+        self.wire(211.81, hp_y, 228.19, hp_y)
+        self.glabel("HP_FILT", 221, hp_y, 90, "output")
+        self.sym("R", "R36", "470R", 218, 74, ["1", "2"])
+        self.wire(218, hp_y, 218, 70.19)
+        self.junction(218, hp_y)
+        self.gnd(218, 82)
+        self.wire(218, 77.81, 218, 82)
+        self.sym("C", "C34", "47nF", 227.5, 74, ["1", "2"])
+        self.wire(227.5, hp_y, 227.5, 70.19)
+        self.junction(227.5, hp_y)
+        self.gnd(227.5, 82)
+        self.wire(227.5, 77.81, 227.5, 82)
+        # C35 AC coupling (series) -> HP_AC
+        self.sym("C", "C35", "47uF", 232, hp_y, ["1", "2"], angle=90)
+        self.wire(235.81, hp_y, 244.19, hp_y)
+        # R39 bleed to GND (defines 0 V DC on the jack side of C35).
+        # The HP_AC name hangs mid-way down R39's stub — the row itself
+        # has no gap wide enough for a 5-char label between the C35 and
+        # R37 pin numbers.
+        self.sym("R", "R39", "4.7k", 241, 74, ["1", "2"])
+        self.wire(241, hp_y, 241, 70.19)
+        self.junction(241, hp_y)
+        self.glabel("HP_AC", 241, 66, 0, "output")
+        self.gnd(241, 82)
+        self.wire(241, 77.81, 241, 82)
+        # R37 series -> jack TIP (left channel)
+        self.sym("R", "R37", "33R", 248, hp_y, ["1", "2"], angle=90)
+        self.wire(251.81, hp_y, 258.11, hp_y)
+        self.glabel("HP_L", 255, hp_y, 90, "output")
+
+        # Jack: J5 placed so TIP lands exactly on the hp_y run
+        self.sym("AudioJack_PJ327A", "J5", "PJ-327A", 267, 67.08,
+                 ["2", "3", "4", "5", "6"])
+        # R38 series -> jack RING (right channel) — own row, linked to
+        # HP_AC by name; the wire climbs to the RING pin.
+        self.glabel("HP_AC", 228, 90, 90, "input")
+        self.wire(228, 90, 232.19, 90)
+        self.sym("R", "R38", "33R", 236, 90, ["1", "2"], angle=90)
+        self.wire(239.81, 90, 250, 90)
+        self.glabel("HP_R", 245, 90, 90, "output")
+        self.wire(250, 90, 250, 64.54)
+        self.wire(250, 64.54, 258.11, 64.54)
+        # SLV (sleeve) -> GND
+        self.wire(258.11, 69.62, 255, 69.62)
+        self.gnd(255, 69.62)
+        # TSW: the tip's normally-closed rest contact = jack detect
+        self.wire(275.89, 62, 281.5, 62)
+        self.glabel("JACK_DET", 281.5, 62, 90, "output")
+        # RSW: unused
+        self.nc(275.89, 69.62)
+
+        # Detect network: R40 pull-up + Q3. No gate RC is needed: when
+        # unplugged the gate sits on the tip's DC (~70 mV via the
+        # R40/R37+R39 divider) and the worst-case audio peak (±0.46V)
+        # stays well under the 2N7002's 1.0V minimum Vgs(th).
+        # (Notes live at y>=140, clear of the speaker's own captions.)
+        self.text("Plug inserted -> TSW opens -> R40 pulls JACK_DET",
+                  200, 140, 1.5)
+        self.text("high -> Q3 pulls PAM8403 MUTE low (speaker off).",
+                  200, 143.5, 1.5)
+        self.text("Unplugged: TSW ties the gate to the tip's ~0V DC",
+                  200, 147, 1.5)
+        self.text("(audio peaks < 2N7002 Vgs(th) min - no chatter).",
+                  200, 150.5, 1.5)
+        # R40 220k: +3V3 -> JACK_DET (3V3 fully enhances Q3, and the
+        # divider vs R37+R39 parks the gate at ~70 mV when unplugged)
+        self.sym("R", "R40", "220k", 226, 118, ["1", "2"])
+        self.v33(226, 112)
+        self.wire(226, 112, 226, 114.19)
+        self.wire(226, 121.81, 226, 124)
+        self.glabel("JACK_DET", 226, 124, 0, "input")
+        # Q3 2N7002: gate on JACK_DET, source to GND, open drain on
+        # PAM_MUTE. Fields moved left of the body: the default spot
+        # above the drain pin collides with its pin number.
+        self.glabel("JACK_DET", 238, 130, 90, "input")
+        self.wire(238, 130, 244.92, 130)
+        self.sym("NMOS_SOT23", "Q3", "2N7002", 250, 128.73,
+                 ["1", "2", "3"],
+                 fields={"ref": (-9.0, -4.5, "left"),
+                         "val": (-9.0, -2.3, "left")})
+        self.wire(255.08, 130, 257.5, 130)
+        self.gnd(257.5, 130)
+        self.wire(250, 123.65, 250, 120)
+        self.glabel("PAM_MUTE", 250, 120, 90, "output")
+
+        # U5 MUTE pin (module symbol pin 6 = SOP-16 pad 5, drawn on the
+        # right edge below SPK-) — freed from the historic +5V strap,
+        # now driven by Q3's open drain.
+        self.wire(ax + 10.16, ay + 3.81, ax + 13, ay + 3.81)
+        self.glabel("PAM_MUTE", ax + 13, ay + 3.81, 0, "input")
 
         # Notes
         ny = 178

@@ -123,6 +123,12 @@ _JLCPCB_POS_CORRECTIONS = {
     "J4": (0, 0),         # FPC: footprint now matches JLCPCB C2856812 exactly
     "SW16": (0, 0),     # MSK12C02: footprint now matches JLCPCB C431540 exactly
     "J3": (0, -3.5),     # JST PH 2P: model origin offset from pad center at 180° rotation
+    # J5 PJ-327A: the footprint origin is the jack's FRONT FACE (so the
+    # board-edge placement math stays readable); the CPL wants the pad
+    # centroid, 6.0mm inboard and 0.4mm east (3 of the 5 pads sit on
+    # the +x column). Verify on the JLC 3D preview at order time
+    # (first-article-check, orientation family: connector).
+    "J5": (0.4, -6.0),
 }
 
 # ── Per-component rotation DELTAS (added on top of the formula) ──
@@ -599,6 +605,26 @@ def _build_placements():
     # C19 near inductor L1
     p.append(("C19", "22uF", "C_1206",
               lx, ly + 6, 0, "bottom"))
+
+    # ── Headphone jack (J5) + auto-mute chain ──
+    # Positions live in routing/_shared.py (single source, same values
+    # board.py places). J5 rot 180 = front face on the bottom board
+    # edge, barrel overhanging like J1.
+    from scripts.generate_pcb.routing import (
+        J5_POS, J5_ROT, Q3_POS, Q3_ROT,
+        R35_POS, R36_POS, C34_POS, C35_POS, R39_POS,
+        R37_POS, R38_POS, R40_POS,
+    )
+    p.append(("J5", "PJ-327A", "PJ-327A", *J5_POS, J5_ROT, "bottom"))
+    p.append(("Q3", "2N7002", "SOT-23-3", *Q3_POS, Q3_ROT, "bottom"))
+    p.append(("R35", "150R", "R_0805", *R35_POS, 90, "bottom"))
+    p.append(("R36", "470R", "R_0805", *R36_POS, 90, "bottom"))
+    p.append(("C34", "47nF", "C_0805", *C34_POS, 90, "bottom"))
+    p.append(("C35", "47uF", "C_0805", *C35_POS, 90, "bottom"))
+    p.append(("R39", "4.7k", "R_0805", *R39_POS, 90, "bottom"))
+    p.append(("R37", "33R", "R_0805", *R37_POS, 0, "bottom"))
+    p.append(("R38", "33R", "R_0805", *R38_POS, 180, "bottom"))
+    p.append(("R40", "220k", "R_0805", *R40_POS, 90, "bottom"))
 
     # ── PAM8403 passives (B.Cu, around U5) ──
     p.append(("C21", "100nF", "C_0805", 38.0, 23.5, 0, "bottom"))

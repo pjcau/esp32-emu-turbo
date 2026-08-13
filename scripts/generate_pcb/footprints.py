@@ -924,6 +924,53 @@ def msk12c02(layer="B"):
     return pads
 
 
+# ── PJ-327A 3.5mm headphone jack (HOOYA, LCSC C19712376) ────────
+# Dimensions from the HOOYA datasheet "P.C.B LAYOUT TOP VIEW"
+# (hardware/datasheets — fetched 2026-08-12; drawing rev A1 2020.6.23):
+#   5 SMD pads 2.9 x 1.6 mm on two columns 7.00 mm apart
+#   (outer-outer 9.90, inner-inner 4.10), pad centres measured from the
+#   body FRONT FACE (= local y=0, where the plug enters):
+#     left  column (x=-3.5): pad 3 @ 2.30, pad 2 @ 9.39
+#     right column (x=+3.5): pad 4 @ 1.70, pad 5 @ 5.30, pad 6 @ 10.99
+#   2 NPTH locating holes Ø1.30 on the centreline at y=3.00 and 9.00.
+#   Body 8.8 wide x 11.0 long x 4.4 tall; barrel Ø5.0 protrudes 1.4 mm
+#   beyond the front face (overhangs the board edge, like J1's shell).
+# Pin roles (plug-travel diagram): 2=TIP, 5=RING, 3=SLEEVE(GND),
+# 6=tip NC rest contact (jack detect), 4=ring NC rest contact (unused).
+# Place at the board edge with rotation 180 so the front face sits ON
+# the edge and the body extends inboard.
+def pj327a(layer="B"):
+    layers = SMD_B if layer == "B" else SMD_F
+    fab = "B.Fab" if layer == "B" else "F.Fab"
+    pads = [
+        _pad("2", "smd", "rect", -3.5, 9.39, 2.9, 1.6, layers),
+        _pad("3", "smd", "rect", -3.5, 2.30, 2.9, 1.6, layers),
+        _pad("4", "smd", "rect", 3.5, 1.70, 2.9, 1.6, layers),
+        _pad("5", "smd", "rect", 3.5, 5.30, 2.9, 1.6, layers),
+        _pad("6", "smd", "rect", 3.5, 10.99, 2.9, 1.6, layers),
+    ]
+    for hy in (3.00, 9.00):
+        pads.append(
+            f'    (pad "" np_thru_hole circle (at 0 {hy})'
+            f' (size 1.3 1.3) (drill 1.3)'
+            f' (layers "*.Cu" "*.Mask") (uuid "{P.uid()}"))\n'
+        )
+    # Body outline on Fab (8.8 wide, front face at y=0, 11.0 long)
+    bx = 4.4
+    pads.append(_fp_line(-bx, 0, bx, 0, fab))
+    pads.append(_fp_line(bx, 0, bx, 11.0, fab))
+    pads.append(_fp_line(bx, 11.0, -bx, 11.0, fab))
+    pads.append(_fp_line(-bx, 11.0, -bx, 0, fab))
+    # Barrel stub past the front face
+    pads.append(_fp_line(-2.5, 0, -2.5, -1.4, fab))
+    pads.append(_fp_line(-2.5, -1.4, 2.5, -1.4, fab))
+    pads.append(_fp_line(2.5, -1.4, 2.5, 0, fab))
+    # Orientation marker near pad 2 (lowest-numbered pad; the jack has
+    # no pad "1"). Outside the body, west of the pad 2 land.
+    pads.extend(_pin1_marker(-5.6, 9.39, layer))
+    return pads
+
+
 # ── Speaker wire pads (28mm 8Ω driver, off-board) ────────────────
 # Two 2.0x3.0mm solder pads for the speaker leads; the pad geometry is
 # independent of the driver diameter. Was named "Speaker-22mm" from an
@@ -997,6 +1044,7 @@ FOOTPRINTS = {
     "F_1812": (fuse_1812, "B"),
     "SS-12D00G3": (msk12c02, "B"),   # C431540 = MSK12C02, not SS-12D00G3
     "SW-SMD-2P-TS1088": (sw_smd_2p_ts1088, "B"),
+    "PJ-327A": (pj327a, "B"),
     "Speaker-28mm": (speaker_28mm, "B"),
     "SMD-4x4x2": (inductor_4x4, "B"),
     "IND-SMD-4.0x4.0": (inductor_4x4_c36409, "B"),

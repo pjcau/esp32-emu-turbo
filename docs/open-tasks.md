@@ -147,6 +147,33 @@ the cap↔IC bounding box + 3 mm — not an actual path. C18→U2 sits at
 BAT+ copper near U2 trips the gate for the wrong reason. Fix the gate's
 metric (real path walk), not the board.
 
+## Pending merge — headphone jack + speaker auto-mute (this branch)
+
+Branch `worktree-audio-jack-mute` (2026-08-12) adds J5, a PJ-327A 3.5mm
+headphone jack on the bottom edge next to the power switch, with a
+hardware speaker auto-mute (jack tip switch → R40/Q3 → PAM8403 MUTE).
+Full write-up: `website/docs/design/schematics.md` §Sheet 4 and the
+placement/geography notes in `scripts/generate_pcb/routing/_shared.py`
+at `J5_POS`. All 104 `verify-all` gates are green on the branch.
+
+**The user decides when to merge.** When it merges, do IN ORDER:
+
+1. The merged board **supersedes the v4.6.1 JLC order set** — regenerate
+   (`make release-prep` or fast path) and re-upload gerbers/BOM/CPL
+   before any payment. `release_jlcpcb/` on the branch already carries
+   the regenerated set + order manifest.
+2. **First-article check** on the JLC 3D preview, per package FAMILY as
+   usual, with two NEW members to eyeball: J5 (connector — barrel must
+   overhang the bottom edge, pads inboard) and Q3 (third SOT-23-3,
+   cpl=180 at KiCad 270 — see its `_LAW_EXCEPTIONS` entry in
+   `verify_cpl_rotation_law.py`).
+3. Bench, on arrival: headphone level (~0.45 Vpp at 32 Ω by design —
+   earbud loudness, not hi-fi; the real fix is the v2 audio
+   coprocessor), no speaker pop on plug insert/remove, mute behaviour at
+   half-insertion, and optionally raise GPIO17 drive strength
+   (`gpio_set_drive_capability(GPIO_NUM_17, GPIO_DRIVE_CAP_3)`) if the
+   headphone level sags.
+
 ## Small cleanups — known fix, known reason they are open
 
 Detail for each lives in `docs/known-issues.md` §C; this is the index.
