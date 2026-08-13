@@ -141,22 +141,46 @@ Do NOT loop on it. Flow:
    `read_network_requests` for any `smtDfm`/`bomMatch` call and whether a
    visible modal appeared. If nothing opened → go to §5b.
 
-**§5b — user-assisted SMT upload (the reliable path).** Tell the user, in
-their controlled viewer tab, to:
-  1. On the **SMT DFM** tab press **BOM match**.
+**Why the BOM-match click fails under automation (confirmed 2026-08-14).**
+A **"Account Restriction Notice"** dialog is present in the DOM with
+`display:block` whenever the automated session tries **BOM match** — it
+intercepts the click, so the "BOM Matching" modal never becomes visible
+and no `input[type=file]` is ever created (there are literally zero file
+inputs in the DOM until the modal opens for real). A trusted human click
+opens it; the synthetic CDP click does not. So the BOM upload + Process +
+Save is genuinely user-assisted for now. **What IS automatable:** once the
+user has done BOM match (bodies render), **you click DFM check yourself**
+— that step works fine under automation (proven 2026-08-14). So the split
+is: user does BOM-match+upload+save; YOU do the DFM check and everything
+after.
+
+**§5b — the split flow.** Ask the user, in their controlled viewer tab, to:
+  1. On the **SMT DFM** tab press **BOM match** (dismiss the Account
+     Restriction Notice if it pops).
   2. In the modal, **Add BOM** → `release_jlcpcb/bom.csv`;
      **Add CPL/coordinate** → `release_jlcpcb/cpl.csv`.
   3. **Process BOM**, then **Save and Close**.
-  4. Press **DFM check**.
-  Then have them say "done". They will hit the same benign confirmations
-  the JLC order flow shows (SW17 not assembled; duplicate-LCSC-part rows
-  LED2/LED3-6, R1,R2/R28,29, R17,18,33/R30,31) — all expected, confirm.
-  You keep the same tab, so once they finish you resume reading it.
+  They hit the same benign confirmations as the JLC order flow (SW17 not
+  assembled; duplicate-LCSC rows LED2/LED3-6, R1,R2/R28,29,
+  R17,18,33/R30,31) — confirm. Then "done".
+  **Then YOU take over**: click **DFM check** (left button ~x73,y50),
+  `wait`, and read the result. Do not ask the user to run DFM check.
 
-3. When they're done: `read_network_requests` for `smtDfm` should show
-   `updateJsonMergeFile` → `parseDfm` → `getParseStatus` 200s. Screenshot
-   the "Component assembly analysis" table (D/W/G per row). The board now
-   renders **3D component bodies**.
+3. After you click DFM check: `read_network_requests` for `smtDfm` shows
+   `updateJsonMergeFile` → `parseDfm` → `getParseStatus` 200s (~15 s).
+   Screenshot the "Component assembly analysis" table; bodies are rendered.
+
+**CRITICAL caveat — the SMT result is BOM-match-session-dependent.** The
+manual BOM match resolves each BOM line to a JLC *library 3D model*, and
+the SMT DFM measures THOSE models against our pads. A different match →
+different pin-edge / pin-without-pad / missing-hole counts even with
+identical copper (observed 2026-08-14: v4.7.0 showed 41+32 passive
+pin-edge, 7× J1 pin-without-pad, 3× J1 missing-hole that v4.6.2 — same
+footprints — did not). **Before calling any such cluster a defect, prove
+it against the copper**: `git diff <last-clean-tag>..HEAD` the flagged
+footprints, and run `verify_pad_land` (green = our pads cover JLC's own
+reference lands, so a "pin overhang" is a model-match artifact, not real).
+Only a finding that survives BOTH checks is a real board issue.
 
 ### 5c. Drill down every Danger/Warning point-by-point (the real value)
 
