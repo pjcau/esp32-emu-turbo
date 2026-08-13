@@ -17,25 +17,57 @@ new gate (project convention since the JLCDFM fix cycle).
 `pcb` (default) = gerber upload + PCB DFM analysis only.
 `full` = also upload `bom.csv` + `cpl.csv` and run the SMT assembly analysis.
 
-## Hard facts from the 2026-08-12 investigation (do not re-derive)
+## Hard facts (2026-08-12 investigation + 2026-08-13 first full live run)
 
 - The site is a Nuxt SPA; the real API sits behind the same-origin gateway
   `https://jlcdfm.com/api` with service base `/overseas-dfm-service`.
 - **Anonymous API upload does not work**: `pcbDfm/uploadGerber` returns a
   raw Spring `500` before multipart binding for non-browser sessions, and
-  the frontend has an explicit `code 460 → open login modal` path on this
-  endpoint. A logged-in JLCPCB browser session is required — which is why
-  this skill drives Chrome instead of curl.
-- Gerber upload form: single multipart field **`gerberFile`** (zip/rar,
-  max 50 MB). Success envelope: `{code: 200, message: <dfmRecordKeyId>}`.
-  The SPA stores the id as `pcbUploadFileId` and every later call keys on
-  `dfmRecordKeyId=<that id>`.
-- BOM/CPL upload form: multipart field **`bomCplFile`** + `multiSheetCheckFlag`,
-  max 2 MB, endpoint `smtDfm/uploadBomCpl?fileType=<type>&dfmRecordKeyId=…`.
-  `code 4003` = multi-sheet workbook warning (confirm dialog re-uploads with
-  `multiSheetCheckFlag=false`).
-- Full endpoint map in the appendix below — use it to *read* results from
-  network traffic, not to bypass the browser.
+  the frontend has an explicit `code 460 → open login modal` path. A
+  logged-in JLCPCB browser session is required — this skill drives Chrome.
+- **Login is per-Chrome-profile**: a fresh Chrome hits
+  `passport.jlcpcb.com` on first navigate. The USER signs in (credentials/
+  Google — never Claude); after that the session cookie persists. There
+  may be a reCAPTCHA — user handles it.
+- **Gerber upload IS reliably automatable** end to end: `find` the hero
+  `input[type=file][accept=".zip,.rar"]` → `file_upload` `gerbers.zip` into
+  its ref. Field name is `gerberFile`. Success = `uploadGerber` 200, and
+  the SPA opens `/viewer?pcbUploadFileId=<id>` and polls
+  `pcbDfm/getParseStatus` until parsed. That `<id>` = **dfmRecordKeyId**.
+- **PCB DFM IS reliably automatable**: on the viewer, left tab **PCB DFM**
+  is default; click **DFM check** (top-left blue button, ~x77,y51). Results
+  fill the left table in ~15 s: three numbers per row = **Danger / Warning
+  / Good** (red/orange/green). 0 in the Danger column across all rows = PCB
+  clean. `getDfmFile?dfmRecordKeyId=` carries the JSON.
+- **SMT DFM (BOM/CPL) is the automation-fragile part — expect to hand off
+  to the user.** Observed 2026-08-13: clicking the **BOM match** button
+  (SMT DFM tab) under automation did NOT open the "BOM Matching" modal —
+  it stayed `display:none`, fired no `smtDfm/*`/`bomMatch*` request, logged
+  no console error. A dormant **"Account Restriction Notice"** dialog sits
+  in the DOM, consistent with an app-side guard on the automated session.
+  **Do not burn turns retrying the click.** Ask the user to drive the SMT
+  upload manually (steps in §5b) while you read results — the viewer stays
+  in your controlled tab, so once they finish you resume automatically.
+- BOM/CPL upload form (when the modal is open, manual or automated):
+  multipart field **`bomCplFile`** + `multiSheetCheckFlag`, max 2 MB. The
+  real SMT pipeline observed live is `smtDfm/updateJsonMergeFile` →
+  `smtDfm/parseDfm` → poll `smtDfm/getParseStatus` (NOT the
+  `analyzeFile/getAnalyzeResult` guessed in the old appendix). `code 4003`
+  = multi-sheet workbook warning (re-upload with `multiSheetCheckFlag=false`).
+- **The viewer is a full inspection tool, not just a scorecard** — use it:
+  - Each finding row has a **Details** button (grey if 0, coloured if hits).
+    Click it → a dialog lists every instance: `No. | severity | Value |
+    Object1 | Object2`, a mini-render, and First/Prev/Next/Last/All nav.
+    This is how you enumerate a Danger class point-by-point and see WHICH
+    refs it hits (e.g. Pin-inner-edge 50× all `Object1=J4`; Lead-to-hole
+    `Object1=U2, Object2=hole`).
+  - After a successful BOM match the viewer renders the **3D component
+    bodies**. Toggle **Top layer / Bottom layer** and **2D / 3D** (top
+    centre) and zoom to do orientation/alignment checks — this is where you
+    confirm the LED cathode-side marks, SOT-23 2+1 lead sides, IC pin-1,
+    connector keying, the same families `/first-article-check` phase A
+    covers. The order-preview viewer showed placeholders; THIS one shows
+    real bodies once BOM is matched.
 
 ## Steps
 
@@ -66,49 +98,98 @@ Load the Chrome tools in ONE ToolSearch call (core set + `file_upload`,
 - Create a NEW tab, navigate to `https://jlcdfm.com/`.
 - Decline non-essential cookie banners if one appears.
 
-### 3. Upload the gerbers
+Prefer `browser_batch` for every multi-step sequence below (click → wait →
+screenshot in one round trip). The CDP click can occasionally time out
+("renderer frozen") — if it does, re-screenshot and retry once; it usually
+recovers on its own.
 
-1. Locate the file input: `input[type=file][name=file][accept=".zip,.rar"]`
-   (the visible "Upload file" button on the right of the hero section wraps
-   it). Use `find` / `read_page` to get its ref — **never click it** (native
-   picker would block the session).
-2. `file_upload` with the ref and the absolute path of
+### 3. Upload the gerbers  (reliable, fully automated)
+
+1. `find` "file upload input accepting zip rar" → get the hero input's ref
+   (`input[type=file][accept=".zip,.rar"]`). **Never click it** (native
+   picker blocks the session).
+2. `file_upload` the ref with the absolute path of
    `release_jlcpcb/gerbers.zip`.
-   - If `file_upload` rejects the path (session-share restriction), fall
-     back to asking the user to drag the file onto the page; do NOT try to
-     re-implement the upload in curl.
-3. Watch `read_network_requests` filtered on `pcbDfm/`:
-   - `uploadGerber` → `code 200`: note the `message` value = **dfmRecordKeyId**.
-   - `code 460` or a login modal: ask the user to sign in to JLCPCB in the
-     tab, then re-upload.
-   - The SPA then polls `pcbDfm/getParseStatus` — wait (parse of our
-     ~270 KB set takes well under a minute) until the analysis screen opens.
+   - If a login page appears first (`passport.jlcpcb.com`): STOP, ask the
+     user to sign in, wait for "done", then re-`find` the ref (it changes
+     after reload) and re-upload.
+   - If `file_upload` rejects the path: ask the user to drag the file in.
+     Never fall back to curl.
+3. `read_network_requests` filtered on `pcbDfm`: `uploadGerber` 200 →
+   the SPA navigates to `/viewer?pcbUploadFileId=<id>`; `<id>` is the
+   **dfmRecordKeyId** every later call uses. It then polls
+   `pcbDfm/getParseStatus` (several 200s) — `wait` ~14 s, screenshot, and
+   the gerber renders in the viewer.
 
-### 4. Capture the PCB DFM analysis
+### 4. PCB DFM check  (reliable, fully automated)
 
-The post-upload screen offers the analyses the user described: the PCB DFM
-result and the SMT (assembly) analysis entry.
+1. Left panel, top: click **DFM check** (the blue button under the PCB DFM
+   tab, ~x77,y51). `wait` ~12 s, screenshot.
+2. Read the left table: each row shows **Danger / Warning / Good** (red /
+   orange / green). Machine JSON is in `pcbDfm/getDfmFile?dfmRecordKeyId=`.
+3. `save_to_disk:true` screenshot of the table for the report. Record every
+   row whose Danger or Warning column is non-zero.
 
-1. Wait for the DFM view to render, then pull the machine-readable result
-   from network traffic: response of `pcbDfm/getDfmFile?dfmRecordKeyId=…`
-   (JSON with every check + severity). `get_page_text` as backup.
-2. Record for the report: every item JLC ranks worse than "pass"
-   (danger/warning), with layer, location and JLC's measured value.
-3. Screenshot the summary view (`save_to_disk: true`) for the report.
+### 5. SMT assembly analysis (`full` only) — plan to hand the upload to the user
 
-### 5. SMT assembly analysis (`full` argument only)
+The **BOM match** modal has not opened under automation (see hard facts).
+Do NOT loop on it. Flow:
 
-1. Open the SMT/assembly analysis section and its BOM/CPL upload modal.
-2. Upload `release_jlcpcb/bom.csv` then `release_jlcpcb/cpl.csv` into their
-   respective inputs (field `bomCplFile`; same no-click / `file_upload` rule).
-   On the `4003` multi-sheet dialog choose re-upload without sheet check.
-3. Trigger the analysis; the SPA calls `smtDfm/analyzeFile` then polls
-   `smtDfm/getAnalyzeStatus`. Read the final `smtDfm/getAnalyzeResult`
-   response from network traffic.
-4. Record part-matching problems, unrecognized designators, rotation or
-   polarity flags. Cross-check any rotation finding against
-   `/first-article-check` conventions before believing it — JLC's viewer
-   has mis-ranked rotations before (v4.3.1 lesson).
+1. Click **SMT DFM** tab (top-left, ~x217,y30). The "Component assembly
+   analysis" table appears (all rows 0 until BOM is matched).
+2. Try **BOM match** once (~x219,y51). Screenshot + check
+   `read_network_requests` for any `smtDfm`/`bomMatch` call and whether a
+   visible modal appeared. If nothing opened → go to §5b.
+
+**§5b — user-assisted SMT upload (the reliable path).** Tell the user, in
+their controlled viewer tab, to:
+  1. On the **SMT DFM** tab press **BOM match**.
+  2. In the modal, **Add BOM** → `release_jlcpcb/bom.csv`;
+     **Add CPL/coordinate** → `release_jlcpcb/cpl.csv`.
+  3. **Process BOM**, then **Save and Close**.
+  4. Press **DFM check**.
+  Then have them say "done". They will hit the same benign confirmations
+  the JLC order flow shows (SW17 not assembled; duplicate-LCSC-part rows
+  LED2/LED3-6, R1,R2/R28,29, R17,18,33/R30,31) — all expected, confirm.
+  You keep the same tab, so once they finish you resume reading it.
+
+3. When they're done: `read_network_requests` for `smtDfm` should show
+   `updateJsonMergeFile` → `parseDfm` → `getParseStatus` 200s. Screenshot
+   the "Component assembly analysis" table (D/W/G per row). The board now
+   renders **3D component bodies**.
+
+### 5c. Drill down every Danger/Warning point-by-point (the real value)
+
+For each row with a non-zero Danger (and material Warnings), click its
+**Details** button (coloured when it has hits):
+  - The dialog lists each instance: `No. | severity | Value | Object1 |
+    Object2`, with a mini-render and First/Prev/Next/Last/All nav. Zoom the
+    header+table region to read Object1/Object2 exactly.
+  - Record what the class actually hits. Known-artifact signatures to match
+    against the accepted table (2026-08-13 values):
+      * **Pin inner edge** → N× all `Object1=J4` (FPC), value ~0.16 mm
+        (drifts 0.03→0.08→0.16 across reports). Artifact.
+      * **Lead to hole distance** → 1× `Object1=U2` (ESOP-8 thermal-EP GND
+        lead vs a GND via — same-net, benign) or `Object1=J1` (plastic
+        pegs) on a PCB-only pass. Same one count either way.
+      * **Lead area overlapping pad / Component clipped by outline** →
+        castellated/fine-pitch + edge-mount parts. Artifact.
+  - **Any Danger whose Object1 is a LED, a passive, or an IC pin that is
+    NOT the above signatures is a REAL finding** — do not wave it through.
+    Verify the geometry locally against `esp32-emu-turbo.kicad_pcb` (e.g.
+    is the flagged via same-net as the pad?) before deciding.
+
+### 5d. Alignment / orientation check on the 3D render
+
+With bodies rendered, toggle **Top layer / Bottom layer** and **2D / 3D**
+(top centre) and zoom the families `/first-article-check` phase A covers —
+this is the independent cross-check on rotation/polarity:
+  - **LEDs (LED1-6)**: cathode mark on the **GND** pad side (board-left for
+    the top-side row). This is the exact check that caught the R33-MED-2
+    reversed-LED bug; re-confirm it here for any set that changed the CPL.
+  - **SOT-23 (Q1/Q2/D1)**: 2-pin vs 1-pin side matches the pads.
+  - **ICs (U2/U3/U5)**: pin-1 marker corner matches; connectors: keying.
+Screenshot anything ambiguous with `save_to_disk:true`.
 
 ### 6. Write the report and dispatch findings
 
@@ -152,12 +233,11 @@ session.
 | `/pcbDfm/uploadGerber` | POST | multipart `gerberFile`; 200 → `message` = dfmRecordKeyId; 460 = login required |
 | `/pcbDfm/getParseStatus?dfmRecordKeyId=` | GET | poll until parsed |
 | `/pcbDfm/getDfmFile?dfmRecordKeyId=` | GET | full PCB DFM result JSON |
-| `/smtDfm/uploadBomCpl?fileType=&dfmRecordKeyId=` | POST | multipart `bomCplFile` + `multiSheetCheckFlag`; 4003 = multi-sheet warning |
-| `/smtDfm/analyzeFile?dfmRecordKeyId=` | POST | start SMT analysis |
-| `/smtDfm/getAnalyzeStatus?dfmRecordKeyId=` | POST | poll |
-| `/smtDfm/getAnalyzeResult?dfmRecordKeyId=` | POST | SMT findings JSON |
-| `/smtDfm/getSmtDfmInfo?dfmRecordKeyId=` | GET | SMT session info |
+| `/smtDfm/updateJsonMergeFile?dfmRecordKeyId=` | POST | **observed live** — fires after BOM match save |
+| `/smtDfm/parseDfm` | POST | **observed live** — starts the SMT analysis |
+| `/smtDfm/getParseStatus?dfmRecordKeyId=` | GET | **observed live** — poll SMT until parsed |
 | `/smtDfm/checkIp` | GET | works anonymously (sanity probe) |
+| `/smtDfm/analyzeFile` · `/getAnalyzeResult` | POST | listed in the bundle but NOT the path the live SMT run used — prefer the three rows above |
 
 ## Key Files
 
