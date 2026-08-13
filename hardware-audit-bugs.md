@@ -3999,3 +3999,189 @@ Order set: v4.6.1 (gerbers md5 26b62cd8) supersedes v4.6.0's. Suite
 KiBot CI green at 95a4dd8. Note for ops: a verify-all wall-clock of
 ~5h on 2026-08-08 was host suspend mid-run, not a hung gate — the same
 suite completes in 217s.
+
+## Round 32 Addendum 3 (2026-08-12) — JLCDFM round 3 on v4.6.1: full-table match, zero real findings
+
+User re-ran jlcdfm.com manually on the v4.6.1 set (gerbers md5
+26b62cd8 verified against release_jlcpcb/gerbers.zip). Diffed the
+report against the "Accepted JLCDFM findings" table per protocol:
+
+- **Lead to hole 0mm x1 Danger** = R32-DFM-3 (J1 pegs, artifact). Match.
+- **Pin inner edge x50 Danger** = R32-DFM-4, but JLC's measured value
+  moved 0.03 -> 0.08mm between runs (their 3D model revs drift). Local
+  re-verification that it is still the artifact and not a pad
+  regression: verify_pad_land 361 pads >= 0.80 coverage, PASS. Table
+  row widened to 0.03-0.08 with the gate-anchored identity check.
+- **Lead area overlapping pad**: 45 Warning / 0 Danger — the 2 Dangers
+  this class carried on 2026-08-08 are gone (R32 fixes landed).
+- **Component spacing**: 0.53mm Good — the accepted U2/C27 0.28
+  warning did not reappear (F1-vertical era re-layout).
+- **Pad spacing 0.15mm x2 Warning** — only line not in the table.
+  Root-caused locally: same-net service vias at 0.145-0.146mm beside
+  their own pads (U5.6 +5V / R1.1 USB_CC1 / SW6.4 GND family — the
+  R32 landing-stub pattern). Above JLC's 0.127 minimum and above
+  SLIVER_MAX; one copper net through the stub. Added to the table as
+  an accepted row, no copper change.
+
+No fixes required; no regeneration; the v4.6.1 upload stands. General
+rules touched: accepted-findings table only (tolerance band + new row
++ gate-anchored identity criteria for the artifact classes).
+
+## Round 33 Findings (2026-08-12)
+
+Full /hardware-audit on main at the v4.6.1 set (order on hold pending
+the audio-jack session — this round baselines the board BEFORE that
+change lands).
+
+### Step 0 gates
+
+| Gate | Result |
+|------|--------|
+| verify_trace_through_pad | PASS (1 passed, 0 failed) |
+| verify_trace_crossings | PASS (1 passed, 0 failed) |
+| verify_copper_clearance | PASS (0 DANGER, 4 WARN 0.10-0.15) |
+| verify_net_connectivity | PASS (0 failed) |
+| verify_dfm_v2 | 124/124 |
+| verify_dfa | 10/10 |
+| validate_jlcpcb | 24/24 (1 warn: GND 0.2mm cap stubs into plane — known class) |
+| verify_bom_cpl_pcb | ALL PASSED |
+| verify_polarity | 304/304 (201 strict + 103 zone-ok) |
+| verify_jlcpcb_capabilities | PASS |
+| verify_stencil_aperture | PASS |
+| verify_drill_standards | PASS |
+| verify_datasheet_nets | ALL PASSED |
+| verify_datasheet | OK |
+| verify_design_intent | ALL PASSED |
+| verify_schematic_pcb_sync | PASS |
+| verify_netlist_diff | PASS |
+| generate_board_config --check | OK |
+| verify_strapping_pins | 11 passed (1 warn: R14 DNP by design, test_gpio45_pullup_skip) |
+| verify_decoupling_adequacy | 23/23 |
+| verify_power_sequence | 32/32 |
+| verify_power_paths | 10 passed, 11 info (zone-dependent) |
+| make verify-power-nets | 6/6 nets single copper group |
+| erc_check | 0 critical, 0 warnings |
+| kicad-cli DRC (severity-all, all-track-errors) | 0 violations, 0 unconnected |
+
+### Domain findings
+
+- **Power chain**: 0 findings. Q1 RPP orientation re-verified (cell on
+  drain, R31-HIGH-1 fix intact); Q2 gate arithmetic re-derived from the
+  spec comments and confirmed (ON Vgs -4.78 V, OFF no-cell -0.108 V vs
+  0.5 V threshold, tau_on 957 us, tau_off 21.5 ms).
+- **ESP32 boot**: 0 findings. R14 absent from BOM/CPL as designed
+  (GPIO45 must be LOW at boot for VDD_SPI=3.3 V Octal PSRAM);
+  CONFIG_SPIRAM_MODE_OCT=y in both sdkconfig.defaults.
+- **Display**: 0 findings. LCD_D0-D7 routed-length skew measured 7.89 mm
+  (limit 20 mm); firmware uses esp_lcd i80 bus (LCD_CAM peripheral);
+  J4 41-N reversal respected (not re-raised).
+- **Audio**: 0 findings. audio.c uses i2s_pdm_tx_config_t, DOUT-only.
+- **SD card**: 0 findings (pad 8/DAT1 clean per trace gates; pad 9 Cd
+  off-net as designed).
+- **Buttons**: 0 findings. SW11 (15,5.5) / SW12 (145,5.5) far from
+  USB-C (80,71.15) and FPC (135,35.5).
+- **USB**: 1 advisory (below).
+- **Emulator performance**: 0 findings. Octal PSRAM + i80 DMA in place;
+  optimization profile documented in snes-optimization.md.
+
+### Bug list
+
+#### R33-LOW-1 — USB diff-pair return-path stitching is advisory-thin
+- **Files**: scripts/verify_usb_return_path.py (advisory gate)
+- **Problem**: 22 USB_D+/D- segments sit > 5.0 mm from the nearest GND
+  via (D+ avg 5.59 mm, max 7.6 mm). verify_usb_impedance PASSes ("sound
+  for this signalling rate").
+- **Root cause**: stitching vias were placed for the 22.2 mm FS-USB
+  requirement, not the tighter 5 mm guideline the advisory gate prints.
+- **Fix**: none required for FS USB (12 Mbps). If a future revision
+  touches B.Cu near the pair, add 2-3 GND stitching vias along the run.
+  Not worth a respin on its own.
+
+No CRIT, no HIGH, no MED. Round 33 is clean: the v4.6.1 set is
+electrically sound as-built; the open items remain the bench-validation
+pair (C33 wake RC, Q1-corridor thermal probe) which need first-article
+hardware, plus the audio-jack decision gating the order.
+
+### R33 Addendum (2026-08-12, same day) — phase A catches R33-MED-2: LED2-6 CPL 180° reversal
+
+Found during /first-article-check phase A on the JLC order preview,
+AFTER the clean Round 33 above (the gates could not see it: copper,
+nets and polarity are all correct — the bug lived in the CPL-angle
+semantics).
+
+#### R33-MED-2 — C19171391 LEDs (LED2-6) shipped with a 180° CPL delta that reverses them
+- **Files**: scripts/generate_pcb/jlcpcb_export.py (_JLCPCB_ROT_DELTAS),
+  scripts/verify_easyeda_footprint.py, hardware/datasheets/POLARITY_AUDIT.md,
+  docs/known-issues.md (H6 addendum)
+- **Problem**: the H6-closure delta ("opposite pin-1 conventions force a
+  180° CPL delta") compensated a pin-NUMBERING difference. Numbering is
+  a label; the CPL angle is a rigid body rotation from the part's
+  library zero, and both LED vendors put the physical cathode at the
+  same (-x) end of that zero. At 180° the cathode lands on LEDn_RA
+  (anode net): five reverse-biased, dark LEDs.
+- **Root cause**: pin-1-to-pad-1 alignment premise, never implemented by
+  any tool in the chain. Red flag that exposed it: the gate text and the
+  H6 comment justified the same 180 from OPPOSITE datasheet readings.
+- **Evidence**: JLC order-preview render (v4.6.1 set) shows every green
+  cathode mark on the anode side at CPL 180; viewer fidelity anchored by
+  U2's proto-confirmed orientation; cache geometry (pads+silk+3D patch)
+  agrees. No working prototype was available for the electrical test —
+  the entry is analytic, with _PENDING_VALIDATION carrying the
+  first-article procedure.
+- **Fix**: deltas removed (LED2-6 emit 0° like LED1), stale allowlist
+  entry removed, 5 _PENDING_VALIDATION entries added with the power-up
+  test. Suite re-green: verify_dfa 10/10 (caught the stale release CPL
+  on the way), verify_easyeda_footprint 92 OK + 5 PENDING, dfm 124/124.
+  New set = v4.6.2 candidate; JLC order must re-upload cpl.csv (and
+  gerbers.zip only for hash consistency — copper unchanged).
+- **Verification loop before payment**: in the JLC viewer after
+  re-upload, every C19171391 green mark must sit on the GND side
+  (board-left in top view); LED1's mark stays the open question of its
+  own model texture — inspect with parts deselected.
+
+## Round 34 Findings (2026-08-12, evening) — v4.6.2 post-LED-fix re-audit
+
+Re-audit requested after the R33-MED-2 fix landed (tag v4.6.2). Copper
+is byte-identical to v4.6.1 modulo gerber date comments (verified by
+tag-to-tag diff); the change surface is the CPL emission alone, so
+Layer 2 ran as a delta review on that surface plus re-affirmation of
+the Round 33 domain results.
+
+### Step 0 gates — all 25 PASS on v4.6.2
+
+Same table as Round 33 with three deltas, all expected:
+- verify_dfa 10/10 (the LED-consistency check now passes on the
+  synced release CPL);
+- verify_easyeda_footprint: 92 OK, 0 FAIL, **5 PENDING** (LED2-6
+  first-article validation entries — by design), 1 REVIEW (J4,
+  pre-existing documented override);
+- everything else identical: trace/crossing/clearance/connectivity
+  clean, dfm 124/124, polarity 304/304, datasheet nets all pass,
+  design intent all pass, strapping 11+1warn (R14 DNP by design),
+  decoupling 23/23, power sequence 32/32, power paths 10+11info,
+  power-nets 6/6 single group, ERC 0/0, DRC 0 violations
+  0 unconnected.
+
+### Layer 2 — delta review
+
+- **CPL blast radius**: `git diff v4.6.1..v4.6.2 -- release_jlcpcb/`
+  touches exactly the five LED rows (180 -> 0). BOM diff empty. No
+  other component's emitted rotation moved.
+- **Rotation-semantics surface**: the removed deltas were the last
+  entries in _JLCPCB_ROT_DELTAS except J4's (which is independently
+  anchored by its two convention-free checks: cable-side assertion in
+  verify_dfm_v2 and the 42-pad rigid-fit). No other part relies on the
+  falsified pin-number-alignment premise.
+- **All other domains**: unchanged copper + unchanged firmware ⇒
+  Round 33 findings stand as-is (LCD skew 7.89 mm, PDM TX audio, Q2
+  gate arithmetic re-derived, R33-LOW-1 USB stitching advisory).
+
+### Bug list
+
+None. No new findings; R33-MED-2 is fixed and gated
+(_PENDING_VALIDATION); carried open items are unchanged: LED2-6
+first-article power-up test, C33 wake RC, Q1-corridor thermal probe,
+R33-LOW-1 (advisory).
+
+Pre-payment state: order must use the v4.6.2 cpl.csv (md5 4c2a0640);
+viewer check = every C19171391 green mark on the GND side.

@@ -195,28 +195,15 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
     # reference for C78988, so it reports delta_row = 0 and needs no waiver.
     # Re-adding an entry here would silently re-arm the old exemption for a
     # completely different part.
-    "LED2": (
-        180,
-        "Red LED 0805 C19171391 (was mislabelled green). Analytical determination (no physical "
-        "board needed): EasyEDA footprint "
-        "scripts/.easyeda_cache/C19171391/fp.pretty/LED0805-R-RD_RED."
-        "kicad_mod lines 23-24 place pad 1 at x=+1.05 and pad 2 at "
-        "x=-1.05; cathode silkscreen notch is on the LEFT side "
-        "(lines 16-20, x=-0.34..-2.22) i.e. co-located with pad 2, "
-        "NOT pad 1. Compare LED1 C84256 (same skill, lines 26-27): "
-        "pad 1 at x=-1.10 IS co-located with its cathode silk notch "
-        "(lines 17-23, x=-1.75..-2.10). Datasheet "
-        "hardware/datasheets/LED2_Red-LED-0805_C19171391.pdf page 1 "
-        "'Package Profile' diagram shows pin ① = cathode (diode symbol "
-        "triangle points to pin 1). Conclusion: EasyEDA author swapped "
-        "pad numbering on C19171391 (footprint author error, not a "
-        "manufacturer convention difference). With our KiCad LED_0805 "
-        "pad 1 = cathode → GND routing and 0° rotation, EasyEDA's "
-        "physical anode would land on our GND pad → LED reverse-biased "
-        "and dark. _JLCPCB_ROT_DELTAS['LED2']=180 in "
-        "scripts/generate_pcb/jlcpcb_export.py flips the part so the "
-        "physical cathode lands on our GND pad → forward-biased.",
-    ),
+    # "LED2" allowlist entry REMOVED 2026-08-12: its evidence string was
+    # the pre-H6-correction datasheet reading ("pin 1 = cathode, EasyEDA
+    # author error") that H6's own 2026-07-26 correction block had
+    # already overturned ("pin 1 = anode, no author error") — the entry
+    # endorsed _JLCPCB_ROT_DELTAS['LED2']=180 from a premise its sibling
+    # comment had retracted. The delta itself was removed 2026-08-12
+    # (see jlcpcb_export.py for the full re-derivation); the LED2-LED6
+    # numbering-frame mismatch is now tracked in _PENDING_VALIDATION
+    # below until the first v4.6.2 article empirically closes it.
 }
 
 
@@ -263,7 +250,23 @@ _GEOMETRIC_MISMATCH_ALLOWLIST: dict[str, tuple[int, str]] = {
 # Do NOT use this list to silence parts you have not actually put into a
 # production queue. "Pending" means "batch ordered, awaiting return".
 
-_PENDING_VALIDATION: dict[str, tuple[int, str, str]] = {}
+_PENDING_VALIDATION: dict[str, tuple[int, str, str]] = {
+    ref: (
+        180,
+        "v4.6.2 order (first set with the LED2-6 CPL 180 deltas removed)",
+        "Power the board (USB or battery+SW16 ON). All C19171391 LEDs are "
+        "plain indicators: LED2 (FULL, lights when charge complete / on "
+        "+3V3 per its net), LED3-6 (VBUS/5V/3V3/HB diagnostic row). "
+        "Expected with delta removed: they light in their respective "
+        "conditions (at minimum 3V3 LED5 must light whenever the board "
+        "runs). If ALL five stay dark while LED1 (CHG, C84256) behaves: "
+        "the removal was wrong -> re-add _JLCPCB_ROT_DELTAS 180 for "
+        "LED2-6, restore the allowlist entry with THIS batch as counter-"
+        "evidence, and reopen H6. If they light: MOVE these five refs "
+        "to _GEOMETRIC_MISMATCH_ALLOWLIST citing this batch.",
+    )
+    for ref in ("LED2", "LED3", "LED4", "LED5", "LED6")
+}
 
 
 def _is_polarized(ref: str, footprint: str, comment: str) -> bool:

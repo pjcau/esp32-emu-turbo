@@ -993,19 +993,22 @@ Every JLCDFM upload produces the same set of Warnings (and one
 3D-artifact Danger) that are **known, reasoned and accepted**. When a
 new report arrives, diff it against this table: anything NOT listed
 here is a real finding; anything listed needs no action. Baseline:
-the 2026-08-08 report on the v4.6.x set.
+the 2026-08-08 report on the v4.6.x set, re-validated against the
+2026-08-12 report on v4.6.1 (gerbers md5 26b62cd8) — that report was
+a full-table match, zero real findings.
 
 | JLCDFM finding | Count | Why it is accepted |
 |---|---|---|
-| Lead to hole distance 0 mm (J1 pegs) | 1 Danger | Our NPTH is the **datasheet's** Ø0.65 ("Ø0.65(2X)", pegs Ø0.50 → 0.075/side); the EasyEDA reference uses 0.70 and JLC's 3D peg model touches a 0.65 hole. R21 rule: datasheet over EasyEDA (see `footprints.py` and the C2 tantalum lesson). Pegs are plastic; no solder joint involved. |
-| Pin inner edge 0.03 mm | 50 Danger | JLC's own 3D lead models poke 0.03 mm past the pad inner edges on the fine-pitch connectors (J4/U6 class). Our lands are rigid-fit-proven equal to JLC's *own reference footprints* (`verify_easyeda_footprint`, 97 OK) — their 3D disagrees with their 2D by a tolerance-level amount. |
+| Lead to hole distance 0 mm | 1 Danger | Labelled **J1 pegs** on a PCB-only pass, **U2** on a full SMT pass (with BOM/CPL loaded) — same copper, same single count. J1 case: our NPTH is the datasheet's Ø0.65 ("Ø0.65(2X)", pegs Ø0.50 → 0.075/side), EasyEDA uses 0.70, JLC's 3D peg touches a 0.65 hole; pegs are plastic, no joint. U2 case (seen 2026-08-13): U2's ESOP-8 thermal-EP GND lead sits 0 mm from a GND thermal/stitching via (net 1 both) — benign same-net condition. Either label = the one accepted count; do not treat the U2 attribution as a new finding. |
+| Pin inner edge 0.03–0.08 mm | 50 Danger | JLC's own 3D lead models poke past the pad inner edges on the fine-pitch connectors (J4/U6 class). Our lands are rigid-fit-proven equal to JLC's *own reference footprints* (`verify_easyeda_footprint`, 97 OK) — their 3D disagrees with their 2D by a tolerance-level amount. The measured value drifts between report runs (0.03 on 2026-08-08, 0.08 on 2026-08-12 — their 3D model revisions move); the identity check is class + count (50) **plus** `verify_pad_land` (361 pads ≥ 0.80 land coverage) and `verify_easyeda_footprint` green — if either gate is red, it is NOT this artifact. |
 | Annular ring 0.13 mm | ~100 Warning | The 0.46/0.20 via family: (0.46−0.20)/2 = 0.13 = JLCPCB's published minimum, used deliberately where corridors are tight. |
 | Fiducial null | 3 Warning | No fiducials by design — JLC panelizes and adds their own rail fiducials for this board size. |
 | Slot width 0.65 mm | 4 Warning | J1 shield slots: R20 chose 0.65 (min millable 0.61; datasheet says 0.60 which JLC cannot mill). |
 | Silkscreen to pad 0.15 mm | 4 Warning | At the 0.15 mm gate floor (`verify_dfm_v2` silk-to-pad test). |
 | Component clipped by outline | 3 Warning | J1 / U6 / SW16 are **edge-mount by design** (declared in `verify_component_bodies.EDGE_MOUNT`); the mouths must protrude. |
-| Component spacing 0.28 mm | 1 Warning | U2/C27 decoupling pair — HF bypass must be tight to the pin; 0.43 mm in our 2D model, JLC's 3D shaves it to 0.28. |
-| Lead area overlapping pad 0.02 mm | ~45 Warning | Same 3D-vs-2D tolerance class as "pin inner edge", on the castellated/fine-pitch parts. |
+| Component spacing 0.28 mm | 1 Warning | U2/C27 decoupling pair — HF bypass must be tight to the pin; 0.43 mm in our 2D model, JLC's 3D shaves it to 0.28. Not present in the 2026-08-12 report (global min measured 0.53 mm, Good) — keep the row in case their 3D flips back. |
+| Lead area overlapping pad 0.02 mm | ~45 Warning | Same 3D-vs-2D tolerance class as "pin inner edge", on the castellated/fine-pitch parts. The 2 Dangers this class carried on 2026-08-08 are gone in the 2026-08-12 report (45 Warning / 0 Danger). |
+| Pad spacing 0.15 mm | 2 Warning | Same-net service vias sitting at the deliberate 0.145–0.146 mm floor beside their own component pads (landing-stub pattern from the R32 slit fixes; the U5.6 +5V / R1.1 USB_CC1 / SW6.4 GND family). Above JLCPCB's 0.127 mm minimum and above `verify_copper_clearance` SLIVER_MAX — electrically one net, joined through the stub. First itemized on the 2026-08-12 report. |
 
 The four **Dangers the 2026-08-08 report found that were real** — pad
 spacing 0.08 (F1 via-ring sliver), component collision 0 mm (J3/F1

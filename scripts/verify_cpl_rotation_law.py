@@ -167,6 +167,31 @@ _LAW_EXCEPTIONS: dict[str, tuple[float, str]] = {
            "for every SOT-23-3, puts the single leg where the pair is — "
            "it does not assemble. Verify on the JLC 3D preview at order "
            "time (first-article-check, SOT-23 family)."),
+    # LED2-6: a SECOND, distinct law-defect class (R33-MED-2, 2026-08-12).
+    # The five entries above are the (row_board + row_ee) mod 180 != 0
+    # drawing-frame defect; these five are a NUMBERING-ROLE mismatch: our
+    # LED_0805 footprint numbers pads by net role (pad 1 = cathode/GND end)
+    # while YONGYUTAI numbers pin 1 = anode, so the pad-1->pad-2 bearings
+    # disagree by 180 even though the PHYSICAL zeros agree. The law binds
+    # number frames; the machine binds geometry — JLC receives gerbers,
+    # CPL and BOM only, never our pad numbers, so a numbering difference
+    # cannot rotate anything on the line. One defect recorded five times.
+    **{ref: (180.0,
+           "Red LED 0805 (C19171391) at cpl=0, Top. Convention-free check: "
+           "the part's own EasyEDA zero puts the physical cathode at the "
+           "-x end (pad 2 at x=-1.05; silk notch and 3D colour patch at "
+           "the same end), and our copper wants the cathode at the -x pad "
+           "(GND, with LEDn_RA -> R -> +3V3 at +x). A rigid rotation of 0 "
+           "seats cathode->GND / anode->LEDn_RA: forward-biased. The "
+           "law's 180 is the pin-numbering label mismatch only, and "
+           "physically seats the cathode on LEDn_RA — reverse-biased and "
+           "dark, which is R33-MED-2, caught in phase A on the v4.6.1 "
+           "order preview (every green cathode mark rendered on the "
+           "anode side; viewer fidelity anchored by U2's proto-confirmed "
+           "entry above). Empirical closure pending on the first v4.6.2 "
+           "article: verify_easyeda_footprint._PENDING_VALIDATION carries "
+           "the power-up procedure.")
+       for ref in ("LED2", "LED3", "LED4", "LED5", "LED6")},
 }
 
 

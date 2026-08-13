@@ -175,7 +175,7 @@ graph TB
 | `/user-feedback` | Record user preferences and distribute to agents/memory |
 | `/memory-maintenance` | Audit and improve the persistent memory — stale-claim sweep vs the live repo, archive resolved items to HISTORY.md, condense the index, verify with `make verify-memory` |
 
-### Audit & Meta — 7 Skills
+### Audit & Meta — 8 Skills
 
 | Skill | Description |
 |-------|-------------|
@@ -183,11 +183,12 @@ graph TB
 | `/electrical-review` | Strapping, decoupling, power sequencing, SPICE |
 | `/isolation-check` | Every conductor connected where intended and isolated everywhere else |
 | `/external-dfm` | KiBot + Tracespace DFM analysis via Docker |
+| `/jlcdfm-upload` | Upload gerbers.zip to jlcdfm.com via browser, capture JLC's official DFM + SMT analysis |
 | `/first-article-check` | Pre-payment 3D-preview orientation check, photo-vs-render on arrival |
 | `/pipeline-resume` | Resume an interrupted release pipeline |
 | `/create-skill` | Author a new skill for this project |
 
-**Total: 27 + 6 + 3 + 2 + 7 + 1 (scout) = 46 skills.**
+**Total: 27 + 6 + 3 + 2 + 8 + 1 (scout) = 47 skills.**
 
 ### Scout (Autonomous) — 1 Skill
 
