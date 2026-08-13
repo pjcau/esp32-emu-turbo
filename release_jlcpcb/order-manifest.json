@@ -1,10 +1,10 @@
 {
   "generatedAt": "2026-08-13",
-  "gitHead": "5509e36",
+  "gitHead": "3577056",
   "files": {
     "gerbers.zip": {
-      "sha256": "68067353ee3e2f95dd0d4c7d80d3f8bdac69795da5bb124cc24461390d67e87c",
-      "bytes": 283057
+      "sha256": "e75f650b4e8197b9cd9bc964b7c753a90e0838841669bdc39a6ab2b45b6a9881",
+      "bytes": 283059
     },
     "bom.csv": {
       "sha256": "99aa528c3da3a85cd77b3b8605a34d25cd80c156d67ec0f5eeb087c86b3c6671",
