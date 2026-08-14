@@ -4300,3 +4300,58 @@ assumption (PAM8403 MUTE internal pull-up) is verified true. The only item
 needing action before the v4.7.0 order is R35-MED-1 (J5 orientation/contact
 mapping) at first-article phase A. Bench watch-list additions: unplugged
 loud-passage speaker glitch (R35-LOW-1), headphone loudness (R35-LOW-2).
+
+## Round 36 Findings (2026-08-14) — J5 net mapping is WRONG (R35-MED-1 was a real bug)
+
+Following R35-MED-1 ("J5 pad->contact mapping unverifiable by gate"), I
+downloaded the authoritative HOOYA PJ-327A datasheet (C19712376, now on
+disk at hardware/datasheets/J5_PJ-327A_C19712376.pdf) and cross-checked.
+**The mapping is wrong.** The "verify at first article" risk was a live
+defect, not a hypothetical.
+
+### R36-HIGH-1 — J5 TIP/SLEEVE swapped + jack-detect on the wrong switch pin
+- **Files**: hardware/datasheet_specs.py (J5), scripts/generate_schematics/sheets/audio.py, scripts/generate_pcb/routing/audio.py
+- **Evidence** (datasheet, both the plug-section diagram AND the PJ-327A
+  schematic cell agree):
+  | HOOYA pin | physical contact | must carry |
+  |---|---|---|
+  | 2 | SLEEVE (barrel) | **GND** |
+  | 3 | TIP (deepest) | **HP_L** (left) |
+  | 4 | TIP-switch (NC to tip, opens on insert) | **JACK_DET** |
+  | 5 | RING (middle) | HP_R (right) |
+  | 6 | SLEEVE-switch (leaf on barrel) | GND / unused |
+  Plug-section diagram labels: TIP(point)=3, RING=5, SLEEVE=2/6.
+- **What we shipped in v4.7.0** (datasheet_specs + PCB nets):
+  pad2=HP_L, pad3=GND, pad4=unconnected, pad5=HP_R, pad6=JACK_DET.
+  → pad2/pad3 (TIP↔SLEEVE) **swapped**; JACK_DET on pad6 (sleeve switch)
+  instead of pad4 (tip switch); pad4 (the real detect) left floating.
+- **Failure**:
+  1. *Headphone audio broken.* Audio (HP_L) drives the SLEEVE and GND
+     drives the TIP. Plugged in: right driver = RING−SLEEVE = HP_R−HP_L =
+     0 (both are the same mono feed) → **right channel silent**; left is
+     inverted; the plug barrel ("ground") sits at audio potential.
+  2. *Auto-mute broken.* Detect is on pad6 = sleeve switch, which does
+     not reliably open on insertion, so the speaker may never mute; the
+     tip switch (pad4) that the design's own comment assumes ("TSW opens
+     on insert") is unconnected. R35-LOW-1's "JACK_DET carries audio when
+     unplugged" is a symptom: pad6 ties to pad2, which we mis-set to HP_L.
+  No damage (low voltage, no rail short); speaker/power/boot unaffected →
+  HIGH, not CRIT.
+- **Root cause**: J5 net assignment was set without the datasheet on disk
+  (the file was referenced but missing) and no gate cross-checks connector
+  contact mapping — exactly the R35-MED-1 gap.
+- **Fix (board respin → v4.8.0)**: correct the J5 nets to the table above:
+  pad2→GND, pad3→HP_L, pad4→JACK_DET, pad5→HP_R (unchanged), pad6→GND.
+  Re-route J5 accordingly. Then re-verify. Because the tip-switch (pad4)
+  still ties JACK_DET to the tip audio when unplugged, land R35-LOW-1's
+  gate RC at the same time: add ~100 nF from JACK_DET to GND (with R40
+  220k → ~22 ms low-pass, strips audio off the detect, leaves the DC
+  insert level).
+- **Regression guard**: datasheet now on disk; add a dedicated
+  J5-contact-mapping assertion (authoritative table above) so this class
+  is gate-covered, not a manual first-article item.
+
+### R36-note — R35-LOW-2 (headphone loudness) stands
+Independent of the wiring fix, the passive tap off the PDM line is quiet
+(~0.2 Vpk into 32 Ω) and draws ~5 mA DC from GPIO17. Acceptable by design;
+the real uplift (active headphone amp) is a v2 item. No change now.
