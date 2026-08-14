@@ -47,7 +47,10 @@
       "Bash(rtk grep *)",
       "mcp__pcbparts__jlc_search",
       "Skill(pcb-to-firmware)",
-      "Bash(kill -0 83036)"
+      "Bash(kill -0 83036)",
+      "Bash(python3 scripts/verify_memory.py)",
+      "Bash(rm .claude/issues/verify_memory.md)",
+      "Bash(python3 scripts/open_issues_report.py)"
     ],
     "deny": [
       "Bash(rm -rf /*)",

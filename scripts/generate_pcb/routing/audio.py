@@ -747,17 +747,24 @@ def _headphone_traces():
         parts.append(_via_net(r39_2[0], 38.5, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # ── HP_L: R37.2 -> J5.2 (tip) ─────────────────────────────────
-    # Straight down the empty west half of P1, then east into the pad
-    # through its top edge. The y=64.9 horizontal shares its y with the
-    # BTN_RIGHT jog in buttons.py — that one is F.Cu, this is B.Cu.
-    j5_2 = _pad("J5", "2")     # (48.5, 65.61)
-    if r37_2 and j5_2:
-        parts.append(_seg(r37_2[0], r37_2[1], r37_2[0], 64.9,
+    # R36-HIGH-1 corrected J5 wiring (HOOYA PJ-327A datasheet on disk):
+    # the ONLY defect was TIP/SLEEVE swapped on the left column — HP_L and
+    # GND trade pads 3<->2. The detect stays on pad 6 (the sleeve NC
+    # switch, GND-referenced when closed), HP_R stays on pad 5. So only
+    # the two left-column pads change; the right column is untouched.
+    #   pad 2 (48.5,65.51) = SLEEVE -> GND   (was HP_L)
+    #   pad 3 (48.5,72.60) = TIP    -> HP_L  (was GND)
+    #   pad 5 (55.5,69.60) = RING   -> HP_R  (unchanged)
+    #   pad 6 (55.5,63.91) = detect -> JACK_DET (unchanged)
+
+    # ── HP_L: R37.2 -> J5.3 (TIP, lower-left pad) ─────────────────
+    # Down the west lane past the SLEEVE pad (x=46.55, 0.5mm clear of pad
+    # 2's west edge at 47.05), then east into the TIP pad.
+    j5_3 = _pad("J5", "3")     # (48.5, 72.60) = TIP
+    if r37_2 and j5_3:
+        parts.append(_seg(r37_2[0], r37_2[1], r37_2[0], j5_3[1],
                           "B.Cu", W_DATA, n_l))
-        parts.append(_seg(r37_2[0], 64.9, j5_2[0], 64.9,
-                          "B.Cu", W_DATA, n_l))
-        parts.append(_seg(j5_2[0], 64.9, j5_2[0], j5_2[1],
+        parts.append(_seg(r37_2[0], j5_3[1], j5_3[0], j5_3[1],
                           "B.Cu", W_DATA, n_l))
 
     # ── HP_R: R38.2 -> J5.5 (ring) ────────────────────────────────
@@ -765,7 +772,7 @@ def _headphone_traces():
     # hole centre, rule needs 1.00), east through the corridor UNDER
     # the BTN_A/BTN_RIGHT wall ends (they stop at y 66.8/65.6), north
     # into the ring pad.
-    j5_5 = _pad("J5", "5")     # (55.5, 69.70)
+    j5_5 = _pad("J5", "5")     # (55.5, 69.60)
     if r38_2 and j5_5:
         parts.append(_seg(r38_2[0], r38_2[1], r38_2[0], 62.5,
                           "B.Cu", W_DATA, n_r))
@@ -778,30 +785,26 @@ def _headphone_traces():
         parts.append(_seg(j5_5[0], 68.2, j5_5[0], j5_5[1],
                           "B.Cu", W_DATA, n_r))
 
-    # ── J5.3 (sleeve) -> GND ──────────────────────────────────────
-    # Via west of the pad, in the F-highway gap between the BTN_Y
-    # (71.56) and BTN_L (73.42) rows; the hole keeps 0.185mm to the
-    # pad edge (verify_via_in_pad floor 0.15).
-    j5_3 = _pad("J5", "3")     # (48.5, 72.70)
-    if j5_3:
-        parts.append(_seg(j5_3[0], j5_3[1], 46.75, j5_3[1],
+    # ── J5.2 (SLEEVE) -> GND ──────────────────────────────────────
+    # Via just south of the sleeve pad (pad2 south edge 66.31), kept
+    # NORTH of the BTN_B F.Cu run at y=68.12 (a via at 68.5 clipped it
+    # to 75µm) — 67.0 leaves >1mm to BTN_B and 0.69mm to the pad edge.
+    j5_2 = _pad("J5", "2")     # (48.5, 65.51) = SLEEVE
+    if j5_2:
+        parts.append(_seg(j5_2[0], j5_2[1], j5_2[0], 67.0,
                           "B.Cu", W_PWR_LOW, n_gnd))
-        parts.append(_via_net(46.75, j5_3[1], n_gnd,
+        parts.append(_via_net(j5_2[0], 67.0, n_gnd,
                               size=VIA_STD, drill=VIA_STD_DRILL))
 
-    # ── JACK_DET: J5.6 + R40.2 + Q3 gate ──────────────────────────
-    j5_6 = _pad("J5", "6")     # (55.5, 64.01)
+    # ── JACK_DET: J5.6 (sleeve NC switch) + R40.2 + Q3 gate ───────
+    # UNCHANGED from v4.7.0 — pin 6 is the correct sleeve detect switch.
+    j5_6 = _pad("J5", "6")     # (55.5, 63.91)
     r40_1 = _pad("R40", "1")   # (54.6, 56.65) north = +3V3
     r40_2 = _pad("R40", "2")   # (54.6, 58.55) south
     q3_g = _pad("Q3", "1")     # (53.9, 62.45)
     q3_s = _pad("Q3", "2")     # (53.9, 60.55)
     q3_d = _pad("Q3", "3")     # (56.1, 61.5)
     if r40_2 and q3_g and j5_6:
-        # R40.2 south, sidestep to x=54.9 (0.4mm east of the Q3 G/S
-        # pad column, 0.6mm west of the D pad), down to y=62.8, gate
-        # branch west at y=62.45 (the vertical is SPLIT there — the
-        # dead-end gate rejects mid-span branches), pad-6 entry east at
-        # y=62.8 (the pad's north edge is 63.11).
         parts.append(_seg(r40_2[0], r40_2[1], r40_2[0], 59.0,
                           "B.Cu", W_DATA, n_det))
         parts.append(_seg(r40_2[0], 59.0, 54.9, 59.0,

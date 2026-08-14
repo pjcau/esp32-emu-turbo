@@ -294,13 +294,14 @@ NET_LIST = [
     #   HP_L/R   — after the R37/R38 series resistors: jack tip / ring.
     (74, "HP_L"),
     (75, "HP_R"),
-    #   JACK_DET — J5 pin 6 (the tip's normally-closed switch contact)
-    #              + R40 + Q3's gate. Closed (unplugged): tied to the
-    #              tip's ~0V DC through R37+R39, so Q3 stays off — the
-    #              worst-case audio peak on the tip (±0.46V) stays well
-    #              under the 2N7002's 1.0V minimum Vgs(th), which is why
-    #              no gate RC is needed. Open (plugged): R40 pulls the
-    #              gate to +3V3 and Q3 mutes the PAM8403.
+    #   JACK_DET — J5 pin 6 (the SLEEVE normally-closed switch) + R40 +
+    #              Q3's gate. R36-HIGH-1 kept the detect here but fixed the
+    #              sleeve/tip audio swap: with pad 2 = GND, the closed
+    #              switch (unplugged) ties JACK_DET to GND — a clean 0V,
+    #              NOT the tip audio — so Q3 stays off and no gate RC is
+    #              needed. Open (plug inserted): R40 220k pulls the gate to
+    #              +3V3 and Q3 mutes the PAM8403. First-article check:
+    #              confirm the speaker mutes on insert (pin 6 opens).
     (76, "JACK_DET"),
     #   PAM_MUTE — U5 pin 5, freed from its +5V strap. Q3's open drain
     #              pulls it low when a plug is present; the PAM8403's

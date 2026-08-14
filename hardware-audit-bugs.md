@@ -4355,3 +4355,31 @@ defect, not a hypothetical.
 Independent of the wiring fix, the passive tap off the PDM line is quiet
 (~0.2 Vpk into 32 Ω) and draws ~5 mA DC from GPIO17. Acceptable by design;
 the real uplift (active headphone amp) is a v2 item. No change now.
+
+### R36-HIGH-1 RESOLVED (2026-08-14, v4.8.0) — simpler fix than first scoped
+Re-reading the datasheet schematic showed pin 6 is the SLEEVE normally-
+closed switch (∧ symbol), not a plain sleeve tab. That makes the fix
+much smaller and cleaner than "move detect to pad 4":
+- **The only real defect was TIP/SLEEVE swapped** on the left column.
+  Fixed by trading HP_L and GND between pad 3 (TIP) and pad 2 (SLEEVE):
+  R37 now feeds pad 3, a GND via serves pad 2.
+- **Detect stays on pad 6** (the sleeve switch). With pad 2 = GND, the
+  closed switch ties JACK_DET to a clean 0 V when unplugged — GROUND-
+  referenced, so no audio on the detect node. This is strictly better
+  than the tip switch and means **R35-LOW-1 disappears and C41 is not
+  needed** (the gate-RC insurance is moot; no audio ever reaches JACK_DET).
+- pad 4 (tip rest contact) stays unconnected; pad 5 = HP_R unchanged.
+Right column copper is untouched; only the two left-column pads moved,
+so the re-route stayed clean (0 DANGER, 0 new WARN, 0 islands).
+
+Files: hardware/datasheet_specs.py (J5), scripts/generate_pcb/footprints.py
++ primitives.py (comments), scripts/generate_pcb/routing/audio.py (left-
+column re-route), scripts/generate_schematics/lib_symbols.py (pin NUMBERS
+2<->3 corrected, names TIP/SLV/SSW/TSW), sheets/audio.py (detect notes),
+scripts/verify_polarity.py (_strict J5 expectation), and the datasheet
+now on disk. Gate coverage: the corrected mapping is now asserted by
+verify_polarity (strict), verify_datasheet_nets, and verify_netlist_diff
+— a re-swap fails all three. Residual (physical-only): first-article
+confirm the speaker mutes on plug insert (pin 6 opens).
+
+New set: v4.8.0. Copper changed only in the J5 left-column corner.

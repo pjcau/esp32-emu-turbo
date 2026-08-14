@@ -395,11 +395,17 @@ _SYMBOL_AUDIO_JACK = """    (symbol "AudioJack_PJ327A" (pin_names (offset 1.016)
         (rectangle (start -6.35 7.62) (end 6.35 -7.62) (stroke (width 0.254) (type default)) (fill (type background)))
         (circle (center -5.08 0) (radius 0.635) (stroke (width 0.254) (type default)) (fill (type none))))
       (symbol "AudioJack_PJ327A_1_1"
-        (pin passive line (at -8.89 5.08 0) (length 2.54) (name "TIP" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at -8.89 5.08 0) (length 2.54) (name "TIP" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
         (pin passive line (at -8.89 2.54 0) (length 2.54) (name "RING" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at -8.89 -2.54 0) (length 2.54) (name "SLV" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 8.89 5.08 180) (length 2.54) (name "TSW" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 8.89 -2.54 180) (length 2.54) (name "RSW" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))))\n"""
+        (pin passive line (at -8.89 -2.54 0) (length 2.54) (name "SLV" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 8.89 5.08 180) (length 2.54) (name "SSW" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))
+        (pin passive line (at 8.89 -2.54 180) (length 2.54) (name "TSW" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))))\n"""
+# R36-HIGH-1 (2026-08-14): pin NUMBERS 2 and 3 corrected against the HOOYA
+# datasheet — the TIP pin is number 3, the SLEEVE pin number 2 (was
+# swapped). Names: pin 6 is the SLEEVE switch (SSW, the auto-mute detect),
+# pin 4 the TIP switch (TSW, unused). Positions unchanged; the schematic's
+# HP_L wire (top-left) now lands on pin 3 = TIP and GND (bottom-left) on
+# pin 2 = SLEEVE, matching the corrected PCB footprint.
 # Pin names SLV/TSW/RSW are abbreviated on purpose: the body is 12.7mm
 # wide and "SLEEVE" x "RINGSW" met in the middle
 # (verify_schematic_render_overlaps).

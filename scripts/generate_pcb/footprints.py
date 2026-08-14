@@ -935,8 +935,14 @@ def msk12c02(layer="B"):
 #   2 NPTH locating holes Ø1.30 on the centreline at y=3.00 and 9.00.
 #   Body 8.8 wide x 11.0 long x 4.4 tall; barrel Ø5.0 protrudes 1.4 mm
 #   beyond the front face (overhangs the board edge, like J1's shell).
-# Pin roles (plug-travel diagram): 2=TIP, 5=RING, 3=SLEEVE(GND),
-# 6=tip NC rest contact (jack detect), 4=ring NC rest contact (unused).
+# Pin roles CORRECTED 2026-08-14 (R36-HIGH-1) from the HOOYA datasheet:
+# plug-travel diagram labels SLEEVE=2/6, RING=5, TIP=3; the schematic
+# draws pin 2 as the fixed sleeve tab and pin 6 as an NC switch (∧) on
+# the sleeve. Only the tip/sleeve audio axis was wrong before:
+#   2=SLEEVE(GND), 3=TIP(HP_L), 4=tip NC rest (unused),
+#   5=RING(HP_R), 6=sleeve NC switch (JACK_DET, GND-ref, opens on insert).
+# Pad GEOMETRY is unchanged (it was already correct); only the earlier
+# tip/sleeve net assignment was backwards.
 # Place at the board edge with rotation 180 so the front face sits ON
 # the edge and the body extends inboard.
 def pj327a(layer="B"):

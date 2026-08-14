@@ -310,27 +310,29 @@ class AudioSheet(SchematicSheet):
         self.glabel("HP_R", 245, 90, 90, "output")
         self.wire(250, 90, 250, 64.54)
         self.wire(250, 64.54, 258.11, 64.54)
-        # SLV (sleeve) -> GND
+        # SLV (sleeve, pin 2) -> GND
         self.wire(258.11, 69.62, 255, 69.62)
         self.gnd(255, 69.62)
-        # TSW: the tip's normally-closed rest contact = jack detect
+        # SSW (pin 6): the SLEEVE normally-closed switch = jack detect
+        # (R36-HIGH-1: this is the sleeve switch, GND-referenced when
+        # closed, not the tip switch).
         self.wire(275.89, 62, 281.5, 62)
         self.glabel("JACK_DET", 281.5, 62, 90, "output")
-        # RSW: unused
+        # TSW (pin 4, tip rest contact): unused
         self.nc(275.89, 69.62)
 
-        # Detect network: R40 pull-up + Q3. No gate RC is needed: when
-        # unplugged the gate sits on the tip's DC (~70 mV via the
-        # R40/R37+R39 divider) and the worst-case audio peak (±0.46V)
-        # stays well under the 2N7002's 1.0V minimum Vgs(th).
+        # Detect network: R40 pull-up + Q3. No gate RC is needed: the
+        # detect is the SLEEVE switch, so when unplugged it ties JACK_DET
+        # to GND (a clean 0V, NOT the tip audio) — Q3 stays hard off with
+        # no chatter regardless of volume.
         # (Notes live at y>=140, clear of the speaker's own captions.)
-        self.text("Plug inserted -> TSW opens -> R40 pulls JACK_DET",
+        self.text("Plug inserted -> sleeve switch opens -> R40 pulls",
                   200, 140, 1.5)
-        self.text("high -> Q3 pulls PAM8403 MUTE low (speaker off).",
+        self.text("JACK_DET high -> Q3 pulls PAM8403 MUTE low (spk off).",
                   200, 143.5, 1.5)
-        self.text("Unplugged: TSW ties the gate to the tip's ~0V DC",
+        self.text("Unplugged: sleeve switch ties JACK_DET to GND (0V),",
                   200, 147, 1.5)
-        self.text("(audio peaks < 2N7002 Vgs(th) min - no chatter).",
+        self.text("so Q3 is hard off and the speaker plays.",
                   200, 150.5, 1.5)
         # R40 220k: +3V3 -> JACK_DET (3V3 fully enhances Q3, and the
         # divider vs R37+R39 parks the gate at ~70 mV when unplugged)

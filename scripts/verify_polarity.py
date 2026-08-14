@@ -192,9 +192,12 @@ _strict("U5", [
 # ============================================================
 # J5 headphone jack (PJ-327A) + auto-mute chain
 # ============================================================
-# Pad 4 (ring NC rest contact) is deliberately unconnected.
+# Datasheet-correct mapping (R36-HIGH-1): pin 2 = SLEEVE (GND),
+# pin 3 = TIP (HP_L), pin 5 = RING (HP_R), pin 6 = SLEEVE switch
+# (JACK_DET, GND-referenced auto-mute detect). Pad 4 (tip rest
+# contact) is deliberately unconnected. v4.7.0 had 2/3 swapped.
 _strict("J5", [
-    ("2", "HP_L"), ("3", "GND"), ("5", "HP_R"), ("6", "JACK_DET"),
+    ("2", "GND"), ("3", "HP_L"), ("5", "HP_R"), ("6", "JACK_DET"),
 ])
 _strict("Q3", [("1", "JACK_DET"), ("2", "GND"), ("3", "PAM_MUTE")])
 _strict("R35", [("1", "I2S_DOUT"), ("2", "HP_FILT")])

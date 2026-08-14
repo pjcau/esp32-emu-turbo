@@ -297,11 +297,26 @@ COMPONENT_SPECS = {
     # ======================================================================
     # J5 — HOOYA PJ-327A 3.5mm headphone jack (C19712376)
     # Datasheet: fetched from LCSC 2026-08-12 (drawing rev A1 2020.6.23).
-    # Pin roles from the plug-travel diagram: the tip zone touches pin 2,
-    # the ring zone pin 5, the sleeve zone pin 3; pins 6 and 4 are the
-    # normally-closed REST contacts of 2 and 5 (continuity 2-6 and 5-4
-    # with no plug; both open when a plug is inserted). Pin 6 is the
-    # jack-detect input for the Q3 auto-mute; pin 4 is unused.
+    # Pin roles CORRECTED 2026-08-14 (R36-HIGH-1) from the HOOYA datasheet
+    # now on disk (J5_PJ-327A_C19712376.pdf). Two independent authoritative
+    # views agree: the plug-travel diagram labels the SLEEVE zone "2/6", the
+    # RING zone "5", the TIP (point) "3"; and the internal schematic draws
+    # pin 2 as the fixed sleeve tab and pin 6 as a NORMALLY-CLOSED switch
+    # (∧ symbol) on the sleeve barrel that opens when a plug is inserted.
+    # v4.7.0 shipped TIP/SLEEVE swapped (2=TIP, 3=SLEEVE) — the real defect,
+    # which broke the headphone audio (right channel cancels, ground on the
+    # tip). The detect on pin 6 is KEPT: it is the sleeve NC switch, which
+    # is GROUND-REFERENCED when closed (unplugged), so JACK_DET reads a
+    # clean 0V (no audio on the detect) — better than the tip switch, and
+    # it needs no gate RC. Only the tip/sleeve audio swap is fixed:
+    #   2 = SLEEVE (fixed tab)          -> GND     (was HP_L)
+    #   3 = TIP                         -> HP_L    (was GND)
+    #   4 = TIP rest contact (unused)   -> (nc)
+    #   5 = RING                        -> HP_R    (unchanged)
+    #   6 = SLEEVE NC switch (detect)   -> JACK_DET(unchanged; opens on insert)
+    # First-article check: confirm the speaker mutes when a plug is
+    # inserted (i.e. pin 6 does open) — the one behaviour the datasheet
+    # symbol implies but only the physical part proves.
     # ======================================================================
     "J5": {
         "component": "PJ-327A 3.5mm Headphone Jack",
@@ -309,11 +324,11 @@ COMPONENT_SPECS = {
         "datasheet": "J5_PJ-327A_C19712376.pdf",
         "datasheet_page": 1,
         "pins": {
-            "2": {"net": _exact("HP_L"),     "function": "TIP — left channel (mono feed via R37)", "type": "smd"},
-            "3": {"net": _exact("GND"),      "function": "SLEEVE — ground", "type": "smd"},
-            "4": {"net": _unconnected(),     "function": "RING rest contact (NC switch, unused)", "type": "smd"},
+            "2": {"net": _exact("GND"),      "function": "SLEEVE — ground (fixed barrel tab)", "type": "smd"},
+            "3": {"net": _exact("HP_L"),     "function": "TIP — left channel (mono feed via R37)", "type": "smd"},
+            "4": {"net": _unconnected(),     "function": "TIP rest contact (NC switch, unused)", "type": "smd"},
             "5": {"net": _exact("HP_R"),     "function": "RING — right channel (mono feed via R38)", "type": "smd"},
-            "6": {"net": _exact("JACK_DET"), "function": "TIP rest contact — opens on plug insert (auto-mute detect)", "type": "smd"},
+            "6": {"net": _exact("JACK_DET"), "function": "SLEEVE NC switch — GND when unplugged, opens on insert (auto-mute detect)", "type": "smd"},
         },
     },
 
