@@ -1090,3 +1090,23 @@ If this file and `make open-issues` ever disagree, the command is right.
 > premise flipping (the gate text argued pin①=cathode, H6 argued
 > pin①=anode, both "derived" 180°) was never derived from the premise at
 > all.
+
+### H — J5 headphone jack TIP/SLEEVE swap (R36-HIGH-1) — CLOSED v4.8.0
+
+**The v4.7.0 headphone jack was miswired** and it took the datasheet to
+catch it — no gate could, because the PJ-327A datasheet was not on disk
+and connector contact-mapping is not geometrically checkable (the
+`verify_easyeda_footprint` WARN correctly flagged J5 as "verify manually").
+Downloading the HOOYA C19712376 datasheet showed pin 2 = SLEEVE, pin 3 =
+TIP (the plug-travel diagram labels SLEEVE = 2/6, TIP = 3, and the internal
+schematic draws pins 2 & 6 on the sleeve barrel). v4.7.0 had 2 = HP_L and
+3 = GND — audio on the sleeve, ground on the tip: right channel cancels
+(RING − SLEEVE = HP_R − HP_L, same mono feed), plug barrel at audio
+potential. Fixed in v4.8.0 by swapping HP_L/GND between pads 3/2. The
+auto-mute detect stays on pad 6 (the sleeve NC switch), now GROUND-
+referenced when closed — cleaner than the tip switch, no gate RC needed.
+The mapping is now asserted by three gates (polarity, datasheet-nets,
+netlist-diff) and the datasheet is on disk. Lesson: a connector whose
+datasheet is missing and whose footprint gate emits a "verify manually"
+WARN is not "gate-covered" — download the datasheet and confirm the
+contact map before shipping, don't defer it to first article.
