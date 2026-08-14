@@ -4185,3 +4185,118 @@ R33-LOW-1 (advisory).
 
 Pre-payment state: order must use the v4.6.2 cpl.csv (md5 4c2a0640);
 viewer check = every C19171391 green mark on the GND side.
+
+## Round 35 Findings (2026-08-14) — v4.7.0 first audit of the headphone jack + auto-mute
+
+First full audit of the audio-jack branch (merged 73f224a). New parts:
+J5 (PJ-327A jack, C19712376), Q3 (2N7002, C8545), R35-R40, C34-C35.
+Focus was the new audio subsystem; the rest of the board is unchanged
+copper from the clean Round 34 and its Layer-1 results stand.
+
+### Step 0 gates — all PASS on v4.7.0
+
+| Gate | Result |
+|------|--------|
+| verify_trace_through_pad | 1/0 PASS |
+| verify_trace_crossings | 1/0 PASS |
+| verify_copper_clearance | 0 DANGER, 4 WARN |
+| verify_net_connectivity | 0 failed |
+| verify_dfm_v2 | 124/124 |
+| verify_dfa | 10/10 |
+| validate_jlcpcb | 24/24 (1 warn: GND 0.2mm cap stubs, known) |
+| verify_bom_cpl_pcb | ALL PASSED |
+| verify_polarity | 48/48 |
+| verify_jlcpcb_capabilities / stencil / drill | ALL PASSED |
+| verify_datasheet_nets | ALL PASSED |
+| verify_datasheet | 29/29 |
+| verify_design_intent | ALL PASSED |
+| verify_schematic_pcb_sync / netlist_diff | PASS |
+| generate_board_config --check | OK |
+| verify_strapping_pins | 11 pass (1 warn R14 DNP, known) |
+| verify_decoupling_adequacy | 23/23 |
+| verify_power_sequence | 32/32 |
+| verify_power_paths | 10 pass, 11 info |
+| verify_easyeda_footprint | 101 OK, 0 FAIL, 5 PENDING (LEDs), 1 REVIEW (J4), **1 WARN (J5, see R35-MED-1)** |
+| ERC | 0 critical, 0 warnings |
+| KiCad DRC | 0 violations, 0 unconnected |
+
+### Audio subsystem review (the new content)
+
+Topology confirmed from PCB nets + audio schematic:
+- **Headphone out** (passive, tapped off the always-on PDM line):
+  I2S_DOUT --R35 150R--> HP_FILT (--R36 470R--> GND divider, --C34 47nF-->
+  GND PDM low-pass) --C35 47uF--> HP_AC (--R39 4.7k--> GND bias) --R37/R38
+  33R--> HP_L/HP_R (both channels = mono).
+- **Auto-mute**: J5 pin 6 (TIP rest contact) = JACK_DET, R40 220k pull-up
+  to +3V3; Q3 2N7002 gate=JACK_DET, drain=PAM_MUTE (U5.5), source=GND.
+  Plug in → tip switch opens → JACK_DET pulled high → Q3 on → PAM8403
+  MUTE low → speaker off. Plug out → JACK_DET ~0V → Q3 off → MUTE floats
+  high → speaker on.
+
+**Key datasheet claim VERIFIED (not a bug):** the design relies on the
+PAM8403 MUTE pin (U5.5) having an internal pull-up so the speaker is ON
+when Q3 is off. Confirmed in `U5_PAM8403_..._official-Diodes.pdf`:
+"The MUTE pin can be left floating due to the internal pull-up." MUTE is
+active-low (logic low disables outputs). PAM_MUTE has no external pull-up
+and needs none. Q3 sinks the IMUTE 3.5 mA pull-up current when muting;
+2N7002 at Vgs=3.3V does this with mV of drop. Correct.
+
+### Domain findings
+- **Power chain / boot / display / SD / buttons / USB / emulator**: 0 new
+  (unchanged copper vs Round 34; gates green).
+- **Audio (new)**: 3 findings below, all LOW/MED — the subsystem is
+  functionally sound; no CRIT/HIGH.
+
+### Bug list
+
+#### R35-MED-1 — J5 pad→contact mapping is unverifiable by gate; must be confirmed at first-article
+- **Files**: hardware/datasheet_specs.py (J5), scripts/generate_pcb/footprints.py, verify_easyeda_footprint.py
+- **Problem**: J5's footprint uses a non-standard pad numbering (pads
+  2,3,4,5,6; no pad 1) and `verify_easyeda_footprint` emits WARN — "pad
+  naming schemes are not comparable, no geometric cross-check possible."
+  Pad 4 is deliberately unnetted (RING rest contact, unused). The entire
+  audio path AND the auto-mute depend on HP_L/HP_R/GND/JACK_DET landing on
+  the correct physical jack contacts; a mis-mapped or mis-oriented
+  footprint breaks both silently.
+- **Root cause**: community/EasyEDA footprint for C19712376 with its own
+  pad-naming convention; no automated pin-1/contact cross-check exists.
+- **Fix**: no code change — this is a **mandatory first-article-check
+  phase A item**: verify J5 keying + each pad's physical contact against
+  the PJ-327A (C19712376) datasheet and the JLC 3D order preview before
+  paying. Record the result. (Already flagged by the gate WARN by design.)
+
+#### R35-LOW-1 — auto-mute detect taps the driven TIP, so JACK_DET carries audio when unplugged
+- **Files**: scripts/generate_schematics/sheets/audio.py (mute network), datasheet_specs.py (J5 pin6, Q3)
+- **Problem**: with no plug, the tip switch ties JACK_DET to HP_L, which
+  carries the reconstructed audio (~±1.25 V peak at full scale:
+  3.3 Vpp × R36/(R35+R36)=0.758). 2N7002 Vgs(th) min is 1.0 V, so a
+  worst-case low-threshold unit at max volume could be pushed slightly
+  above threshold on positive peaks. The schematic notes "no gate RC is
+  needed", reasoning only about the plug-inserted steady state.
+- **Why it stays LOW**: actual muting is strongly suppressed — a barely-on
+  2N7002 (Vgs≈1.25 V) has high Rds and cannot sink the PAM8403 MUTE
+  internal pull-up's 3.5 mA hard enough to cross VIL, so the speaker does
+  not actually mute; at worst a tiny disturbance on the loudest peaks on
+  an extreme MOSFET unit.
+- **Fix (optional insurance)**: add ~100 nF from JACK_DET to GND — with
+  R40 220k it forms a ~22 ms low-pass that strips audio off the detect
+  node, making the mute purely DC-controlled. Cheap; revisit only if a
+  first article shows loud-passage speaker glitches when unplugged.
+
+#### R35-LOW-2 — passive headphone output is quiet, and loads GPIO17 with ~5 mA DC
+- **Files**: audio.py headphone network
+- **Problem**: headphones are driven passively from HP_AC (source impedance
+  ≈ R35‖R36 = 113 Ω) through 33 Ω series into 16-32 Ω — heavy attenuation,
+  ~0.2 V peak into 32 Ω (~0.75 mW). Also the R35/R36 tap draws a continuous
+  ~5 mA DC from GPIO17 (3.3 V / 620 Ω) on top of the PAM path.
+- **Assessment**: by design (a passive tap off the always-on PDM line);
+  audible but quiet. 5 mA is well within the GPIO's 40 mA source limit.
+  Not a defect — recorded so headphone loudness is a known expectation for
+  the first-article listening test, not a surprise.
+
+### Verdict
+No CRIT/HIGH. Layer 1 fully green. The auto-mute's load-bearing datasheet
+assumption (PAM8403 MUTE internal pull-up) is verified true. The only item
+needing action before the v4.7.0 order is R35-MED-1 (J5 orientation/contact
+mapping) at first-article phase A. Bench watch-list additions: unplugged
+loud-passage speaker glitch (R35-LOW-1), headphone loudness (R35-LOW-2).
