@@ -156,14 +156,7 @@ _SYMBOL_PAM8403 = """    (symbol "PAM8403_Module" (pin_names (offset 1.016)) (in
         (pin power_in line (at -10.16 0 0) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
         (pin input line (at -10.16 -3.81 0) (length 2.54) (name "AUDIO_IN" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
         (pin output line (at 10.16 3.81 180) (length 2.54) (name "SPK+" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))
-        (pin output line (at 10.16 0 180) (length 2.54) (name "SPK-" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
-        (pin input line (at 10.16 -3.81 180) (length 2.54) (name "MUTE" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))))\n"""
-# Pin 6 "MUTE" (added with the J5 headphone jack): SOP-16 pin 5, active
-# low with an internal pull-up (PAM8403 datasheet pin table). Freed from
-# the historic +5V strap so the jack-detect transistor Q3 can pull it
-# low. verify_netlist_diff maps it through _U5_MAP["6"] -> pad "5".
-# Drawn on the RIGHT edge (below SPK-) — a bottom-center pin put its
-# number on top of the Value text (verify_schematic_render_overlaps).
+        (pin output line (at 10.16 0 180) (length 2.54) (name "SPK-" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))))\n"""
 
 _SYMBOL_SD = """    (symbol "SD_Module" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
@@ -351,65 +344,6 @@ _SYMBOL_PMOS = """    (symbol "PMOS_SOT23" (pin_names (offset 0.508) hide) (in_b
         (pin passive line (at 5.08 -1.27 180) (length 2.54) (name "S" (effects (font (size 0.889 0.889)))) (number "2" (effects (font (size 1.016 1.016)))))
         (pin passive line (at 0 5.08 270) (length 2.54) (name "D" (effects (font (size 0.889 0.889)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
 
-# N-channel MOSFET, SOT-23 (2N7002) — Q3, the headphone-jack mute
-# driver. Same pin COORDINATES as PMOS_SOT23/BAT54C (see the PMOS note:
-# every SOT-23 small-signal symbol in this library shares that grid so
-# sheet wiring is interchangeable). Numbers follow the SOT-23 pads:
-#   1 = Gate  (enters left,  y=-1.27 local)
-#   2 = Source (enters right, y=-1.27 local)
-#   3 = Drain (enters top,   x=0 local)
-# Arrow drawn on the source lead pointing INTO the channel = N-channel
-# (KiCad Q_NMOS convention, mirror of the PMOS arrow).
-_SYMBOL_NMOS = """    (symbol "NMOS_SOT23" (pin_names (offset 0.508) hide) (in_bom yes) (on_board yes)
-      (property "Reference" "Q" (at 0 5.08 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "NMOS" (at 0 -5.08 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (symbol "NMOS_SOT23_0_1"
-        (polyline (pts (xy -1.27 -2.032) (xy -1.27 0.762)) (stroke (width 0.254) (type default)) (fill (type none)))
-        (polyline (pts (xy -0.635 -2.286) (xy -0.635 1.016)) (stroke (width 0.254) (type default)) (fill (type none)))
-        (polyline (pts (xy -2.54 -1.27) (xy -1.27 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
-        (polyline (pts (xy -0.635 -1.27) (xy 2.54 -1.27)) (stroke (width 0.254) (type default)) (fill (type none)))
-        (polyline (pts (xy -0.635 0.762) (xy 0 0.762) (xy 0 2.54)) (stroke (width 0.254) (type default)) (fill (type none)))
-        (polyline (pts (xy 0.762 -1.651) (xy 0 -1.27) (xy 0.762 -0.889) (xy 0.762 -1.651)) (stroke (width 0.254) (type default)) (fill (type outline))))
-      (symbol "NMOS_SOT23_1_1"
-        (pin input line (at -5.08 -1.27 0) (length 2.54) (name "G" (effects (font (size 0.889 0.889)))) (number "1" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 5.08 -1.27 180) (length 2.54) (name "S" (effects (font (size 0.889 0.889)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 0 5.08 270) (length 2.54) (name "D" (effects (font (size 0.889 0.889)))) (number "3" (effects (font (size 1.016 1.016)))))))\n"""
-
-# 3.5mm stereo headphone jack with switch contacts (HOOYA PJ-327A,
-# LCSC C19712376). Pin NUMBERS are the footprint pad numbers — no
-# verify_netlist_diff map needed. Roles from the HOOYA datasheet's
-# plug-travel diagram (tip zone touches 2, ring zone 5, sleeve 3; 6 and
-# 4 are the normally-closed rest contacts of 2 and 5 — they open when a
-# plug is inserted):
-#   2 = TIP (left)    5 = RING (right)    3 = SLEEVE (GND)
-#   6 = TIPSW  — NC to 2 when unplugged (jack-detect input)
-#   4 = RINGSW — NC to 5 when unplugged (unused here)
-_SYMBOL_AUDIO_JACK = """    (symbol "AudioJack_PJ327A" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
-      (property "Reference" "J" (at 0 8.89 0) (effects (font (size 1.27 1.27))))
-      (property "Value" "PJ-327A" (at 0 -8.89 0) (effects (font (size 1.27 1.27))))
-      (property "Footprint" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (property "Datasheet" "" (at 0 0 0) (effects (font (size 1.27 1.27)) hide))
-      (symbol "AudioJack_PJ327A_0_1"
-        (rectangle (start -6.35 7.62) (end 6.35 -7.62) (stroke (width 0.254) (type default)) (fill (type background)))
-        (circle (center -5.08 0) (radius 0.635) (stroke (width 0.254) (type default)) (fill (type none))))
-      (symbol "AudioJack_PJ327A_1_1"
-        (pin passive line (at -8.89 5.08 0) (length 2.54) (name "TIP" (effects (font (size 1.016 1.016)))) (number "3" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at -8.89 2.54 0) (length 2.54) (name "RING" (effects (font (size 1.016 1.016)))) (number "5" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at -8.89 -2.54 0) (length 2.54) (name "SLV" (effects (font (size 1.016 1.016)))) (number "2" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 8.89 5.08 180) (length 2.54) (name "SSW" (effects (font (size 1.016 1.016)))) (number "6" (effects (font (size 1.016 1.016)))))
-        (pin passive line (at 8.89 -2.54 180) (length 2.54) (name "TSW" (effects (font (size 1.016 1.016)))) (number "4" (effects (font (size 1.016 1.016)))))))\n"""
-# R36-HIGH-1 (2026-08-14): pin NUMBERS 2 and 3 corrected against the HOOYA
-# datasheet — the TIP pin is number 3, the SLEEVE pin number 2 (was
-# swapped). Names: pin 6 is the SLEEVE switch (SSW, the auto-mute detect),
-# pin 4 the TIP switch (TSW, unused). Positions unchanged; the schematic's
-# HP_L wire (top-left) now lands on pin 3 = TIP and GND (bottom-left) on
-# pin 2 = SLEEVE, matching the corrected PCB footprint.
-# Pin names SLV/TSW/RSW are abbreviated on purpose: the body is 12.7mm
-# wide and "SLEEVE" x "RINGSW" met in the middle
-# (verify_schematic_render_overlaps).
-
 _SYMBOL_USBLC6_2SC6 = """    (symbol "USBLC6_2SC6" (pin_names (offset 1.016)) (in_bom yes) (on_board yes)
       (property "Reference" "U" (at 0 7.62 0) (effects (font (size 1.27 1.27))))
       (property "Value" "USBLC6-2SC6" (at 0 -7.62 0) (effects (font (size 1.27 1.27))))
@@ -476,8 +410,6 @@ SYMBOLS: dict[str, str] = {
     "LED": _SYMBOL_LED,
     "BAT54C": _SYMBOL_BAT54C,
     "PMOS_SOT23": _SYMBOL_PMOS,
-    "NMOS_SOT23": _SYMBOL_NMOS,
-    "AudioJack_PJ327A": _SYMBOL_AUDIO_JACK,
     "USBLC6_2SC6": _SYMBOL_USBLC6_2SC6,
     "FPC_16P": _SYMBOL_FPC_16P,
     "PWR_FLAG": _SYMBOL_PWR_FLAG,

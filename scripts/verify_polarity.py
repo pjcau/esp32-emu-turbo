@@ -176,11 +176,7 @@ _strict("C29", [("1", "+3V3"), ("2", "BUCK_FB")])
 # ============================================================
 _strict("U5", [
     ("2", "GND"),
-    # Pin 5 (MUTE) left the +5V strap with the J5 headphone jack: it is
-    # now the PAM_MUTE control line, pulled low by Q3 when a plug is
-    # inserted and held high by the chip's internal pull-up otherwise
-    # (Diodes PAM8403 datasheet pin table: "may be left floating").
-    ("4", "+5V"), ("5", "PAM_MUTE"), ("6", "+5V"),
+    ("4", "+5V"), ("5", "+5V"), ("6", "+5V"),
     # INL/INR sit on the PAM8403 side of the C22 series DC-block, so the
     # net is PAM_IN_AC — I2S_DOUT stops at C22.1 on the ESP32 side.
     ("7", "PAM_IN_AC"), ("10", "PAM_IN_AC"),
@@ -188,26 +184,6 @@ _strict("U5", [
     ("12", "+5V"), ("13", "+5V"),
     ("14", "SPK-"), ("15", "GND"), ("16", "SPK+"),
 ])
-
-# ============================================================
-# J5 headphone jack (PJ-327A) + auto-mute chain
-# ============================================================
-# Datasheet-correct mapping (R36-HIGH-1): pin 2 = SLEEVE (GND),
-# pin 3 = TIP (HP_L), pin 5 = RING (HP_R), pin 6 = SLEEVE switch
-# (JACK_DET, GND-referenced auto-mute detect). Pad 4 (tip rest
-# contact) is deliberately unconnected. v4.7.0 had 2/3 swapped.
-_strict("J5", [
-    ("2", "GND"), ("3", "HP_L"), ("5", "HP_R"), ("6", "JACK_DET"),
-])
-_strict("Q3", [("1", "JACK_DET"), ("2", "GND"), ("3", "PAM_MUTE")])
-_strict("R35", [("1", "I2S_DOUT"), ("2", "HP_FILT")])
-_strict("R36", [("1", "HP_FILT"), ("2", "GND")])
-_strict("C34", [("1", "HP_FILT"), ("2", "GND")])
-_strict("C35", [("1", "HP_FILT"), ("2", "HP_AC")])
-_strict("R39", [("1", "HP_AC"), ("2", "GND")])
-_strict("R37", [("1", "HP_AC"), ("2", "HP_L")])
-_strict("R38", [("1", "HP_AC"), ("2", "HP_R")])
-_strict("R40", [("1", "+3V3"), ("2", "JACK_DET")])
 
 # ============================================================
 # U6: TF-01A (SD card module)
@@ -702,12 +678,8 @@ class PolarityVerificationTest(unittest.TestCase):
         self._check_strict("C29", "2", "BUCK_FB")
 
     def test_pam8403_power(self):
-        """U5 (PAM8403): VDD/PVDD/GND on correct pins.
-
-        Pin 5 (MUTE) is no longer in the +5V group — it carries
-        PAM_MUTE since the J5 headphone jack (see the mute test below).
-        """
-        for pin in ["4", "6", "12", "13"]:
+        """U5 (PAM8403): VDD/PVDD/GND on correct pins."""
+        for pin in ["4", "5", "6", "12", "13"]:
             self._check_strict("U5", pin, "+5V")
         for pin in ["2", "11", "15"]:
             self._check_strict("U5", pin, "GND")
@@ -1012,18 +984,13 @@ class PolarityVerificationTest(unittest.TestCase):
         """
         self._check_strict("U5", "12", "+5V")
 
-    def test_pam8403_mute_driven(self):
-        """PAM8403 /MUTE (pin 5) carries the headphone auto-mute line.
+    def test_pam8403_mute_not_floating(self):
+        """PAM8403 /MUTE (pin 5) must be tied HIGH (+5V).
 
-        The Diodes PAM8403 datasheet pin table gives MUTE an internal
-        pull-up ("may be left floating"), so the pin needs no external
-        tie — Q3's open drain (gate = JACK_DET, the J5 tip switch)
-        pulls it low when a plug is inserted, muting the speaker. The
-        old form of this test asserted the +5V strap that predates the
-        jack.
+        Datasheet: active-low mute, no internal pull-up.
+        Floating = undefined state, may produce noise.
         """
-        self._check_strict("U5", "5", "PAM_MUTE")
-        self._check_strict("Q3", "3", "PAM_MUTE")
+        self._check_strict("U5", "5", "+5V")
 
     def test_display_mode_select_pins(self):
         """Display IM0/IM1/IM2 must be correctly tied for 8080 8-bit parallel.

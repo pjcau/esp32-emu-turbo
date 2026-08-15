@@ -74,9 +74,7 @@ SECTION_LAW = [
     ("controls", r"^BTN_|^MENU_K$"),
     ("display",  r"^LCD_|^LED_BLA$"),  # LED_BLA: backlight anode after R27
     ("storage",  r"^SD_"),
-    # HP_* is the J5 headphone line-out chain; JACK_DET is its plug
-    # detect / auto-mute control node (PAM_MUTE already matches ^PAM_).
-    ("audio",    r"^I2S_|^PAM_|^SPK|^HP_|^JACK_DET$"),
+    ("audio",    r"^I2S_|^PAM_|^SPK"),
     ("usb",      r"^USB_D"),
     # mcu comes BEFORE power so LED6_RA is claimed here. LED1/2/3/4/5_RA are
     # passive rail-indicator junctions and belong to power; LED6_RA hangs off

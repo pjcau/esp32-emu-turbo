@@ -3138,11 +3138,8 @@ def test_jlcdfm_unconnected_trace_end():
     ZONE_FILL_DEAD_ENDS = {
         # BAT+ stub on F.Cu (zone fill connection to battery trace)
         ("F.Cu", 81.0, 46.135),
-        # (R37, 2026-08-15) The PAM_VREF stub at ("B.Cu", 34.445, 26.15) is
-        # GONE, not moved: routing/audio.py now starts it on U5 pin 8's pad
-        # centre, so it is a genuine pad connection and needs no waiver.
-        # The entry was never a zone-fill termination anyway — it was an
-        # expired collision detour that had outlived its collision.
+        # PAM_VREF stub on B.Cu (pin 8 decoupling, zone fill)
+        ("B.Cu", 34.445, 26.15),
         # USB_CC1/CC2 stubs on B.Cu (zone fill to GND plane via pulldowns)
         ("B.Cu", 86.95, 67.0),
         ("B.Cu", 74.95, 67.0),

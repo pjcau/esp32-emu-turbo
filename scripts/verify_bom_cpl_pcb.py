@@ -94,11 +94,6 @@ JLCPCB_FOOTPRINTS = {
     # land still has to be a real one, because the whole point is that it
     # CAN be fitted later.
     "SW-SMD-2P-TS1088",
-    # J5 headphone jack (C19712376, HOOYA PJ-327A): land drawn from the
-    # HOOYA datasheet PCB-layout drawing (5 pads 2.9x1.6 on 7.0mm
-    # columns + 2 NPTH Ø1.3) — the manufacturer's own reference, so
-    # JLCPCB-compatible by construction.
-    "PJ-327A",
 }
 
 PASS = 0

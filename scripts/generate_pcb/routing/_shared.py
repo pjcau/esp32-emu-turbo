@@ -725,46 +725,6 @@ C25_POS = (31.5, 37.5)   # PVDD decoupling (pin 13 to GND) — 5.8mm from pin 13
 R20_POS = (38.0, 26.500) # INL bias to GND — 3.0mm from C21, 3.0mm from C23
 R21_POS = (38.0, 32.500) # INR bias to GND — 3.0mm from C23
 
-# ── Headphone jack (J5) + auto-mute (routing/audio.py::_headphone_*) ──
-#
-# GEOGRAPHY LESSON that cost this layout three attempts: the bottom
-# half of the board is fenced by the button-matrix B.Cu VERTICALS
-# (walls at x = 45.55, 53.10, 58.10, 63.10, 64.80, 65.55, 67.83 running
-# from the button rows down to y 62..73) and by the F.Cu bottom highway
-# (11 horizontal rows, y 62.0..74.46) plus the F.Cu inter-row block at
-# y 55..58. Components can share x with an F.Cu row (different layer)
-# but B.Cu traces cannot cross a wall and THROUGH-vias cannot land on
-# either. Placement below exploits the three real pockets:
-#   NORTH  x 44..52.5, y 17..41  (empty B.Cu) — the whole PDM filter
-#   P1     x 46..52.8, y 52.5..63 (between walls 45.55/53.10) — R37/R38
-#   P2a    x 53.4..57.8, y 56..63 (between walls 53.10/58.10) — R40/Q3
-#
-# Jack at the bottom edge, front face 0.1mm inboard (rot 180; the
-# barrel still overhangs 1.3mm, like J1's shell — at a flush 75.0 the
-# pad-4 land sat 0.25mm from the edge, under JLCPCB's 0.30mm rule).
-# x=52.0 chosen so the two NPTH locating holes (52,65.9)/(52,71.9)
-# fall in F-highway gaps — only the BTN_RIGHT row (y=65.6) and BTN_Y
-# row (y=71.56) needed local detours (see routing/buttons.py).
-J5_POS = (52.0, 74.9)
-J5_ROT = 180
-# Resulting pads: 2/TIP (48.5,65.51)=HP_L  3/SLEEVE (48.5,72.60)=GND
-#   4/RINGSW (55.5,73.20)=n.c.  5/RING (55.5,69.60)=HP_R
-#   6/TIPSW (55.5,63.91)=JACK_DET
-# NORTH filter pocket (all rot 90: pad 1 north, matching the schematic
-# pin-1-upstream convention):
-R35_POS = (47.0, 27.0)   # 150R series from I2S_DOUT (pad1 N = tap via)
-R36_POS = (47.0, 30.4)   # 470R attenuator HP_FILT -> GND
-C34_POS = (49.3, 30.4)   # 47nF PDM low-pass HP_FILT -> GND
-C35_POS = (51.5, 33.4)   # 47uF AC coupling HP_FILT -> HP_AC
-R39_POS = (49.3, 36.4)   # 4.7k DC bleed HP_AC -> GND
-# P1 pocket (channel series resistors, one row):
-R37_POS = (47.5, 57.2)   # 33R, rot 0: pad1 E = HP_AC, pad2 W = HP_L
-R38_POS = (51.2, 57.2)   # 33R, rot 180: pad1 W = HP_AC, pad2 E = HP_R
-# P2a pocket (detect):
-R40_POS = (54.6, 57.6)   # 220k pull-up, rot 90: pad1 N = +3V3 via
-Q3_POS = (55.0, 61.5)    # 2N7002, rot 270: G/S column west, D pad east
-Q3_ROT = 270             # G (53.9,62.45) S (53.9,60.55) D (56.1,61.5)
-
 # USB ESD protection positions (synced with board.py placements)
 # U4 (USBLC6-2SC6 SOT-23-6): placed between D+/D- approach columns.
 # Pins 3/4 (D+) overlap D+ trace at x=90.25, pins 1/6 (D-) overlap D- trace at x=91.65.
@@ -1072,7 +1032,6 @@ def _init_pads():
         ("J3", "JST-PH-2P-SMD", *JST, 180, "B"),
         ("SPK1", "Speaker-28mm", *SPEAKER, 0, "B"),
         ("SW16", "SS-12D00G3", *PWR_SW, 0, "B"),
-        ("J5", "PJ-327A", *J5_POS, J5_ROT, "B"),
     ]
     for ref, fp_name, cx, cy, rot, lc in components:
         _PADS[ref] = _compute_pads(fp_name, cx, cy, rot, lc)
@@ -1109,9 +1068,6 @@ def _init_pads():
 
     # SW16 respin: Q2 high-side +5V switch
     _PADS["Q2"] = _compute_pads("SOT-23-3", Q2_POS[0], Q2_POS[1], Q2_ROT, "B")
-
-    # Headphone jack auto-mute transistor
-    _PADS["Q3"] = _compute_pads("SOT-23-3", Q3_POS[0], Q3_POS[1], Q3_ROT, "B")
 
     # Key passives with explicit routing
     passive_placements = [
@@ -1154,15 +1110,6 @@ def _init_pads():
         ("LED4", "LED_0805", *LED4_POS, 0, "F"),
         ("LED5", "LED_0805", *LED5_POS, 0, "F"),
         ("LED6", "LED_0805", *LED6_POS, 0, "F"),
-        # Headphone jack filter + detect passives
-        ("R35", "R_0805", *R35_POS, 90, "B"),
-        ("R36", "R_0805", *R36_POS, 90, "B"),
-        ("C34", "C_0805", *C34_POS, 90, "B"),
-        ("C35", "C_0805", *C35_POS, 90, "B"),
-        ("R39", "R_0805", *R39_POS, 90, "B"),
-        ("R37", "R_0805", *R37_POS, 0, "B"),
-        ("R38", "R_0805", *R38_POS, 180, "B"),
-        ("R40", "R_0805", *R40_POS, 90, "B"),
         # PAM8403 passives
         ("C21", "C_0805", *C21_POS, 0, "B"),
         ("C22", "C_0805", *C22_POS, 90, "B"),

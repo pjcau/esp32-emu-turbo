@@ -20,7 +20,6 @@ from .audio import _i2s_traces
 from .passives import _diag_led_traces
 from .passives import _led_traces
 from .buttons import _menu_diode_traces
-from .audio import _headphone_traces
 from .audio import _pam_passive_traces
 from .passives import _passive_traces
 from .power import _power_traces
@@ -107,7 +106,6 @@ def _route_once(report: bool = True):
     all_parts.extend(_spi_traces())
     all_parts.extend(_i2s_traces())
     all_parts.extend(_pam_passive_traces())
-    all_parts.extend(_headphone_traces())
     all_parts.extend(_usb_traces())
     all_parts.extend(_usb_c_reversibility_traces())
     all_parts.extend(_button_traces())

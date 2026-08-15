@@ -264,10 +264,7 @@ COMPONENT_SPECS = {
     # OUTL+/OUTL- are left floating — PAM8403 datasheet app note allows
     # unused BTL outputs to float; both amplifiers are still biased and
     # consume ~2mA quiescent each (negligible on a handheld battery).
-    # SHDN tied high (+5V) for always-on. MUTE carries PAM_MUTE since
-    # the J5 headphone jack: the pin has an internal pull-up (datasheet
-    # pin table — may float = unmuted) and Q3's open drain pulls it low
-    # when a plug is inserted, muting the speaker.
+    # SHDN tied high (+5V) for always-on; MUTE tied high (+5V) for unmuted.
     # ======================================================================
     "U5": {
         "component": "PAM8403 Class-D Audio Amplifier",
@@ -279,7 +276,7 @@ COMPONENT_SPECS = {
             "2":  {"net": _exact("GND"),        "function": "PGND — power ground", "type": "smd"},
             "3":  {"net": _unconnected(),       "function": "OUTL- — left channel - (floating, only right channel wired to speaker)", "type": "smd"},
             "4":  {"net": _exact("+5V"),        "function": "PVDD — power supply", "type": "smd"},
-            "5":  {"net": _exact("PAM_MUTE"),   "function": "MUTE — active low, internal pull-up; pulled low by Q3 when a headphone plug is in J5", "type": "smd"},
+            "5":  {"net": _exact("+5V"),        "function": "MUTE — active low, tied high (unmuted)", "type": "smd"},
             "6":  {"net": _exact("+5V"),        "function": "VDD — analog power supply", "type": "smd"},
             "7":  {"net": _exact("PAM_IN_AC"),  "function": "INL — left audio input (AC-coupled through C22)", "type": "smd"},
             "8":  {"net": _any_of("PAM_VREF", ""),  "function": "VREF — internal reference (bypass cap C21 to GND)", "type": "smd"},
@@ -291,61 +288,6 @@ COMPONENT_SPECS = {
             "14": {"net": _exact("SPK-"),       "function": "OUTR- — right channel - (speaker -)", "type": "smd"},
             "15": {"net": _exact("GND"),        "function": "PGND — power ground", "type": "smd"},
             "16": {"net": _exact("SPK+"),       "function": "OUTR+ — right channel + (speaker +)", "type": "smd"},
-        },
-    },
-
-    # ======================================================================
-    # J5 — HOOYA PJ-327A 3.5mm headphone jack (C19712376)
-    # Datasheet: fetched from LCSC 2026-08-12 (drawing rev A1 2020.6.23).
-    # Pin roles CORRECTED 2026-08-14 (R36-HIGH-1) from the HOOYA datasheet
-    # now on disk (J5_PJ-327A_C19712376.pdf). Two independent authoritative
-    # views agree: the plug-travel diagram labels the SLEEVE zone "2/6", the
-    # RING zone "5", the TIP (point) "3"; and the internal schematic draws
-    # pin 2 as the fixed sleeve tab and pin 6 as a NORMALLY-CLOSED switch
-    # (∧ symbol) on the sleeve barrel that opens when a plug is inserted.
-    # v4.7.0 shipped TIP/SLEEVE swapped (2=TIP, 3=SLEEVE) — the real defect,
-    # which broke the headphone audio (right channel cancels, ground on the
-    # tip). The detect on pin 6 is KEPT: it is the sleeve NC switch, which
-    # is GROUND-REFERENCED when closed (unplugged), so JACK_DET reads a
-    # clean 0V (no audio on the detect) — better than the tip switch, and
-    # it needs no gate RC. Only the tip/sleeve audio swap is fixed:
-    #   2 = SLEEVE (fixed tab)          -> GND     (was HP_L)
-    #   3 = TIP                         -> HP_L    (was GND)
-    #   4 = TIP rest contact (unused)   -> (nc)
-    #   5 = RING                        -> HP_R    (unchanged)
-    #   6 = SLEEVE NC switch (detect)   -> JACK_DET(unchanged; opens on insert)
-    # First-article check: confirm the speaker mutes when a plug is
-    # inserted (i.e. pin 6 does open) — the one behaviour the datasheet
-    # symbol implies but only the physical part proves.
-    # ======================================================================
-    "J5": {
-        "component": "PJ-327A 3.5mm Headphone Jack",
-        "lcsc": "C19712376",
-        "datasheet": "J5_PJ-327A_C19712376.pdf",
-        "datasheet_page": 1,
-        "pins": {
-            "2": {"net": _exact("GND"),      "function": "SLEEVE — ground (fixed barrel tab)", "type": "smd"},
-            "3": {"net": _exact("HP_L"),     "function": "TIP — left channel (mono feed via R37)", "type": "smd"},
-            "4": {"net": _unconnected(),     "function": "TIP rest contact (NC switch, unused)", "type": "smd"},
-            "5": {"net": _exact("HP_R"),     "function": "RING — right channel (mono feed via R38)", "type": "smd"},
-            "6": {"net": _exact("JACK_DET"), "function": "SLEEVE NC switch — GND when unplugged, opens on insert (auto-mute detect)", "type": "smd"},
-        },
-    },
-
-    # ======================================================================
-    # Q3 — 2N7002 N-channel MOSFET (C8545), headphone auto-mute driver
-    # Gate = JACK_DET (R40 220k pull-up to +3V3; the closed tip switch
-    # parks it at ~0V when unplugged). Open drain on PAM_MUTE.
-    # ======================================================================
-    "Q3": {
-        "component": "2N7002 N-Channel MOSFET",
-        "lcsc": "C8545",
-        "datasheet": "Q3_2N7002_C8545.pdf",
-        "datasheet_page": 1,
-        "pins": {
-            "1": {"net": _exact("JACK_DET"), "function": "Gate — jack detect node", "type": "smd"},
-            "2": {"net": _exact("GND"),      "function": "Source", "type": "smd"},
-            "3": {"net": _exact("PAM_MUTE"), "function": "Drain — open-drain mute pull-down", "type": "smd"},
         },
     },
 

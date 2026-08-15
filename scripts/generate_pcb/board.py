@@ -393,9 +393,6 @@ def _silkscreen_labels():
     parts.append(P.gr_text("LCD", px, py - 14.75, "B.SilkS", 1.0))
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
     parts.append(P.gr_text("PWR", px, py - 5, "B.SilkS", 1.0))
-    # Headphone jack label — east of the J5 body, clear of pad 5
-    # (east edge 56.95) and of the NPTH holes on x=52.
-    parts.append(P.gr_text("HP", 59.5, 67.3, "B.SilkS", 1.0))
     # Speaker + shoulder buttons
     px, py = enc_to_pcb(*SPEAKER_ENC)
     parts.append(P.gr_text("SPEAKER", px, py, "B.SilkS", 1.0))
@@ -464,19 +461,6 @@ def _silkscreen_labels():
         # PAM8403 passives — above/below U5
         ("C24", "1uF", 29.365, 22.0, -3.0, 0),
         ("C25", "1uF", 31.5, 37.5, 0, 2.5),
-        # Headphone jack chain — north filter pocket labels sit east of
-        # each part (the pocket is empty), P1/P2a labels go where the
-        # walls leave room.
-        ("R35", "150R", 47.0, 27.0, 2.6, 0),
-        ("R36", "470R", 47.0, 30.4, -2.6, 0),
-        ("C34", "47nF", 49.3, 30.4, 2.6, 0),
-        ("C35", "47uF", 51.5, 33.4, -2.7, 0),
-        # R39's label goes WEST: at +2.6 it sat 3.3mm from the (55,37.5)
-        # mounting hole and verify_dfm flags gr_text within 6mm.
-        ("R39", "4.7k", 49.3, 36.4, -2.6, 0),
-        ("R37", "33R", 47.5, 57.2, 0, -1.6),
-        ("R38", "33R", 51.2, 57.2, 0, -1.6),
-        ("R40", "220k", 54.6, 57.6, 0, -2.6),
     ]
     for ref, val, cx, cy, dx, dy in _passive_labels:
         parts.append(P.gr_text(
@@ -561,12 +545,6 @@ def _component_placeholders():
 
     px, py = enc_to_pcb(*PWR_SWITCH_ENC)
     placements.append(("SW16", "SS-12D00G3", px, py, 0, "B.Cu"))
-
-    # Headphone jack (bottom edge, right of the power switch; front
-    # face on the edge, barrel overhangs like J1). Position/rotation
-    # rationale in routing/_shared.py::J5_POS.
-    placements.append(("J5", "PJ-327A", *routing.J5_POS,
-                       routing.J5_ROT, "B.Cu"))
 
     px, py = enc_to_pcb(*SPEAKER_ENC)
     placements.append(("SPK1", "Speaker-28mm", px, py, 0, "B.Cu"))
@@ -685,18 +663,6 @@ def _component_placeholders():
     # C28 ESP32 +3V3 bulk cap (10uF, 2.8mm from U1 pin 2)
     placements.append(("C28", "C_0805", *routing.C28_POS, 90, "B.Cu"))
 
-    # Headphone jack chain (B.Cu) — see routing/_shared.py for the
-    # pocket geography that fixes these positions.
-    placements.append(("Q3", "SOT-23-3", *routing.Q3_POS, routing.Q3_ROT, "B.Cu"))
-    placements.append(("R35", "R_0805", *routing.R35_POS, 90, "B.Cu"))  # PDM series
-    placements.append(("R36", "R_0805", *routing.R36_POS, 90, "B.Cu"))  # attenuator
-    placements.append(("C34", "C_0805", *routing.C34_POS, 90, "B.Cu"))  # PDM low-pass
-    placements.append(("C35", "C_0805", *routing.C35_POS, 90, "B.Cu"))  # AC coupling
-    placements.append(("R39", "R_0805", *routing.R39_POS, 90, "B.Cu"))  # DC bleed
-    placements.append(("R37", "R_0805", *routing.R37_POS, 0, "B.Cu"))   # tip series
-    placements.append(("R38", "R_0805", *routing.R38_POS, 180, "B.Cu"))  # ring series
-    placements.append(("R40", "R_0805", *routing.R40_POS, 90, "B.Cu"))  # detect pull-up
-
     # PAM8403 passive components (B.Cu)
     # PAM8403 passives — spread ~2mm from body for clean layout
     placements.append(("C22", "C_0805", *routing.C22_POS, 90, "B.Cu"))  # DC-blocking
@@ -741,9 +707,6 @@ def _component_placeholders():
         "Speaker-28mm": (-13, 13),
         "JST-PH-2P-SMD": (-3, 3),
         "SS-12D00G3": (-4, 4),
-        # Jack sits ON the bottom edge: +13 would print off-board, so
-        # both fields go north of the body (B.Fab only).
-        "PJ-327A": (-14, -12),
         "SMD-4x4x2": (-4, 4),
         "IND-SMD-4.0x4.0": (-4, 4),
         "Fiducial": (-2, 2),
