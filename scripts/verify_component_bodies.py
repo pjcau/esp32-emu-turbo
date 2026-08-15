@@ -66,6 +66,9 @@ EDGE_MOUNT = {
     "J1": "USB-C receptacle — plug mouth must protrude past the edge",
     "U6": "TF-01A microSD holder — card mouth must protrude past the edge",
     "SW16": "MSK12C02 slide switch — actuator must reach the enclosure wall",
+    "J5": "PJ-327A headphone jack — barrel/plug mouth must protrude past "
+          "the edge (same edge-mount class as J1/U6; front face on the "
+          "board edge, body extends inboard)",
 }
 
 failures = []
@@ -142,6 +145,24 @@ def parse_board():
                 w, h = h, w
             fp["pads"].append(dict(num=mp.group(1), type=mp.group(2),
                                    X=X, Y=Y, W=w, H=h))
+        # The footprint's OWN body outline (B.Fab/F.Fab). Authoritative for
+        # parts whose JLC 3D reference cannot be fitted (J5/J1/U1) — used as
+        # the clearance-check body so no connector is left unchecked. Not an
+        # override: it is our declared body rectangle, transformed to board
+        # coordinates exactly like the pads.
+        fxs, fys = [], []
+        a_ = math.radians(fp["rot"])
+        ca, sa = math.cos(a_), math.sin(a_)
+        for la, lb in sexp_blocks(blk, "fp_line") + sexp_blocks(blk, "fp_rect"):
+            el = blk[la:lb]
+            if "Fab" not in el:  # only the fabrication body outline
+                continue
+            for mc in re.finditer(
+                    r"\((?:start|end)\s+([-\d.]+)\s+([-\d.]+)\)", el):
+                lx, ly = float(mc.group(1)), float(mc.group(2))
+                fxs.append(fp["x"] + lx * ca + ly * sa)
+                fys.append(fp["y"] - lx * sa + ly * ca)
+        fp["own_box"] = (min(fxs), min(fys), max(fxs), max(fys)) if fxs else None
         fps.append(fp)
     return fps
 
@@ -214,7 +235,11 @@ def fit_bodies(fps):
             continue
         ref_data = load_ref_outline(lcsc)
         if ref_data is None or not ref_data[0] or ref_data[2] is None:
-            unfit.append((fp["ref"], lcsc, "no cached outline"))
+            if fp.get("own_box"):
+                bodies[fp["ref"]] = dict(layer=fp["layer"], box=fp["own_box"],
+                                         fp=fp, fallback=True)
+            else:
+                unfit.append((fp["ref"], lcsc, "no cached outline"))
             continue
         rpads, rnamed, rbox = ref_data
         ours = [(p["X"], p["Y"]) for p in fp["pads"]
@@ -260,7 +285,13 @@ def fit_bodies(fps):
                     best = (err, rot, mirror, dx, dy)
         err, rot, mirror, dx, dy = best
         if err > FIT_ERR_MAX:
-            unfit.append((fp["ref"], lcsc, f"fit error {err:.2f}mm"))
+            # No usable 3D reference fit — fall back to our own footprint
+            # body outline so the part is still clearance-checked.
+            if fp.get("own_box"):
+                bodies[fp["ref"]] = dict(layer=fp["layer"], box=fp["own_box"],
+                                         fp=fp, fallback=True)
+            else:
+                unfit.append((fp["ref"], lcsc, f"fit error {err:.2f}mm"))
             continue
         x0, y0, x1, y1 = rbox
         cs = [xform(c, rot, mirror)
