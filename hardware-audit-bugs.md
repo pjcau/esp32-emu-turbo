@@ -4138,3 +4138,74 @@ semantics).
   re-upload, every C19171391 green mark must sit on the GND side
   (board-left in top view); LED1's mark stays the open question of its
   own model texture — inspect with parts deselected.
+
+## Round 37 Findings (2026-08-15) — post-revert audit of v4.6.2 (jack dropped)
+
+Context: after evaluating the headphone-jack programme (v4.7.0 J5 + Q3
+auto-mute → v4.8.0 J5 TIP/SLEEVE fix → v4.8.1 U5 land match), the user
+chose to abandon it and revert the active design **byte-identical to tag
+v4.6.2** (commit 1875670, `git read-tree --reset v4.6.2` + kept the
+jlcdfm-upload skill, session JLCDFM reports, and the verify_cpl_rotation_law
+LED2-6 exception). Rounds 34-36 were the jack programme and are reverted
+out of this file; jack lives only in tags v4.7.0/v4.8.0/v4.8.1. This audit
+certifies the reverted tree is self-consistent and jack-free.
+
+### Step 0 gates — ALL PASS
+| Gate | Result |
+|------|--------|
+| verify_trace_through_pad | 1 passed, 0 failed |
+| verify_trace_crossings | 1 passed, 0 failed |
+| verify_copper_clearance | 0 DANGER, 4 WARN (baseline button-matrix, same-net) |
+| verify_net_connectivity | PASS (0 failed) |
+| verify_dfm_v2 | 124 passed, 0 failed |
+| verify_dfa | 10 passed, 0 failed |
+| validate_jlcpcb | 24 passed, 0 failed, 1 info-warn |
+| verify_bom_cpl_pcb | ALL CHECKS PASSED |
+| verify_polarity | 304 pin-to-net (201 strict + 103 zone-ok), 0 fail |
+| verify_jlcpcb_capabilities / stencil / drill | ALL PASS |
+| verify_datasheet_nets | ALL CHECKS PASSED |
+| verify_datasheet | 29 passed (exit 0) |
+| verify_design_intent | ALL CHECKS PASSED (369) |
+| verify_schematic_pcb_sync | PASS — schematic, PCB, datasheet_specs agree |
+| verify_netlist_diff | PASS — schematic and PCB consistent |
+| generate_board_config --check | PASS (config.py ↔ board_config.h) |
+| verify_strapping_pins | 11 passed, 1 info-warn |
+| verify_decoupling_adequacy | 23 passed, 0 failed |
+| verify_power_sequence | 32 passed, 0 failed |
+| verify_power_paths | 10 passed, 11 info (zone-dependent) |
+| erc_check | 0 critical, 0 warnings |
+| KiCad DRC | 0 violations, 0 unconnected |
+
+### Revert-consistency check (the point of this round) — CLEAN
+- **Zero functional jack references** anywhere in the board generator
+  (`scripts/generate_pcb/`, `scripts/generate_schematics/`,
+  `datasheet_specs.py`), the gate scripts, or `website/docs/`,
+  `docs/known-issues.md`, `docs/open-tasks.md`. J5 / Q3 / PJ-327 / 2N7002
+  / HP_L / HP_R / JACK_DET / auto-mute all absent.
+- **Firmware**: no jack GPIO/nets. The only "headphone" strings are in
+  third-party emulator source (smsplus PORTING notes) — not ours.
+- **CPL**: 98 placements, **0 rows for J5 or Q3** — correct v4.6.2 set.
+- **Enclosure**: `ports.scad` defines a `headphone_jack_cutout` module but
+  **never instantiates it** — and it already existed in v4.6.2 (pre-jack
+  optional helper), so it is NOT a revert residue. No action.
+
+### Domain findings (Layer 2)
+The board is byte-identical to tag v4.6.2, which passed a full functional
+audit at Round 34 (post-LED-fix re-audit, 25/25 gates, zero findings) on
+identical copper. All cross-domain consistency (power chain, ESP32 boot,
+display, audio path, SD, buttons, USB) is re-asserted here by the Layer 1
+cross-source gates (design_intent 369, schematic_pcb_sync, netlist_diff,
+board_config, datasheet_nets 267) — all green. No new prose findings; the
+domain conclusions of Round 34 stand unchanged.
+
+- **Power chain**: 0 · **ESP32 boot**: 0 · **Display**: 0 · **Audio**: 0
+  (speaker path only, no jack) · **SD card**: 0 · **Buttons**: 0 ·
+  **USB**: 0 · **Emulator perf**: 0
+
+### Bug list
+None. Layer 1 fully green; revert is clean and jack-free; board == v4.6.2
+(Round-34 validated). **Verdict: v4.6.2 certified consistent, ready to
+order.** Residual SMT-DFM advisory flags (J4 FPC pin-inner-edge ×50, U2
+thermal-EP GND via lead-to-hole ×1) are JLC library 3D-model artifacts,
+not defects — proven in the v4.8.1 experiment where U5's land matched
+JLC's exact reference (coverage 1.000) yet the pin-edge flags persisted.
