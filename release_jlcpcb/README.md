@@ -70,7 +70,46 @@ Raytraced 3D views of the assembled board (KiCad raytracer, synced from
 
 ## Release History
 
-### v4.4.0 — 2026-08-01 (current)
+### v4.8.1 — 2026-08-15 (current)
+
+**R37 — U5 SOP-16 land matched to the JLC reference (SMT-DFM "pin edge"
+elimination):**
+
+- JLC's online SMT DFM flagged **73 "pin left/right edge" dangers** on
+  **U5 (PAM8403)** — its land was 1.55 × 0.6 mm at rows ±2.70, while JLC's
+  reference land (cached EasyEDA package for C5122557) is 1.745 × 0.56 mm
+  at ±2.87, i.e. **0.2675 mm short on the outward lead-tip side of every
+  pin**. That deficit is exactly what JLC measures as a tip overhang.
+- **Fix**: U5's land now matches the reference exactly (1.745 × 0.56 @
+  ±2.87). `verify_pad_land` coverage for U5 went 0.888 → **1.000**, axis
+  deficit 0.195 mm → **0**. The 73 flags are removed at the source.
+- The growth is **outward**; the inward edge actually retreated 0.0725 mm,
+  so every inward clearance (the 3-via thermal column, the SPK-/+5V bridge
+  vias) *improved*. U5 did not move and **no net was re-assigned**.
+- Routing: three constants in `routing/audio.py` followed the wider pad —
+  the SPK- F.Cu bridge over pin 3 (25.50→25.25, the real blocker: pin 3 is
+  the NC -OUT_L land, a different net), the +5V bridge via (25.65→25.45,
+  `verify_via_in_pad` floor), and the PAM_VREF stub (now starts on the pad
+  centre). All gaps recomputed with margin; the now-dead
+  `ZONE_FILL_DEAD_ENDS` waiver for the old VREF dead-end was removed.
+- **Copper-only vs v4.8.0**: BOM/CPL **byte-identical** (bom.csv md5
+  b277c935, cpl.csv d9d01ffc; U5 placement 30.00/29.50 @180 Bottom
+  unchanged). Only `gerbers.zip` changed.
+- **Verification**: verify-all 104/104, DFM 124/124, DFA 10/10,
+  gate-coverage 13/13 caught by owners, trace-through-pad 0, net
+  connectivity 0, copper clearance 0 DANGER, power nets all single copper,
+  KiCad DRC 0 violations.
+- **Order manifest** (`order-manifest.json`, what the upload is checked
+  against):
+  - `gerbers.zip` `9f2358bdec9725f1eee5bba1045ef50e9d6a4b753edb1ee5e68031fd9e5d2790`
+  - `bom.csv` `99aa528c3da3a85cd77b3b8605a34d25cd80c156d67ec0f5eeb087c86b3c6671`
+  - `cpl.csv` `dd4e203911d7a06e4561c78cb2ad254fd49a01440d3938d1ce3065d26c618371`
+- Supersedes **v4.8.0** (R36-HIGH-1, J5 headphone-jack TIP/SLEEVE fix).
+  The remaining SMT-DFM dangers (J4 FPC pin-inner-edge, J1 USB-C
+  pin-without-pad/missing-hole, U2 thermal-EP lead-to-hole) are inherent
+  JLC library 3D-model artifacts, not board defects.
+
+### v4.4.0 — 2026-08-01
 
 **Gate-coverage expansion (audit categories 15-18) + 10 live bugs fixed:**
 

@@ -188,15 +188,27 @@ def _i2s_traces():
         # top edge, via to F.Cu, cross pin 3 on F.Cu (different layer), via back
         # to B.Cu below pin 3, then continue to speaker via.
         #
-        # Pin 3 AABB y=[26.025, 27.575]. Via size 0.6mm (r=0.3).
-        # bridge_top: pin 3 bottom edge (27.575) + via_r (0.3) + clearance (0.15) = 28.025
-        # bridge_bot: pin 3 top edge (26.025) - via_r (0.3) - clearance (0.15) = 25.575
-        # Existing GND via at (26.825, 24.8): gap to bridge_bot via at (28.095, 25.5):
-        #   dist = sqrt(1.27^2 + 0.7^2) = 1.45mm > 0.85mm (0.3+0.3+0.25) ✓
-        # Existing PVDD via at (29.365, 28.7): gap to bridge_top via at (28.095, 28.1):
-        #   dist = sqrt(1.27^2 + 0.6^2) = 1.40mm > 0.85mm ✓
-        bridge_top_y = 28.1   # above pin 3 top edge + via_r + clearance
-        bridge_bot_y = 25.5   # below pin 3 bottom edge - via_r - clearance
+        # R37: U5's land now matches the JLC reference (footprints.sop16),
+        # so the top pin row sits at y=26.63 and pin 3's AABB grew NORTH:
+        # y=[25.7575, 27.5025] (was [26.025, 27.575]). Via size 0.6mm (r=0.3).
+        # bridge_top: pin 3 south edge (27.5025) + via_r (0.3) + clearance
+        #   (0.15) = 27.9525 → 28.1 kept (0.2975mm of copper, was 0.225) ✓
+        # bridge_bot: pin 3 north edge (25.7575) - via_r (0.3) - clearance
+        #   (0.15) = 25.3075. 25.50 would now leave only 0.1575mm, under the
+        #   0.15mm preferred floor with no margin — and pin 3 is the NC
+        #   -OUT_L land, a DIFFERENT net from SPK-, so this is a real short
+        #   risk, not a same-net touch. Moved to 25.25 → 0.2075mm ✓
+        # The two neighbouring vias moved WITH the pad row (both are placed
+        # at a fixed offset from a pad centre), so their gaps are recomputed:
+        #   pin-2 GND via, now (26.825, 24.63): dist to the bridge_bot via
+        #     at (28.095, 25.25) = sqrt(1.27^2 + 0.62^2) = 1.413mm >
+        #     0.85mm (0.3+0.3+0.25) ✓
+        #   PVDD13 via, now (29.365, 28.87): dist to the bridge_top via at
+        #     (28.095, 28.1) = sqrt(1.27^2 + 0.77^2) = 1.485mm > 0.85mm ✓
+        # C24.2 pad (29.365, 22.95) 1.35x1.15, left edge 28.69: the B.Cu
+        #   drop at x=28.095 (w=0.3, right edge 28.245) clears it by 0.445 ✓
+        bridge_top_y = 28.1   # above pin 3 bottom edge + via_r + clearance
+        bridge_bot_y = 25.25  # above pin 3 top edge - via_r - clearance (R37)
         mid_y = 23.7  # speaker crossover via Y (unchanged)
 
         # B.Cu: pin 14 down to bridge_top
@@ -434,15 +446,25 @@ def _pam_passive_traces():
     if pam_vref and c21_p1 and c21_p2:
         # c21_p2 at (35.55, 24.5) = near pad (VREF side)
         # c21_p1 at (37.45, 24.5) = far pad (GND side)
-        # COLLISION FIX: VREF pin 8 at (34.445, 26.800). PAM_IN_AC horiz (net59)
-        # runs at y=26.8 from INL (33.175) to R20 pad2 (35.05) on B.Cu.
-        # Starting the VREF vert at (34.445, 26.800) creates a segment-segment
-        # crossing with the PAM_IN_AC horiz (gap=-0.200mm).
-        # Fix: start VREF vert at pad top edge (y=26.15), 0.65mm above pad center.
-        # The pad copper naturally connects the VREF vert to pin 8.
-        # VREF vert bottom edge at 26.15+0.10=26.25; PAM_IN_AC top edge at 26.80-0.10=26.70.
-        # Gap = 0.45mm >> 0.10mm required. OK.
-        _vref_start_y = pam_vref[1] - 0.65  # pad top edge = 26.800 - 0.65 = 26.15
+        # HISTORY — why this stub used to start 0.65mm ABOVE the pad centre
+        # instead of at it: PAM_IN_AC once ran a B.Cu horizontal at y=26.8
+        # from INL (33.175) to R20.2, and a stub starting on pin 8's centre
+        # would have collided with it (gap -0.200mm). That horizontal is
+        # gone — PAM_IN_AC now reaches R20 through the y=28.0 detour built
+        # in _pam_passive_traces — so the reason expired, but the offset
+        # stayed, and with it a permanent dead-end endpoint that
+        # verify_dfm_v2 carried in its ZONE_FILL_DEAD_ENDS allowlist at
+        # ("B.Cu", 34.445, 26.15).
+        #
+        # R37: U5's land moved to the JLC reference, so that hard-coded
+        # 26.15 no longer lands anywhere meaningful. Rather than chase it
+        # with a new magic number, start the stub ON the pad centre: the
+        # 0.75mm it gains is copper that lies entirely INSIDE pin 8's own
+        # land (x 34.165..34.725, y 25.7575..27.5025), so it adds no
+        # external copper and cannot change any clearance — and the
+        # endpoint is now a real pad connection, which retires the
+        # allowlist entry instead of moving it.
+        _vref_start_y = pam_vref[1]
         # Explicit net assignment: segment starts offset from pad center so
         # auto-detection misses it — pad 8 must carry PAM_VREF.
         _PAD_NETS[("U5", "8")] = n_vref
@@ -521,7 +543,16 @@ def _pam_passive_traces():
         # it down — PAM_VREF's B.Cu runs at y=25.20 and a barrel at
         # (38.00, 25.65) would come within 0.10mm of it — so the F.Cu
         # bridge takes a 0.15mm rise over its 6.1mm span instead.
-        bridge_y_w = 25.65
+        #
+        # R37: now U5.6's pad DID grow — to the JLC reference land, north
+        # edge y=25.7575 (was 26.025). At y=25.65 the 0.2mm hole's south
+        # edge (25.75) would sit 0.0075mm from that edge; verify_via_in_pad
+        # wants 0.15mm, so y <= 25.5075. 25.45 gives 0.2075mm. North is
+        # free here: the barrel's neighbours are PAM_MUTE's B.Cu vertical
+        # at x=30.635 (0.94mm) and PAM_IN_AC's at x=33.175 (0.94mm), both
+        # column constraints that do not move with y, and PAM_VREF's
+        # y=25.20 lane only exists east of x=37.05.
+        bridge_y_w = 25.45
         # B.Cu: vert up from VDD pin 6 to bridge_y_w
         parts.append(_seg(pam_vdd6[0], pam_vdd6[1],
                           pam_vdd6[0], bridge_y_w,

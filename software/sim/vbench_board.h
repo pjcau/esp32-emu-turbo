@@ -9,7 +9,7 @@
 #pragma once
 
 /* Fingerprint of the .kicad_pcb this was derived from. */
-#define VB_PCB_HASH "sha256:3d174ec32fcaef72f8b6070347091c2118bd60f8ce220237d5718e2f6fa95d4c"
+#define VB_PCB_HASH "sha256:c4f773f444574429cd01fb78c9e99c8fb0e1c0b5794a56f178dd2c0b46d0dd9d"
 
 /* Rails — rails.py: +3V3 = V_REF*(1+R25/R26) from the real divider;
  * spread is V_REF's own tolerance (SY8089 AN p.4). +5V is the

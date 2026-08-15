@@ -284,17 +284,32 @@ def sop16(layer="B"):
     layers = SMD_B if layer == "B" else SMD_F
     fab = "B.Fab" if layer == "B" else "F.Fab"
     pads = []
-    pw, ph = 1.55, 0.6   # narrow body: 1.55mm pad (lead 1.05mm + extension)
+    # R37 (2026-08-15) — JLC SMT-DFM "pin left/right edge" (73 flags: 41 L,
+    # 32 R). JLC measures OUR land against THEIR reference land, taken from
+    # the cached EasyEDA package for C5122557
+    # (scripts/.easyeda_cache/C5122557/fp.pretty/
+    #  SOP-16_L10.0-W3.9-P1.27-LS6.0-BL.kicad_mod):
+    #     pad 0.560 x 1.745, rows at ±2.87.
+    # We were 1.55 x 0.6 at ±2.70, i.e. 0.2675mm SHORT on the OUTWARD side
+    # of every lead — exactly the tip overhang JLC flags. Matching the
+    # reference makes the land 0.0725mm SHORTER on the inward side too,
+    # so every inward clearance (thermal-via column, bridge vias) improves.
+    #
+    # Rect, not the reference's oval: same bbox, strictly more copper under
+    # the lead tip, and the corners have been clearance-checked (the widest
+    # neighbour approach is 0.53mm, see routing/buttons.py _u5_forbidden_x).
+    pw, ph = 1.745, 0.56   # JLC reference land for C5122557 (SOP-16 150mil)
+    row = 2.87             # JLC reference row offset (was 2.70)
 
     # Left: pins 1-8 (top to bottom)
     for i in range(8):
         y = -4.445 + i * 1.27
-        pads.append(_pad(str(i + 1), "smd", "rect", -2.7, y, pw, ph, layers))
+        pads.append(_pad(str(i + 1), "smd", "rect", -row, y, pw, ph, layers))
 
     # Right: pins 9-16 (bottom to top)
     for i in range(8):
         y = 4.445 - i * 1.27
-        pads.append(_pad(str(i + 9), "smd", "rect", 2.7, y, pw, ph, layers))
+        pads.append(_pad(str(i + 9), "smd", "rect", row, y, pw, ph, layers))
 
     # Body outline on Fab layer (3.9mm body width)
     bx = 2.0    # body half-width (3.9mm / 2 ≈ 2.0mm)
@@ -305,13 +320,13 @@ def sop16(layer="B"):
     pads.append(_fp_line(-bx, by, -bx, -by, fab))    # left
 
     # Pin 1 marker — silk + fab (R12 JLCDFM fix)
-    # Pin 1 at (-2.7, -4.445), pad bbox (-3.475..-1.925, -4.745..-4.145).
-    # Place marker ABOVE the pad (cy ≤ -5.195). Marker at (-2.7, -5.5)
-    # — 0.755mm clear of pad top, inside body (body y_min = -5.0) →
+    # Pin 1 at (-2.87, -4.445), pad bbox (-3.7425..-1.9975, -4.725..-4.165).
+    # Place marker ABOVE the pad (cy ≤ -5.195). Marker at (-2.87, -5.5)
+    # — 0.775mm clear of pad top, inside body (body y_min = -5.0) →
     # slightly outside body at y=-5.5 (0.5mm past body edge).
     # Fallback: inside body between pads would collide with adjacent
     # pins 2-8. Going outside body top is the cleanest option.
-    pads.extend(_pin1_marker(-2.7, -5.5, layer))
+    pads.extend(_pin1_marker(-row, -5.5, layer))
 
     return pads
 
