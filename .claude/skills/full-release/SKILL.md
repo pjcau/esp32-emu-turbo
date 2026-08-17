@@ -11,6 +11,14 @@ argument-hint: <version> (e.g. v3.0)
 
 Complete end-to-end pipeline: generate PCB, run ALL verifications, render all views, export gerbers, and sync release_jlcpcb/. Combines `/verify`, `/render`, `/pcba-render`, and `/release` into a single workflow.
 
+**Precondition — run `/pcba-readiness` first.** It is the submission gate:
+full gate suite + JLCDFM (tier-1 design-error must be zero), the
+prototype-gap ledger (this board has never been physically prototyped —
+every bring-up behaviour closed by datasheet/reference analysis or deferred
+to a named first-article bench test), and the 25-class known-failure
+cross-check. Do NOT upload to JLCPCB until it reports **SUBMISSION-READY**;
+this pipeline ends at the JLCPCB upload, so the gate must pass before it.
+
 **Argument**: Version tag (e.g., `v3.0`).
 
 ## Critical Rules

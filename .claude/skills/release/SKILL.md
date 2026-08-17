@@ -11,6 +11,17 @@ argument-hint: <version> (e.g. v1.9)
 
 Create a production-ready release package for JLCPCB manufacturing.
 
+## Precondition — run `/pcba-readiness` first (submission gate)
+
+Before cutting a release, run **`/pcba-readiness`** and confirm it reports
+**SUBMISSION-READY**. It is the gate that decides whether the only remaining
+risk is a factory defect: full gate suite + JLCDFM (tier-1 design-error must
+be zero), the prototype-gap ledger (this board has never been physically
+prototyped — every behaviour a bring-up would prove must be closed by
+datasheet/reference analysis or deferred to a named first-article bench
+test), and the 25-class known-failure cross-check. If it reports NOT READY,
+fix the open tier-1 findings and re-run before proceeding here.
+
 **Argument**: Version tag (e.g., `v1.9`).
 
 ## Steps

@@ -66,7 +66,15 @@ dependency map: [`docs/architecture.md`](docs/architecture.md).
 
 Pipeline order that matters in practice:
 `/pcb-schematic` → `/pcb-board` → `/pcb-components` → `/pcb-routing` →
-`/generate` → `/verify` → `/release` (or `/full-release`).
+`/generate` → `/verify` → `/pcba-readiness` → `/release` (or `/full-release`).
+
+`/pcba-readiness` is the submission gate: it runs the full gate suite +
+JLCDFM, builds the prototype-gap ledger (what our non-existent physical
+prototype leaves unproven, closed by datasheet/reference analysis or
+deferred to a named first-article bench test), and cross-checks the board
+against the 25-class known-failure catalog. Do NOT cut a release / submit
+to JLCPCB until it reports **SUBMISSION-READY** (tier-1 design-error risk
+zero, every tier-2 item closed-or-deferred).
 
 Cross-agent sync points: `config.py` ↔ `board_config.h` (GPIO),
 `board.py` 160×75 mm ↔ `enclosure.scad` (dimensions).
