@@ -80,6 +80,52 @@ this. Ordering v4.9.0 is correct regardless: the hardware is right, and
 SNES performance is a firmware/silicon question resolved by measurement on
 the first article, not by another board spin.
 
+## Full 25-class catalog cross-check (v4.9.0) — 0 failures
+
+Beyond the 5 domain analyses, v4.9.0 was run against every gate owning a
+class in the skill's failure-class catalog (Step 1b). **All pass, 0
+failures:**
+
+| Class | Gate | Result |
+|---|---|---|
+| 15 Protection-FET body-diode | verify_rpp_polarity | PASS — cell on Q1 drain, load on source (the class that was blind for 4 releases is now correct) |
+| 18 Reference-plane seam | verify_reference_plane | 0 failed, 15 warn (see below) |
+| 19 Bus SI skew/via/crosstalk | verify_length_match / via_discontinuity / crosstalk | 0 failed (5+8+369 pass), warns below |
+| 17 Pinch-point ampacity | verify_power_via_ampacity | PASS 15/15 |
+| 12 Enclosure drift | verify_enclosure_sync | PASS 17/17 |
+| ESD | verify_esd_protection | PASS |
+| 22 Stencil / silk | verify_stencil_aperture / verify_silk_holes | PASS / 6 pass |
+| 20 Component-body collision | verify_component_bodies | 4 pass, 0 fail |
+| 21 Via-in-pad wicking | verify_via_in_pad | PASS (U2 lead-to-hole = same-net GND, benign) |
+
+## Accepted warnings — reviewed one-by-one, none actionable
+
+~38 WARN total across the SI/EMC/clearance gates. Reviewed individually;
+**all are accepted-baseline, none is a defect or a submission blocker.**
+They group as:
+
+1. **Fast-signal heuristics firing on slow/DC nets** — most reference-plane
+   seam-crossings and crosstalk pairs are BUTTON nets (BTN_*), read slowly:
+   no fast edge, so seam-crossing / crosstalk is physically irrelevant. The
+   gates flag geometry regardless of net speed.
+2. **LCD parallel bus + SD SPI @20 MHz, inherent same-bus coupling, within
+   margin** — crosstalk pairs all in the relaxed 1W–3W band (none < 1W);
+   LCD_WR vs data skew 215 ps = 0.86% of the 20 MHz cycle (electrical limit
+   210 mm vs 30 mm actual); SD already derated 40→20 MHz (R2-MED-5).
+3. **Intended config / low-current stubs** — GPIO45 R14 DNP (the *desired*
+   state; a populated R14 would kill the PSRAM), GND 0.2 mm netclass-min
+   stubs, and the 4 same-net button-matrix copper-clearance WARN (0 DANGER).
+
+### Two watch-items (not defects — remember, don't fix now)
+
+- **Buck switching-node seam crossings** (LX / BUCK_LX / BUCK_FB cross the
+  +5V/+3V3 plane seam): the only EMC-relevant warns — the noisiest node
+  detours its return around the seam. Within the accepted band, short
+  traces. *If radiated EMC ever becomes a concern, start here.*
+- **LCD_D4 at 8 layer-excursion vias** (warn ceiling; fail is >8; LCD_D1–D3
+  at 6): fine at 20 MHz, but a future regen adding one via to LCD_D4 would
+  trip the gate to FAIL. *Watch on every regeneration.*
+
 ## Iteration loop status
 
 Loop converged: tier-1 = 0, every tier-2 row is CLOSED or on the checklist,
