@@ -1,3 +1,11 @@
+---
+name: pcba-readiness
+model: claude-opus-5
+description: Pre-submission readiness gate for JLCPCB — drives risk down to "only a factory defect could invalidate this". Runs the full gate suite + JLCDFM (tier-1 design-error must be zero), builds the prototype-gap ledger (what a physical bring-up would prove, closed by datasheet/reference analysis or deferred to a named first-article bench test), and cross-checks the board against the 25-class known-failure catalog. Emits a SUBMISSION-READY / NOT-READY verdict. Run before /release and /full-release.
+disable-model-invocation: false
+allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, WebSearch, WebFetch
+---
+
 # PCBA Readiness — drive risk down to "only a factory defect could invalidate this"
 
 The goal of this skill is a single, honest verdict before you submit and
