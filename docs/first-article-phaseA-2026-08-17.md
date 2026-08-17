@@ -2,6 +2,12 @@
 
 **Verdict: PASS — cleared for payment.**
 
+> **ORDER PLACED 2026-08-17 — JLCPCB order `W2026081721393881`.** The paid
+> order corresponds to the manifest hashes below (gerbers `df25252b…`, bom
+> `e98f0ad5…`, cpl `9bf758c1…`), git set v4.9.0 == tag v4.6.2. This is the
+> first physical article of the design — bring-up follows Phase B on arrival.
+> JLC's own DFM review runs 4-6 h post-order; forward any note it raises.
+
 - **Set**: v4.9.0 (board byte-identical to tag v4.6.2), git HEAD on `main`.
 - **JLC order preview**: cart.jlcpcb.com PCBA viewer, `pcbFileNo=e7be776c5aed490eab91d352741c822b`,
   Component Placements tab (2D + 3D), Top and Bottom.
