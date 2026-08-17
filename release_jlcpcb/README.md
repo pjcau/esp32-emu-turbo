@@ -70,7 +70,44 @@ Raytraced 3D views of the assembled board (KiCad raytracer, synced from
 
 ## Release History
 
-### v4.4.0 — 2026-08-01 (current)
+### v4.9.0 — 2026-08-17 (current) — headphone jack dropped, board back to v4.6.2
+
+**Design decision: abandon the headphone-jack programme, revert the active
+board to the last pre-jack design (v4.6.2).**
+
+- The jack programme — v4.7.0 (J5 3.5 mm jack + Q3 speaker auto-mute),
+  v4.8.0 (R36-HIGH-1 J5 TIP/SLEEVE fix), v4.8.1 (R37 U5 land match) — was
+  evaluated and dropped. The board is now **byte-identical to tag v4.6.2**
+  (the pre-jack board, already phase-A validated + JLCDFM round-3 CLEAN).
+  This is a forward version number on a reverted design, to keep the
+  release timeline monotonic; the jack survives in tags v4.7.0/v4.8.0/v4.8.1.
+- **Why dropped**: the JLC SMT-DFM "dangers" that motivated the jack-era
+  churn are JLC library 3D-**model** artifacts, not board defects — proven
+  in v4.8.1, where U5's land was grown to match JLC's OWN reference land
+  exactly (verify_pad_land coverage 1.000) and the 73 "pin edge" flags
+  STILL persisted, because JLC's 3D model lead extends ~0.08 mm past their
+  own reference land. No IPC-compliant footprint clears them. Dropping the
+  jack does not remove them either (they live on USB-C/amp/FPC) — the jack
+  was dropped as a feature/risk decision, not as a fix.
+- Kept across the revert (board-independent): the `jlcdfm-upload` skill,
+  this session's JLCDFM reports, and the `verify_cpl_rotation_law` LED2-6
+  exception (needed by v4.6.2's own LED 0° emit).
+- **SMT-DFM residuals on v4.6.2** (JLCDFM full run, 2026-08-17): PCB DFM
+  0 DANGER; SMT = 2 artifact classes only — Pin-inner-edge ×50 (all J4
+  FPC), Lead-to-hole ×1 (U2 IP5306 thermal-EP GND lead vs its same-net GND
+  thermal via). Both benign, neither a defect.
+- **Verification**: hardware-audit Round 37 — Layer 1 all green (DFM
+  124/124, DFA 10/10, polarity 304, design-intent 369, ERC 0, KiCad DRC
+  0/0), revert-residue scan clean (0 functional J5/Q3 references anywhere;
+  CPL 98 placements, 0 J5/Q3 rows), zero domain findings. Board == v4.6.2
+  (Round-34 validated).
+- **Order manifest** (`order-manifest.json`, what the upload is checked
+  against — identical to v4.6.2):
+  - `gerbers.zip` `df25252b471664e3f021193dbc56fb4a2b15a8714dab441b171b7414c99ea1c0`
+  - `bom.csv` `e98f0ad5eaee803efdacbe6f1a541a7a532ee76375019f3a29c0aeac15054c3b`
+  - `cpl.csv` `9bf758c1557788dc8c5059403de12df0fdc4b8b44bdf609f73d865b0c2c4082f`
+
+### v4.4.0 — 2026-08-01
 
 **Gate-coverage expansion (audit categories 15-18) + 10 live bugs fixed:**
 
