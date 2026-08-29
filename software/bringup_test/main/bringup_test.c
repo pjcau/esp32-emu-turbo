@@ -53,6 +53,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_attr.h"
+#include "esp_rom_sys.h"
 #include "hal/usb_serial_jtag_ll.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -243,6 +244,13 @@ static void phase_enter(const char *id)
 }
 
 static void phase_clear(void) { s_phase_magic = 0; }
+
+/* Snapshot of the marker as it survived the reset, taken in app_main() before
+ * the first run_check(): by the time chk_previous_run executes, run_check has
+ * already stamped the live marker with chk_previous_run's own id, so reading
+ * the live variable would report every warm reset as a death in check 01. */
+static uint32_t s_prev_magic;
+static char     s_prev_id[48];
 
 /* ══════════════════════════════════════════════════════════════════════
  * Check table plumbing
@@ -555,17 +563,17 @@ static void chk_previous_run(void)
         bringup_detail("cold power-on — no previous-run state is retained across it");
         return;
     }
-    if (s_phase_magic != PHASE_MAGIC) {
+    if (s_prev_magic != PHASE_MAGIC) {
         bringup_detail("reset=%d, no unfinished run recorded — the previous run "
                        "reached BRINGUP-END", (int)s_reset_reason);
         return;
     }
 
     /* The magic survived, so the last run died before reaching the end. */
-    s_phase_id[sizeof(s_phase_id) - 1] = '\0';   /* it is RAM, not a promise */
+    s_prev_id[sizeof(s_prev_id) - 1] = '\0';     /* it is RAM, not a promise */
     char died_in[96];   /* prefix + the full 48-byte phase id, no truncation */
     snprintf(died_in, sizeof(died_in),
-             "previous run died during check '%s'", s_phase_id);
+             "previous run died during check '%s'", s_prev_id);
     TEST_FAIL_MESSAGE(died_in);
 }
 
@@ -656,7 +664,15 @@ static void chk_usb_serial_jtag(void)
 {
     TEST_ASSERT_EQUAL_MESSAGE(EXPECT_USB_DN, USB_DN, "USB D- moved off its pin");
     TEST_ASSERT_EQUAL_MESSAGE(EXPECT_USB_DP, USB_DP, "USB D+ moved off its pin");
+    /* The console itself is filling this FIFO while the report streams out,
+     * so a single-instant snapshot races against the host's read cadence.
+     * Poll for up to 50 ms: with any host attached the FIFO drains in
+     * microseconds; only a genuinely dead link stays full for the window. */
     bool writable = usb_serial_jtag_ll_txfifo_writable();
+    for (int i = 0; !writable && i < 500; i++) {
+        esp_rom_delay_us(100);
+        writable = usb_serial_jtag_ll_txfifo_writable();
+    }
     bringup_detail("D-=GPIO%d D+=GPIO%d txfifo_writable=%s "
                    "(this line reaching you already proves the link)",
                    EXPECT_USB_DN, EXPECT_USB_DP, writable ? "yes" : "no");
@@ -1438,6 +1454,10 @@ void tearDown(void) {}
 void app_main(void)
 {
     s_reset_reason = esp_reset_reason();
+
+    /* Save the previous run's marker before any run_check() overwrites it. */
+    s_prev_magic = s_phase_magic;
+    memcpy(s_prev_id, s_phase_id, sizeof(s_prev_id));
 
     /* Before anything is printed: the LED starts beating here, so a board that
      * never gets a word out still shows whether the chip is executing. */
