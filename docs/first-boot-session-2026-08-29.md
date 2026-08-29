@@ -9,8 +9,8 @@ Live session log for the staged sequence in
 | 1 USB only | VBUS LED on | ✅ PASS | `hardware/first-article/v4.9.0-W2026081721393881/IMG_5905.jpeg` — VBUS lit with SW16 OFF (rails correctly dark: Q2 gating works) |
 | 2 rails | 5V/3V3 LEDs | ✅ PASS | `IMG_5906.jpeg` — SW16 ON: VBUS+5V+3V3 lit, HB dark (chip blank — expected). **Resolves the doc's open question: IP5306 DOES supply 5V batteryless.** CHG+FULL both lit with no cell (undefined-but-harmless, re-check at Stage 4) |
 | 3 boot | HB LED 1 Hz + BRINGUP verdict | ✅ PASS | `hardware/first-article/v4.9.0-W2026081721393881/bringup-stage3-serial-2026-08-29.log` — **GREEN, 47 PASS / 0 FAIL / 11 expected SKIP**, reproduced on two consecutive warm resets; HB at 1 Hz confirmed by eye (operator, 2026-08-29). Two latent bring-up firmware bugs found and fixed on the way (see below) |
-| 4 battery | boots from cell alone | ☐ | includes C33 wake test (respin watch list) |
-| 5 subsystems | blink codes clear one by one | ☐ | SD, LCD, audio checks will FAIL until peripherals attached — normal |
+| 4 battery | boots from cell alone | ⏸️ DEFERRED | no cell on hand (2026-08-29) — C33 wake test stays on the respin watch list |
+| 5 subsystems | blink codes clear one by one | 🟡 SD DONE | **SD: PASS** — `bringup-stage5-sd-serial-2026-08-29.log`, GREEN 52/0/6 with a 16GB card: full chain incl. FAT mount at 20 MHz. (A no-name 128GB card was rejected at CMD59/CRC_ON_OFF by the IDF driver on every try incl. freshly powered — card-side fault, do not use it.) Remaining: LCD colour bars by eye (panel on J4), speaker tone audible |
 
 All seven LED polarities are now physically confirmed (HB beating at 1 Hz
 at Stage 3 closed the last one) — the LED `_PENDING_VALIDATION` is fully
