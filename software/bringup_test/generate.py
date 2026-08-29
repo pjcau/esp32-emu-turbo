@@ -349,6 +349,7 @@ C_PREAMBLE = r'''/*
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_attr.h"
+#include "esp_cpu.h"
 #include "esp_rom_sys.h"
 #include "hal/usb_serial_jtag_ll.h"
 #include "freertos/FreeRTOS.h"
@@ -1048,6 +1049,47 @@ static void chk_lcd_data_shorts(void)
     TEST_ASSERT_EQUAL_MESSAGE(0, shorts, "two LCD data lines are connected");
 }
 
+/* Diagnostic only, never fails: average rise time of each data line released
+ * from LOW into the internal ~45k pull-up, in CPU cycles converted to ns.
+ * The panel's input capacitance roughly triples the value, so comparing a
+ * run with the FPC seated against one with it removed answers "do the data
+ * pins make contact at J4?" — the one question a write-only panel (RD tied
+ * HIGH) leaves no other way to ask. */
+static void chk_lcd_data_risetime(void)
+{
+    char vals[160] = {0};
+    for (int i = 0; i < N_LCD_DATA; i++) {
+        gpio_num_t pin = LCD_DATA[i];
+        gpio_set_pull_mode(pin, GPIO_PULLUP_ONLY);
+        int64_t total_cyc = 0;
+        const int N = 32;
+        for (int k = 0; k < N; k++) {
+            gpio_set_direction(pin, GPIO_MODE_OUTPUT);
+            gpio_set_level(pin, 0);
+            esp_rom_delay_us(50);
+            portDISABLE_INTERRUPTS();
+            gpio_set_direction(pin, GPIO_MODE_INPUT);
+            uint32_t c0 = esp_cpu_get_cycle_count();
+            uint32_t dc;
+            for (;;) {
+                dc = esp_cpu_get_cycle_count() - c0;
+                if (gpio_get_level(pin) || dc > 240000) break;   /* 1 ms cap */
+            }
+            portENABLE_INTERRUPTS();
+            total_cyc += dc;
+        }
+        pin_input(pin, GPIO_PULLUP_ONLY);
+        /* 240 cycles per us at 240 MHz */
+        long avg_ns = (long)(total_cyc * 1000 / (N * 240));
+        size_t n = strlen(vals);
+        snprintf(vals + n, sizeof(vals) - n, "%sD%d=%ldns",
+                 i ? " " : "", i, avg_ns);
+    }
+    bringup_detail("release-to-HIGH via internal pull-up, avg of 32: %s "
+                   "(compare FPC seated vs removed — a seated panel adds "
+                   "capacitance and slows every line)", vals);
+}
+
 static void chk_lcd_ctrl(void)
 {
     int bad = 0;
@@ -1563,6 +1605,8 @@ static const check_t CHECKS_LCD[] = {
       "an ILI9488 data pin shorted to +3V3 or GND at J4 or along the FPC fan-out" },
     { "lcd.data.shorts", "D0-D7", chk_lcd_data_shorts,
       "solder bridge between two adjacent data lines at J4 or the module pads" },
+    { "lcd.data.risetime", "D0-D7", chk_lcd_data_risetime,
+      "diagnostic only — see the detail field" },
     { "lcd.ctrl.toggle", "CS/RST/DC/WR", chk_lcd_ctrl,
       "a control line shorted at J4, or the pin is loaded by the panel" },
     { "lcd.panel.init", "D0-D7+CS/RST/DC/WR", chk_lcd_init,
