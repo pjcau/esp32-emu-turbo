@@ -61,6 +61,23 @@ The full-swing MHz PDM stream drives the PAM8403 input directly.
 - `audio.audible` verdict: chain alive = the check's purpose met;
   fidelity is R38's problem, not the board assembly's.
 
+## Session close (2026-08-29 evening)
+
+Final board state: **BRINGUP GREEN 53/0/6, HB steady at 1 Hz,
+operator-verified.** LED legend learned on the bench: 10-blinks/s
+flutter + 1 s pause = "failure with no code", in practice almost always
+`bringup.previous_run` after a capture-harness reset killed a run
+mid-flight — one clean run (or SW16 power-cycle) clears it; a flutter
+that survives a power-cycle would be a real failure.
+
+Resume points, in arrival order:
+1. **~2026-09-12** — type-B FFC adapter arrives → LCD retry
+   (pin 40 toward the "LCD" silk, eye on the 3V3 LED at first power,
+   `lcd.data.risetime` must rise above ~200 ns when contact is real).
+2. Battery cell → stage 4 (LIVE operation, C33 wake test).
+3. v2 backlog from today: R37 (top-contact J4), R38 (PDM RC filter),
+   plus a +/− silkscreen for the SPK pads.
+
 All seven LED polarities are now physically confirmed (HB beating at 1 Hz
 at Stage 3 closed the last one) — the LED `_PENDING_VALIDATION` is fully
 closed.
