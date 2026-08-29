@@ -74,20 +74,28 @@ esp_err_t audio_play_test_tone(int duration_ms)
 {
     if (!s_tx_chan) return ESP_ERR_INVALID_STATE;
 
-    const int freq = 440;  /* A4 */
+    /* Three short 1 kHz beeps rather than one continuous tone: with no PDM
+     * reconstruction filter on the board (R38) the carrier hisses for as
+     * long as the channel plays, and a beep PATTERN stays recognizable over
+     * that hiss where a single tone drowned in it. 1 kHz sits near the 28mm
+     * speaker's efficiency peak and the ear's sensitive band. */
+    const int freq = 1000;
     const int total_samples = (AUDIO_SAMPLE_RATE * duration_ms) / 1000;
+    const int seg = total_samples / 6;   /* beep,gap,beep,gap,beep,gap */
     const int chunk = 256;
 
     int16_t buf[chunk];
     size_t bytes_written;
 
-    ESP_LOGI(TAG, "Playing %d Hz tone for %d ms", freq, duration_ms);
+    ESP_LOGI(TAG, "Playing 3x %d Hz beeps over %d ms", freq, duration_ms);
 
     for (int i = 0; i < total_samples; i += chunk) {
         int n = (total_samples - i < chunk) ? (total_samples - i) : chunk;
         for (int j = 0; j < n; j++) {
-            float t = (float)(i + j) / AUDIO_SAMPLE_RATE;
-            buf[j] = (int16_t)(4000.0f * sinf(2.0f * M_PI * freq * t));
+            int s = i + j;
+            bool on = seg > 0 && (s / seg) % 2 == 0;   /* segments 0,2,4 beep */
+            float t = (float)s / AUDIO_SAMPLE_RATE;
+            buf[j] = on ? (int16_t)(16000.0f * sinf(2.0f * M_PI * freq * t)) : 0;
         }
         i2s_channel_write(s_tx_chan, buf, n * sizeof(int16_t), &bytes_written, portMAX_DELAY);
     }

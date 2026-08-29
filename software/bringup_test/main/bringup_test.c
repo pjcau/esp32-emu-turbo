@@ -1223,9 +1223,9 @@ static void chk_audio_tone(void)
     if (!s_audio_up)
         BRINGUP_SKIP("I2S never started (see audio.pdm.init) — no tone to play");
     int64_t t0 = esp_timer_get_time();
-    esp_err_t err = audio_play_test_tone(600);
+    esp_err_t err = audio_play_test_tone(900);
     int64_t ms = (esp_timer_get_time() - t0) / 1000;
-    bringup_detail("440Hz for 600ms returned %s in %lldms", esp_err_to_name(err),
+    bringup_detail("3x 1kHz beeps over 900ms returned %s in %lldms", esp_err_to_name(err),
                    (long long)ms);
     TEST_ASSERT_EQUAL_MESSAGE(ESP_OK, err, "the DMA never drained the tone buffer");
     /* A stalled I2S clock shows up as a write that blocks far longer than the
