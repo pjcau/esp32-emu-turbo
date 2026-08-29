@@ -1235,6 +1235,11 @@ static void chk_audio_tone(void)
 
 static void chk_audio_audible(void)
 {
+    /* Silence the PDM carrier before skipping: an enabled-but-idle PDM
+     * channel still emits its 50%-density carrier, and with no
+     * reconstruction filter on the board (R38) that is a continuous
+     * fan-like hiss from the speaker for as long as the board is on. */
+    audio_stop();
     BRINGUP_SKIP("whether the tone was audible cannot be sensed by the ESP32 — "
                  "there is no feedback path from the PAM8403 back to a GPIO. "
                  "If audio.tone passed and you heard nothing, the fault is after "

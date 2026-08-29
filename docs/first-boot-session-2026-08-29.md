@@ -10,7 +10,7 @@ Live session log for the staged sequence in
 | 2 rails | 5V/3V3 LEDs | ✅ PASS | `IMG_5906.jpeg` — SW16 ON: VBUS+5V+3V3 lit, HB dark (chip blank — expected). **Resolves the doc's open question: IP5306 DOES supply 5V batteryless.** CHG+FULL both lit with no cell (undefined-but-harmless, re-check at Stage 4) |
 | 3 boot | HB LED 1 Hz + BRINGUP verdict | ✅ PASS | `hardware/first-article/v4.9.0-W2026081721393881/bringup-stage3-serial-2026-08-29.log` — **GREEN, 47 PASS / 0 FAIL / 11 expected SKIP**, reproduced on two consecutive warm resets; HB at 1 Hz confirmed by eye (operator, 2026-08-29). Two latent bring-up firmware bugs found and fixed on the way (see below) |
 | 4 battery | boots from cell alone | ⏸️ DEFERRED | no cell on hand (2026-08-29) — C33 wake test stays on the respin watch list |
-| 5 subsystems | blink codes clear one by one | 🟡 SD DONE, LCD BLOCKED | **SD: PASS** — `bringup-stage5-sd-serial-2026-08-29.log`, GREEN 52/0/6 with a 16GB card: full chain incl. FAT mount at 20 MHz. (A no-name 128GB card was rejected at CMD59/CRC_ON_OFF by the IDF driver on every try incl. freshly powered — card-side fault, do not use it.) **LCD: BLOCKED on R37-HIGH-1 (see below)** — panel tail contact-face mismatch, adapter on order. Remaining: LCD colour bars by eye, speaker tone audible |
+| 5 subsystems | blink codes clear one by one | 🟡 SD DONE, LCD BLOCKED | **SD: PASS** — `bringup-stage5-sd-serial-2026-08-29.log`, GREEN 52/0/6 with a 16GB card: full chain incl. FAT mount at 20 MHz. (A no-name 128GB card was rejected at CMD59/CRC_ON_OFF by the IDF driver on every try incl. freshly powered — card-side fault, do not use it.) **LCD: BLOCKED on R37-HIGH-1 (see below)** — panel tail contact-face mismatch, adapter on order (ETA ~2026-09-12). **Audio: chain ALIVE** — speaker soldered, tone audible but carrier-dominated, see R38-MED-1 below. Remaining: LCD colour bars by eye (needs adapter) |
 
 ## R37-HIGH-1 — J4 contact face is inverted for the purchased panel (found at first article, 2026-08-29)
 
@@ -36,6 +36,30 @@ GREEN).
 - New bring-up check `lcd.data.risetime` (added this session) is the
   no-multimeter contact probe: ~200 ns = panel not loading the data
   lines; a seated panel must slow every line.
+
+## R38-MED-1 — no PDM reconstruction filter in the audio path (found at first article, 2026-08-29)
+
+Speaker soldered (SPK+/SPK− pads, BTL) and the 440 Hz bring-up tone IS
+audible — the chain GPIO17 → C22 → PAM8403 → speaker is electrically
+alive — but it sounds like a loud fan-like hiss with a faint tone under
+it, and cutting the tone amplitude −12 dB did not reduce the hiss:
+**the PDM carrier dominates**. Root cause: the board has NO low-pass
+between the PDM pin and the amplifier input — C22 is a series DC-block
+(a high-pass), and the `audio.c` comment claiming the "existing RC
+network acts as a low-pass filter" was wrong (there is no shunt element).
+The full-swing MHz PDM stream drives the PAM8403 input directly.
+
+- **v2 fix**: series R (~1k) + shunt C (~10 nF) between C22 and
+  PAM_IN_AC — or moot entirely under the planned v2 audio coprocessor
+  with a true I2S DAC.
+- **First-article rework (optional, fiddly)**: requires inserting a
+  series element — deferred unless audio testing needs it.
+- Firmware mitigation this session: the bring-up suite now calls
+  `audio_stop()` after the audio checks — an enabled-but-idle PDM
+  channel emits its 50%-density carrier continuously, which was a
+  constant hiss for as long as the board stayed on.
+- `audio.audible` verdict: chain alive = the check's purpose met;
+  fidelity is R38's problem, not the board assembly's.
 
 All seven LED polarities are now physically confirmed (HB beating at 1 Hz
 at Stage 3 closed the last one) — the LED `_PENDING_VALIDATION` is fully

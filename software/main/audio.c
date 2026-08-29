@@ -87,7 +87,7 @@ esp_err_t audio_play_test_tone(int duration_ms)
         int n = (total_samples - i < chunk) ? (total_samples - i) : chunk;
         for (int j = 0; j < n; j++) {
             float t = (float)(i + j) / AUDIO_SAMPLE_RATE;
-            buf[j] = (int16_t)(16000.0f * sinf(2.0f * M_PI * freq * t));
+            buf[j] = (int16_t)(4000.0f * sinf(2.0f * M_PI * freq * t));
         }
         i2s_channel_write(s_tx_chan, buf, n * sizeof(int16_t), &bytes_written, portMAX_DELAY);
     }
