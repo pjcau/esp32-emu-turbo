@@ -73,8 +73,8 @@ def _button_traces():
     # Button definitions: (ref, net_name, gpio)
     front_btns = [
         ("SW1", "BTN_UP", 40), ("SW2", "BTN_DOWN", 41),
-        ("SW3", "BTN_LEFT", 42), ("SW4", "BTN_RIGHT", 1),
-        ("SW5", "BTN_A", 2), ("SW6", "BTN_B", 48),
+        ("SW3", "BTN_LEFT", 42), ("SW4", "BTN_RIGHT", 2),
+        ("SW5", "BTN_A", 1), ("SW6", "BTN_B", 48),
         ("SW7", "BTN_X", 47), ("SW8", "BTN_Y", 21),
         ("SW9", "BTN_START", 18), ("SW10", "BTN_SELECT", 0),
     ]

@@ -159,10 +159,10 @@ Fork and adapt Retro-Go for our hardware. Retro-Go is included as a git submodul
 | 2.2 | Create target `targets/esp32-emu-turbo/` | `config.h` + `env.py` + `sdkconfig` | ✅ Done |
 | 2.3 | Docker build pipeline | `docker-compose.retro-go.yml` + Makefile targets | ✅ Done |
 | 2.4 | Custom display driver `ili9488_i80.h` | 8-bit i80 parallel via `esp_lcd_panel_io_i80`, async DMA, 5-buffer pool | ✅ Done |
-| 2.5 | Frame scaling | Automatic via Retro-Go core (320x480 portrait, integer scale + letterbox) | ✅ Done |
+| 2.5 | Frame scaling | Automatic via Retro-Go core (480x320 landscape — the panel sits along the handheld's long axis; the earlier portrait plan was wrong, first article 2026-09-11) | ✅ Done |
 | 2.6 | Input mapping | 12 GPIO direct buttons + MENU=SELECT (GPIO 0) | ✅ Done |
 | 2.7 | Audio routing | I2S **PDM TX** on DOUT only (GPIO17) → C22 → PAM8403. No external DAC, no BCLK/LRCK — same path as step 1.6 | ✅ Done |
-| 2.8 | First boot: NES test | nofrendo running Super Mario Bros at 60fps | ⏳ Needs hardware |
+| 2.8 | First boot: NES test | nofrendo on the v4.9.0 first article: Owlia (homebrew) and Mario Bros played from SD, all 12 buttons verified (2026-09-11). Four fork fixes on the way: i80 0x3C continuation, landscape, silent PDM at volume 0, RIGHT/A GPIO swap (R39-HIGH-1) | ✅ Done |
 
 ### Build & flash (Docker)
 
@@ -243,7 +243,7 @@ Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 paralle
 |:---|:---|
 | Bus | 8-bit i80 parallel (`esp_lcd_panel_io_i80`) |
 | Clock | 20 MHz write clock |
-| Resolution | 320x480 portrait |
+| Resolution | 480x320 landscape (MADCTL MV; panel native 320x480) |
 | Color format | RGB565 (16-bit) |
 | DMA | Async with 5-buffer pool |
 | Backlight | Always-on — LED-A fed from **+5V through R27 (20 Ω)** on the PCB, no GPIO control |

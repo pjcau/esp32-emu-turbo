@@ -88,8 +88,8 @@
 #define BTN_UP              GPIO_NUM_40
 #define BTN_DOWN            GPIO_NUM_41
 #define BTN_LEFT            GPIO_NUM_42
-#define BTN_RIGHT           GPIO_NUM_1
-#define BTN_A               GPIO_NUM_2
+#define BTN_RIGHT           GPIO_NUM_2   /* module pin 38 = IO2 (R39-HIGH-1) */
+#define BTN_A               GPIO_NUM_1   /* module pin 39 = IO1 (R39-HIGH-1) */
 #define BTN_B               GPIO_NUM_48
 #define BTN_X               GPIO_NUM_47
 #define BTN_Y               GPIO_NUM_21

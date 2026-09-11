@@ -99,15 +99,21 @@ that emulator frames are letterboxed, not full-screen.
 
 ### Frame Scaling
 
-| Source system | Native res | → Display 320x480 | Method |
-|:---|:---|:---|:---|
-| NES | 256x240 | 256x240 centered | 1:1 letterbox |
-| SNES | 256x224 | 256x448 (2x V) | Integer 2x vertical |
-| Game Boy | 160x144 | 320x288 (2x both) | Integer 2x |
-| Genesis | 320x224 | 320x448 (2x V) | Integer 2x vertical |
-| Master System | 256x192 | 256x384 (2x V) | Integer 2x vertical |
+The framebuffer is **480x320 landscape** (the panel is mounted along the
+handheld's long axis; the first article settled this on 2026-09-11 — the
+earlier "portrait, 2x vertical" plan would have shown games rotated by
+90°). Retro-Go's own scaler handles every core:
 
-The ILI9488 at 320x480 is well-suited: most systems are ≤320px wide and can be doubled vertically for a crisp image with black bars.
+| Source system | Native res | → Display 480x320 | Method |
+|:---|:---|:---|:---|
+| NES | 256x240 | 320x240 centered (fit) or 427x320 (fill) | Retro-Go scaler, user-selectable |
+| SNES | 256x224 | 366x320 (fit, 1.43x) | Retro-Go scaler |
+| Game Boy | 160x144 | 320x288 (2x both) | Integer 2x |
+| Genesis | 320x224 | 457x320 (fit) | Retro-Go scaler |
+| Master System | 256x192 | 427x320 (fit) | Retro-Go scaler |
+
+Every core fits inside 480x320 with less than 1.5x scaling, so the 20 MHz
+8-bit bus budget above (full-frame 60 fps with ~8% margin) still holds.
 
 ---
 

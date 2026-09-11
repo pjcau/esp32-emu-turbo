@@ -102,8 +102,8 @@ PCB and free for v2.
 | GPIO40 | D-pad UP | 10k pull-up + 100nF debounce |
 | GPIO41 | D-pad DOWN | 10k pull-up + 100nF debounce |
 | GPIO42 | D-pad LEFT | 10k pull-up + 100nF debounce |
-| GPIO1 | D-pad RIGHT | 10k pull-up + 100nF debounce |
-| GPIO2 | A | 10k pull-up + 100nF debounce |
+| GPIO2 | D-pad RIGHT | 10k pull-up + 100nF debounce |
+| GPIO1 | A | 10k pull-up + 100nF debounce |
 | GPIO48 | B | 10k pull-up + 100nF debounce |
 | GPIO47 | X | 10k pull-up + 100nF debounce |
 | GPIO21 | Y | 10k pull-up + 100nF debounce |

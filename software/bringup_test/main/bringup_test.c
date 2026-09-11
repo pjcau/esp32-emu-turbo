@@ -72,8 +72,8 @@ static const btn_t BUTTONS[] = {
     { "UP", BTN_UP, 40, true },
     { "DOWN", BTN_DOWN, 41, true },
     { "LEFT", BTN_LEFT, 42, true },
-    { "RIGHT", BTN_RIGHT, 1, true },
-    { "A", BTN_A, 2, true },
+    { "RIGHT", BTN_RIGHT, 2, true },
+    { "A", BTN_A, 1, true },
     { "B", BTN_B, 48, true },
     { "X", BTN_X, 47, true },
     { "Y", BTN_Y, 21, true },
@@ -101,8 +101,8 @@ static const int SD_LINE_NUM[] = { 44, 43, 38, 39 };
 typedef struct { const char *net; int gpio; } pinmap_t;
 static const pinmap_t PINMAP[] = {
     { "BTN_SELECT", 0 },
-    { "BTN_RIGHT", 1 },
-    { "BTN_A", 2 },
+    { "BTN_A", 1 },
+    { "BTN_RIGHT", 2 },
     { "BTN_R", 3 },
     { "LCD_D0", 4 },
     { "LCD_D1", 5 },

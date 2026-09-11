@@ -136,8 +136,8 @@ For each button, wire a 6x6mm tact switch with a 10kΩ pull-up resistor:
 | UP | GPIO40 | White |
 | DOWN | GPIO41 | White |
 | LEFT | GPIO42 | White |
-| RIGHT | GPIO1 | White |
-| A | GPIO2 | Red |
+| RIGHT | GPIO2 | White |
+| A | GPIO1 | Red |
 | B | GPIO48 | Blue |
 | X | GPIO47 | Yellow |
 | Y | GPIO21 | Green |

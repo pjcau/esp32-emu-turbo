@@ -1487,9 +1487,15 @@ def test_usb_pin_mapping():
           _PIN_TO_GPIO.get(36) == 44,
           f"pin 36 mapped to GPIO{_PIN_TO_GPIO.get(36)} — must be GPIO44 (RXD0)")
 
-    check("Pin 38 = GPIO1 in _PIN_TO_GPIO",
-          _PIN_TO_GPIO.get(38) == 1,
-          f"pin 38 mapped to GPIO{_PIN_TO_GPIO.get(38)} — must be GPIO1")
+    # Pins 38/39 are IO2/IO1 — in that order — per the WROOM-1 datasheet
+    # (R39-HIGH-1: the table had them swapped and the first article showed
+    # D-pad RIGHT acting as A).
+    check("Pin 38 = GPIO2 in _PIN_TO_GPIO",
+          _PIN_TO_GPIO.get(38) == 2,
+          f"pin 38 mapped to GPIO{_PIN_TO_GPIO.get(38)} — must be GPIO2 (IO2)")
+    check("Pin 39 = GPIO1 in _PIN_TO_GPIO",
+          _PIN_TO_GPIO.get(39) == 1,
+          f"pin 39 mapped to GPIO{_PIN_TO_GPIO.get(39)} — must be GPIO1 (IO1)")
 
 
 def test_firmware_gpio_sync():

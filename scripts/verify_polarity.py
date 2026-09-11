@@ -92,8 +92,8 @@ def _zone(ref, pin_net_pairs):
 #     retired (R10-LOW-2); audio is PDM TX and uses only DOUT
 # Pin 13 (GPIO19): shared between USB_D- and BTN_R; last writer = BTN_R
 # Pin 36 (TX0), 37 (RX0): not GPIO-routed, net 0
-# Pin 38 (GPIO1=BTN_RIGHT): routing uses approach vias, pad may not match
-# Pin 39 (GPIO2=BTN_A): same
+# Pin 38 (GPIO2=BTN_RIGHT): routing uses approach vias, pad may not match
+# Pin 39 (GPIO1=BTN_A): same
 # Pin 40 (GND): zone-connected
 _strict("U1", [
     ("2", "+3V3"),
@@ -123,8 +123,8 @@ _zone("U1", [
     ("30", "SD_MISO"),    # GPIO13 -- routed but pad lookup may miss
     ("36", "SD_MOSI"),    # GPIO11 -- routed, pad injection via approach via
     ("37", "SD_MISO"),    # GPIO13 -- routed, pad injection via approach via
-    ("38", "BTN_RIGHT"),  # GPIO1 -- routed but pad lookup may miss
-    ("39", "BTN_A"),      # GPIO2 -- routed but pad lookup may miss
+    ("38", "BTN_RIGHT"),  # GPIO2 -- routed but pad lookup may miss
+    ("39", "BTN_A"),      # GPIO1 -- routed but pad lookup may miss
 ])
 
 # ============================================================

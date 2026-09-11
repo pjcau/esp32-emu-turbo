@@ -84,10 +84,28 @@ hardware/kicad/.erc-report.stamp
 # stay ignored: 66 MB, and nothing reads them (inject-3d-models.py uses the
 # KiCad libraries instead).
 scripts/.easyeda_cache/**/*.step
-test-roms/*.sfc
-test-roms/*.smc
-test-roms/*.nes
-test-roms/*.rom
+# ROMs: only the free homebrew/test ROMs listed below are committed;
+# anything else dropped into test-roms/ (commercial ROMs for bench play)
+# stays out of git, in any subfolder.
+test-roms/**/*.sfc
+test-roms/**/*.smc
+test-roms/**/*.nes
+test-roms/**/*.rom
+test-roms/**/*.gb
+test-roms/**/*.gbc
+test-roms/**/*.sms
+test-roms/**/*.gg
+test-roms/**/*.pce
+test-roms/**/*.bin
+test-roms/**/*.zip
+!test-roms/nes/owlia.nes
+!test-roms/snes/superbossgaiden.sfc
+!test-roms/gb/blarggs-cpu-instrs.gb
+!test-roms/gbc/ucity.gbc
+!test-roms/sms/silvervalley.sms
+!test-roms/gg/Swabby-GG-1.11.gg
+!test-roms/pce/reflectron.pce
+!test-roms/gen/miniplanets.bin
 software/sim/sim_test_native
 software/sim/sim_test
 software/sim/emu-turbo-sim
@@ -122,3 +140,4 @@ software/sim/emu-turbo-bench
 # DRC output artifacts (regenerated on demand by verify_dfm_v2 / drc_native)
 hardware/kicad/drc-edge-guard.json
 hardware/kicad/drc-report.json
+

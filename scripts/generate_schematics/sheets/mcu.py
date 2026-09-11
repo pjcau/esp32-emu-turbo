@@ -352,9 +352,9 @@ class MCUSheet(SchematicSheet):
         ty += 8
         self.text("Controls (active low, 10k pull-up):", tx, ty, 2, True)
         ty += 5
-        self.text("D-pad: GPIO40=UP 41=DOWN 42=LEFT 1=RIGHT", tx, ty)
+        self.text("D-pad: GPIO40=UP 41=DOWN 42=LEFT 2=RIGHT", tx, ty)
         ty += 5
-        self.text("Face:  GPIO2=A 48=B 47=X 21=Y", tx, ty)
+        self.text("Face:  GPIO1=A 48=B 47=X 21=Y", tx, ty)
         ty += 5
         self.text("Sys:   GPIO18=START 0=SELECT 45=L 3=R", tx, ty)
         ty += 8

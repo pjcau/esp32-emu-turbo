@@ -164,3 +164,54 @@ Capture-harness gotchas for any future machine (all reproduced here):
   read to `BRINGUP-END` while draining continuously.
 - Grep for `BRINGUP-END` at start-of-line only: check 01's PASS detail
   contains the literal string "reached BRINGUP-END".
+
+## Retro-Go first boot (2026-09-11) — Phase 2.8 reached, R39-HIGH-1 found
+
+Retro-Go (fork, target `esp32-emu-turbo`) built from the submodule and
+flashed as a full image (`rg_tool.py install` at 0x0 — `make
+retro-go-flash` cannot be the first flash: it writes per-partition and
+the board still carried the bring-up partition table). Card: the 16 GB
+SD, FAT32, `roms/<system>/` with the free test ROMs from `test-roms/`.
+Four firmware findings, all fixed in the fork (commit 0e533078 +
+follow-ups) — none is a board defect:
+
+1. **Half-drawn windows.** `rg_display` streams a window as 4-line DMA
+   chunks and the IDF i80 IO sends a command with every chunk; the driver
+   sent 0x2C each time, which resets the write pointer to the window
+   origin, so only the first 4 rows of every rectangle were written (half
+   glyphs, stale rows from the previous image). Fix: 0x2C on the first
+   chunk after `set_window`, 0x3C (Memory Write Continue) after. The
+   bring-up never showed it because `esp_lcd` sends a whole bitmap in one
+   0x2C.
+2. **Portrait target on a landscape handheld.** The panel sits along the
+   board's long axis (D-pad left, ABXY right); the target was 320x480
+   portrait. Now 480x320, MADCTL 0x28 — operator-confirmed upright with
+   the clusters on the correct sides. The docs' "2x vertical" scaling
+   plan is void (see Phase 2 docs).
+3. **PDM carrier hiss in the launcher.** With no reconstruction filter
+   (R38) an enabled PDM channel is a loud hiss even on zero samples.
+   `pdm.c` now keeps the channel disabled while muted or at volume 0
+   (time-paced like the dummy driver) and this target starts at volume 0
+   (`RG_AUDIO_DEFAULT_VOLUME`, generic default 50 unchanged).
+4. **R39-HIGH-1 — module pins 38/39 swapped in every project table.**
+   Symptom: D-pad RIGHT opened the game menu (the A action) and A did
+   nothing. The WROOM-1 datasheet on disk (`hardware/datasheets/U1_…pdf`,
+   "Pin Definitions") has **pin 38 = IO2, pin 39 = IO1**; `_PIN_TO_GPIO`,
+   `datasheet_specs.py`, the schematic symbol/pin table, `board_config.h`
+   and the Retro-Go target all had 38=GPIO1/39=GPIO2, and the gate
+   `Pin 38 = GPIO1` asserted the wrong fact (a table copied into its own
+   check). Pins 4-37 verified against the datasheet: only this pair.
+   **The copper is right**: BTN_RIGHT lands on pad 38 = GPIO2, BTN_A on
+   pad 39 = GPIO1 — so the fix is names only: `BTN_RIGHT=GPIO2`,
+   `BTN_A=GPIO1` in board_config.h / config.py / Retro-Go target, tables
+   and symbol corrected, gate now asserts 38=GPIO2 and 39=GPIO1. The
+   regenerated PCB is byte-identical to the built board. Bring-up
+   firmware regenerated (its 2026-09-11 log predates the rename: its
+   `btn.RIGHT` lines really exercised GPIO1 = the A button, and vice
+   versa — idle/pull checks only, verdict unaffected).
+
+Result: launcher usable (L/R added as system prev/next), all 12 buttons
+operator-verified in the launcher, **Owlia (NES) launched and played** —
+Phase 2.8 done on free homebrew; Super Mario Bros is the user's own copy,
+kept out of git (`.gitignore` now ignores every ROM under `test-roms/`
+except the committed homebrew set).

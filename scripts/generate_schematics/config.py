@@ -18,8 +18,8 @@ GPIO_NETS: dict[int, str] = {
     # GPIO16 stays retired and free for v2 (ADC2 candidate) — it falls back
     # to a plain GPIO16 label in mcu.py, same as the PSRAM pins.
     17: "I2S_DOUT",
-    40: "BTN_UP", 41: "BTN_DOWN", 42: "BTN_LEFT", 1: "BTN_RIGHT",
-    2: "BTN_A", 48: "BTN_B", 47: "BTN_X", 21: "BTN_Y",
+    40: "BTN_UP", 41: "BTN_DOWN", 42: "BTN_LEFT", 2: "BTN_RIGHT",
+    1: "BTN_A", 48: "BTN_B", 47: "BTN_X", 21: "BTN_Y",
     18: "BTN_START", 0: "BTN_SELECT", 45: "BTN_L", 3: "BTN_R",
     19: "USB_D-", 20: "USB_D+",
 }
@@ -36,7 +36,7 @@ ESP_PINS: dict[int, tuple] = {
     24: ("R", 47, 27.94), 25: ("R", 48, 25.4), 26: ("R", 45, 22.86), 27: ("R", 0, 20.32),
     28: ("R", 35, 17.78), 29: ("R", 36, 15.24), 30: ("R", 37, 12.7), 31: ("R", 38, 10.16),
     32: ("R", 39, 7.62), 33: ("R", 40, 5.08), 34: ("R", 41, 2.54), 35: ("R", 42, 0),
-    36: ("R", 44, -5.08), 37: ("R", 43, -7.62), 38: ("R", 1, -10.16), 39: ("R", 2, -12.7),
+    36: ("R", 44, -5.08), 37: ("R", 43, -7.62), 38: ("R", 2, -10.16), 39: ("R", 1, -12.7),
     40: ("B", "GND", 0), 41: ("B", "GND", 2.54),
 }
 

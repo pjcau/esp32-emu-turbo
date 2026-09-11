@@ -50,8 +50,8 @@ _SYMBOL_ESP32 = """    (symbol "ESP32-S3-WROOM-1" (pin_names (offset 1.016)) (in
         (pin bidirectional line (at 15.24 0 180) (length 2.54) (name "GPIO42" (effects (font (size 1.016 1.016)))) (number "35" (effects (font (size 1.016 1.016)))))
         (pin bidirectional line (at 15.24 -5.08 180) (length 2.54) (name "TX0" (effects (font (size 1.016 1.016)))) (number "36" (effects (font (size 1.016 1.016)))))
         (pin bidirectional line (at 15.24 -7.62 180) (length 2.54) (name "RX0" (effects (font (size 1.016 1.016)))) (number "37" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at 15.24 -10.16 180) (length 2.54) (name "GPIO1" (effects (font (size 1.016 1.016)))) (number "38" (effects (font (size 1.016 1.016)))))
-        (pin bidirectional line (at 15.24 -12.7 180) (length 2.54) (name "GPIO2" (effects (font (size 1.016 1.016)))) (number "39" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at 15.24 -10.16 180) (length 2.54) (name "GPIO2" (effects (font (size 1.016 1.016)))) (number "38" (effects (font (size 1.016 1.016)))))
+        (pin bidirectional line (at 15.24 -12.7 180) (length 2.54) (name "GPIO1" (effects (font (size 1.016 1.016)))) (number "39" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 0 -41.91 90) (length 2.54) (name "GND" (effects (font (size 1.016 1.016)))) (number "40" (effects (font (size 1.016 1.016)))))
         (pin power_in line (at 2.54 -41.91 90) (length 2.54) (name "~" (effects (font (size 1.016 1.016)))) (number "41" (effects (font (size 1.016 1.016)))))))\n"""
 # Pin 41's NAME is "~" (blank), not "GND": pins 40 and 41 sit 2.54 mm apart

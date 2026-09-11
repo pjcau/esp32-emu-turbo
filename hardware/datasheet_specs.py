@@ -170,8 +170,8 @@ COMPONENT_SPECS = {
             "35": {"net": _exact("BTN_LEFT"),   "function": "GPIO42 — D-pad left", "type": "smd"},
             "36": {"net": _exact("SD_MOSI"),    "function": "GPIO44 (U0RXD) — SD MOSI", "type": "smd"},
             "37": {"net": _exact("SD_MISO"),    "function": "GPIO43 (U0TXD) — SD MISO", "type": "smd"},
-            "38": {"net": _exact("BTN_RIGHT"),  "function": "GPIO1 — D-pad right", "type": "smd"},
-            "39": {"net": _exact("BTN_A"),      "function": "GPIO2 — A button", "type": "smd"},
+            "38": {"net": _exact("BTN_RIGHT"),  "function": "GPIO2 — D-pad right", "type": "smd"},
+            "39": {"net": _exact("BTN_A"),      "function": "GPIO1 — A button", "type": "smd"},
             # Pin 40 is GND — connected via copper zone fill, not direct pad net
             "40": {"net": _any_of("GND", ""),   "function": "GND (bottom pad row, zone-filled)", "type": "smd"},
             "41": {"net": _exact("GND"),        "function": "EPAD — exposed ground pad", "type": "smd"},

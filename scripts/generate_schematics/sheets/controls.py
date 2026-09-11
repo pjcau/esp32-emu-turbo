@@ -24,9 +24,9 @@ class ControlsSheet(SchematicSheet):
             ("UP", "BTN_UP", "SW1", "R4", "C5", "GPIO40"),
             ("DOWN", "BTN_DOWN", "SW2", "R5", "C6", "GPIO41"),
             ("LEFT", "BTN_LEFT", "SW3", "R6", "C7", "GPIO42"),
-            ("RIGHT", "BTN_RIGHT", "SW4", "R7", "C8", "GPIO1"),
+            ("RIGHT", "BTN_RIGHT", "SW4", "R7", "C8", "GPIO2"),
             # Row 0-3: Face buttons
-            ("A", "BTN_A", "SW5", "R8", "C9", "GPIO2"),
+            ("A", "BTN_A", "SW5", "R8", "C9", "GPIO1"),
             ("B", "BTN_B", "SW6", "R9", "C10", "GPIO48"),
             ("X", "BTN_X", "SW7", "R10", "C11", "GPIO47"),
             ("Y", "BTN_Y", "SW8", "R11", "C12", "GPIO21"),
