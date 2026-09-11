@@ -9,7 +9,7 @@ Live session log for the staged sequence in
 | 1 USB only | VBUS LED on | ✅ PASS | `hardware/first-article/v4.9.0-W2026081721393881/IMG_5905.jpeg` — VBUS lit with SW16 OFF (rails correctly dark: Q2 gating works) |
 | 2 rails | 5V/3V3 LEDs | ✅ PASS | `IMG_5906.jpeg` — SW16 ON: VBUS+5V+3V3 lit, HB dark (chip blank — expected). **Resolves the doc's open question: IP5306 DOES supply 5V batteryless.** CHG+FULL both lit with no cell (undefined-but-harmless, re-check at Stage 4) |
 | 3 boot | HB LED 1 Hz + BRINGUP verdict | ✅ PASS | `hardware/first-article/v4.9.0-W2026081721393881/bringup-stage3-serial-2026-08-29.log` — **GREEN, 47 PASS / 0 FAIL / 11 expected SKIP**, reproduced on two consecutive warm resets; HB at 1 Hz confirmed by eye (operator, 2026-08-29). Two latent bring-up firmware bugs found and fixed on the way (see below) |
-| 4 battery | boots from cell alone | ⏸️ DEFERRED | no cell on hand (2026-08-29) — C33 wake test stays on the respin watch list |
+| 4 battery | boots from cell alone | ✅ PASS (2026-09-11) | 105080 cell on J3 via a soldered JST-PH pigtail: boots from the cell alone, charge-and-play (CHG with USB while running), OFF kills 5V/3V3/HB on battery and stays off, charge-only with USB in OFF (VBUS only), **wake test PASS — C33 4.7 µF closes its BENCH-VALIDATE**. Cell cool under load. See "Stage 4" below |
 | 5 subsystems | blink codes clear one by one | ✅ PASS (SD, LCD, audio) | **SD: PASS** — `bringup-stage5-sd-serial-2026-08-29.log`, GREEN 52/0/6 with a 16GB card: full chain incl. FAT mount at 20 MHz. (A no-name 128GB card was rejected at CMD59/CRC_ON_OFF by the IDF driver on every try incl. freshly powered — card-side fault, do not use it.) **LCD: PASS (2026-09-11)** — `bringup-stage5-lcd-serial-2026-09-11.log`, GREEN 53/0/6 with the panel on the R37 workaround (40P extension board + type-B FFC): `lcd.data.risetime` 1000–1200 ns on all of D0–D7 (was ~200 ns unloaded), 8 colour bars confirmed by eye in the documented order, then the black/white load-test fills; no 3V3 event. R37-HIGH-1 stays open only as the v2 top-contact J4 item. **Audio: PASS (operator-confirmed)** — speaker soldered, 3×1 kHz beep pattern clearly recognizable over the R38 carrier hiss (test tone reworked for it; channel now silenced after the check). Clean audio deferred to the R38 v2 fix. Nothing remaining at stage 5 |
 
 ## R37-HIGH-1 — J4 contact face is inverted for the purchased panel (found at first article, 2026-08-29)
@@ -215,3 +215,38 @@ operator-verified in the launcher, **Owlia (NES) launched and played** —
 Phase 2.8 done on free homebrew; Super Mario Bros is the user's own copy,
 kept out of git (`.gitignore` now ignores every ROM under `test-roms/`
 except the committed homebrew set).
+
+## Stage 4 — battery (2026-09-11), PASS
+
+Cell: the 105080 LiPo, wired to a JST-PH pigtail by solder joints (J3 has
+no "+" silkscreen — only "BATT"; pad 1 = BAT_IN, pad 2 = GND; v2: add a
+polarity mark). Polarity checked by continuity to the USB-C shell before
+joining. Screen and SD fitted, bring-up firmware re-flashed for the HB
+LED (GREEN 53/0/6 on USB first).
+
+Sequence and results:
+- **First cold start from a freshly connected cell**: SW16 ON gave only a
+  faint 5V LED (the IP5306 load-detect pulses), nothing else. A USB
+  "kick" (charger, 2 s) started the IP5306; from then on every test
+  below passed, including the wake test. Reading: an IP5306 that has
+  just been connected to a cell does not start from the KEY pulse
+  alone; once it has seen VIN it wakes from KEY reliably. Once per cell
+  insertion, not a defect — note it in the user docs.
+- Boots from the cell alone, USB unplugged while running → keeps
+  running: boost (U2, L1), Q1 and the BAT+ copper are good.
+- Charge-and-play: CHG lights with USB while running. On battery,
+  CHG+FULL both lit = the IP5306's discharge-mode level display, not a
+  fault (closes the August "CHG+FULL with no cell" question).
+- SW16 OFF on battery: 5V/3V3/HB/screen all off, still off after a
+  minute (Q2 gates the loads on battery too).
+- USB in with SW16 OFF: VBUS only — charge-only path works. CHG stayed
+  dark with this (fresh, likely full) cell; re-check with a partly
+  discharged cell that CHG lights in charge-only.
+- **Wake test: USB out, OFF for a full minute (IP5306 32 s light-load
+  shutdown has fired), ON → 5V → 3V3 → HB on its own.** C33 4.7 µF is
+  validated; SW17 stays DNP.
+- Cell cool throughout; no thermal observation on Q1/U2.
+
+First article status: **stages 0-5 all PASS.** Remaining bench items are
+performance (SNES fps on the real board) and the v2 backlog (R37
+top-contact J4, R38 PDM RC filter, SPK and J3 polarity silkscreen).
