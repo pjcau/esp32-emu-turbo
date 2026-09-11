@@ -257,3 +257,21 @@ Sequence and results:
 First article status: **stages 0-5 all PASS.** Remaining bench items are
 performance (SNES fps on the real board) and the v2 backlog (R37
 top-contact J4, R38 PDM RC filter, SPK and J3 polarity silkscreen).
+
+## SNES on the real board — first numbers (2026-09-11, late)
+
+Read from the USB serial (`[debug] ... BUSY:x%, FPS:t (S:s R:r+p)` line,
+printed once a second by `rg_system`; t = emulated frames/s, s = skipped,
+r = rendered). Board on the Mac's USB, battery unplugged.
+
+| ROM | Core state | Emulated fps | Drawn fps | BUSY |
+|---|---|---|---|---|
+| Super Boss Gaiden (homebrew) | **hung** — loop ticks, snes9x idle | 107 (all skipped) | 1 | 2% |
+| Super Mario World (U) | runs, playable | **42 / 60 = 70%** | ~11 (frameskip 3 fixed in `main_snes.c`) | 68–75% |
+
+Baseline for Phase 4 (30→60 fps) is therefore **70% speed, 11 drawn fps,
+~28% of wall time NOT spent in the core** — worth checking whether the
+audio pacing (`rg_audio_submit`, PDM channel off at volume 0 so paced by
+sleep) or `rg_display_sync` is the idle 28% before touching the emulator.
+Audio: crackles as expected (R38 + underruns at 70% speed). Free heap
+under SNES: 167 KB internal, 566 KB PSRAM.
