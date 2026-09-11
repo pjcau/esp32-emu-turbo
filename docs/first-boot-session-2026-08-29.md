@@ -246,6 +246,13 @@ Sequence and results:
   shutdown has fired), ON → 5V → 3V3 → HB on its own.** C33 4.7 µF is
   validated; SW17 stays DNP.
 - Cell cool throughout; no thermal observation on Q1/U2.
+- **Bench rule, proven the hard way**: with the cell on J3 the board does
+  NOT enumerate on the MacBook's USB port (`device not accepting
+  address, error -71`, chip resetting in a loop) — the IP5306 starts
+  charging as soon as it sees VBUS and the 500 mA port collapses. Unplug
+  J3 for any flash/serial session from a laptop port (a wall charger or a
+  powered hub is fine for charge-and-play). Matches the schematics.md
+  note that "battery isolation for bench work is unplug J3".
 
 First article status: **stages 0-5 all PASS.** Remaining bench items are
 performance (SNES fps on the real board) and the v2 backlog (R37
