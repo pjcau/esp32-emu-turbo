@@ -275,3 +275,25 @@ audio pacing (`rg_audio_submit`, PDM channel off at volume 0 so paced by
 sleep) or `rg_display_sync` is the idle 28% before touching the emulator.
 Audio: crackles as expected (R38 + underruns at 70% speed). Free heap
 under SNES: 167 KB internal, 566 KB PSRAM.
+
+## SNES — where the time goes (2026-09-12, instrumented build)
+
+After fixing the per-frame audio size (533 samples for NTSC, fork
+8164755a) Super Mario World runs at 45-52 emulated fps. Instrumenting the
+loop (`RG_ENABLE_PROFILING`, fork commit after 8164755a) and the audio
+pacing sleep gave the breakdown per frame:
+
+| Piece | Time | Note |
+|---|---|---|
+| `S9xMainLoop`, frame NOT rendered | ~8.5 ms | CPU + APU emulation alone would do 60 fps with margin |
+| `S9xMainLoop`, frame rendered | ~40-50 ms | PPU tile renderer — the bottleneck |
+| `rg_display_submit` | 5 µs | asynchronous, display path is not a factor |
+| audio mix | 1.5 ms | |
+| audio pacing sleep | exact (requested = actual) | Dummy and PDM identical; the ~3 ms/frame "idle" was the late arrival after rendered frames |
+
+With `frameskip = 3` (fixed in `main_snes.c`) ~13 rendered frames/s eat
+about half the machine time. Consequences: emulated speed 75-85%, ~10-13
+visual fps. Phase 4's target is therefore the snes9x renderer (gfx/tile):
+a ~5x speed-up on rendered frames is what 30 visual fps at real speed
+needs. Super Boss Gaiden (homebrew) hangs snes9x and is not usable as a
+benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World.
