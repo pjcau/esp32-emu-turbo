@@ -266,7 +266,7 @@ r = rendered). Board on the Mac's USB, battery unplugged.
 
 | ROM | Core state | Emulated fps | Drawn fps | BUSY |
 |---|---|---|---|---|
-| Super Boss Gaiden (homebrew) | **hung** — loop ticks, snes9x idle | 107 (all skipped) | 1 | 2% |
+| Super Boss Gaiden (homebrew) | reading later identified as the LAUNCHER idle loop (107 fps, 2% busy) — game not actually measured | — | — | — |
 | Super Mario World (U) | runs, playable | **42 / 60 = 70%** | ~11 (frameskip 3 fixed in `main_snes.c`) | 68–75% |
 
 Baseline for Phase 4 (30→60 fps) is therefore **70% speed, 11 drawn fps,
@@ -297,3 +297,15 @@ visual fps. Phase 4's target is therefore the snes9x renderer (gfx/tile):
 a ~5x speed-up on rendered frames is what 30 visual fps at real speed
 needs. Super Boss Gaiden (homebrew) hangs snes9x and is not usable as a
 benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World.
+
+## NES 60 fps + PDM DAC mode (2026-09-12)
+
+- **Super Mario Bros (NES, nofrendo): 60 fps, BUSY 35%** — Phase 2.8's
+  stated target met on the first article.
+- Audio: the PDM driver now uses IDF's **DAC line mode** (fork, carrier
+  128 x 48 kHz, tuned sigma-delta scaling) instead of codec line mode.
+  Operator A/B: "much better, the music is distinct", a hiss remains —
+  the expected R38 residual; the RC rework sheet (1 kΩ + 10 nF at C22) is
+  the next step, software has no further lever on a full-swing carrier.
+- The per-frame SNES audio size fix is confirmed by ear: pitch and tempo
+  correct.
