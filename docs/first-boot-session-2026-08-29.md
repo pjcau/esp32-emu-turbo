@@ -309,3 +309,99 @@ benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World.
   the next step, software has no further lever on a full-swing carrier.
 - The per-frame SNES audio size fix is confirmed by ear: pitch and tempo
   correct.
+
+## Phase 4 step 4.0 — the renderer instrumented, two fixes, SMW at 60 fps (2026-09-13)
+
+Bench: board on USB (`/dev/ttyACM0`), battery off J3, volume 0, Super Mario
+World, the heavy scene (1 strip/frame, ~2950 tiles/frame, Mode 1). Fork
+commit 3e444cd9 + the Transparency knob.
+
+**Tooling correction.** Yesterday's 40–50 ms "rendered frame" came from
+`rg_tool.py profile` = `RG_ENABLE_PROFILING`, which also passes
+`-finstrument-functions` to every component (mutex + linear lookup on every
+function entry/exit — the tile writers are called thousands of times a
+frame). New switch `SNES_PROF=1` (env var, `retro-core/CMakeLists.txt`):
+counters and timer reads only, `PROF` / `PROF/drawn-frame` lines once a
+second, plus a 7-column HUD in the 57 px letterbox bar left of the viewport
+(drawn from the loop only when the display is idle, outside the timed
+sections). Build: docker `retro-go-flash` service with `-e SNES_PROF=1`,
+`rg_tool.py build retro-core` then `flash retro-core`.
+
+**Measured, production code (per drawn frame):**
+
+| | before | blank-tile fix | + pacing credit | Transparency Off (not a fix) |
+|---|---|---|---|---|
+| emulated fps | 45–47 | 47–48 | **60** | 60 |
+| drawn fps | 11–12 | 12 | 15 (auto-frameskip 3–5), 20–30 in light scenes | 30 |
+| busy | 65–72% | 66–71% | 80–95% | 92–95% |
+| `S9xMainLoop` drawn / skipped | 34.5 / 8–10.5 ms | 36 / 9 | 30 / 9 | 17.5 / 10 |
+| **R** (renderer) | **24.0 ms** | 21.3 | 21.0 | 7.5 |
+| `S9xUpdateScreen` = clear + sub + main + combine | 24.2 = 3.1 + 6.1 + 8.1 + 6.7 | 21.8 = 3.1 + 5.8 + 6.4 + 6.2 | same | 9.0 = 4.5 + 0 + 4.4 + 0 |
+| BG0 / BG1 / BG2 / OBJ | 3.1 / 6.1 / 4.3 / 0.7 | 2.4 / 5.8 / 3.7 / 0.3 | same | 3.2 / **0** / 0.7 / 0.5 |
+| tiles entered / blank / ConvertTile | 3050 / 1500 / **1520** | 2900 / 1480 / **25** | same | 2100 / 1570 / 30 |
+| audio submit (skipped frames) | 3.5–5.5 ms | same | 0.1–2 | |
+
+- **Blank tiles were never cached.** `ConvertTile()` returned a depth-less
+  `BLANK_TILE` that could not satisfy the "cached at this depth"
+  test, so every blank tile was re-converted every draw (VRAM read + 64 B
+  cache write, both PSRAM). Now `0x20|depth` is a cached state. R −11%.
+- **The audio pacing threw away the skipped frames' slack.** Muted PDM path
+  slept "chunk duration from now" on each submit: the three 12 ms frames of
+  a frameskip-3 group were stretched to 16.7 ms each while the 36 ms drawn
+  frame's overrun was never recovered → 86 ms per 4 frames = 46 fps at
+  65–72% busy. `busy_until` now models a queue allowed to run up to the DMA
+  lead ahead, and DMA goes 4 → 8 × 256 frames (32 → 64 ms) so the unmuted
+  path matches. **SMW at 60 fps, 100% speed**; audio ON re-measured:
+  identical (58–62 fps, R 22, 20 drawn).
+- `rg_system`'s auto-frameskip (1..5 on speed/busy) is live — the plan doc's
+  "adaptive branch is dead code" was wrong; only the initial value is 3.
+- **Colour math is on in every frame of this scene and BG1 lives on the
+  sub-screen only** (`bg1=0` with transparency off): the new
+  "Transparency Off" option drops that layer (operator-confirmed missing
+  elements in several screens), so it stays a knob, not a fix. Its numbers
+  give the ceiling: the colour-math path costs ~14 of the 21 ms.
+
+**Next**: 4.1 cache config (I-cache 32 KB, D-cache 64 KB / 64 B — bootloader
+applies it, full `install`), 4.2 z-buffers internal + `IRAM_ATTR` writers,
+then the combine loop (6.5 ms = 113 ns/pixel in C) and the sub-screen pass.
+Milestone A (60 emulated / 20 drawn on the heavy scene) needs R ≤ 14 ms.
+
+### Same day, later — cache, z-buffer, Super Mario Kart (fork 48cedc75)
+
+Second reference scene: **Super Mario Kart, race** (Mode 7 + DSP-1
+coprocessor, 27 strips/frame from HDMA, OAM rewritten mid-frame). Before
+any of this it ran at 38–40 fps: a **non-drawn frame costs 17.3 ms** there
+(CPU + DSP-1 + APU alone exceed the 16.7 ms budget — the DSP-1 is emulated
+in software, `dsp.c`), R 28 ms, `S9xSetupOBJ` 24×/frame = 6 ms, Mode 7 main
+pass 20 ms.
+
+| Mario Kart race | before | I-cache 32 KB + D-cache 64 KB/64 B | + main z-buffer internal |
+|---|---|---|---|
+| non-drawn frame | 17.3 ms | **11.7** | 10.7 |
+| R | 28 | 24.5 | 22 |
+| fps | 38–40 | 56–58 | **60** |
+| busy | 96% | 98% | 96–97% |
+| free internal heap | 164 KB | 117 | 80 (largest block 31 KB) |
+
+- The cache change is the biggest single win so far and it helps the CPU
+  side more than the renderer: everything the 65C816/DSP-1 touches (WRAM,
+  ROM, SRAM) is in PSRAM. Gotcha: `rg_tool.py` passes the target sdkconfig
+  as `SDKCONFIG_DEFAULTS`, which never rewrites an existing app sdkconfig —
+  the first "install" changed nothing; `clean` + `install` did.
+- The second z-buffer (61 KB) no longer fits internal (31 KB largest block).
+- **Tried and reverted**: per-strip `S9xSetupOBJ` with per-line OAM
+  generations. Calls rose 24 → 46–61/frame and the time did not move —
+  137 µs per 8-line strip, not proportional to lines, i.e. the cost is
+  fetching the function from flash on every strip, not the work. 60 → 53
+  fps. The lever is `IRAM_ATTR` on the strip-path code, not fewer lines.
+- Benchmark set agreed with the user (light → heavy, one save state each):
+  Super Mario World, Zelda ALttP, Mega Man X, Super Metroid, Super Mario
+  Kart. Super FX / SA-1 titles are out of scope.
+- Open cosmetic: a light-blue rectangle refreshing every ~2 s on Mario
+  Kart's selection screen (SNES_PROF builds only — most likely the HUD
+  write colliding with a full-viewport update; not seen in-race).
+
+State at close: fork 48cedc75, SMW and Mario Kart both at 60 fps emulated
+on the profiling build; drawn 10–15/s on the heavy scenes. Next: IRAM
+placement of the tile writers / UpdateScreen / SetupOBJ, then the
+colour-math combine loop.
