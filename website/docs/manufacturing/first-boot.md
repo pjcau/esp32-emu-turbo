@@ -6,6 +6,28 @@ LEDs](../rework/diagnostic-leds.md) and a multimeter on the gated test
 points are the only instruments, and **the battery is connected last**,
 only after the circuit has proven itself on USB power alone.
 
+:::tip Result on the first article — stages 0–5 all PASS
+Article 0003 (v4.9.0, order W2026081721393881) went through this page between
+2026-08-29 and 2026-09-11: USB, rails, boot (bring-up firmware GREEN 53/0/6),
+display, SD, audio, all 12 buttons, and the battery stage including charge-only
+with SW16 OFF and the **C33 wake test** (USB out, OFF for a minute, ON → 5V →
+3V3 → HB on its own — C33 4.7 µF validated, SW17 stays DNP). No board defect;
+three findings closed in firmware or deferred to v2 (R37 J4 contact face, R38
+PDM reconstruction filter, R39 module pins 38/39 named wrong — copper right).
+Two things the session added to the procedure below:
+
+- **A freshly connected cell needs one USB "kick".** The first cold start from
+  a cell that has just been plugged into J3 gave only a faint 5V LED (the
+  IP5306 load-detect pulses) — the IP5306 does not start from the KEY pulse
+  alone until it has seen VIN once. Two seconds on a charger, and from then on
+  every switch-on works, wake test included. Once per cell insertion, not a
+  defect.
+- **On battery, CHG+FULL both lit is normal**: it is the IP5306's discharge-mode
+  level display, not a fault.
+
+Full record: [first-boot session log](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/first-boot-session-2026-08-29.md).
+:::
+
 :::danger Battery safety — read before starting
 **Connecting the battery is always a LIVE operation on this board**:
 SW16 is not in series with the cell (permanent invariant, respin
@@ -200,6 +222,12 @@ is the only stage where they can be made, because both need a cell:
 
 Never use the switch to "disconnect the battery" for a rework: it does
 not, by design. Unplug J3.
+
+**Unplug J3 for flash/serial sessions from a laptop port, too.** With the
+cell attached the IP5306 starts charging the moment it sees VBUS; a 500 mA
+laptop port collapses and the board never enumerates (`device not accepting
+address, error -71`, chip resetting in a loop — seen on a MacBook, 2026-09-11).
+A wall charger or a powered hub is fine for charge-and-play.
 
 ## Stage 5 — subsystems, one insertion at a time
 

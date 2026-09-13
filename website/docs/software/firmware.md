@@ -6,7 +6,7 @@ sidebar_position: 2
 
 # ESP32 Firmware
 
-ESP-IDF v5.x firmware for the ESP32 Emu Turbo hardware. Phase 1 validates all hardware subsystems, Phase 2 integrates Retro-Go, Phase 3 enables all emulator cores.
+ESP-IDF v5.x firmware for the ESP32 Emu Turbo hardware. Phase 1 validates all hardware subsystems, Phase 2 integrates Retro-Go, Phase 3 enables all emulator cores. Phases 1 and 2 are complete and proven on the v4.9.0 first article (bring-up GREEN, Retro-Go NES at 60 fps, 2026-09-12); Phase 3 is in progress.
 
 ---
 
@@ -161,8 +161,8 @@ Fork and adapt Retro-Go for our hardware. Retro-Go is included as a git submodul
 | 2.4 | Custom display driver `ili9488_i80.h` | 8-bit i80 parallel via `esp_lcd_panel_io_i80`, async DMA, 5-buffer pool | ✅ Done |
 | 2.5 | Frame scaling | Automatic via Retro-Go core (480x320 landscape — the panel sits along the handheld's long axis; the earlier portrait plan was wrong, first article 2026-09-11) | ✅ Done |
 | 2.6 | Input mapping | 12 GPIO direct buttons + MENU=SELECT (GPIO 0) | ✅ Done |
-| 2.7 | Audio routing | I2S **PDM TX** on DOUT only (GPIO17) → C22 → PAM8403. No external DAC, no BCLK/LRCK — same path as step 1.6 | ✅ Done |
-| 2.8 | First boot: NES test | nofrendo on the v4.9.0 first article: Owlia (homebrew) and Mario Bros played from SD, all 12 buttons verified (2026-09-11). Four fork fixes on the way: i80 0x3C continuation, landscape, silent PDM at volume 0, RIGHT/A GPIO swap (R39-HIGH-1) | ✅ Done |
+| 2.7 | Audio routing | I2S **PDM TX** on DOUT only (GPIO17) → C22 → PAM8403. No external DAC, no BCLK/LRCK — same path as step 1.6. Since 2026-09-12 the fork drives the PDM peripheral in IDF **DAC line mode** (128 × 48 kHz carrier, tuned sigma-delta scaling): music is distinct; the residual hiss is the missing reconstruction filter (R38, RC rework sheet ready) and has no software lever left | ✅ Done |
+| 2.8 | First boot: NES test | nofrendo on the v4.9.0 first article: Owlia (homebrew) and Mario Bros played from SD, all 12 buttons verified (2026-09-11). **Super Mario Bros: 60 fps, 35% busy** (2026-09-12) — target met. Four fork fixes on the way: i80 0x3C continuation, landscape, silent PDM at volume 0, RIGHT/A GPIO swap (R39-HIGH-1) | ✅ Done |
 
 ### Build & flash (Docker)
 
@@ -255,19 +255,29 @@ The driver uses `esp_lcd_panel_io_tx_param` for commands (CASET/RASET) and `esp_
 
 ## Phase 3 — All Emulators at Full Speed
 
-Enable and test each emulator core.
+Enable and test each emulator core on the first article. The number to read is
+the `[debug] ... BUSY:x%, FPS:t (S:s R:r+p)` line `rg_system` prints once a
+second on the USB serial (t = emulated frames/s, s = skipped, r = rendered).
+Bench rule: the battery must be **unplugged from J3** for any serial session
+from a laptop port — with a cell attached the IP5306 starts charging the moment
+it sees VBUS and a 500 mA port collapses (`device not accepting address,
+error -71`).
 
-| Step | Core | Test ROM | Target |
-|:---|:---|:---|:---|
-| 3.1 | nofrendo (NES) | Super Mario Bros | 60 fps |
-| 3.2 | gnuboy (GB) | Tetris | 60 fps |
-| 3.3 | gnuboy (GBC) | Pokemon Crystal | 60 fps |
-| 3.4 | smsplus (SMS) | Sonic the Hedgehog | 60 fps |
-| 3.5 | smsplus (GG) | Sonic Triple Trouble | 60 fps |
-| 3.6 | pce-go (PCE) | Bonk's Adventure | 60 fps |
-| 3.7 | handy (Lynx) | California Games | 60 fps |
-| 3.8 | gwenesis (Genesis) | Sonic the Hedgehog | 50-60 fps |
-| 3.9 | gw-emulator (G&W) | Ball | 60 fps |
+| Step | Core | Test ROM | Target | Measured (article 0003) |
+|:---|:---|:---|:---|:---|
+| 3.1 | nofrendo (NES) | Super Mario Bros | 60 fps | ✅ **60 fps, BUSY 35%** (2026-09-12) |
+| 3.2 | gnuboy (GB) | Tetris | 60 fps | — |
+| 3.3 | gnuboy (GBC) | Pokemon Crystal | 60 fps | — |
+| 3.4 | smsplus (SMS) | Sonic the Hedgehog | 60 fps | — |
+| 3.5 | smsplus (GG) | Sonic Triple Trouble | 60 fps | — |
+| 3.6 | pce-go (PCE) | Bonk's Adventure | 60 fps | — |
+| 3.7 | handy (Lynx) | California Games | 60 fps | — |
+| 3.8 | gwenesis (Genesis) | Sonic the Hedgehog | 50-60 fps | — |
+| 3.9 | gw-emulator (G&W) | Ball | 60 fps | — |
+| — | snes9x (SNES) | Super Mario World | 60 fps (Phase 4) | 45–52 emulated fps (75–85%), ~10–13 drawn, BUSY 68–75% — see [SNES Optimization](snes-optimization#measured-on-the-first-article-2026-09-12) |
+
+Super Boss Gaiden (SNES homebrew) hangs snes9x and is not usable as a
+benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World.
 
 For SNES-specific optimization (Phase 4) and v2 hardware audio coprocessor (Phase 5), see [SNES Optimization](snes-optimization).
 

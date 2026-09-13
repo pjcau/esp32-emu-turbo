@@ -31,18 +31,25 @@ Retro-Go is a multi-system emulator for ESP32 devices. It provides a launcher UI
 
 | Core | System | Resolution | QEMU Benchmark | FPS on ESP32-S3 |
 |:---|:---|:---|:---|:---|
-| nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | **60 fps** |
-| gnuboy | Game Boy | 160x144 | 432 fps (7.2x) | **60 fps** |
-| gnuboy | Game Boy Color | 160x144 | 393 fps (6.5x) | **60 fps** |
-| smsplus | Master System | 256x192 | 481 fps (8.0x) | **60 fps** |
-| smsplus | Game Gear | 160x144 | 484 fps (8.1x) | **60 fps** |
-| pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | **60 fps** |
-| handy | Atari Lynx | 160x102 | — | **60 fps** |
-| gwenesis | Sega Genesis / Mega Drive | 320x224 | — | **50-60 fps** |
-| gw-emulator | Game & Watch | various | — | **60 fps** |
-| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | **~60 fps** (estimated) |
+| nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | **60 fps — measured** on the first article (Super Mario Bros, 35% busy, 2026-09-12) |
+| gnuboy | Game Boy | 160x144 | 432 fps (7.2x) | 60 fps (expected, not yet run on hardware) |
+| gnuboy | Game Boy Color | 160x144 | 393 fps (6.5x) | 60 fps (expected) |
+| smsplus | Master System | 256x192 | 481 fps (8.0x) | 60 fps (expected) |
+| smsplus | Game Gear | 160x144 | 484 fps (8.1x) | 60 fps (expected) |
+| pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | 60 fps (expected) |
+| handy | Atari Lynx | 160x102 | — | 60 fps (expected) |
+| gwenesis | Sega Genesis / Mega Drive | 320x224 | — | 50-60 fps (expected) |
+| gw-emulator | Game & Watch | various | — | 60 fps (expected) |
+| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | **45–52 emulated fps (75–85%), ~10–13 drawn — measured** (Super Mario World, 2026-09-12) |
 
-All systems run at full speed on ESP32-S3 N16R8 @ 240MHz. QEMU benchmark confirms 6.5-10.9x headroom vs 60fps target. See [QEMU Benchmark](/docs/software/simulator#qemu-esp32-s3-benchmark) for full details.
+The QEMU column is a CPU-only benchmark (6.5-10.9x headroom vs 60 fps for the 8-bit
+cores); the last column is what the real board does. Two systems have been measured
+so far: NES holds 60 fps with margin, SNES does not — its cost is in the snes9x
+PPU renderer (~40-50 ms per rendered frame vs ~8.5 ms of CPU+APU emulation), which
+the CPU-only QEMU number could never show. See
+[SNES Optimization](/docs/software/snes-optimization#measured-on-the-first-article-2026-09-12)
+for the breakdown and [QEMU Benchmark](/docs/software/simulator#qemu-esp32-s3-benchmark)
+for the simulator method.
 
 ---
 
@@ -50,10 +57,10 @@ All systems run at full speed on ESP32-S3 N16R8 @ 240MHz. QEMU benchmark confirm
 
 | Phase | Description | Status | Details |
 |:---|:---|:---|:---|
-| **Phase 1** | Hardware Abstraction (ESP-IDF bootstrap) | ✅ Done | [Firmware](/docs/software/firmware) |
-| **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
-| **Phase 3** | All Emulators at Full Speed | ⏳ Needs HW | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
-| **Phase 4** | SNES Optimization (30→60 FPS) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization) |
+| **Phase 1** | Hardware Abstraction (ESP-IDF bootstrap) | ✅ Done — validated on the first article (bring-up GREEN 53/0/6) | [Firmware](/docs/software/firmware) |
+| **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done — runs on the first article, NES at 60 fps (2026-09-12) | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
+| **Phase 3** | All Emulators at Full Speed | 🔄 In progress — NES measured 60 fps; other 8-bit/16-bit cores still to run | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
+| **Phase 4** | SNES Optimization (measured 75–85% → 60 FPS) | 📋 Next — baseline measured, bottleneck = PPU renderer | [SNES Optimization](/docs/software/snes-optimization) |
 | **Phase 5** | v2 Audio Coprocessor (ESP32-S3-MINI-1) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor) |
 
 ---

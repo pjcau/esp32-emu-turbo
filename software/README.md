@@ -92,10 +92,10 @@ software/
 ├── partitions.csv          Flash layout (4MB app + 12MB storage)
 └── main/
     ├── CMakeLists.txt      Component build config
-    ├── idf_component.yml   ESP Registry dependency (esp_lcd_st7796)
+    ├── idf_component.yml   ESP Registry dependency (atanisoft/esp_lcd_ili9488)
     ├── board_config.h      All GPIO pin definitions
     ├── main.c              Test harness entry point
-    ├── display.c/h         ST7796S 320x480 8-bit i80 parallel + backlight PWM
+    ├── display.c/h         ILI9488 320x480 8-bit i80 parallel (backlight hardwired, no PWM)
     ├── input.c/h           12-button GPIO polling (active-low, HW debounce)
     ├── sdcard.c/h          SD card SPI + FAT32 mount + ROM listing
     ├── audio.c/h           I2S 32kHz mono → PAM8403 amplifier
@@ -175,7 +175,7 @@ sudo ./scripts/setup-sdcard.sh /dev/sdX --no-format  # Copy only
 
 | Problem | Fix |
 |---|---|
-| Build fails on `esp_lcd_st7796` | Run `idf.py reconfigure` to fetch managed components |
+| Build fails on `esp_lcd_ili9488` | Run `idf.py reconfigure` to fetch managed components |
 | No serial output | Check USB cable is data-capable, try `/dev/ttyACM0` |
 | Display stays black | Verify FPC cable seated correctly, check GPIO45 (BL) |
 | SD card not detected | Ensure FAT32 format, check SPI wiring (GPIO36–39) |

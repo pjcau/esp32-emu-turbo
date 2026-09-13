@@ -10,9 +10,49 @@ Progressive optimization plan to reach 60 FPS stable on SNES titles. Three softw
 
 ---
 
+## Measured on the first article (2026-09-12)
+
+The plan below was written before the board existed, from a CPU-only QEMU
+benchmark and an estimated cost model. The v4.9.0 first article now gives real
+numbers (Retro-Go fork with `RG_ENABLE_PROFILING`, Super Mario World (U), board
+on USB with the battery unplugged):
+
+| What | Measured | Meaning |
+|:---|:---|:---|
+| Emulated speed | **45–52 fps of 60 (75–85%)** | after fixing the per-frame audio size (533 samples/frame NTSC); 42/60 before |
+| Drawn frames | **~10–13 fps** | `frameskip = 3` fixed in `main_snes.c` |
+| `S9xMainLoop`, frame **not** rendered | **~8.5 ms** | CPU (65C816) + APU (SPC700) alone would run 60 fps with margin |
+| `S9xMainLoop`, frame rendered | **~40–50 ms** | the **PPU tile renderer** — ~5x the cost of everything else |
+| `rg_display_submit` | 5 µs | asynchronous DMA; the display path is not a factor |
+| Audio mix | 1.5 ms | |
+| Audio pacing sleep | exact (requested = actual) | Dummy and PDM drivers identical; the earlier "idle 28%" was frames arriving late after a rendered one |
+| Free heap under SNES | 167 KB internal, 566 KB PSRAM | |
+| BUSY (rg_system) | 68–75% | |
+
+**What this changes.** The cost model in [Why SNES is Hard](#why-snes-is-hard-on-esp32-s3)
+put the SPC700 DSP at 48% of the frame and the PPU at 30%; on the real board the
+CPU+APU pair fits in ~8.5 ms and the renderer alone blows the 16.67 ms budget three
+times over. The order of the sub-phases is therefore being inverted:
+
+1. **Renderer first** — Phase 4.3's PPU fast-path / tile cache work (`gfx.c`,
+   `tile.c` in snes9x) is the Phase 4 target. A ~5x speed-up on rendered frames
+   is what 30 visual fps at real speed needs; the rest of the plan cannot get
+   there without it.
+2. **Frameskip stays adaptive**, not fixed: with 13 rendered frames/s eating half
+   the machine time, every rendered frame that could be skipped is worth 40 ms.
+3. **ASM DSP (4.1) and dual-core SPC700 (4.2.1) become second-order** — they buy
+   back part of the 8.5 ms, not the 40 ms.
+
+Benchmark notes: Super Boss Gaiden (homebrew) hangs snes9x and is not usable as
+a benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World. Audio
+crackles at 75–85% speed as expected (underruns) on top of the R38 carrier hiss.
+Source: [first-boot session log](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/first-boot-session-2026-08-29.md).
+
+---
+
 ## Phase 4 — SNES Optimization (60 FPS target)
 
-Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-phases over ~14 days. Target: **60 FPS stable** on standard titles (Super Mario World, Zelda ALttP, Chrono Trigger, Final Fantasy VI, Mega Man X). Baseline: ~30 FPS. See below for full technical details.
+Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-phases over ~14 days. Target: **60 FPS stable** on standard titles (Super Mario World, Zelda ALttP, Chrono Trigger, Final Fantasy VI, Mega Man X). Baseline: ~30 FPS *(pre-hardware estimate — measured: 45–52 emulated / 10–13 drawn, see above; the sub-phase order is being re-prioritised around the renderer)*. See below for full technical details.
 
 | Sub-phase | Step | Optimization | Days | Gain | Cumulative FPS |
 |:---|:---|:---|---:|:---|:---|
@@ -48,7 +88,14 @@ Frame time budget: 16.67 ms (for 60 fps)
 └────────────────────────────────────────────┘
 ```
 
-At 114% of the frame budget on a single core, SNES emulation via Retro-Go (Snes9x 2005) currently reaches ~30 FPS on a target of 60 FPS. The 3-phase optimization plan below combines assembly-level DSP work, architectural changes (dual-core, memory layout), and rendering optimizations (PPU fast-path, tile cache, DMA display) to reach 60 FPS stable.
+:::caution Estimate, superseded by measurement
+This breakdown was the pre-hardware estimate. On the first article the CPU+APU
+pair costs ~8.5 ms per frame and a rendered frame ~40–50 ms — the PPU renderer,
+not the SPC700 DSP, is the bottleneck. See
+[Measured on the first article](#measured-on-the-first-article-2026-09-12).
+:::
+
+At 114% of the frame budget on a single core, the estimate put SNES emulation via Retro-Go (Snes9x 2005) at ~30 FPS on a target of 60 FPS. The 3-phase optimization plan below combines assembly-level DSP work, architectural changes (dual-core, memory layout), and rendering optimizations (PPU fast-path, tile cache, DMA display) to reach 60 FPS stable.
 
 :::note
 Performance gains are not perfectly additive — each optimization reduces the total frame time, so subsequent ones operate on a smaller base. The estimates account for this non-linearity.

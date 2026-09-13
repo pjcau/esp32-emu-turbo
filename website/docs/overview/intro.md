@@ -19,8 +19,9 @@ Build a portable battery-powered device with USB-C charging and an ILI9488 3.95"
 |---|---|---|
 | **1. Feasibility** | Component analysis, schematics, budget | Completed |
 | **2. Hardware Design** | KiCad schematics, OpenSCAD enclosure, GPIO mapping | Completed |
-| **3. Prototype** | PCB fabrication, assembly, bring-up and rework | In Progress |
-| **4. Final version** | Respin with the audio coprocessor + 3D-printed enclosure | Pending |
+| **3. Prototype** | PCB fabrication, assembly, bring-up and rework | **Completed** — v4.9.0 first article passed every bring-up stage incl. battery (2026-09-11); Retro-Go runs, NES at 60 fps |
+| **4. Software** | Emulator cores at full speed, SNES optimization | In Progress — NES 60 fps measured; SNES 75–85% speed, PPU renderer is the target ([status](/docs/software)) |
+| **5. Final version** | Respin (R37/R38 + silkscreen backlog, audio coprocessor) + 3D-printed enclosure | Pending |
 
 ## Key Requirements
 

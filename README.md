@@ -6,6 +6,27 @@ Handheld retro gaming console based on ESP32-S3 — **SNES** (primary) and **NES
 
 Build a portable battery-powered device based on ESP32-S3, capable of loading and playing retro games via SD card, with USB-C charging and an ILI9488 3.95" color LCD display.
 
+## Where the project stands (2026-09-12)
+
+- **The first article works.** Board v4.9.0 (article 0003, JLCPCB-assembled) passed
+  every bring-up stage on 2026-09-11: USB power, rails, boot, display, SD, audio, all
+  12 buttons, and **battery** — boots from the cell alone, charge-and-play, SW16
+  charge-only, and the C33 wake pulse after the IP5306 light-load shutdown.
+- **Retro-Go runs on it.** Launcher, ROM browser from SD, save states. **NES: Super
+  Mario Bros at 60 fps, 35% busy** — Phase 2.8 target met.
+- **SNES is playable but not full speed.** Super Mario World at 45–52 emulated fps
+  (75–85%), ~10–13 drawn fps. Instrumented profiling shows the snes9x **PPU tile
+  renderer** is the bottleneck (40–50 ms per rendered frame vs ~8.5 ms for CPU+APU
+  alone); display DMA and audio pacing are not a factor. That renderer is the Phase 4
+  target.
+- **No board defect found.** Three findings, all closed in firmware or deferred to v2:
+  R37 (J4 FPC contact face inverted for the purchased panel — workaround validated),
+  R38 (no PDM reconstruction filter — audible hiss, 1 kΩ + 10 nF rework sheet ready),
+  R39 (module pins 38/39 were swapped in every project table — names fixed, copper
+  was right).
+
+Details: [first-boot session log](docs/first-boot-session-2026-08-29.md).
+
 ## Development Phases
 
 ### Phase 1 — Feasibility Analysis ✅
@@ -13,44 +34,48 @@ Build a portable battery-powered device based on ESP32-S3, capable of loading an
 - Select components (display, controller, power supply)
 
 ### Phase 2 — Hardware Design ✅
-- KiCad electrical schematics (7 hierarchical sheets, 68 components)
+- KiCad electrical schematics (7 hierarchical sheets)
 - OpenSCAD 3D enclosure model
 - GPIO pin mapping and validation
 - Docker rendering pipeline
 - 4-layer PCB layout (160x75mm, JLCPCB-ready)
 
-### Phase 3 — PCB Fabrication (In Progress)
-- Production files ready in `release_jlcpcb/` v1.3 (Gerber ZIP + BOM + CPL)
-- All pre-production checks pass: 0 trace shorts, zone fill verified, DRC clean
-- JLCPCB order and assembly
-- Testing and performance optimization
+### Phase 3 — PCB Fabrication and First Article ✅
+- Production files in `release_jlcpcb/` (current set **v4.9.0**: Gerber ZIP + BOM + CPL)
+- All pre-production gates green (`make verify-all`): DFM, DFA, DRC, power-net integrity, JLCDFM
+- First article (article 0003) assembled by JLCPCB and commissioned 2026-08-29 → 2026-09-11:
+  bring-up firmware GREEN 53/0/6, stages 0–5 all PASS including battery
+- Bench rules learned the hard way: unplug J3 for any flash/serial session from a
+  laptop USB port (the IP5306 charge current collapses a 500 mA port); a freshly
+  connected cell needs one USB "kick" before the IP5306 wakes from the switch
+- v2 backlog: R37 top-contact J4, R38 PDM RC filter, J3 "+" and SPK polarity silkscreen
 
 ### Phase 4 — Software
 
 #### 4.1 — Hardware Validation (ESP-IDF) ✅
 Standalone firmware in `software/` to test all hardware before emulator integration.
 - 1.1 ESP-IDF v5.x project setup (N16R8, 240MHz, 16MB flash, 8MB PSRAM) ✅
-- 1.2 ST7796S display driver (i80 8-bit parallel, 20MHz) ✅
+- 1.2 ILI9488 display driver (i80 8-bit parallel, 20MHz) ✅
 - 1.3 Display test pattern (color bars) ✅
 - 1.4 SD card via SPI (FAT32, ROM directory scan) ✅
 - 1.5 12-button GPIO input (1ms polling, HW debounce) ✅
-- 1.6 I2S audio output (440Hz test tone) ✅
-- 1.7 IP5306 power management (battery %, charge status) ✅
+- 1.6 Audio output (I2S PDM on DOUT only → PAM8403, 440Hz test tone) ✅
+- 1.7 IP5306 power management — N/A on this board (I2C not routed; charge state = LEDs) ⚠️
 
-#### 4.2 — Retro-Go Integration (In Progress)
+#### 4.2 — Retro-Go Integration ✅
 Fork and adapt [Retro-Go](https://github.com/ducalex/retro-go) for our hardware (`retro-go/` git submodule).
 - 2.1 Add retro-go as git submodule ✅
 - 2.2 Create target `targets/esp32-emu-turbo/` (config.h, env.py, sdkconfig) ✅
 - 2.3 Docker build pipeline (`docker-compose.retro-go.yml`) ✅
-- 2.4 Custom display driver `st7796s_i80.h` (i80 parallel, async DMA, 5-buffer pool) ✅
-- 2.5 Frame scaling (320x480 portrait, integer scale + letterbox) ✅
+- 2.4 Custom display driver `ili9488_i80.h` (i80 parallel, async DMA, 5-buffer pool, 0x2C/0x3C continuation) ✅
+- 2.5 Frame scaling (480x320 landscape, Retro-Go scaler) ✅
 - 2.6 Input mapping (12 GPIO direct buttons) ✅
-- 2.7 Audio routing (I2S ext DAC → PAM8403) ✅
-- 2.8 First boot: NES test (nofrendo @ 60fps) ⏳ Needs hardware
+- 2.7 Audio routing (PDM DOUT → PAM8403, IDF DAC line mode) ✅
+- 2.8 First boot: NES at 60 fps on the real board (Super Mario Bros, 2026-09-12) ✅
 
-#### 4.3 — Emulator Testing (Needs Hardware)
-Enable and validate each emulator core at target frame rate.
-- 3.1 NES (nofrendo) → 60 fps
+#### 4.3 — Emulator Testing (In Progress)
+Enable and validate each emulator core at target frame rate on the first article.
+- 3.1 NES (nofrendo) → **60 fps measured** ✅
 - 3.2 Game Boy (gnuboy) → 60 fps
 - 3.3 Game Boy Color (gnuboy) → 60 fps
 - 3.4 Master System (smsplus) → 60 fps
@@ -60,16 +85,21 @@ Enable and validate each emulator core at target frame rate.
 - 3.8 Genesis (gwenesis) → 50-60 fps
 - 3.9 Game & Watch (gw-emulator) → 60 fps
 
-#### 4.4 — SNES Optimization (Needs Hardware)
-Progressive optimization of the snes9x core for ESP32-S3.
-- 4.1 Baseline snes9x2010 → 15-20 fps
-- 4.2 Critical buffers → IRAM → 25-30 fps
-- 4.3 Audio DSP on Core 1 → 30-35 fps
-- 4.4 Adaptive frameskip → 35-45 fps perceived
-- 4.5 Interlaced rendering → 40-50 fps perceived
+#### 4.4 — SNES Optimization (Next)
+Measured baseline on the first article (2026-09-12, instrumented build):
+- Super Mario World: 45–52 emulated fps (75–85% speed), ~10–13 drawn fps with frameskip 3
+- `S9xMainLoop` ≈ 8.5 ms when the frame is not rendered, **40–50 ms when it is** —
+  the PPU tile renderer costs ~5x the CPU+APU emulation
+- Display submit 5 µs (async), audio mix 1.5 ms, audio pacing exact — neither is a lever
+- Free heap under SNES: 167 KB internal, 566 KB PSRAM
+
+Target: a ~5x speed-up of the snes9x renderer (gfx/tile) is what 30 visual fps at
+real speed needs. The optimization plan lives in
+[`website/docs/software/snes-optimization.md`](website/docs/software/snes-optimization.md)
+and is being re-prioritised around the renderer.
 
 ### Phase 5 — Final Version (v2)
-- Revised PCB if needed
+- Respin with the v2 backlog (R37/R38 + silkscreen) and the audio coprocessor sheet
 - 3D-printed enclosure
 - Final assembly
 
@@ -83,10 +113,10 @@ Progressive optimization of the snes9x core for ESP32-S3.
 | **Dimensions**     | 160 x 75 mm                          |
 | **Layers**         | 4 (Signal / GND / Power / Signal)    |
 | **Surface Finish** | ENIG                                 |
-| **Components**     | 64 assembled by JLCPCB               |
+| **Assembly**       | JLCPCB PCBA (BOM + CPL in `release_jlcpcb/`) |
 | **Trace Shorts**   | 0 (verified)                         |
 | **Zone Fill**      | ✅ Inner layers filled (GND + 3V3/5V) |
-| **Release**        | v1.3 (2026-02-14)                    |
+| **Release**        | v4.9.0 — first article passed bring-up 2026-09-11 |
 | **Estimated Cost** | ~$40/board (5 pcs, fully assembled)  |
 
 ## Key Requirements
@@ -95,10 +125,10 @@ Progressive optimization of the snes9x core for ESP32-S3.
 | ------------- | ---------------------------------------------------------------- |
 | **MCU**       | ESP32-S3 N16R8 (16MB flash, 8MB Octal PSRAM)                     |
 | **Display**   | ILI9488 3.95" 320x480, 8-bit 8080 parallel, bare panel + 40P FPC |
-| **Power**     | LiPo 3.7V 5000mAh + IP5306 (SOP-8) + AMS1117                     |
+| **Power**     | LiPo 3.7V 5000mAh + IP5306 (charger + boost) + SY8089 2A buck    |
 | **Charging**  | USB-C (charge-and-play)                                          |
-| **Audio**     | I2S -> PAM8403 -> 28mm speaker                                   |
-| **Controls**  | 13 buttons (D-pad, ABXY, Start, Select, L, R, Menu)              |
+| **Audio**     | I2S PDM -> PAM8403 -> 28mm speaker                               |
+| **Controls**  | 12 buttons (D-pad, ABXY, Start, Select, L, R)                    |
 | **Storage**   | Micro SD card via SPI                                            |
 | **Emulation** | SNES (primary), NES (secondary)                                  |
 
@@ -214,13 +244,15 @@ esp32-emu-turbo/
 All project documentation lives in `website/docs/` and is published via Docusaurus to GitHub Pages:
 
 - [Documentation Site](https://pjcau.github.io/esp32-emu-turbo/) — full docs online
-- [Feasibility Analysis](website/docs/feasibility.md)
-- [SNES Hardware Spec](website/docs/snes-hardware.md)
-- [Bill of Materials](website/docs/components.md)
-- [Electrical Schematics](website/docs/schematics.md)
-- [Prototyping Guide](website/docs/prototyping.md)
-- [Enclosure Design](website/docs/enclosure.md)
-- [PCB Design](website/docs/pcb.md)
+- [Feasibility Analysis](website/docs/overview/feasibility.md)
+- [SNES Hardware Spec](website/docs/overview/snes-hardware.md)
+- [Bill of Materials](website/docs/design/components.md)
+- [Electrical Schematics](website/docs/design/schematics.md)
+- [PCB Design](website/docs/design/pcb.md)
+- [Enclosure Design](website/docs/design/enclosure.md)
+- [Manufacturing (JLCPCB)](website/docs/manufacturing/manufacturing.md)
+- [First boot — staged session](website/docs/manufacturing/first-boot.md)
+- [Software overview](website/docs/software/overview.md) · [Firmware](website/docs/software/firmware.md) · [SNES Optimization](website/docs/software/snes-optimization.md)
 
 Engineering notes live in `docs/`:
 
