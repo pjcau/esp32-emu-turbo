@@ -93,10 +93,13 @@ Measured baseline on the first article (2026-09-12, instrumented build):
 - Display submit 5 µs (async), audio mix 1.5 ms, audio pacing exact — neither is a lever
 - Free heap under SNES: 167 KB internal, 566 KB PSRAM
 
-Target: a ~5x speed-up of the snes9x renderer (gfx/tile) is what 30 visual fps at
-real speed needs. The optimization plan lives in
-[`website/docs/software/snes-optimization.md`](website/docs/software/snes-optimization.md)
-and is being re-prioritised around the renderer.
+Target: real speed (60 emulated fps) with 20 drawn fps (needs ~1.5x on the
+renderer) as the acceptance bar, 30 drawn fps (~2.5x) as the goal. The
+renderer-first plan — instrument, cache/config wins, z-buffers and hot code out
+of PSRAM/flash, fewer strips and passes, a painter's-order Mode 1 fast path,
+budget-driven frameskip, then the APU on the idle second core — is in
+[`website/docs/software/snes-optimization.md`](website/docs/software/snes-optimization.md).
+No hardware change involved.
 
 ### Phase 5 — Final Version (v2)
 - Respin with the v2 backlog (R37/R38 + silkscreen) and the audio coprocessor sheet

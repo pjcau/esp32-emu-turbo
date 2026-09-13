@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # SNES Optimization
 
-Progressive optimization plan to reach 60 FPS stable on SNES titles. Three software phases (assembly DSP, dual-core architecture, PPU rendering) plus a v2 hardware audio coprocessor option.
+How SNES gets from "playable at 75–85%" to real speed on the existing board: measured baseline, a renderer-first software plan (no hardware change), the original February plan as an appendix, and the v2 audio-coprocessor option.
 
 ---
 
@@ -34,14 +34,18 @@ put the SPC700 DSP at 48% of the frame and the PPU at 30%; on the real board the
 CPU+APU pair fits in ~8.5 ms and the renderer alone blows the 16.67 ms budget three
 times over. The order of the sub-phases is therefore being inverted:
 
-1. **Renderer first** — Phase 4.3's PPU fast-path / tile cache work (`gfx.c`,
-   `tile.c` in snes9x) is the Phase 4 target. A ~5x speed-up on rendered frames
-   is what 30 visual fps at real speed needs; the rest of the plan cannot get
-   there without it.
-2. **Frameskip stays adaptive**, not fixed: with 13 rendered frames/s eating half
+1. **Renderer first** — the PPU renderer (`gfx.c`, `tile.c` in snes9x) is the
+   Phase 4 target. Rendering alone costs ~32–42 ms (the 40–50 ms figure includes
+   the 8.5 ms of CPU+APU): **30 drawn fps at real speed needs ~2.5x on the
+   renderer, 60 drawn fps ~5x** (budget table below). The rest of the plan cannot
+   get there without it.
+2. **Frameskip becomes adaptive**, not fixed: with 13 rendered frames/s eating half
    the machine time, every rendered frame that could be skipped is worth 40 ms.
-3. **ASM DSP (4.1) and dual-core SPC700 (4.2.1) become second-order** — they buy
-   back part of the 8.5 ms, not the 40 ms.
+3. **ASM DSP and dual-core SPC700 become second-order** — they buy back part of
+   the 8.5 ms, not the 40 ms.
+
+The renderer-first plan is the next section; the original February plan is kept
+as an appendix for the DSP and dual-core material.
 
 Benchmark notes: Super Boss Gaiden (homebrew) hangs snes9x and is not usable as
 a benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World. Audio
@@ -50,7 +54,252 @@ Source: [first-boot session log](https://github.com/pjcau/esp32-emu-turbo/blob/m
 
 ---
 
-## Phase 4 — SNES Optimization (60 FPS target)
+## Phase 4 — Renderer-first plan (2026-09-13)
+
+Written against the code as it is in the fork (`retro-core/components/snes9x`,
+a snes9x-2005 lineage; `retro-core/main/main_snes.c`), not against a generic
+snes9x. Same hardware, same board: everything below is software and
+`sdkconfig`.
+
+### The budget
+
+`S9xMainLoop` costs ~8.5 ms of CPU+APU per emulated frame whether or not the
+frame is drawn, plus **R ≈ 32–42 ms** when it is. At 60 emulated fps the wall
+time per second is `60 × 8.5 ms + drawn × R`, so:
+
+| Milestone | Emulated / drawn fps | R must be ≤ | Speed-up on today's R | Feel |
+|:---|:---|---:|---:|:---|
+| **today** | 45–52 / 10–13 | 32–42 ms | 1x | playable, choppy, audio underruns |
+| **A** | 60 / 20 | ~25 ms | ~1.5x | real speed, audio clean, visibly stepped |
+| **B** | 60 / 30 | ~16 ms | ~2.5x | real speed, smooth enough for platformers |
+| **C** | 60 / 60 | ~8 ms | ~5x | native — not expected in C on this chip |
+
+**A** is the acceptance bar for Phase 4, **B** the goal. C is listed so nobody
+promises it: reaching it would mean the renderer costs less than the CPU+APU
+emulation, which no ESP32-S3 snes9x port has shown.
+
+### What a rendered frame actually does today
+
+Facts read from the code, each of which is a lever below:
+
+- **Lazy strip rendering.** Nothing is drawn per scanline; `RenderLine()` only
+  snapshots the BG scroll (and Mode 7 matrix) per line. `S9xUpdateScreen()`
+  draws the pending strip `PreviousLine..CurrentLine` and is triggered by
+  `FLUSH_REDRAW()` from ~30 PPU register-write sites (`ppu.c`, `ppu.h`,
+  `dma.c`) plus once at end of frame. Each call recomputes clip windows,
+  clears the z-buffers for the strip, and runs `RenderScreen()` once — or
+  twice when colour math is on (`ADD_OR_SUB_ON_ANYTHING`: sub-screen pass
+  first, then main, then a per-line combine).
+- **Per-pixel z-test.** `RenderScreen()` draws OBJ first, then BG0..BG3, each
+  through `WRITE_4PIXELS16*()` (`tile.c`): for every pixel a z-byte read,
+  compare, z-byte write and a 16-bit screen write. Tiles come from a 512 KB
+  decoded-tile cache (`IPPU.TileCache`, filled by `ConvertTile()` from VRAM,
+  invalidated on VRAM writes).
+- **Everything hot lives in PSRAM.** `CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL=32768`
+  sends every allocation above 32 KB to external RAM, and all of these are
+  above it: `GFX.Screen` 122 KB (256×239×2), `GFX.SubScreen` 122 KB,
+  `GFX.ZBuffer` 61 KB, `GFX.SubZBuffer` 61 KB, `IPPU.TileCache` 512 KB,
+  `Memory.VRAM` 64 KB, `Memory.RAM` 128 KB. Between them and the core: a
+  **32 KB data cache with 32-byte lines** (`CONFIG_ESP32S3_DATA_CACHE_32KB`),
+  Octal PSRAM at 80 MHz. The z-test is therefore a PSRAM read-modify-write
+  per pixel.
+- **Code from flash through a 16 KB instruction cache.** The core has **zero**
+  `IRAM_ATTR`; `gfx.c` + `tile.c` are ~4 200 lines, the whole core ~28 000.
+  The framework is built `-Os` (`CONFIG_COMPILER_OPTIMIZATION_SIZE=y`), the
+  snes9x component `-O2` (its `CMakeLists.txt`).
+- **One core.** The emulator is the main task, pinned to CPU0
+  (`CONFIG_ESP_MAIN_TASK_AFFINITY_CPU0`). CPU1 runs nothing but the display
+  driver's DMA completion callbacks and `rg_sysmon`.
+- **Frameskip is a constant.** `app->frameskip = 3` in `main_snes.c`; the
+  adaptive branch of the loop (`frameskip == 0` → skip when `elapsed >
+  frameTime + 1.5 ms` or the display was late) is dead code for SNES.
+- **Free internal SRAM under SNES: ~167 KB** (566 KB PSRAM). That is the
+  budget for every "move it internal" step below; the cache upgrades in 4.1
+  come out of it too.
+
+### Steps, in order
+
+Each step is measured the same way (see *Method*) and reverted if the number
+does not move. Days are effort, not calendar.
+
+#### 4.0 — Instrument the renderer before touching it (½ day)
+
+Extend the existing `RG_ENABLE_PROFILING` block (`main_snes.c`) with counters
+reset every second, printed on the `PROF` line:
+
+- `S9xUpdateScreen()` calls per frame and lines per strip (how fragmented is a
+  frame — 1 strip or 30?);
+- frames with the sub-screen pass (`ANYTHING_ON_SUB && ADD_OR_SUB_ON_ANYTHING`);
+- tiles drawn, `ConvertTile()` calls (cache misses) per frame;
+- time inside `DrawOBJS()`, `DrawBackground()` (per BG), the z-buffer
+  `memset`s, and the colour-math combine loop — `esp_timer_get_time()` around
+  each, accumulated;
+- BG-mode histogram per frame.
+
+Run on the three reference scenes (*Method*). Deliverable: one table in the
+session log. **Every estimate below is provisional until this exists.**
+
+#### 4.1 — Configuration-only wins (½ day)
+
+No source change; each toggled alone and measured:
+
+| Change | Where | Cost | Why |
+|:---|:---|:---|:---|
+| Data cache 32 → **64 KB**, line 32 → **64 B** | `CONFIG_ESP32S3_DATA_CACHE_64KB`, `..._LINE_64B` | 32 KB internal SRAM | every hot buffer is behind this cache |
+| Instruction cache 16 → **32 KB** | `CONFIG_ESP32S3_INSTRUCTION_CACHE_32KB` | 16 KB internal SRAM | 1 MB of code through 16 KB thrashes on the tile writers |
+| Framework `-Os` → `-O2` | `CONFIG_COMPILER_OPTIMIZATION_PERF=y` | flash size | `rg_display`, `rg_audio`, the surface scaler |
+| `-O3` / `-funroll-loops` on `tile.c`, `gfx.c` only | snes9x `CMakeLists.txt` | flash size | inner loops are 4-pixel unrolled by hand, the compiler can do 8 |
+| Flash 80 → 120 MHz | `CONFIG_ESPTOOLPY_FLASHFREQ_120M` + `CONFIG_SPI_FLASH_HPM_ENABLE` | marked experimental by IDF | instruction-cache misses fill 50% faster |
+
+Expected: 10–25% on R (the code is memory-bound, and both caches are
+under-sized for it). Budget after this step: ~167 − 48 = **~119 KB** internal.
+
+#### 4.2 — Put the right buffers in internal SRAM, and the hot code in IRAM (1 day)
+
+Priority order, one at a time, each measured:
+
+1. **`GFX.ZBuffer` + `GFX.SubZBuffer`** (2 × 61 KB) — the per-pixel
+   read-modify-write. `heap_caps_malloc(…, MALLOC_CAP_INTERNAL)` in
+   `S9xInitDisplay()` (`main_snes.c`). This alone eats the 119 KB; if it does
+   not fit, the strip trick applies: `GFX.DB` is a base pointer and the
+   writers index it by `y × ZPitch`, so a z-buffer sized for the tallest
+   strip (224 lines = 57 KB) with `GFX.DB = strip − StartY × ZPitch` serves
+   any strip — one 57 KB buffer instead of 122 KB, if 4.0 shows strips
+   never overlap the sub/main passes.
+2. **`Memory.VRAM`** (64 KB) — `ConvertTile()` source and Mode 7's direct
+   reads. Pays off on tile-cache-miss-heavy scenes (Mode 7, animated tiles).
+3. **Not** `GFX.Screen`: its writes are sequential (write-allocate friendly)
+   and the display DMA reads it from PSRAM anyway.
+4. **Not** `IPPU.TileCache` (512 KB): stays in PSRAM; shrink it instead if
+   4.0 shows most of it is never touched (SMW uses a fraction of the 4096
+   2-bpp-equivalent slots).
+5. **`IRAM_ATTR`** on the writers: `WRITE_4PIXELS16*`, `DrawTile16*`,
+   `DrawClippedTile16*`, `DrawBackground()`, `DrawOBJS()`, `ConvertTile()`,
+   `S9xUpdateScreen()`. ~15–20 KB of IRAM; ESP-IDF places `IRAM_ATTR` code
+   in the instruction RAM, outside the flash cache entirely.
+
+Where the internal budget comes from if it runs short: the display driver's
+5-buffer pool (`ili9488_i80.h`; 3 is enough at these frame rates), and
+`GFX.SubScreen` can be dropped when transparency is off (4.3).
+
+Expected: **1.3–1.8x** on R. This is the step the ESP32-S3 snes9x ports that
+report ~45 fps (`fcipaq/snes9x_esp32`) lean on hardest.
+
+#### 4.3 — Draw fewer pixels: strips, passes, clears (2 days)
+
+Driven entirely by the 4.0 counters:
+
+- **Z-buffer clears** — the two `memset`s per strip line (122 KB of writes
+  per full frame) go away with frame-stamped depth: depth values carry
+  `frame & 0xC0` in their top bits and the compare becomes "older stamp =
+  empty", so the buffer is never cleared. `MAIN_SCREEN_DEPTH`,
+  `SUB_SCREEN_DEPTH` and the `D + n` priorities in `RenderScreen()` fit in
+  6 bits.
+- **Strip fragmentation** — if 4.0 shows many `S9xUpdateScreen()` calls per
+  frame, audit the `FLUSH_REDRAW()` sites: several already guard on "value
+  changed"; the ones that do not (mid-frame writes of an unchanged value)
+  are free strips saved.
+- **Sub-screen pass** — when 4.0 shows colour math enabled but the
+  sub-screen result cannot reach the screen (no layer on sub, or the colour
+  window covers nothing), skip the pass. Add an operator switch
+  **"Transparency: on / off"** in the SNES options menu: off skips the
+  sub-screen pass and the combine loop entirely (visual downgrade in fades
+  and water; a legitimate trade on a handheld).
+- **Sprites** — `S9xSetupOBJ()` runs whenever `OBJChanged` (every frame with
+  OAM DMA); measure it; the per-line OBJ lists are rebuilt from all 128
+  sprites each time.
+
+Expected: **1.2–1.5x** on top of 4.2.
+
+#### 4.4 — The inner loop: painter's-order fast path (2–3 days)
+
+This is the February plan's "PPU fast-path (Mode 1)" made concrete. The
+z-buffer exists because this core draws **front-to-back** (OBJ first, then
+BGs by priority) and lets the z-test reject covered pixels. For the common
+case — **Mode 1, no colour math, no windows, no mosaic, no offset-per-tile,
+no hi-res** — a **back-to-front** renderer needs no z-buffer at all: draw
+BG3 low, BG2 low, BG1 low, BG0 low, OBJ by priority, BG highs, in the
+documented SNES priority order, each layer writing opaque pixels only. Per
+pixel: one 16-bit write, no z read, no z write. Sprites-vs-BG priority is
+handled by drawing sprite priority classes at the right slots in that order
+(the OBJ per-line lists already carry priority).
+
+- Detect the fast-path conditions once per strip in `S9xUpdateScreen()`;
+  fall back to the existing z-buffer renderer otherwise (nothing is lost).
+- Writers for the fast path: `WRITE_8PIXELS16_OPAQUE` variants (8 pixels per
+  call, 2 × 32-bit stores for the fully opaque tile case — `ConvertTile()`
+  already returns `BLANK_TILE`, extend it to report "fully opaque").
+- Xtensa specifics once the C version is measured: the zero-overhead `loop`
+  instruction and 32-bit stores; no need for hand assembly to get there.
+
+Expected: **1.5–2x** on the fast-path frames. Cumulative with 4.1–4.3 this
+is the **B** milestone (~2.5x) for Mode 1 games — SMW, Zelda, Mega Man X,
+most platformers. Mode 7 games stay on the z-buffer path and land near
+**A**.
+
+#### 4.5 — Frameskip that follows the budget, not a constant (½ day)
+
+Replace `app->frameskip = 3` with a policy on the measured frame time:
+
+- keep a rolling average of R and of the non-rendered frame time;
+- choose the drawn rate so that `60 × 8.5 + drawn × R ≤ 1000 ms` with 10%
+  headroom, quantised to 60/n (60, 30, 20, 15, 12);
+- render on a fixed cadence at that rate (steady 20 fps looks better than
+  bursts of 3 renders then 6 skips);
+- never skip when the audio sink reports it is about to underrun — the
+  audio pacing sleep is already exact (measured), so the sink is the
+  authority on "are we late".
+
+Retro-Go's own adaptive branch (`frameskip == 0`) is the starting point; it
+only lacks the cadence and the audio-aware rule. This step turns every
+speed-up above into steady visual fps automatically.
+
+#### 4.6 — Second core (2–3 days, only after 4.4 is measured)
+
+CPU1 is idle. What can move there without rewriting snes9x:
+
+- **SPC700 + DSP** (the February 4.2.1): the APU is stepped from the CPU
+  loop (`APU_EXECUTE` in `cpuexec.c`) and its output mixed per frame; moving
+  it to CPU1 with a lock-free sample ring cuts the 8.5 ms to ~5–6 ms — on
+  **every** frame, drawn or not. Worth ~15% of wall time at milestone B.
+- **Not** the renderer: `S9xUpdateScreen()` reads live VRAM/CGRAM/OAM while
+  the CPU keeps mutating them, so a strip would need a snapshot (64 KB VRAM
+  per strip) — rejected on memory grounds.
+- The audio mix (1.5 ms) and the display scaler are already cheap/async.
+
+The February 4.1 (Xtensa assembly for BRR / Gaussian / mixer / echo) lives
+here as an optional follow-up to shrink what CPU1 has to do; it is no longer
+on the critical path.
+
+#### Not doing
+
+- **Overclock to 260 MHz**: the ESP32-S3 is specified to 240 MHz; there is
+  no supported higher setting.
+- **Audio sample-rate reduction**: the mix is 1.5 ms; nothing to gain.
+- **Reducing emulated speed to hide the renderer**: the target is real speed
+  with fewer drawn frames, never the reverse.
+
+### Method
+
+- Build with `RG_ENABLE_PROFILING`, board on USB with **the battery unplugged
+  from J3**, read the `PROF` and `FPS` lines on the serial for 60 s from the
+  same save state.
+- Three scenes, saved as slots: **Super Mario World** level 1 (Mode 1, the
+  reference), **Super Mario Kart** first race (Mode 7), **Zelda: A Link to
+  the Past** outdoor rain (Mode 1 with colour math and windows). Super Boss
+  Gaiden is not a benchmark (it hangs the core).
+- One change per commit in the fork, numbers in the commit message and in
+  the [session log](https://github.com/pjcau/esp32-emu-turbo/blob/main/docs/first-boot-session-2026-08-29.md);
+  a change that does not move R by its expected share is reverted, not kept
+  "because it should help".
+- Report R (rendered-frame `main` minus non-rendered `main`), drawn fps,
+  emulated fps and BUSY; the milestone table above is the pass/fail.
+
+---
+
+## Appendix — the pre-hardware plan (February 2026, superseded)
+
+Kept for its DSP, dual-core and PPU material, which the renderer-first plan above references by step number. Do not read its fps columns as predictions.
 
 Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-phases over ~14 days. Target: **60 FPS stable** on standard titles (Super Mario World, Zelda ALttP, Chrono Trigger, Final Fantasy VI, Mega Man X). Baseline: ~30 FPS *(pre-hardware estimate — measured: 45–52 emulated / 10–13 drawn, see above; the sub-phase order is being re-prioritised around the renderer)*. See below for full technical details.
 
@@ -71,7 +320,7 @@ Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-
 
 ---
 
-## Why SNES is Hard on ESP32-S3
+### Why SNES is Hard on ESP32-S3
 
 The SNES has three CPU-intensive subsystems that must be emulated in real-time:
 
@@ -350,7 +599,7 @@ Unlike the pre-optimization estimates, the 3-phase plan targets **60 FPS with fu
 
 ---
 
-### Phase 5 — v2 Hardware Audio Coprocessor
+## Phase 5 — v2 Hardware Audio Coprocessor
 
 **Goal:** Add an **ESP32-S3-MINI-1** module as a dedicated audio coprocessor on the v2 PCB. This completely offloads audio processing from the ESP32-S3 for **all emulators** — not just SNES. Both ESP32-S3 cores become 100% available for CPU + PPU + game logic. **~5 days** (down from 14 with RP2040 — see [Why ESP32-S3-MINI-1 instead of RP2040](#why-esp32-s3-mini-1-instead-of-rp2040) for the rationale).
 
