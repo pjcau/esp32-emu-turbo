@@ -40,7 +40,7 @@ def run(board, games, settle, capture):
             print(f"{g}: no ping after resume", file=sys.stderr)
             continue
         time.sleep(settle)
-        out[g] = board.capture(capture, echo=False)
+        out[g] = board.capture(capture, echo=False, summary=False)
     return out
 
 
@@ -52,7 +52,7 @@ def table(res, ref=None):
             v = r.get(c)
             if v is None:
                 row += f"{'-':>11}"
-            elif ref and g in ref and c in ref[g] and c in ("R", "d.update", "d.sub", "d.main", "d.combine"):
+            elif ref and ref.get(g, {}).get(c) and c in ("R", "d.update", "d.sub", "d.main", "d.combine"):
                 row += f"{v:8.0f}{(v / ref[g][c] - 1) * 100:+3.0f}%"
             else:
                 row += f"{v:11.1f}"

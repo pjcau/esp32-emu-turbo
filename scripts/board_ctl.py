@@ -113,7 +113,7 @@ class Board:
                 return True
         return False
 
-    def capture(self, seconds, echo=True):
+    def capture(self, seconds, echo=True, summary=True):
         """Collect PROF lines for `seconds`; return per-field averages."""
         fields, deadline = {}, time.time() + seconds
         n = 0
@@ -134,7 +134,14 @@ class Board:
             if m:
                 for k, v in re.findall(r"(\w+)=([\d.]+)", m.group(1)):
                     fields.setdefault("d." + k, []).append(float(v))
-        summary = {k: statistics.mean(v) for k, v in fields.items() if v}
+                mm = re.search(r"modes (.*)", m.group(1))
+                if mm:  # "modes 0:30 1:0 ... 7:508" = strip-lines per BG mode, per second
+                    for k, v in re.findall(r"(\d):(\d+)", mm.group(1)):
+                        fields.setdefault("m" + k, []).append(float(v))
+        means = {k: statistics.mean(v) for k, v in fields.items() if v}
+        if not summary:
+            return means
+        summary = means
         if n:
             print(f"--- {n} PROF samples over {seconds}s ---")
             keys = ["fps", "drawn", "busy", "main(drawn)", "main(skip)", "R", "mix", "loop",
