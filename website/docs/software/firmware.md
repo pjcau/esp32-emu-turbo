@@ -298,13 +298,32 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 43%, 60 drawn |
 | 3.6 | pce-go (PCE) | Reflectron | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn (intro text screen) |
 | 3.7 | handy (Lynx) | — | 60 fps | no ROM on the card yet |
-| 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, BUSY 93%, 20 drawn — no headroom, first thing to look at after SNES |
+| 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, **30 drawn** — YM2612 synthesis moved to core 1 (was 20 drawn, BUSY 93% with the FM chip on core 0) |
 | 3.9 | gw-emulator (G&W) | — | 60 fps | no ROM on the card yet |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 
 The non-SNES cores run with retro-go's default frameskip 1 (every other
 frame drawn) and 30-55% CPU, so they have room for frameskip 0 once the
-display path is tuned. The 32 KB I-cache / 64 KB D-cache configuration and
+display path is tuned. Genesis: the frame is M68K 5.5 ms + Z80 3.1 ms +
+VDP 11.3 ms per drawn frame on core 0, and the YM2612 (6 ms per frame,
+37% of the budget, measured with `GEN_PROF=1`) now runs on core 1 —
+register writes are logged with their clock and replayed with exact sync
+one frame later (`ym2612.c`, `GWENESIS_YM_WORKER`). Audio lags the
+picture by one frame.
+
+**Debug HUD.** Options menu → *Debug HUD: On* (or `board_ctl.py raw "hud
+on"`) prints FPS, drawn, skipped, busy and free internal heap once a
+second in the left letterbox bar of every emulator, plus per-core lines
+where a profiling build provides them (SNES: R, N, strips, tiles…; Genesis:
+68K/Z80/VDP/YM). The bar must be wide enough — with a 320-pixel-wide
+console (Genesis) set *Scaling: Off* to read it.
+
+**How the 60 fps claim is tested.** `scripts/emu_check.py` launches every
+core's test ROM over the console, presses START twice and averages the
+`rg_system` stats line for 6 s; `scripts/snes_bench.py` resumes the seven
+SNES scenes (save states) and averages the `SNES_PROF` counters. Both are
+run after every renderer change; the tables above and in
+[SNES Optimization](snes-optimization) are their output. The 32 KB I-cache / 64 KB D-cache configuration and
 the console remote control are shared by every app; `gwenesis`, `fmsx` and
 `prboom-go` must be rebuilt after a shared-component change or they keep
 the old code (and, without the console, block the host's USB writes).

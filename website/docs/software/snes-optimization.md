@@ -184,9 +184,18 @@ in the binary or in the allocations corrupted the heap (TLSF walk crash right
 after "Loaded chunks"). Fixed in `snapshot.c`; save states now survive
 rebuilds.
 
-Milestone **A** (60 / 20) is met on every scene except Mario Kart, whose
-limit is now the CPU side (DSP-1) plus a Mode 7 loop at ~45 instructions
-per pixel. What is left in the renderer is instruction count: the
+**Roadmap status (2026-09-14).** Milestone **A** (60 emulated / 20 drawn)
+is met on every scene except Mario Kart (57 / 11, limited by the DSP-1 CPU
+emulation, not the renderer). Milestone **B** (60 / 30) is reached on SMW,
+Zelda and Mega Man X and not on the Mode 7 games or DKC. Of the plan's
+steps: 4.0 done, 4.1 done, 4.2 partly (z-buffer yes; IRAM and VRAM
+disproven), 4.3 done in a different form (colour-math fast path, per-line
+backdrop/palette instead of fewer strips), 4.4 (painter's order) and 4.5
+(budget-driven frameskip) not started, 4.6 (second core) done for Genesis'
+FM chip and still open for the SNES APU. The renderer is no longer the
+first thing to optimise for the SNES: the next wins are the APU/CPU side
+on core 1 (Kart, Metroid) and frameskip that follows the budget (every
+scene sits at frameskip 1-2 with 40-70% busy). What is left in the renderer is instruction count: the
 per-pixel loops (Mode 7, `WRITE_4PIXELS16`, the backdrop combine — 5 ms in
 SMW because the sky *is* the backdrop) run 20-45 instructions on a
 single-issue 240 MHz core; a 4-pixels-at-a-time skip on the combine made

@@ -13,7 +13,7 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 from board_ctl import Board  # noqa: E402
 
-GAMES = [  # app, partition, rom
+GAMES = [  # app, partition, rom  (every app must carry the console: rebuild gwenesis/fmsx/prboom-go after shared changes)
     ("nes", "retro-core", "/sd/roms/nes/Super Mario Bros. + Duck Hunt (USA).nes"),
     ("nes", "retro-core", "/sd/roms/nes/owlia.nes"),
     ("gb", "retro-core", "/sd/roms/gb/Tetris (JUE) (V1.1) [!].gb"),
