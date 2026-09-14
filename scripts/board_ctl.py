@@ -15,6 +15,8 @@ press buttons and read the SNES_PROF counters without touching the board.
     board_ctl.py release
     board_ctl.py capture 10             # 10 s of PROF lines + averages
     board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
+    board_ctl.py put ~/roms/x.sfc "/sd/roms/snes/x.sfc"   # upload (base64 over the console; from the launcher)
+    board_ctl.py rm "/sd/roms/snes/x.sfc"
     board_ctl.py launcher | reboot | raw "<line>"
 
 Port: --port or ESP_PORT (default /dev/ttyACM0).
@@ -75,6 +77,30 @@ class Board:
     def launch(self, app, rom):
         part = APPS.get(app, "retro-core")
         self.send(f"launch {part} {app} {rom}", timeout=3)
+
+    def put(self, local, remote):
+        """Upload a file to the card: 'put <size> <path>' then base64 text."""
+        import base64
+        data = open(local, "rb").read()
+        if not self.send(f"put {len(data)} {remote}", wait=r"^CTL put (ready|failed)", timeout=5):
+            return False
+        t0, done = time.time(), False
+        for off in range(0, len(data), 3072):
+            self.ser.write(base64.b64encode(data[off:off + 3072]) + b"\n")
+            l = self.readline()
+            if "CTL put " in l:
+                print(l[l.index("CTL "):], f"({(off + 3072) / 1024 / (time.time() - t0):.0f} KB/s)")
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            l = self.readline()
+            if "CTL put " in l:
+                l = l[l.index("CTL "):]
+                print(l)
+                if any(w in l for w in ("done", "short", "failed")):
+                    done = "done" in l
+                    break
+        print(f"{len(data)} bytes in {time.time() - t0:.1f}s")
+        return done
 
     def wait_boot(self, timeout=15):
         """Wait until the (re)booted app answers ping."""
@@ -145,6 +171,10 @@ def main():
         print("booted" if b.wait_boot() else "no ping after reboot", file=sys.stderr)
     elif a.cmd == "capture":
         b.capture(float(a.args[0]) if a.args else 5)
+    elif a.cmd == "put":
+        sys.exit(0 if b.put(os.path.expanduser(a.args[0]), " ".join(a.args[1:])) else 1)
+    elif a.cmd == "rm":
+        b.send("rm " + " ".join(a.args), wait=r"^CTL rm", timeout=5)
     elif a.cmd == "raw":
         b.send(" ".join(a.args), wait=None, timeout=1)
     elif a.cmd == "script":
