@@ -1,0 +1,173 @@
+#!/usr/bin/env python3
+"""Drive the ESP32 Emu Turbo board over its USB console (bench remote control).
+
+Counterpart of RG_GAMEPAD_CONSOLE in retro-go/components/retro-go/rg_input.c:
+every line sent to the console is a command, every "CTL ..." line back is
+its acknowledgement, so a script can select the emulator, launch a ROM,
+press buttons and read the SNES_PROF counters without touching the board.
+
+    board_ctl.py ping
+    board_ctl.py ls /sd/roms/snes
+    board_ctl.py launch snes "/sd/roms/snes/Super Mario World.sfc"
+    board_ctl.py key start 150          # press START for 150 ms
+    board_ctl.py key a+b 100            # combos with '+'
+    board_ctl.py hold right             # held until 'release'
+    board_ctl.py release
+    board_ctl.py capture 10             # 10 s of PROF lines + averages
+    board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
+    board_ctl.py launcher | reboot | raw "<line>"
+
+Port: --port or ESP_PORT (default /dev/ttyACM0).
+"""
+import argparse
+import os
+import re
+import statistics
+import sys
+import time
+
+import serial
+
+APPS = {  # app short name -> partition (launcher/main/applications.c)
+    "nes": "retro-core", "snes": "retro-core", "gb": "retro-core", "gbc": "retro-core",
+    "sms": "retro-core", "gg": "retro-core", "pce": "retro-core", "lynx": "retro-core",
+    "gw": "retro-core", "msx": "fmsx", "gen": "gwenesis", "md": "gwenesis", "doom": "prboom-go",
+}
+ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+class Board:
+    def __init__(self, port, baud=115200):
+        self.ser = serial.Serial(port, baud, timeout=0.05)
+        self.ser.reset_input_buffer()
+
+    def readline(self):
+        line = self.ser.readline().decode("utf-8", "replace")
+        return ANSI.sub("", line).rstrip("\r\n")
+
+    def send(self, line, wait=r"^CTL ", timeout=2.0, echo=True):
+        """Send one command, return the CTL lines received before timeout."""
+        self.ser.write((line + "\n").encode())
+        self.ser.flush()
+        out, deadline = [], time.time() + timeout
+        while time.time() < deadline:
+            l = self.readline()
+            if not l:
+                continue
+            # replies come from the input task and can land mid-way through a
+            # log line printed by the emulator task: cut from the marker
+            if "CTL " in l:
+                l = l[l.index("CTL "):]
+                out.append(l)
+                if echo:
+                    print(l)
+                if not l.startswith("CTL ls ") or l.startswith("CTL ls done") or l.startswith("CTL ls failed"):
+                    if wait and re.search(wait, l):
+                        break
+        if not out:
+            print(f"(no CTL reply to '{line}' within {timeout}s)", file=sys.stderr)
+        return out
+
+    def key(self, names, ms=100):
+        self.send(f"key {names} {ms}")
+        time.sleep(ms / 1000 + 0.08)  # release + debounce before the next one
+
+    def launch(self, app, rom):
+        part = APPS.get(app, "retro-core")
+        self.send(f"launch {part} {app} {rom}", timeout=3)
+
+    def wait_boot(self, timeout=15):
+        """Wait until the (re)booted app answers ping."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            time.sleep(1.0)
+            if self.send("ping", timeout=1.0, echo=False):
+                return True
+        return False
+
+    def capture(self, seconds, echo=True):
+        """Collect PROF lines for `seconds`; return per-field averages."""
+        fields, deadline = {}, time.time() + seconds
+        n = 0
+        while time.time() < deadline:
+            l = self.readline()
+            if not l:
+                continue
+            if echo and ("PROF" in l or "FPS:" in l):
+                print(l)
+            m = re.search(r"PROF n=(\d+) drawn=(\d+) .*?fps=(\d+) busy=(\d+)%", l)
+            if m:
+                n += 1
+                for k, v in zip(("n", "drawn", "fps", "busy"), m.groups()):
+                    fields.setdefault(k, []).append(int(v))
+                for k, v in re.findall(r"(\w[\w()]*)=(\d+)", l.split("us/frame:")[1]):
+                    fields.setdefault(k, []).append(int(v))
+            m = re.search(r"PROF/drawn-frame: (.*)", l)
+            if m:
+                for k, v in re.findall(r"(\w+)=([\d.]+)", m.group(1)):
+                    fields.setdefault("d." + k, []).append(float(v))
+        summary = {k: statistics.mean(v) for k, v in fields.items() if v}
+        if n:
+            print(f"--- {n} PROF samples over {seconds}s ---")
+            keys = ["fps", "drawn", "busy", "main(drawn)", "main(skip)", "R", "mix", "loop",
+                    "d.update", "d.clear", "d.sub", "d.main", "d.combine", "d.obj", "d.objsetup",
+                    "d.bg0", "d.bg1", "d.bg2", "d.bg3", "d.tiles", "d.blank", "d.conv", "d.strips"]
+            print("  ".join(f"{k}={summary[k]:.1f}" for k in keys if k in summary))
+        else:
+            print("no PROF lines seen (not a SNES_PROF build, or not in the SNES emulator?)")
+        return summary
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--port", default=os.environ.get("ESP_PORT", "/dev/ttyACM0"))
+    ap.add_argument("cmd")
+    ap.add_argument("args", nargs="*")
+    a = ap.parse_args()
+    b = Board(a.port)
+
+    if a.cmd == "ping":
+        ok = b.send("ping")
+        sys.exit(0 if ok else 1)
+    elif a.cmd == "ls":
+        b.send(f"ls {a.args[0] if a.args else '/sd'}", wait=r"^CTL ls (done|failed)", timeout=10)
+    elif a.cmd == "key":
+        b.key(a.args[0], int(a.args[1]) if len(a.args) > 1 else 100)
+    elif a.cmd == "hold":
+        b.send(f"hold {a.args[0]}")
+    elif a.cmd == "release":
+        b.send("release " + (a.args[0] if a.args else ""))
+    elif a.cmd == "launch":
+        b.launch(a.args[0], " ".join(a.args[1:]))
+        print("booted" if b.wait_boot() else "no ping after launch", file=sys.stderr)
+    elif a.cmd in ("launcher", "reboot"):
+        b.send(a.cmd)
+        print("booted" if b.wait_boot() else "no ping after reboot", file=sys.stderr)
+    elif a.cmd == "capture":
+        b.capture(float(a.args[0]) if a.args else 5)
+    elif a.cmd == "raw":
+        b.send(" ".join(a.args), wait=None, timeout=1)
+    elif a.cmd == "script":
+        for line in open(a.args[0]):
+            line = line.split("#")[0].strip()
+            if not line:
+                continue
+            print(f"> {line}")
+            parts = line.split()
+            if parts[0] == "sleep":
+                time.sleep(float(parts[1]))
+            elif parts[0] == "key":
+                b.key(parts[1], int(parts[2]) if len(parts) > 2 else 100)
+            elif parts[0] == "capture":
+                b.capture(float(parts[1]) if len(parts) > 1 else 5)
+            elif parts[0] == "launch":
+                b.launch(parts[1], " ".join(parts[2:]))
+                b.wait_boot()
+            else:
+                b.send(line)
+    else:
+        ap.error(f"unknown command {a.cmd}")
+
+
+if __name__ == "__main__":
+    main()
