@@ -101,12 +101,15 @@ test-roms/**/*.zip
 # Bench ROMs (the user's own copies) — listed by name so nobody wonders
 # whether the patterns above catch them. Only owlia.nes is committed for NES;
 # SNES benchmark set: Super Mario World, Super Mario Kart, Zelda ALttP,
-# Mega Man X, Super Metroid (see website/docs/software/snes-optimization.md).
+# Mega Man X, Super Metroid, Donkey Kong Country, Super Mario All-Stars
+# (see website/docs/software/snes-optimization.md).
 test-roms/nes/Legend of Zelda, The - A Link to the Past (USA).sfc
 test-roms/nes/Mario Bros. (World).nes
 test-roms/nes/Mega Man X (USA) (Rev 1).sfc
 test-roms/nes/Super Mario Bros. + Duck Hunt (USA).nes
 test-roms/nes/Super Metroid (Japan, USA) (En,Ja).sfc
+test-roms/nes/Donkey Kong Country (U) (V1.2) [!].smc
+test-roms/nes/Super Mario All-Stars + Super Mario World (USA).sfc
 test-roms/snes/Super Mario Kart (USA).sfc
 test-roms/snes/Super Mario World (U) [!].smc
 !test-roms/nes/owlia.nes

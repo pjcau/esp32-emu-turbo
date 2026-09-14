@@ -26,6 +26,7 @@ ROMS = {  # scene -> ROM; "name@N" resumes save slot N (default 0)
     "zelda": "/sd/roms/snes/Legend of Zelda - A Link to the Past (USA).sfc",
     "mmx": "/sd/roms/snes/Mega Man X (USA) (Rev 1).sfc",
     "metroid": "/sd/roms/snes/Super Metroid (Japan, USA) (En,Ja).sfc",
+    "dkc": "/sd/roms/snes/Donkey Kong Country (U) (V1.2).sfc",       # Jungle Hijinxs, after the treehouse
 }
 COLS = ["efps", "drawn", "busy", "R", "main(skip)", "d.update", "d.sub", "d.main",
         "d.combine", "d.obj", "d.objsetup", "d.clear", "d.conv", "d.strips"]
