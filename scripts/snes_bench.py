@@ -19,8 +19,9 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(__file__))
 from board_ctl import Board  # noqa: E402
 
-ROMS = {
-    "smw": "/sd/roms/snes/Super Mario World (U) [!].smc",
+ROMS = {  # scene -> ROM; "name@N" resumes save slot N (default 0)
+    "smw": "/sd/roms/snes/Super Mario World (U) [!].smc",           # overworld map, Yoshi's Island 2 node
+    "smw-level": "/sd/roms/snes/Super Mario World (U) [!].smc@1",   # inside Yoshi's Island 2
     "kart": "/sd/roms/snes/Super Mario Kart (USA).sfc",
     "zelda": "/sd/roms/snes/Legend of Zelda - A Link to the Past (USA).sfc",
     "mmx": "/sd/roms/snes/Mega Man X (USA) (Rev 1).sfc",
@@ -35,7 +36,8 @@ def run(board, games, settle, capture):
     out = {}
     for g in games:
         print(f"== {g}", file=sys.stderr)
-        board.launch("snes", ROMS[g], resume=True)
+        rom, _, slot = ROMS[g].partition("@")
+        board.launch("snes", rom, resume=True, slot=int(slot or 0))
         if not board.wait_boot():
             print(f"{g}: no ping after resume", file=sys.stderr)
             continue
