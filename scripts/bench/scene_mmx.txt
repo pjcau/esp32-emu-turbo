@@ -1,0 +1,13 @@
+# Mega Man X: title -> START -> intro highway stage, walk right, save slot 0
+launch snes /sd/roms/snes/Mega Man X (USA) (Rev 1).sfc
+sleep 10
+key start 150
+sleep 4
+key start 150
+sleep 10
+hold right
+sleep 3
+release
+sleep 0.3
+capture 3
+save 0

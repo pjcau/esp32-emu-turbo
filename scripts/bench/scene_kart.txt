@@ -1,0 +1,18 @@
+# Super Mario Kart: title -> 1P -> Mario Kart GP -> 50cc -> Mario -> Mushroom Cup -> race
+launch snes /sd/roms/snes/Super Mario Kart (USA).sfc
+sleep 10
+key start 150
+sleep 3
+key a 150
+sleep 2
+key a 150
+sleep 2
+key a 150
+sleep 2
+key a 150
+sleep 2
+key a 150
+sleep 2
+key a 150
+sleep 8
+capture 2
