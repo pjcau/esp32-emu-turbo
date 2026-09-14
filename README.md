@@ -6,19 +6,23 @@ Handheld retro gaming console based on ESP32-S3 — **SNES** (primary) and **NES
 
 Build a portable battery-powered device based on ESP32-S3, capable of loading and playing retro games via SD card, with USB-C charging and an ILI9488 3.95" color LCD display.
 
-## Where the project stands (2026-09-12)
+## Where the project stands (2026-09-14)
 
 - **The first article works.** Board v4.9.0 (article 0003, JLCPCB-assembled) passed
   every bring-up stage on 2026-09-11: USB power, rails, boot, display, SD, audio, all
   12 buttons, and **battery** — boots from the cell alone, charge-and-play, SW16
   charge-only, and the C33 wake pulse after the IP5306 light-load shutdown.
-- **Retro-Go runs on it.** Launcher, ROM browser from SD, save states. **NES: Super
-  Mario Bros at 60 fps, 35% busy** — Phase 2.8 target met.
-- **SNES is playable but not full speed.** Super Mario World at 45–52 emulated fps
-  (75–85%), ~10–13 drawn fps. Instrumented profiling shows the snes9x **PPU tile
-  renderer** is the bottleneck (40–50 ms per rendered frame vs ~8.5 ms for CPU+APU
-  alone); display DMA and audio pacing are not a factor. That renderer is the Phase 4
-  target.
+- **Every emulator runs at 60 fps.** NES, GB, GBC, SMS, GG, PC Engine and Genesis
+  measured on the board (`scripts/emu_check.py`); Genesis needed its FM chip moved
+  to the second core.
+- **SNES runs at real speed.** 60 emulated fps on Super Mario World, Zelda ALttP,
+  Mega Man X, Super Metroid and Donkey Kong Country with 19–26 drawn fps; Super
+  Mario Kart at 57 (DSP-1 CPU load). Two days of renderer work, measured on seven
+  save-state scenes — see below.
+- **The board is driven from the host.** `scripts/board_ctl.py` launches ROMs,
+  presses buttons, saves/loads states and reads the profiling counters over the USB
+  console; a webcam checks the picture. A Debug HUD (options menu) shows FPS, drawn,
+  busy and heap on every emulator.
 - **No board defect found.** Three findings, all closed in firmware or deferred to v2:
   R37 (J4 FPC contact face inverted for the purchased panel — workaround validated),
   R38 (no PDM reconstruction filter — audible hiss, 1 kΩ + 10 nF rework sheet ready),
@@ -73,33 +77,39 @@ Fork and adapt [Retro-Go](https://github.com/ducalex/retro-go) for our hardware 
 - 2.7 Audio routing (PDM DOUT → PAM8403, IDF DAC line mode) ✅
 - 2.8 First boot: NES at 60 fps on the real board (Super Mario Bros, 2026-09-12) ✅
 
-#### 4.3 — Emulator Testing (In Progress)
-Enable and validate each emulator core at target frame rate on the first article.
-- 3.1 NES (nofrendo) → **60 fps measured** ✅
-- 3.2 Game Boy (gnuboy) → 60 fps
-- 3.3 Game Boy Color (gnuboy) → 60 fps
-- 3.4 Master System (smsplus) → 60 fps
-- 3.5 Game Gear (smsplus) → 60 fps
-- 3.6 PC Engine (pce-go) → 60 fps
-- 3.7 Atari Lynx (handy) → 60 fps
-- 3.8 Genesis (gwenesis) → 50-60 fps
-- 3.9 Game & Watch (gw-emulator) → 60 fps
+#### 4.3 — Emulator Testing ✅
+Every core at target frame rate on the first article (2026-09-14, `scripts/emu_check.py`):
+- 3.1 NES (nofrendo) → 60 fps, 31–36% busy ✅
+- 3.2 / 3.3 Game Boy / Color (gnuboy) → 60 fps ✅
+- 3.4 / 3.5 Master System / Game Gear (smsplus) → 60 fps, 60 drawn ✅
+- 3.6 PC Engine (pce-go) → 60 fps ✅
+- 3.7 Atari Lynx (handy), 3.9 Game & Watch — no test ROM on the card yet
+- 3.8 Genesis (gwenesis) → 60 fps, 30 drawn — YM2612 synthesis on core 1 ✅
 
-#### 4.4 — SNES Optimization (Next)
-Measured baseline on the first article (2026-09-12, instrumented build):
-- Super Mario World: 45–52 emulated fps (75–85% speed), ~10–13 drawn fps with frameskip 3
-- `S9xMainLoop` ≈ 8.5 ms when the frame is not rendered, **40–50 ms when it is** —
-  the PPU tile renderer costs ~5x the CPU+APU emulation
-- Display submit 5 µs (async), audio mix 1.5 ms, audio pacing exact — neither is a lever
-- Free heap under SNES: 167 KB internal, 566 KB PSRAM
+#### 4.4 — SNES Optimization (Milestone A reached)
+Measured on seven save-state scenes (`scripts/snes_bench.py`), renderer cost per
+drawn frame, baseline → now:
 
-Target: real speed (60 emulated fps) with 20 drawn fps (needs ~1.5x on the
-renderer) as the acceptance bar, 30 drawn fps (~2.5x) as the goal. The
-renderer-first plan — instrument, cache/config wins, z-buffers and hot code out
-of PSRAM/flash, fewer strips and passes, a painter's-order Mode 1 fast path,
-budget-driven frameskip, then the APU on the idle second core — is in
+| Scene | R (ms) | fps emulated / drawn |
+|:---|---:|:---|
+| Super Mario World (map / level) | 18.2 → 16.4 / 14.8 | 60 / 26 |
+| Zelda: A Link to the Past | 24.9 → 9.5 | 60 / 25 |
+| Mega Man X | 12.9 → 10.9 | 60 / 24 |
+| Super Metroid (Mode 7) | 24.6 → 14.4 | 60 / 22 |
+| Donkey Kong Country | 16.1 → 11.6 | 60 / 19 |
+| Super Mario Kart (Mode 7 + DSP-1) | 22.5 → 22.5 | 57 / 11 |
+
+What paid: blank-tile cache, audio pacing credit, 32/64 KB caches, main z-buffer in
+SRAM, a colour-math fast path when the sub-screen is empty (Zelda −56%), tile
+writers with `restrict` pointers, Mode 7 invariants in locals, per-line backdrop
+and palette-0 so HDMA gradients no longer split the frame into strips (DKC 97 → 1).
+What did not: `IRAM_ATTR` on the renderer, VRAM in internal SRAM — the loops are
+instruction-bound, not memory-bound. Also fixed on the way: the save-state loader
+wrote the APU RAM through a stale pointer (heap corruption on any rebuild).
+
+Open: painter's-order fast path, budget-driven frameskip, and the SNES APU on the
+second core (the Kart/Metroid lever). Details and every measurement:
 [`website/docs/software/snes-optimization.md`](website/docs/software/snes-optimization.md).
-No hardware change involved.
 
 ### Phase 5 — Final Version (v2)
 - Respin with the v2 backlog (R37/R38 + silkscreen) and the audio coprocessor sheet
