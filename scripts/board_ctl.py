@@ -13,6 +13,8 @@ press buttons and read the SNES_PROF counters without touching the board.
     board_ctl.py key a+b 100            # combos with '+'
     board_ctl.py hold right             # held until 'release'
     board_ctl.py release
+    board_ctl.py save 0 | load 0        # emulator save-state (slot 0)
+    board_ctl.py resume snes "/sd/roms/snes/x.sfc"   # launch + load slot 0 = repeatable benchmark scene
     board_ctl.py capture 10             # 10 s of PROF lines + averages
     board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
     board_ctl.py put ~/roms/x.sfc "/sd/roms/snes/x.sfc"   # upload (base64 over the console; from the launcher)
@@ -74,9 +76,9 @@ class Board:
         self.send(f"key {names} {ms}")
         time.sleep(ms / 1000 + 0.08)  # release + debounce before the next one
 
-    def launch(self, app, rom):
+    def launch(self, app, rom, resume=False):
         part = APPS.get(app, "retro-core")
-        self.send(f"launch {part} {app} {rom}", timeout=3)
+        self.send(f"{'resume' if resume else 'launch'} {part} {app} {rom}", timeout=3)
 
     def put(self, local, remote):
         """Upload a file to the card: 'put <size> <path>' then base64 text."""
@@ -163,9 +165,11 @@ def main():
         b.send(f"hold {a.args[0]}")
     elif a.cmd == "release":
         b.send("release " + (a.args[0] if a.args else ""))
-    elif a.cmd == "launch":
-        b.launch(a.args[0], " ".join(a.args[1:]))
+    elif a.cmd in ("launch", "resume"):
+        b.launch(a.args[0], " ".join(a.args[1:]), resume=a.cmd == "resume")
         print("booted" if b.wait_boot() else "no ping after launch", file=sys.stderr)
+    elif a.cmd in ("save", "load"):
+        b.send(f"{a.cmd} {a.args[0] if a.args else 0}", wait=rf"^CTL {a.cmd} (done|failed)", timeout=10)
     elif a.cmd in ("launcher", "reboot"):
         b.send(a.cmd)
         print("booted" if b.wait_boot() else "no ping after reboot", file=sys.stderr)
@@ -190,9 +194,11 @@ def main():
                 b.key(parts[1], int(parts[2]) if len(parts) > 2 else 100)
             elif parts[0] == "capture":
                 b.capture(float(parts[1]) if len(parts) > 1 else 5)
-            elif parts[0] == "launch":
-                b.launch(parts[1], " ".join(parts[2:]))
+            elif parts[0] in ("launch", "resume"):
+                b.launch(parts[1], " ".join(parts[2:]), resume=parts[0] == "resume")
                 b.wait_boot()
+            elif parts[0] in ("save", "load"):
+                b.send(line, wait=rf"^CTL {parts[0]} (done|failed)", timeout=10)
             else:
                 b.send(line)
     else:
