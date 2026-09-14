@@ -32,6 +32,10 @@ GAMES = [
     ("col", "retro-core", None),
     ("msx", "fmsx", None),
     ("doom", "prboom-go", None),
+    ("sg1", "retro-core", None),
+    ("ngp", "retro-extra", None),
+    ("a26", "retro-extra", None),
+    ("duke3d", "duke3d-go", None),
 ]
 FOLDERS = {"lnx": "lynx", "gen": "gen"}  # app name -> card folder when they differ
 

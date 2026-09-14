@@ -19,6 +19,10 @@ homebrew/test ROMs are committed; everything else is ignored by pattern
 | `col/` | smsplus (retro-core) | .col .rom | untested — drop a ROM here |
 | `msx/` | fmsx | .rom .mx1 .mx2 .dsk | untested — drop a ROM here |
 | `doom/` | prboom-go | .wad | `freedoom1.wad` (Freedoom 0.13.0, free) — untested |
+| `sg1/` | smsplus (retro-core) | .sg .sg1 | added 2026-09-14, untested |
+| `ngp/` | RACE (retro-extra) | .ngp .ngc | added 2026-09-14 (libretro RACE), untested |
+| `a26/` | Stella (retro-extra) | .a26 .bin | added 2026-09-14 (stella-odroid-go), untested |
+| `duke3d/` | duke3d-go | .grp (+ the other Duke3D 1.3D/1.5 data files in the same folder) | added 2026-09-14, untested; shareware 1.3D works |
 
 `scripts/emu_check.py` launches the first ROM of every folder that has one
 and reads the FPS/BUSY line, so a new system is covered as soon as its

@@ -105,6 +105,11 @@ test-roms/**/*.mx1
 test-roms/**/*.mx2
 test-roms/**/*.dsk
 test-roms/**/*.wad
+test-roms/**/*.ngp
+test-roms/**/*.ngc
+test-roms/**/*.a26
+test-roms/**/*.grp
+test-roms/**/*.sg
 # Bench ROMs (the user's own copies) — listed by name so nobody wonders
 # whether the patterns above catch them. Only owlia.nes is committed for NES;
 # SNES benchmark set: Super Mario World, Super Mario Kart, Zelda ALttP,
