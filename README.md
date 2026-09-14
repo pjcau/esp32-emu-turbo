@@ -86,6 +86,18 @@ Every core at target frame rate on the first article (2026-09-14, `scripts/emu_c
 - 3.7 Atari Lynx (handy), 3.9 Game & Watch — no test ROM on the card yet
 - 3.8 Genesis (gwenesis) → 60 fps, 30 drawn — YM2612 synthesis on core 1 ✅
 
+#### 4.3b — New cores, compiled but not yet run on the board (2026-09-14)
+Built while the board was away; first thing to verify at the next bench session.
+- **SG-1000** (smsplus, launcher entry) · **Neo Geo Pocket / Color** (libretro RACE) ·
+  **Atari 2600** (Stella, from stella-odroid-go) · **Duke Nukem 3D** (upstream `duke3d`
+  branch, ported: input, audio task, GRP as ROM)
+- NGP + 2600 live in a new `retro-extra` app, Duke3D in `duke3d-go`; the **partition
+  table changed** (retro-core 1.5 MB, + 1 MB + 2 MB) — flash the full image once:
+  `software/retro-go-build/retro-go_esp32-emu-turbo.img` at 0x0 (`rg_tool.py install`).
+- ROM folders ready in `test-roms/` (`sg1 ngp a26 duke3d lynx gw col msx doom`);
+  `scripts/emu_check.py` picks the first ROM of each folder on the card.
+- Not planned: GBA (no full-speed port exists for the ESP32-S3).
+
 #### 4.4 — SNES Optimization (Milestone A reached)
 Measured on seven save-state scenes (`scripts/snes_bench.py`), renderer cost per
 drawn frame, baseline → now:

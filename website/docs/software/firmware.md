@@ -315,6 +315,15 @@ register writes are logged with their clock and replayed with exact sync
 one frame later (`ym2612.c`, `GWENESIS_YM_WORKER`). Audio lags the
 picture by one frame.
 
+**Pending on-device verification (2026-09-14).** Steps 3.10-3.13 were
+compiled with the board disconnected and have never booted on it. First
+bench session: flash the full image (below), populate `/roms/sg1`,
+`/roms/ngp`, `/roms/a26`, `/roms/duke3d` (the Duke 1.3D shareware `.grp`
+plus its `.CON`/`.RTS`/`.DMO` files), run `scripts/emu_check.py` with the
+webcam, then fix what breaks — expected suspects: button mapping, audio
+sample rates (NGP 22 kHz, 2600 31.4 kHz, Duke 11 kHz mono→stereo), Duke3D
+file paths (`Engine/cache.c game_dir`), Stella frame height per ROM.
+
 **Partition table (2026-09-14).** `rg_tool.py` now lays out launcher 1 MB,
 retro-core 1.5 MB, prboom-go 768 KB, gwenesis 1 MB, fmsx 576 KB,
 duke3d-go 1 MB and retro-extra 2 MB (RACE + Stella live apart because
