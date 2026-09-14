@@ -13,7 +13,11 @@ import time
 sys.path.insert(0, os.path.dirname(__file__))
 from board_ctl import Board  # noqa: E402
 
-GAMES = [  # app, partition, rom  (every app must carry the console: rebuild gwenesis/fmsx/prboom-go after shared changes)
+# (app, partition, preferred ROM or None). With None the first file of the
+# system's folder on the card is used, so a new system is covered as soon as
+# its /sd/roms/<app> folder has a ROM. Every app must carry the console:
+# rebuild gwenesis/fmsx/prboom-go after a shared-component change.
+GAMES = [
     ("nes", "retro-core", "/sd/roms/nes/Super Mario Bros. + Duck Hunt (USA).nes"),
     ("nes", "retro-core", "/sd/roms/nes/owlia.nes"),
     ("gb", "retro-core", "/sd/roms/gb/Tetris (JUE) (V1.1) [!].gb"),
@@ -23,7 +27,13 @@ GAMES = [  # app, partition, rom  (every app must carry the console: rebuild gwe
     ("gg", "retro-core", "/sd/roms/gg/Swabby-GG-1.11.gg"),
     ("pce", "retro-core", "/sd/roms/pce/reflectron.pce"),
     ("gen", "gwenesis", "/sd/roms/gen/miniplanets.bin"),
+    ("lnx", "retro-core", None),   # /sd/roms/lynx
+    ("gw", "retro-core", None),
+    ("col", "retro-core", None),
+    ("msx", "fmsx", None),
+    ("doom", "prboom-go", None),
 ]
+FOLDERS = {"lnx": "lynx", "gen": "gen"}  # app name -> card folder when they differ
 
 
 def stats(board, seconds):
@@ -44,6 +54,14 @@ def main():
     snap = "--snap" in sys.argv
     print(f"{'app':5} {'rom':52} {'fps':>5} {'busy':>5} {'drawn':>6}")
     for app, part, rom in GAMES:
+        if rom is None:
+            folder = f"/sd/roms/{FOLDERS.get(app, app)}"
+            files = [l.split(None, 3)[3] for l in b.send(f"ls {folder}", wait=r"^CTL ls (done|failed)", timeout=10, echo=False)
+                     if l.startswith("CTL ls f")]
+            if not files:
+                print(f"{app:5} {'(no ROM in ' + folder + ')':52}")
+                continue
+            rom = f"{folder}/{files[0]}"
         b.send(f"launch {part} {app} {rom}", timeout=3, echo=False)
         b.wait_boot()
         time.sleep(8)
