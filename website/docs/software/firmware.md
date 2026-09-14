@@ -300,6 +300,10 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.7 | handy (Lynx) | — | 60 fps | no ROM on the card yet |
 | 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, **30 drawn** — YM2612 synthesis moved to core 1 (was 20 drawn, BUSY 93% with the FM chip on core 0) |
 | 3.9 | gw-emulator (G&W) | — | 60 fps | no ROM on the card yet |
+| 3.10 | smsplus (SG-1000) | — | 60 fps | enabled 2026-09-14, no ROM yet |
+| 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | — | 60 fps | ported from libretro RACE 2026-09-14, untested |
+| 3.12 | Stella (Atari 2600, `retro-extra`) | — | 60 fps | ported from stella-odroid-go 2026-09-14, untested |
+| 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ported from the upstream `duke3d` branch 2026-09-14, untested |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 
 The non-SNES cores run with retro-go's default frameskip 1 (every other
@@ -310,6 +314,16 @@ VDP 11.3 ms per drawn frame on core 0, and the YM2612 (6 ms per frame,
 register writes are logged with their clock and replayed with exact sync
 one frame later (`ym2612.c`, `GWENESIS_YM_WORKER`). Audio lags the
 picture by one frame.
+
+**Partition table (2026-09-14).** `rg_tool.py` now lays out launcher 1 MB,
+retro-core 1.5 MB, prboom-go 768 KB, gwenesis 1 MB, fmsx 576 KB,
+duke3d-go 1 MB and retro-extra 2 MB (RACE + Stella live apart because
+their ~30 KB of static tables each would take internal RAM from every
+retro-core emulator). A board flashed before that date needs the full
+image once — `software/retro-go-build/retro-go_esp32-emu-turbo.img` at
+offset 0 (`rg_tool.py install`, or `esptool.py write_flash 0x0 …`); single
+apps flash as before afterwards. Save states and settings on the SD card
+are untouched.
 
 **Debug HUD.** Options menu → *Debug HUD: On* (or `board_ctl.py raw "hud
 on"`) prints FPS, drawn, skipped, busy and free internal heap once a
