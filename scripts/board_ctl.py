@@ -125,11 +125,13 @@ class Board:
                 continue
             if echo and ("PROF" in l or "FPS:" in l):
                 print(l)
-            m = re.search(r"PROF n=(\d+) drawn=(\d+) .*?fps=(\d+) busy=(\d+)%", l)
+            m = re.search(r"PROF n=(\d+) drawn=(\d+) wall=(\d+)ms fps=(\d+) busy=(\d+)%", l)
             if m:
                 n += 1
-                for k, v in zip(("n", "drawn", "fps", "busy"), m.groups()):
+                for k, v in zip(("n", "drawn", "wall", "fps", "busy"), m.groups()):
                     fields.setdefault(k, []).append(int(v))
+                # rg_system's fps under-reports; n frames per wall ms is the real emulated rate
+                fields.setdefault("efps", []).append(int(m.group(1)) * 1000 / int(m.group(3)))
                 for k, v in re.findall(r"(\w[\w()]*)=(\d+)", l.split("us/frame:")[1]):
                     fields.setdefault(k, []).append(int(v))
             m = re.search(r"PROF/drawn-frame: (.*)", l)

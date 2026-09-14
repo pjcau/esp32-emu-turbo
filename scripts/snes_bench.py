@@ -27,7 +27,7 @@ ROMS = {  # scene -> ROM; "name@N" resumes save slot N (default 0)
     "mmx": "/sd/roms/snes/Mega Man X (USA) (Rev 1).sfc",
     "metroid": "/sd/roms/snes/Super Metroid (Japan, USA) (En,Ja).sfc",
 }
-COLS = ["fps", "drawn", "busy", "R", "main(skip)", "d.update", "d.sub", "d.main",
+COLS = ["efps", "drawn", "busy", "R", "main(skip)", "d.update", "d.sub", "d.main",
         "d.combine", "d.obj", "d.objsetup", "d.clear", "d.conv", "d.strips"]
 RESULTS = os.path.join(os.path.dirname(__file__), "..", "software", "benchmark", "results")
 

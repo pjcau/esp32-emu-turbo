@@ -117,6 +117,65 @@ Facts read from the code, each of which is a lever below:
   budget for every "move it internal" step below; the cache upgrades in 4.1
   come out of it too.
 
+### Measured log (2026-09-13 / 14) — read this before the steps
+
+The steps below were written from the code before the first measurements.
+Two days on the first article settled several of them; the numbers here
+override the estimates further down.
+
+**Method that replaced the guesswork.** `SNES_PROF=1` counters + on-screen
+HUD (step 4.0), a USB-console remote control (`scripts/board_ctl.py`:
+launch a ROM, inject keys, save/resume a state, upload files to the card)
+and `scripts/snes_bench.py`, which resumes six saved scenes and averages the
+counters: SMW overworld map, SMW inside Yoshi's Island 2, Super Mario Kart
+first race (Mode 7 + DSP-1), Zelda ALttP inside Link's house (colour
+math), Mega Man X first stage, Super Metroid Ceres elevator (Mode 7).
+Results live in `software/benchmark/results/*.json`; `--compare <label>`
+prints the deltas. A webcam on the screen (`scripts/board_cam.py`) checks
+that the picture did not change.
+
+**Corrections to the plan.** The real renderer cost was 18-25 ms per drawn
+frame, not 32-42 (that figure came from `-finstrument-functions`, which
+inflates hot loops). Adaptive frameskip is *not* dead code: `rg_system`
+raises and lowers it every second. And the two "move it internal" levers
+of 4.2 do not pay: `IRAM_ATTR` on the whole renderer bought 1-6% (the 32 KB
+instruction cache already holds it), `Memory.VRAM` in internal SRAM bought
+nothing measurable (the Mode 7 loop is instruction-bound at ~60 cycles per
+pixel, not latency-bound) and exposed a heap-layout-dependent corruption
+with the 512 KB ROMs (open). The main z-buffer *did* pay (Mario Kart 38 →
+57 fps), and the cache upgrade to 32 KB I / 64 KB D is kept.
+
+**What paid.** Blank tiles cached by depth (-1500 `ConvertTile` per frame in
+SMW); the audio pacing credit (SMW 46 → 60 fps); the Mode 7 macro with its
+invariants in locals (-12%); the **sub-screen-empty colour-math fast path**:
+when nothing is on the sub screen the sub z-buffer is 0/1 by column, so a
+256-byte table replaces the per-pixel PSRAM read and a precomputed
+"palette op fixed colour" replaces the arithmetic (Zelda R 24.9 → 11.0 ms,
+Super Metroid 24.6 → 15.9); and the plain tile writers rewritten with
+`restrict` pointers and register-resident depths (SMW -13%, Zelda -16%,
+Mega Man X -18%).
+
+| Scene | R baseline (ms) | R now | emulated / drawn fps now |
+|:---|---:|---:|:---|
+| SMW map | 18.2 | 16.0 | 60 / 26 |
+| SMW Yoshi's Island 2 | — | 14.8 | 60 / 26 |
+| Mario Kart race | 22.5 | 22.2 | 57 / 11 (CPU: DSP-1 11 ms per frame) |
+| Zelda house | 24.9 | 9.3 | 60 / 25 |
+| Mega Man X | 12.9 | 10.6 | 60 / 24 |
+| Super Metroid Ceres | 24.6 | 15.5 | 60 / 22 |
+
+Milestone **A** (60 / 20) is met on every scene except Mario Kart, whose
+limit is now the CPU side (DSP-1) plus a Mode 7 loop at ~45 instructions
+per pixel. What is left in the renderer is instruction count: the
+per-pixel loops (Mode 7, `WRITE_4PIXELS16`, the backdrop combine — 5 ms in
+SMW because the sky *is* the backdrop) run 20-45 instructions on a
+single-issue 240 MHz core; a 4-pixels-at-a-time skip on the combine made
+it slower, not faster. Next levers, in order: run the plain Mode 7 loop
+per colour-window run (Kart), tighten the Mode 7 inner loop, the painter's
+order fast path (4.4) that removes the z-buffer read-modify-write, and a
+dedicated SNES app partition (the retro-core binary carries 43 KB of IRAM
+for nofrendo/gnuboy/smsplus) to make room for the sub z-buffer.
+
 ### Steps, in order
 
 Each step is measured the same way (see *Method*) and reverted if the number
