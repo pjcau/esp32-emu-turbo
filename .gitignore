@@ -118,6 +118,9 @@ test-roms/nes/Super Metroid (Japan, USA) (En,Ja).sfc
 test-roms/nes/Donkey Kong Country (U) (V1.2) [!].smc
 test-roms/nes/Super Mario All-Stars + Super Mario World (USA).sfc
 test-roms/snes/Super Mario Kart (USA).sfc
+test-roms/msx/Road Fighter (Japan).rom
+test-roms/col/Pac-Man (1983)(Atari)(proto).bin
+test-roms/doom/freedoom1.wad
 test-roms/snes/Super Mario World (U) [!].smc
 !test-roms/nes/owlia.nes
 !test-roms/snes/superbossgaiden.sfc
