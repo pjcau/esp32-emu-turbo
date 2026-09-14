@@ -263,18 +263,51 @@ from a laptop port — with a cell attached the IP5306 starts charging the momen
 it sees VBUS and a 500 mA port collapses (`device not accepting address,
 error -71`).
 
-| Step | Core | Test ROM | Target | Measured (article 0003) |
+### Driving the board from the host
+
+Since 2026-09-14 the firmware answers commands on the USB console
+(`RG_GAMEPAD_CONSOLE` in `rg_input.c`, enabled in the esp32-emu-turbo
+`config.h`): every line on stdin is a command, every reply is a `CTL ...`
+line. `scripts/board_ctl.py` wraps it:
+
+```bash
+scripts/board_ctl.py ping                       # which app is running
+scripts/board_ctl.py ls /sd/roms/snes
+scripts/board_ctl.py put ~/rom.sfc "/sd/roms/snes/rom.sfc"   # base64 over USB, ~38 KB/s (from the launcher)
+scripts/board_ctl.py launch snes "/sd/roms/snes/rom.sfc"
+scripts/board_ctl.py key start 150              # tap; "key a+b", "hold right", "release"
+scripts/board_ctl.py save 0 / load 0            # emulator save state
+scripts/board_ctl.py resume snes "/sd/roms/snes/rom.sfc"     # launch + load slot 0 = repeatable scene
+scripts/board_ctl.py capture 10                 # SNES_PROF counters, averaged
+scripts/board_cam.py                            # one webcam frame of the screen
+```
+
+Injected keys are OR-ed into the gamepad state, so menus and games see real
+presses; app switches and save states run at the frame boundary
+(`rg_system_tick()`), not from the input task. `scripts/snes_bench.py` resumes
+the SNES benchmark scenes and prints a comparison table;
+`scripts/emu_check.py` launches every other core's test ROM and reads the
+`FPS/BUSY` line below.
+
+| Step | Core | Test ROM | Target | Measured (article 0003, 2026-09-14, `emu_check.py`) |
 |:---|:---|:---|:---|:---|
-| 3.1 | nofrendo (NES) | Super Mario Bros | 60 fps | ✅ **60 fps, BUSY 35%** (2026-09-12) |
-| 3.2 | gnuboy (GB) | Tetris | 60 fps | — |
-| 3.3 | gnuboy (GBC) | Pokemon Crystal | 60 fps | — |
-| 3.4 | smsplus (SMS) | Sonic the Hedgehog | 60 fps | — |
-| 3.5 | smsplus (GG) | Sonic Triple Trouble | 60 fps | — |
-| 3.6 | pce-go (PCE) | Bonk's Adventure | 60 fps | — |
-| 3.7 | handy (Lynx) | California Games | 60 fps | — |
-| 3.8 | gwenesis (Genesis) | Sonic the Hedgehog | 50-60 fps | — |
-| 3.9 | gw-emulator (G&W) | Ball | 60 fps | — |
-| — | snes9x (SNES) | Super Mario World | 60 fps (Phase 4) | 45–52 emulated fps (75–85%), ~10–13 drawn, BUSY 68–75% — see [SNES Optimization](snes-optimization#measured-on-the-first-article-2026-09-12) |
+| 3.1 | nofrendo (NES) | Super Mario Bros / owlia | 60 fps | ✅ 60 fps, BUSY 36% / 31%, 30 drawn (frameskip 1) |
+| 3.2 | gnuboy (GB) | Tetris | 60 fps | ✅ 60 fps, BUSY 34%, 30 drawn |
+| 3.3 | gnuboy (GBC) | Space Invaders / ucity | 60 fps | ✅ 60 fps, BUSY 53% / 35%, 30 drawn |
+| 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 37%, 60 drawn |
+| 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 43%, 60 drawn |
+| 3.6 | pce-go (PCE) | Reflectron | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn (intro text screen) |
+| 3.7 | handy (Lynx) | — | 60 fps | no ROM on the card yet |
+| 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, BUSY 93%, 20 drawn — no headroom, first thing to look at after SNES |
+| 3.9 | gw-emulator (G&W) | — | 60 fps | no ROM on the card yet |
+| — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
+
+The non-SNES cores run with retro-go's default frameskip 1 (every other
+frame drawn) and 30-55% CPU, so they have room for frameskip 0 once the
+display path is tuned. The 32 KB I-cache / 64 KB D-cache configuration and
+the console remote control are shared by every app; `gwenesis`, `fmsx` and
+`prboom-go` must be rebuilt after a shared-component change or they keep
+the old code (and, without the console, block the host's USB writes).
 
 Super Boss Gaiden (SNES homebrew) hangs snes9x and is not usable as a
 benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World.

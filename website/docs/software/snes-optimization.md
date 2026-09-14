@@ -157,12 +157,32 @@ Mega Man X -18%).
 
 | Scene | R baseline (ms) | R now | emulated / drawn fps now |
 |:---|---:|---:|:---|
-| SMW map | 18.2 | 16.0 | 60 / 26 |
+| SMW map | 18.2 | 16.4 | 60 / 26 |
 | SMW Yoshi's Island 2 | — | 14.8 | 60 / 26 |
-| Mario Kart race | 22.5 | 22.2 | 57 / 11 (CPU: DSP-1 11 ms per frame) |
-| Zelda house | 24.9 | 9.3 | 60 / 25 |
-| Mega Man X | 12.9 | 10.6 | 60 / 24 |
-| Super Metroid Ceres | 24.6 | 15.5 | 60 / 22 |
+| Mario Kart race | 22.5 | 22.5 | 57 / 11 (CPU: DSP-1 11 ms per frame) |
+| Zelda house | 24.9 | 9.5 | 60 / 25 |
+| Mega Man X | 12.9 | 10.9 | 60 / 24 |
+| Super Metroid Ceres | 24.6 | 14.4 | 60 / 22 |
+| Donkey Kong Country, Jungle Hijinxs | 16.1 (97 strips) | 11.6 (1 strip) | 60 / 19 |
+
+**Strips.** `PROF/flush` and `PROF/cgram` name the PPU register and the
+CGRAM entry that force a mid-frame `S9xUpdateScreen()`. Donkey Kong Country
+writes CGRAM entries 0 and 1 on every scanline (HDMA sky gradient) and paid
+97 strips per frame — every tile band cut to 1-3 lines. Entry 0 is the
+backdrop and is never read by a tile, entries 0-15 are only read by tiles
+whose palette starts below 16: both are now snapshotted per line in
+`LineData` (like the scroll registers) and read per line — `LineData.Backdrop`
+in the backdrop fills, `DrawTile16PalLine` for the tiles, selected only while
+`IPPU.PalLineDirty`. Writes to entries ≥ 16, in Mode 7 or with 8-bpp tiles
+still flush. Cost elsewhere: +2-3% on SMW/Zelda.
+
+**A bug that looked like a memory-placement problem.** `S9xLoadState()` read
+the `IAPU` struct from the file and then `fread()` the 64 KB APU RAM through
+`IAPU.RAM` *before* restoring the pointer — i.e. at the address the saving
+process had. It only worked while the heap layout was identical; any change
+in the binary or in the allocations corrupted the heap (TLSF walk crash right
+after "Loaded chunks"). Fixed in `snapshot.c`; save states now survive
+rebuilds.
 
 Milestone **A** (60 / 20) is met on every scene except Mario Kart, whose
 limit is now the CPU side (DSP-1) plus a Mode 7 loop at ~45 instructions
@@ -170,11 +190,14 @@ per pixel. What is left in the renderer is instruction count: the
 per-pixel loops (Mode 7, `WRITE_4PIXELS16`, the backdrop combine — 5 ms in
 SMW because the sky *is* the backdrop) run 20-45 instructions on a
 single-issue 240 MHz core; a 4-pixels-at-a-time skip on the combine made
-it slower, not faster. Next levers, in order: run the plain Mode 7 loop
-per colour-window run (Kart), tighten the Mode 7 inner loop, the painter's
-order fast path (4.4) that removes the z-buffer read-modify-write, and a
-dedicated SNES app partition (the retro-core binary carries 43 KB of IRAM
-for nofrendo/gnuboy/smsplus) to make room for the sub z-buffer.
+it slower, not faster. Tried since: the Mode 7 loop
+with a per-span counter (Metroid -7%, Kart ±0), a per-colour-window-run
+plain Mode 7 loop (Kart slower — disabled), a 4-pixel "covered" skip in the
+backdrop combine (slower: in SMW the sky *is* the backdrop, so z is mostly
+zero). Next levers: the painter's order fast path (4.4) that removes the
+z-buffer read-modify-write, and a dedicated SNES app partition (the
+retro-core binary carries 43 KB of IRAM for nofrendo/gnuboy/smsplus) to
+make room for the sub z-buffer. Mario Kart's ceiling is the CPU side.
 
 ### Steps, in order
 

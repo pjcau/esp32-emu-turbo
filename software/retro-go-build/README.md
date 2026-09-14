@@ -1,16 +1,16 @@
 # Retro-Go Build Output
 
-Pre-built firmware binaries for the ESP32 Emu Turbo target. Built with ESP-IDF v5.4 via Docker (`docker-compose.retro-go.yml`).
+Pre-built firmware binaries for the ESP32 Emu Turbo target. Built with ESP-IDF v5.4 via Docker (`docker-compose.retro-go.yml`). Rebuilt 2026-09-14 (fork `c16ff62f`: console remote control, SNES renderer work, save-state loader fix).
 
 ## Binaries
 
 | File | Contents | Size | Partition free |
 |---|---|---|---|
-| `launcher.bin` | Retro-Go launcher UI + ROM browser | 1015 KB | 67% |
-| `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W, MSX) | 972 KB | ~68% |
-| `gwenesis.bin` | Sega Genesis / Mega Drive (standalone) | 962 KB | ~69% |
-| `prboom-go.bin` | Doom port (PrBoom) | 814 KB | ~74% |
-| `fmsx.bin` | MSX emulator (fMSX) | 639 KB | 79% |
+| `launcher.bin` | Retro-Go launcher UI + ROM browser | 998 KB | 3% |
+| `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W) — production build, no SNES_PROF HUD | 973 KB | 5% |
+| `gwenesis.bin` | Sega Genesis / Mega Drive (standalone) | 944 KB | 8% |
+| `prboom-go.bin` | Doom port (PrBoom) | 796 KB | 22% |
+| `fmsx.bin` | MSX emulator (fMSX) | 621 KB | 39% |
 
 ## How to flash
 
