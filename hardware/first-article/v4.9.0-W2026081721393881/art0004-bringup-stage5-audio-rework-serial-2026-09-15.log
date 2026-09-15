@@ -1,0 +1,358 @@
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x2b (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40379d72
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x170c
+load:0x403c8700,len:0x4
+load:0x403c8704,len:0xe24
+load:0x403cb700,len:0x317c
+entry 0x403c893c
+I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+I (27) boot: compile time Aug 29 2026 21:13:06
+I (27) boot: Multicore bootloader
+I (27) boot: chip revision: v0.2
+I (27) boot: efuse block revision: v1.4
+I (27) qio_mode: Enabling default flash chip QIO
+I (28) boot.esp32s3: Boot SPI Speed : 80MHz
+I (28) boot.esp32s3: SPI Mode       : QIO
+I (28) boot.esp32s3: SPI Flash Size : 16MB
+I (28) boot: Enabling RNG early entropy source...
+I (29) boot: Partition Table:
+I (29) boot: ## Label            Usage          Type ST Offset   Length
+I (29) boot:  0 nvs              WiFi data        01 02 00009000 00008000
+I (29) boot:  1 phy_init         RF data          01 01 00011000 00001000
+I (30) boot:  2 factory          factory app      00 00 00020000 00400000
+I (30) boot:  3 storage          Unknown data     01 82 00420000 00be0000
+I (31) boot: End of partition table
+I (31) esp_image: segment 0: paddr=00020020 vaddr=3c040020 size=13d00h ( 81152) map
+I (43) esp_image: segment 1: paddr=00033d28 vaddr=3fc96200 size=031c4h ( 12740) load
+I (46) esp_image: segment 2: paddr=00036ef4 vaddr=40374000 size=09124h ( 37156) load
+I (53) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=34d54h (216404) map
+I (86) esp_image: segment 4: paddr=00074d7c vaddr=4037d124 size=09080h ( 36992) load
+I (93) esp_image: segment 5: paddr=0007de04 vaddr=600fe100 size=0001ch (    28) load
+I (100) boot: Loaded app from partition at offset 0x20000
+I (101) boot: Disabling RNG early entropy source...
+I (101) octal_psram: vendor id    : 0x0d (AP)
+I (102) octal_psram: dev id       : 0x02 (generation 3)
+I (102) octal_psram: density      : 0x03 (64 Mbit)
+I (102) octal_psram: good-die     : 0x01 (Pass)
+I (102) octal_psram: Latency      : 0x01 (Fixed)
+I (103) octal_psram: VCC          : 0x01 (3V)
+I (103) octal_psram: SRF          : 0x01 (Fast Refresh)
+I (103) octal_psram: BurstType    : 0x01 (Hybrid Wrap)
+I (103) octal_psram: BurstLen     : 0x01 (32 Byte)
+I (103) octal_psram: Readlatency  : 0x02 (10 cycles@Fixed)
+I (104) octal_psram: DriveStrength: 0x00 (1/1)
+I (105) MSPI Timing: PSRAM timing tuning index: 10
+I (105) esp_psram: Found 8MB PSRAM device
+I (105) esp_psram: Speed: 80MHz
+I (105) cpu_start: Multicore app
+I (531) esp_psram: SPI SRAM memory test OK
+I (540) cpu_start: Pro cpu start user code
+I (540) cpu_start: cpu freq: 240000000 Hz
+I (540) app_init: Application information:
+I (540) app_init: Project name:     esp32-emu-turbo-bringup
+I (540) app_init: App version:      1
+I (541) app_init: Compile time:     Aug 29 2026 21:12:53
+I (541) app_init: ELF file SHA256:  6383c7fa8...
+I (541) app_init: ESP-IDF:          v5.4
+I (541) efuse_init: Min chip rev:     v0.0
+I (541) efuse_init: Max chip rev:     v0.99 
+I (541) efuse_init: Chip rev:         v0.2
+I (541) heap_init: Initializing. RAM available for dynamic allocation:
+I (542) heap_init: At 3FC9A360 len 0004F3B0 (316 KiB): RAM
+I (542) heap_init: At 3FCE9710 len 00005724 (21 KiB): RAM
+I (542) heap_init: At 3FCF0000 len 00008000 (32 KiB): DRAM
+I (542) heap_init: At 600FE11C len 00001ECC (7 KiB): RTCRAM
+I (542) esp_psram: Adding pool of 8192K of PSRAM memory to heap allocator
+I (543) spi_flash: detected chip: generic
+I (543) spi_flash: flash io: qio
+I (543) sleep_gpio: Configure to isolate all GPIO pins in sleep state
+I (544) sleep_gpio: Enable automatic switching of GPIO sleep configuration
+I (544) main_task: Started on CPU0
+I (545) esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations
+I (545) main_task: Calling app_main()
+I (546) gpio: GPIO[15]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+
+BRINGUP-BEGIN;board=esp32-emu-turbo;module=N16R8;built=Sep 11 2026 19:14:00
+BRINGUP-FORMAT;seq;result;id;pins;detail
+./main/bringup_test.c:279:bringup.previous_run:PASS
+BRINGUP;01;PASS;bringup.previous_run;-;reset=11, no unfinished run recorded — the previous run reached BRINGUP-END
+./main/bringup_test.c:279:sys.reset_reason:PASS
+BRINGUP;02;PASS;sys.reset_reason;-;reset=USB(11)
+./main/bringup_test.c:279:chip.model:PASS
+BRINGUP;03;PASS;chip.model;-;model=9 cores=2 rev=0.2 features=0x00000012
+./main/bringup_test.c:279:chip.flash_size:PASS
+BRINGUP;04;PASS;chip.flash_size;-;flash=16MB expected=16MB (N16R8)
+./main/bringup_test.c:279:chip.psram_size:PASS
+BRINGUP;05;PASS;chip.psram_size;-;psram=8MB expected=8MB mode=octal
+./main/bringup_test.c:279:config.gpio_unique:PASS
+BRINGUP;06;PASS;config.gpio_unique;-;32 GPIO assignments, all distinct
+./main/bringup_test.c:279:usb.serial_jtag:PASS
+BRINGUP;07;PASS;usb.serial_jtag;GPIO19/20;D-=GPIO19 D+=GPIO20 txfifo_writable=yes (this line reaching you already proves the link)
+I (2553) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2555) gpio: GPIO[3]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2557) gpio: GPIO[45]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2559) gpio: GPIO[46]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:gpio.strapping:PASS
+BRINGUP;08;PASS;gpio.strapping;GPIO0/3/45/46;post-boot levels (NOT the reset-time latch): GPIO0/BTN_SELECT=1 GPIO3/BTN_R=1 GPIO45/BTN_L=0 GPIO46/LCD_WR=1
+./main/bringup_test.c:279:led.heartbeat:PASS
+BRINGUP;09;PASS;led.heartbeat;LED_HB;GPIO15 drive HIGH reads 1, LOW reads 0, active-high, 1Hz heartbeat running, codes 2=SD 3=display 4=audio 5=buttons 6=PSRAM. Light output cannot be sensed — look at LED6
+I (2562) temperature_sensor: Range [-10°C ~ 80°C], error < 1°C
+./main/bringup_test.c:279:temp.baseline:PASS
+BRINGUP;10;PASS;temp.baseline;-;die=30.4C at idle
+I (2565) gpio: GPIO[40]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.UP.idle:PASS
+BRINGUP;11;PASS;btn.UP.idle;GPIO40;GPIO40 idle=1
+I (2575) gpio: GPIO[41]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.DOWN.idle:PASS
+BRINGUP;12;PASS;btn.DOWN.idle;GPIO41;GPIO41 idle=1
+I (2585) gpio: GPIO[42]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.LEFT.idle:PASS
+BRINGUP;13;PASS;btn.LEFT.idle;GPIO42;GPIO42 idle=1
+I (2595) gpio: GPIO[2]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.RIGHT.idle:PASS
+BRINGUP;14;PASS;btn.RIGHT.idle;GPIO2;GPIO2 idle=1
+I (2605) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.A.idle:PASS
+BRINGUP;15;PASS;btn.A.idle;GPIO1;GPIO1 idle=1
+I (2615) gpio: GPIO[48]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.B.idle:PASS
+BRINGUP;16;PASS;btn.B.idle;GPIO48;GPIO48 idle=1
+I (2625) gpio: GPIO[47]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.X.idle:PASS
+BRINGUP;17;PASS;btn.X.idle;GPIO47;GPIO47 idle=1
+I (2635) gpio: GPIO[21]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.Y.idle:PASS
+BRINGUP;18;PASS;btn.Y.idle;GPIO21;GPIO21 idle=1
+I (2645) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.START.idle:PASS
+BRINGUP;19;PASS;btn.START.idle;GPIO18;GPIO18 idle=1
+I (2655) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.SELECT.idle:PASS
+BRINGUP;20;PASS;btn.SELECT.idle;GPIO0;GPIO0 idle=1
+I (2665) gpio: GPIO[45]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.L.idle:PASS
+BRINGUP;21;PASS;btn.L.idle;GPIO45;GPIO45 idle=1
+I (2675) gpio: GPIO[3]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.R.idle:PASS
+BRINGUP;22;PASS;btn.R.idle;GPIO3;GPIO3 idle=1
+I (2685) gpio: GPIO[40]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2695) gpio: GPIO[40]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.UP.rc:PASS
+BRINGUP;23;PASS;btn.UP.rc;GPIO40;GPIO40 rise=724us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2696) gpio: GPIO[41]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2706) gpio: GPIO[41]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.DOWN.rc:PASS
+BRINGUP;24;PASS;btn.DOWN.rc;GPIO41;GPIO41 rise=727us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2707) gpio: GPIO[42]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2717) gpio: GPIO[42]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.LEFT.rc:PASS
+BRINGUP;25;PASS;btn.LEFT.rc;GPIO42;GPIO42 rise=742us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2718) gpio: GPIO[2]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2728) gpio: GPIO[2]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.RIGHT.rc:PASS
+BRINGUP;26;PASS;btn.RIGHT.rc;GPIO2;GPIO2 rise=720us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2729) gpio: GPIO[1]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2739) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.A.rc:PASS
+BRINGUP;27;PASS;btn.A.rc;GPIO1;GPIO1 rise=712us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2740) gpio: GPIO[48]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2750) gpio: GPIO[48]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.B.rc:PASS
+BRINGUP;28;PASS;btn.B.rc;GPIO48;GPIO48 rise=706us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2751) gpio: GPIO[47]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2761) gpio: GPIO[47]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.X.rc:PASS
+BRINGUP;29;PASS;btn.X.rc;GPIO47;GPIO47 rise=705us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2762) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2772) gpio: GPIO[21]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.Y.rc:PASS
+BRINGUP;30;PASS;btn.Y.rc;GPIO21;GPIO21 rise=708us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2773) gpio: GPIO[18]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2783) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.START.rc:PASS
+BRINGUP;31;PASS;btn.START.rc;GPIO18;GPIO18 rise=729us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2784) gpio: GPIO[0]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2794) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.SELECT.rc:PASS
+BRINGUP;32;PASS;btn.SELECT.rc;GPIO0;GPIO0 rise=723us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2795) gpio: GPIO[45]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2825) gpio: GPIO[45]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.L.rc:PASS
+BRINGUP;33;PASS;btn.L.rc;GPIO45;GPIO45 stayed LOW for 20000us with no internal pull — pull-up correctly absent (DNP)
+I (2825) gpio: GPIO[3]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2836) gpio: GPIO[3]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.R.rc:PASS
+BRINGUP;34;PASS;btn.R.rc;GPIO3;GPIO3 rise=719us (expect ~1390us for 10k x 100nF, window 500-4000us)
+I (2837) gpio: GPIO[40]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2837) gpio: GPIO[41]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2837) gpio: GPIO[42]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2838) gpio: GPIO[2]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2838) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2838) gpio: GPIO[48]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2839) gpio: GPIO[47]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2839) gpio: GPIO[21]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2839) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2839) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2840) gpio: GPIO[45]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2840) gpio: GPIO[3]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2850) gpio: GPIO[40]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2855) gpio: GPIO[40]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2860) gpio: GPIO[41]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2865) gpio: GPIO[41]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2870) gpio: GPIO[42]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2875) gpio: GPIO[42]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2880) gpio: GPIO[2]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2885) gpio: GPIO[2]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2890) gpio: GPIO[1]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2895) gpio: GPIO[1]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2900) gpio: GPIO[48]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2905) gpio: GPIO[48]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2910) gpio: GPIO[47]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2915) gpio: GPIO[47]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2920) gpio: GPIO[21]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2925) gpio: GPIO[21]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2930) gpio: GPIO[18]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2935) gpio: GPIO[18]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2940) gpio: GPIO[0]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2945) gpio: GPIO[0]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2950) gpio: GPIO[45]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2955) gpio: GPIO[45]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2960) gpio: GPIO[3]| InputEn: 1| OutputEn: 1| OpenDrain: 1| Pullup: 0| Pulldown: 0| Intr:0 
+I (2965) gpio: GPIO[3]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:btn.isolation:PASS
+BRINGUP;35;PASS;btn.isolation;all 12;12 nets, every one isolated from the other 11
+I (2970) gpio: GPIO[4]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2975) gpio: GPIO[4]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (2980) gpio: GPIO[4]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2980) gpio: GPIO[5]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2985) gpio: GPIO[5]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (2990) gpio: GPIO[5]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2990) gpio: GPIO[6]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (2995) gpio: GPIO[6]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3000) gpio: GPIO[6]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3000) gpio: GPIO[7]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3005) gpio: GPIO[7]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3010) gpio: GPIO[7]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3010) gpio: GPIO[8]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3015) gpio: GPIO[8]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3020) gpio: GPIO[8]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3020) gpio: GPIO[9]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3025) gpio: GPIO[9]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3030) gpio: GPIO[9]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3030) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3035) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3040) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3040) gpio: GPIO[11]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3045) gpio: GPIO[11]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3050) gpio: GPIO[11]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:lcd.data.stuck:PASS
+BRINGUP;36;PASS;lcd.data.stuck;D0-D7;D0-D7 all follow both internal pulls
+I (3050) gpio: GPIO[4]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3050) gpio: GPIO[5]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3051) gpio: GPIO[6]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3051) gpio: GPIO[7]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3051) gpio: GPIO[8]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3052) gpio: GPIO[9]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3052) gpio: GPIO[10]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3052) gpio: GPIO[11]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:lcd.data.shorts:PASS
+BRINGUP;37;PASS;lcd.data.shorts;D0-D7;walking-1 over D0-D7, no line follows another
+I (3075) gpio: GPIO[4]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3077) gpio: GPIO[5]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3079) gpio: GPIO[6]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3081) gpio: GPIO[7]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3083) gpio: GPIO[8]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3085) gpio: GPIO[9]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3087) gpio: GPIO[10]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3089) gpio: GPIO[11]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:lcd.data.risetime:PASS
+BRINGUP;38;PASS;lcd.data.risetime;D0-D7;release-to-HIGH via internal pull-up, avg of 32: D0=233ns D1=200ns D2=200ns D3=200ns D4=200ns D5=200ns D6=200ns D7=202ns (compare FPC seated vs removed — a seated panel adds capacitance and slows every line)
+I (3090) gpio: GPIO[12]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3094) gpio: GPIO[13]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3098) gpio: GPIO[14]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3102) gpio: GPIO[46]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:lcd.ctrl.toggle:PASS
+BRINGUP;39;PASS;lcd.ctrl.toggle;CS/RST/DC/WR;CS/RST/DC/WR all drive both ways
+I (3106) display: Initializing ILI9488 8-bit i80 parallel display
+I (3107) gpio: GPIO[13]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+I (3107) ili9488: Configuring for BGR color order
+I (3107) ili9488: new ili9488 panel @0x3fca7dc0
+I (3107) ili9488: Setting GPIO:13 to 0
+I (3117) ili9488: Setting GPIO:13 to 1
+I (3127) ili9488: Initializing ILI9488
+I (3327) ili9488: Initialization complete
+I (3463) display: Display initialized: 320x480, 8-bit i80 @ 20 MHz
+./main/bringup_test.c:279:lcd.panel.init:PASS
+BRINGUP;40;PASS;lcd.panel.init;D0-D7+CS/RST/DC/WR;display_init()=ESP_OK 320x480 8-bit i80 @ 20MHz
+I (3500) display: Color bars drawn
+./main/bringup_test.c:279:lcd.panel.pattern:PASS
+BRINGUP;41;PASS;lcd.panel.pattern;D0-D7+CS/RST/DC/WR;8 colour bars pushed, 480 rows of 320 px: ESP_OK
+./main/bringup_test.c:976:lcd.panel.readback:IGNORE: LCD_RD is tied HIGH on the PCB, the panel cannot be read back \xE2\x80\x94 confirm the colour bars by eye (R,G,B,white,black,cyan,magenta,yellow)
+BRINGUP;42;SKIP;lcd.panel.readback;-;LCD_RD is tied HIGH on the PCB, the panel cannot be read back — confirm the colour bars by eye (R,G,B,white,black,cyan,magenta,yellow)
+./main/bringup_test.c:982:lcd.backlight:IGNORE: backlight is hardwired to 3V3 through a resistor, no GPIO control \xE2\x80\x94 if the panel is dark but the bars were drawn, look at the backlight series resistor and the FPC seating, not at the firmware
+BRINGUP;43;SKIP;lcd.backlight;-;backlight is hardwired to 3V3 through a resistor, no GPIO control — if the panel is dark but the bars were drawn, look at the backlight series resistor and the FPC seating, not at the firmware
+I (3503) gpio: GPIO[44]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3508) gpio: GPIO[44]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3513) gpio: GPIO[44]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3513) gpio: GPIO[43]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3518) gpio: GPIO[43]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3523) gpio: GPIO[43]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3523) gpio: GPIO[38]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3528) gpio: GPIO[38]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3533) gpio: GPIO[38]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3533) gpio: GPIO[39]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3538) gpio: GPIO[39]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 0| Pulldown: 1| Intr:0 
+I (3543) gpio: GPIO[39]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:sd.lines.stuck:PASS
+BRINGUP;44;PASS;sd.lines.stuck;MOSI/MISO/CLK/CS;MOSI/MISO/CLK/CS all follow both internal pulls
+I (3544) gpio: GPIO[39]| InputEn: 1| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 
+./main/bringup_test.c:279:sd.bus.init:PASS
+BRINGUP;45;PASS;sd.bus.init;MOSI/MISO/CLK/CS;SPI2 up at 400kHz, CS under software control
+./main/bringup_test.c:1102:sd.cmd0:IGNORE: no R1 byte on SD_MISO \xE2\x80\x94 either the socket is empty or the card is not powered/selected. Re-run with a known-good card inserted: if it still reads 0xFF the fault is on the board (no card-detect line is read on this revision, so nothing in software can te
+BRINGUP;46;SKIP;sd.cmd0;MOSI/MISO/CLK/CS;no R1 byte on SD_MISO — either the socket is empty or the card is not powered/selected. Re-run with a known-good card inserted: if it still reads 0xFF the fault is on the board (no card-detect line is read on this revision, so nothing in software can te
+./main/bringup_test.c:1118:sd.cmd8:IGNORE: no card responded to CMD0 (see sd.cmd0) \xE2\x80\x94 nothing to interrogate
+BRINGUP;47;SKIP;sd.cmd8;MOSI/MISO/CLK/CS;no card responded to CMD0 (see sd.cmd0) — nothing to interrogate
+./main/bringup_test.c:1118:sd.acmd41:IGNORE: no card responded to CMD0 (see sd.cmd0) \xE2\x80\x94 nothing to interrogate
+BRINGUP;48;SKIP;sd.acmd41;MOSI/MISO/CLK/CS;no card responded to CMD0 (see sd.cmd0) — nothing to interrogate
+./main/bringup_test.c:1118:sd.ocr:IGNORE: no card responded to CMD0 (see sd.cmd0) \xE2\x80\x94 nothing to interrogate
+BRINGUP;49;SKIP;sd.ocr;MOSI/MISO/CLK/CS;no card responded to CMD0 (see sd.cmd0) — nothing to interrogate
+I (3549) gpio: GPIO[44]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3550) gpio: GPIO[43]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+I (3550) gpio: GPIO[38]| InputEn: 0| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:0 
+./main/bringup_test.c:1195:sd.fat.mount:IGNORE: no card responded to CMD0 (see sd.cmd0) \xE2\x80\x94 nothing to mount
+BRINGUP;50;SKIP;sd.fat.mount;MOSI/MISO/CLK/CS;no card responded to CMD0 (see sd.cmd0) — nothing to mount
+I (3551) audio: Initializing I2S PDM audio (32000 Hz, 16-bit)
+I (3552) audio: Audio initialized: I2S PDM TX 32000 Hz mono
+./main/bringup_test.c:279:audio.pdm.init:PASS
+BRINGUP;51;PASS;audio.pdm.init;I2S_DOUT;audio_init()=ESP_OK PDM TX on GPIO17, 32000Hz 16-bit mono (clk unused by design)
+I (3553) audio: Playing 3x 1000 Hz beeps over 900 ms
+I (4299) audio: Test tone complete
+./main/bringup_test.c:279:audio.tone:PASS
+BRINGUP;52;PASS;audio.tone;I2S_DOUT;3x 1kHz beeps over 900ms returned ESP_OK in 746ms
+I (4300) audio: Audio stopped
+./main/bringup_test.c:1243:audio.audible:IGNORE: whether the tone was audible cannot be sensed by the ESP32 \xE2\x80\x94 there is no feedback path from the PAM8403 back to a GPIO. If audio.tone passed and you heard nothing, the fault is after GPIO17: coupling cap, PAM8403 supply or SD pin, or the speaker
+BRINGUP;53;SKIP;audio.audible;-;whether the tone was audible cannot be sensed by the ESP32 — there is no feedback path from the PAM8403 back to a GPIO. If audio.tone passed and you heard nothing, the fault is after GPIO17: coupling cap, PAM8403 supply or SD pin, or the speaker
+./main/bringup_test.c:279:psram.pattern:PASS
+BRINGUP;54;PASS;psram.pattern;-;1024KB written and read back byte-exact
+./main/bringup_test.c:279:power.load:PASS
+BRINGUP;55;PASS;power.load;-;survived 3s of dual-core + PSRAM + LCD load, 2 full-screen fills, heap 8715252->8715252
+./main/bringup_test.c:279:power.temp_delta:PASS
+BRINGUP;56;PASS;power.temp_delta;-;die 30.4C -> 32.4C, delta +2.0C after the load test
+./main/bringup_test.c:1386:power.rail3v3.absolute:IGNORE: the ESP32-S3 exposes no ADC channel on VDD3P3, so the absolute +3V3 voltage cannot be read in software. Rail health here is inferred from sys.reset_reason (brownout detector) and power.load, not measured
+BRINGUP;57;SKIP;power.rail3v3.absolute;-;the ESP32-S3 exposes no ADC channel on VDD3P3, so the absolute +3V3 voltage cannot be read in software. Rail health here is inferred from sys.reset_reason (brownout detector) and power.load, not measured
+./main/bringup_test.c:1394:power.battery_sense:IGNORE: board_config.h defines no battery-sense net: there is no divider from BAT+ into any ADC pin on this revision, so battery voltage and charge level are not observable from firmware
+BRINGUP;58;SKIP;power.battery_sense;-;board_config.h defines no battery-sense net: there is no divider from BAT+ into any ADC pin on this revision, so battery voltage and charge level are not observable from firmware
+./main/bringup_test.c:1401:power.ip5306_i2c:IGNORE: IP5306 I2C is not routed (board_config.h: GPIO33/34 are reserved for the Octal PSRAM). The charger runs on its power-on defaults and reports nothing to the MCU \xE2\x80\x94 charge state is the on-board LED only
+BRINGUP;59;SKIP;power.ip5306_i2c;-;IP5306 I2C is not routed (board_config.h: GPIO33/34 are reserved for the Octal PSRAM). The charger runs on its power-on defaults and reports nothing to the MCU — charge state is the on-board LED only
+
+-----------------------
+59 Tests 0 Failures 11 Ignored 
+OK
+BRINGUP-SKIPPED;lcd.panel.readback,lcd.backlight,sd.cmd0,sd.cmd8,sd.acmd41,sd.ocr,sd.fat.mount,audio.audible,power.rail3v3.absolute,power.battery_sense,power.ip5306_i2c
+BRINGUP-SUMMARY;total=59;pass=48;fail=0;skip=11;verdict=GREEN
+BRINGUP-LED;GPIO15 1Hz steady = alive
+BRINGUP-END

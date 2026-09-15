@@ -108,6 +108,55 @@ esp_err_t audio_play_test_tone(int duration_ms)
     return ESP_OK;
 }
 
+esp_err_t audio_play_note(int freq_hz, int duration_ms)
+{
+    if (!s_tx_chan) return ESP_ERR_INVALID_STATE;
+
+    const int total = (AUDIO_SAMPLE_RATE * duration_ms) / 1000;
+    const int ramp = AUDIO_SAMPLE_RATE / 200;   /* 5 ms fade in/out: no click */
+    const int chunk = 256;
+    int16_t buf[chunk];
+    size_t bytes_written;
+
+    for (int i = 0; i < total; i += chunk) {
+        int n = (total - i < chunk) ? (total - i) : chunk;
+        for (int j = 0; j < n; j++) {
+            int s = i + j;
+            float env = 1.0f;
+            if (freq_hz <= 0) env = 0.0f;                          /* rest */
+            else if (s < ramp) env = (float)s / ramp;
+            else if (total - s < ramp) env = (float)(total - s) / ramp;
+            float t = (float)s / AUDIO_SAMPLE_RATE;
+            buf[j] = (int16_t)(16000.0f * env * sinf(2.0f * M_PI * freq_hz * t));
+        }
+        i2s_channel_write(s_tx_chan, buf, n * sizeof(int16_t), &bytes_written, portMAX_DELAY);
+    }
+    return ESP_OK;
+}
+
+esp_err_t audio_play_melody(void)
+{
+    if (!s_tx_chan) return ESP_ERR_INVALID_STATE;
+
+    /* Super Mario Bros. overworld intro: E5 E5 E5 C5 E5 G5 G4 — instantly
+     * recognizable on a 28mm speaker, ~1.6 s. 0 Hz = rest. */
+    static const struct { int hz, ms; } notes[] = {
+        {659, 120}, {0, 40}, {659, 120}, {0, 160}, {659, 120}, {0, 160},
+        {523, 120}, {0, 40}, {659, 120}, {0, 160}, {784, 200}, {0, 400},
+        {392, 200},
+    };
+    ESP_LOGI(TAG, "Playing melody (%u notes)", (unsigned)(sizeof(notes) / sizeof(notes[0])));
+    for (unsigned i = 0; i < sizeof(notes) / sizeof(notes[0]); i++)
+        audio_play_note(notes[i].hz, notes[i].ms);
+
+    int16_t buf[256];
+    size_t bytes_written;
+    memset(buf, 0, sizeof(buf));
+    i2s_channel_write(s_tx_chan, buf, sizeof(buf), &bytes_written, portMAX_DELAY);
+    ESP_LOGI(TAG, "Melody complete");
+    return ESP_OK;
+}
+
 void audio_stop(void)
 {
     if (s_tx_chan) {

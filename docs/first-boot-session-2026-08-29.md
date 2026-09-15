@@ -405,3 +405,35 @@ State at close: fork 48cedc75, SMW and Mario Kart both at 60 fps emulated
 on the profiling build; drawn 10–15/s on the heavy scenes. Next: IRAM
 placement of the tile writers / UpdateScreen / SetupOBJ, then the
 colour-math combine loop.
+
+## 2026-09-15 — article 0004: bring-up GREEN, R38 rework on the bench
+
+Second board of the same order (W2026081721393881), bare: no SD, no
+panel, no speaker at first power-on. Bring-up flashed with local esptool
+(pipx) and captured with the August recipe.
+
+- **Stage 3: GREEN 48 PASS / 0 FAIL / 11 SKIP**, two consecutive warm
+  resets (`art0004-bringup-stage3-run{1,2}-serial-2026-09-15.log`). Same
+  baseline as article 0003 pre-peripherals: button RC 706–737 µs, D0–D7
+  ~200 ns unloaded, load test +2.0 °C, no brownout. Capture artifact seen
+  once: a `BRINGUP;` prefix dropped on the `psram.pattern` line in run 2
+  (USB-serial, the SUMMARY still counted it) — not a board finding.
+- **R38 rework applied** (1 kΩ + 10 nF at C22 / PAM_IN_AC, per the rework
+  sheet) and the 28 mm 8 Ω / 2 W speaker soldered. Post-rework run
+  GREEN 48/0/11 (`art0004-bringup-stage5-audio-rework-serial-2026-09-15.log`);
+  DC checks on U5: pin 7 = 2.5 V (bias intact after the rework), pin 12 =
+  4.8–5 V (not shut down), pins 14–16 = 0–1.6 V AC pulsing with the tone.
+- **First "no sound" was the speaker wiring, not the board**: pins 14–16
+  read OL with the amp driving; the speaker itself measured 8 Ω before
+  fitting. Re-done joints on the SPK pads → audible. SPK pads are two
+  unmarked 2×3 mm SMD rectangles 19 mm apart under the speaker (the
+  missing ± silk is already a v2 item).
+- **R38 verdict: carrier hiss reduced but still present** with 1 kΩ + 10 nF
+  (fc ≈ 16 kHz). Next try if it matters: 22 nF (fc ≈ 7 kHz) — the ear
+  should not miss anything below that on this speaker.
+- Firmware added this session: `audio_play_note()` / `audio_play_melody()`
+  (SMB overworld intro) in the production driver, and an opt-in bench
+  build of the bring-up (`EXTRA_CFLAGS=-DBRINGUP_TONE_LOOP`) that repeats
+  the melody every ~4 s after the report, disabling the PDM channel
+  between repeats so the gaps are true silence. The report itself is
+  unchanged. Article 0004 is left with this build on it.

@@ -21,6 +21,17 @@ esp_err_t audio_init(void);
 esp_err_t audio_play_test_tone(int duration_ms);
 
 /**
+ * Play one sine note (freq_hz, 0 = rest) for duration_ms with a 5 ms
+ * fade in/out. Blocks until written.
+ */
+esp_err_t audio_play_note(int freq_hz, int duration_ms);
+
+/**
+ * Play a short recognizable melody (SMB overworld intro, ~1.6 s). Blocks.
+ */
+esp_err_t audio_play_melody(void);
+
+/**
  * Stop audio playback and disable the I2S channel.
  */
 void audio_stop(void);

@@ -1749,6 +1749,24 @@ void app_main(void)
     /* Only a completed run clears the marker; anything that reboots the board
      * before this point leaves the phase behind for the next run to report. */
     phase_clear();
+
+#ifdef BRINGUP_TONE_LOOP
+    /* Bench variant (build with EXTRA_CFLAGS=-DBRINGUP_TONE_LOOP): keep a
+     * short melody repeating for as long as the board is on, so the audio
+     * chain after GPIO17 can be probed with a meter, a scope or an ear. Not part of
+     * the report — the run above is unchanged. */
+    printf("BRINGUP-TONE-LOOP;melody every ~4s until reset\n");
+    fflush(stdout);
+    for (;;) {
+        /* Channel up only while playing: an idle PDM channel still emits
+         * its carrier (R38 hiss), so the gaps are true silence. */
+        if (audio_init() == ESP_OK) {
+            audio_play_melody();
+            audio_stop();
+        }
+        vTaskDelay(pdMS_TO_TICKS(2500));
+    }
+#endif
 }
 '''
 
