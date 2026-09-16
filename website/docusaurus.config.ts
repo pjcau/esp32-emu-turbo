@@ -30,6 +30,9 @@ const config: Config = {
 
   url: 'https://pjcau.github.io',
   baseUrl: '/esp32-emu-turbo/',
+  // 3d_case/ (project root) holds every STL: the print set at its root and
+  // the viewer set under viewer/. Served as-is so no STL lives in website/.
+  staticDirectories: ['static', '../3d_case'],
 
   organizationName: 'pjcau',
   projectName: 'esp32-emu-turbo',

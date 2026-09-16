@@ -1,134 +1,61 @@
 ---
 name: enclosure-export
 model: claude-sonnet-5
-description: Export OpenSCAD enclosure parts to STL files for 3D printing
+description: Export OpenSCAD enclosure parts to STL — viewer set (assembly coords) + print set (bed orientation) — and run the interference gate
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob
-argument-hint: [all|top|bottom|buttons|dpad|abxy]
+argument-hint: [all|viewer|print]
 ---
 
-# Enclosure STL Export for 3D Printing
+# Enclosure STL Export
 
-Export individual enclosure parts to STL files for FDM/SLA 3D printing.
-
-**Argument** (optional): `all` (default), or specific part name.
-
-## Prerequisites
-
-Docker must be running with the OpenSCAD image built:
+One command, two outputs, one gate:
 
 ```bash
-cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
-docker compose build openscad
+make export-enclosure-stl     # = ./scripts/export-enclosure-stl.sh, ~30 s
 ```
 
-## Export Commands
+| Output | Where | Coordinates | Consumer |
+|---|---|---|---|
+| `viewer/assembly.stl`, `viewer/exploded.stl`, `viewer/parts/*.stl` | `3d_case/viewer/` — served by Docusaurus via `staticDirectories: ['static', '../3d_case']` | assembly (Z=0 back face) | `website/static/viewer.html` loads `viewer/...`; file names are hard-coded in its `ASSEMBLY_PARTS` list |
+| `case_top.stl case_bottom.stl dpad.stl btn_{a,b,x,y}.stl start.stl menu.stl select.stl lever_{l,r}.stl battery_strap_x2.stl` | `3d_case/` (project root — the user's folder) | print orientation (flat face on the bed) | the slicer |
 
-### Export all printable parts
+The script ends with `scripts/verify_enclosure_collision.py`: an STL set is
+never produced from a model whose shells cut into the parts they enclose.
+Before uploading to a print service run `make verify-enclosure-requirements`:
+R12 is the same thin-wall scan Weerg runs (min 1.2 mm), R8 the named walls.
+
+## Print orientation (built into the selectors)
+
+| Part | Selector | Note |
+|---|---|---|
+| Top shell | `case_top_print` | front face down — the mirrored `case_top` is for the viewer only |
+| Bottom shell | `case_bottom` | back face down; the two lever hinge rods are 9 mm bridges |
+| Face caps | `part_dpad`, `part_btn_*`, `part_start/menu/select` | face down; stepped conical flange needs no support |
+| L/R levers | `part_shoulder_l`, `part_shoulder_r` | face down; hook slot faces up |
+| Battery straps (print 2) | `part_strap_print` | flat, pegs up |
+
+## Export one part by hand
 
 ```bash
-cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
-mkdir -p hardware/enclosure/stl
-
-# Top shell (display side)
-docker compose run --rm openscad \
-    -o /output/case_top.stl \
-    -D 'part="case_top"' \
-    /project/enclosure.scad
-
-# Bottom shell (battery side)
-docker compose run --rm openscad \
-    -o /output/case_bottom.stl \
-    -D 'part="case_bottom"' \
-    /project/enclosure.scad
-
-# D-pad cap
-docker compose run --rm openscad \
-    -o /output/dpad.stl \
-    -D 'part="part_dpad"' \
-    /project/enclosure.scad
-
-# ABXY button caps (4 individual)
-for btn in a b x y; do
-    docker compose run --rm openscad \
-        -o "/output/btn_${btn}.stl" \
-        -D "part=\"part_btn_${btn}\"" \
-        /project/enclosure.scad
-done
-
-# Start, Menu, Select caps
-for cap in start menu select; do
-    docker compose run --rm openscad \
-        -o "/output/${cap}.stl" \
-        -D "part=\"part_${cap}\"" \
-        /project/enclosure.scad
-done
-
-# Shoulder buttons
-docker compose run --rm openscad \
-    -o /output/shoulder_l.stl \
-    -D 'part="part_shoulder_l"' \
-    /project/enclosure.scad
-
-docker compose run --rm openscad \
-    -o /output/shoulder_r.stl \
-    -D 'part="part_shoulder_r"' \
-    /project/enclosure.scad
+docker compose run --rm --user "$(id -u):$(id -g)" openscad \
+    -o /output/case_top.stl -D 'part="case_top_print"' /project/enclosure.scad
+# lands in website/static/img/renders/case_top.stl (the /output mount) — move it to 3d_case/ (no STL stays under website/)
 ```
 
-### Export a single part
+## Print settings
 
-```bash
-docker compose run --rm openscad \
-    -o /output/<part_name>.stl \
-    -D 'part="<part_selector>"' \
-    /project/enclosure.scad
-```
+- PLA/PETG shells, 0.2 mm layers, 20 % infill, **no supports**.
+- Caps and levers 100 % infill, 0.12 mm layers; PETG or TPU for feel.
+- Hardware: 4 × M2.5 heat-set inserts L 2.5 × OD 3.5 pressed into the top
+  bosses from the PCB side; 4 × M2.5 × 20 from the back (a 25 mm screw
+  would go through the roof — gate R6).
+- Fit tolerances already in the model: 0.3 mm/side caps and panel pocket,
+  0.3 mm alignment lip.
 
-## Part Selector Reference
+## Key files
 
-| Part | Selector | Print Notes |
-|------|----------|-------------|
-| Top shell | `case_top` | Print upside-down (flat face down) |
-| Bottom shell | `case_bottom` | Print as-is (flat face down) |
-| D-pad | `part_dpad` | Print cap-face down |
-| Button A | `part_btn_a` | Print cap-face down |
-| Button B | `part_btn_b` | Print cap-face down |
-| Button X | `part_btn_x` | Print cap-face down |
-| Button Y | `part_btn_y` | Print cap-face down |
-| Start | `part_start` | Print cap-face down |
-| Menu | `part_menu` | Print cap-face down |
-| Select | `part_select` | Print cap-face down |
-| Shoulder L | `part_shoulder_l` | Print cap-face down |
-| Shoulder R | `part_shoulder_r` | Print cap-face down |
-
-## 3D Printing Recommendations
-
-### Material
-- **PLA/PETG** for shells (strong, easy to print)
-- **TPU** for button caps (flexible, better feel) — optional
-- **PLA** for button caps works fine too
-
-### Print Settings (FDM)
-- Layer height: 0.2mm (shells), 0.12mm (button caps for detail)
-- Infill: 20-30% (shells), 100% (button caps)
-- Supports: Not needed for shells (designed for supportless printing)
-- Tolerances: 0.3mm clearance built into alignment lip design
-
-### Post-processing
-- Light sanding on mating surfaces for smooth fit
-- Test-fit button caps in cutouts before final assembly
-- M3 heat-set inserts in screw boss holes (optional, can self-tap into PLA)
-
-## Post-export Verification
-
-```bash
-ls -la website/static/img/renders/*.stl 2>/dev/null || ls -la hardware/enclosure/stl/*.stl 2>/dev/null
-```
-
-## Key Files
-
-- `hardware/enclosure/enclosure.scad` — Main enclosure (all part selectors)
-- `hardware/enclosure/modules/*.scad` — Component modules
-- `docker-compose.yml` — OpenSCAD Docker service
-- `website/docs/enclosure.md` — Design documentation
+- `scripts/export-enclosure-stl.sh` — part lists for both sets
+- `scripts/verify_enclosure_collision.py` — the gate it ends with
+- `website/static/viewer.html` — `ASSEMBLY_PARTS` (add a file there if you add a viewer part; `part_straps.stl` is one)
+- `website/docs/design/enclosure.md` — printing + assembly-order sections

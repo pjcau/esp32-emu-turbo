@@ -12,12 +12,18 @@ the gate objects. An assertion that never fires is not evidence.
     M4  abxy Y offset -9 -> -10              DFM shift reverted  -> exit 1
     M5  menu_y -24.2 -> -25                  button drift        -> exit 1
     M6  bat_d 10 -> 9.5                      pre-F1 pocket back  -> exit 1
-    M7  body_d 26 -> 25                      battery/module clash-> exit 1
+    M7  bot_d 16 -> 15                       battery/module clash-> exit 1
     M8  esp_d 3.1 -> 3.0                     envelope understated-> exit 1
     M9  pcb_w renamed                        contract broken     -> exit 2
     M10 pcb_w indented (module-local shape)  contract broken     -> exit 2
     M11 screw_positions uses an unknown name contract broken     -> exit 2
     M12 unmutated file                       all green           -> exit 0
+    M13 disp_w 83.52 -> 86.4                 V1 viewport back    -> exit 1
+    M14 disp_riser 3.1 -> 1.0                cable space gone    -> exit 1
+    M15 bat_offset_y 5 -> 0                  pocket under J3     -> exit 1
+    M16 lever_tip_over 0.8 -> 3              lever into the screw-> exit 1
+    M17 sw_h 1.5 -> 3.0                      wrong switch height -> exit 1
+    M18 bat_strap_x2 26 -> 5                 strap under the ESP32-> exit 1
 """
 
 from __future__ import annotations
@@ -84,13 +90,20 @@ def main() -> int:
          "    [-9, 0],     // Y", "    [-10, 0],     // Y", 1),
         ("M5 menu drift", "menu_y = -24.2;", "menu_y = -25;", 1),
         ("M6 pre-F1 battery pocket", "bat_d = 10;", "bat_d = 9.5;", 1),
-        ("M7 battery/module clash", "body_d = 26;", "body_d = 25;", 1),
+        ("M7 battery/module clash", "bot_d = 16;", "bot_d = 15;", 1),
         ("M8 ESP envelope understated", "esp_d = 3.1;", "esp_d = 3.0;", 1),
         ("M9 constant renamed", "pcb_w = 160;", "pcb_width = 160;", 2),
         ("M10 constant indented", "pcb_w = 160;", "  pcb_w = 160;", 2),
         ("M11 vector uses unknown name",
          "[-body_w/2 + 15, body_h/2 - 12],    // Front-left",
          "[-frame_w/2 + 15, body_h/2 - 12],   // Front-left", 2),
+        ("M13 V1 viewport back", "disp_w = 83.52;", "disp_w = 86.4;", 1),
+        ("M14 cable riser gone", "disp_riser = 3.1;", "disp_riser = 1.0;", 1),
+        ("M15 pocket under J3", "bat_offset_y = 5;", "bat_offset_y = 0;", 1),
+        ("M16 lever into the screw", "lever_tip_over = 0.8;",
+         "lever_tip_over = 3;", 1),
+        ("M17 wrong switch height", "sw_h = 1.5;", "sw_h = 3.0;", 1),
+        ("M18 strap under the ESP32", "bat_strap_x2 = 26;", "bat_strap_x2 = 5;", 1),
     ]
     for name, old, new, want in cases:
         rc = run_with(mutate(old, new))
@@ -104,7 +117,8 @@ def main() -> int:
         print(f"Results: FAIL — {len(failures)} case(s): "
               f"{', '.join(failures)}")
         return 1
-    print("Results: PASS — 12/12 scad mutations detected")
+    print(f"Results: PASS — {len(cases) + 1}/{len(cases) + 1} scad "
+          "mutations detected")
     return 0
 
 

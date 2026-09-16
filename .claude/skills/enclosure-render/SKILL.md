@@ -1,93 +1,86 @@
 ---
 name: enclosure-render
 model: claude-sonnet-5
-description: Render OpenSCAD enclosure views to PNG via Docker
+description: Render OpenSCAD enclosure views to PNG via Docker (13 views incl. inside-shell, boss section and cross-sections)
 disable-model-invocation: true
 allowed-tools: Bash, Read, Glob
-argument-hint: [all|front|back|top|exploded|cross-section|fit-check|pcb]
+argument-hint: [all|front|back|top|ports|exploded|cross-section|cross-section-yz|fit-check|top-inside|top-inside-bare|bottom-inside|pcb]
 ---
 
 # Enclosure Rendering Pipeline
 
-Render the OpenSCAD enclosure model to high-resolution PNG images via Docker.
+Render the OpenSCAD enclosure model to PNG via the `openscad` Docker service
+(`openscad/openscad:dev` — NOT `2021.01`). Paths are relative to the repo
+root; the container maps `hardware/enclosure` → `/project` and
+`website/static/img/renders` → `/output`.
 
-**Argument** (optional): View to render. `all` (default), or a specific view name.
+**Argument** (optional): a view name, default `all`.
 
-## Prerequisites
-
-Docker must be running. Build the OpenSCAD image if not already built:
-
-```bash
-cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
-docker compose build openscad
-```
-
-## Render All Views
+## Render all views
 
 ```bash
-./scripts/render-enclosure.sh
-# or via Makefile:
-make render-enclosure
+make render-enclosure        # = ./scripts/render-enclosure.sh (builds the image if needed)
 ```
 
-This renders 7 views at 1920x1080 resolution to `website/static/img/renders/`.
+13 views at 1920×1080 → `website/static/img/renders/enclosure/enclosure-<view>.png`.
+Outputs are written with `--user $(id -u)` — a root-owned leftover from an
+older run makes OpenSCAD fail with "Can't open file for export": delete it
+(`find website/static/img/renders -user root -delete`) and re-run.
 
-## Available Views
+| View | Part | Camera (center / rot / dist) | Shows |
+|------|------|------------------------------|-------|
+| `front` | assembly | 0,0,12.5 / 25,0,340 / 500 | front 3/4 |
+| `back` | assembly | 0,0,12.5 / 205,0,200 / 500 | back as physically turned around (L/R mirrored) |
+| `top` | assembly | 0,0,12.5 / 0,0,0 / 430 | plan view of the front face |
+| `ports` | assembly | 0,0,12 / 90,0,0 / 300 | bottom edge: USB-C, SD, power |
+| `exploded` | exploded | 0,0,20 / 55,0,330 / 600 | shells, PCB, panel, caps, levers |
+| `cross-section` | cross_section | 0,-10,13 / 60,0,0 / 300 | XZ at Y=0: battery, module, PCB, panel + riser, cap stack |
+| `cross-section-yz` | cross_section_yz | 53,0,14 / 70,0,90 / 180 | YZ through the Y button: pocket, tail fold, well |
+| `fit-check` | fit_check | 0,0,10 / 35,0,340 / 420 | bottom shell + translucent PCB + battery + levers |
+| `top-inside` | top_inside | 0,0,5 / 35,0,20 / 420 | display frame, bosses, guide wells, panel + caps in place |
+| `top-inside-bare` | top_inside_bare | 0,0,5 / 35,0,20 / 420 | same without panel/caps: insert sockets, gussets, LED pipes |
+| `bottom-inside` | bottom_inside | 0,0,8 / 35,0,20 / 420 | pocket, columns, ribs, lever hinges (no PCB) |
+| `boss-section` | boss_section | 70,30.5,20 / 70,0,0 / 60 | one top boss cut open: insert socket + relief (print geometry) |
+| `pcb` | pcb | 0,0,1 / 25,0,340 / 300 | PCB model only |
 
-| View | Part | Camera | Description |
-|------|------|--------|-------------|
-| `front` | assembly | 25,0,340 | Front 3/4 view, assembled |
-| `back` | assembly | 205,0,20 | Back 3/4 view, assembled |
-| `top` | assembly | 90,0,0 | Top-down view |
-| `exploded` | exploded | 55,0,330 | Exploded with all components |
-| `cross-section` | cross_section | 55,0,0 | XZ plane cut showing Z-stack |
-| `fit-check` | fit_check | 30,0,340 | Bottom shell open-top view |
-| `pcb` | pcb | 25,0,340 | PCB model only |
-
-## Render a Single View
+## Render a single view
 
 ```bash
-cd /Users/pierrejonnycau/Documents/WORKS/esp32-emu-turbo
-
-docker compose run --rm openscad \
-    -o "/output/enclosure/enclosure-front.png" \
-    --imgsize "1920,1080" \
-    --camera "0,0,12.5,25,0,340,500" \
-    -D 'part="assembly"' \
-    /project/enclosure.scad
+docker compose run --rm --user "$(id -u):$(id -g)" openscad \
+    -o /output/enclosure/enclosure-top-inside.png \
+    --imgsize 1920,1080 --camera 0,0,5,35,0,20,420 \
+    -D 'part="top_inside"' /project/enclosure.scad
 ```
 
-Camera format: `center_x,center_y,center_z,rot_x,rot_y,rot_z,distance`
+Camera format: `center_x,center_y,center_z,rot_x,rot_y,rot_z,distance`.
+`--user` keeps the output files owned by you instead of root.
 
-## Render Individual Parts (for STL colored viewer)
+## What to look at after a change
 
-```bash
-# Top shell
-docker compose run --rm openscad -o "/output/case_top.png" \
-    --imgsize "1920,1080" --camera "0,0,12.5,25,0,340,500" \
-    -D 'part="case_top"' /project/enclosure.scad
+- `top-inside`: the glass sitting between the Select and Y caps, the tail
+  fold on the D-pad side, the extension board before the slot; nothing
+  green/orange over a button.
+- `top-inside-bare`: four grey bosses with the brass inserts seated, the
+  frame walls and +X stubs, LED holes through the Menu well ring.
+- `bottom-inside`: no speaker body is drawn — the seat ring marks where the
+  28 mm driver drops in.
+- `bottom-inside`: lever nubs under the switches, hinge blocks clear of the
+  pocket border, columns' necks.
+- `cross-section`: 7.0 mm between PCB top and ceiling; cap stems reaching the
+  switches; battery under the module with clearance.
+- Console output: `ECHO: "V2.1 stack: body_d=26.6 top_int=7 btn_stem_h=1.1
+  btn_cap_h=7.9 glass_cx=0.75 disp_x=3.725 lever_nub_h=11.1"` — any other
+  numbers mean a constant moved.
 
-# Bottom shell
-docker compose run --rm openscad -o "/output/case_bottom.png" \
-    --imgsize "1920,1080" --camera "0,0,12.5,25,0,340,500" \
-    -D 'part="case_bottom"' /project/enclosure.scad
-```
+Renders are pictures; the numeric truth is `make verify-enclosure-sync`,
+`make verify-enclosure-requirements` and `make verify-enclosure-collision`.
+Run those first. Labels in particular: the requirements gate (R9) exports
+the glyphs and checks each sits beside its own button — do not judge them
+from a thumbnail.
 
-Available individual parts: `case_top`, `case_bottom`, `part_display`, `part_dpad`, `part_btn_a`, `part_btn_b`, `part_btn_x`, `part_btn_y`, `part_start`, `part_menu`, `part_select`, `part_shoulder_l`, `part_shoulder_r`, `part_pcb`.
+## Key files
 
-## Post-render Verification
-
-```bash
-ls -la website/static/img/renders/enclosure/enclosure-*.png
-```
-
-Expected 7 files: `enclosure-front.png`, `enclosure-back.png`, `enclosure-top.png`, `enclosure-exploded.png`, `enclosure-cross-section.png`, `enclosure-fit-check.png`, `enclosure-pcb.png`.
-
-## Key Files
-
-- `scripts/render-enclosure.sh` — Render orchestration script
-- `hardware/enclosure/enclosure.scad` — Main enclosure source
-- `hardware/enclosure/modules/*.scad` — Component modules
-- `docker-compose.yml` — OpenSCAD Docker service definition
-- `docker/openscad/` — OpenSCAD Docker image build context
-- `website/static/img/renders/` — Output directory
+- `scripts/render-enclosure.sh` — view table (edit here to add a view)
+- `hardware/enclosure/enclosure.scad` — `part` selector at the bottom
+- `docker-compose.yml` → `openscad` service; `docker/openscad/`
+- `website/docs/design/enclosure.md` — embeds every view; add the image when adding a view

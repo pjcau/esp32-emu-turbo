@@ -125,6 +125,7 @@
   <div class="legend-item"><div class="legend-swatch" style="background:#666"></div> Start / Menu / Select</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> L / R Shoulder</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#008033"></div> PCB</div>
+  <div class="legend-item"><div class="legend-swatch" style="background:#8a8a95"></div> Battery straps</div>
 </div>
 
 <div id="canvas-container"></div>
@@ -159,6 +160,7 @@ const ASSEMBLY_PARTS = [
   { file: 'parts/part_shoulder_l.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
   { file: 'parts/part_shoulder_r.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
   { file: 'parts/part_pcb.stl',        color: 0x008033, metalness: 0.3, roughness: 0.5, clearcoat: 0.4 },
+  { file: 'parts/part_straps.stl',     color: 0x8a8a95, metalness: 0.1, roughness: 0.8 },
 ];
 
 let scene, camera, renderer, controls;
@@ -225,7 +227,8 @@ function clearMeshes() {
 
 function loadSTL(url) {
   return new Promise((resolve, reject) => {
-    loader.load('img/renders/3d/' + url, resolve, undefined, reject);
+    // 3d_case/viewer/ (staticDirectories); the query defeats the browser cache
+    loader.load('viewer/' + url + '?v=' + Date.now(), resolve, undefined, reject);
   });
 }
 

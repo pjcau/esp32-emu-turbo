@@ -75,6 +75,20 @@ DISPLAY_W = 86.4
 DISPLAY_H = 64.8
 DISPLAY_ENC = (0, 2)   # enclosure offset
 
+# ── Physical panel — ILI9488 3.95" bare panel, resistive-touch version ──
+# Vendor mechanical spec (website/static/img/ili9488-datasheet-specs.png):
+#   outline 60.88(W) x 94.57(H) x 3.90(T) with touch (2.60 without)
+#   active  55.68(W) x 83.52(H); FPC tail not included
+# Landscape on the board: the 94.57 side runs along X. DISPLAY_W/H above
+# is the F.Fab reserved zone drawn on the board; the enclosure viewport is
+# the ACTIVE area and verify_enclosure_sync reads THESE constants as the
+# panel source of truth. Nothing below is used by the generator.
+PANEL_ACTIVE_W = 83.52   # along X (landscape)
+PANEL_ACTIVE_H = 55.68   # along Y
+PANEL_OUTLINE_L = 94.57  # along X
+PANEL_OUTLINE_W = 60.88  # along Y
+PANEL_T = 3.90           # with the resistive touch layer
+
 # ── FPC slot (vertical cutout for 40-pin ribbon cable) ──
 # Between display right edge (x=43.2) and ABXY left button (x=52)
 FPC_SLOT_ENC = (47, 2)   # slot center in enclosure coords

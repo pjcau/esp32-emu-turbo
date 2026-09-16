@@ -61,6 +61,12 @@ GATES = [
     ("verify_enclosure_sync",
      "the printed shell no longer matches the board (outline, holes, "
      "cutouts, battery, or Z-stack)"),
+    ("verify_enclosure_collision",
+     "the printed shell occupies the same space as a part it encloses "
+     "(PCB, panel, battery, speaker or a button cap)"),
+    ("verify_enclosure_requirements",
+     "the enclosure drifted from a user requirement (display stack, glass "
+     "placement, LEDs, speaker corner, inserts, button sizes, labels)"),
     ("verify_crosstalk",
      "a timing-critical net co-runs inside the 3W band with an aggressor"),
     ("verify_reference_plane",

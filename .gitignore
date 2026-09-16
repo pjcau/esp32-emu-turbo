@@ -170,3 +170,5 @@ software/sim/emu-turbo-bench
 hardware/kicad/drc-edge-guard.json
 hardware/kicad/drc-report.json
 
+# print-set archives made by hand for the print service
+3d_case/*.zip

@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb pcb-filled render-schematics \
-       render-enclosure render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
+       render-enclosure export-enclosure-stl verify-enclosure-collision verify-enclosure-requirements test-enclosure-requirements generate-enclosure-pcb render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        verify-isolation verify-jlcpcb-vias verify-zone-fill test-zone-fill verify-sch-overlaps \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad open-issues \
@@ -32,6 +32,7 @@ generate-schematic: ## Generate 7 KiCad schematics from Python spec
 generate-pcb: ## Generate KiCad PCB + JLCPCB exports (BOM, CPL) + Net Explorer data
 	@$(T) generate-pcb python3 -m scripts.generate_pcb hardware/kicad
 	@$(T) net-explorer python3 scripts/generate_net_explorer.py
+	@$(T) enclosure-pcb python3 scripts/generate_enclosure_pcb.py
 
 render-schematics: docker-build ## Export KiCad schematic to SVG
 	@$(T) render-schematics ./scripts/render-schematics.sh
@@ -78,6 +79,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_collision_via_metric \
 	test_cpl_rotation_law \
 	test_enclosure_sync \
+	test_enclosure_requirements \
 	test_esd_protection \
 	test_erc_severity \
 	test_gate_coverage \
@@ -119,6 +121,8 @@ VERIFY_ALL_SCRIPTS = \
 	verify_drill_standards \
 	verify_easyeda_footprint \
 	verify_enclosure_sync \
+	verify_enclosure_collision \
+	verify_enclosure_requirements \
 	verify_erc \
 	verify_esd_protection \
 	verify_firmware_retrogo_sync \
@@ -378,6 +382,21 @@ verify-erc: ## KiCad ERC gate on the generated schematic (error severity, local 
 
 verify-enclosure-sync: ## Enclosure <-> PCB mechanical sync gate (scad constants vs board.py / battery model)
 	@$(T) verify-enclosure-sync python3 scripts/verify_enclosure_sync.py
+
+verify-enclosure-collision: ## Enclosure interference gate — shells vs PCB/panel/battery/caps via OpenSCAD CGAL (Docker)
+	@$(T) verify-enclosure-collision python3 scripts/verify_enclosure_collision.py
+
+verify-enclosure-requirements: ## Enclosure requirements gate — the user's constraints (stack, glass placement, LEDs, speaker, inserts, sizes, labels)
+	@$(T) verify-enclosure-requirements python3 scripts/verify_enclosure_requirements.py
+
+test-enclosure-requirements: ## Mutation tests for the enclosure-requirements gate
+	@$(T) test-enclosure-requirements python3 scripts/test_enclosure_requirements.py
+
+generate-enclosure-pcb: ## Regenerate hardware/enclosure/pcb_parts.scad from board.py placements
+	@$(T) generate-enclosure-pcb python3 scripts/generate_enclosure_pcb.py
+
+export-enclosure-stl: docker-build ## Export enclosure STLs (viewer parts + print set) via Docker
+	@$(T) export-enclosure-stl ./scripts/export-enclosure-stl.sh
 
 test-enclosure-sync: ## Mutation tests for the enclosure-sync gate
 	@$(T) test-enclosure-sync python3 scripts/test_enclosure_sync.py
