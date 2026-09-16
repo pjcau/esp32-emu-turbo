@@ -25,7 +25,7 @@ button.
   R5  speaker         grille top-left when looking at the back (+X, +Y in
                       enclosure coords); driver clears the pocket border,
                       columns, lever hinges, ribs and the wall
-  R6  inserts         M2.5 heat-set (OD 3.5, L 3): socket OD-0.5..OD-0.3,
+  R6  inserts         M2.5 heat-set HANGLIFE D3.5 x L4: socket OD-0.5..OD-0.3,
                       depth >= L+0.3, boss wall >= 1.5; screw tip lands in
                       the relief above the insert; bottom column walls,
                       gussets present
@@ -333,16 +333,18 @@ def main() -> int:
     tip = head_dep + s_len
     z_top = pcb_z + pcb_d
     check("R6", "insert-socket",
-          abs(i_od - 3.5) < 1e-9 and abs(i_l - 2.5) < 1e-9        # the user's insert
+          abs(i_od - 3.5) < 1e-9 and abs(i_l - 4.0) < 1e-9        # HANGLIFE M2.5 x D3.5 x L4
           and i_od - 0.5 <= i_hd <= i_od - 0.3 and i_dep >= i_l + 0.3
           and i_wall >= 2.0 - 1e-9 and (tb_d - i_hd) / 2 >= i_wall - 1e-9,
           f"M2.5 insert OD {i_od:g} L {i_l:g}: socket Ø{i_hd:g} x {i_dep:g}, "
           f"boss Ø{tb_d:g} = {(tb_d - i_hd) / 2:.2f} mm of plastic around it "
           f"(user asked for {i_wall:g})")
     check("R6", "screw-length",
-          z_top + i_l + 0.5 <= tip <= z_top + i_dep + rel_h - 0.3,
-          f"M2.5x{s_len:g} tip at Z={tip:g}: insert spans {z_top:g}..{z_top + i_l:g}, "
-          f"relief to {z_top + i_dep + rel_h:g}")
+          z_top + i_l <= tip <= z_top + i_dep + rel_h - 0.3
+          and i_dep + rel_h <= top_int - 0.3,
+          f"M2.5x{s_len:g} tip at Z={tip:g}: insert spans {z_top:g}..{z_top + i_l:g} "
+          f"(full engagement), relief to {z_top + i_dep + rel_h:g}; hole {i_dep + rel_h:g} "
+          f"of the {top_int:g} mm boss")
     check("R6", "bottom-columns",
           (sd_out - sd_in) / 2 >= MIN_WALL and g_n >= 3 and g_t >= MIN_WALL
           and 1.5 <= half_h <= 3,

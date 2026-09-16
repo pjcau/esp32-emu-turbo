@@ -85,6 +85,8 @@ def main() -> int:
         ("Q5 insert socket oversize", "insert_hole_d = 3.1;", "insert_hole_d = 3.6;", 1),
         ("Q5b insert wall thinned to 1.5", "insert_wall = 2.0;", "insert_wall = 1.5;", 1),
         ("Q6 screw through the roof", "screw_len = 20;", "screw_len = 25;", 1),
+        ("Q6b insert socket too shallow for L4", "insert_hole_depth = insert_l + 0.5;",
+         "insert_hole_depth = insert_l - 1.0;", 1),
         ("Q7 gusset too thin", "boss_gusset_t = 1.5;", "boss_gusset_t = 0.8;", 1),
         ("Q8 extension board past the glass edge", "ext_l = 28;", "ext_l = 100;", 1),
         ("Q9 Menu pill into the LED web", "menu_h = 3.8;", "menu_h = 5.5;", 1),

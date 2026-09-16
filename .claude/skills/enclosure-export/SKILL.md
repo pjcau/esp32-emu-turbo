@@ -47,7 +47,7 @@ docker compose run --rm --user "$(id -u):$(id -g)" openscad \
 
 - PLA/PETG shells, 0.2 mm layers, 20 % infill, **no supports**.
 - Caps and levers 100 % infill, 0.12 mm layers; PETG or TPU for feel.
-- Hardware: 4 × M2.5 heat-set inserts L 2.5 × OD 3.5 pressed into the top
+- Hardware: 4 × M2.5 heat-set inserts D3.5 × L4 pressed into the top
   bosses from the PCB side; 4 × M2.5 × 20 from the back (a 25 mm screw
   would go through the roof — gate R6).
 - Fit tolerances already in the model: 0.3 mm/side caps and panel pocket,

@@ -240,14 +240,17 @@ boss_gusset_h = 8.0;    // height on the column
 m25_head_d = 5.0;       // pan head o4.5 + clearance (counterbore)
 m25_head_depth = 1.8;
 screw_len = 20;         // M2.5 x 20: tip at Z = 1.8 + 20 = 21.8, inside the relief
-// === Top bosses with M2.5 heat-set inserts — user 2026-09-16: ID M2.5,
-// L 2.5, OD 3.5, "2 mm of plastic around it for robustness" ===
+// === Top bosses with M2.5 heat-set inserts — the user's part is HANGLIFE
+// "M2.5 x D3.5 x L4" (amazon B0CS6YVJYD): OD 3.5, length 4.0; "2 mm of
+// plastic around it for robustness" ===
 insert_od = 3.5;        // knurled OD
-insert_l = 2.5;         // length
+insert_l = 4.0;         // length (listing: "larghezza 3.5 mm e lunghezza 4.0 mm")
 insert_hole_d = 3.1;    // socket (OD - 0.4, PLA/PETG heat-set)
-insert_hole_depth = insert_l + 0.5;   // 3.0: flush insert + 0.5
+insert_hole_depth = insert_l + 0.5;   // 4.5: flush insert + 0.5
 insert_relief_d = 2.8;  // bore above the insert for the screw tip
-insert_relief_h = 2.5;  // Z 20.6..23.1 — the M2.5x20 tip stops at 21.8
+insert_relief_h = 2.0;  // socket + relief = 6.5 of the 7 mm boss; 0.5 boss
+                        // + 2.0 front wall stay closed. M2.5x20 tip at Z 21.8
+                        // = 0.2 past the insert end (21.6): full 4 mm engagement
 insert_wall = 2.0;      // plastic around the socket (user's request)
 top_boss_d = insert_hole_d + 2 * insert_wall + 0.1;   // 7.2
 

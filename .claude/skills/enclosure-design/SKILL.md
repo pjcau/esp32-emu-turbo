@@ -131,7 +131,7 @@ stays ≥ 0.3 from the counterbore and the column neck clears the switch body.
 
 ### Screws — M2.5 through the PCB holes, heat-set inserts in the top
 Top boss Ø7.2 × 7 mm (`top_boss_d` = socket + 2 × `insert_wall` 2.0), a plain
-cylinder, with a socket Ø3.1 × 3.0 (`insert_hole_d/depth`) for the user's M2.5 insert (ID M2.5, L 2.5, OD 3.5) at
+cylinder, with a socket Ø3.1 × 4.5 (`insert_hole_d/depth`) for the user's M2.5 insert (HANGLIFE M2.5 x D3.5 x L4: OD 3.5, L 4.0) at
 the PCB end and a Ø2.8 relief above it (`inserts_sim()` draws the four
 inserts in the inside views). Bottom column Ø6,
 outer HALF-column for the last 2 mm (`boss_half_h`: the contact face keeps

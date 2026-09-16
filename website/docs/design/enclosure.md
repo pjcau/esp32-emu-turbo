@@ -39,7 +39,7 @@ that `scripts/verify_enclosure_sync.py` checks against `board.py` or a datasheet
 | Display did not fit / viewport wrong size | V1 viewport was 86.4 × 64.8 (a guessed 4.0" active area). The real ILI9488 3.95" panel with touch is **94.57 × 60.88 × 3.90 mm outline, 83.52 × 55.68 active**, with the 8-9 mm driver-ledge border on the **D-pad side** | Viewport = active area. The **glass** is centred between the Select cap and the Y cap bodies (0.47 mm gap each side — those two caps have their flange clipped on the glass side); the active area lands at x = 3.7, y = 2. The glass may overhang the FPC slot |
 | No room for the FPC tail + extension board | The R37 workaround chain (panel tail → 40P extension board → type-B FFC → slot → J4) runs **under the panel**, over the PCB | Tail on the D-pad side, U-folded under the glass (1.8 mm fold zone, 2.1 mm from SW4); extension board 28 × 24 × 3 placed under the glass **before the slot** (x 16.5…44.5); **3.1 mm cable riser** → top interior exactly **7.0 mm** above the PCB (`disp_stack`) |
 | Nothing held the panel | V1 had a bezel but no frame; the panel floated on the PCB | Top shell grows a **display frame**: 1.2 mm rim walls from the ceiling down to the PCB along both long sides plus two stubs beside the FFC passage; open on the tail side. The panel is taped to the bezel from inside; the frame contains it and lands on the PCB plane when the screws are tightened |
-| No screw bosses in the top shell | V1 screws threaded into the bottom shell's own bosses — the top shell was never fastened | **Top-shell bosses** Ø7.2 at the 4 PCB corner holes, 7 mm tall (they are the spacer to the PCB), with a socket Ø3.1 × 3.0 for an **M2.5 heat-set insert (ID M2.5, L 2.5, OD 3.5)** at the PCB end, **2 mm of plastic around it** (boss Ø7.2) and a Ø2.8 relief above it (plain cylinders: the insert is pressed from the PCB side and fuses into the boss wall). **M2.5 × 20** from the back, through the bottom column and the PCB hole, into the insert |
+| No screw bosses in the top shell | V1 screws threaded into the bottom shell's own bosses — the top shell was never fastened | **Top-shell bosses** Ø7.2 at the 4 PCB corner holes, 7 mm tall (they are the spacer to the PCB), with a socket Ø3.1 × 4.5 for an **M2.5 heat-set insert HANGLIFE M2.5 × D3.5 × L4** (OD 3.5, L 4.0) at the PCB end, **2 mm of plastic around it** (boss Ø7.2) and a Ø2.8 relief above it (plain cylinders: the insert is pressed from the PCB side and fuses into the boss wall). **M2.5 × 20** from the back, through the bottom column and the PCB hole, into the insert |
 | Bottom bosses hit the L/R buttons | The corner hole (70, 30.5) is **5 mm** from switch SW11/SW12 at (65, 32). A plunger centred on the switch can be at most ~3 mm wide next to the counterbore | L/R are **hinged levers**: pivot rod printed in the shell at x = 51 (outside the 95 mm battery pocket), nub on the switch at x = 65, face 14 × 8.5 mm ending 0.45 mm before the counterbore. Bottom columns get a Ø4.4 neck under the PCB with a relief on the switch side and **four 1.2 mm gussets from the floor** (outward and along ±Y, none toward the levers) |
 | Button caps could not reach the switches | V1 stems were 2 mm with a 6.4 mm interior; real switch height is 1.5 mm | Cap stack computed from the real numbers (table below): 3 mm guide well under the ceiling, countersunk conical flange, 1.5 mm stem — 7.9 mm total. Sizes up: **ABXY Ø9**, **D-pad arms 6.5**, **Start/Select 10 × 5**, **Menu 12 × 4** — Start/Select cannot grow in X and ABXY cannot pass Ø9 without moving a switch (the glass is between them) |
 | Battery pocket wrong size and place | V1 pocket 85 × 50 sat over J3 (JST S2B-PH-SM4-TB, **5.5 mm** tall under the PCB, datasheet p.4); the fitted cell measures **90 × 50 × 10** (user, 2026-09-16), not 80 | Pocket **95 × 50 × 10** at x −49…46, y −20…30; border 8 mm (below J3's 10.5 mm underside); corners notched for the hinges; clips removed (a pouch cell is held by a foam pad, not pinched). Gates: pocket ≥ measured cell (R10) and clear of **all 77 bottom-side parts** |
@@ -87,49 +87,49 @@ All face caps share one stack; the numbers are `echo()`ed by OpenSCAD on every r
 
 ## Screws and inserts
 
-- 4 × **M2.5 heat-set inserts, ID M2.5 × L 2.5 × OD 3.5**, pressed into the top bosses from the PCB side (socket Ø3.1 × 3.0; boss Ø7.2 = 2.05 mm wall).
-- 4 × **M2.5 × 20** pan head from the back, counterbore Ø5.0 × 1.8. Path: floor → bottom column (Ø6, Ø2.8 bore, outer half-column for the last 2 mm so the contact face clears SW11/SW12, four 1.5 mm gussets) → PCB Ø2.5 hole → insert (Z 17.6…20.1) → tip at Z 21.8 inside the Ø2.8 relief (Z 20.6…23.1). A 25 mm screw would hit the roof: the gate `R6 screw-length` rejects it.
+- 4 × **M2.5 heat-set inserts HANGLIFE M2.5 × D3.5 × L4** (OD 3.5, L 4.0), pressed into the top bosses from the PCB side (socket Ø3.1 × 4.5; boss Ø7.2 = 2.05 mm wall).
+- 4 × **M2.5 × 20** pan head from the back, counterbore Ø5.0 × 1.8. Path: floor → bottom column (Ø6, Ø2.8 bore, outer half-column for the last 2 mm so the contact face clears SW11/SW12, four 1.5 mm gussets) → PCB Ø2.5 hole → insert (Z 17.6…21.6) → tip at Z 21.8, 0.2 mm into the Ø2.8 relief (Z 22.1…24.1). A 25 mm screw would hit the roof: the gate `R6 screw-length` rejects it.
 - The two centre PCB holes (±25, 0) are under the battery pocket and stay unused.
 
 ## Rendered Views
 
 ### Front (Display Side)
-![Front View](/img/renders/enclosure/enclosure-front.png?v=202609162213)
+![Front View](/img/renders/enclosure/enclosure-front.png?v=202609162234)
 
 ### Plan view
-![Top View](/img/renders/enclosure/enclosure-top.png?v=202609162213)
+![Top View](/img/renders/enclosure/enclosure-top.png?v=202609162234)
 
 ### Back — hinged L/R levers, speaker grille, screw counterbores
-![Back View](/img/renders/enclosure/enclosure-back.png?v=202609162213)
+![Back View](/img/renders/enclosure/enclosure-back.png?v=202609162234)
 
 ### Bottom edge — USB-C plug opening, SD slot, power switch slot
-![Ports](/img/renders/enclosure/enclosure-ports.png?v=202609162213)
+![Ports](/img/renders/enclosure/enclosure-ports.png?v=202609162234)
 
 ### Exploded View
-![Exploded View](/img/renders/enclosure/enclosure-exploded.png?v=202609162213)
+![Exploded View](/img/renders/enclosure/enclosure-exploded.png?v=202609162234)
 
 ### Cross-section, XZ at Y = 0 — battery, module, PCB, panel + riser, caps
-![Cross-Section View](/img/renders/enclosure/enclosure-cross-section.png?v=202609162213)
+![Cross-Section View](/img/renders/enclosure/enclosure-cross-section.png?v=202609162234)
 
 ### Cross-section, YZ through the Y button — panel pocket, tail fold, guide well
-![Cross-Section YZ](/img/renders/enclosure/enclosure-cross-section-yz.png?v=202609162213)
+![Cross-Section YZ](/img/renders/enclosure/enclosure-cross-section-yz.png?v=202609162234)
 
 ### Top shell from the inside — display frame, screw bosses, guide wells
-![Top inside](/img/renders/enclosure/enclosure-top-inside.png?v=202609162213)
+![Top inside](/img/renders/enclosure/enclosure-top-inside.png?v=202609162234)
 
 ### Same, bare — bosses with the four inserts seated, LED light pipes through the Menu well
-![Top inside bare](/img/renders/enclosure/enclosure-top-inside-bare.png?v=202609162213)
+![Top inside bare](/img/renders/enclosure/enclosure-top-inside-bare.png?v=202609162234)
 
 ### One boss cut through its axis — the print geometry of the insert socket
-![Boss section](/img/renders/enclosure/enclosure-boss-section.png?v=202609162213)
+![Boss section](/img/renders/enclosure/enclosure-boss-section.png?v=202609162234)
 
-From the PCB-side face of the boss inward: socket **Ø3.1 × 3.0 deep** for the M2.5 insert (ID M2.5, L 2.5, OD 3.5, knurled — pressed with a soldering iron, flush with the boss face), then a **Ø2.8 relief 2.5 deep** for the screw tip, then 1.5 mm of boss plus the 2 mm front wall. Boss Ø7.2 = **2.05 mm of plastic** around the socket (the user asked for 2). Gate R6 pins these numbers.
+From the PCB-side face of the boss inward: socket **Ø3.1 × 4.5 deep** for the insert (HANGLIFE M2.5 × D3.5 × L4: OD 3.5, L 4.0, knurled — pressed with a soldering iron, flush with the boss face), then a **Ø2.8 relief 2.0 deep** for the screw tip, then 0.5 mm of boss plus the 2 mm front wall. Boss Ø7.2 = **2.05 mm of plastic** around the socket (the user asked for 2). M2.5 × 20 tip at Z 21.8 = 0.2 mm past the insert end: full 4 mm engagement. Gate R6 pins these numbers.
 
 ### Bottom shell without the PCB — pocket with hold-down straps, columns with gussets, ribs, lever hinges, speaker seat ring
-![Bottom inside](/img/renders/enclosure/enclosure-bottom-inside.png?v=202609162213)
+![Bottom inside](/img/renders/enclosure/enclosure-bottom-inside.png?v=202609162234)
 
 ### Fit Check (bottom shell + PCB + battery + levers)
-![Fit Check View](/img/renders/enclosure/enclosure-fit-check.png?v=202609162213)
+![Fit Check View](/img/renders/enclosure/enclosure-fit-check.png?v=202609162234)
 
 ## Interactive 3D Viewer
 
@@ -220,7 +220,7 @@ D-pad side.
 | Battery pocket | 95 × 50 × 10 | measured cell 90 × 50 × 10 + 5 mm leads; border 1.5 × 8 tall; centre (−1.5, 5) |
 | Battery straps | 2 × (5 × 1.2 × 63.4) | at x = −30 / +26, Z 12…13.2; posts 8 × 5.2 × 10 |
 | Bottom column | Ø6 / Ø2.8, outer half-column for the last 2 mm, 4 gussets 1.5 | 13.4 mm tall |
-| Top boss | Ø7.2, insert socket Ø3.1 × 3.0 + relief Ø2.8 × 2.5 | 7 mm tall, plain cylinder, 2 mm wall |
+| Top boss | Ø7.2, insert socket Ø3.1 × 4.5 + relief Ø2.8 × 2.0 | 7 mm tall, plain cylinder, 2 mm wall |
 | Speaker | grille Ø22 at (63.5, 8), seat ring Ø32 / Ø28.6 | 28 mm driver, 5 mm thick |
 
 ## Printing
@@ -242,7 +242,7 @@ D-pad side.
 | Tolerances built in | 0.3 mm per side on caps and the panel pocket, 0.3 mm on the alignment lip |
 
 ### Assembly order
-0. Press the 4 M2.5 inserts (L 2.5, OD 3.5) into the top bosses (from the PCB side, soldering iron ~200 °C, flush with the boss face).
+0. Press the 4 M2.5 inserts (D3.5 × L4) into the top bosses (from the PCB side, soldering iron ~200 °C, flush with the boss face).
 1. Tape the panel to the bezel from inside the top shell (glass against the ceiling), tail on the D-pad side.
 2. Drop the face caps into their wells from inside (flange cone into the countersink).
 3. Snap the L/R levers onto the hinge rods in the bottom shell (hook opening faces the floor); seat the speaker in its ring; cell in the pocket, leads through the +X notch to J3; drop the two straps' pegs into the post holes.
