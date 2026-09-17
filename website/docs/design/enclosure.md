@@ -122,6 +122,11 @@ All face caps share one stack; the numbers are `echo()`ed by OpenSCAD on every r
 ### Same, bare — bosses with the four inserts seated, LED light pipes through the Menu well
 ![Top inside bare](/img/renders/enclosure/enclosure-top-inside-bare.png?v=202609170844)
 
+### The groove bug the STL audit caught (section through a boss, before / after)
+![Groove bug](/img/renders/enclosure/enclosure-groove-bug.png)
+
+Exact 2D sections at y = 30.5 (through the top-right boss), old model on the left. The lip groove was subtracted as a full 167.6 × 82.6 slab from Z 18.0 up: every boss and frame wall stopped at Z 18.0, 0.4 mm above the PCB top (17.6), and the insert stuck out of its socket. The constants said "7.0 mm interior"; only measuring the exported STL (gate S5) showed the geometry did not. The groove is now the ring between the outer skin and the interior.
+
 ### One boss cut through its axis — the print geometry of the insert socket
 ![Boss section](/img/renders/enclosure/enclosure-boss-section.png?v=202609170844)
 
