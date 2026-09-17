@@ -60,5 +60,8 @@ rmdir "$RENDERS/print" "$RENDERS/3d/parts" "$RENDERS/3d"
 echo "==> Interference gate"
 python3 "$SCRIPT_DIR/verify_enclosure_collision.py"
 
+echo "==> STL audit (the exported files, measured)"
+python3 "$SCRIPT_DIR/verify_enclosure_stl.py"
+
 echo "==> Done"
 ls -la "$PRINT_DIR" "$VIEWER_DIR" "$VIEWER_DIR/parts"

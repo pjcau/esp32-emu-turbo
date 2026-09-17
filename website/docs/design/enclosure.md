@@ -24,6 +24,7 @@ make generate-enclosure-pcb          # pcb_parts.scad from board.py (also run by
 make verify-enclosure-sync           # scad constants vs board.py / datasheets (29 checks)
 make verify-enclosure-requirements   # the user's constraints (16 checks: labels, thin walls, ...)
 make verify-enclosure-collision      # CGAL interference: shells vs PCB/panel/battery/caps
+make verify-enclosure-stl            # measure the exported STLs themselves (S1-S11)
 ```
 :::
 
@@ -48,6 +49,7 @@ that `scripts/verify_enclosure_sync.py` checks against `board.py` or a datasheet
 | USB-C plug could not seat | Receptacle mouth is at the PCB edge, 5 mm inside the wall; the 9 × 3.2 hole only passed the plug shell | Opening sized for the **plug overmold** (13 × 6.5), crossing the shell split |
 | Battery free to lift against the PCB | Nothing held the cell down; the ESP32 underside is only 0.9 mm above the cell top | Two printed **hold-down straps** 5 × 1 mm over the cell at x = −30 and +26 (outside the module footprint), pegged into four posts on the pocket border at the cell plane (Z 12); the PCB captures them. Gate: straps and posts ≥ 0.5 mm under every bottom-side part |
 | Print service rejected the STLs: "thin walls" | Groove skin 0.7, column necks 0.8, speaker ring 0.7, tongue 1.0, cap flanges 0.8, straps 1.0, lever hook 0.35 | One constant **`min_wall = 1.2`**: side walls 2.6 (1.2 skin + 1.2 tongue + 0.2), column contact = outer half-column (no neck), speaker ring 1.7, cap flange 1.2, straps 1.2, lever hook 5 mm wide with 1.35 walls, well rings trimmed through their bore beside the glass, LED pipes open the Menu ring outward, port cutouts only through the wall. Gate R8 tabulates 17 named walls; **R12 slices every shell and lever in OpenSCAD, erodes by 0.6 and fails on anything that disappears** |
+| Bosses and frame 0.4 mm short of the PCB (found 2026-09-17 by measuring the STL) | The lip groove was subtracted as a full slab, chopping the last 0.4 mm off every internal feature — invisible to constant-based gates | Groove is a ring; new gate **`verify_enclosure_stl`** slices the exported `3d_case/*.stl` with OpenSCAD `import()` and measures every cutout, boss, pocket and part against `board.py`, the datasheets and the requirements — a second, independent road (S1–S11) |
 | Hand-drawn PCB model | A dozen boxes from memory; J3 was 3 mm too short, LEDs missing | `hardware/enclosure/pcb_parts.scad` is **generated from `board.py`** (all 98 fitted parts with body sizes/heights, slot, holes); a stale file is a red gate |
 | Engraved labels wrong | V2.0 mirrored the whole label group about x = 0 (A/B/X/Y landed on the D-pad); V2.1 mirrored every top glyph (backwards B, STA/SEL) | Top-shell glyphs are engraved as-is (read from the front), only the back-face L/R are mirrored about their own centre; gate R9 exports the glyphs and checks position **and chirality** (stem side of the B and the L) |
 
@@ -94,42 +96,42 @@ All face caps share one stack; the numbers are `echo()`ed by OpenSCAD on every r
 ## Rendered Views
 
 ### Front (Display Side)
-![Front View](/img/renders/enclosure/enclosure-front.png?v=202609162234)
+![Front View](/img/renders/enclosure/enclosure-front.png?v=202609170844)
 
 ### Plan view
-![Top View](/img/renders/enclosure/enclosure-top.png?v=202609162234)
+![Top View](/img/renders/enclosure/enclosure-top.png?v=202609170844)
 
 ### Back — hinged L/R levers, speaker grille, screw counterbores
-![Back View](/img/renders/enclosure/enclosure-back.png?v=202609162234)
+![Back View](/img/renders/enclosure/enclosure-back.png?v=202609170844)
 
 ### Bottom edge — USB-C plug opening, SD slot, power switch slot
-![Ports](/img/renders/enclosure/enclosure-ports.png?v=202609162234)
+![Ports](/img/renders/enclosure/enclosure-ports.png?v=202609170844)
 
 ### Exploded View
-![Exploded View](/img/renders/enclosure/enclosure-exploded.png?v=202609162234)
+![Exploded View](/img/renders/enclosure/enclosure-exploded.png?v=202609170844)
 
 ### Cross-section, XZ at Y = 0 — battery, module, PCB, panel + riser, caps
-![Cross-Section View](/img/renders/enclosure/enclosure-cross-section.png?v=202609162234)
+![Cross-Section View](/img/renders/enclosure/enclosure-cross-section.png?v=202609170844)
 
 ### Cross-section, YZ through the Y button — panel pocket, tail fold, guide well
-![Cross-Section YZ](/img/renders/enclosure/enclosure-cross-section-yz.png?v=202609162234)
+![Cross-Section YZ](/img/renders/enclosure/enclosure-cross-section-yz.png?v=202609170844)
 
 ### Top shell from the inside — display frame, screw bosses, guide wells
-![Top inside](/img/renders/enclosure/enclosure-top-inside.png?v=202609162234)
+![Top inside](/img/renders/enclosure/enclosure-top-inside.png?v=202609170844)
 
 ### Same, bare — bosses with the four inserts seated, LED light pipes through the Menu well
-![Top inside bare](/img/renders/enclosure/enclosure-top-inside-bare.png?v=202609162234)
+![Top inside bare](/img/renders/enclosure/enclosure-top-inside-bare.png?v=202609170844)
 
 ### One boss cut through its axis — the print geometry of the insert socket
-![Boss section](/img/renders/enclosure/enclosure-boss-section.png?v=202609162234)
+![Boss section](/img/renders/enclosure/enclosure-boss-section.png?v=202609170844)
 
 From the PCB-side face of the boss inward: socket **Ø3.1 × 4.5 deep** for the insert (HANGLIFE M2.5 × D3.5 × L4: OD 3.5, L 4.0, knurled — pressed with a soldering iron, flush with the boss face), then a **Ø2.8 relief 2.0 deep** for the screw tip, then 0.5 mm of boss plus the 2 mm front wall. Boss Ø7.2 = **2.05 mm of plastic** around the socket (the user asked for 2). M2.5 × 20 tip at Z 21.8 = 0.2 mm past the insert end: full 4 mm engagement. Gate R6 pins these numbers.
 
 ### Bottom shell without the PCB — pocket with hold-down straps, columns with gussets, ribs, lever hinges, speaker seat ring
-![Bottom inside](/img/renders/enclosure/enclosure-bottom-inside.png?v=202609162234)
+![Bottom inside](/img/renders/enclosure/enclosure-bottom-inside.png?v=202609170844)
 
 ### Fit Check (bottom shell + PCB + battery + levers)
-![Fit Check View](/img/renders/enclosure/enclosure-fit-check.png?v=202609162234)
+![Fit Check View](/img/renders/enclosure/enclosure-fit-check.png?v=202609170844)
 
 ## Interactive 3D Viewer
 
@@ -268,7 +270,9 @@ Run the three gates after any change:
 | `verify_enclosure_requirements` | the model still does what was asked: 7.0 mm stack, glass between the caps, tail/extension zones, 6 LEDs, speaker corner, insert/screw geometry, button sizes, 17 named minimum thicknesses, the measured 90 × 50 × 10 cell, the hold-down straps, engraved labels beside their own button and not mirrored, and a **measured thin-wall audit** (OpenSCAD slices eroded by 0.6 mm) | 16 + 16 mutations |
 | `verify_enclosure_collision` | the shells share no volume with the PCB parts, panel stack, battery, speaker or caps; caps vs panel; panel vs PCB parts (OpenSCAD CGAL) | — |
 
-All three run in `make verify-all`; `make dispatch` routes a red one to the cad-engineer agent.
+| `verify_enclosure_stl` | **the other road**: no scad constants — it slices `3d_case/case_top.stl`, `case_bottom.stl`, the levers and the viewer parts with OpenSCAD `import()` and measures envelopes, every front cutout vs its switch/LED placement, the viewport vs the panel datasheet, the glass pocket and its gaps, insert sockets (Ø3.1 × 4.5, 2 mm wall), counterbores/bores/half-columns, pocket vs the measured cell and J3, lever webs, grille quadrant, cap/lever/strap/display alignment and thin walls on the STL slices; refuses STLs older than the scad | 11 |
+
+All four run in `make verify-all`; `make dispatch` routes a red one to the cad-engineer agent. `make export-enclosure-stl` ends with the collision gate and the STL audit.
 
 ## Modular Design
 

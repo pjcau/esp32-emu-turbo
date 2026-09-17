@@ -464,12 +464,19 @@ module top_shell() {
             cylinder(h=insert_relief_h + 0.1, d=insert_relief_d, $fn=20);
         }
 
-        // Groove for the alignment lip of the bottom shell
+        // Groove for the alignment lip of the bottom shell — a RING between
+        // the outer skin and the interior. (V2.1 subtracted a full slab
+        // here and silently chopped the last 0.4 mm off every boss and
+        // frame wall; caught by verify_enclosure_stl S5.)
         translate([0, 0, top_d - lip_h])
         linear_extrude(height=lip_h + 0.1)
-        rounded_rect(body_w - 2*(side_wall - lip_t - lip_clearance),
-                      body_h - 2*(side_wall - lip_t - lip_clearance),
-                      max(1, corner_r - side_wall + lip_t + lip_clearance));
+        difference() {
+            rounded_rect(body_w - 2*(side_wall - lip_t - lip_clearance),
+                          body_h - 2*(side_wall - lip_t - lip_clearance),
+                          max(1, corner_r - side_wall + lip_t + lip_clearance));
+            rounded_rect(body_w - 2*side_wall, body_h - 2*side_wall,
+                          max(1, corner_r - side_wall));
+        }
 
         // USB-C plug opening crosses the split: notch the rim end
         translate([0, 0, body_d]) mirror([0, 0, 1]) usbc_opening();

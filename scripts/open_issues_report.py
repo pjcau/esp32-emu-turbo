@@ -67,6 +67,9 @@ GATES = [
     ("verify_enclosure_requirements",
      "the enclosure drifted from a user requirement (display stack, glass "
      "placement, LEDs, speaker corner, inserts, button sizes, labels)"),
+    ("verify_enclosure_stl",
+     "the exported print STLs, measured directly, disagree with board.py, "
+     "the datasheets or the requirements (or are older than the scad)"),
     ("verify_crosstalk",
      "a timing-critical net co-runs inside the 3W band with an aggressor"),
     ("verify_reference_plane",

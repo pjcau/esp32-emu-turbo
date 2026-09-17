@@ -1,5 +1,5 @@
 .PHONY: all docker-build generate-schematic generate-pcb pcb-filled render-schematics \
-       render-enclosure export-enclosure-stl verify-enclosure-collision verify-enclosure-requirements test-enclosure-requirements generate-enclosure-pcb render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
+       render-enclosure export-enclosure-stl verify-enclosure-collision verify-enclosure-requirements verify-enclosure-stl test-enclosure-requirements generate-enclosure-pcb render-pcb render-all simulate verify-all verify-fast verify-dfa verify-datasheet verify-trace-through-pad verify-trace-crossings verify-copper-clearance verify-easyeda docs-bom docs-bom-check verify-power-nets verify-sch-crossings verify-cpl-law test-cpl-law analyze-pin1 context-budget repo-map repo-map-check validate-jlcpcb pcb-check external-dfm \
        verify-isolation verify-jlcpcb-vias verify-zone-fill test-zone-fill verify-sch-overlaps \
        export-gerbers release-prep firmware-sync-check verify-net-connectivity test-power-nets \
        net-explorer net-explorer-check verify-sch-pins verify-dangling verify-netlist-kicad open-issues \
@@ -123,6 +123,7 @@ VERIFY_ALL_SCRIPTS = \
 	verify_enclosure_sync \
 	verify_enclosure_collision \
 	verify_enclosure_requirements \
+	verify_enclosure_stl \
 	verify_erc \
 	verify_esd_protection \
 	verify_firmware_retrogo_sync \
@@ -391,6 +392,9 @@ verify-enclosure-requirements: ## Enclosure requirements gate — the user's con
 
 test-enclosure-requirements: ## Mutation tests for the enclosure-requirements gate
 	@$(T) test-enclosure-requirements python3 scripts/test_enclosure_requirements.py
+
+verify-enclosure-stl: ## Enclosure STL audit — measures the exported 3d_case/*.stl against board.py, datasheets and requirements (the "other road")
+	@$(T) verify-enclosure-stl python3 scripts/verify_enclosure_stl.py
 
 generate-enclosure-pcb: ## Regenerate hardware/enclosure/pcb_parts.scad from board.py placements
 	@$(T) generate-enclosure-pcb python3 scripts/generate_enclosure_pcb.py

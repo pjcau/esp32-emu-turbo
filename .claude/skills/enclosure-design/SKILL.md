@@ -21,11 +21,12 @@ Design and modify the parametric 3D enclosure for the ESP32 Emu Turbo handheld.
    (positions, `PANEL_*` panel spec), `hardware/datasheets/` +
    `website/static/datasheets/` (component heights), `scripts/vbench/models/`
    (battery cell). Write the source next to the constant.
-2. **Three gates green before you stop** (all in `make verify-all`):
+2. **Four gates green before you stop** (all in `make verify-all`):
    ```bash
    python3 scripts/verify_enclosure_sync.py          # constants vs board.py / datasheets / generated PCB model
-   python3 scripts/verify_enclosure_requirements.py  # the USER's constraints R1-R9 (Docker: label export)
+   python3 scripts/verify_enclosure_requirements.py  # the USER's constraints R1-R12 (Docker: label + thin-wall export)
    python3 scripts/verify_enclosure_collision.py     # CGAL: shells vs parts, caps vs panel, panel vs PCB
+   python3 scripts/verify_enclosure_stl.py           # the OTHER road: measures 3d_case/*.stl (needs a fresh export)
    python3 scripts/test_enclosure_sync.py            # mutation suites — every check must be able to fail
    python3 scripts/test_enclosure_requirements.py
    ```
@@ -185,6 +186,7 @@ that gate or from a `labels_check` render, never from a dark thumbnail.
 | `scripts/verify_enclosure_sync.py` (+ `test_enclosure_sync.py`) | constants gate + mutation suite |
 | `scripts/verify_enclosure_requirements.py` (+ `test_enclosure_requirements.py`) | user-requirements gate R1-R9 + mutation suite (Docker) |
 | `scripts/verify_enclosure_collision.py` | CGAL interference gate (Docker) |
+| `scripts/verify_enclosure_stl.py` | STL audit S1-S11 — slices the exported files and measures them against board.py/datasheets; caught the groove chopping 0.4 mm off the bosses, which no constant gate could see |
 | `scripts/render-enclosure.sh`, `scripts/export-enclosure-stl.sh` | renders / STLs (print set → `3d_case/`) |
 | `website/docs/design/enclosure.md` | the documentation — update the V1→V2 table and the dimension tables when constants change |
 
