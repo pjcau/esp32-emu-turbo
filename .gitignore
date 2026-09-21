@@ -84,57 +84,14 @@ hardware/kicad/.erc-report.stamp
 # stay ignored: 66 MB, and nothing reads them (inject-3d-models.py uses the
 # KiCad libraries instead).
 scripts/.easyeda_cache/**/*.step
-# ROMs: only the free homebrew/test ROMs listed below are committed;
-# anything else dropped into test-roms/ (commercial ROMs for bench play)
-# stays out of git, in any subfolder.
-test-roms/**/*.sfc
-test-roms/**/*.smc
-test-roms/**/*.nes
-test-roms/**/*.rom
-test-roms/**/*.gb
-test-roms/**/*.gbc
-test-roms/**/*.sms
-test-roms/**/*.gg
-test-roms/**/*.pce
-test-roms/**/*.bin
-test-roms/**/*.zip
-test-roms/**/*.lnx
-test-roms/**/*.gw
-test-roms/**/*.col
-test-roms/**/*.mx1
-test-roms/**/*.mx2
-test-roms/**/*.dsk
-test-roms/**/*.wad
-test-roms/**/*.ngp
-test-roms/**/*.ngc
-test-roms/**/*.a26
-test-roms/**/*.grp
-test-roms/**/*.sg
-# Bench ROMs (the user's own copies) — listed by name so nobody wonders
-# whether the patterns above catch them. Only owlia.nes is committed for NES;
-# SNES benchmark set: Super Mario World, Super Mario Kart, Zelda ALttP,
-# Mega Man X, Super Metroid, Donkey Kong Country, Super Mario All-Stars
-# (see website/docs/software/snes-optimization.md).
-test-roms/nes/Legend of Zelda, The - A Link to the Past (USA).sfc
-test-roms/nes/Mario Bros. (World).nes
-test-roms/nes/Mega Man X (USA) (Rev 1).sfc
-test-roms/nes/Super Mario Bros. + Duck Hunt (USA).nes
-test-roms/nes/Super Metroid (Japan, USA) (En,Ja).sfc
-test-roms/nes/Donkey Kong Country (U) (V1.2) [!].smc
-test-roms/nes/Super Mario All-Stars + Super Mario World (USA).sfc
-test-roms/snes/Super Mario Kart (USA).sfc
-test-roms/msx/Road Fighter (Japan).rom
-test-roms/col/Pac-Man (1983)(Atari)(proto).bin
-test-roms/doom/freedoom1.wad
-test-roms/snes/Super Mario World (U) [!].smc
-!test-roms/nes/owlia.nes
-!test-roms/snes/superbossgaiden.sfc
-!test-roms/gb/blarggs-cpu-instrs.gb
-!test-roms/gbc/ucity.gbc
-!test-roms/sms/silvervalley.sms
-!test-roms/gg/Swabby-GG-1.11.gg
-!test-roms/pce/reflectron.pce
-!test-roms/gen/miniplanets.bin
+# ROMs: nothing under test-roms/ is committed (neither commercial bench
+# ROMs nor free homebrew) — only the README and one .gitkeep per system
+# folder, so the folder layout mirrors /sd/roms/<tab short name>. Upload
+# with scripts/board_ctl.py put, see test-roms/README.md.
+test-roms/**
+!test-roms/README.md
+!test-roms/*/
+!test-roms/*/.gitkeep
 software/sim/sim_test_native
 software/sim/sim_test
 software/sim/emu-turbo-sim

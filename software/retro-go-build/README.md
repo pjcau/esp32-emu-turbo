@@ -1,6 +1,6 @@
 # Retro-Go Build Output
 
-Pre-built firmware binaries for the ESP32 Emu Turbo target. Built with ESP-IDF v5.4 via Docker (`docker-compose.retro-go.yml`). Rebuilt 2026-09-14 (fork `8f3f0ad1`): console remote control, SNES renderer work, save-state loader fix, Genesis YM2612 on core 1, Debug HUD, SG-1000, Duke3D, NGP, Atari 2600. The partition table changed (retro-core 1.5 MB, + duke3d-go, + retro-extra): flash the full `.img` once, then single apps again.
+Pre-built firmware binaries for the ESP32 Emu Turbo target. Built with ESP-IDF v5.4 via Docker (`docker-compose.retro-go.yml`). Rebuilt 2026-09-21 (fork `30df124b`): display rotated 180° (MADCTL 0xE8, panel mounted tail-LEFT after the FPC crossover cable), SG-1000 dispatch fixed in retro-core. Previous rebuild 2026-09-14 (fork `8f3f0ad1`): console remote control, SNES renderer work, save-state loader fix, Genesis YM2612 on core 1, Debug HUD, SG-1000, Duke3D, NGP, Atari 2600. The partition table changed (retro-core 1.5 MB, + duke3d-go, + retro-extra): flash the full `.img` once, then single apps again.
 
 ## Binaries
 

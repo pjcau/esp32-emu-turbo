@@ -26,8 +26,8 @@ GAMES = [
     ("sms", "retro-core", "/sd/roms/sms/silvervalley.sms"),
     ("gg", "retro-core", "/sd/roms/gg/Swabby-GG-1.11.gg"),
     ("pce", "retro-core", "/sd/roms/pce/reflectron.pce"),
-    ("gen", "gwenesis", "/sd/roms/gen/miniplanets.bin"),
-    ("lnx", "retro-core", None),   # /sd/roms/lynx
+    ("md", "gwenesis", "/sd/roms/md/miniplanets.bin"),
+    ("lnx", "retro-core", None),
     ("gw", "retro-core", None),
     ("col", "retro-core", None),
     ("msx", "fmsx", None),
@@ -37,7 +37,7 @@ GAMES = [
     ("a26", "retro-extra", None),
     ("duke3d", "duke3d-go", None),
 ]
-FOLDERS = {"lnx": "lynx", "gen": "gen"}  # app name -> card folder when they differ
+FOLDERS = {}  # app name -> card folder when they differ (launcher scans /sd/roms/<app>)
 
 
 def stats(board, seconds):

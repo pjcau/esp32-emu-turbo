@@ -379,7 +379,7 @@ python3 rg_tool.py --target=esp32-emu-turbo flash
 # /roms/sms/  — .sms files
 # /roms/gg/   — .gg files
 # /roms/pce/  — .pce files
-# /roms/gen/  — .bin/.md files
+# /roms/md/   — .bin/.md/.gen files (Mega Drive; the launcher scans /roms/<tab short name>)
 ```
 
 For the full software architecture overview, see [Software Architecture](/docs/software).

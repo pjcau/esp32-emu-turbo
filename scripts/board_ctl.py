@@ -96,8 +96,10 @@ class Board:
             l = self.readline()
             if "CTL put " in l:
                 print(l[l.index("CTL "):], f"({(off + 3072) / 1024 / (time.time() - t0):.0f} KB/s)")
+                if "done" in l:   # the final ack can land on the last chunk's read
+                    done = True
         deadline = time.time() + 10
-        while time.time() < deadline:
+        while not done and time.time() < deadline:
             l = self.readline()
             if "CTL put " in l:
                 l = l[l.index("CTL "):]
