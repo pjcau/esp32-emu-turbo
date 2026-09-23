@@ -17,7 +17,7 @@ make export-enclosure-stl     # = ./scripts/export-enclosure-stl.sh, ~30 s
 
 | Output | Where | Coordinates | Consumer |
 |---|---|---|---|
-| `viewer/assembly.stl`, `viewer/exploded.stl`, `viewer/parts/*.stl` | `3d_case/viewer/` — served by Docusaurus via `staticDirectories: ['static', '../3d_case']` | assembly (Z=0 back face) | `website/static/viewer.html` loads `viewer/...`; file names are hard-coded in its `ASSEMBLY_PARTS` list |
+| `3d_case/*.stl` (print set) + `viewer/placement.json` + `viewer/parts/{part_display,part_pcb}.stl` | `3d_case/` — served by Docusaurus via `staticDirectories: ['static', '../3d_case']` | print (bed) orientation; the viewer only rotates/moves them | `website/static/viewer.html` loads the PRINT files placed by `placement.json` (`scripts/enclosure_placement.py`); scad assembly copies live in `hardware/enclosure/reference/` for the gates only |
 | `case_top.stl case_bottom.stl dpad.stl btn_{a,b,x,y}.stl start.stl menu.stl select.stl lever_{l,r}.stl battery_strap_x2.stl` | `3d_case/` (project root — the user's folder) | print orientation (flat face on the bed) | the slicer |
 
 The script ends with `scripts/verify_enclosure_collision.py`: an STL set is
@@ -57,5 +57,5 @@ docker compose run --rm --user "$(id -u):$(id -g)" openscad \
 
 - `scripts/export-enclosure-stl.sh` — part lists for both sets
 - `scripts/verify_enclosure_collision.py` — the gate it ends with
-- `website/static/viewer.html` — `ASSEMBLY_PARTS` (add a file there if you add a viewer part; `part_straps.stl` is one)
+- `scripts/enclosure_placement.py` — `PLACEMENT` (a new print part needs its rotation + reference there; `viewer.html` `GROUP_STYLE` gives its colour/explode offset)
 - `website/docs/design/enclosure.md` — printing + assembly-order sections

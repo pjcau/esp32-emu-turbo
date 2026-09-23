@@ -1114,7 +1114,13 @@ if (part == "assembly") {
 } else if (part == "case_top") {
     translate([0, 0, body_d]) mirror([0, 0, 1]) top_shell();
 } else if (part == "case_top_print") {
-    top_shell();                       // front face down on the bed
+    // Front face down on the bed = the ASSEMBLY copy turned over 180° about
+    // X. Never top_shell() alone: its local frame is the assembly MIRRORED
+    // in Z, and a mirror is not a motion you can do to a printed part — the
+    // 2026-09 print came out as the mirror image, ABXY holes on the D-pad
+    // side. Every print part must be a pure rotation of its viewer part
+    // (gate S0 in verify_enclosure_stl.py).
+    rotate([180, 0, 0]) mirror([0, 0, 1]) top_shell();
 } else if (part == "case_bottom") {
     bottom_shell();
 } else if (part == "part_display") {
@@ -1144,8 +1150,8 @@ if (part == "assembly") {
 } else if (part == "part_straps") {
     bat_straps();
 } else if (part == "part_strap_print") {
-    // one strap, pegs up, flat on the bed
-    translate([0, 0, wall + bat_post_h + bat_strap_t]) mirror([0, 0, 1])
+    // one strap, pegs up, flat on the bed (turned over: rotate, never mirror)
+    translate([0, 0, wall + bat_post_h + bat_strap_t]) rotate([180, 0, 0])
     translate([-bat_strap_x1, -bat_offset_y, 0]) bat_strap(bat_strap_x1);
 } else if (part == "boss_section") {
     boss_section();

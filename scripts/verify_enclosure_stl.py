@@ -3,7 +3,7 @@
 
 The three enclosure gates read enclosure.scad's constants and trust
 OpenSCAD to turn them into geometry. This gate starts from the files that
-go to the printer — 3d_case/*.stl and 3d_case/viewer/parts/*.stl — cuts
+go to the printer — 3d_case/*.stl (+ hardware/enclosure/reference/) — cuts
 them with OpenSCAD `import()` + `projection(cut=true)` at chosen heights,
 measures every hole, ring and pocket in the slice, and compares against
 sources that are NOT the scad: board.py placements (switches, LEDs, mount
@@ -13,6 +13,9 @@ the numbers here disagree with the design numbers; agreement is the
 "does it add up" the user asked for.
 
 Checks (S = STL)
+  S0  the viewer shows the print files: each 3d_case/*.stl, moved by
+      viewer/placement.json (pure rotation + offset), lands exactly on the
+      scad assembly copy in hardware/enclosure/reference/
   S1  shell envelopes: top 170 x 85 x 10.6, bottom 170 x 85 x 18 (with lip)
   S2  front-face cutouts vs board placements: 4 ABXY circles (Ø >= 9),
       D-pad cross (24 x 24, arms >= 6.5), Start/Select/Menu pills, six LED
@@ -53,7 +56,8 @@ sys.path.insert(0, str(BASE))
 OUT_DIR = BASE / "website" / "static" / "img" / "renders"      # docker /output
 WORK = OUT_DIR / "_stlcheck"
 CASE = BASE / "3d_case"
-PARTS = CASE / "viewer" / "parts"
+REF = BASE / "hardware" / "enclosure" / "reference"   # scad assembly copies
+PARTS = CASE / "viewer" / "parts"                        # display, pcb
 
 TOL_POS = 0.15
 MIN_WALL = 1.2
@@ -117,6 +121,20 @@ def slice_svg(stl: Path, z: float, thin: bool = False):
         shutil.copy(stl, part)
     svg = openscad(SLICE_SCAD, "slice.svg", zc=z, thin=1 if thin else 0)
     return contours(svg)
+
+
+def front_view(cs):
+    """Print-frame slice of the top shell -> assembly XY.
+
+    The top prints face-down, i.e. the assembly copy turned 180° about X,
+    so assembly (x, y) sits at print (x, -y). Measuring the print file
+    directly in assembly XY (as this gate did before 2026-09-23) only
+    passes on the MIRROR IMAGE of the top — which is what got printed."""
+    out = []
+    for pts, area, bb, depth in cs:
+        out.append(([(x, -y) for x, y in pts], area,
+                    (bb[0], bb[1], -bb[3], -bb[2]), depth))
+    return out
 
 
 def contours(svg: Path):
@@ -219,7 +237,7 @@ def main() -> int:
     scad_mtime = max(p.stat().st_mtime for p in
                      (BASE / "hardware" / "enclosure").glob("*.scad"))
     for f in ("case_top.stl", "case_bottom.stl", "lever_r.stl", "lever_l.stl",
-              "battery_strap_x2.stl", "viewer/parts/part_straps.stl"):
+              "battery_strap_x2.stl", "viewer/parts/part_display.stl"):
         if not (CASE / f).exists():
             raise Structural(f"3d_case/{f} missing — run make export-enclosure-stl")
         if (CASE / f).stat().st_mtime < scad_mtime:
@@ -232,6 +250,39 @@ def main() -> int:
         print(f"  {'PASS' if ok else 'FAIL'}  {code} {name}: {detail}")
 
     top, bot = CASE / "case_top.stl", CASE / "case_bottom.stl"
+
+    def top_slice(z):
+        return front_view(slice_svg(top, z))
+
+    # S0 the viewer shows the print files: every 3d_case/*.stl instance,
+    # placed by viewer/placement.json (what viewer.html applies), must be a
+    # rotation (det +1) and reproduce the scad assembly reference exactly
+    import json
+    from scripts import enclosure_placement as EP
+    pj = CASE / "viewer" / "placement.json"
+    if not pj.exists() or pj.stat().st_mtime < scad_mtime:
+        raise Structural("3d_case/viewer/placement.json missing or stale — "
+                         "run make export-enclosure-stl")
+    shipped = json.loads(pj.read_text())
+    bad = [f"{p['file']}: det {EP.det(p['rot'])}" for p in shipped if EP.det(p["rot"]) != 1]
+    fresh = EP.compute()
+    def norm(ps):
+        return [(p["file"], json.dumps(p["rot"]), json.dumps(list(p["t"]))) for p in ps]
+    if norm(fresh) != norm(shipped):
+        bad.append("placement.json differs from the print files — regenerate it")
+    for rf, frac, extra in EP.check([dict(p, t=tuple(p["t"]), ref=f["ref"])
+                                     for p, f in zip(shipped, fresh)]):
+        if frac < 0.999 or extra:
+            bad.append(f"{rf}: {frac:.1%} reproduced, {extra} vertices elsewhere")
+    printed = {f.name for f in CASE.glob("*.stl")}
+    unplaced = printed - {p["file"] for p in shipped}
+    if unplaced:
+        bad.append(f"print files the viewer never shows: {sorted(unplaced)}")
+    check("S0", "viewer-shows-the-print-files",
+          not bad,
+          f"{len(shipped)} placed instances of {len(printed)} print files, all pure "
+          "rotations, each lands exactly on the design's assembly position"
+          + (": " + "; ".join(bad) if bad else ""))
 
     # S1 envelopes
     bt, bb_ = bbox(top), bbox(bot)
@@ -247,7 +298,7 @@ def main() -> int:
           f"(want 170x85x18: 16 + 2 lip)")
 
     # S2 front face cutouts (slice through the front wall)
-    face = slice_svg(top, 1.0)
+    face = top_slice(1.0)
     fh = holes(face)
     bad = []
     sw_pos = {r: (P[r][1], P[r][2]) for r in P if r.startswith("SW") and P[r][4] == "top"}
@@ -315,7 +366,7 @@ def main() -> int:
     # S4 glass pocket: scan from the centre of the viewport to the frame's
     # inner faces (Y both ways at x = 0; +X at y = 20 hits the stub; the
     # tail side is open, so the -X edge follows from the outline length)
-    mid = slice_svg(top, 6.0)
+    mid = top_slice(6.0)
     up = first_material(mid, 0, 2, 0, 1, 45)
     dn = first_material(mid, 0, 2, 0, -1, 45)
     pocket_h = up + dn
@@ -335,9 +386,9 @@ def main() -> int:
           f"Y cap body {gap_r:.2f}, to the Select cap body {gap_l:.2f} (equal, >= 0.4)")
 
     # S5 top bosses: slices at 0.4 above the boss end (8.6) and inside the relief (3.0)
-    end = slice_svg(top, 8.8)      # 0.2 below the boss end (9.0 = PCB top face)
-    rel = slice_svg(top, 3.0)
-    face0 = slice_svg(top, 1.0)
+    end = top_slice(8.8)      # 0.2 below the boss end (9.0 = PCB top face)
+    rel = top_slice(3.0)
+    face0 = top_slice(1.0)
     corners = [(x, y) for x, y in B.MOUNT_HOLES_ENC if abs(x) > 50]
     bad = []
     for x, y in corners:
@@ -353,8 +404,8 @@ def main() -> int:
         if abs(ds - (INSERT[0] - 0.4)) > 0.08 or wall < 2.0 - 0.05 or abs(dq - 2.8) > 0.08:
             bad.append(f"({x},{y}): socket Ø{ds:.2f} ring Ø{dr:.2f} wall {wall:.2f} relief Ø{dq:.2f}")
     # socket depth: the socket Ø must still be present at 4.4 below the end and gone at 4.6
-    d1 = near(holes(slice_svg(top, 9.0 - 4.4)), *corners[0], 0.5)
-    d2 = near(holes(slice_svg(top, 9.0 - 4.6)), *corners[0], 0.5)
+    d1 = near(holes(top_slice(9.0 - 4.4)), *corners[0], 0.5)
+    d2 = near(holes(top_slice(9.0 - 4.6)), *corners[0], 0.5)
     depth_ok = d1 and abs(size(d1[0])[0] - 3.1) < 0.08 and d2 and abs(size(d2[0])[0] - 2.8) < 0.08
     check("S5", "insert-bosses",
           not bad and depth_ok,
@@ -436,26 +487,26 @@ def main() -> int:
               "part_btn_y": "SW8", "part_start": "SW9", "part_select": "SW10",
               "part_menu": "SW13"}
     for fn, ref in capmap.items():
-        b = bbox(PARTS / f"{fn}.stl")
+        b = bbox(REF / f"{fn}.stl")
         cx, cy = (b[0] + b[1]) / 2, (b[2] + b[3]) / 2
         hgt = b[5] - b[4]
         # flange is asymmetric on Select/Y: use the stem (lowest 1 mm) for the centre
-        low = [(x, y) for x, y, z in stl_vertices(PARTS / f"{fn}.stl") if z < b[4] + 0.5]
+        low = [(x, y) for x, y, z in stl_vertices(REF / f"{fn}.stl") if z < b[4] + 0.5]
         scx = (min(p[0] for p in low) + max(p[0] for p in low)) / 2
         scy = (min(p[1] for p in low) + max(p[1] for p in low)) / 2
         if math.hypot(scx - P[ref][1], scy - P[ref][2]) > TOL_POS or abs(hgt - 7.9) > 0.05:
             bad.append(f"{fn}: stem at ({scx:.2f},{scy:.2f}) vs {ref} ({P[ref][1]},{P[ref][2]}), height {hgt:.2f}")
     for fn, ref in (("part_shoulder_r", "SW12"), ("part_shoulder_l", "SW11")):
-        b = bbox(PARTS / f"{fn}.stl")
-        topv = [(x, y) for x, y, z in stl_vertices(PARTS / f"{fn}.stl") if z > b[5] - 0.3]
+        b = bbox(REF / f"{fn}.stl")
+        topv = [(x, y) for x, y, z in stl_vertices(REF / f"{fn}.stl") if z > b[5] - 0.3]
         nx = (min(p[0] for p in topv) + max(p[0] for p in topv)) / 2
         ny = (min(p[1] for p in topv) + max(p[1] for p in topv)) / 2
         if math.hypot(nx - P[ref][1], ny - P[ref][2]) > TOL_POS or abs(b[5] - 14.3) > 0.05:
             bad.append(f"{fn}: nub at ({nx:.2f},{ny:.2f}) top Z {b[5]:.2f} vs {ref} ({P[ref][1]},{P[ref][2]}) / 14.3")
-    sb = bbox(PARTS / "part_straps.stl")
+    sb = bbox(REF / "part_straps.stl")
     esp = P["U1"]
     strap_ok = abs(sb[5] - 13.2) < 0.05 and abs(sb[4] - 9.0) < 0.05   # pegs 3 mm into the posts
-    strap_x = sorted({round(x, 1) for x, y, z in stl_vertices(PARTS / "part_straps.stl") if z > 13.1})
+    strap_x = sorted({round(x, 1) for x, y, z in stl_vertices(REF / "part_straps.stl") if z > 13.1})
     inside_esp = [x for x in strap_x if esp[1] - esp[5] / 2 < x < esp[1] + esp[5] / 2]
     if not strap_ok or inside_esp:
         bad.append(f"straps Z {sb[4]:.2f}..{sb[5]:.2f}, x over the ESP32: {inside_esp[:3]}")

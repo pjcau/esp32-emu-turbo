@@ -97,6 +97,13 @@
     border: 1px solid rgba(255,255,255,0.15);
     flex-shrink: 0;
   }
+  .legend-note {
+    margin-top: 8px;
+    max-width: 200px;
+    font-size: 11px;
+    opacity: 0.75;
+  }
+  #print-status.error { color: #ff6b6b; opacity: 1; font-weight: bold; }
 </style>
 </head>
 <body>
@@ -126,6 +133,9 @@
   <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> L / R Shoulder</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#008033"></div> PCB</div>
   <div class="legend-item"><div class="legend-swatch" style="background:#8a8a95"></div> Battery straps</div>
+  <div class="legend-note">Every printed part shown here IS its print file
+    (3d_case/*.stl), only rotated and moved into place.</div>
+  <div class="legend-note" id="print-status"></div>
 </div>
 
 <div id="canvas-container"></div>
@@ -144,23 +154,26 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 
-// Part definitions: file → color + material props
-const ASSEMBLY_PARTS = [
-  { file: 'parts/case_top.stl',     color: 0x2a2a35, metalness: 0.2, roughness: 0.7, clearcoat: 0.3 },
-  { file: 'parts/case_bottom.stl',  color: 0x35353f, metalness: 0.2, roughness: 0.7, clearcoat: 0.3 },
-  { file: 'parts/part_display.stl', color: 0x0a0a22, metalness: 0.1, roughness: 0.3, clearcoat: 0.8 },
-  { file: 'parts/part_dpad.stl',    color: 0x555555, metalness: 0.1, roughness: 0.8 },
-  { file: 'parts/part_btn_a.stl',   color: 0xcc3333, metalness: 0.15, roughness: 0.5 },
-  { file: 'parts/part_btn_b.stl',   color: 0xcccc33, metalness: 0.15, roughness: 0.5 },
-  { file: 'parts/part_btn_x.stl',   color: 0x3366cc, metalness: 0.15, roughness: 0.5 },
-  { file: 'parts/part_btn_y.stl',   color: 0x33b050, metalness: 0.15, roughness: 0.5 },
-  { file: 'parts/part_start.stl',      color: 0x666666, metalness: 0.1, roughness: 0.8 },
-  { file: 'parts/part_menu.stl',       color: 0x666666, metalness: 0.1, roughness: 0.8 },
-  { file: 'parts/part_select.stl',     color: 0x666666, metalness: 0.1, roughness: 0.8 },
-  { file: 'parts/part_shoulder_l.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
-  { file: 'parts/part_shoulder_r.stl', color: 0x555555, metalness: 0.1, roughness: 0.8 },
-  { file: 'parts/part_pcb.stl',        color: 0x008033, metalness: 0.3, roughness: 0.5, clearcoat: 0.4 },
-  { file: 'parts/part_straps.stl',     color: 0x8a8a95, metalness: 0.1, roughness: 0.8 },
+// The printed parts are the PRINT FILES themselves (3d_case/*.stl, served
+// at the site root), placed by viewer/placement.json: a rotation matrix
+// (det +1, checked below — a mirror would show a part you cannot print)
+// and a translation per instance. Only the display and the PCB, which are
+// not printed, come from viewer/parts/.
+const GROUP_STYLE = {
+  top:    { color: 0x2a2a35, metalness: 0.2, roughness: 0.7, clearcoat: 0.3, explode: 35 },
+  bottom: { color: 0x35353f, metalness: 0.2, roughness: 0.7, clearcoat: 0.3, explode: 0 },
+  dpad:   { color: 0x555555, metalness: 0.1, roughness: 0.8, explode: 47.25 },
+  btn_a:  { color: 0xcc3333, metalness: 0.15, roughness: 0.5, explode: 47.25 },
+  btn_b:  { color: 0xcccc33, metalness: 0.15, roughness: 0.5, explode: 47.25 },
+  btn_x:  { color: 0x3366cc, metalness: 0.15, roughness: 0.5, explode: 47.25 },
+  btn_y:  { color: 0x33b050, metalness: 0.15, roughness: 0.5, explode: 47.25 },
+  pill:   { color: 0x666666, metalness: 0.1, roughness: 0.8, explode: 47.25 },
+  lever:  { color: 0x555555, metalness: 0.1, roughness: 0.8, explode: -10.5 },
+  strap:  { color: 0x8a8a95, metalness: 0.1, roughness: 0.8, explode: 3.5 },
+};
+const NON_PRINTED = [
+  { file: 'viewer/parts/part_display.stl', color: 0x0a0a22, metalness: 0.1, roughness: 0.3, clearcoat: 0.8, explode: 17.5 },
+  { file: 'viewer/parts/part_pcb.stl',     color: 0x008033, metalness: 0.3, roughness: 0.5, clearcoat: 0.4, explode: 7 },
 ];
 
 let scene, camera, renderer, controls;
@@ -227,58 +240,69 @@ function clearMeshes() {
 
 function loadSTL(url) {
   return new Promise((resolve, reject) => {
-    // 3d_case/viewer/ (staticDirectories); the query defeats the browser cache
-    loader.load('viewer/' + url + '?v=' + Date.now(), resolve, undefined, reject);
+    // 3d_case/ is served at the site root (staticDirectories); the query
+    // defeats the browser cache
+    loader.load(url + '?v=' + Date.now(), resolve, undefined, reject);
   });
 }
 
-async function loadAssemblyColored() {
-  clearMeshes();
-  document.getElementById('loading').classList.remove('hidden');
-
-  const promises = ASSEMBLY_PARTS.map(async (part) => {
-    const geometry = await loadSTL(part.file);
-    geometry.computeVertexNormals();
-
-    const material = new THREE.MeshPhysicalMaterial({
-      color: part.color,
-      metalness: part.metalness || 0.2,
-      roughness: part.roughness || 0.6,
-      clearcoat: part.clearcoat || 0,
-      clearcoatRoughness: 0.4,
-      wireframe: wireframeOn,
-      side: THREE.DoubleSide,
-    });
-
-    const mesh = new THREE.Mesh(geometry, material);
-    scene.add(mesh);
-    currentMeshes.push(mesh);
-  });
-
-  await Promise.all(promises);
-  document.getElementById('loading').classList.add('hidden');
+function placementMatrix(p) {
+  const r = p.rot, t = p.t;
+  const m = new THREE.Matrix4().set(
+    r[0][0], r[0][1], r[0][2], t[0],
+    r[1][0], r[1][1], r[1][2], t[1],
+    r[2][0], r[2][1], r[2][2], t[2],
+    0, 0, 0, 1);
+  if (Math.abs(m.determinant() - 1) > 1e-9)
+    throw new Error(p.file + ': placement is not a rotation (det ' + m.determinant() + ')');
+  return m;
 }
 
-async function loadExplodedSingle() {
-  clearMeshes();
-  document.getElementById('loading').classList.remove('hidden');
-
-  const geometry = await loadSTL('exploded.stl');
-  geometry.computeVertexNormals();
-  geometry.center();
-
+function addMesh(geometry, style, matrix, exploded) {
   const material = new THREE.MeshPhysicalMaterial({
-    color: 0x2a2a35,
-    metalness: 0.3,
-    roughness: 0.6,
-    clearcoat: 0.2,
+    color: style.color,
+    metalness: style.metalness || 0.2,
+    roughness: style.roughness || 0.6,
+    clearcoat: style.clearcoat || 0,
+    clearcoatRoughness: 0.4,
     wireframe: wireframeOn,
     side: THREE.DoubleSide,
   });
-
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.matrixAutoUpdate = false;
+  mesh.matrix.copy(matrix);
+  if (exploded)
+    mesh.matrix.premultiply(new THREE.Matrix4().makeTranslation(0, 0, style.explode));
   scene.add(mesh);
   currentMeshes.push(mesh);
+}
+
+async function loadParts(exploded) {
+  clearMeshes();
+  document.getElementById('loading').classList.remove('hidden');
+  const status = document.getElementById('print-status');
+  try {
+    const placement = await (await fetch('viewer/placement.json?v=' + Date.now())).json();
+    const geoms = {};
+    for (const p of placement) geoms[p.file] = geoms[p.file] || loadSTL(p.file);
+    await Promise.all(placement.map(async (p) => {
+      const g = (await geoms[p.file]).clone();
+      g.computeVertexNormals();
+      addMesh(g, GROUP_STYLE[p.group], placementMatrix(p), exploded);
+    }));
+    await Promise.all(NON_PRINTED.map(async (part) => {
+      const g = await loadSTL(part.file);
+      g.computeVertexNormals();
+      addMesh(g, part, new THREE.Matrix4(), exploded);
+    }));
+    const files = new Set(placement.map(p => p.file));
+    status.textContent = files.size + ' print files shown as printed: '
+      + [...files].join(', ');
+    status.classList.remove('error');
+  } catch (e) {
+    status.textContent = 'VIEWER ERROR: ' + e.message;
+    status.classList.add('error');
+  }
   document.getElementById('loading').classList.add('hidden');
 }
 
@@ -287,11 +311,7 @@ async function switchView(view) {
   document.getElementById('btn-assembly').classList.toggle('active', view === 'assembly');
   document.getElementById('btn-exploded').classList.toggle('active', view === 'exploded');
 
-  if (view === 'assembly') {
-    await loadAssemblyColored();
-  } else {
-    await loadExplodedSingle();
-  }
+  await loadParts(view === 'exploded');
 }
 window.switchView = switchView;
 
@@ -323,7 +343,7 @@ function animate() {
 animate();
 
 // Load initial view
-loadAssemblyColored();
+loadParts(false);
 </script>
 
 </body>
