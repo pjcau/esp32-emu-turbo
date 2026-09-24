@@ -62,6 +62,52 @@ for the simulator method.
 | **Phase 3** | All Emulators at Full Speed | 🔄 In progress — NES measured 60 fps; other 8-bit/16-bit cores still to run | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
 | **Phase 4** | SNES Optimization (measured 75–85% → 60 FPS) | 📋 Next — baseline measured, bottleneck = PPU renderer | [SNES Optimization](/docs/software/snes-optimization) |
 | **Phase 5** | v2 Audio Coprocessor (ESP32-S3-MINI-1) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor) |
+| **Phase 6** | Firmware update from SD card (cable-free flashing) | 🗓️ Future | [below](#future--firmware-update-from-sd-card) |
+
+
+### Future — firmware update from SD card
+
+Today every firmware change is flashed over USB (`rg_tool.py install`, a
+full `.img`). The plan is to make the SD card the normal update path, so
+the board can be updated on battery, with no cable and no esptool on the
+host. USB stays for the very first flash and for recovery only.
+
+**Why not the launcher itself.** The ESP32-S3 ROM bootloader only knows
+USB/UART, and an app cannot safely rewrite the partition it runs from.
+Retro-go's upstream solution (ODROID-GO, Esplay) is a separate **flasher
+app in the `factory` partition**, which is never overwritten by an update.
+
+**What is missing for this board** (checked 2026-09-24):
+
+- `retro-go/components/retro-go/targets/esp32-emu-turbo/env.py` has
+  `FW_FORMAT = "none"`, so `rg_tool.py build-fw` produces no `.fw`.
+- The target `config.h` defines neither `RG_APP_FACTORY` nor
+  `RG_UPDATER_APPLICATION`, so the launcher updater only checks versions;
+  `RG_UPDATER_GITHUB_RELEASES` still points at upstream `ducalex/retro-go`.
+- There is no flasher app.
+
+**Planned work:**
+
+1. **Flasher app** (~200–300 KB) in `factory`: on boot, look for
+   `/sd/firmware/*.fw` or a held recovery button (`RG_RECOVERY_BTN`); verify
+   the checksum, write the app partitions with a progress bar on the
+   display, rename the file so it is not re-flashed on the next boot, and
+   reboot. Otherwise jump straight to the launcher.
+2. **`.fw` format:** reuse the Esplay/ODROID format `rg_tool.py` already
+   packs; enable it in `env.py`.
+3. **Partition table:** `factory` = flasher, then the existing apps.
+4. **Launcher:** set `RG_APP_FACTORY` / `RG_UPDATER_APPLICATION` /
+   `RG_UPDATER_DOWNLOAD_LOCATION`, point the release URL at this repo.
+5. **Tooling:** `make firmware-sd` builds the `.fw` ready to copy to the card.
+
+**Pairs with Wi-Fi:** the launcher is already built with networking and has
+a WebUI that uploads files to the SD, so "upload `.fw` from the browser →
+reboot to flash" becomes a fully wireless update without adding an OTA
+stack (the emulator cores keep networking off to save internal RAM).
+
+**Acceptance:** an update applied from SD on a first article, a deliberately
+broken `.fw` rejected by the checksum, and a boot-looping launcher
+recovered via the recovery button — all without a USB cable.
 
 ---
 
