@@ -59,10 +59,12 @@ int main(int argc, char **argv)
         fwrite(buf, 1, sizeof buf, fv);
     }
     fclose(fv);
+    static float delay[SPLASH_ECHO_LEN];
+    splash_audio_init(delay);
     FILE *fa = fopen(argv[2], "wb");
     for (int n = 0; n < SPLASH_FRAMES * SPLASH_RATE / SPLASH_FPS; n++)
     {
-        int16_t v = (int16_t)(splash_sample(n) * 26000.f);
+        int16_t v = (int16_t)(splash_audio_next() * 26000.f);
         fwrite(&v, 2, 1, fa);
     }
     fclose(fa);
