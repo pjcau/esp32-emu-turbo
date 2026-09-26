@@ -311,19 +311,6 @@ For the custom PCB version (see [PCB Design](pcb.md)), all SMT components are so
 
 **PCBA cost (real JLCPCB quote):** **$197.86 for 5 boards (~$39.57/board)** including fabrication, components and assembly. Most of it is one-time setup — see the [full quote breakdown](/docs/manufacturing#jlcpcb-quote-breakdown-5-units).
 
-### v2 Additional Components (Audio Coprocessor)
-
-The v2 PCB adds an ESP32-S3-MINI-1-N8 as a dedicated audio coprocessor (see [Phase 5 — Software Architecture](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor)):
-
-| Ref | Component | Package | LCSC | Class | Unit cost |
-|-----|-----------|---------|------|-------|-----------|
-| U7 | ESP32-S3-MINI-1-N8 | Module (15.4×20.5mm) | C2913206 | Extended | $3.25 |
-| C34,C35 | 100nF 0805 (decoupling) | 0805 | C49678 | Basic | $0.01 |
-
-**v2 BOM delta:** +$3.27 per unit. No external crystal, flash, or extra passives needed — the module integrates everything. (References C26–C33 are already taken on the v1 board — C32/C33 are the SW16 respin's gate and wake caps — so the coprocessor's decoupling caps are **C34/C35**.)
-
-**v2 estimated PCBA cost:** ~$215 for 5 boards (~$43/board).
-
 ---
 
 ## PCB Version — What to Buy Separately

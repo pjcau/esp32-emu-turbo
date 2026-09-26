@@ -82,6 +82,16 @@ const config: Config = {
           label: 'Docs',
         },
         {
+          to: '/docs/remediation',
+          label: 'Remediation',
+          position: 'left',
+        },
+        {
+          to: '/docs/next-steps',
+          label: 'Next Steps',
+          position: 'left',
+        },
+        {
           href: 'pathname:///viewer.html',
           label: '3D Viewer',
           position: 'left',

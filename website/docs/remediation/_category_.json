@@ -1,0 +1,10 @@
+{
+  "label": "Remediation",
+  "position": 4.3,
+  "collapsible": true,
+  "collapsed": false,
+  "link": {
+    "type": "doc",
+    "id": "remediation/index"
+  }
+}

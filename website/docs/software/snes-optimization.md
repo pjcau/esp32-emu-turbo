@@ -6,7 +6,7 @@ sidebar_position: 4
 
 # SNES Optimization
 
-How SNES gets from "playable at 75–85%" to real speed on the existing board: measured baseline, a renderer-first software plan (no hardware change), the original February plan as an appendix, and the v2 audio-coprocessor option.
+How SNES gets from "playable at 75–85%" to real speed on the existing board: measured baseline, a renderer-first software plan (no hardware change), the original February plan as an appendix, and why audio stays on the main chip (no coprocessor).
 
 ---
 
@@ -690,234 +690,49 @@ Unlike the pre-optimization estimates, the 3-phase plan targets **60 FPS with fu
 
 ---
 
-## Phase 5 — v2 Hardware Audio Coprocessor
+## Audio — no separate coprocessor {#audio-no-coprocessor}
 
-**Goal:** Add an **ESP32-S3-MINI-1** module as a dedicated audio coprocessor on the v2 PCB. This completely offloads audio processing from the ESP32-S3 for **all emulators** — not just SNES. Both ESP32-S3 cores become 100% available for CPU + PPU + game logic. **~5 days** (down from 14 with RP2040 — see [Why ESP32-S3-MINI-1 instead of RP2040](#why-esp32-s3-mini-1-instead-of-rp2040) for the rationale).
+The February plan added an ESP32-S3-MINI-1 module as a dedicated audio
+coprocessor on the next board. That plan was dropped on 2026-09-26: the
+measurements on the first article removed the reason for it.
 
-#### Why a Hardware Audio Coprocessor?
+| What | Measured on the board | Consequence |
+|:---|:---|:---|
+| CPU (65C816) + APU (SPC700) together | ~8.5 ms of the 16.7 ms frame | fits, with margin |
+| Audio mix | 1.5 ms | negligible |
+| PPU renderer | 10–16 ms per drawn frame | the actual bottleneck |
+| Super Mario Kart (57 fps) | DSP-1 cartridge chip, 11 ms per frame | CPU side, not audio |
 
-Even after Phase 4 optimizations, the ESP32-S3 spends one entire core on SNES audio (SPC700 + DSP). For simpler emulators (NES, GB, Genesis), audio still consumes I2S DMA time and interrupt cycles. A dedicated audio chip eliminates this entirely.
+The pre-hardware estimate put the SPC700 + S-DSP at ~8 ms, 48% of the
+frame (see the appendix). On the board the renderer dominates, so a chip
+that takes audio away would speed up the part that already fits and leave
+the slow part untouched.
 
-```
-v1 Architecture (software only):
-┌──────────────────────────────────────────────────────┐
-│ ESP32-S3                                             │
-│   Core 0: CPU + PPU + Display                        │
-│   Core 1: SPC700 + DSP + I2S DMA ← audio burden     │
-│                                        │             │
-│                                   I2S bus            │
-│                                        │             │
-│                                   PAM8403 → Speaker  │
-└──────────────────────────────────────────────────────┘
+**The second core already does this job.** The ESP32-S3 has two cores and
+the second one is almost idle during games (Wi-Fi runs only in the
+launcher). The Genesis core already moves its YM2612 FM synthesis to
+core 1, which took it from 20 to 30 drawn fps at a full 60 emulated fps.
+Moving the SNES S-DSP sample generation to core 1 is the matching software
+step, with no hardware change.
 
-v2 Architecture (ESP32-S3-MINI-1 audio hub):
-┌──────────────────────┐   SPI 10MHz    ┌──────────────────────┐
-│ ESP32-S3 (main)      │ ──────────────→│ ESP32-S3-MINI-1      │
-│   Core 0: CPU + PPU  │   commands     │   Core 0: SPC700 DSP │
-│   Core 1: CPU + PPU  │   + PCM data   │   Core 1: I2S output │
-│   (both 100% free    │               │                      │
-│    for emulation)    │               │     I2S (hardware)   │
-└──────────────────────┘               │          │           │
-                                       │     PAM8403          │
-                                       │          │           │
-                                       │      Speaker         │
-                                       └──────────────────────┘
-```
+**An external chip would be worse than core 1.** The SPC700 and the 65C816
+talk through four I/O ports that games poll in lockstep; the latency of an
+SPI link would break that sync. Only the final stage (the S-DSP producing
+samples) can be separated, which is exactly what core 1 can take. The
+module would also have cost $3.27 per board, 15.4 × 20.5 mm of board area,
+an SPI link to route, a second firmware to build and flash, and ~50 mA more
+on the 3.3 V rail.
 
-#### Why ESP32-S3-MINI-1 instead of RP2040
+**Where the next board (v4) spends on audio instead.** The real audio
+problem on the current board is analog: the PDM carrier hiss, reduced by
+the R38 rework (1 kΩ + 10 nF) but not removed, and the reason this target
+starts at volume 0. The v4 plan replaces the PDM → RC filter → PAM8403
+chain with an I2S class-D amplifier with an integrated DAC (for example the
+MAX98357A class of part; the exact part is chosen against JLCPCB stock when
+the v4 schematic starts). That gives clean audio with fewer parts and lets
+the default volume come back up.
 
-The original Phase 5 design used an RP2040 (ARM Cortex-M0+, $0.70). After analysis, the **ESP32-S3-MINI-1** is the better choice despite a higher module cost (~$3.25), because the development time savings and architectural simplification far outweigh the $2.26 BOM increase.
-
-##### Development time comparison
-
-| Step | Task | RP2040 | ESP32-S3-MINI-1 | Savings |
-|:---|:---|---:|---:|:---|
-| 5.1 | Circuit design + PCB | 2 days | **1 day** | Module integrates crystal + flash |
-| 5.2 | SPI protocol | 2 days | **1 day** | Same ESP-IDF SPI API on both sides |
-| 5.3 | Passthrough firmware (PCM relay) | 1 day | **0.5 days** | Copy `audio.c` I2S code, same API |
-| 5.4 | SPC700 native firmware | 5 days | **0.5 days** | Xtensa ASM from Phase 4.1 runs **identically** |
-| 5.5 | ESP32 firmware integration | 2 days | **1 day** | Single `idf.py`, one build system |
-| 5.6 | Testing + latency tuning | 2 days | **1 day** | Same `idf.py monitor`, same log format |
-| **Total** | | **14 days** | **~5 days** | **-9 days (64% reduction)** |
-
-The decisive factor is **Step 5.4**: with the RP2040, you must rewrite ~120 lines of Xtensa LX7 assembly (BRR decode, Gaussian interpolation, voice mixing, echo FIR from Phase 4.1) into ARM Thumb assembly — a complete cross-architecture port requiring testing, debugging, and re-optimization. With the ESP32-S3-MINI-1, you copy the `.S` files and compile. Done.
-
-##### Technical advantages
-
-| Aspect | RP2040 | ESP32-S3-MINI-1 | Winner |
-|:---|:---|:---|:---|
-| **Architecture** | ARM Cortex-M0+ | Xtensa LX7 (same as main chip) | MINI-1 |
-| **Clock speed** | 133 MHz | 240 MHz (+80%) | MINI-1 |
-| **Internal SRAM** | 264 KB | 512 KB (+94%) | MINI-1 |
-| **I2S** | Via PIO (custom bitbang) | Native hardware I2S | MINI-1 |
-| **SPI slave** | Hardware | Hardware (same ESP-IDF API) | Tie |
-| **Toolchain** | Pico SDK (separate) | ESP-IDF (same as main) | MINI-1 |
-| **ASM compatibility** | Zero (must rewrite all) | 100% (identical Xtensa LX7) | MINI-1 |
-| **External components** | Crystal + flash + 4 caps | None (all integrated) | MINI-1 |
-| **WiFi/BT** | No | Yes (future upgrade path) | MINI-1 |
-| **Unit cost** | $0.70 + $0.29 external = $0.99 | $3.25 + $0.02 caps = $3.27 | RP2040 |
-| **Development time** | 14 days | 5 days | MINI-1 |
-
-##### Key architectural benefits
-
-1. **One toolchain** — No need to install Pico SDK, learn RP2040 PIO, or maintain two build systems in Docker. The entire project stays pure ESP-IDF.
-
-2. **Unified debugging** — Both chips flash and monitor via `idf.py`. Same serial log format, same profiling APIs, same Docker Compose target (just a different `idf.py` target for the coprocessor).
-
-3. **Simpler BOM** — Eliminates the 12 MHz crystal, W25Q16 flash chip, and 4 extra decoupling capacitors. The module has everything integrated.
-
-4. **Faster CPU** — 240 MHz vs 133 MHz with higher IPC (Xtensa LX7 is a more capable core than Cortex-M0+). The SPC700 emulation runs with massive headroom.
-
-5. **More SRAM** — 512 KB vs 264 KB. The SPC700 needs 64 KB RAM + DSP buffers + I2S ring buffer. On the MINI-1, there is 400+ KB free for audio mixing buffers and future features.
-
-6. **Future upgrade path** — The ESP32-S3-MINI-1 has WiFi and Bluetooth 5.0 LE built in. Future firmware could enable WiFi ROM downloads, Bluetooth wireless controllers, or OTA updates for the coprocessor — all with zero hardware changes.
-
-#### ESP32-S3-MINI-1 Specifications
-
-| Parameter | Value |
-|:---|:---|
-| **Module** | ESP32-S3-MINI-1-N8 (Espressif) |
-| **SoC** | ESP32-S3 (Xtensa LX7 dual-core) |
-| **Cores** | 2x Xtensa LX7 @ 240 MHz |
-| **Internal SRAM** | 512 KB |
-| **Flash** | 8 MB Quad SPI (integrated) |
-| **PSRAM** | None (not needed for audio) |
-| **I2S** | 2x hardware I2S (8/16/24/32-bit) |
-| **SPI** | SPI2 + SPI3 (general-purpose, DMA-capable) |
-| **GPIOs** | 39 (including 4 strapping) |
-| **Antenna** | On-board PCB antenna |
-| **Operating voltage** | 3.0–3.6V |
-| **Power** | ~50 mA active (single core audio task) |
-| **Dimensions** | 15.4 × 20.5 × 2.4 mm |
-| **LCSC Part #** | C2913206 |
-| **Unit cost** | ~$3.25 |
-
-:::note Why N8 (no PSRAM) instead of N4R2?
-The audio coprocessor only needs internal SRAM. SPC700 RAM is 64 KB, DSP buffers ~32 KB, I2S ring buffer ~16 KB — total ~112 KB, well within the 512 KB internal SRAM. PSRAM would add latency to the audio path without benefit. The N8 variant also keeps all 39 GPIOs available (N4R2 loses GPIO26 to PSRAM).
-:::
-
-#### Dual-Mode Firmware
-
-The ESP32-S3-MINI-1 runs two firmware modes, selected by the main ESP32-S3 via an SPI command at emulator launch:
-
-| Mode | Active for | MINI-1 Core 0 | MINI-1 Core 1 | Audio latency |
-|:---|:---|:---|:---|---:|
-| **Passthrough** | NES, GB, GBC, SMS, GG, PCE, Genesis, Lynx | Receive PCM via SPI → ring buffer | Ring buffer → I2S DMA output | under 2 ms |
-| **SPC700 Native** | SNES | Full SPC700 CPU + S-DSP emulation (Phase 4.1 ASM) | I2S DMA output from DSP buffer | under 5 ms |
-
-**Passthrough mode:** The main ESP32-S3 computes audio samples as usual (e.g., NES APU, GB sound) and sends raw PCM over SPI. The MINI-1 relays them to I2S via DMA. This frees the main ESP32-S3 from I2S DMA interrupts and buffer management. The MINI-1 firmware reuses the same `i2s_std` driver code from Phase 1 (`audio.c`).
-
-**SPC700 Native mode:** The main ESP32-S3 sends SPC700 I/O port writes (4 bytes) and timing sync packets over SPI. The MINI-1 runs the complete SPC700 CPU emulation + S-DSP natively. The Phase 4.1 Xtensa assembly functions (`DecodeBlockAsm`, `GaussianInterpAsm`, `MixVoiceAsm`, `EchoFIRAsm`) run **identically** — same opcodes, same register layout, same instruction timings. At 240 MHz with 512 KB SRAM, the MINI-1 has massive headroom for real-time SPC700 emulation.
-
-#### SPI Communication Protocol
-
-| Command | Direction | Payload | Rate |
-|:---|:---|:---|:---|
-| `MODE_SET` | Main → MINI-1 | 1 byte (0=Passthrough, 1=SPC700) | At emulator launch |
-| `PCM_DATA` | Main → MINI-1 | 256–512 bytes PCM (16-bit stereo) | 32 kHz / buffer size |
-| `SPC_PORT_WRITE` | Main → MINI-1 | 4 bytes (ports 0-3) | Per CPU write (~1000/frame) |
-| `SPC_SYNC` | Main → MINI-1 | 4 bytes (timestamp) | Every 2 ms |
-| `SPC_UPLOAD` | Main → MINI-1 | Variable (SPC700 program) | At game load |
-| `STATUS` | MINI-1 → Main | 4 bytes (ports 0-3 readback) | On request |
-
-**SPI bus:** 10 MHz clock, Mode 0, 8-bit frames. Both sides use the same `spi_slave`/`spi_master` ESP-IDF driver with DMA. At 10 MHz (higher than the 4 MHz originally planned for RP2040, since both chips support ESP-IDF SPI DMA natively), a 512-byte PCM buffer transfers in ~0.4 ms.
-
-#### BOM Impact (v1 → v2)
-
-| Component | Qty | Unit cost | Total | Notes |
-|:---|---:|---:|---:|:---|
-| ESP32-S3-MINI-1-N8 | 1 | $3.25 | $3.25 | Audio coprocessor (flash + crystal integrated) |
-| 100nF caps (decoupling) | 2 | $0.01 | $0.02 | Power filtering |
-| 3.3V buck (shared) | — | — | $0.00 | Uses existing SY8089 |
-| **Total v2 addition** | | | **$3.27** | |
-
-**v2 total BOM delta:** ~$3.27. The ESP32-S3-MINI-1 runs at 3.3V from the existing SY8089 buck (2 A rating — the MINI-1 adds ~50 mA for single-core audio tasks, well within budget, and unlike the old LDO the extra current costs almost no heat).
-
-**Comparison with RP2040 BOM:** The RP2040 approach cost $0.99 in parts (chip + flash + crystal + caps) but required 14 days of development. The MINI-1 costs $2.28 more per unit but saves 9 days. On a 5-unit JLCPCB order, that is $11.40 total — a trivial cost for 64% less development time. The simpler PCB layout (3 components vs 7) also reduces routing complexity.
-
-#### GPIO / SPI Wiring
-
-In v2, GPIO 15, 16 and 17 are all available on the main ESP32-S3 — 15/16 were never connected (PDM needs no BCLK/LRCK) and 17 is freed when audio output moves to the coprocessor. All three are repurposed for the SPI link to the MINI-1:
-
-```
-ESP32-S3 Main (SPI Master)         ESP32-S3-MINI-1 (SPI Slave)
-──────────────────────────         ─────────────────────────────
-GPIO 15 (SPI_CLK)         ───────→ GPIO 12 (SPI2_CLK)
-GPIO 16 (SPI_MOSI)        ───────→ GPIO 11 (SPI2_MOSI)
-GPIO 17 (SPI_MISO)        ←─────── GPIO 13 (SPI2_MISO)
-GPIO 20 (SPI_CS)           ───────→ GPIO 10 (SPI2_CS)
-
-ESP32-S3-MINI-1 (I2S hardware)    Audio
-─────────────────────────────      ─────
-GPIO 17 (I2S_DOUT, PDM)   ───────→ C22 → PAM8403 INR/INL
-(GPIO 15/16 unused: PAM8403 is analog — it has no BCLK/LRCK inputs)
-```
-
-**Notes:**
-- GPIO 15/16 are already unconnected in v1 (the PDM audio path needs only DOUT) and GPIO 17 is freed when audio moves off-chip, so all three become SPI pins in v2 — clean reuse, no wasted GPIOs.
-- GPIO 20 (USB_D+ in v1) serves as SPI chip select in v2. Native USB is no longer available in v2 (debug via SPI or UART instead).
-- The MINI-1 drives the PAM8403 from its own GPIO 17 (PDM DOUT), the same arrangement as v1 — the audio output path is identical.
-
-#### Performance: v1 vs v2
-
-| Metric | v1 (software) | v2 (ESP32-S3-MINI-1) | Improvement |
-|:---|:---|:---|:---|
-| **ESP32 cores for emulation** | 1.0–1.5 (Core 1 shared with audio) | 2.0 (both cores 100%) | +33–100% |
-| **SNES audio CPU cost** | ~5 ms/frame (ASM, Core 1) | 0 ms (offloaded) | **-100%** |
-| **NES/GB audio CPU cost** | ~0.5 ms/frame + I2S IRQ | 0 ms (offloaded) | **-100%** |
-| **Audio latency** | 2–5 ms (DMA buffer) | 2–5 ms (SPI + DMA) | Same |
-| **Audio quality** | 16 kHz (compromise for FPS) | 32 kHz stereo (no compromise) | **2x sample rate** |
-| **Coprocessor clock** | — | 240 MHz (80% faster than RP2040) | N/A |
-| **Power consumption** | ~180 mA (both cores loaded) | ~230 mA (+50 mA MINI-1) | +28% |
-| **BOM cost** | $33 | $36.27 | +$3.27 |
-| **Development time** | — | 5 days (vs 14 for RP2040) | **-64%** |
-
-#### SNES FPS Impact (v2)
-
-With the ESP32-S3-MINI-1 handling all audio, the main ESP32-S3 frame budget changes drastically:
-
-```
-v2 Frame time budget: 16.67 ms (for 60 fps)
-
-┌────────────────────────────────────────────────┐
-│ 65C816 CPU emulation         ~4.5 ms  27%      │
-│ PPU rendering (2 BG layers)  ~5.0 ms  30%      │
-│ SPC700 audio DSP              0.0 ms   0%      │ ← offloaded to MINI-1
-│ Display transfer             ~1.5 ms   9%      │
-├────────────────────────────────────────────────┤
-│ TOTAL                       ~11.0 ms  66%      │ ← 34% headroom!
-└────────────────────────────────────────────────┘
-```
-
-At only 66% of the frame budget **before any Phase 4 software optimizations**, v2 hardware reaches 60 FPS for standard SNES games out of the box. Phase 4 optimizations (PPU fast-path, tile cache, overclock) become headroom for complex games.
-
-#### v2 Game Compatibility (All 16-bit Systems)
-
-| System | Example games | v1 FPS | v2 FPS | Notes |
-|:---|:---|---:|---:|:---|
-| **NES** | Super Mario Bros, Zelda | 60 | 60 | Already full speed; v2 frees CPU headroom |
-| **Game Boy** | Tetris, Pokemon | 60 | 60 | Already full speed |
-| **GBC** | Pokemon Crystal | 60 | 60 | Already full speed |
-| **SMS** | Sonic the Hedgehog | 60 | 60 | Already full speed |
-| **Game Gear** | Sonic Triple Trouble | 60 | 60 | Already full speed |
-| **PCE** | Bonk's Adventure | 60 | 60 | Already full speed |
-| **Lynx** | California Games | 60 | 60 | Already full speed |
-| **Genesis** | Sonic, Streets of Rage | 50–60 | **58–60** | +8–10 FPS from freed Core 1 |
-| **SNES (standard)** | Mario World, Zelda ALttP | 30 | **55–60** | Audio offloaded, no Phase 4 needed |
-| **SNES (complex)** | Chrono Trigger, FF6 | 25–30 | **50–58** | Phase 4 PPU optimizations for 60 |
-| **SNES (Super FX)** | Star Fox, Yoshi's Island | 15–25 | **25–40** | Coprocessor still too heavy for 60 |
-
-:::tip v2 makes Phase 4 optional for most SNES games
-With the ESP32-S3-MINI-1 handling all audio natively (running the same Xtensa LX7 assembly from Phase 4.1), the biggest SNES bottleneck (48% of frame time) is eliminated at the hardware level. Standard SNES games reach 55–60 FPS **without any assembly or architectural optimization** on the main chip. Phase 4 becomes a bonus for pushing complex titles to a stable 60.
-:::
-
-#### v2 Implementation Roadmap (5 days)
-
-| Step | Task | Days | Details |
-|:---|:---|---:|:---|
-| **5.1** | Circuit design + PCB | 1 | Add ESP32-S3-MINI-1-N8 footprint to KiCad. Only 2 decoupling caps needed (no crystal, no flash). Route 4 SPI traces + 3 I2S traces to PAM8403. Simpler than RP2040 (3 components vs 7). |
-| **5.2** | SPI communication protocol | 1 | Use `spi_master` on main ESP32 and `spi_slave` on MINI-1 — both from ESP-IDF. Same API, same DMA engine. Protocol: `MODE_SET` + `PCM_DATA` + `SPC_PORT_WRITE`. Can start from ESP-IDF SPI slave example. |
-| **5.3** | Passthrough firmware | 0.5 | Copy `audio.c` from Phase 1 to the coprocessor project. Replace `i2s_write()` source from local buffer to SPI-received buffer. Same `i2s_std` driver, same config, same sample format. |
-| **5.4** | SPC700 native firmware | 0.5 | Copy Phase 4.1 assembly files (`.S`) + SPC700 C emulation code to coprocessor project. Compile with `idf.py set-target esp32s3 && idf.py build`. The Xtensa assembly runs identically — same opcodes (`MULL`, `MIN`, `MAX`, `LOOP`), same register layout, same instruction timing. No porting needed. |
-| **5.5** | Main ESP32 integration | 1 | Replace I2S audio output in Retro-Go with SPI transmit to coprocessor. Add `MODE_SET` command at emulator launch. The emulator code doesn't change — only the audio output path switches from local I2S to SPI. |
-| **5.6** | Testing + latency tuning | 1 | Same `idf.py monitor` for both chips. Same serial log format. Same profiling APIs (`esp_timer_get_time()`). Can test both chips simultaneously with two USB cables. |
+**If more headroom is ever needed**, the only hardware change that moves
+frame rates is a faster main MCU, for example the ESP32-P4 (dual RISC-V at
+400 MHz; it has no radio, so Wi-Fi would need a companion chip). An audio
+coprocessor does not.

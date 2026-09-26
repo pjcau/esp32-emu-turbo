@@ -124,7 +124,7 @@ second core (the Kart/Metroid lever). Details and every measurement:
 [`website/docs/software/snes-optimization.md`](website/docs/software/snes-optimization.md).
 
 ### Phase 5 — Final Version (v2)
-- Respin with the v2 backlog (R37/R38 + silkscreen) and the audio coprocessor sheet
+- Respin with the first-article backlog (R37 + silkscreen) and an I2S amplifier in place of the PDM audio chain (no audio coprocessor — the second ESP32-S3 core covers it)
 - 3D-printed enclosure
 - Final assembly
 

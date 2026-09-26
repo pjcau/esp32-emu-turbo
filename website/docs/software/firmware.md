@@ -354,7 +354,7 @@ the old code (and, without the console, block the host's USB writes).
 Super Boss Gaiden (SNES homebrew) hangs snes9x and is not usable as a
 benchmark; Super Mario Kart (Mode 7) behaves like Super Mario World.
 
-For SNES-specific optimization (Phase 4) and v2 hardware audio coprocessor (Phase 5), see [SNES Optimization](snes-optimization).
+For SNES-specific optimization (Phase 4) and why audio stays on the main chip instead of a coprocessor, see [SNES Optimization](snes-optimization#audio-no-coprocessor).
 
 ---
 

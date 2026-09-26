@@ -61,8 +61,7 @@ for the simulator method.
 | **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done — runs on the first article, NES at 60 fps (2026-09-12) | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
 | **Phase 3** | All Emulators at Full Speed | 🔄 In progress — NES measured 60 fps; other 8-bit/16-bit cores still to run | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
 | **Phase 4** | SNES Optimization (measured 75–85% → 60 FPS) | 📋 Next — baseline measured, bottleneck = PPU renderer | [SNES Optimization](/docs/software/snes-optimization) |
-| **Phase 5** | v2 Audio Coprocessor (ESP32-S3-MINI-1) | 📋 Planned | [SNES Optimization](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor) |
-| **Phase 6** | Firmware update from SD card (cable-free flashing) | 🗓️ Future | [below](#future--firmware-update-from-sd-card) |
+| **Phase 5** | Firmware update from SD card (cable-free flashing) | 🗓️ Future | [below](#future--firmware-update-from-sd-card) |
 
 
 ### Future — firmware update from SD card

@@ -351,43 +351,6 @@ make export-gerbers
 - Reduced critical violations from **186 → 10** borderline clearance issues (0.032-0.085mm vs 0.09mm JLCPCB min)
 - Fixed **8 unconnected items** in power routing (VBUS, +5V, +3V3, BAT+, LX nets)
 
-## v2 PCB — Audio Coprocessor
-
-The v2 revision adds an **ESP32-S3-MINI-1-N8** audio coprocessor to the bottom side of the PCB. See [Phase 5 — Software Architecture](/docs/software/snes-optimization#phase-5--v2-hardware-audio-coprocessor) for the full rationale.
-
-### v2 Component Placement
-
-| Ref     | Component          | Side          | Location                 | Notes                  |
-| ------- | ------------------ | ------------- | ------------------------ | ---------------------- |
-| **U7**  | ESP32-S3-MINI-1-N8 | B.Cu (bottom) | Near PAM8403 (left area) | SPI slave + I2S output |
-| C34,C35 | 100nF 0805         | B.Cu (bottom) | Adjacent to U7           | Decoupling (C1–C33 are taken on v1 — C32/C33 are the SW16 respin's gate and wake caps) |
-
-### v2 Routing Changes
-
-| Connection           | v1                    | v2                     |
-| -------------------- | --------------------- | ---------------------- |
-| GPIO 15 (main ESP32) | unused (I2S_BCLK reservation retired — PDM needs only DOUT) | SPI_CLK → U7 (MINI-1)  |
-| GPIO 16 (main ESP32) | unused (I2S_LRCK reservation retired) | SPI_MOSI → U7 (MINI-1) |
-| GPIO 17 (main ESP32) | I2S_DOUT → PAM8403    | SPI_MISO ← U7 (MINI-1) |
-| GPIO 20 (main ESP32) | USB_D+ (native USB)   | SPI_CS → U7 (MINI-1)   |
-| U7 GPIO 15           | —                     | I2S_BCLK → PAM8403     |
-| U7 GPIO 16           | —                     | I2S_LRCLK → PAM8403    |
-| U7 GPIO 17           | —                     | I2S_DOUT → PAM8403     |
-
-The PAM8403 audio amplifier input changes from the main ESP32-S3 to the MINI-1 coprocessor. The I2S bus traces from U7 to U5 (PAM8403) are short and direct since both are on the bottom side in the left area.
-
-### v2 Schematic Architecture
-
-| Sheet | File                             | Components                          |
-| ----- | -------------------------------- | ----------------------------------- |
-| Root  | `esp32-emu-turbo.kicad_sch`      | 7 sheet references                  |
-| 1–6   | (same as v1)                     | (same as v1)                        |
-| **7** | `07-audio-coprocessor.kicad_sch` | **ESP32-S3-MINI-1-N8 + decoupling** |
-
-v2 Total: **94 component references on the board**, **88 assembled by JLCPCB**.
-
----
-
 ## Next Steps
 
 ### v1 (current)
@@ -398,10 +361,8 @@ v2 Total: **94 component references on the board**, **88 assembled by JLCPCB**.
 4. Buy off-board components: bare LCD panel (40P FPC), LiPo battery, speaker (see table above)
 5. Manual assembly: plug battery into J3, insert 40-pin FPC into J4, solder speaker wires
 
-### v2 (audio coprocessor)
+### Next revision (v4)
 
-1. Add ESP32-S3-MINI-1-N8 to KiCad schematic (Sheet 8) and PCB layout
-2. Re-route I2S traces from U7 to U5 (PAM8403), SPI traces from U1 to U7
-3. Re-export Gerbers, BOM, and CPL for JLCPCB
-4. Order v2 PCBs with 88 assembled components
-5. Flash coprocessor firmware via separate USB connection or SPI bootloader
+1. Apply the first-article backlog: R37 top-contact J4, J3 "+" and SPK silkscreen
+2. Replace the PDM audio chain (GPIO 17 → R38 RC filter → PAM8403) with an I2S class-D amplifier with integrated DAC — see [why audio stays on the main chip](/docs/software/snes-optimization#audio-no-coprocessor)
+3. Re-export Gerbers, BOM and CPL for JLCPCB
