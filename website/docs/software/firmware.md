@@ -251,6 +251,35 @@ Custom driver replacing Retro-Go's SPI-based `ili9341.h` with 8-bit 8080 paralle
 
 The driver uses `esp_lcd_panel_io_tx_param` for commands (CASET/RASET) and `esp_lcd_panel_io_tx_color` for async DMA pixel transfers. A completion callback recycles buffers to the pool, providing natural backpressure without explicit sync.
 
+### Launcher art for new systems
+
+Every launcher tab shows three images from `retro-go/themes/default/`,
+named after the tab's short name: `logo_<tab>.png` (46×50),
+`banner_<tab>.png` (272×24, magenta `0xF81F` = transparent) and
+`background_<tab>.png` (320×240). Systems the upstream theme has no art for
+take theirs from **[es-theme-gbz35](https://github.com/rxbrad/es-theme-gbz35)**
+by rxbrad, the EmulationStation theme retro-go already credits for its
+backgrounds (its art in turn comes from the Carbon, Spare and SimpleBigArt
+themes; the repository ships no licence file, the project is
+non-commercial).
+
+`retro-go/tools/import_gbz35_art.py` does the conversion from the theme's
+originals: `background.png` downscaled, the `system.svg` logo rendered with a
+headless Chromium into the banner, and the system icon of the background
+turned into a light logo card. It only writes the images that are missing.
+
+```bash
+git clone --depth 1 https://github.com/rxbrad/es-theme-gbz35.git /tmp/gbz35
+cd retro-go
+python3 tools/import_gbz35_art.py /tmp/gbz35 <path-to>/chrome-headless-shell
+python3 tools/gen_images.py      # re-embed themes/default/*.png in launcher/main/images.c
+```
+
+A new system is one line in the script's `SYSTEMS` table (tab short name →
+theme folder). Imported so far: Arcade (MAME), Duke Nukem 3D (the theme's
+`pc` art), SG-1000, Atari 2600, and the missing pieces of GBA, MSX and Neo Geo
+Pocket.
+
 ---
 
 ## Phase 3 — All Emulators at Full Speed
