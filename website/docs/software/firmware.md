@@ -325,7 +325,7 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.3 | gnuboy (GBC) | Space Invaders / ucity | 60 fps | ✅ 60 fps, BUSY 53% / 35%, 30 drawn |
 | 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 37%, 60 drawn |
 | 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 43%, 60 drawn |
-| 3.6 | pce-go (PCE) | Reflectron | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn (intro text screen) |
+| 3.6 | pce-go (PCE) | Reflectron / Street Fighter II' CE (2.5 MB HuCard) | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn; SF2' CE 60 fps, BUSY 33-43% (2026-09-26). Audio moved from 22050 to 32000 Hz: it crackled |
 | 3.7 | handy (Lynx) | — | 60 fps | no ROM on the card yet |
 | 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, **30 drawn** — YM2612 synthesis moved to core 1 (was 20 drawn, BUSY 93% with the FM chip on core 0) |
 | 3.9 | gw-emulator (G&W) | — | 60 fps | still untested (2026-09-26): the card needs a `.gw` ROM made with LCD-Game-Shrinker; the `.mgw` tried is a Tomytronic simulator package. A wrong file now shows a message instead of an assert/reboot |
@@ -335,6 +335,14 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | 🟡 2026-09-26: boots to the menus (80–90 fps). Fixed: an ODROID-GO audio conversion that doubled the buffer and overwrote FatFs (crash at the first file access), and START reaching the game as Insert (keypad aliases in `SDL.h`). Open: menu graphics missing/cut along a slanted line — the game drew into the surface being sent to the panel; the double-buffer fix is flashed but not verified yet |
 | 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ 8-bit boards at native speed; 1943 60 emulated / ~25 drawn; 68000 boards 45–58 emulated — see [Arcade (MAME)](../next-steps/arcade) |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
+
+**Audio sample rate rule (2026-09-26): every app runs its audio at 32000 Hz.**
+The PDM sink (`drivers/audio/pdm.c`, DAC line mode) derives its clocks from
+`sample_rate / 100`, and at 22050 Hz the output was wrong in two apps: in
+mame-go the music ignored the volume setting (loud at volume 5, while the
+launcher splash at the same volume was quiet), in pce-go it crackled. Both
+were fixed by moving to 32000 Hz, where every other core already ran. A new
+core must use 32000 too (or verify its rate on the speaker first).
 
 The non-SNES cores run with retro-go's default frameskip 1 (every other
 frame drawn) and 30-55% CPU, so they have room for frameskip 0 once the

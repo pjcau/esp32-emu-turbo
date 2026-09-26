@@ -15,7 +15,7 @@ upload to the card without pulling it:
 | `snes/` | snes9x (retro-core) | .sfc .smc | 60 fps ✅ (seven bench scenes) |
 | `gb/`, `gbc/` | gnuboy (retro-core) | .gb .gbc | 60 fps ✅ |
 | `sms/`, `gg/` | smsplus (retro-core) | .sms .gg | 60 fps ✅ |
-| `pce/` | pce-go (retro-core) | .pce | 60 fps ✅ |
+| `pce/` | pce-go (retro-core) | .pce .zip (PC Engine and TurboGrafx-16 both go here) | 60 fps ✅ (Reflectron; Street Fighter II' CE 2026-09-26, audio at 32 kHz) |
 | `md/` | gwenesis | .bin .md .gen | 60 fps ✅ (YM2612 on core 1) — folder is `md/`, not `gen/`: the launcher only scans `/roms/<tab short name>` |
 | `lnx/` | handy (retro-core) | .lnx | untested — drop a ROM here (folder is `lnx/`, not `lynx/`) |
 | `gw/` | gw-emulator (retro-core) | .gw | untested — needs a `.gw` made with LCD-Game-Shrinker (MAME handheld ROM + artwork); `.mgw` Tomytronic packages are not G&W ROMs |
