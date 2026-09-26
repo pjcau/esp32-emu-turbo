@@ -328,11 +328,12 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.6 | pce-go (PCE) | Reflectron | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn (intro text screen) |
 | 3.7 | handy (Lynx) | — | 60 fps | no ROM on the card yet |
 | 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, **30 drawn** — YM2612 synthesis moved to core 1 (was 20 drawn, BUSY 93% with the FM chip on core 0) |
-| 3.9 | gw-emulator (G&W) | — | 60 fps | no ROM on the card yet |
+| 3.9 | gw-emulator (G&W) | — | 60 fps | still untested (2026-09-26): the card needs a `.gw` ROM made with LCD-Game-Shrinker; the `.mgw` tried is a Tomytronic simulator package. A wrong file now shows a message instead of an assert/reboot |
 | 3.10 | smsplus (SG-1000) | — | 60 fps | enabled 2026-09-14, no ROM yet |
 | 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | — | 60 fps | ported from libretro RACE 2026-09-14, untested |
-| 3.12 | Stella (Atari 2600, `retro-extra`) | — | 60 fps | ported from stella-odroid-go 2026-09-14, untested |
-| 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ported from the upstream `duke3d` branch 2026-09-14, untested |
+| 3.12 | Stella (Atari 2600, `retro-extra`) | Halo 2600 | 60 fps | ✅ 60 fps, BUSY 55%, 30 drawn (2026-09-26) |
+| 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | 🟡 2026-09-26: boots to the menus (80–90 fps). Fixed: an ODROID-GO audio conversion that doubled the buffer and overwrote FatFs (crash at the first file access), and START reaching the game as Insert (keypad aliases in `SDL.h`). Open: menu graphics missing/cut along a slanted line — the game drew into the surface being sent to the panel; the double-buffer fix is flashed but not verified yet |
+| 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ 8-bit boards at native speed; 1943 60 emulated / ~25 drawn; 68000 boards 45–58 emulated — see [Arcade (MAME)](../next-steps/arcade) |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 
 The non-SNES cores run with retro-go's default frameskip 1 (every other
@@ -352,6 +353,11 @@ plus its `.CON`/`.RTS`/`.DMO` files), run `scripts/emu_check.py` with the
 webcam, then fix what breaks — expected suspects: button mapping, audio
 sample rates (NGP 22 kHz, 2600 31.4 kHz, Duke 11 kHz mono→stereo), Duke3D
 file paths (`Engine/cache.c game_dir`), Stella frame height per ROM.
+
+**Partition table (2026-09-26).** Since the arcade app: launcher 1.125 MB
+(it had filled 1 MB), mame-go 2 MB, and a 4 MB `mamerom` data partition
+where mame-go keeps big read-only ROM regions memory-mapped (arcade page).
+The image is 14.8 MB; a board flashed before needs the full image again.
 
 **Partition table (2026-09-14).** `rg_tool.py` now lays out launcher 1 MB,
 retro-core 1.5 MB, prboom-go 768 KB, gwenesis 1 MB, fmsx 576 KB,

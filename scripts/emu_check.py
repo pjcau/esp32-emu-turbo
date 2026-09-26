@@ -4,6 +4,8 @@
 For each ROM: launch, press START twice (title screens), then average the
 rg_system stats line ("BUSY:xx%, FPS:yy (S:skipped R:rendered+partial)")
 for a few seconds. Prints a table; optional webcam snapshot per game.
+
+    emu_check.py [--snap] [--only=<app>]   e.g. --only=arcade
 """
 import os
 import re
@@ -35,8 +37,17 @@ GAMES = [
     ("sg1", "retro-core", None),
     ("ngp", "retro-extra", None),
     ("a26", "retro-extra", None),
-    ("duke3d", "duke3d-go", None),
+    ("duke3d", "duke3d-go", "/sd/roms/duke3d/DUKE3D.GRP"),  # the folder also holds .CON/.RTS/.DMO
+    ("arcade", "mame-go", "/sd/roms/arcade/pacman.zip"),
+    ("arcade", "mame-go", "/sd/roms/arcade/robby.zip"),
+    ("arcade", "mame-go", "/sd/roms/arcade/1942a.zip"),
+    ("arcade", "mame-go", "/sd/roms/arcade/1943.zip"),
+    ("arcade", "mame-go", "/sd/roms/arcade/targ.zip"),
+    ("arcade", "mame-go", "/sd/roms/arcade/circus.zip"),
 ]
+# Keys pressed after boot to leave the title screens (default: START twice).
+# Arcade games need a coin (SELECT) before START.
+START_KEYS = {"arcade": ["select", "start"]}
 FOLDERS = {}  # app name -> card folder when they differ (launcher scans /sd/roms/<app>)
 
 
@@ -56,11 +67,17 @@ def stats(board, seconds):
 def main():
     b = Board(os.environ.get("ESP_PORT", "/dev/ttyACM0"))
     snap = "--snap" in sys.argv
+    # bench rule: keep the speaker quiet while the checks run
+    b.send("volume 5", wait=r"^CTL volume", timeout=3, echo=False)
     print(f"{'app':5} {'rom':52} {'fps':>5} {'busy':>5} {'drawn':>6}")
+    only = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")]
     for app, part, rom in GAMES:
+        if only and app not in only:
+            continue
         if rom is None:
             folder = f"/sd/roms/{FOLDERS.get(app, app)}"
-            files = [l.split(None, 3)[3] for l in b.send(f"ls {folder}", wait=r"^CTL ls (done|failed)", timeout=10, echo=False)
+            # "CTL ls f <size> <name>" (the name may contain spaces)
+            files = [l.split(None, 4)[4] for l in b.send(f"ls {folder}", wait=r"^CTL ls (done|failed)", timeout=10, echo=False)
                      if l.startswith("CTL ls f")]
             if not files:
                 print(f"{app:5} {'(no ROM in ' + folder + ')':52}")
@@ -69,8 +86,8 @@ def main():
         b.send(f"launch {part} {app} {rom}", timeout=3, echo=False)
         b.wait_boot()
         time.sleep(8)
-        for _ in range(2):
-            b.key("start", 200)
+        for key in START_KEYS.get(app, ["start", "start"]):
+            b.key(key, 200)
             time.sleep(3)
         r = stats(b, 6)
         name = os.path.basename(rom)[:52]
