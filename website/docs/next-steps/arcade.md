@@ -138,3 +138,13 @@ decoded build:
 
 Free PSRAM while playing: Blood Bros. 1.8 MB, Aero Fighters 2.6 MB. Speed
 is the next limit (the emulation runs at 75–95 %), not memory.
+
+**Speed, next step (2026-09-26, measured on the PC build, board result
+pending):** both games spend a large share of the 68000's time in a loop
+that polls a vblank flag (Aero Fighters `0B84: cmpi.b #1,$FF8055 / bcs`,
+about 4000 passes per frame; Blood Bros. `0988: btst #7,$8004C / beq`). A
+MAME-style speed-up handler now stops the 68000 until the interrupt
+instead: the 68000's instruction count roughly halves (Aero Fighters 42 →
+20 million instruction fetches over 1800 frames), with identical frames.
+The Z80 sound CPU has no dominant idle loop. Remaining costs: YM2610 FM
+synthesis, the 8 → 16 bpp screen conversion, the 68000 itself.
