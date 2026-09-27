@@ -15,10 +15,11 @@ writes retro-go/mame-go/components/mame2000/src/drivers/neogeo_modern_roms.inc
 by drivers/neogeo.c, then regenerates mamego_driver.c.
 
 Skipped on purpose, with the reason printed: encrypted sets (the 0.37b5
-driver has no CMC/PCM2/SMA decryption), programs over 3.5 MB (no room on
-the board), 512 KB sound CPU ROMs, and any construct the translation does
-not know (32-bit loads, fills, copies, BIOS overrides). Only parent sets:
-clones are variants of the same game and would only grow the binary.
+driver has no CMC/PCM2/SMA decryption), programs over 5 MB (no room on
+the board: 1 MB fixed + 4 MB banked), 512 KB sound CPU ROMs, and any construct the translation does
+not know (32-bit loads, fills, copies, BIOS overrides). Parent sets, then
+the clones of a translated parent (the zip people have is often a clone:
+another program revision), ~500 bytes of binary each.
 """
 import os
 import re
@@ -32,7 +33,7 @@ DRIVER = os.path.join(COMP, "src", "drivers", "neogeo.c")
 OUT_ROMS = os.path.join(COMP, "src", "drivers", "neogeo_modern_roms.inc")
 OUT_GAMES = os.path.join(COMP, "src", "drivers", "neogeo_modern_games.inc")
 MAME_URL = "https://raw.githubusercontent.com/mamedev/mame/master/src/mame/snk/neogeo.cpp"
-MAX_PROGRAM = 0x380000          # program ROM limit on the board (flash partition, PSRAM)
+MAX_PROGRAM = 0x500000          # 1 MB in PSRAM + 4 MB banked part in the flash partition
 GFX2_MAX = 0x1000000            # the 0.37b5 driver splits sprites over GFX2 + GFX3 at 16 MB
 
 CRC = r'CRC\(\s*([0-9a-fA-F]{8})\s*\)'
@@ -72,6 +73,8 @@ def translate(name, body):
             elif tag == "cslot1:sprites":
                 sprites_size = size
                 out.append("@SPRITES@")
+            elif tag == "mcu":
+                pass    # link MCU (Thrash Rally, League Bowling): never dumped, not needed to play
             else:
                 raise Skip("region " + tag)
             continue
@@ -100,6 +103,8 @@ def translate(name, body):
         m = re.match(r'ROM_LOAD16_BYTE\(\s*"([^"]+)"\s*,\s*(0x[0-9a-fA-F]+)\s*,\s*(0x[0-9a-fA-F]+)\s*,\s*' + CRC, l)
         if m and region == "cslot1:sprites":
             sprites.append((m.group(1), num(m.group(2)), num(m.group(3)), m.group(4).lower()))
+            continue
+        if region == "mcu" and "NO_DUMP" in l:
             continue
         if l.startswith("ROM_START") or l.startswith("ROM_END"):
             continue
@@ -148,23 +153,42 @@ def main():
     for m in re.finditer(r'^GAME\(\s*(\d+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,[^"]*"([^"]*)"\s*,\s*"([^"]*)"', text, re.M):
         games[m.group(2)] = (m.group(1), m.group(3), m.group(4), m.group(5))
 
+    def is_game(n):
+        return n in games and games[n][1] == "neogeo"
+
     roms, gamelines, skipped = [], [], {}
-    for m in re.finditer(r'^ROM_START\(\s*(\w+)\s*\)(.*?)^ROM_END', text, re.S | re.M):
-        name, body = m.group(1), m.group(2)
-        if name not in games or games[name][1] != "neogeo":
-            continue                                 # clones and non-games
-        try:
-            rom = translate(name, body)
-        except Skip as e:
-            skipped[name] = str(e)
-            continue
-        year, parent, maker, title = games[name]
-        ours = name + "m" if name in old_names else name
-        parent37 = name if name in old_names else "neogeo"
-        roms.append("ROM_START( %s )\n%s\nROM_END\n" % (ours, rom))
-        gamelines.append('GAME( %s, %s, %s, neogeo, neogeo, neogeo, %s, "%s", "%s (modern set)" )'
-                         % (year, ours, parent37, old_flags.get(name, "ROT0"),
-                            maker.replace('"', "'"), title.replace('"', "'")))
+    bodies = {m.group(1): m.group(2) for m in
+              re.finditer(r'^ROM_START\(\s*(\w+)\s*\)(.*?)^ROM_END', text, re.S | re.M)}
+    ours_of = lambda n: n + "m" if n in old_names else n
+    done = set()
+    # parents first, then clones of a parent that was translated (the zip a
+    # user has is often a clone: a different program revision of the game)
+    for pass_ in ("parent", "clone"):
+        for name, body in bodies.items():
+            if name not in games:
+                continue
+            parent = games[name][1]
+            if pass_ == "parent" and parent != "neogeo":
+                continue
+            if pass_ == "clone" and not (is_game(parent) and parent in done):
+                continue
+            try:
+                rom = translate(name, body)
+            except Skip as e:
+                skipped[name] = str(e)
+                continue
+            done.add(name)
+            year, _, maker, title = games[name]
+            ours = ours_of(name)
+            if pass_ == "clone":
+                parent37 = ours_of(parent)
+            else:
+                parent37 = name if name in old_names else "neogeo"
+            flags = old_flags.get(name, old_flags.get(parent, "ROT0"))
+            roms.append("ROM_START( %s )\n%s\nROM_END\n" % (ours, rom))
+            gamelines.append('GAME( %s, %s, %s, neogeo, neogeo, neogeo, %s, "%s", "%s (modern set)" )'
+                             % (year, ours, parent37, flags,
+                                maker.replace('"', "'"), title.replace('"', "'")))
 
     head = "/* Generated by scripts/neogeo_modern_sets.py from current MAME's neogeo.cpp: do not edit. */\n"
     open(OUT_ROMS, "w").write(head + "\n".join(roms))

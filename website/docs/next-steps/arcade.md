@@ -180,6 +180,7 @@ below). What made it fit:
 | Samples up to 3.5 MB | `mamerom` flash partition, streamed there while loading |
 | Samples above 3.5 MB | `<game>_snd<n>.pcm` on the SD, 512 KB cache of 4 KB pages read by the YM2610 (~130 page reads per 600 frames in play) |
 | Program ≥ 1 MB | the flash partition when the samples left it free (pointers rebased after the move) |
+| Program of 5 MB (Shock Troopers, KOF '97, Last Blade) | first MB (fixed at 0x000000) in PSRAM, the 4 MB banked part in the flash partition; the samples are then always paged from the SD |
 
 The conversion reads the zip 64 KB at a time (8 MB ROM files never sit in
 memory). On the board it is slow the first time (Metal Slug 2: ~5 min); on
@@ -321,13 +322,36 @@ per-game speed-up. To be measured again.
 | Neo Drift Out | `neodriftm` | 57.8 |
 | Metal Slug 2 | `mslug2m` | 57.0 (42 in play) |
 | Metal Slug | `mslugm` | 53.8 |
-| Puzzle Bobble 2 | `pbobbl2nm` | 40.8 (to investigate) |
+| Puzzle Bobble 2 | `pbobbl2nm` | 40.8 (real 68000 load, see below) |
 
-Not supported yet: Shock Troopers (5 MB program), Thrash Rally (MCU).
+**Puzzle Bobble 2 is slow because it works harder, not because of a bug.**
+On the PC (gprof + a 68000 PC histogram, `-DPCHIST` builds only) it runs 6x
+the 68000 instructions of Sonic Wings 2 and draws 2.5x the sprite strips.
+There is no wait loop to skip: the time is spread over 0x2460–0x2c40 (game
+logic) and a random-number routine at 0x25da, and MAME 0.37b5 found no
+speed-up for this game either. Only the general work helps (sprite renderer
+on core 1, a faster 68000).
+
+**Shock Troopers and Thrash Rally (2026-09-27, evening, PC only so far):**
+- 5 MB programs are split: 1 MB in PSRAM, 4 MB in flash (the partition is
+  exactly 4 MB, so their samples always come from the SD). Shock Troopers
+  (set 2) reaches the route select; frames identical to the all-in-RAM
+  build for 6000 frames; save/load 200/200. This unlocks 9 sets: Shock
+  Troopers 1 and 2, KOF '97, The Last Blade 1 and 2, Metal Slug X, Real
+  Bout Fatal Fury 2 and Special, Samurai Shodown IV. On the board PSRAM is
+  tighter (1.3 MB more than Metal Slug 2 in use): to be checked.
+- Thrash Rally never needed its MCU: it only drives the link between two
+  cabinets, was never dumped, and current MAME does not emulate it either.
+  The generator now drops that region; the game reaches the tutorial.
+
 **Modern ROM sets:** `scripts/neogeo_modern_sets.py` translates current
-MAME's `neogeo.cpp` into 0.37b5 definitions (109 parent sets; encrypted
-sets and programs over 3.5 MB skipped), so any modern zip loads without a
-hand-written definition.
+MAME's `neogeo.cpp` into 0.37b5 definitions (166 sets: the parents, then
+the clones of a translated parent, since the zip people have is often a
+clone such as `shocktroa`; encrypted sets and programs over 5 MB skipped),
+so any modern zip loads without a hand-written definition. The picker looks
+at the whole family of the zip's name (`shocktro` → `shocktrom` →
+`shocktroa`). mame-go's partition is nearly full (1.56 of 1.57 MB) after
+this.
 
 **Ready to try on the board (54 sets, MAME 0.37b5 names):** 2020bb, 2020bbh,
 androdun, bjourney, bstars, bstars2, burningf, burningh, crsword, cyberlip,
