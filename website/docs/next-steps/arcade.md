@@ -206,12 +206,13 @@ that do not include it (Puzzle Bobble 2). Art: rxbrad/es-theme-gbz35.
   | YM2610 synthesis on core 1 (register-write queue, one frame of latency) | 28.6 | 35 |
   | generic 68000 idle-loop skip | 25.9 | 39 |
   | generic Z80 idle-loop skip | 25.3 | 39 |
+  | palette lookup + display copy on core 1 (second screen bitmap) | 23.6 | 42 |
 
   All generic for the Neo Geo (no per-game speed-ups): a short backward loop
   that repeats with the same registers and the same RAM writes, and writes
   nothing to I/O, gives away the rest of its timeslice. Left on core 0:
-  68000 10.8, video 4.7, Z80 3.8, palette blit 2.2, frame copy 1.5 ms.
-  Next: the video renderer on core 1 (would bring core 0 near 17.5 ms).
+  68000 12, video 5, Z80 4, other 2.2 ms. Next: the sprite renderer on
+  core 1 (needs the per-frame palette recalculation moved with it).
 - `init_mgd2` sets reorder their sprites in memory and are not paged yet.
 - Encrypted sets (KOF '99 and later, Metal Slug 3+) need decryption this
   MAME version does not have.
