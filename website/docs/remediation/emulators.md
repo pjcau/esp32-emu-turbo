@@ -6,25 +6,37 @@ sidebar_position: 2
 
 # Emulators
 
-## Cores built but never measured
+## Cores measured on the board (2026-09-26/27)
 
-These are compiled into the firmware but have not been measured on the
-board yet.
+The cores that had never run on the board have been measured; see the
+[firmware table](/docs/software/firmware#phase-3--all-emulators-at-full-speed)
+for the full list.
 
-| Core | What is missing |
-|:---|:---|
-| Atari 2600 (Stella) | test ROM ready in `test-roms/a26/` (Halo 2600), not yet on the SD card |
-| Duke Nukem 3D | shareware data ready in `test-roms/duke3d/`, not yet on the SD card |
-| Atari Lynx (Handy) | a free homebrew ROM (Running Knight) |
-| Game & Watch | `.gw` files come from Nintendo's ROMs and artwork; no free source |
-| MSX (fMSX) | boots to a black screen: the BIOS files are missing from `/sd/bios/msx/` |
+| Core | Result | What it took |
+|:---|:---|:---|
+| Atari 2600 (Stella) | ✅ 60 fps, 55% busy (Halo 2600) | only the ROM on the card |
+| Duke Nukem 3D | ✅ playable, 48–53 fps in E1L1, menus 73 fps | four fixes: an ODROID-GO audio conversion overwrote FatFs (crash), keypad names aliased RETURN (no menu input), the game drew into the frame being sent (broken menus), a non-volatile spin-wait hung the level start; audio moved to 32 kHz |
+| MSX (fMSX) | ✅ 60 fps, 62% busy (Pac-Man `.mx1`) | the free **C-BIOS** (BSD licence, text on the card) as `MSX.ROM` / `MSX2.ROM` / `MSX2EXT.ROM` in `/sd/retro-go/bios/msx/`; fMSX now warns only for `MSX.ROM` |
+| Atari Lynx (Handy) | still untested | the downloaded `.7z` files were Cloudflare "Just a moment..." pages, not ROMs |
+| Game & Watch | still untested | needs a `.gw` made with LCD-Game-Shrinker; the `.mgw` tried is a Tomytronic simulator package. A wrong file now shows a message instead of an assert |
 
 ## Known bugs
 
 | Bug | Measured | Next step |
 |:---|:---|:---|
-| **DOOM memory leak** | 35 fps, but free heap falls from 7.2 to 2.0 MB in 20 s | find the leak before it runs out of memory |
+| **DOOM memory leak** | 35 fps (full speed), but the free heap keeps falling during play | find the leak before it runs out of memory |
 | **Super Mario Kart at 57 fps** | the DSP-1 cartridge chip costs 11 ms per frame | CPU-side work on the DSP-1 emulation |
+| **Neo Geo Pocket near the limit** | 60 fps with ~29 drawn, CPU 93–99% (Metal Slug) | profile RACE; the sound chip already runs at 16 kHz |
+
+## Audio rates (2026-09-27)
+
+Every app now feeds the speaker at 32000 Hz (Atari 2600 at 31400): the PDM
+sink derives its clocks from rate / 100 and other rates crackled or
+ignored the volume. Moved today: DOOM (mix at 16 kHz doubled to 32 kHz,
+sfx interpolated — mixing its OPL music at 32 kHz starved the sound task),
+Neo Geo Pocket (chip at 16 kHz, doubled), Genesis (26633 → 32000,
+resampled per frame), Duke Nukem 3D (mix at 16 kHz, doubled). See
+[Audio](audio).
 
 ## Smoother picture on the cores that already reach 60
 
@@ -33,7 +45,8 @@ frame.
 
 - **Frameskip 0 on the light cores.** NES, Game Boy, GBC and PC Engine
   draw 30 fps while the CPU is 30–55% busy, so there is room to draw all
-  60.
+  60. It also moves the display-synchronous audio buzz from 30 Hz knocks
+  to a 60 Hz hum, as on SMS ([Audio](audio)).
 - **SNES audio (S-DSP) on the second core.** Frees a slice of core 0 for
   the renderer, the same move that took the Genesis from 20 to 30 drawn
   fps.

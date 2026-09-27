@@ -18,6 +18,7 @@ press buttons and read the SNES_PROF counters without touching the board.
     board_ctl.py resume1 snes "/sd/roms/snes/x.sfc"  # same, slot 1
     board_ctl.py capture 10             # 10 s of PROF lines + averages
     board_ctl.py volume 5               # set (or with no value read) the volume, 0-100
+    board_ctl.py cat /sd/crash.log      # print a text file from the card
     board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
     board_ctl.py put ~/roms/x.sfc "/sd/roms/snes/x.sfc"   # upload (base64 over the console; from the launcher)
     board_ctl.py rm "/sd/roms/snes/x.sfc"
@@ -195,6 +196,9 @@ def main():
         sys.exit(0 if b.put(os.path.expanduser(a.args[0]), " ".join(a.args[1:])) else 1)
     elif a.cmd == "rm":
         b.send("rm " + " ".join(a.args), wait=r"^CTL rm", timeout=5)
+    elif a.cmd == "cat":
+        for l in b.send("cat " + " ".join(a.args), wait=r"^CTL cat (done|failed)", timeout=10, echo=False):
+            print(l[8:] if l.startswith("CTL cat ") else l)
     elif a.cmd == "volume":
         b.send("volume " + (a.args[0] if a.args else ""), wait=r"^CTL volume", timeout=3)
     elif a.cmd == "raw":

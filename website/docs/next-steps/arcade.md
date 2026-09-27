@@ -90,8 +90,7 @@ changed in the MAME code is listed in
 | Targ, Spectar, Side Trak, Hard Hat | Exidy, 6502 | ✅ 57 fps (native rate) | free ROMs, mamedev.org |
 | Circus, Crash, Rip Cord, Robot Bowl | Exidy Circus, 6502 | ✅ 57 fps (native rate) | Circus was 40 fps: overlay colours 33022 → 510, same frames |
 | Starfire, Fire One | Exidy, Z80 | ✅ 57 fps | free ROMs |
-| Fax | Exidy, 6502 | ❌ stuck on its EPROM test | the mamedev.org dump is a different ROM set from 0.37b5 |
-| Victory | Exidy, Z80 + 6502 | ❌ interrupt self-test fails | 0.37b5 driver |
+| Fax, Victory | Exidy | ❌ removed from the card and `test-roms/` (2026-09-27) | Fax: the mamedev.org dump is a different ROM set from 0.37b5; Victory: interrupt self-test fails with the 0.37b5 driver |
 | Galaga, Donkey Kong (Jr, 3), Galaxian, Moon Cresta, Frogger, Scramble | Namco / Nintendo / Konami | compiled, **not tested** | no ROMs on the card yet |
 
 What the app does besides running the games:
@@ -114,10 +113,10 @@ What the app does besides running the games:
 
 | Game | Hardware | On the board |
 |:---|:---|:---|
-| **Blood Bros.** | 68000 10 MHz + Seibu sound (Z80, YM3812, OKI6295) | ✅ runs: 55–58 emulated fps, ~19 drawn |
-| **Aero Fighters** | 68000 10 MHz + Z80 + YM2610 | ✅ runs: ~45 emulated fps, ~15 drawn (played for a minute, no crash) |
+| **Blood Bros.** | 68000 10 MHz + Seibu sound (Z80, YM3812, OKI6295) | ✅ **60 fps** (full speed) after the idle-loop speed-up, ~20 drawn (was 55–58) |
+| **Aero Fighters** | 68000 10 MHz + Z80 + YM2610 | ✅ 47–57 emulated fps after the speed-up, ~18 drawn (was ~45) |
 | **Out Run** | 2× 68000 12.5 MHz + Z80 + YM2151 + SegaPCM, sprite-scaled road | ❌ beyond the ESP32-S3 |
-| **Sonic Wings 2** | Neo Geo (68000 + Z80 + YM2610), 7 MB zipped + BIOS | ❌ ROMs larger than the 8 MB PSRAM |
+| **Sonic Wings 2** | Neo Geo (68000 + Z80 + YM2610), 7 MB zipped + BIOS | ❌ on this module: runs on the PC build (a "later set" added for the modern zip), CPU cost ~1.2× Aero Fighters, but sprites 8 MB + ADPCM 3 MB need ~11 MB of flash and only 4 MB are free. A 32 MB-flash module (WROOM-2 N32R8V, 1.8 V flash: compatibility to check) would fit it. The Neo Geo driver also decodes sprites in place, so tiles must be converted before the region moves to flash |
 
 The 68000 (MAME's Musashi core) is fast enough; memory was the wall.
 Measured after start-up with everything in PSRAM: Aero Fighters 2.0 MB of
@@ -139,8 +138,8 @@ decoded build:
 Free PSRAM while playing: Blood Bros. 1.8 MB, Aero Fighters 2.6 MB. Speed
 is the next limit (the emulation runs at 75–95 %), not memory.
 
-**Speed, next step (2026-09-26, measured on the PC build, board result
-pending):** both games spend a large share of the 68000's time in a loop
+**Speed (2026-09-26, measured on the board 2026-09-27: Blood Bros. 60,
+Aero Fighters 47–57):** both games spend a large share of the 68000's time in a loop
 that polls a vblank flag (Aero Fighters `0B84: cmpi.b #1,$FF8055 / bcs`,
 about 4000 passes per frame; Blood Bros. `0988: btst #7,$8004C / beq`). A
 MAME-style speed-up handler now stops the 68000 until the interrupt

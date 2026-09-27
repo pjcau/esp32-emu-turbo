@@ -318,22 +318,25 @@ the SNES benchmark scenes and prints a comparison table;
 `scripts/emu_check.py` launches every other core's test ROM and reads the
 `FPS/BUSY` line below.
 
-| Step | Core | Test ROM | Target | Measured (article 0003, 2026-09-14, `emu_check.py`) |
+| Step | Core | Test ROM | Target | Measured (article 0003; `emu_check.py` rerun 2026-09-27) |
 |:---|:---|:---|:---|:---|
-| 3.1 | nofrendo (NES) | Super Mario Bros / owlia | 60 fps | ✅ 60 fps, BUSY 36% / 31%, 30 drawn (frameskip 1) |
+| 3.1 | nofrendo (NES) | Super Mario Bros / owlia | 60 fps | ✅ 60 fps, BUSY 36% / 31%, 30 drawn (frameskip 1) — unchanged 2026-09-27 |
 | 3.2 | gnuboy (GB) | Tetris | 60 fps | ✅ 60 fps, BUSY 34%, 30 drawn |
 | 3.3 | gnuboy (GBC) | Space Invaders / ucity | 60 fps | ✅ 60 fps, BUSY 53% / 35%, 30 drawn |
-| 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 37%, 60 drawn |
-| 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 43%, 60 drawn |
+| 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 35%, 55 drawn |
+| 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 40%, 55 drawn |
 | 3.6 | pce-go (PCE) | Reflectron / Street Fighter II' CE (2.5 MB HuCard) | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn; SF2' CE 60 fps, BUSY 33-43% (2026-09-26). Audio moved from 22050 to 32000 Hz: it crackled |
-| 3.7 | handy (Lynx) | — | 60 fps | no ROM on the card yet |
-| 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 60 fps, **30 drawn** — YM2612 synthesis moved to core 1 (was 20 drawn, BUSY 93% with the FM chip on core 0) |
+| 3.7 | handy (Lynx) | — | 60 fps | still untested: the `.7z` files downloaded were Cloudflare "Just a moment..." pages, not ROMs |
+| 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 59.4 fps, BUSY 94%, 29 drawn — YM2612 synthesis on core 1; audio resampled from 26633 to 32000 Hz (2026-09-27) |
 | 3.9 | gw-emulator (G&W) | — | 60 fps | still untested (2026-09-26): the card needs a `.gw` ROM made with LCD-Game-Shrinker; the `.mgw` tried is a Tomytronic simulator package. A wrong file now shows a message instead of an assert/reboot |
-| 3.10 | smsplus (SG-1000) | — | 60 fps | enabled 2026-09-14, no ROM yet |
-| 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | — | 60 fps | ported from libretro RACE 2026-09-14, untested |
+| 3.10 | smsplus (SG-1000) | GP World | 60 fps | ✅ 60 fps, BUSY 33%, 55 drawn (START is pause: `emu_check` presses none) |
+| 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | Metal Slug 1st Mission | 60 fps | ✅ 60 fps, ~29 drawn, BUSY 93–99%; sound chip at 16 kHz doubled to 32 kHz (2026-09-27) |
 | 3.12 | Stella (Atari 2600, `retro-extra`) | Halo 2600 | 60 fps | ✅ 60 fps, BUSY 55%, 30 drawn (2026-09-26) |
-| 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | 🟡 2026-09-26: boots to the menus (80–90 fps). Fixed: an ODROID-GO audio conversion that doubled the buffer and overwrote FatFs (crash at the first file access), and START reaching the game as Insert (keypad aliases in `SDL.h`). Open: menu graphics missing/cut along a slanted line — the game drew into the surface being sent to the panel; the double-buffer fix is flashed but not verified yet |
-| 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ 8-bit boards at native speed; 1943 60 emulated / ~25 drawn; 68000 boards 45–58 emulated — see [Arcade (MAME)](../next-steps/arcade) |
+| 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ✅ playable 2026-09-27: E1L1 48–53 fps with movement and fire, menus 73 fps, audio 16 kHz mix doubled to 32 kHz. Fixed on the way: FatFs overwritten by an ODROID-GO audio conversion, START arriving as Insert, the frame drawn into the surface being sent (broken menus), a non-volatile spin-wait hanging the level start |
+| 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ Pac-Man, 1942, Robby Roto 60; Exidy/Circus boards 57 (native); 1943 60 emulated / 27 drawn; Blood Bros. 60, Aero Fighters 47–57 after the idle-loop speed-ups — see [Arcade (MAME)](../next-steps/arcade) |
+| 3.15 | fMSX (MSX) | Pac-Man `.mx1` | 60 fps | ✅ 59 fps, BUSY 62%, with the free C-BIOS in `/sd/retro-go/bios/msx/` |
+| 3.16 | prboom-go (DOOM) | Freedoom 1 | 35 fps (engine rate) | ✅ 35 fps, BUSY 100%; mix at 16 kHz doubled to 32 kHz, sfx interpolated; the heap still falls during play (leak open) |
+| — | ColecoVision (smsplus) | Pac-Man | 60 fps | ✅ 60 fps, BUSY 31% (START opens the keypad: `emu_check` presses none) |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 
 **Audio sample rate rule (2026-09-26): every app runs its audio at 32000 Hz.**

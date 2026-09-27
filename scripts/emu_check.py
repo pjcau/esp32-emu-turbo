@@ -47,7 +47,9 @@ GAMES = [
 ]
 # Keys pressed after boot to leave the title screens (default: START twice).
 # Arcade games need a coin (SELECT) before START.
-START_KEYS = {"arcade": ["select", "start"]}
+START_KEYS = {"arcade": ["select", "start"],
+              # Coleco: START opens the on-screen keypad; SG-1000: START is pause
+              "col": [], "sg1": []}
 FOLDERS = {}  # app name -> card folder when they differ (launcher scans /sd/roms/<app>)
 
 
