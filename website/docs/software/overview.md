@@ -51,6 +51,7 @@ test ROMs and fixes are in
 | snes9x + SuperFX | SNES Star Fox | 256x224 | — | ✅ 53–60 emulated fps, 7–10 drawn (GSU on core 1) |
 | prboom-go | DOOM (Freedoom) | 320x200 | — | ✅ 35 fps (engine rate), BUSY 100% |
 | wolf3d-go | Wolfenstein 3D (shareware) | 320x200 | — | ✅ 62 fps, BUSY 34% |
+| opentyrian-go | OpenTyrian (Tyrian 2.1 freeware) | 320x200 | — | ✅ 36 fps (engine rate 35), BUSY ~30% |
 | duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1 |
 | quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ runs, 21–44 fps (mostly 25–35) in the attract demo |
 | handy | Atari Lynx | 160x102 | — | ⏳ untested — no test ROM yet |
@@ -221,6 +222,7 @@ Every core fits inside 480x320 with less than 1.5x scaling, so the 20 MHz
 | [atanisoft/esp_lcd_ili9488](https://github.com/atanisoft/esp_lcd_ili9488) | ILI9488 ESP-IDF driver | Display driver reference |
 | [libretro/snes9x2010](https://github.com/libretro/snes9x2010) | Lightweight snes9x fork | SNES core source |
 | [pcgamer404/retro-go-pro](https://github.com/pcgamer404/retro-go-pro) | Retro-Go fork with PC game ports | Source of our Wolfenstein 3D and Quake apps |
+| [DynaMight1124/retro-go](https://github.com/DynaMight1124/retro-go) | Retro-Go "megapack" fork | Source of our OpenTyrian app |
 
 What the other Retro-Go forks add, and what is worth pulling in:
 [Retro-Go Forks Survey](/docs/software/retro-go-forks-survey).
