@@ -6,28 +6,23 @@ Handheld retro gaming console based on ESP32-S3 — **SNES** (primary) and **NES
 
 Build a portable battery-powered device based on ESP32-S3, capable of loading and playing retro games via SD card, with USB-C charging and an ILI9488 3.95" color LCD display.
 
-## Where the project stands (2026-09-14)
+## Where the project stands (2026-09-27)
 
 - **The first article works.** Board v4.9.0 (article 0003, JLCPCB-assembled) passed
   every bring-up stage on 2026-09-11: USB power, rails, boot, display, SD, audio, all
-  12 buttons, and **battery** — boots from the cell alone, charge-and-play, SW16
-  charge-only, and the C33 wake pulse after the IP5306 light-load shutdown.
-- **Every emulator runs at 60 fps.** NES, GB, GBC, SMS, GG, PC Engine and Genesis
-  measured on the board (`scripts/emu_check.py`); Genesis needed its FM chip moved
-  to the second core.
-- **SNES runs at real speed.** 60 emulated fps on Super Mario World, Zelda ALttP,
-  Mega Man X, Super Metroid and Donkey Kong Country with 19–26 drawn fps; Super
-  Mario Kart at 57 (DSP-1 CPU load). Two days of renderer work, measured on seven
-  save-state scenes — see below.
+  12 buttons, and **battery**.
+- **16 systems run on the board.** NES, GB/GBC, SMS/GG/SG-1000, PC Engine, Genesis,
+  Neo Geo Pocket, Atari 2600, MSX, Colecovision at full speed; SNES at real speed
+  (all but Mario Kart); DOOM at its 35 fps engine rate; Duke Nukem 3D playable
+  (~50 fps in game); arcade via a MAME 0.37 port (Pac-Man, 1942, 1943, Blood Bros.,
+  Aero Fighters).
 - **The board is driven from the host.** `scripts/board_ctl.py` launches ROMs,
-  presses buttons, saves/loads states and reads the profiling counters over the USB
-  console; a webcam checks the picture. A Debug HUD (options menu) shows FPS, drawn,
-  busy and heap on every emulator.
-- **No board defect found.** Three findings, all closed in firmware or deferred to v2:
-  R37 (J4 FPC contact face inverted for the purchased panel — workaround validated),
-  R38 (no PDM reconstruction filter — audible hiss, 1 kΩ + 10 nF rework sheet ready),
-  R39 (module pins 38/39 were swapped in every project table — names fixed, copper
-  was right).
+  presses buttons, saves/loads states, captures audio and reads the profiling
+  counters over the USB console; `scripts/emu_check.py` runs every core in one pass.
+- **No board defect found.** Findings R37 (J4 contact face), R38 (no PDM filter) and
+  R39 (pin-name swap) are closed in firmware or deferred to the next board. One open
+  audio item: a low buzz at the drawn frame rate, analog, under investigation
+  ([remediation/audio](website/docs/remediation/audio.md)).
 
 Details: [first-boot session log](docs/first-boot-session-2026-08-29.md).
 
@@ -56,51 +51,26 @@ Details: [first-boot session log](docs/first-boot-session-2026-08-29.md).
 
 ### Phase 4 — Software
 
-#### 4.1 — Hardware Validation (ESP-IDF) ✅
-Standalone firmware in `software/` to test all hardware before emulator integration.
-- 1.1 ESP-IDF v5.x project setup (N16R8, 240MHz, 16MB flash, 8MB PSRAM) ✅
-- 1.2 ILI9488 display driver (i80 8-bit parallel, 20MHz) ✅
-- 1.3 Display test pattern (color bars) ✅
-- 1.4 SD card via SPI (FAT32, ROM directory scan) ✅
-- 1.5 12-button GPIO input (1ms polling, HW debounce) ✅
-- 1.6 Audio output (I2S PDM on DOUT only → PAM8403, 440Hz test tone) ✅
-- 1.7 IP5306 power management — N/A on this board (I2C not routed; charge state = LEDs) ⚠️
+Firmware = our [Retro-Go](https://github.com/ducalex/retro-go) fork (`retro-go/`
+submodule). Per-step tables and measurements live in the docs:
+[firmware](website/docs/software/firmware.md),
+[SNES optimization](website/docs/software/snes-optimization.md),
+[emulator remediation](website/docs/remediation/emulators.md).
 
-#### 4.2 — Retro-Go Integration ✅
-Fork and adapt [Retro-Go](https://github.com/ducalex/retro-go) for our hardware (`retro-go/` git submodule).
-- 2.1 Add retro-go as git submodule ✅
-- 2.2 Create target `targets/esp32-emu-turbo/` (config.h, env.py, sdkconfig) ✅
-- 2.3 Docker build pipeline (`docker-compose.retro-go.yml`) ✅
-- 2.4 Custom display driver `ili9488_i80.h` (i80 parallel, async DMA, 5-buffer pool, 0x2C/0x3C continuation) ✅
-- 2.5 Frame scaling (480x320 landscape, Retro-Go scaler) ✅
-- 2.6 Input mapping (12 GPIO direct buttons) ✅
-- 2.7 Audio routing (PDM DOUT → PAM8403, IDF DAC line mode) ✅
-- 2.8 First boot: NES at 60 fps on the real board (Super Mario Bros, 2026-09-12) ✅
+| Step | What | Status |
+|:---|:---|:---|
+| 4.1 | Hardware validation firmware (`software/`): display, SD, buttons, PDM audio | ✅ (IP5306 I2C not routed — N/A) |
+| 4.2 | Retro-Go target: ILI9488 i80 driver, 480×320 scaler, 12-button input, PDM audio, Docker build | ✅ first boot 2026-09-12 |
+| 4.3 | Retro-Go cores: NES, GB, GBC, SMS, GG, SG-1000, PCE, Genesis (YM2612 on core 1) | ✅ 60 fps |
+| 4.4 | New cores: Neo Geo Pocket, Atari 2600 (`retro-extra`), MSX (C-BIOS), Colecovision, DOOM (Freedoom), Duke Nukem 3D (`duke3d-go`) | ✅ on the board 2026-09-21 → 09-27 |
+| 4.5 | Arcade: MAME 0.37b5 port (`mame-go`), ROMs in a 4 MB flash partition, tile cache, save states, 68000 idle-loop speed-ups | ✅ 8-bit boards 60 fps; Blood Bros. 60, Aero Fighters 47–57 |
+| 4.6 | SNES renderer (Milestone A): 60 emulated fps on SMW, Zelda, Mega Man X, Super Metroid, DKC | ✅ Mario Kart 57 (DSP-1) |
+| 4.7 | Audio: every core at 32 kHz on the PDM sink, heavy chips at 16 kHz doubled, carrier off when silent | ✅ buzz at frame rate open |
+| 4.8 | Launcher: GAME BRO! boot splash, art for new systems from [es-theme-gbz35](https://github.com/rxbrad/es-theme-gbz35) | ✅ |
+| 4.9 | Host bench tools: `board_ctl.py`, `emu_check.py`, `snes_bench.py`, audio capture, Debug HUD | ✅ |
+| 4.10 | Open: Atari Lynx and Game & Watch (no test ROM yet), DOOM heap leak, Wolfenstein 3D / Quake ports, SNES APU on core 1 | ⏳ |
 
-#### 4.3 — Emulator Testing ✅
-Every core at target frame rate on the first article (2026-09-14, `scripts/emu_check.py`):
-- 3.1 NES (nofrendo) → 60 fps, 31–36% busy ✅
-- 3.2 / 3.3 Game Boy / Color (gnuboy) → 60 fps ✅
-- 3.4 / 3.5 Master System / Game Gear (smsplus) → 60 fps, 60 drawn ✅
-- 3.6 PC Engine (pce-go) → 60 fps ✅
-- 3.7 Atari Lynx (handy), 3.9 Game & Watch — no test ROM on the card yet
-- 3.8 Genesis (gwenesis) → 60 fps, 30 drawn — YM2612 synthesis on core 1 ✅
-
-#### 4.3b — New cores, compiled but not yet run on the board (2026-09-14)
-Built while the board was away; first thing to verify at the next bench session.
-- **SG-1000** (smsplus, launcher entry) · **Neo Geo Pocket / Color** (libretro RACE) ·
-  **Atari 2600** (Stella, from stella-odroid-go) · **Duke Nukem 3D** (upstream `duke3d`
-  branch, ported: input, audio task, GRP as ROM)
-- NGP + 2600 live in a new `retro-extra` app, Duke3D in `duke3d-go`; the **partition
-  table changed** (retro-core 1.5 MB, + 1 MB + 2 MB) — flash the full image once:
-  `software/retro-go-build/retro-go_esp32-emu-turbo.img` at 0x0 (`rg_tool.py install`).
-- ROM folders ready in `test-roms/` (`sg1 ngp a26 duke3d lynx gw col msx doom`);
-  `scripts/emu_check.py` picks the first ROM of each folder on the card.
-- Not planned: GBA (no full-speed port exists for the ESP32-S3).
-
-#### 4.4 — SNES Optimization (Milestone A reached)
-Measured on seven save-state scenes (`scripts/snes_bench.py`), renderer cost per
-drawn frame, baseline → now:
+SNES, renderer cost per drawn frame (`scripts/snes_bench.py`, baseline → now):
 
 | Scene | R (ms) | fps emulated / drawn |
 |:---|---:|:---|
@@ -110,18 +80,6 @@ drawn frame, baseline → now:
 | Super Metroid (Mode 7) | 24.6 → 14.4 | 60 / 22 |
 | Donkey Kong Country | 16.1 → 11.6 | 60 / 19 |
 | Super Mario Kart (Mode 7 + DSP-1) | 22.5 → 22.5 | 57 / 11 |
-
-What paid: blank-tile cache, audio pacing credit, 32/64 KB caches, main z-buffer in
-SRAM, a colour-math fast path when the sub-screen is empty (Zelda −56%), tile
-writers with `restrict` pointers, Mode 7 invariants in locals, per-line backdrop
-and palette-0 so HDMA gradients no longer split the frame into strips (DKC 97 → 1).
-What did not: `IRAM_ATTR` on the renderer, VRAM in internal SRAM — the loops are
-instruction-bound, not memory-bound. Also fixed on the way: the save-state loader
-wrote the APU RAM through a stale pointer (heap corruption on any rebuild).
-
-Open: painter's-order fast path, budget-driven frameskip, and the SNES APU on the
-second core (the Kart/Metroid lever). Details and every measurement:
-[`website/docs/software/snes-optimization.md`](website/docs/software/snes-optimization.md).
 
 ### Phase 5 — Final Version (v2)
 - Respin with the first-article backlog (R37 + silkscreen) and an I2S amplifier in place of the PDM audio chain (no audio coprocessor — the second ESP32-S3 core covers it)
