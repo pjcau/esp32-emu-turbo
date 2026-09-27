@@ -19,6 +19,8 @@ press buttons and read the SNES_PROF counters without touching the board.
     board_ctl.py capture 10             # 10 s of PROF lines + averages
     board_ctl.py volume 5               # set (or with no value read) the volume, 0-100
     board_ctl.py cat /sd/crash.log      # print a text file from the card
+    board_ctl.py acap 4 out.wav         # the audio samples as submitted (digital, no microphone)
+    board_ctl.py raw "lcd off"          # stop sending frames to the panel (bench), "lcd on" back
     board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
     board_ctl.py put ~/roms/x.sfc "/sd/roms/snes/x.sfc"   # upload (base64 over the console; from the launcher)
     board_ctl.py rm "/sd/roms/snes/x.sfc"
@@ -199,6 +201,21 @@ def main():
     elif a.cmd == "cat":
         for l in b.send("cat " + " ".join(a.args), wait=r"^CTL cat (done|failed)", timeout=10, echo=False):
             print(l[8:] if l.startswith("CTL cat ") else l)
+    elif a.cmd == "acap":
+        # acap SECONDS OUT.wav : the samples exactly as the emulator submits them
+        import base64, wave
+        secs = int(a.args[0]) if a.args else 3
+        out = a.args[1] if len(a.args) > 1 else "capture.wav"
+        b.send(f"acap {secs}", wait=r"^CTL acap", timeout=3, echo=False)
+        time.sleep(secs + 1)
+        data, rate = bytearray(), 32000
+        for l in b.send("adump", wait=r"^CTL adump done", timeout=120, echo=False):
+            if l.startswith("CTL a "):
+                data += base64.b64decode(l[6:].strip())
+            elif l.startswith("CTL adump done"):
+                rate = int(l.split()[4])
+        w = wave.open(out, "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(bytes(data)); w.close()
+        print(f"{out}: {len(data) // 2} samples at {rate} Hz")
     elif a.cmd == "volume":
         b.send("volume " + (a.args[0] if a.args else ""), wait=r"^CTL volume", timeout=3)
     elif a.cmd == "raw":
