@@ -371,3 +371,30 @@ mutnat, nam1975, ncombat, neomrdo, panicbom, pbobble, popbounc, pspikes2,
 puzzldpr, puzzledp, quizdai2, quizdais, roboarmy, sengokh, sengoku,
 sengoku2, socbrawl, sonicwi2, sonicwi2m, spinmast, ssideki, stakwin,
 strhoop, superspy, tpgolf, trally, wh1, wjammers.
+
+## Capcom CPS1 on v3 (2026-09-27, PC-verified, board pending)
+
+**Where the games go:** CPS1 zips go in the **Arcade** tab (`/sd/roms/arcade/`,
+repo folder `test-roms/cps1/`); mame-go picks the driver from the zip.
+
+**What was added (fork `929fc118`, `e245fffa`):**
+
+| Change | Why |
+|:---|:---|
+| `drivers/cps1.c`, `vidhrdw/cps1.c`, YM2151, kabuki from mame2000-libretro (CPS2 left out) | the 0.37b5 CPS1 driver, 80 sets |
+| Graphics streamed from the zip: four readers feed the tile conversion (it reads the ROM's four quarters in step), 64 KB tile blocks go to the `mamerom` flash partition, the rest to PSRAM | the ROM never sits in memory; Street Fighter II's 6 MB of tiles = 4 MB flash + 2 MB PSRAM. Sets whose graphics are not plain `ROM_LOAD`s (Ghouls'n Ghosts) load the ROM and convert it into flash |
+| `scripts/cps1_modern_sets.py`: 69 modern sets | today's zips often carry a newer program on the same chips (SF2 CE "World 920513"); the set reuses the 0.37b5 definition with the modern program ROMs (bootlegs and hacks skipped for binary space) |
+| Generic 68000 idle skip on, Z80 skip off | the Z80 feeds the YM2151/OKI through memory: its skip changed the audio on the PC |
+| 384-wide screens fit the panel width (480×280) | CPS1 is 384×224 |
+| mame-go partition 1.5 → 1.75 MB (retro-extra 1.75 → 1.5 MB, binary 1.43 MB) | CPS1 adds ~150 KB |
+
+**Checked on the PC harness:** Final Fight, Carrier Air Wing, Ghouls'n
+Ghosts, Knights of the Round, SF2 Champion Edition reach attract / title /
+select screens; the flash and streamed paths give the same frames and audio
+as the in-RAM conversion. In use after start: ~5.6 MB for SF2 CE (program
+1.5 MB, 2 MB of tiles, 2 MB scroll-2 cache bitmap).
+
+**Not yet:** speed on the board (one 10–12 MHz 68000 + Z80 + YM2151 + a
+384-wide renderer: expect it at the limit, like the Neo Geo), Q-Sound games
+(Cadillacs and Dinosaurs, Warriors of Fate, Punisher: kabuki-encrypted Z80 +
+4 MB of Q-Sound samples) untested.

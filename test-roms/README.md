@@ -29,6 +29,7 @@ upload to the card without pulling it:
 | `wolf3d/` | wolf3d-go | shareware v1.4 `.WL1` files in `wolf3d/data/`, plus a small `Wolfenstein 3D.wl1` at the top to pick in the launcher | 62 fps in E1M1 (2026-09-27) |
 | `quake/` | quake-go | `id1/pak0.pak` (shareware); add `id1/pak1.pak` for the registered game | built, not yet run |
 | `arcade/` | mame-go (MAME 0.37b5) | .zip (MAME ROM sets; modern sets with renamed files are matched by CRC) | 60 fps ✅ Pac-Man, 1942, Robby Roto; 57 fps (native) ✅ Exidy/Circus free ROMs from mamedev.org; 1943 60 emulated / ~25 drawn — see [Arcade (MAME)](../website/docs/next-steps/arcade.md) |
+| `cps1/` | mame-go (Capcom CPS1) | .zip — **on the card they go in `/roms/arcade/`** (Arcade tab) | PC harness only so far (Final Fight, SF2 CE, Knights, Ghouls, Carrier Air Wing) |
 
 `scripts/emu_check.py` launches the first ROM of every folder that has one
 and reads the FPS/BUSY line, so a new system is covered as soon as its
