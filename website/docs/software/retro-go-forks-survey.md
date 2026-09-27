@@ -62,7 +62,7 @@ replaces an existing one or needs the "bootstrap" mechanism in item 2.
 
 ### DynaMight1124/retro-go (51★, most active "megapack")
 
-<https://github.com/DynaMight1124/retro-go>. The default branch `megapack` is
+[https://github.com/DynaMight1124/retro-go](https://github.com/DynaMight1124/retro-go). The default branch `megapack` is
 upstream `dev` plus about 12 commits. Every port also has its own branch.
 The author says openly that most ports were done with AI help and tuned
 afterwards.
@@ -88,7 +88,7 @@ afterwards.
 
 ### pcgamer404/retro-go-pro (source of our Wolf3D/Quake)
 
-<https://github.com/pcgamer404/retro-go-pro>. This is DynaMight1124's
+[https://github.com/pcgamer404/retro-go-pro](https://github.com/pcgamer404/retro-go-pro). This is DynaMight1124's
 megapack plus 26 commits.
 
 | Item | What | Ours? | Notes | Value |
@@ -101,7 +101,7 @@ megapack plus 26 commits.
 
 ### nod3011/retro-go-nano-s3 (ESP32-S3 Nano, 227 own commits)
 
-<https://github.com/nod3011/retro-go-nano-s3>. Heavy rework for an S3 board,
+[https://github.com/nod3011/retro-go-nano-s3](https://github.com/nod3011/retro-go-nano-s3). Heavy rework for an S3 board,
 with commit messages partly in Thai.
 
 | Item | What | Ours? | Effort | Value |
@@ -115,7 +115,7 @@ with commit messages partly in Thai.
 
 ### ThomasFarstrike/retro-go (`integration/fri3d-2026`, 84 own commits over `dev`)
 
-<https://github.com/ThomasFarstrike/retro-go/tree/integration/fri3d-2026>.
+[https://github.com/ThomasFarstrike/retro-go/tree/integration/fri3d-2026](https://github.com/ThomasFarstrike/retro-go/tree/integration/fri3d-2026).
 This is the Fri3d Camp 2026 badge integration.
 
 - **Duke3D**: the same palette/gamma/tile-cache fixes that DynaMight1124
@@ -127,7 +127,7 @@ This is the Fri3d Camp 2026 badge integration.
 
 ### ashkan89/retro-go (80 own commits, ESP32-S3 N16R8 targets)
 
-<https://github.com/ashkan89/retro-go>. The fork includes `managed_components`
+[https://github.com/ashkan89/retro-go](https://github.com/ashkan89/retro-go). The fork includes `managed_components`
 copies, so its diff is noisy.
 
 | Item | What | Ours? | Effort | Value |
@@ -141,7 +141,7 @@ copies, so its diff is noisy.
 
 ### Zepan/retro-go: SPI2HDMI bridge
 
-<https://github.com/Zepan/retro-go>. This adds an `spi2hdmi-s3` target: an
+[https://github.com/Zepan/retro-go](https://github.com/Zepan/retro-go). This adds an `spi2hdmi-s3` target: an
 ESP32-S3 drives an SPI→HDMI bridge over QSPI, with 48 kHz PCM HDMI audio
 through the bridge and UART recovery commands. DynaMight1124 has a matching
 `SPI2HDMI` branch. Effort: medium. Value: **medium for planning the next
@@ -150,14 +150,14 @@ weigh against the LT8912B idea in Plan A.
 
 ### thangvv-tech/retro-go: ESP-NOW wireless gamepad
 
-<https://github.com/thangvv-tech/retro-go>. This adds an ESP-NOW gamepad with
+[https://github.com/thangvv-tech/retro-go](https://github.com/thangvv-tech/retro-go). This adds an ESP-NOW gamepad with
 pairing/bonding UI, a web gamepad, and Wi-Fi coexistence fixes, plus an
 ES8311 codec fix. Effort: medium. Value: low-medium; it would allow a
 wireless second controller.
 
 ### alecu/retro-go
 
-<https://github.com/alecu/retro-go>. This is a Ventilastation POV-disc
+[https://github.com/alecu/retro-go](https://github.com/alecu/retro-go). This is a Ventilastation POV-disc
 target and has nothing to reuse for us. It has two small generic fixes worth
 cherry-picking: a stack buffer overflow fix in `rg_system_vlog`, and a
 `rg_task_create` queue-creation race fix. It also adds gzip-compressed MSX
@@ -166,7 +166,7 @@ Value: medium, because these are real bugs that are probably in our tree too.
 
 ### Fri3dCamp/badge_retro-go (and tomvanbraeckel copy)
 
-<https://github.com/Fri3dCamp/badge_retro-go>. It has 148 commits but is
+[https://github.com/Fri3dCamp/badge_retro-go](https://github.com/Fri3dCamp/badge_retro-go). It has 148 commits but is
 based on 2024 `dev` (251 behind `master`). Items:
 
 - `find_games`: downloads games over Wi-Fi.
