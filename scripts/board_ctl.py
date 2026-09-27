@@ -42,7 +42,7 @@ APPS = {  # app short name -> partition (launcher/main/applications.c)
     "sms": "retro-core", "gg": "retro-core", "pce": "retro-core", "lynx": "retro-core",
     "gw": "retro-core", "msx": "fmsx", "gen": "gwenesis", "md": "gwenesis", "doom": "prboom-go",
     "sg1": "retro-core", "col": "retro-core", "lnx": "retro-core",
-    "ngp": "retro-extra", "a26": "retro-extra", "duke3d": "duke3d-go", "arcade": "mame-go",
+    "ngp": "retro-extra", "a26": "retro-extra", "duke3d": "duke3d-go", "arcade": "mame-go", "neogeo": "mame-go",
     "wolf3d": "wolf3d-go", "quake": "quake-go", "opentyrian": "opentyrian-go",
 }
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
@@ -225,6 +225,8 @@ def main():
         b.capture(float(a.args[0]) if a.args else 5)
     elif a.cmd == "put":
         sys.exit(0 if b.put(os.path.expanduser(a.args[0]), " ".join(a.args[1:])) else 1)
+    elif a.cmd == "mv":   # board_ctl.py mv "/sd/a b.zip" "/sd/dir/a b.zip"
+        b.send(f"mv {a.args[0]}|{a.args[1]}", wait=r"^CTL mv", timeout=5)
     elif a.cmd == "rm":
         b.send("rm " + " ".join(a.args), wait=r"^CTL rm", timeout=5)
     elif a.cmd == "cat":

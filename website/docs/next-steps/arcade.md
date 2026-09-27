@@ -166,23 +166,42 @@ The paged build draws **bit-identical frames** to the sprites-in-RAM build
 (PC harness, 3000 frames, caches of 256 KB to 9 MB). Modern ROM sets load:
 the newer `sfix.sfix` BIOS dump is accepted and the rest is matched by CRC.
 
+**Games of 30–50 MB (2026-09-27, fork `643adbb2`)**
+
+Metal Slug 2 (49 MB: 3 MB program, 8 MB samples, 32 MB sprites) runs on
+the board: 47–50 emulated fps on the title, 28–33 in game (CPU-bound, see
+below). What made it fit:
+
+| Part | Where it lives |
+|:---|:---|
+| Sprites (any size) | `.spr` on the SD, 8 KB-page cache in PSRAM (2.3 MB here) |
+| Samples up to 3.5 MB | `mamerom` flash partition, streamed there while loading |
+| Samples above 3.5 MB | `<game>_snd<n>.pcm` on the SD, 512 KB cache of 4 KB pages read by the YM2610 (~130 page reads per 600 frames in play) |
+| Program ≥ 1 MB | the flash partition when the samples left it free (pointers rebased after the move) |
+
+The conversion reads the zip 64 KB at a time (8 MB ROM files never sit in
+memory). On the board it is slow the first time (Metal Slug 2: ~5 min); on
+the PC it takes seconds with the same code:
+
+```bash
+python3 scripts/neogeo_prepare.py test-roms/neogeo/*.zip
+cp -r build/neogeo-prepare/sys/mame2000/neospr /media/<card>/retro-go/mame/mame2000/
+```
+
+**Folder:** Neo Geo games have their own launcher tab, **Neo Geo**
+(`/sd/roms/neogeo/`, same mame-go app). Put `neogeo.zip` (the BIOS:
+`sp-s2.sp1`, `sfix.sfix`, `sm1.sm1`, `000-lo.lo`) there too, for the sets
+that do not include it (Puzzle Bobble 2). Art: rxbrad/es-theme-gbz35.
+
 **Limits on the board today**
 
-- Program ≤ 2 MB (after Sonic Wings 2's 2 MB, 136 KB of PSRAM is left).
-- Sound samples ≤ ~3.7 MB: the `mamerom` partition is 4 MB and the flash is
-  full (15.86 of 16 MB). Bigger sample sets need **sample paging from the SD**
-  (next step) — Metal Slug 1/2, KOF '94–'95, Samurai Shodown II, Art of
-  Fighting, Neo Turf Masters.
-- Each sprite ROM file ≤ 2 MB for the on-board conversion (this MAME unzips
-  a whole file into RAM, two at a time). Larger files: convert on the PC
-  with the harness and copy the `.spr` files, or a streaming unzip later.
-- `init_mgd2` sets (Riding Hero, King of the Monsters, League Bowling, Eight
-  Man, Football Frenzy, Ninja Commando, Minnasanno Okagesamadesu,
-  Bakatonosama) reorder their sprites in memory and are not paged yet.
+- Speed: the 68000 + Z80 + YM2610 + sprite renderer run on one core at 100%;
+  big games are about half speed in play. Next: idle-loop speed-ups and
+  moving work to core 1.
+- `init_mgd2` sets reorder their sprites in memory and are not paged yet.
+- Encrypted sets (KOF '99 and later, Metal Slug 3+) need decryption this
+  MAME version does not have.
 - Save states do not restore Neo Geo games exactly yet.
-
-Metal Slug 2 (32 MB of sprites, 8 MB of samples, 3 MB program) already runs
-on the PC with paged sprites; on the board it waits for sample paging.
 
 **Ready to try on the board (54 sets, MAME 0.37b5 names):** 2020bb, 2020bbh,
 androdun, bjourney, bstars, bstars2, burningf, burningh, crsword, cyberlip,

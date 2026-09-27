@@ -129,3 +129,6 @@ hardware/kicad/drc-report.json
 
 # print-set archives made by hand for the print service
 3d_case/*.zip
+
+# PC-side generated files (scripts/neogeo_prepare.py: Neo Geo sprite/sample files for the SD card)
+/build/neogeo-prepare/
