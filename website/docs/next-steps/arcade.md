@@ -220,6 +220,16 @@ that do not include it (Puzzle Bobble 2). Art: rxbrad/es-theme-gbz35.
 - Save states restore Neo Geo games exactly (fork `ec8acd7b`): see
   *Save states* below.
 
+**Sprites on core 1 (2026-09-27 evening, fork `15e1790f`, PC-verified,
+board pending).** The sprite + fix-layer renderer (~5 ms of core 0 in
+Metal Slug 2) runs in the present task on core 1, one frame behind; core 0
+keeps the MAME palette bookkeeping (global state). The renderer reads a
+copy of the video RAM refreshed from the 256-byte blocks written during the
+frame (a few hundred words, not 67 KB). Only with paged sprites. On the PC
+harness, with a present step that also runs one frame late: frames and
+audio identical to the inline renderer on Metal Slug 2, Shock Troopers
+(16-bit) and Thrash Rally, Sonic Wings 2, Magician Lord (8-bit).
+
 ### What was changed in mame-go for Neo Geo
 
 Fork commits `d0430d65` and `643adbb2`. Every change was checked on the PC

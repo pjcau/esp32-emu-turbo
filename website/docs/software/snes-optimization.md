@@ -159,7 +159,7 @@ Mega Man X -18%).
 |:---|---:|---:|:---|
 | SMW map | 18.2 | 16.4 | 60 / 26 |
 | SMW Yoshi's Island 2 | — | 14.8 | 60 / 26 |
-| Mario Kart race | 22.5 | 22.5 | 57 / 11 (CPU: DSP-1 11 ms per frame) |
+| Mario Kart race | 22.5 | 22.5 | 57 / 11 (CPU side 11 ms per frame; the DSP-1 itself is ~2% of it, see below) |
 | Zelda house | 24.9 | 9.5 | 60 / 25 |
 | Mega Man X | 12.9 | 10.9 | 60 / 24 |
 | Super Metroid Ceres | 24.6 | 14.4 | 60 / 22 |
@@ -185,8 +185,8 @@ after "Loaded chunks"). Fixed in `snapshot.c`; save states now survive
 rebuilds.
 
 **Roadmap status (2026-09-14).** Milestone **A** (60 emulated / 20 drawn)
-is met on every scene except Mario Kart (57 / 11, limited by the DSP-1 CPU
-emulation, not the renderer). Milestone **B** (60 / 30) is reached on SMW,
+is met on every scene except Mario Kart (57 / 11, limited by the CPU side —
+65816 + SPC700 + audio mix — not the renderer). Milestone **B** (60 / 30) is reached on SMW,
 Zelda and Mega Man X and not on the Mode 7 games or DKC. Of the plan's
 steps: 4.0 done, 4.1 done, 4.2 partly (z-buffer yes; IRAM and VRAM
 disproven), 4.3 done in a different form (colour-math fast path, per-line
@@ -690,6 +690,35 @@ Unlike the pre-optimization estimates, the 3-phase plan targets **60 FPS with fu
 
 ---
 
+## Phase 5 — S-DSP on core 1 (2026-09-27, PC-verified, board pending) {#phase-5-sdsp-core1}
+
+**Where Mario Kart's time goes.** A PC build of the same snes9x sources
+(`esp32-emu-turbo-scratch/snes-work`, gprof, 3600 frames of the first race
+at frameskip 3) put the DSP-1 at ~2% of the run (`DSP1SetByte`, `Op0A`,
+`Op06`, `DSP1_Sin` together): the "DSP-1 11 ms" of the table above was the
+whole CPU side. The large non-renderer items are the SPC700 (`APUExecute`
+13%) and the audio mix (`MixStereo` + BRR `DecodeBlock` + `S9xMixSamples`
+~12%, i.e. ~2 ms of the board's frame). Moving the DSP-1 to core 1 would
+gain nothing — the game reads each result right after writing the
+parameters — so it was not done.
+
+**What moved.** The SPC700 stays on core 0 (lockstep with the 65816). The
+S-DSP's sample generation moves to core 1 (`apu.c`, task `snes_dsp`): the
+frame's DSP register writes are queued in order, core 1 replays them and
+mixes the frame while core 0 runs the next one. The SPC700 reads registers
+from an image on core 0; the ENDX/KON/KOFF bits the mixer changes when a
+sample ends come back as deltas at the frame boundary, and OUTX/ENVX from a
+snapshot there — the same values it read before, since the mix already ran
+once per frame. Audio is one frame (~17 ms) later.
+
+**Checked on the PC:** Mario Kart, Super Mario World, Donkey Kong Country
+and Zelda, 3600 frames each: every audio sample identical to the inline
+mix (shifted by one frame), video identical. Save/load behaves exactly as
+before (note: SNES save states in this port are not frame-exact to begin
+with, 3-7 of 200 frames identical after a load, with or without this
+change). Expected on the board: ~2 ms off core 0 per frame, enough for
+Mario Kart's 57 → 60.
+
 ## Audio — no separate coprocessor {#audio-no-coprocessor}
 
 The February plan added an ESP32-S3-MINI-1 module as a dedicated audio
@@ -701,7 +730,7 @@ measurements on the first article removed the reason for it.
 | CPU (65C816) + APU (SPC700) together | ~8.5 ms of the 16.7 ms frame | fits, with margin |
 | Audio mix | 1.5 ms | negligible |
 | PPU renderer | 10–16 ms per drawn frame | the actual bottleneck |
-| Super Mario Kart (57 fps) | DSP-1 cartridge chip, 11 ms per frame | CPU side, not audio |
+| Super Mario Kart (57 fps) | CPU side 11 ms per frame (DSP-1 only ~2% of it) | CPU side, incl. the audio mix |
 
 The pre-hardware estimate put the SPC700 + S-DSP at ~8 ms, 48% of the
 frame (see the appendix). On the board the renderer dominates, so a chip
