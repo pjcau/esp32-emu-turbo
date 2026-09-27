@@ -48,7 +48,8 @@ def build(out):
         deps = [os.path.join(COMP, src)]
         if os.path.exists(dep):
             deps = open(dep).read().replace("\\\n", " ").split(":", 1)[1].split()
-        if not os.path.exists(obj) or any(not os.path.exists(d) or os.path.getmtime(d) > os.path.getmtime(obj) for d in deps):
+        if not os.path.exists(obj) or not os.path.exists(dep) \
+                or any(not os.path.exists(d) or os.path.getmtime(d) > os.path.getmtime(obj) for d in deps):
             subprocess.run(["gcc", *cflags, "-MMD", "-MF", dep, "-c", os.path.join(COMP, src), "-o", obj], check=True)
         return obj
 
