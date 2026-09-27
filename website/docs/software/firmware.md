@@ -336,6 +336,8 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ Pac-Man, 1942, Robby Roto 60; Exidy/Circus boards 57 (native); 1943 60 emulated / 27 drawn; Blood Bros. 60, Aero Fighters 47–57 after the idle-loop speed-ups — see [Arcade (MAME)](../next-steps/arcade) |
 | 3.15 | fMSX (MSX) | Pac-Man `.mx1` | 60 fps | ✅ 59 fps, BUSY 62%, with the free C-BIOS in `/sd/retro-go/bios/msx/` |
 | 3.16 | prboom-go (DOOM) | Freedoom 1 | 35 fps (engine rate) | ✅ 35 fps, BUSY 100%; mix at 16 kHz doubled to 32 kHz, sfx interpolated; the heap still falls during play (leak open) |
+| 3.17 | wolf3d-go (Wolfenstein 3D, Wolf4SDL via [retro-go-pro](https://github.com/pcgamer404/retro-go-pro)) | shareware v1.4 `.WL1` in `/sd/roms/wolf3d/data/` | 70 fps (engine cap) | ✅ 62 fps, BUSY 34% in E1M1 (2026-09-27); mix at 16 kHz doubled to 32 kHz. Built for shareware data: the full game (`.WL6`) needs `version.h` changed and a rebuild. Menus redraw only on change (1–2 fps in the HUD is normal there) |
+| 3.18 | quake-go (WinQuake software renderer, via retro-go-pro) | shareware `id1/pak0.pak` | playable | builds (710 KB), mixer at 32 kHz on core 1; not yet run on the board — the 18.7 MB PAK still has to be copied to `/sd/roms/quake/id1/` |
 | — | ColecoVision (smsplus) | Pac-Man | 60 fps | ✅ 60 fps, BUSY 31% (START opens the keypad: `emu_check` presses none) |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 

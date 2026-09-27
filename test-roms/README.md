@@ -26,6 +26,8 @@ upload to the card without pulling it:
 | `ngp/` | RACE (retro-extra) | .ngp .ngc | 60 fps ✅ (2026-09-21, Metal Slug 1st Mission, BUSY 75-99%) |
 | `a26/` | Stella (retro-extra) | .a26 .bin | 60 fps ✅ (2026-09-26, Halo 2600) |
 | `duke3d/` | duke3d-go | .grp (+ the other Duke3D 1.3D/1.5 data files in the same folder) | boots to the menus (2026-09-26); menu rendering fix pending verification |
+| `wolf3d/` | wolf3d-go | shareware v1.4 `.WL1` files in `wolf3d/data/`, plus a small `Wolfenstein 3D.wl1` at the top to pick in the launcher | 62 fps in E1M1 (2026-09-27) |
+| `quake/` | quake-go | `id1/pak0.pak` (shareware); add `id1/pak1.pak` for the registered game | built, not yet run |
 | `arcade/` | mame-go (MAME 0.37b5) | .zip (MAME ROM sets; modern sets with renamed files are matched by CRC) | 60 fps ✅ Pac-Man, 1942, Robby Roto; 57 fps (native) ✅ Exidy/Circus free ROMs from mamedev.org; 1943 60 emulated / ~25 drawn — see [Arcade (MAME)](../website/docs/next-steps/arcade.md) |
 
 `scripts/emu_check.py` launches the first ROM of every folder that has one
