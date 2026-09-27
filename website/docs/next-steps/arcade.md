@@ -14,7 +14,8 @@ consoles in [More Systems](/docs/next-steps/more-systems).
 |:---|:---|:---|
 | 🟢 **Should fit** | Pac-Man, Galaga, Donkey Kong, Space Invaders, Frogger and similar Z80 / 6502 / 8080 boards of 1978–84 | Port the drivers one by one from an old, small MAME release, or follow the approach of ESP32 projects that already run a handful of these games |
 | 🟡 **Hard** | 68000 boards (Sega System 16, Capcom CPS1) | One 10 MHz 68000 plus sound CPUs: the Genesis core shows this is at the edge |
-| 🔴 **No** | CPS2, Neo Geo MVS, 3D boards | CPU load and ROM size, as for the home consoles in [More Systems](/docs/next-steps/more-systems) |
+| 🟡 **Runs, at part speed** | Neo Geo MVS (unencrypted sets, up to ~50 MB) | Sprites and large sample ROMs paged from the SD card; see [Neo Geo on v3](#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27) |
+| 🔴 **No** | CPS2, encrypted Neo Geo sets (KOF '99 and later), 3D boards | CPU load, encryption this MAME version lacks, 3D hardware |
 
 ## On the current console (v3)
 
@@ -26,7 +27,8 @@ consoles in [More Systems](/docs/next-steps/more-systems).
 - **What fits:** Z80 / 6502 / 8080 boards of 1978–85 run comfortably
   (lighter than the NES / SMS cores already at 60 fps); CPS1 is at the
   limit (see [More Systems](/docs/next-steps/more-systems#sega-family-and-mame-on-the-current-console-v3));
-  CPS2 and Neo Geo do not fit (ROM sizes beyond the 8 MB PSRAM).
+  CPS2 does not fit; Neo Geo runs at part speed with its large ROMs
+  paged from the SD card (see [below](#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27)).
 - **Controls:** the 12 buttons cover joystick, 1–3 fire buttons, coin
   (Select) and start.
 - **Proof:** the same `emu_check.py` measurement on 3 reference games per
@@ -116,7 +118,7 @@ What the app does besides running the games:
 | **Blood Bros.** | 68000 10 MHz + Seibu sound (Z80, YM3812, OKI6295) | ✅ **60 fps** (full speed) after the idle-loop speed-up, ~20 drawn (was 55–58) |
 | **Aero Fighters** | 68000 10 MHz + Z80 + YM2610 | ✅ 47–57 emulated fps after the speed-up, ~18 drawn (was ~45) |
 | **Out Run** | 2× 68000 12.5 MHz + Z80 + YM2151 + SegaPCM, sprite-scaled road | ❌ beyond the ESP32-S3 |
-| **Sonic Wings 2** | Neo Geo (68000 + Z80 + YM2610), 7 MB zipped + BIOS | ❌ on this module: runs on the PC build (a "later set" added for the modern zip), CPU cost ~1.2× Aero Fighters, but sprites 8 MB + ADPCM 3 MB need ~11 MB of flash and only 4 MB are free. A 32 MB-flash module (WROOM-2 N32R8V, 1.8 V flash: compatibility to check) would fit it. The Neo Geo driver also decodes sprites in place, so tiles must be converted before the region moves to flash |
+| **Sonic Wings 2** | Neo Geo (68000 + Z80 + YM2610), 7 MB zipped + BIOS | ✅ 38–50 emulated fps since 2026-09-27, with sprites paged from the SD card (it needs ~11 MB, and only 4 MB of flash were free); see [Neo Geo on v3](#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27) |
 
 The 68000 (MAME's Musashi core) is fast enough; memory was the wall.
 Measured after start-up with everything in PSRAM: Aero Fighters 2.0 MB of
@@ -202,6 +204,59 @@ that do not include it (Puzzle Bobble 2). Art: rxbrad/es-theme-gbz35.
 - Encrypted sets (KOF '99 and later, Metal Slug 3+) need decryption this
   MAME version does not have.
 - Save states do not restore Neo Geo games exactly yet.
+
+### What was changed in mame-go for Neo Geo
+
+Fork commits `d0430d65` and `643adbb2`. Every change was checked on the PC
+harness against the build that keeps everything in RAM: frames and audio
+are identical.
+
+| Change | Problem it solves |
+|:---|:---|
+| **Sprite pages on the SD** (`mamego_neospr.c`): C ROMs converted once into `.spr` files (decoded tiles + `pen_usage`), read through an LRU cache of 8 KB pages sized from the free PSRAM | 8–32 MB of sprites against 8 MB of PSRAM; transparent tiles are skipped without touching the card |
+| **Samples to flash while loading** (`common.c`): V ROMs written file by file straight to the `mamerom` partition | a 3 MB sample region plus a 2 MB unzipped file did not fit next to the program |
+| **Samples paged from the SD** (`<game>_snd<n>.pcm`, 512 KB cache of 4 KB pages, read by the YM2610's ADPCM-A/B) | sample sets larger than the 3.5 MB flash partition (Metal Slug 2: 8 MB) |
+| **Program ROM in flash** (`memory_rebase()` moves every CPU pointer onto the flash copy) | frees 3 MB of PSRAM on Metal Slug 2 for a larger sprite cache |
+| **Streamed unzip** (`zipstream_*`, 64 KB at a time) | 8 MB ROM files never sit in memory during the conversion |
+| **ROM-set matching**: `neogeo.zip` next to the game, the newer `sfix.sfix` BIOS dump, optional ROMs read correctly, a "later set" driver `sonicwi2m` | modern zips and sets without the BIOS load |
+| **8 open files** instead of 4 (`rg_storage`) | Metal Slug 2 keeps 3 open while playing; the conversion needed 5 |
+| **PC preparation** (`tools/neoprep.c`, `scripts/neogeo_prepare.py`) | the same conversion code runs in seconds on the PC instead of minutes on the board |
+| **Neo Geo launcher tab** (`/sd/roms/neogeo/`) | Neo Geo games separate from the 8-bit arcade games |
+
+### Strategy
+
+**The idea.** Memory was the wall, and it is solved by one rule: anything
+too large for the PSRAM lives on the SD card or in flash, is read through a
+small cache, and must give the same frames as the all-in-RAM build (checked
+on the PC before it goes on the board). That opens every unencrypted Neo Geo
+set up to ~50 MB. What is left is **speed**: in play, big games run at
+about half speed with the CPU at 100%.
+
+**Order of work**, cheapest and surest first:
+
+1. **Per-game idle-loop hacks: they already exist.** MAME 0.37b5's
+   `machine/neogeo.c` has 86 `NEO_CYCLE_R` handlers that stop the 68000
+   while a game polls for vblank, the same trick that took Blood Bros. to
+   60 fps. They are keyed on the driver name, so the one for Sonic Wings 2
+   (`sonicwi2`, PC `0x1e6c8`) is probably not active for the `sonicwi2m`
+   set our zip loads as. Check and enable it. Metal Slug 2's hack is off in
+   MAME ("breaks the game"): find a working loop with the PC's PC-count
+   profiler, as for Aero Fighters.
+2. **Measure where the time goes** on the board (68000 / Z80 / YM2610 /
+   sprite renderer / 8 → 16 bpp conversion), the way `GEN_PROF` did it for
+   the Genesis.
+3. **YM2610 on core 1.** Core 1 is idle in these games. Moving FM synthesis
+   there took the Genesis from 20 to 30 drawn fps; the Neo Geo has the same
+   kind of chip.
+4. **Sprite renderer**: skip fully transparent sprite columns and zoomed-out
+   strips early, and go straight to 16 bpp without the conversion pass.
+5. **Correctness**: exact save states, and the `init_mgd2` sets whose
+   sprites are reordered in memory (not paged yet).
+
+**Out of scope on this board:** encrypted sets (KOF '99 and later, Metal
+Slug 3+), because MAME 0.37b5 has no decryption for them, and sets over
+~50 MB. **Target:** 60 emulated fps in play on the 1990–95 games (the 54
+ready sets below), and Metal Slug 2 above 45.
 
 **Ready to try on the board (54 sets, MAME 0.37b5 names):** 2020bb, 2020bbh,
 androdun, bjourney, bstars, bstars2, burningf, burningh, crsword, cyberlip,

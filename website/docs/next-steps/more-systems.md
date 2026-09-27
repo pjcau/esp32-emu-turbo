@@ -14,7 +14,7 @@ only a port and a measurement settle them.
 |:---|:---|:---|
 | 🟢 **Should fit** | Atari 7800, Atari 5200/800, WonderSwan / Color, Vectrex, Intellivision, Odyssey² / Videopac, ZX Spectrum, Amstrad CPC | 1–4 MHz 8/16-bit CPUs, small ROMs, lighter than the NES/SMS cores that already run at 60 |
 | 🟡 **Possible with work** | PC Engine CD, Commodore 64, Game Boy Advance | PCE CD reuses the PCE core (60 fps at 43% busy) plus CD audio streamed from the SD. C64 needs a cycle-accurate video chip. GBA needs an ARM7 interpreter at 16.78 MHz: expect slow, a measurement would say how slow |
-| 🔴 **Out of reach on this chip** | Sega CD, 32X, Neo Geo, Virtual Boy, PlayStation, Saturn, N64 | Too many fast CPUs (32X: two SH-2 at 23 MHz; Sega CD: a second 68000), ROMs larger than the 8 MB PSRAM (Neo Geo up to ~90 MB), or 3D hardware |
+| 🔴 **Out of reach on this chip** | Sega CD, 32X, Virtual Boy, PlayStation, Saturn, N64 | Too many fast CPUs (32X: two SH-2 at 23 MHz; Sega CD: a second 68000), ROMs larger than the 8 MB PSRAM, or 3D hardware. Neo Geo was listed here: it now runs at part speed with its ROMs paged from the SD card (see [Arcade (MAME)](/docs/next-steps/arcade#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27)) |
 
 **PlayStation.** A MIPS R3000A at 33.9 MHz plus a geometry coprocessor, a
 GPU with 1 MB of VRAM and a sound chip. The emulators that run it on cheap

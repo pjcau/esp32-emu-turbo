@@ -21,7 +21,7 @@ today:
 | Requirement | ESP32-S3 (current) | ESP32-P4 + ESP32-C6 | Linux SoC (ARM + GPU) |
 |:---|:-:|:-:|:-:|
 | Classic MAME (Z80 / 6502) | 🟢 | 🟢 | 🟢 |
-| 16-bit (SNES, MD, PCE, Neo Geo) | 🟡 SNES at the limit, no Neo Geo | 🟢 almost all (Neo Geo only up to 32 MB of ROM) | 🟢 |
+| 16-bit (SNES, MD, PCE, Neo Geo) | 🟡 SNES at the limit, Neo Geo at part speed (ROMs paged from the SD) | 🟢 almost all (Neo Geo only up to 32 MB of ROM) | 🟢 |
 | 32-bit (GBA, 32X, Sega CD, CPS2) | 🔴 | 🟡 Sega CD / CPS1 likely, GBA uncertain, 32X unlikely | 🟢 |
 | **PlayStation** | 🔴 | 🔴 no RISC-V dynarec | 🟢 |
 | **Nintendo 64** | 🔴 | 🔴 | 🟢 with a real GPU |
