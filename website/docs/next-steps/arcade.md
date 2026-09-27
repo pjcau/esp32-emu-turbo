@@ -197,9 +197,21 @@ that do not include it (Puzzle Bobble 2). Art: rxbrad/es-theme-gbz35.
 
 **Limits on the board today**
 
-- Speed: the 68000 + Z80 + YM2610 + sprite renderer run on one core at 100%;
-  big games are about half speed in play. Next: idle-loop speed-ups and
-  moving work to core 1.
+- Speed (Metal Slug 2 in play, `NEOPROF=1` build, ms per emulated frame):
+
+  | Step | ms/frame | emulated fps |
+  |:---|:---|:---|
+  | start | ~34 | 29 |
+  | YM2610 once per frame (fast_sound) | 32.1 | 31 |
+  | YM2610 synthesis on core 1 (register-write queue, one frame of latency) | 28.6 | 35 |
+  | generic 68000 idle-loop skip | 25.9 | 39 |
+  | generic Z80 idle-loop skip | 25.3 | 39 |
+
+  All generic for the Neo Geo (no per-game speed-ups): a short backward loop
+  that repeats with the same registers and the same RAM writes, and writes
+  nothing to I/O, gives away the rest of its timeslice. Left on core 0:
+  68000 10.8, video 4.7, Z80 3.8, palette blit 2.2, frame copy 1.5 ms.
+  Next: the video renderer on core 1 (would bring core 0 near 17.5 ms).
 - `init_mgd2` sets reorder their sprites in memory and are not paged yet.
 - Encrypted sets (KOF '99 and later, Metal Slug 3+) need decryption this
   MAME version does not have.

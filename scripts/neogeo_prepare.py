@@ -40,14 +40,16 @@ def build(out):
     srcs, defines = component_sources()
     incs = ["-I" + os.path.join(COMP, d) for d in ("src", "src/libretro", "src/libretro/libretro-common/include")]
     cflags = FLAGS + defines + incs
-    # drivers/neogeo.c #includes the machine and video files: rebuild it when they change
-    extra = {"src/drivers/neogeo.c": ["src/machine/neogeo.c", "src/vidhrdw/neogeo.c", "src/machine/pd4990a.c"]}
-
+    # gcc writes each object's real dependencies (#included .c files too:
+    # drivers/neogeo.c, m68kmame.c) and they decide what to rebuild
     def compile_one(src):
         obj = os.path.join(objdir, src.replace("/", "_") + ".o")
-        deps = [os.path.join(COMP, src)] + [os.path.join(COMP, d) for d in extra.get(src, [])]
-        if not os.path.exists(obj) or any(os.path.getmtime(d) > os.path.getmtime(obj) for d in deps):
-            subprocess.run(["gcc", *cflags, "-c", os.path.join(COMP, src), "-o", obj], check=True)
+        dep = obj[:-2] + ".d"
+        deps = [os.path.join(COMP, src)]
+        if os.path.exists(dep):
+            deps = open(dep).read().replace("\\\n", " ").split(":", 1)[1].split()
+        if not os.path.exists(obj) or any(not os.path.exists(d) or os.path.getmtime(d) > os.path.getmtime(obj) for d in deps):
+            subprocess.run(["gcc", *cflags, "-MMD", "-MF", dep, "-c", os.path.join(COMP, src), "-o", obj], check=True)
         return obj
 
     with ThreadPoolExecutor(os.cpu_count()) as pool:
