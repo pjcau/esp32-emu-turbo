@@ -147,3 +147,48 @@ instead: the 68000's instruction count roughly halves (Aero Fighters 42 →
 20 million instruction fetches over 1800 frames), with identical frames.
 The Z80 sound CPU has no dominant idle loop. Remaining costs: YM2610 FM
 synthesis, the 8 → 16 bpp screen conversion, the 68000 itself.
+
+## Neo Geo on v3: sprites paged from the SD card (2026-09-27)
+
+Aero Fighters 2 / Sonic Wings 2 runs on the board (fork `d0430d65`): 38–50
+emulated fps in game, 16 frames drawn per second, CPU at 100% (68000 + Z80 +
+YM2610), audio at 32 kHz.
+
+**How it fits in 8 MB of PSRAM**
+
+| Part | Sonic Wings 2 | Where it lives |
+|:---|:---|:---|
+| Sprites (C ROMs) | 8 MB | Converted once (first launch, 51 s) into `/sd/retro-go/mame/mame2000/neospr/<game>_gfx<n>.spr`: tiles already decoded + their `pen_usage`. Read through an LRU cache of 8 KB pages in PSRAM (864 KB here); transparent tiles never touch the card. ~40 page reads per 600 frames, worst frame 11 |
+| Sound samples (V ROMs) | 3 MB | Written straight to the `mamerom` flash partition file by file while loading, never allocated in PSRAM |
+| Program (P), BIOS, Z80, text layer | 2.4 MB | PSRAM |
+
+The paged build draws **bit-identical frames** to the sprites-in-RAM build
+(PC harness, 3000 frames, caches of 256 KB to 9 MB). Modern ROM sets load:
+the newer `sfix.sfix` BIOS dump is accepted and the rest is matched by CRC.
+
+**Limits on the board today**
+
+- Program ≤ 2 MB (after Sonic Wings 2's 2 MB, 136 KB of PSRAM is left).
+- Sound samples ≤ ~3.7 MB: the `mamerom` partition is 4 MB and the flash is
+  full (15.86 of 16 MB). Bigger sample sets need **sample paging from the SD**
+  (next step) — Metal Slug 1/2, KOF '94–'95, Samurai Shodown II, Art of
+  Fighting, Neo Turf Masters.
+- Each sprite ROM file ≤ 2 MB for the on-board conversion (this MAME unzips
+  a whole file into RAM, two at a time). Larger files: convert on the PC
+  with the harness and copy the `.spr` files, or a streaming unzip later.
+- `init_mgd2` sets (Riding Hero, King of the Monsters, League Bowling, Eight
+  Man, Football Frenzy, Ninja Commando, Minnasanno Okagesamadesu,
+  Bakatonosama) reorder their sprites in memory and are not paged yet.
+- Save states do not restore Neo Geo games exactly yet.
+
+Metal Slug 2 (32 MB of sprites, 8 MB of samples, 3 MB program) already runs
+on the PC with paged sprites; on the board it waits for sample paging.
+
+**Ready to try on the board (54 sets, MAME 0.37b5 names):** 2020bb, 2020bbh,
+androdun, bjourney, bstars, bstars2, burningf, burningh, crsword, cyberlip,
+fatfury1, fightfev, flipshot, goalx3, gpilots, gururin, janshin, joyjoy,
+karnovr, kotm2, legendos, lresort, maglord, maglordh, mahretsu, mosyougi,
+mutnat, nam1975, ncombat, neomrdo, panicbom, pbobble, popbounc, pspikes2,
+puzzldpr, puzzledp, quizdai2, quizdais, roboarmy, sengokh, sengoku,
+sengoku2, socbrawl, sonicwi2, sonicwi2m, spinmast, ssideki, stakwin,
+strhoop, superspy, tpgolf, trally, wh1, wjammers.
