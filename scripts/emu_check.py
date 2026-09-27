@@ -29,8 +29,7 @@ GAMES = [
     ("gg", "retro-core", "/sd/roms/gg/Swabby-GG-1.11.gg"),
     ("pce", "retro-core", "/sd/roms/pce/reflectron.pce"),
     ("md", "gwenesis", "/sd/roms/md/miniplanets.bin"),
-    ("lnx", "retro-core", None),
-    ("gw", "retro-core", None),
+    # Lynx (lnx) and Game & Watch (gw): set aside with their launcher tabs (2026-09-27)
     ("col", "retro-core", None),
     ("msx", "fmsx", None),
     ("doom", "prboom-go", None),

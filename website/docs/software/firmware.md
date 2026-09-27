@@ -326,9 +326,9 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 35%, 55 drawn |
 | 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 40%, 55 drawn |
 | 3.6 | pce-go (PCE) | Reflectron / Street Fighter II' CE (2.5 MB HuCard) | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn; SF2' CE 60 fps, BUSY 33-43% (2026-09-26). Audio moved from 22050 to 32000 Hz: it crackled |
-| 3.7 | handy (Lynx) | — | 60 fps | still untested: the `.7z` files downloaded were Cloudflare "Just a moment..." pages, not ROMs |
+| 3.7 | handy (Lynx) | — | — | ⏸ set aside (2026-09-27): launcher tab commented out and dropped from `emu_check.py` until a real ROM is available (the `.7z` files downloaded were web pages). The core stays in retro-core |
 | 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 59.4 fps, BUSY 94%, 29 drawn — YM2612 synthesis on core 1; audio resampled from 26633 to 32000 Hz (2026-09-27) |
-| 3.9 | gw-emulator (G&W) | — | 60 fps | still untested (2026-09-26): the card needs a `.gw` ROM made with LCD-Game-Shrinker; the `.mgw` tried is a Tomytronic simulator package. A wrong file now shows a message instead of an assert/reboot |
+| 3.9 | gw-emulator (G&W) | — | — | ⏸ set aside (2026-09-27): launcher tab commented out and dropped from `emu_check.py`; needs a `.gw` ROM made with LCD-Game-Shrinker (the `.mgw` tried is a Tomytronic simulator package). The core stays in retro-core |
 | 3.10 | smsplus (SG-1000) | GP World | 60 fps | ✅ 60 fps, BUSY 33%, 55 drawn (START is pause: `emu_check` presses none) |
 | 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | Metal Slug 1st Mission | 60 fps | ✅ 60 fps, ~29 drawn, BUSY 93–99%; sound chip at 16 kHz doubled to 32 kHz (2026-09-27) |
 | 3.12 | Stella (Atari 2600, `retro-extra`) | Halo 2600 | 60 fps | ✅ 60 fps, BUSY 55%, 30 drawn (2026-09-26) |
