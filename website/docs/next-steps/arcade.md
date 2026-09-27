@@ -271,6 +271,35 @@ Slug 3+), because MAME 0.37b5 has no decryption for them, and sets over
 ~50 MB. **Target:** 60 emulated fps in play on the 1990–95 games (the 54
 ready sets below), and Metal Slug 2 above 45.
 
+**Tested on the board (2026-09-27, fork `3d1734d3`)** — modern ROM sets
+from `/sd/roms/neogeo/` with `neogeo.zip` (BIOS) next to them, sprite and
+sample files prepared on the PC with `scripts/neogeo_prepare.py` (start in
+12–26 s, no conversion on the board), FIT scaling (434×320), audio 32 kHz.
+Emulated fps in the attract mode (no input); real play is heavier
+(Metal Slug 2: 42 fps in play).
+
+| Game | Set | fps (attract) |
+|:---|:---|:---|
+| Alpha Mission II | `alpham2m` | 60.1 |
+| KOF '95 | `kof95m` | 60.1 |
+| Blazing Star | `blazstarm` | 59.9 |
+| NAM-1975 | `nam1975m` | 59.8 |
+| Aero Fighters 3 / Sonic Wings 3 | `sonicwi3m` | 59.8 |
+| Windjammers | `wjammersm` | 59.5 |
+| Aero Fighters 2 / Sonic Wings 2 | `sonicwi2m` | 59.4 |
+| Magician Lord | `maglordm` | 59.3 |
+| Cyber-Lip | `cyberlip` | 59.1 |
+| Neo Drift Out | `neodriftm` | 57.8 |
+| Metal Slug 2 | `mslug2m` | 57.0 (42 in play) |
+| Metal Slug | `mslugm` | 53.8 |
+| Puzzle Bobble 2 | `pbobbl2nm` | 40.8 (to investigate) |
+
+Not supported yet: Shock Troopers (5 MB program), Thrash Rally (MCU).
+**Modern ROM sets:** `scripts/neogeo_modern_sets.py` translates current
+MAME's `neogeo.cpp` into 0.37b5 definitions (109 parent sets; encrypted
+sets and programs over 3.5 MB skipped), so any modern zip loads without a
+hand-written definition.
+
 **Ready to try on the board (54 sets, MAME 0.37b5 names):** 2020bb, 2020bbh,
 androdun, bjourney, bstars, bstars2, burningf, burningh, crsword, cyberlip,
 fatfury1, fightfev, flipshot, goalx3, gpilots, gururin, janshin, joyjoy,
