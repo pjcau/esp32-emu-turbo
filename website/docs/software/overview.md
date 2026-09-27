@@ -29,27 +29,40 @@ Retro-Go is a multi-system emulator for ESP32 devices. It provides a launcher UI
 
 ### Supported Emulators
 
-| Core | System | Resolution | QEMU Benchmark | FPS on ESP32-S3 |
-|:---|:---|:---|:---|:---|
-| nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | **60 fps — measured** on the first article (Super Mario Bros, 35% busy, 2026-09-12) |
-| gnuboy | Game Boy | 160x144 | 432 fps (7.2x) | 60 fps (expected, not yet run on hardware) |
-| gnuboy | Game Boy Color | 160x144 | 393 fps (6.5x) | 60 fps (expected) |
-| smsplus | Master System | 256x192 | 481 fps (8.0x) | 60 fps (expected) |
-| smsplus | Game Gear | 160x144 | 484 fps (8.1x) | 60 fps (expected) |
-| pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | 60 fps (expected) |
-| handy | Atari Lynx | 160x102 | — | 60 fps (expected) |
-| gwenesis | Sega Genesis / Mega Drive | 320x224 | — | 50-60 fps (expected) |
-| gw-emulator | Game & Watch | various | — | 60 fps (expected) |
-| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | **45–52 emulated fps (75–85%), ~10–13 drawn — measured** (Super Mario World, 2026-09-12) |
+Measured on the v4.9.0 first article (article 0003) with `scripts/emu_check.py`
+and `scripts/snes_bench.py`, last rerun 2026-09-27. "Drawn" is how many of the
+60 emulated frames reach the display each second; the full per-step table,
+test ROMs and fixes are in
+[Firmware — Phase 3](/docs/software/firmware#phase-3--all-emulators-at-full-speed).
 
-The QEMU column is a CPU-only benchmark (6.5-10.9x headroom vs 60 fps for the 8-bit
-cores); the last column is what the real board does. Two systems have been measured
-so far: NES holds 60 fps with margin, SNES does not — its cost is in the snes9x
-PPU renderer (~40-50 ms per rendered frame vs ~8.5 ms of CPU+APU emulation), which
-the CPU-only QEMU number could never show. See
-[SNES Optimization](/docs/software/snes-optimization#measured-on-the-first-article-2026-09-12)
-for the breakdown and [QEMU Benchmark](/docs/software/simulator#qemu-esp32-s3-benchmark)
-for the simulator method.
+| Core | System | Native res | QEMU benchmark | Measured on the board |
+|:---|:---|:---|:---|:---|
+| nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | ✅ 60 fps, BUSY 36%, 30 drawn |
+| gnuboy | Game Boy | 160x144 | 432 fps (7.2x) | ✅ 60 fps, BUSY 34%, 30 drawn |
+| gnuboy | Game Boy Color | 160x144 | 393 fps (6.5x) | ✅ 60 fps, BUSY 35–53%, 30 drawn |
+| smsplus | Master System / Game Gear / SG-1000 / ColecoVision | 256x192 | 481 fps (8.0x) | ✅ 60 fps, BUSY 31–40%, 55 drawn |
+| pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | ✅ 60 fps, BUSY 33–43%, 30 drawn |
+| gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 59.4 fps, BUSY 94%, 29 drawn (YM2612 on core 1) |
+| RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps, BUSY 93–99%, ~29 drawn |
+| Stella | Atari 2600 | 160x192 | — | ✅ 60 fps, BUSY 55%, 30 drawn |
+| fMSX | MSX (free C-BIOS) | 256x192 | — | ✅ 59 fps, BUSY 62% |
+| mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
+| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on 6 of 7 test scenes, 19–26 drawn; Super Mario Kart 57 (DSP-1) |
+| snes9x + SuperFX | SNES Star Fox | 256x224 | — | ✅ 53–60 emulated fps, 7–10 drawn (GSU on core 1) |
+| prboom-go | DOOM (Freedoom) | 320x200 | — | ✅ 35 fps (engine rate), BUSY 100% |
+| wolf3d-go | Wolfenstein 3D (shareware) | 320x200 | — | ✅ 62 fps, BUSY 34% |
+| duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1 |
+| quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ runs, 21–44 fps (mostly 25–35) in the attract demo |
+| handy | Atari Lynx | 160x102 | — | ⏳ untested — no test ROM yet |
+| gw-emulator | Game & Watch | various | — | ⏳ untested — needs a `.gw` from LCD-Game-Shrinker |
+
+The QEMU column is a CPU-only benchmark (6.5–10.9x headroom for the 8-bit
+cores). It could never show the SNES bottleneck: the snes9x PPU renderer, not
+CPU+APU emulation (~8.5 ms per frame). The Phase 4 renderer work took SNES
+from 45–52 to 60 emulated fps — see
+[SNES Optimization](/docs/software/snes-optimization). Open items (DOOM heap
+drift, Mario Kart DSP-1, Neo Geo Pocket near the CPU limit) are tracked in
+[Remediation — Emulators](/docs/remediation/emulators).
 
 ---
 
@@ -59,10 +72,9 @@ for the simulator method.
 |:---|:---|:---|:---|
 | **Phase 1** | Hardware Abstraction (ESP-IDF bootstrap) | ✅ Done — validated on the first article (bring-up GREEN 53/0/6) | [Firmware](/docs/software/firmware) |
 | **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done — runs on the first article, NES at 60 fps (2026-09-12) | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
-| **Phase 3** | All Emulators at Full Speed | 🔄 In progress — NES measured 60 fps; other 8-bit/16-bit cores still to run | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
-| **Phase 4** | SNES Optimization (measured 75–85% → 60 FPS) | 📋 Next — baseline measured, bottleneck = PPU renderer | [SNES Optimization](/docs/software/snes-optimization) |
+| **Phase 3** | All Emulators at Full Speed | ✅ Almost done — every tested core at full speed, plus new cores and PC game ports (2026-09-21 → 09-27); Lynx and Game & Watch still need a test ROM | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
+| **Phase 4** | SNES Optimization (renderer → 60 FPS) | ✅ Milestone A done — 60 emulated fps on all test scenes but Mario Kart (57); next: S-DSP on core 1, more drawn frames | [SNES Optimization](/docs/software/snes-optimization) |
 | **Phase 5** | Firmware update from SD card (cable-free flashing) | 🗓️ Future | [below](#future--firmware-update-from-sd-card) |
-
 
 ### Future — firmware update from SD card
 
@@ -208,3 +220,7 @@ Every core fits inside 480x320 with less than 1.5x scaling, so the 20 MHz
 | [esp-box-emu](https://github.com/esp-cpp/esp-box-emu) | Emulators on ESP32-S3-BOX | LVGL UI reference |
 | [atanisoft/esp_lcd_ili9488](https://github.com/atanisoft/esp_lcd_ili9488) | ILI9488 ESP-IDF driver | Display driver reference |
 | [libretro/snes9x2010](https://github.com/libretro/snes9x2010) | Lightweight snes9x fork | SNES core source |
+| [pcgamer404/retro-go-pro](https://github.com/pcgamer404/retro-go-pro) | Retro-Go fork with PC game ports | Source of our Wolfenstein 3D and Quake apps |
+
+What the other Retro-Go forks add, and what is worth pulling in:
+[Retro-Go Forks Survey](/docs/software/retro-go-forks-survey).
