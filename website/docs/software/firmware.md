@@ -144,7 +144,7 @@ The project includes 8 freely distributable homebrew ROMs in `test-roms/` for te
 | Max filename length | 255 characters (long filename support enabled) |
 
 :::tip SNES ROM sizes
-Most SNES games are 1–4 MB. Games with special chips (SA-1, SuperFX) are larger and may not be compatible with snes9x on ESP32-S3.
+Most SNES games are 1–4 MB. SuperFX games (Star Fox) run since 2026-09-27: the GSU runs on core 1 and needs the full 6 MB ROM buffer (the GSU sees the ROM through a 2 MB mirror). SA-1 games are still not supported.
 :::
 
 ---
@@ -335,10 +335,11 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ✅ playable 2026-09-27: E1L1 48–53 fps with movement and fire, menus 73 fps, audio 16 kHz mix doubled to 32 kHz. Fixed on the way: FatFs overwritten by an ODROID-GO audio conversion, START arriving as Insert, the frame drawn into the surface being sent (broken menus), a non-volatile spin-wait hanging the level start |
 | 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ Pac-Man, 1942, Robby Roto 60; Exidy/Circus boards 57 (native); 1943 60 emulated / 27 drawn; Blood Bros. 60, Aero Fighters 47–57 after the idle-loop speed-ups — see [Arcade (MAME)](../next-steps/arcade) |
 | 3.15 | fMSX (MSX) | Pac-Man `.mx1` | 60 fps | ✅ 59 fps, BUSY 62%, with the free C-BIOS in `/sd/retro-go/bios/msx/` |
-| 3.16 | prboom-go (DOOM) | Freedoom 1 | 35 fps (engine rate) | ✅ 35 fps, BUSY 100%; mix at 16 kHz doubled to 32 kHz, sfx interpolated; the heap still falls during play (leak open) |
+| 3.16 | prboom-go (DOOM) | Freedoom 1 | 35 fps (engine rate) | ✅ 35 fps, BUSY 100%; mix at 16 kHz doubled to 32 kHz, sfx interpolated. The in-game crash is fixed (2026-09-27, fork `66d251ed`): the game outgrew the 8 KB main-task stack (9.4 KB used in E1 play) and now runs in its own 16 KB task; the lump cache keeps 1.5 MB of PSRAM free for the rest of the system instead of filling it. 6 min of scripted play without a crash |
 | 3.17 | wolf3d-go (Wolfenstein 3D, Wolf4SDL via [retro-go-pro](https://github.com/pcgamer404/retro-go-pro)) | shareware v1.4 `.WL1` in `/sd/roms/wolf3d/data/` | 70 fps (engine cap) | ✅ 62 fps, BUSY 34% in E1M1 (2026-09-27); mix at 16 kHz doubled to 32 kHz. Built for shareware data: the full game (`.WL6`) needs `version.h` changed and a rebuild. Menus redraw only on change (1–2 fps in the HUD is normal there) |
-| 3.18 | quake-go (WinQuake software renderer, via retro-go-pro) | shareware `id1/pak0.pak` | playable | builds (710 KB), mixer at 32 kHz on core 1; not yet run on the board — the 18.7 MB PAK still has to be copied to `/sd/roms/quake/id1/` |
+| 3.18 | quake-go (WinQuake software renderer, via retro-go-pro) | shareware `id1/pak0.pak` | playable | ✅ runs (2026-09-27): attract demo 21–44 fps, mostly 25–35, BUSY 100%, heap stable; mixer at 32 kHz on core 1. The 18.7 MB `pak0.pak` is copied with a card reader (console `put` is ~40 KB/s) |
 | — | ColecoVision (smsplus) | Pac-Man | 60 fps | ✅ 60 fps, BUSY 31% (START opens the keypad: `emu_check` presses none) |
+| — | snes9x + SuperFX (SNES) | Star Fox (Rev 2) | 60 fps | ✅ 53–60 emulated fps, 7–10 drawn, BUSY 99% (2026-09-27, fork `98f88705`): SuperFX from snes9x2005, GSU on core 1 while core 0 emulates the 65816 (inline it cost 50–67% of each second: 22–30 fps). GSU state is not in save states yet |
 | — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 
 **Audio sample rate rule (2026-09-26): every app runs its audio at 32000 Hz.**

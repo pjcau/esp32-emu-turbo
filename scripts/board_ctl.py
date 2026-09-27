@@ -52,6 +52,28 @@ class Board:
     def __init__(self, port, baud=115200):
         self.ser = serial.Serial(port, baud, timeout=0.05)
         self.ser.reset_input_buffer()
+        # App the key presses are meant for, set by launch(). If the app
+        # crashed back to the launcher, blind presses there open "File
+        # properties -> Delete selected file?" and confirm it: on 2026-09-27
+        # a DOOM play script deleted 9 ROMs from the card that way. So once a
+        # game was launched, every key/hold first checks the running app.
+        self.expect_app = None
+
+    def current_app(self):
+        for l in self.send("ping", timeout=1.5, echo=False):
+            m = re.search(r"app=(\S+)", l)
+            if m:
+                return m.group(1)
+        return None
+
+    def _check_app(self):
+        if self.expect_app is None:
+            return
+        app = self.current_app()
+        if app != self.expect_app:
+            self.ser.write(b"release\n")
+            raise RuntimeError(f"key presses stopped: running app is {app!r}, expected {self.expect_app!r} "
+                               "(crashed back to the launcher?)")
 
     def readline(self):
         line = self.ser.readline().decode("utf-8", "replace")
@@ -59,6 +81,8 @@ class Board:
 
     def send(self, line, wait=r"^CTL ", timeout=2.0, echo=True):
         """Send one command, return the CTL lines received before timeout."""
+        if line.startswith(("key ", "hold ")):
+            self._check_app()
         self.ser.write((line + "\n").encode())
         self.ser.flush()
         out, deadline = [], time.time() + timeout
@@ -88,6 +112,7 @@ class Board:
         part = APPS.get(app, "retro-core")
         cmd = f"resume{slot}" if resume else "launch"
         self.send(f"{cmd} {part} {app} {rom}", timeout=3)
+        self.expect_app = part
 
     def put(self, local, remote):
         """Upload a file to the card: 'put <size> <path>' then base64 text."""
@@ -179,6 +204,9 @@ def main():
         sys.exit(0 if ok else 1)
     elif a.cmd == "ls":
         b.send(f"ls {a.args[0] if a.args else '/sd'}", wait=r"^CTL ls (done|failed)", timeout=10)
+    elif a.cmd in ("key", "hold") and b.current_app() == "launcher" and not os.environ.get("BOARD_CTL_LAUNCHER_KEYS"):
+        # the launcher's file menu can delete ROMs: navigate it on purpose only
+        sys.exit("refusing key presses in the launcher (set BOARD_CTL_LAUNCHER_KEYS=1 to allow)")
     elif a.cmd == "key":
         b.key(a.args[0], int(a.args[1]) if len(a.args) > 1 else 100)
     elif a.cmd == "hold":
