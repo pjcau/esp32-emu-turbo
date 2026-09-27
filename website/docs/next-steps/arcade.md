@@ -216,7 +216,8 @@ that do not include it (Puzzle Bobble 2). Art: rxbrad/es-theme-gbz35.
 - `init_mgd2` sets reorder their sprites in memory and are not paged yet.
 - Encrypted sets (KOF '99 and later, Metal Slug 3+) need decryption this
   MAME version does not have.
-- Save states do not restore Neo Geo games exactly yet.
+- Save states restore Neo Geo games exactly (fork `ec8acd7b`): see
+  *Save states* below.
 
 ### What was changed in mame-go for Neo Geo
 
@@ -235,6 +236,29 @@ are identical.
 | **8 open files** instead of 4 (`rg_storage`) | Metal Slug 2 keeps 3 open while playing; the conversion needed 5 |
 | **PC preparation** (`tools/neoprep.c`, `scripts/neogeo_prepare.py`) | the same conversion code runs in seconds on the PC instead of minutes on the board |
 | **Neo Geo launcher tab** (`/sd/roms/neogeo/`) | Neo Geo games separate from the 8-bit arcade games |
+| **Exact save states** (`neogeo_mamego_state()` in `drivers/neogeo.c`, `YM2610_state()` in `fm.c`, `AY8910_state()`) | the generic mame-go state saved only the CPU regions: Neo Geo keeps its work RAM, video RAM, palettes, latches and sound chip elsewhere, and its program ROM is in flash |
+| **Per-game fixes for modern sets** (`neogeo_name()` in `machine/neogeo.c`; the generator copies the 0.37b5 flags) | a modern set named `<name>m` missed the 153 name-keyed fixes of `<name>`: Metal Slug 2 and KOF '95 stopped at the warning screen (no SRAM protection hack), and no set got its `NEO_CYCLE_R` speed-up |
+
+### Save states
+
+A Neo Geo state (~506 KB) holds the CPU contexts and scheduler (as for every
+mame-go board), the Z80 region, and from the driver: 64 KB work RAM, the
+68 KB of video RAM in use, both palette banks and which one is active, the
+64 KB backup RAM, the memory card, the IRQ2/raster and latch variables, the
+calendar chip, both CPUs' bank offsets, and the YM2610 with its SSG. The
+YM2610 struct holds pointers into itself and into a malloc'd table: they
+are relocated on load, so a state loads in a new run of the same build.
+The program ROM is left out (read-only, in flash).
+
+PSRAM is almost all given to the sprite page cache while a game runs, so
+the state buffer is that cache, borrowed between frames and emptied
+(`neospr_borrow()`); it refills from the card in the next frames.
+
+Checked on the PC harness: save at frame 1500, then 200 frames compared
+with the run that never saved, in the same process and in a new process
+that loads the file: 200/200 identical on Metal Slug 2, KOF '95 and Puzzle
+Bobble 2 (before: 0/200). On the board: save and load in play on Metal
+Slug 2, game continues at 51–54 fps.
 
 ### Strategy
 
@@ -277,6 +301,11 @@ sample files prepared on the PC with `scripts/neogeo_prepare.py` (start in
 12–26 s, no conversion on the board), FIT scaling (434×320), audio 32 kHz.
 Emulated fps in the attract mode (no input); real play is heavier
 (Metal Slug 2: 42 fps in play).
+
+**Caveat (found later the same day):** this table was measured before the
+`neogeo_name()` fix. Metal Slug 2 and KOF '95 were stuck on the warning
+screen, so their numbers are for that screen, and no game had its
+per-game speed-up. To be measured again.
 
 | Game | Set | fps (attract) |
 |:---|:---|:---|
