@@ -45,8 +45,13 @@
 }
 
 /* ── Navbar ───────────────────────────────────────────── */
-.navbar {
-  backdrop-filter: blur(8px);
+/* Desktop only: backdrop-filter makes .navbar the containing block of its
+   position:fixed children, which clips the mobile menu (.navbar-sidebar)
+   to the bar's height, so the hamburger opened nothing. */
+@media (min-width: 997px) {
+  .navbar {
+    backdrop-filter: blur(8px);
+  }
 }
 
 .navbar__title {
