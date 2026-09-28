@@ -22,6 +22,7 @@ rule. The feasibility tiers are estimates until a port is measured.
 | [Plan A: ESP32-P4 + ESP32-C6](/docs/next-steps/plan-esp32-p4) | stay on Espressif: changes, time, cost, which requirements it meets |
 | [Plan B: Rockchip RK3566](/docs/next-steps/plan-rk3566) | Linux module, the chip of RG353-class handhelds |
 | [Plan C: Raspberry Pi CM4](/docs/next-steps/plan-cm4) | Linux module with the largest software ecosystem |
+| [Plan D: ESP32-S3 with 32 MB flash](/docs/next-steps/plan-esp32-s3-n32r16v) | same board, module swap to 32 MB flash / 16 MB PSRAM: every case, system by system |
 
 ## Suggested order
 

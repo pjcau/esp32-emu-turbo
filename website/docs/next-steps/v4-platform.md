@@ -18,16 +18,16 @@ today:
 
 ## PS1 and N64 decide the platform
 
-| Requirement | ESP32-S3 (current) | ESP32-P4 + ESP32-C6 | Linux SoC (ARM + GPU) |
-|:---|:-:|:-:|:-:|
-| Classic MAME (Z80 / 6502) | 🟢 | 🟢 | 🟢 |
-| 16-bit (SNES, MD, PCE, Neo Geo) | 🟡 SNES at the limit, Neo Geo at part speed (ROMs paged from the SD) | 🟢 almost all (Neo Geo only up to 32 MB of ROM) | 🟢 |
-| 32-bit (GBA, 32X, Sega CD, CPS2) | 🔴 | 🟡 Sega CD / CPS1 likely, GBA uncertain, 32X unlikely | 🟢 |
-| **PlayStation** | 🔴 | 🔴 no RISC-V dynarec | 🟢 |
-| **Nintendo 64** | 🔴 | 🔴 | 🟢 with a real GPU |
-| **HDMI** | 🔴 no peripheral, only marginal experiments | 🟢 through the LT8912B DSI → HDMI bridge Espressif supports (720p) | 🟢 built in |
-| **Bluetooth controllers** | 🟡 **BLE only**: recent Xbox pads work, DualShock / DualSense / Switch Pro do not | 🟢 with an original ESP32 as radio chip (Classic + BLE); 🟡 with the C6 (BLE only) | 🟢 Bluetooth Classic + BLE: all of them |
-| Wi-Fi | 🟢 | 🟢 through the C6 | 🟢 |
+| Requirement | ESP32-S3 (current) | ESP32-S3 32 MB flash / 16 MB PSRAM (Plan D) | ESP32-P4 + ESP32-C6 | Linux SoC (ARM + GPU) |
+|:---|:-:|:-:|:-:|:-:|
+| Classic MAME (Z80 / 6502) | 🟢 | 🟢 | 🟢 | 🟢 |
+| 16-bit (SNES, MD, PCE, Neo Geo) | 🟡 SNES at the limit, Neo Geo at part speed (ROMs paged from the SD) | 🟡 same speed, Neo Geo / CPS1 with far less paging | 🟢 almost all (Neo Geo only up to 32 MB of ROM) | 🟢 |
+| 32-bit (GBA, 32X, Sega CD, CPS2) | 🔴 | 🟡 CPS2 memory fits, speed to measure; GBA / 32X / Sega CD 🔴 | 🟡 Sega CD / CPS1 likely, GBA uncertain, 32X unlikely | 🟢 |
+| **PlayStation** | 🔴 | 🔴 | 🔴 no RISC-V dynarec | 🟢 |
+| **Nintendo 64** | 🔴 | 🔴 | 🔴 | 🟢 with a real GPU |
+| **HDMI** | 🔴 no peripheral, only marginal experiments | 🔴 same chip | 🟢 through the LT8912B DSI → HDMI bridge Espressif supports (720p) | 🟢 built in |
+| **Bluetooth controllers** | 🟡 **BLE only**: recent Xbox pads work, DualShock / DualSense / Switch Pro do not | 🟡 BLE only (same chip) | 🟢 with an original ESP32 as radio chip (Classic + BLE); 🟡 with the C6 (BLE only) | 🟢 Bluetooth Classic + BLE: all of them |
+| Wi-Fi | 🟢 | 🟢 | 🟢 through the C6 | 🟢 |
 
 - **No microcontroller reaches PS1 and N64.** The emulators that run them
   on cheap hardware depend on a **dynarec** (MIPS code translated to ARM
@@ -49,6 +49,7 @@ today:
 | Path | Verdict |
 |:---|:---|
 | **A. In stages: S3 → P4 → Linux** | Not recommended. The P4 step costs a new board but reaches neither PS1 nor N64 and does not solve Bluetooth Classic; the move to Linux still has to happen, so three boards get designed instead of two. |
+| **D. Module swap on the S3 (v3.2)** | **Worth doing on its own, not instead of B.** Same board and firmware with 32 MB flash and 16 MB PSRAM: more apps, Neo Geo / CPS1 with less paging, a chance at CPS2, in ~3–4 weeks for ~+$5 per console. It reaches none of PS1, N64, HDMI, Bluetooth Classic, so it does not count as a v4 step. See [Plan D](/docs/next-steps/plan-esp32-s3-n32r16v). |
 | **B. One jump to a Linux module** | **Recommended.** One step covers every new requirement. A **compute module** on a carrier board of our own design avoids routing DDR memory on our PCB. |
 
 | Module | CPU / GPU | N64 | PS1 | HDMI | Wi-Fi / BT | Power (indicative) |
@@ -76,16 +77,16 @@ the cost of battery life and heat.
   audio) instead of writing emulators.
 - **Boot:** 10–20 s instead of instant-on.
 
-## The three plans in detail
+## The four plans in detail
 
-| | [Plan A: ESP32-P4 + C6](/docs/next-steps/plan-esp32-p4) | [Plan B: RK3566](/docs/next-steps/plan-rk3566) | [Plan C: CM4](/docs/next-steps/plan-cm4) |
-|:---|:-:|:-:|:-:|
-| Requirements met | 4 of 6 (32-bit partly) | 6 of 6 (N64 partly) | 6 of 6 (N64 partly) |
-| PS1 / N64 | 🔴 / 🔴 | 🟢 / 🟡 | 🟢 / 🟡 |
-| Keeps display, enclosure, retro-go | yes | no | no |
-| Time (estimate) | ~4–5 months | ~6–8 months | ~5–7 months |
-| BOM per console (estimate) | ~$52–58 | ~$70–100 | ~$80–110 |
-| Battery life | like today | ~5–6 h | ~4–5 h |
+| | [Plan A: ESP32-P4 + C6](/docs/next-steps/plan-esp32-p4) | [Plan B: RK3566](/docs/next-steps/plan-rk3566) | [Plan C: CM4](/docs/next-steps/plan-cm4) | [Plan D: S3 32 MB](/docs/next-steps/plan-esp32-s3-n32r16v) |
+|:---|:-:|:-:|:-:|:-:|
+| Requirements met | 4 of 6 (32-bit partly) | 6 of 6 (N64 partly) | 6 of 6 (N64 partly) | 2 of 6 (MAME / 16-bit better, 32-bit only CPS2 maybe) |
+| PS1 / N64 | 🔴 / 🔴 | 🟢 / 🟡 | 🟢 / 🟡 | 🔴 / 🔴 |
+| Keeps display, enclosure, retro-go | yes | no | no | yes, and the PCB |
+| Time (estimate) | ~4–5 months | ~6–8 months | ~5–7 months | ~3–4 weeks |
+| BOM per console (estimate) | ~$52–58 | ~$70–100 | ~$80–110 | ~$45 (today +$5) |
+| Battery life | like today | ~5–6 h | ~4–5 h | like today |
 
 ## Roadmap
 
@@ -93,12 +94,15 @@ the cost of battery life and heat.
 2. **v3.1 (ESP32-S3):** v3 with the fixes from
    [Remediation](/docs/remediation) (audio, emulator bugs, hardware
    backlog); it stays the low-cost, instant-on 8/16-bit console.
-3. **v4 study (a few weeks):** buy an RK3566 development board and a
+3. **v3.2 (ESP32-S3, optional):** the same board with the
+   WROOM-2-N32R16V module ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)):
+   more apps and more arcade, no new requirements.
+4. **v4 study (a few weeks):** buy an RK3566 development board and a
    CM4 / CM5, and measure N64 and PS1 frame rates, power draw and
    Bluetooth controller compatibility on a set of reference games. Same
    method as with the S3: measure first, then design.
-4. **v4 carrier board:** the chosen module, DSI display, HDMI, PMIC,
+5. **v4 carrier board:** the chosen module, DSI display, HDMI, PMIC,
    buttons and I2S audio; Wi-Fi and Bluetooth come with the module.
 
-All the new requirements arrive together at step 4, with no intermediate
+All the new requirements arrive together at step 5, with no intermediate
 boards.
