@@ -350,6 +350,8 @@ on core 1, a faster 68000).
   Troopers 1 and 2, KOF '97, The Last Blade 1 and 2, Metal Slug X, Real
   Bout Fatal Fury 2 and Special, Samurai Shodown IV. On the board PSRAM is
   tighter (1.3 MB more than Metal Slug 2 in use): to be checked.
+- On the board (2026-09-28): Shock Troopers runs at 60 fps in attract and
+  tutorial (sprite cache 512 KB, 72 KB of PSRAM left); Thrash Rally 44–60.
 - Thrash Rally never needed its MCU: it only drives the link between two
   cabinets, was never dumped, and current MAME does not emulate it either.
   The generator now drops that region; the game reaches the tutorial.
@@ -387,6 +389,24 @@ repo folder `test-roms/cps1/`); mame-go picks the driver from the zip.
 | Generic 68000 idle skip on, Z80 skip off | the Z80 feeds the YM2151/OKI through memory: its skip changed the audio on the PC |
 | 384-wide screens fit the panel width (480×280) | CPS1 is 384×224 |
 | mame-go partition 1.5 → 1.75 MB (retro-extra 1.75 → 1.5 MB, binary 1.43 MB) | CPS1 adds ~150 KB |
+
+**On the board (2026-09-28):**
+
+| Game | Set | fps (attract/title) | Notes |
+|:---|:---|:---|:---|
+| Final Fight | `ffight` | 40 | tiles streamed to flash (2 MB) |
+| Carrier Air Wing | `cawing` | 37–44 | |
+| Ghouls'n Ghosts | `ghouls` | 43–51 | graphics not plain `ROM_LOAD`s: ROM loaded and converted into flash |
+| Knights of the Round | `knights` | 36 | 16-bit colour, one display surface (no room for two) |
+| SF2 Champion Edition | `sf2cem` (modern set) | 33–35 | 4 MB tiles in flash + 2 MB in PSRAM; the display reads the core's frame buffer |
+| SF2 Hyper Fighting | `sf2hf` (modern set) | 32–38 | the 0.37b5 name is `sf2t`: matched by its chips |
+
+Board-only fixes found on the way: ESP-IDF's `malloc(0)` returns NULL (CPS1's
+empty gfx elements looked like "out of memory"), the 4 MB program file no
+longer inflated whole (streamed from the zip), a tile-bound off-by-one that
+read one tile past the flash mapping, the 2 MB `CODE_SIZE` trimmed to the
+program's size, pen-usage masks in 16 bits. Speed is below 60: CPS1 needs
+the same 68000 work as the Neo Geo (see the Metal Slug 2 section).
 
 **Checked on the PC harness:** Final Fight, Carrier Air Wing, Ghouls'n
 Ghosts, Knights of the Round, SF2 Champion Edition reach attract / title /

@@ -716,8 +716,9 @@ and Zelda, 3600 frames each: every audio sample identical to the inline
 mix (shifted by one frame), video identical. Save/load behaves exactly as
 before (note: SNES save states in this port are not frame-exact to begin
 with, 3-7 of 200 frames identical after a load, with or without this
-change). Expected on the board: ~2 ms off core 0 per frame, enough for
-Mario Kart's 57 → 60.
+change). **On the board (2026-09-28): Mario Kart's first race runs at 57–62,
+mostly 60 fps (was 57)**; Star Fox stays at 60 with the SuperFX and the
+S-DSP sharing core 1; audio at 32 kHz.
 
 ## Audio — no separate coprocessor {#audio-no-coprocessor}
 
