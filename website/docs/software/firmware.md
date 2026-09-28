@@ -408,6 +408,28 @@ For SNES-specific optimization (Phase 4) and why audio stays on the main chip in
 
 ---
 
+## Firmware update from the SD card (2026-09-28)
+
+After one USB flash of a build that has it, apps are updated from the card:
+
+1. Put `<app>.bin` (the image the build writes, e.g.
+   `retro-go/mame-go/build/mame-go.bin`) in `retro-go/update/` on the card —
+   `scripts/sd_update.py --card <mount> [apps]` copies them, or
+   `scripts/sd_update.py --console [apps]` uploads them over USB (~38 KB/s)
+   and reboots to the launcher.
+2. At boot the launcher writes each image into the partition of the same
+   name, verifies it (`esp_image_verify`) and renames the file to `.done`
+   (`.failed` if the check fails).
+3. `launcher.bin` cannot be written by the running launcher: it hands over
+   to another app, whose boot writes the launcher partition and switches
+   back (`components/retro-go/rg_update.c`, called at the end of
+   `rg_system_init()`).
+
+Tested on the board: OpenTyrian (585 KB) and the launcher itself (1.06 MB).
+Limits: only app partitions — a change of the partition table (the sizes in
+`rg_tool.py`) still needs `rg_tool.py install` over USB; an image larger
+than its partition is refused by the script and by the board.
+
 ## Build & Flash
 
 ```bash
