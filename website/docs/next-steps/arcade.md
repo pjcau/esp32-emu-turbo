@@ -398,3 +398,48 @@ as the in-RAM conversion. In use after start: ~5.6 MB for SF2 CE (program
 384-wide renderer: expect it at the limit, like the Neo Geo), Q-Sound games
 (Cadillacs and Dinosaurs, Warriors of Fate, Punisher: kabuki-encrypted Z80 +
 4 MB of Q-Sound samples) untested.
+
+
+## Metal Slug 2 toward 60 fps: board measurements (2026-09-28)
+
+Target set by the user: Metal Slug 2 in play at 55–60 fps. Measured on the
+board with the `NEOPROF=1` build (core 0 split per part, core 1 busy from an
+idle hook, display task time), in play from a save state, 30 s windows.
+
+| Build | Light scenes | Heavy scenes | Core 0 | Core 1 |
+|:---|:---|:---|:---|:---|
+| Sound on core 0, sprites on core 0 | 45–53 fps | 34–38 fps | 98% | ~50% |
+| Sprites on core 1 (present task) | 43 fps | — | 97% | 96% |
+| Sound board (Z80 + YM2610) on core 1 | 49–54 fps | 36–39 fps | 98% | 95–99% |
+
+What the numbers say:
+
+- **Heavy scenes are the 68000's.** It takes 14–18 ms a frame there
+  (7–10 ms in light scenes): the game's logic is really that busy (Metal
+  Slug 2 slows down on a real MVS too), no wait loop to skip (PC histogram:
+  the time is spread over the game's code).
+- **Moving work to core 1 is paid back in memory contention.** Both cores
+  share the 64 KB data cache and the PSRAM: with the sprites on core 1 the
+  68000 went from 11.8 to 14 ms, with the sound board from ~15 to ~17 ms in
+  heavy scenes. Net: +0 fps for the sprites (kept off by default,
+  `NEODEFER=1` builds it), +2–3 fps for the sound board (kept on).
+- **The display task** (scale to 434×320 + smoothing filter + line
+  checksums) costs ~4.5 ms per emulated frame on core 1; with the LCD off
+  the game gains only 2–4 fps, so it is not the main limit. Turning the
+  filter off looked bad at 1.43× and was reverted.
+- `-O3` on the 68000 core does not fit the 1.75 MB partition (+110 KB).
+
+**Sound board on core 1 (fork, PC-verified + board):** a private Z80
+(`cpu/z80/z80snd.c`, z80.c built again with its own memory/port accessors)
+runs the Neo Geo sound program with direct ROM banks and RAM, the YM2610
+written directly with its timers counted in Z80 cycles and samples rendered
+as the Z80 runs; the 68000's commands are delivered one frame later at the
+same point in the frame, the reply it reads comes from the previous frame.
+PC: audio envelope 95% equal to MAME's scheduling (shifted one frame), same
+frames on screen, save/load 200/200.
+
+**Next levers for heavy scenes (not started):** a faster 68000 core
+(direct-pointer fast paths for the Neo Geo's ROM/RAM instead of MAME's
+memory handlers, hot opcode handlers in IRAM if memory allows), or less
+cache traffic from core 1 (the display reading the MAME bitmap directly
+with a 16-bit palette, dropping the separate conversion pass).
