@@ -89,8 +89,8 @@ def main():
     old_text = open(DRIVER).read()
     old = blocks(old_text)
     old_games = {}
-    for m in re.finditer(r'^GAME\(\s*(\d+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,', old_text, re.M):
-        old_games[m.group(2)] = dict(parent=m.group(3), machine=m.group(4), input=m.group(5), init=m.group(6), flags=m.group(7))
+    for m in re.finditer(r'^GAME\(\s*(\d+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,\s*(\w+)\s*,[^"]*"[^"]*"\s*,\s*"([^"]*)"', old_text, re.M):
+        old_games[m.group(2)] = dict(parent=m.group(3), machine=m.group(4), input=m.group(5), init=m.group(6), flags=m.group(7), title=m.group(8))
     old_parts = {n: old_split(b) for n, b in old.items()}
 
     modern_games = {}
@@ -122,6 +122,21 @@ def main():
                     match = "same"      # 0.37b5 has this very set
                     break
                 match = match or oname
+        if not match:
+            # renamed across versions (sf2hf here is sf2t there): any 0.37b5 set
+            # with exactly these chips, the one whose title shares most words
+            words = set(re.findall(r"[a-z]+", title.lower()))
+            best = -1
+            for oname, (oprog, oother, opc, ooc) in old_parts.items():
+                g = old_games.get(oname)
+                if not g or ooc != ocrc:
+                    continue
+                if opc == pcrc:
+                    match = "same"
+                    break
+                score = len(words & set(re.findall(r"[a-z]+", g["title"].lower())))
+                if score > best:
+                    best, match = score, oname
         if not match or match == "same":
             continue
         oprog, oother, _, _ = old_parts[match]

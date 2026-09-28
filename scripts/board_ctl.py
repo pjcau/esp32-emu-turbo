@@ -19,6 +19,8 @@ press buttons and read the SNES_PROF counters without touching the board.
     board_ctl.py capture 10             # 10 s of PROF lines + averages
     board_ctl.py volume 5               # set (or with no value read) the volume, 0-100
     board_ctl.py cat /sd/crash.log      # print a text file from the card
+    board_ctl.py shot out.png           # screenshot of the running emulator (PNG)
+    board_ctl.py get /sd/file local     # download a file from the card
     board_ctl.py acap 4 out.wav         # the audio samples as submitted (digital, no microphone)
     board_ctl.py raw "lcd off"          # stop sending frames to the panel (bench), "lcd on" back
     board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
@@ -76,7 +78,13 @@ class Board:
                                "(crashed back to the launcher?)")
 
     def readline(self):
-        line = self.ser.readline().decode("utf-8", "replace")
+        # the 50 ms timeout returns whatever arrived: keep a partial line until
+        # its newline comes (long base64 lines of `get`/`adump` were cut in two)
+        chunk = self.ser.readline().decode("utf-8", "replace")
+        self._partial = getattr(self, "_partial", "") + chunk
+        if not self._partial.endswith("\n"):
+            return ""
+        line, self._partial = self._partial, ""
         return ANSI.sub("", line).rstrip("\r\n")
 
     def send(self, line, wait=r"^CTL ", timeout=2.0, echo=True):
@@ -191,6 +199,31 @@ class Board:
         return summary
 
 
+def fetch(b, remote, piece=7200, tries=4):
+    """A file from the card through `get`, piece by piece; a piece that
+    arrives short (a USB line lost) is asked again."""
+    import base64
+    data = b""
+    while True:
+        for _ in range(tries):
+            lines = b.send(f"get {remote} {len(data)} {piece}", wait=r"^CTL get (done|failed)", timeout=20, echo=False)
+            got, ok = b"", bool(lines) and "done" in lines[-1]
+            for l in lines:
+                if l.startswith("CTL g "):
+                    try:
+                        got += base64.b64decode(l[6:])
+                    except Exception:
+                        ok = False
+            m = re.search(r"CTL get done (\d+)", lines[-1]) if lines else None
+            if ok and m and int(m.group(1)) == len(got):
+                break
+        else:
+            raise SystemExit(f"get {remote}: piece at {len(data)} failed {tries} times")
+        data += got
+        if len(got) < piece:
+            return data
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--port", default=os.environ.get("ESP_PORT", "/dev/ttyACM0"))
@@ -229,6 +262,27 @@ def main():
         b.send(f"mv {a.args[0]}|{a.args[1]}", wait=r"^CTL mv", timeout=5)
     elif a.cmd == "rm":
         b.send("rm " + " ".join(a.args), wait=r"^CTL rm", timeout=5)
+    elif a.cmd == "shot":   # board_ctl.py shot out.png : screenshot of the running emulator
+        remote = "/sd/shot.raw"   # raw RGB565 + width/height (mame-go screenshot handler)
+        b.send("shot " + remote, wait=r"^CTL shot", timeout=20)
+        import struct
+        data = fetch(b, remote)
+        out = a.args[0] if a.args else "shot.png"
+        if len(data) > 4:
+            from PIL import Image
+            w, h = struct.unpack("<HH", data[:4])
+            px = data[4:4 + w * h * 2]
+            img = Image.new("RGB", (w, h))
+            img.putdata([((v >> 11) << 3, ((v >> 5) & 63) << 2, (v & 31) << 3)
+                         for v in struct.unpack("<%dH" % (w * h), px)])
+            img.save(out)
+            print(f"{w}x{h} -> {out}")
+        else:
+            print("no screenshot")
+    elif a.cmd == "get":    # board_ctl.py get /sd/file local
+        data = fetch(b, a.args[0])
+        open(a.args[1], "wb").write(data)
+        print(f"{len(data)} bytes -> {a.args[1]}")
     elif a.cmd == "cat":
         for l in b.send("cat " + " ".join(a.args), wait=r"^CTL cat (done|failed)", timeout=10, echo=False):
             print(l[8:] if l.startswith("CTL cat ") else l)
