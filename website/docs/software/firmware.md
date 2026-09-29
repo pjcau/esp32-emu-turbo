@@ -86,9 +86,7 @@ SD Card (FAT32)
     ├── sms/       .sms files
     ├── gg/        .gg files
     ├── pce/       .pce files
-    ├── gen/       .bin / .md files
-    ├── lynx/      .lnx files
-    └── gw/        .gw files
+    └── gen/       .bin / .md files
 ```
 
 ### Preparation steps
@@ -195,7 +193,7 @@ All 5 Retro-Go applications compile successfully for the ESP32 Emu Turbo target 
 | Binary | Contents | Size | Partition free |
 |:---|:---|:---|:---|
 | `launcher.bin` | Retro-Go launcher UI + ROM browser | 1037 KB | 67% |
-| `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W) | ~2.5 MB | ~17% |
+| `retro-core.bin` | All emulators (NES, SNES, GB, GBC, SMS, GG, SG-1000, Coleco, PCE) | ~2.5 MB | ~17% |
 | `gwenesis.bin` | Sega Genesis / Mega Drive (standalone) | ~1.5 MB | ~50% |
 | `prboom-go.bin` | Doom port (PrBoom) | ~1.5 MB | ~50% |
 
@@ -276,8 +274,8 @@ python3 tools/gen_images.py      # re-embed themes/default/*.png in launcher/mai
 
 A new system is one line in the script's `SYSTEMS` table (tab short name →
 theme folder). Imported so far: Arcade (MAME), Duke Nukem 3D (the theme's
-`pc` art), SG-1000, Atari 2600, and the missing pieces of GBA and Neo Geo
-Pocket (the MSX art went with fMSX, removed 2026-09-29).
+`pc` art), SG-1000, and the missing pieces of GBA and Neo Geo
+Pocket (the MSX art went with fMSX, the Atari 2600 art with Stella, both removed 2026-09-29).
 
 ---
 
@@ -332,12 +330,12 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 35%, 55 drawn |
 | 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 40%, 55 drawn |
 | 3.6 | pce-go (PCE) | Reflectron / Street Fighter II' CE (2.5 MB HuCard) | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn; SF2' CE 60 fps, BUSY 33-43% (2026-09-26). Audio moved from 22050 to 32000 Hz: it crackled |
-| 3.7 | handy (Lynx) | — | — | ⏸ set aside (2026-09-27): launcher tab commented out and dropped from `emu_check.py` until a real ROM is available (the `.7z` files downloaded were web pages). The core stays in retro-core |
+| 3.7 | ~~handy (Lynx)~~ | — | — | removed 2026-09-29: not needed (core, launcher tab and art deleted) |
 | 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 59.4 fps, BUSY 94%, 29 drawn — YM2612 synthesis on core 1; audio resampled from 26633 to 32000 Hz (2026-09-27) |
-| 3.9 | gw-emulator (G&W) | — | — | ⏸ set aside (2026-09-27): launcher tab commented out and dropped from `emu_check.py`; needs a `.gw` ROM made with LCD-Game-Shrinker (the `.mgw` tried is a Tomytronic simulator package). The core stays in retro-core |
+| 3.9 | ~~gw-emulator (G&W)~~ | — | — | removed 2026-09-29: not needed (core, launcher tab and art deleted) |
 | 3.10 | smsplus (SG-1000) | GP World | 60 fps | ✅ 60 fps, BUSY 33%, 55 drawn (START is pause: `emu_check` presses none) |
 | 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | Metal Slug 1st Mission | 60 fps | ✅ 60 fps, ~29 drawn, BUSY 93–99%; sound chip at 16 kHz doubled to 32 kHz (2026-09-27) |
-| 3.12 | Stella (Atari 2600, `retro-extra`) | Halo 2600 | 60 fps | ✅ 60 fps, BUSY 55%, 30 drawn (2026-09-26) |
+| 3.12 | ~~Stella (Atari 2600, `retro-extra`)~~ | — | — | removed 2026-09-29: not needed (core, launcher tab and art deleted) |
 | 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ✅ playable 2026-09-27: E1L1 48–53 fps with movement and fire, menus 73 fps, audio 16 kHz mix doubled to 32 kHz. Fixed on the way: FatFs overwritten by an ODROID-GO audio conversion, START arriving as Insert, the frame drawn into the surface being sent (broken menus), a non-volatile spin-wait hanging the level start |
 | 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ Pac-Man, 1942, Robby Roto 60; Exidy/Circus boards 57 (native); 1943 60 emulated / 27 drawn; Blood Bros. 60, Aero Fighters 47–57 after the idle-loop speed-ups — see [Arcade (MAME)](../next-steps/arcade) |
 | 3.15 | ~~fMSX (MSX)~~ | — | — | removed 2026-09-29 (not needed): the 640 KB partition went to the GBA app `gbsp` |
@@ -382,8 +380,8 @@ The image is 14.8 MB; a board flashed before needs the full image again.
 
 **Partition table (2026-09-14).** `rg_tool.py` now lays out launcher 1 MB,
 retro-core 1.5 MB, prboom-go 768 KB, gwenesis 1 MB, fmsx 576 KB (removed 2026-09-29),
-duke3d-go 1 MB and retro-extra 2 MB (RACE + Stella live apart because
-their ~30 KB of static tables each would take internal RAM from every
+duke3d-go 1 MB and retro-extra 2 MB (RACE lives apart because
+its ~26 KB of static tables would take internal RAM from every
 retro-core emulator). A board flashed before that date needs the full
 image once — `software/retro-go-build/retro-go_esp32-emu-turbo.img` at
 offset 0 (`rg_tool.py install`, or `esptool.py write_flash 0x0 …`); single

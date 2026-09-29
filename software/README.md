@@ -155,7 +155,7 @@ make retro-go-clean
 | Binary | Contents | Size | Partition free |
 |---|---|---|---|
 | `launcher.bin` | Launcher UI + ROM browser | 1037 KB | 67% |
-| `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W) | ~2.5 MB | ~17% |
+| `retro-core.bin` | All emulators (NES, SNES, GB, GBC, SMS, GG, SG-1000, Coleco, PCE) | ~2.5 MB | ~17% |
 | `gwenesis.bin` | Sega Genesis / Mega Drive | ~1.5 MB | ~50% |
 | `prboom-go.bin` | Doom port (PrBoom) | ~1.5 MB | ~50% |
 | `fmsx.bin` | MSX emulator | 655 KB | 79% |

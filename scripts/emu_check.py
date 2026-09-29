@@ -29,12 +29,10 @@ GAMES = [
     ("gg", "retro-core", "/sd/roms/gg/Swabby-GG-1.11.gg"),
     ("pce", "retro-core", "/sd/roms/pce/reflectron.pce"),
     ("md", "gwenesis", "/sd/roms/md/miniplanets.bin"),
-    # Lynx (lnx) and Game & Watch (gw): set aside with their launcher tabs (2026-09-27)
     ("col", "retro-core", None),
     ("doom", "prboom-go", None),
     ("sg1", "retro-core", None),
     ("ngp", "retro-extra", None),
-    ("a26", "retro-extra", None),
     ("duke3d", "duke3d-go", "/sd/roms/duke3d/DUKE3D.GRP"),  # the folder also holds .CON/.RTS/.DMO
     ("arcade", "mame-go", "/sd/roms/arcade/pacman.zip"),
     ("arcade", "mame-go", "/sd/roms/arcade/robby.zip"),

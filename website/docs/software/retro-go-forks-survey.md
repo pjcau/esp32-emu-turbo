@@ -22,9 +22,9 @@ esp-cpp/esp-box-emu and Svarkovsky/s3-msx-pc.
 
 **Baseline.** Our fork is on upstream `master` (0 commits behind) plus 46 of
 our own commits. We don't have upstream `dev`. We already have: launcher +
-splash, retro-core (NES, SNES + SuperFX, GB/GBC, SMS/GG/SG-1000, PCE, Lynx,
-G&W, Coleco), gwenesis, prboom-go, duke3d-go, retro-extra (NGP via RACE,
-Atari 2600 via stella-odroid-go), mame-go (MAME 0.37b5 subset, 8-bit and
+splash, retro-core (NES, SNES + SuperFX, GB/GBC, SMS/GG/SG-1000, PCE,
+Coleco), gwenesis, prboom-go, duke3d-go, retro-extra (NGP via RACE;
+Lynx, Atari 2600 and Game & Watch removed 2026-09-29), mame-go (MAME 0.37b5 subset, 8-bit and
 68000 boards), wolf3d-go and quake-go (both from pcgamer404/retro-go-pro).
 Overclock support for the ESP32-S3 is already in `master`.
 

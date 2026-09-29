@@ -44,7 +44,7 @@ test ROMs and fixes are in
 | pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | ✅ 60 fps, BUSY 33–43%, 30 drawn |
 | gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 59.4 fps, BUSY 94%, 29 drawn (YM2612 on core 1) |
 | RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps, BUSY 93–99%, ~29 drawn |
-| Stella | Atari 2600 | 160x192 | — | ✅ 60 fps, BUSY 55%, 30 drawn |
+| ~~Stella~~ | Atari 2600 | — | — | removed 2026-09-29: not needed |
 | ~~fMSX~~ | MSX | — | — | removed 2026-09-29: not needed; its partition went to GBA (`gbsp`) |
 | mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
 | mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 Sonic Wings 2 38–50 emulated fps; Metal Slug 2 (49 MB) 28–33 in play — see [Neo Geo on v3](/docs/next-steps/arcade#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27) |
@@ -55,8 +55,8 @@ test ROMs and fixes are in
 | opentyrian-go | OpenTyrian (Tyrian 2.1 freeware) | 320x200 | — | ✅ 36 fps (engine rate 35), BUSY ~30% |
 | duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1 |
 | quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ runs, 21–44 fps (mostly 25–35) in the attract demo |
-| handy | Atari Lynx | 160x102 | — | ⏳ untested — no test ROM yet |
-| gw-emulator | Game & Watch | various | — | ⏳ untested — needs a `.gw` from LCD-Game-Shrinker |
+| ~~handy~~ | Atari Lynx | — | — | removed 2026-09-29: not needed |
+| ~~gw-emulator~~ | Game & Watch | — | — | removed 2026-09-29: not needed |
 
 The QEMU column is a CPU-only benchmark (6.5–10.9x headroom for the 8-bit
 cores). It could never show the SNES bottleneck: the snes9x PPU renderer, not
@@ -74,7 +74,7 @@ drift, Mario Kart DSP-1, Neo Geo Pocket near the CPU limit) are tracked in
 |:---|:---|:---|:---|
 | **Phase 1** | Hardware Abstraction (ESP-IDF bootstrap) | ✅ Done — validated on the first article (bring-up GREEN 53/0/6) | [Firmware](/docs/software/firmware) |
 | **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done — runs on the first article, NES at 60 fps (2026-09-12) | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
-| **Phase 3** | All Emulators at Full Speed | ✅ Almost done — every tested core at full speed, plus new cores and PC game ports (2026-09-21 → 09-27); Lynx and Game & Watch still need a test ROM | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
+| **Phase 3** | All Emulators at Full Speed | ✅ Almost done — every tested core at full speed, plus new cores and PC game ports (2026-09-21 → 09-27) | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
 | **Phase 4** | SNES Optimization (renderer → 60 FPS) | ✅ Milestone A done — 60 emulated fps on all test scenes but Mario Kart (57); next: S-DSP on core 1, more drawn frames | [SNES Optimization](/docs/software/snes-optimization) |
 | **Phase 5** | Firmware update from SD card (cable-free flashing) | 🗓️ Future | [below](#future--firmware-update-from-sd-card) |
 
