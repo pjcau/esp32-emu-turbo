@@ -12,6 +12,7 @@ must not be "fixed", is `docs/known-issues.md` in the repository.
 
 | Item | Found | Fix in the respin |
 |:---|:---|:---|
+| **Wi-Fi antenna buried** (top priority) | first article, 2026-09-29: RSSI about −90 dBm | antenna over the edge or all-layer keep-out, SD lines rerouted, gate fixed — see [Wi-Fi](wifi) |
 | **R37**: display FPC connector J4 | first article, 2026-09-11/12 | use a top-contact J4 for the panel's FPC tail |
 | **R38**: PDM carrier hiss | first article, 2026-09-12 | see [Audio](audio) |
 | **J3 has no "+" marking** | first article | add the "+" silkscreen next to pad 1 (BAT_IN) |

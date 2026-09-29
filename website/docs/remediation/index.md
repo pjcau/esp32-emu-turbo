@@ -17,3 +17,4 @@ how its fix is proven on the board. With these fixes the console becomes
 | [Emulators](/docs/remediation/emulators) | DOOM memory leak, frameskip 0 on the light cores |
 | [Hardware](/docs/remediation/hardware) | respin backlog (R37, silkscreen on J3 and the speaker pads) and the open IP5306 no-battery claim |
 | [Battery Indicator](/docs/remediation/battery) | battery icon in the launcher's top-right corner: divider rework to GPIO16, ADC driver, launcher only |
+| [Wi-Fi](/docs/remediation/wifi) | radio almost deaf (RSSI about −90 dBm, 1 MB uploads time out): the antenna sits over the inner GND/+3V3 planes, 15 mm inside the edge; top priority on the respin |
