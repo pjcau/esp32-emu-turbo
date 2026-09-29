@@ -52,7 +52,7 @@ replaces an existing one or needs the "bootstrap" mechanism in item 2.
 
 - **OpenTyrian**: GPL-2, 35/50 fps shoot-'em-up.
 - **ClassiCube**: BSD-3, Minecraft Classic.
-- **PicoDrive**: Mega CD support. On the ESP32-S3 its Genesis speed is about the same as gwenesis. **To do** (user, 2026-09-29): see [Sega CD through PicoDrive](/docs/next-steps/more-systems#sega-cd-through-picodrive-the-plan-to-do-decided-2026-09-29).
+- **PicoDrive**: Mega CD support. On the ESP32-S3 its Genesis speed is about the same as gwenesis. Mega CD not wanted (user, 2026-09-29: games too big).
 - **MAME4ALL**: 1,603 drivers. Worth diffing against our mame-go driver list.
 - **ESP-NOW wireless gamepad / 2-player** (thangvv-tech).
 - **USB MSC SD access** (ashkan89, devinzhang91).
