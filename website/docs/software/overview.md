@@ -47,8 +47,10 @@ test ROMs and fixes are in
 | ~~Stella~~ | Atari 2600 | — | — | removed 2026-09-29: not needed |
 | ~~fMSX~~ | MSX | — | — | removed 2026-09-29: not needed; its partition went to GBA (`gbsp`) |
 | mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
-| mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 Sonic Wings 2 38–50 emulated fps; Metal Slug 2 (49 MB) 28–33 in play — see [Neo Geo on v3](/docs/next-steps/arcade#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27) |
-| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on 6 of 7 test scenes, 19–26 drawn; Super Mario Kart 57 (DSP-1) |
+| mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 13 games 43–60 fps in attract (2026-09-29); Metal Slug 2 (49 MB) ~42–46 in play — see [Neo Geo, prefetch off](/docs/next-steps/arcade#neo-geo-with-the-68000-prefetch-off-2026-09-29) |
+| mame-go (CPS1 driver) | Capcom CPS1 | 384x224 | — | 🟡 Final Fight 45, SF2 CE 38–40, Ghouls 43–51, Knights 36 — see [CPS1](/docs/next-steps/arcade#capcom-cps1-on-v3-2026-09-27-on-the-board-2026-09-2829) |
+| gbsp (gpSP interpreter) | Game Boy Advance | 240x160 | — | 🟡 on screen: Sonic 59, TMNT 52, Metal Slug 46 fps (2026-09-29, lines drawn on core 1) |
+| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on every test scene, 19–26 drawn; Super Mario Kart 57–62, mostly 60 (S-DSP on core 1, 2026-09-28) |
 | snes9x + SuperFX | SNES Star Fox | 256x224 | — | ✅ 53–60 emulated fps, 7–10 drawn (GSU on core 1) |
 | prboom-go | DOOM (Freedoom) | 320x200 | — | ✅ 35 fps (engine rate), BUSY 100% |
 | wolf3d-go | Wolfenstein 3D (shareware) | 320x200 | — | ✅ 62 fps, BUSY 34% |
@@ -75,52 +77,20 @@ drift, Mario Kart DSP-1, Neo Geo Pocket near the CPU limit) are tracked in
 | **Phase 1** | Hardware Abstraction (ESP-IDF bootstrap) | ✅ Done — validated on the first article (bring-up GREEN 53/0/6) | [Firmware](/docs/software/firmware) |
 | **Phase 2** | Retro-Go Integration (fork + custom drivers) | ✅ Done — runs on the first article, NES at 60 fps (2026-09-12) | [Firmware](/docs/software/firmware#phase-2--retro-go-integration) |
 | **Phase 3** | All Emulators at Full Speed | ✅ Almost done — every tested core at full speed, plus new cores and PC game ports (2026-09-21 → 09-27) | [Firmware](/docs/software/firmware#phase-3--all-emulators-at-full-speed) |
-| **Phase 4** | SNES Optimization (renderer → 60 FPS) | ✅ Milestone A done — 60 emulated fps on all test scenes but Mario Kart (57); next: S-DSP on core 1, more drawn frames | [SNES Optimization](/docs/software/snes-optimization) |
-| **Phase 5** | Firmware update from SD card (cable-free flashing) | 🗓️ Future | [below](#future--firmware-update-from-sd-card) |
+| **Phase 4** | SNES Optimization (renderer → 60 FPS) | ✅ Milestone A done — 60 emulated fps on every test scene; Mario Kart reached 60 with the S-DSP on core 1 (2026-09-28); next: more drawn frames | [SNES Optimization](/docs/software/snes-optimization) |
+| **Phase 5** | Firmware update from SD card (cable-free flashing) | ✅ Done 2026-09-28 — apps (launcher included) updated from `retro-go/update/` on the card; recovery without USB still missing | [Firmware](/docs/software/firmware#firmware-update-from-the-sd-card-2026-09-28) |
 
-### Future — firmware update from SD card
+### Firmware update from SD card — done (2026-09-28)
 
-Today every firmware change is flashed over USB (`rg_tool.py install`, a
-full `.img`). The plan is to make the SD card the normal update path, so
-the board can be updated on battery, with no cable and no esptool on the
-host. USB stays for the very first flash and for recovery only.
+The launcher applies app images found in `retro-go/update/` on the card at
+boot (`components/retro-go/rg_update.c`), itself included; build, copy
+(`scripts/sd_update.py --card` or `--console`) and check are described in
+[Firmware → Firmware update from the SD card](/docs/software/firmware#firmware-update-from-the-sd-card-2026-09-28).
 
-**Why not the launcher itself.** The ESP32-S3 ROM bootloader only knows
-USB/UART, and an app cannot safely rewrite the partition it runs from.
-Retro-go's upstream solution (ODROID-GO, Esplay) is a separate **flasher
-app in the `factory` partition**, which is never overwritten by an update.
-
-**What is missing for this board** (checked 2026-09-24):
-
-- `retro-go/components/retro-go/targets/esp32-emu-turbo/env.py` has
-  `FW_FORMAT = "none"`, so `rg_tool.py build-fw` produces no `.fw`.
-- The target `config.h` defines neither `RG_APP_FACTORY` nor
-  `RG_UPDATER_APPLICATION`, so the launcher updater only checks versions;
-  `RG_UPDATER_GITHUB_RELEASES` still points at upstream `ducalex/retro-go`.
-- There is no flasher app.
-
-**Planned work:**
-
-1. **Flasher app** (~200–300 KB) in `factory`: on boot, look for
-   `/sd/firmware/*.fw` or a held recovery button (`RG_RECOVERY_BTN`); verify
-   the checksum, write the app partitions with a progress bar on the
-   display, rename the file so it is not re-flashed on the next boot, and
-   reboot. Otherwise jump straight to the launcher.
-2. **`.fw` format:** reuse the Esplay/ODROID format `rg_tool.py` already
-   packs; enable it in `env.py`.
-3. **Partition table:** `factory` = flasher, then the existing apps.
-4. **Launcher:** set `RG_APP_FACTORY` / `RG_UPDATER_APPLICATION` /
-   `RG_UPDATER_DOWNLOAD_LOCATION`, point the release URL at this repo.
-5. **Tooling:** `make firmware-sd` builds the `.fw` ready to copy to the card.
-
-**Pairs with Wi-Fi:** the launcher is already built with networking and has
-a WebUI that uploads files to the SD, so "upload `.fw` from the browser →
-reboot to flash" becomes a fully wireless update without adding an OTA
-stack (the emulator cores keep networking off to save internal RAM).
-
-**Acceptance:** an update applied from SD on a first article, a deliberately
-broken `.fw` rejected by the checksum, and a boot-looping launcher
-recovered via the recovery button — all without a USB cable.
+Not done from the original plan: a **recovery app in `factory`** (a broken
+launcher still needs USB), the `.fw` package format, and "upload from the
+browser, reboot to flash" over Wi-Fi (the WebUI works, but the Wi-Fi on this
+board is weak — see the known issues).
 
 ---
 

@@ -64,7 +64,7 @@ submodule). Per-step tables and measurements live in the docs:
 | 4.3 | Retro-Go cores: NES, GB, GBC, SMS, GG, SG-1000, PCE, Genesis (YM2612 on core 1) | ✅ 60 fps |
 | 4.4 | New cores: Neo Geo Pocket (`retro-extra`), Colecovision, DOOM (Freedoom), Duke Nukem 3D (`duke3d-go`), Wolfenstein 3D (`wolf3d-go`, 62 fps), Quake (`quake-go`, built) | ✅ on the board 2026-09-21 → 09-27 |
 | 4.5 | Arcade: MAME 0.37b5 port (`mame-go`), ROMs in a 4 MB flash partition, tile cache, save states, 68000 idle-loop speed-ups | ✅ 8-bit boards 60 fps; Blood Bros. 60, Aero Fighters 47–57 |
-| 4.6 | SNES renderer (Milestone A): 60 emulated fps on SMW, Zelda, Mega Man X, Super Metroid, DKC | ✅ Mario Kart 57 (DSP-1) |
+| 4.6 | SNES renderer (Milestone A): 60 emulated fps on SMW, Zelda, Mega Man X, Super Metroid, DKC | ✅ Mario Kart 60 since 2026-09-28 (S-DSP on core 1) |
 | 4.7 | Audio: every core at 32 kHz on the PDM sink, heavy chips at 16 kHz doubled, carrier off when silent | ✅ buzz at frame rate open |
 | 4.8 | Launcher: GAME BRO! boot splash, art for new systems from [es-theme-gbz35](https://github.com/rxbrad/es-theme-gbz35) | ✅ |
 | 4.9 | Host bench tools: `board_ctl.py`, `emu_check.py`, `snes_bench.py`, audio capture, Debug HUD | ✅ |

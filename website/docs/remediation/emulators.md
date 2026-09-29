@@ -25,7 +25,7 @@ for the full list.
 | Bug | Measured | Next step |
 |:---|:---|:---|
 | **DOOM memory leak** | 35 fps (full speed), but the free heap keeps falling during play | find the leak before it runs out of memory |
-| **Super Mario Kart at 57 fps** | the DSP-1 cartridge chip costs 11 ms per frame | CPU-side work on the DSP-1 emulation |
+| ~~Super Mario Kart at 57 fps~~ | fixed 2026-09-28: 57–62, mostly 60 | the S-DSP mix moved to core 1 (the DSP-1 was only ~2% of the frame) |
 | **Neo Geo Pocket near the limit** | 60 fps with ~29 drawn, CPU 93–99% (Metal Slug) | profile RACE; the sound chip already runs at 16 kHz |
 
 ## Audio rates (2026-09-27)

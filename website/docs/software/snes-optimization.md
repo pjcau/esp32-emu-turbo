@@ -690,7 +690,7 @@ Unlike the pre-optimization estimates, the 3-phase plan targets **60 FPS with fu
 
 ---
 
-## Phase 5 — S-DSP on core 1 (2026-09-27, PC-verified, board pending) {#phase-5-sdsp-core1}
+## Phase 5 — S-DSP on core 1 (2026-09-27, on the board 2026-09-28) {#phase-5-sdsp-core1}
 
 **Where Mario Kart's time goes.** A PC build of the same snes9x sources
 (`esp32-emu-turbo-scratch/snes-work`, gprof, 3600 frames of the first race
@@ -731,7 +731,7 @@ measurements on the first article removed the reason for it.
 | CPU (65C816) + APU (SPC700) together | ~8.5 ms of the 16.7 ms frame | fits, with margin |
 | Audio mix | 1.5 ms | negligible |
 | PPU renderer | 10–16 ms per drawn frame | the actual bottleneck |
-| Super Mario Kart (57 fps) | CPU side 11 ms per frame (DSP-1 only ~2% of it) | CPU side, incl. the audio mix |
+| Super Mario Kart (57 fps, 60 since the S-DSP moved to core 1) | CPU side 11 ms per frame (DSP-1 only ~2% of it) | CPU side, incl. the audio mix |
 
 The pre-hardware estimate put the SPC700 + S-DSP at ~8 ms, 48% of the
 frame (see the appendix). On the board the renderer dominates, so a chip

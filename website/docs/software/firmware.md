@@ -345,7 +345,7 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.19 | opentyrian-go (OpenTyrian, via [DynaMight1124/retro-go](https://github.com/DynaMight1124/retro-go/tree/opentyrian)) | Tyrian 2.1 freeware data in `/sd/roms/opentyrian/` | 35 fps (engine rate) | ✅ 36 fps, BUSY ~30% in game, 2 min of play without a crash (2026-09-27, fork `a4b3c228`). Audio resampled 11 → 32 kHz, mixer task above the display task (it skipped at priority 2), music gain 2x. Data: `tyrian21.zip` from [camanis.net](https://camanis.net/tyrian/tyrian21.zip) (freeware since 2004) without the DOS `.exe/.ovl/.doc`, plus an empty `OpenTyrian.tyr` for the launcher |
 | — | ColecoVision (smsplus) | Pac-Man | 60 fps | ✅ 60 fps, BUSY 31% (START opens the keypad: `emu_check` presses none) |
 | — | snes9x + SuperFX (SNES) | Star Fox (Rev 2) | 60 fps | ✅ 53–60 emulated fps, 7–10 drawn, BUSY 99% (2026-09-27, fork `98f88705`): SuperFX from snes9x2005, GSU on core 1 while core 0 emulates the 65816 (inline it cost 50–67% of each second: 22–30 fps). Save states include the GSU state (saved and reloaded during the 3D flight on the board, 2026-09-27) |
-| — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on 6 of 7 (Kart 57), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
+| — | snes9x (SNES) | 7 scenes | 60 fps (Phase 4) | ✅ 60 emulated fps on all 7 (Kart 57–62, mostly 60, since the S-DSP moved to core 1 on 2026-09-28), 19-26 drawn — see [SNES Optimization](snes-optimization#measured-log-2026-09-13--14--read-this-before-the-steps) |
 
 **Audio sample rate rule (2026-09-26): every app runs its audio at 32000 Hz.**
 The PDM sink (`drivers/audio/pdm.c`, DAC line mode) derives its clocks from
@@ -414,25 +414,97 @@ For SNES-specific optimization (Phase 4) and why audio stays on the main chip in
 
 ## Firmware update from the SD card (2026-09-28)
 
-After one USB flash of a build that has it, apps are updated from the card:
+After one USB flash of a build that has it (every image since 2026-09-28),
+apps are updated from the card: no esptool, no download mode, works on
+battery. USB is only needed when the partition table changes (below).
 
-1. Put `<app>.bin` (the image the build writes, e.g.
-   `retro-go/mame-go/build/mame-go.bin`) in `retro-go/update/` on the card —
-   `scripts/sd_update.py --card <mount> [apps]` copies them, or
-   `scripts/sd_update.py --console [apps]` uploads them over USB (190-490 KB/s depending on the card)
-   and reboots to the launcher.
-2. At boot the launcher writes each image into the partition of the same
-   name, verifies it (`esp_image_verify`) and renames the file to `.done`
-   (`.failed` if the check fails).
-3. `launcher.bin` cannot be written by the running launcher: it hands over
-   to another app, whose boot writes the launcher partition and switches
-   back (`components/retro-go/rg_update.c`, called at the end of
+### Which binary holds what
+
+Each launcher tab runs one app; updating a system means updating its app.
+Sizes as of 2026-09-29 (`retro-go/<app>/build/<app>.bin`); the partition
+sizes come from `PROJECT_APPS` in `retro-go/rg_tool.py`.
+
+| App (`<app>.bin`) | Systems / games | Binary | Partition |
+|:---|:---|---:|---:|
+| `launcher` | launcher, splash, console, applies the SD update | 1.02 MB | 1.125 MB |
+| `retro-core` | NES, SNES (+ SuperFX, DSP-1), GB, GBC, SMS, GG, SG-1000, ColecoVision, PC Engine | 947 KB | 1.25 MB |
+| `gwenesis` | Mega Drive / Genesis | 951 KB | 1 MB |
+| `gbsp` | Game Boy Advance | 647 KB | 832 KB |
+| `retro-extra` | Neo Geo Pocket / Color (RACE) | 500 KB | 1.5 MB |
+| `mame-go` | Arcade (MAME 0.37b5), Neo Geo, CPS1 | 1.73 MB | 1.75 MB |
+| `prboom-go` | DOOM | 803 KB | 832 KB |
+| `duke3d-go` | Duke Nukem 3D | 829 KB | 1 MB |
+| `wolf3d-go` | Wolfenstein 3D | 563 KB | 640 KB |
+| `quake-go` | Quake | 712 KB | 768 KB |
+| `opentyrian-go` | OpenTyrian | 585 KB | 640 KB |
+
+KB = bytes / 1024. `mame-go` has only ~20 KB left: the next thing added
+to it needs a bigger partition, i.e. a USB flash (below). `prboom-go`'s
+partition is 832 KB on the board: its binary outgrew the 768 KB of
+`rg_tool.py` and `mkfw.py` grew the partition when it built the image;
+`rg_tool.py` now says 832 KB too (2026-09-29), otherwise `sd_update.py`
+refused the DOOM update.
+
+A change in `components/retro-go` (shared code: display, audio, input,
+console, the updater itself) reaches every app only when every app is
+rebuilt and updated.
+
+### Procedure
+
+1. **Build** the apps that changed (Docker, from the repo root):
+
+   ```bash
+   docker compose -f docker-compose.retro-go.yml run --rm retro-go-build \
+     python rg_tool.py --target=esp32-emu-turbo build retro-core retro-extra launcher
+   ```
+
+2. **Copy the images to the card**, into `retro-go/update/<app>.bin` —
+   either way works:
+
+   - **Card reader** (fastest, any size):
+     ```bash
+     scripts/sd_update.py --card /media/$USER/<card> retro-core retro-extra launcher
+     ```
+     then put the card back in the console and switch it on.
+   - **Over the USB cable, card stays in the console** (190–490 KB/s
+     depending on the card; the launcher must be running):
+     ```bash
+     scripts/sd_update.py --console retro-core retro-extra launcher
+     ```
+     it returns to the launcher, uploads through the console (`board_ctl.py
+     put`, CRC32-checked) and reboots so the update is applied at once.
+
+   With no app named, the script takes every app that has a built `.bin`.
+   It refuses a name that is not in `rg_tool.py` and an image larger than
+   its partition.
+
+3. **At boot the launcher applies it:** for each `retro-go/update/*.bin`
+   it writes the partition of the same name (a blue screen with a progress
+   bar), verifies the image (`esp_image_verify`) and renames the file to
+   `<app>.bin.done`, or `<app>.bin.failed` if the check fails (the old app
+   is then broken: repeat the update or flash it over USB).
+   `launcher.bin` cannot be written by the running launcher: it starts
+   another app, whose boot writes the launcher partition and switches back
+   (`components/retro-go/rg_update.c`, called at the end of
    `rg_system_init()`).
 
+4. **Check:** `retro-go/update/` on the card must hold only `.done` files
+   (they can be deleted); open the tab that changed. A removed system's tab
+   disappears only after the new `launcher.bin`.
+
 Tested on the board: OpenTyrian (585 KB) and the launcher itself (1.06 MB).
-Limits: only app partitions — a change of the partition table (the sizes in
-`rg_tool.py`) still needs `rg_tool.py install` over USB; an image larger
-than its partition is refused by the script and by the board.
+
+### When USB is still needed
+
+- **Partition table changed** (a size in `rg_tool.py` `PROJECT_APPS`, a new
+  app, or the `mamerom` data partition): `rg_tool.py install` over USB
+  writes the full image; SD updates work again afterwards. `sd_update.py`
+  cannot tell — it only compares the image with the size in `rg_tool.py`,
+  which is the new one.
+- **The launcher no longer boots** (a broken `launcher.bin`, or a `.failed`
+  launcher): there is no recovery app in `factory` yet, so the board is
+  re-flashed over USB (GPIO0/SELECT held at boot = download mode).
+- **First flash** of a board that predates 2026-09-28.
 
 ## Build & Flash
 

@@ -14,6 +14,6 @@ how its fix is proven on the board. With these fixes the console becomes
 | Area | What is open |
 |:---|:---|
 | [Audio](/docs/remediation/audio) | PDM carrier hiss: R38 RC values, I2S amplifier on the respin, default volume |
-| [Emulators](/docs/remediation/emulators) | DOOM memory leak, Mario Kart at 57 fps, frameskip 0 on the light cores |
+| [Emulators](/docs/remediation/emulators) | DOOM memory leak, frameskip 0 on the light cores |
 | [Hardware](/docs/remediation/hardware) | respin backlog (R37, silkscreen on J3 and the speaker pads) and the open IP5306 no-battery claim |
 | [Battery Indicator](/docs/remediation/battery) | battery icon in the launcher's top-right corner: divider rework to GPIO16, ADC driver, launcher only |

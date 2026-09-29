@@ -66,7 +66,7 @@ def main():
             shutil.copyfile(src, os.path.join(d, app + ".bin"))
             print(f"{app}: {n // 1024} KB -> {d}")
         else:
-            print(f"{app}: uploading {n // 1024} KB (about {n // 38000} s)")
+            print(f"{app}: uploading {n // 1024} KB (about {max(1, n // 190000)} s)")
             subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "board_ctl.py"), "put", src,
                             f"/sd/retro-go/update/{app}.bin"], check=True)
     if a.console and todo:
