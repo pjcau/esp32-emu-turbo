@@ -5,7 +5,7 @@ For each ROM: launch, press START twice (title screens), then average the
 rg_system stats line ("BUSY:xx%, FPS:yy (S:skipped R:rendered+partial)")
 for a few seconds. Prints a table; optional webcam snapshot per game.
 
-    emu_check.py [--snap] [--only=<app>]   e.g. --only=arcade
+    emu_check.py [--snap] [--only=<app>] [--volume=N]  (volume 0 by default)   e.g. --only=arcade
 """
 import os
 import re
@@ -68,8 +68,9 @@ def stats(board, seconds):
 def main():
     b = Board(os.environ.get("ESP_PORT", "/dev/ttyACM0"))
     snap = "--snap" in sys.argv
-    # bench rule: keep the speaker quiet while the checks run
-    b.send("volume 5", wait=r"^CTL volume", timeout=3, echo=False)
+    # bench rule: the speaker stays silent while developing (--volume=N for an audio check)
+    vol = next((a.split("=", 1)[1] for a in sys.argv if a.startswith("--volume=")), "0")
+    b.send(f"volume {vol}", wait=r"^CTL volume", timeout=3, echo=False)
     print(f"{'app':5} {'rom':52} {'fps':>5} {'busy':>5} {'drawn':>6}")
     only = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--only=")]
     for app, part, rom in GAMES:

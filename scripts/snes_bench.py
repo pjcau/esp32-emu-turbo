@@ -70,9 +70,12 @@ def main():
     ap.add_argument("--settle", type=float, default=6)
     ap.add_argument("--capture", type=float, default=6)
     ap.add_argument("--compare", help="label of an earlier run to diff against")
+    ap.add_argument("--volume", default="0", help="speaker volume during the run (0 while developing)")
     a = ap.parse_args()
 
-    res = run(Board(a.port), a.games.split(","), a.settle, a.capture)
+    board = Board(a.port)
+    board.send(f"volume {a.volume}", wait=r"^CTL volume", timeout=3, echo=False)
+    res = run(board, a.games.split(","), a.settle, a.capture)
     os.makedirs(RESULTS, exist_ok=True)
     path = os.path.join(RESULTS, f"{a.label}.json")
     json.dump({"label": a.label, "date": datetime.now().isoformat(timespec="seconds"),
