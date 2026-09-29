@@ -52,7 +52,7 @@ replaces an existing one or needs the "bootstrap" mechanism in item 2.
 
 - **OpenTyrian**: GPL-2, 35/50 fps shoot-'em-up.
 - **ClassiCube**: BSD-3, Minecraft Classic.
-- **PicoDrive**: Mega CD support. On the ESP32-S3 its Genesis speed is about the same as gwenesis.
+- **PicoDrive**: Mega CD support. On the ESP32-S3 its Genesis speed is about the same as gwenesis. **To do** (user, 2026-09-29): see [Sega CD through PicoDrive](/docs/next-steps/more-systems#sega-cd-through-picodrive-the-plan-to-do-decided-2026-09-29).
 - **MAME4ALL**: 1,603 drivers. Worth diffing against our mame-go driver list.
 - **ESP-NOW wireless gamepad / 2-player** (thangvv-tech).
 - **USB MSC SD access** (ashkan89, devinzhang91).
@@ -199,6 +199,34 @@ Value: low-medium. Zip romart is the only one we might want.
 | [vanBassum/retro-go](https://github.com/vanBassum/retro-go) | WT-SC01-PLUS target (**ESP32-S3 + 8080 parallel display**, like ours), MCP23S17 gamepad, local `sdmmc` override for the SD CMD59 issue | We have our own 8080 driver | Reference only | Low |
 | [fffonion/retro-go](https://github.com/fffonion/retro-go) | gpSP with RISC-V JIT for ESP32-S31 | No | Not for Xtensa | Low |
 | [devinzhang91/retro-go](https://github.com/devinzhang91/retro-go) | esplay-nano target + USB MSC | No | See ashkan89 | Low |
+
+## JIT / dynarec building blocks (checked 2026-09-29)
+
+Why: the GBA app (`gbsp`) is interpreter-bound (~91–115 cycles per GBA
+instruction, half of it in the per-instruction loop), and a dynarec is the
+lever for 60 fps on Metal Slug / TMNT. **Nobody has a gpSP dynarec for
+Xtensa (ESP32-S3) yet**, but the pieces exist:
+
+| What | Where | License | Use for us |
+|:---|:---|:---|:---|
+| **gpSP RISC-V dynarec** for the ESP32-P4 (Tanmatsu): `riscv_emit.h` 126 KB, `riscv_codegen.h` 10 KB, `riscv_stub.S` 25 KB; JIT cache in PSRAM made executable with a second `esp_mmu_map(..., MMU_MEM_CAP_EXEC)` mapping. Author reports ~2x; the retro-go issue reports 4–13x over retro-go's interpreter (NFS Underground 2 4 → 30 fps, Pokémon Fire Red 7 → 30); experimental, graphical glitches | [Irak4t0n/HowBoyAdvance](https://github.com/Irak4t0n/HowBoyAdvance); integrated in retro-go by [rapha-tech `GBA_dynarec`](https://github.com/rapha-tech/retro-go/tree/GBA_dynarec) ([issue #349](https://github.com/ducalex/retro-go/issues/349)) | GPL-2 (gpSP), stated in the fork's `INTEGRATION_DYNAREC.md`; the HowBoyAdvance repo has no license file | **P4 console: GBA dynarec nearly ready.** S3: the template for an Xtensa backend (RISC-V, like Xtensa, has no flags and compare-and-branch) and the ESP32 glue (PSRAM exec, cache sync). Our interpreter is already trimmed, so expect less than their gain |
+| **68000 → Xtensa JIT**, complete, on the classic ESP32 (M5Paper, Palm emulator): `m68k_jit_backend_xtensa.c` 73 KB, blocks compiled on the second core, ~100 KB IRAM cache (`jit_execmem_esp32.c`), host tests for the code generator. Interpreter 58% → JIT 87% of real speed | [megabytefisher/Dragonfruit](https://github.com/megabytefisher/Dragonfruit) | MIT | The Xtensa instruction encoder and executable-memory layer to start from (LX6 → LX7: same instructions, different internal RAM map). Also the base for a 68000 JIT later (Neo Geo, CPS1, Mega Drive) |
+| Executing code from PSRAM on the S3 (`esp_mmu_map` with `MMU_TARGET_PSRAM0` + `MMU_MEM_CAP_EXEC`) | [igrr's gist](https://gist.github.com/igrr/ef5a3ad9f5fbf835f06c88b6b36defcc), [ESP-IDF MMU docs](https://docs.espressif.com/projects/esp-idf/en/stable/esp32s3/api-reference/system/mm.html) | example / Apache-2 | A large translation cache in PSRAM instead of the full internal RAM; its speed through the 32 KB instruction cache has to be measured |
+| Mature Xtensa encoder incl. the windowed ABI (`py/asmxtensa.c`, `emitnxtensawin.c`) | [MicroPython](https://github.com/micropython/micropython) | MIT | Alternative encoder source |
+| Xtensa JIT for a WASM-like bytecode (`jit_xtensa.c`) | [ESPB](https://github.com/smersh1307n2/ESPB) | **none** | Read only, do not copy |
+
+**Estimate with these pieces** (sessions of work, not measured): phase 0,
+a mini-JIT on the board measuring generated code in IRAM and in PSRAM,
+1; Xtensa backend for gpSP modelled on the RISC-V one, 2–4; correctness
+(test ROMs, frame hashes against the interpreter), 3–5; speed, 2–3 —
+**about 8–13 in total**. Expected CPU-side gain 2–3x (estimate), enough
+for 60 fps on Metal Slug (today ~14 ms of CPU in a 21.7 ms frame). Stop
+after phase 0 if generated code is not at least 3–4x faster than the
+interpreter loop.
+
+**32X** stays out of reach on the S3 even with a JIT (two SH-2 at 23 MHz
+on top of a Mega Drive that already fills core 0); on a P4, PicoDrive's
+SH-2 dynarec has a RISC-V backend for RV64 only (the P4 is RV32).
 
 ## Checked but nothing new for us
 

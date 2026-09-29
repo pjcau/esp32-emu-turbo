@@ -68,7 +68,7 @@ submodule). Per-step tables and measurements live in the docs:
 | 4.7 | Audio: every core at 32 kHz on the PDM sink, heavy chips at 16 kHz doubled, carrier off when silent | ✅ buzz at frame rate open |
 | 4.8 | Launcher: GAME BRO! boot splash, art for new systems from [es-theme-gbz35](https://github.com/rxbrad/es-theme-gbz35) | ✅ |
 | 4.9 | Host bench tools: `board_ctl.py`, `emu_check.py`, `snes_bench.py`, audio capture, Debug HUD | ✅ |
-| 4.10 | Open: DOOM heap leak, Quake first run on the board, SNES APU on core 1 | ⏳ |
+| 4.10 | Open: DOOM heap leak, Sega CD through PicoDrive (new app), GBA at 60 fps on the heavy games | ⏳ |
 
 SNES, renderer cost per drawn frame (`scripts/snes_bench.py`, baseline → now):
 
