@@ -24,7 +24,7 @@ press buttons and read the SNES_PROF counters without touching the board.
     board_ctl.py acap 4 out.wav         # the audio samples as submitted (digital, no microphone)
     board_ctl.py raw "lcd off"          # stop sending frames to the panel (bench), "lcd on" back
     board_ctl.py script bench.txt       # one command per line, "sleep N" allowed
-    board_ctl.py put ~/roms/x.sfc "/sd/roms/snes/x.sfc"   # upload (base64 over the console; from the launcher)
+    board_ctl.py put ~/roms/x.sfc "/sd/roms/snes/x.sfc"   # upload (raw bytes + CRC32 over the console; from the launcher)
     board_ctl.py rm "/sd/roms/snes/x.sfc"
     board_ctl.py launcher | reboot | raw "<line>"
 
@@ -122,29 +122,52 @@ class Board:
         self.send(f"{cmd} {part} {app} {rom}", timeout=3)
         self.expect_app = part
 
-    def put(self, local, remote):
-        """Upload a file to the card: 'put <size> <path>' then base64 text."""
+    def put(self, local, remote, binary=True):
+        """Upload a file to the card: 'putb <size> <path>' then the raw bytes
+        (falls back to 'put' + base64 on firmware without putb). The board
+        answers with the CRC32 of what it received; a mismatch is a failure."""
         import base64
+        import zlib
         data = open(local, "rb").read()
-        if not self.send(f"put {len(data)} {remote}", wait=r"^CTL put (ready|failed)", timeout=5):
+        cmd = "putb" if binary else "put"
+        reply = self.send(f"{cmd} {len(data)} {remote}", wait=r"^CTL (put (ready|failed)|err)", timeout=5)
+        if binary and any(l.startswith("CTL err") for l in reply):
+            return self.put(local, remote, binary=False)
+        if not any(l.startswith("CTL put ready") for l in reply):
             return False
-        t0, done = time.time(), False
-        for off in range(0, len(data), 3072):
-            self.ser.write(base64.b64encode(data[off:off + 3072]) + b"\n")
-            l = self.readline()
-            if "CTL put " in l:
-                print(l[l.index("CTL "):], f"({(off + 3072) / 1024 / (time.time() - t0):.0f} KB/s)")
-                if "done" in l:   # the final ack can land on the last chunk's read
-                    done = True
-        deadline = time.time() + 10
-        while not done and time.time() < deadline:
-            l = self.readline()
-            if "CTL put " in l:
-                l = l[l.index("CTL "):]
-                print(l)
-                if any(w in l for w in ("done", "short", "failed")):
-                    done = "done" in l
+        # USB flow control paces the writes. Replies are only drained, never
+        # waited for, while streaming: a blocking readline cost 50 ms per chunk
+        # (40 KB/s) and stalls again on a half-arrived [debug] log line.
+        t0, rx, result = time.time(), "", None
+
+        def scan(rx):
+            *lines, rest = rx.split("\n")
+            for l in lines:
+                if "CTL put " in l:
+                    l = ANSI.sub("", l[l.index("CTL put "):]).rstrip("\r")
+                    m = re.match(r"CTL put (?:done )?(\d+)", l)
+                    print(l, f"({int(m.group(1)) / 1024 / (time.time() - t0):.0f} KB/s)" if m else "")
+                    for w in ("done", "short", "failed"):
+                        if l.startswith("CTL put " + w):
+                            return rest, l if w == "done" else False
+            return rest, None
+
+        step = 16384 if binary else 3072
+        for off in range(0, len(data), step):
+            piece = data[off:off + step]
+            self.ser.write(piece if binary else base64.b64encode(piece) + b"\n")
+            if self.ser.in_waiting:
+                rx, result = scan(rx + self.ser.read(self.ser.in_waiting).decode("utf-8", "replace"))
+                if result is not None:
                     break
+        deadline = time.time() + 10
+        while result is None and time.time() < deadline:
+            rx, result = scan(rx + self.ser.read(max(1, self.ser.in_waiting)).decode("utf-8", "replace"))
+        done = bool(result)
+        m = re.search(r"crc ([0-9a-f]{8})", result or "")
+        if done and m and int(m.group(1), 16) != zlib.crc32(data):
+            print(f"CRC MISMATCH: board {m.group(1)}, file {zlib.crc32(data):08x}", file=sys.stderr)
+            done = False
         print(f"{len(data)} bytes in {time.time() - t0:.1f}s")
         return done
 

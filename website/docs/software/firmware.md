@@ -301,7 +301,7 @@ line. `scripts/board_ctl.py` wraps it:
 ```bash
 scripts/board_ctl.py ping                       # which app is running
 scripts/board_ctl.py ls /sd/roms/snes
-scripts/board_ctl.py put ~/rom.sfc "/sd/roms/snes/rom.sfc"   # base64 over USB, ~38 KB/s (from the launcher)
+scripts/board_ctl.py put ~/rom.sfc "/sd/roms/snes/rom.sfc"   # raw bytes (putb) + CRC32 check, from the launcher: 190-490 KB/s, bound by the card's SPI write speed (USB side ~520 KB/s)
 scripts/board_ctl.py launch snes "/sd/roms/snes/rom.sfc"
 scripts/board_ctl.py key start 150              # tap; "key a+b", "hold right", "release"
 scripts/board_ctl.py save 0 / load 0            # emulator save state
@@ -309,6 +309,13 @@ scripts/board_ctl.py resume snes "/sd/roms/snes/rom.sfc"     # launch + load slo
 scripts/board_ctl.py capture 10                 # SNES_PROF counters, averaged
 scripts/board_cam.py                            # one webcam frame of the screen
 ```
+
+`put` streams raw bytes (`putb`) read straight from the USB-Serial-JTAG FIFO
+while a second task writes the card, and fails on a CRC32 mismatch; it falls
+back to base64 on firmware without `putb`. The console also takes
+`format ERASE-ALL-SD-DATA` (a new FAT with 32 KB clusters, also on a card that
+no longer mounts) — test a replacement card for write retention before
+restoring onto it (a 32 GB card that dropped FAT writes was found this way).
 
 Injected keys are OR-ed into the gamepad state, so menus and games see real
 presses; app switches and save states run at the frame boundary
@@ -414,7 +421,7 @@ After one USB flash of a build that has it, apps are updated from the card:
 1. Put `<app>.bin` (the image the build writes, e.g.
    `retro-go/mame-go/build/mame-go.bin`) in `retro-go/update/` on the card —
    `scripts/sd_update.py --card <mount> [apps]` copies them, or
-   `scripts/sd_update.py --console [apps]` uploads them over USB (~38 KB/s)
+   `scripts/sd_update.py --console [apps]` uploads them over USB (190-490 KB/s depending on the card)
    and reboots to the launcher.
 2. At boot the launcher writes each image into the partition of the same
    name, verifies it (`esp_image_verify`) and renames the file to `.done`
