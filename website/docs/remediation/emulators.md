@@ -16,7 +16,7 @@ for the full list.
 |:---|:---|:---|
 | Atari 2600 (Stella) | ✅ 60 fps, 55% busy (Halo 2600) | only the ROM on the card |
 | Duke Nukem 3D | ✅ playable, 48–53 fps in E1L1, menus 73 fps | four fixes: an ODROID-GO audio conversion overwrote FatFs (crash), keypad names aliased RETURN (no menu input), the game drew into the frame being sent (broken menus), a non-volatile spin-wait hung the level start; audio moved to 32 kHz |
-| MSX (fMSX) | ✅ 60 fps, 62% busy (Pac-Man `.mx1`) | the free **C-BIOS** (BSD licence, text on the card) as `MSX.ROM` / `MSX2.ROM` / `MSX2EXT.ROM` in `/sd/retro-go/bios/msx/`; fMSX now warns only for `MSX.ROM` |
+| ~~MSX (fMSX)~~ | removed 2026-09-29 | not needed; the partition went to GBA (`gbsp`) |
 | Atari Lynx (Handy) | still untested | the downloaded `.7z` files were Cloudflare "Just a moment..." pages, not ROMs |
 | Game & Watch | still untested | needs a `.gw` made with LCD-Game-Shrinker; the `.mgw` tried is a Tomytronic simulator package. A wrong file now shows a message instead of an assert |
 

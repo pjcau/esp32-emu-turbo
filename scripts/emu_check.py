@@ -18,7 +18,7 @@ from board_ctl import Board  # noqa: E402
 # (app, partition, preferred ROM or None). With None the first file of the
 # system's folder on the card is used, so a new system is covered as soon as
 # its /sd/roms/<app> folder has a ROM. Every app must carry the console:
-# rebuild gwenesis/fmsx/prboom-go after a shared-component change.
+# rebuild gwenesis/prboom-go/gbsp after a shared-component change.
 GAMES = [
     ("nes", "retro-core", "/sd/roms/nes/Super Mario Bros. + Duck Hunt (USA).nes"),
     ("nes", "retro-core", "/sd/roms/nes/owlia.nes"),
@@ -31,7 +31,6 @@ GAMES = [
     ("md", "gwenesis", "/sd/roms/md/miniplanets.bin"),
     # Lynx (lnx) and Game & Watch (gw): set aside with their launcher tabs (2026-09-27)
     ("col", "retro-core", None),
-    ("msx", "fmsx", None),
     ("doom", "prboom-go", None),
     ("sg1", "retro-core", None),
     ("ngp", "retro-extra", None),

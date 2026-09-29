@@ -76,6 +76,12 @@ the cost of battery life and heat.
   used, and the work becomes integration (device tree, display, buttons,
   audio) instead of writing emulators.
 - **Boot:** 10–20 s instead of instant-on.
+- **Wi-Fi antenna (top priority, found 2026-09-29):** on the current board
+  the module antenna sits over full GND/+3V3 planes, 15 mm inside the edge
+  — RSSI about −90 dBm next to the router, so SD-over-Wi-Fi (OTA, ROMs,
+  logs) is slower than USB. Any next board, whichever plan: antenna over
+  the board edge with an all-layer copper keep-out, and a gate that checks
+  it. Details: `docs/known-issues.md`, RESPIN section.
 
 ## The four plans in detail
 

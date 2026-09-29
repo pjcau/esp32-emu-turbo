@@ -11,8 +11,8 @@ Build a portable battery-powered device based on ESP32-S3, capable of loading an
 - **The first article works.** Board v4.9.0 (article 0003, JLCPCB-assembled) passed
   every bring-up stage on 2026-09-11: USB power, rails, boot, display, SD, audio, all
   12 buttons, and **battery**.
-- **17 systems run on the board.** NES, GB/GBC, SMS/GG/SG-1000, PC Engine, Genesis,
-  Neo Geo Pocket, Atari 2600, MSX, Colecovision at full speed; SNES at real speed
+- **16 systems run on the board.** NES, GB/GBC, SMS/GG/SG-1000, PC Engine, Genesis,
+  Neo Geo Pocket, Atari 2600, Colecovision at full speed; SNES at real speed
   (all but Mario Kart); DOOM at its 35 fps engine rate; Duke Nukem 3D playable
   (~50 fps in game); Wolfenstein 3D at 62 fps; arcade via a MAME 0.37 port (Pac-Man, 1942, 1943, Blood Bros.,
   Aero Fighters).
@@ -62,7 +62,7 @@ submodule). Per-step tables and measurements live in the docs:
 | 4.1 | Hardware validation firmware (`software/`): display, SD, buttons, PDM audio | ✅ (IP5306 I2C not routed — N/A) |
 | 4.2 | Retro-Go target: ILI9488 i80 driver, 480×320 scaler, 12-button input, PDM audio, Docker build | ✅ first boot 2026-09-12 |
 | 4.3 | Retro-Go cores: NES, GB, GBC, SMS, GG, SG-1000, PCE, Genesis (YM2612 on core 1) | ✅ 60 fps |
-| 4.4 | New cores: Neo Geo Pocket, Atari 2600 (`retro-extra`), MSX (C-BIOS), Colecovision, DOOM (Freedoom), Duke Nukem 3D (`duke3d-go`), Wolfenstein 3D (`wolf3d-go`, 62 fps), Quake (`quake-go`, built) | ✅ on the board 2026-09-21 → 09-27 |
+| 4.4 | New cores: Neo Geo Pocket, Atari 2600 (`retro-extra`), Colecovision, DOOM (Freedoom), Duke Nukem 3D (`duke3d-go`), Wolfenstein 3D (`wolf3d-go`, 62 fps), Quake (`quake-go`, built) | ✅ on the board 2026-09-21 → 09-27 |
 | 4.5 | Arcade: MAME 0.37b5 port (`mame-go`), ROMs in a 4 MB flash partition, tile cache, save states, 68000 idle-loop speed-ups | ✅ 8-bit boards 60 fps; Blood Bros. 60, Aero Fighters 47–57 |
 | 4.6 | SNES renderer (Milestone A): 60 emulated fps on SMW, Zelda, Mega Man X, Super Metroid, DKC | ✅ Mario Kart 57 (DSP-1) |
 | 4.7 | Audio: every core at 32 kHz on the PDM sink, heavy chips at 16 kHz doubled, carrier off when silent | ✅ buzz at frame rate open |

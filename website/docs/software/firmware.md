@@ -198,7 +198,6 @@ All 5 Retro-Go applications compile successfully for the ESP32 Emu Turbo target 
 | `retro-core.bin` | All emulators (NES, GB, GBC, SMS, GG, PCE, Lynx, SNES, G&W) | ~2.5 MB | ~17% |
 | `gwenesis.bin` | Sega Genesis / Mega Drive (standalone) | ~1.5 MB | ~50% |
 | `prboom-go.bin` | Doom port (PrBoom) | ~1.5 MB | ~50% |
-| `fmsx.bin` | MSX emulator | 655 KB | 79% |
 
 :::note
 The build produces `Device doesn't support fw format, try build-img!` at the end — this is expected. Our target uses individual app flashing via `make retro-go-flash`, not a combined firmware image.
@@ -277,8 +276,8 @@ python3 tools/gen_images.py      # re-embed themes/default/*.png in launcher/mai
 
 A new system is one line in the script's `SYSTEMS` table (tab short name →
 theme folder). Imported so far: Arcade (MAME), Duke Nukem 3D (the theme's
-`pc` art), SG-1000, Atari 2600, and the missing pieces of GBA, MSX and Neo Geo
-Pocket.
+`pc` art), SG-1000, Atari 2600, and the missing pieces of GBA and Neo Geo
+Pocket (the MSX art went with fMSX, removed 2026-09-29).
 
 ---
 
@@ -334,7 +333,7 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.12 | Stella (Atari 2600, `retro-extra`) | Halo 2600 | 60 fps | ✅ 60 fps, BUSY 55%, 30 drawn (2026-09-26) |
 | 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ✅ playable 2026-09-27: E1L1 48–53 fps with movement and fire, menus 73 fps, audio 16 kHz mix doubled to 32 kHz. Fixed on the way: FatFs overwritten by an ODROID-GO audio conversion, START arriving as Insert, the frame drawn into the surface being sent (broken menus), a non-volatile spin-wait hanging the level start |
 | 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ Pac-Man, 1942, Robby Roto 60; Exidy/Circus boards 57 (native); 1943 60 emulated / 27 drawn; Blood Bros. 60, Aero Fighters 47–57 after the idle-loop speed-ups — see [Arcade (MAME)](../next-steps/arcade) |
-| 3.15 | fMSX (MSX) | Pac-Man `.mx1` | 60 fps | ✅ 59 fps, BUSY 62%, with the free C-BIOS in `/sd/retro-go/bios/msx/` |
+| 3.15 | ~~fMSX (MSX)~~ | — | — | removed 2026-09-29 (not needed): the 640 KB partition went to the GBA app `gbsp` |
 | 3.16 | prboom-go (DOOM) | Freedoom 1 | 35 fps (engine rate) | ✅ 35 fps, BUSY 100%; mix at 16 kHz doubled to 32 kHz, sfx interpolated. The in-game crash is fixed (2026-09-27, fork `66d251ed`): the game outgrew the 8 KB main-task stack (9.4 KB used in E1 play) and now runs in its own 16 KB task; the lump cache keeps 1.5 MB of PSRAM free for the rest of the system instead of filling it. 6 min of scripted play without a crash |
 | 3.17 | wolf3d-go (Wolfenstein 3D, Wolf4SDL via [retro-go-pro](https://github.com/pcgamer404/retro-go-pro)) | shareware v1.4 `.WL1` in `/sd/roms/wolf3d/data/` | 70 fps (engine cap) | ✅ 62 fps, BUSY 34% in E1M1 (2026-09-27); mix at 16 kHz doubled to 32 kHz. Built for shareware data: the full game (`.WL6`) needs `version.h` changed and a rebuild. Menus redraw only on change (1–2 fps in the HUD is normal there) |
 | 3.18 | quake-go (WinQuake software renderer, via retro-go-pro) | shareware `id1/pak0.pak` | playable | ✅ played (2026-09-27): New Game → start map, 90 s of scripted walking/turning/firing: 39.7 fps average (19–56), no crash; attract demo 21–44 fps, BUSY 100%, heap stable; mixer at 32 kHz on core 1. The 18.7 MB `pak0.pak` is copied with a card reader (console `put` is ~40 KB/s) |
@@ -375,7 +374,7 @@ where mame-go keeps big read-only ROM regions memory-mapped (arcade page).
 The image is 14.8 MB; a board flashed before needs the full image again.
 
 **Partition table (2026-09-14).** `rg_tool.py` now lays out launcher 1 MB,
-retro-core 1.5 MB, prboom-go 768 KB, gwenesis 1 MB, fmsx 576 KB,
+retro-core 1.5 MB, prboom-go 768 KB, gwenesis 1 MB, fmsx 576 KB (removed 2026-09-29),
 duke3d-go 1 MB and retro-extra 2 MB (RACE + Stella live apart because
 their ~30 KB of static tables each would take internal RAM from every
 retro-core emulator). A board flashed before that date needs the full
@@ -397,7 +396,7 @@ core's test ROM over the console, presses START twice and averages the
 SNES scenes (save states) and averages the `SNES_PROF` counters. Both are
 run after every renderer change; the tables above and in
 [SNES Optimization](snes-optimization) are their output. The 32 KB I-cache / 64 KB D-cache configuration and
-the console remote control are shared by every app; `gwenesis`, `fmsx` and
+the console remote control are shared by every app; `gwenesis`, `gbsp` and
 `prboom-go` must be rebuilt after a shared-component change or they keep
 the old code (and, without the console, block the host's USB writes).
 

@@ -871,6 +871,29 @@ and is six releases stale; the tag is the truth.
   must stay `SS-12D00G3` or `verify_schematic_pcb_sync.py` fails. Renaming
   the key across routing/footprints/CPL is a respin cleanup.
 
+- **TOP PRIORITY for the next hardware release (user, 2026-09-29): the
+  Wi-Fi antenna is buried — the radio is nearly deaf.** Measured on the
+  first article: RSSI **−87 to −91 dBm** at the desk, where the PC's
+  Wi-Fi sees the same FRITZ!Box at 72 %; ping 85–2000 ms; the launcher's
+  file server (retro-go `webui.c`) works for small files (20 KB: upload
+  19 KB/s, download 4.4 KB/s — slower than the USB console) and times out
+  on 1 MB. A scan from the board saw 0 access points. **Cause:** U1
+  (ESP32-S3-WROOM-1, on B.Cu, centre (80, 27.5)) has its PCB antenna
+  ~15 mm inside the board edge (antenna end ≈ Y 14.75–20.75 mm, board edge
+  Y = 0), and the **In1.Cu GND and In2.Cu +3V3 zones cover the whole board,
+  antenna included**; SD_MOSI/MISO/CLK run across the antenna end on B.Cu.
+  Espressif's layout rule for the WROOM-1: antenna over the board edge (or
+  outside it), no copper on any layer under the antenna, ≥15 mm clearance
+  around it. **Fix in the respin:** move U1 so the antenna overhangs the
+  edge, or cut an all-layer keep-out under and around it (zones + tracks);
+  reroute the SD lines; check the enclosure/display keep metal and the
+  panel away from it. **The gate is blind to this:**
+  `verify_antenna_keepout.py` only checks a 2 mm strip beyond the module and
+  counts "GND plane present on In1.Cu" as a PASS — it must check every
+  layer under the antenna itself and fail on any copper there, in the same
+  respin. Software needs nothing: Wi-Fi stays off by default, console
+  `wifi on|off|scan|status` for bench checks.
+
 ---
 
 ## C — Cleanups with a known fix and a known reason they are still open

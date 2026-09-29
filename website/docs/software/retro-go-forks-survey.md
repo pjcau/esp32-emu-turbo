@@ -23,7 +23,7 @@ esp-cpp/esp-box-emu and Svarkovsky/s3-msx-pc.
 **Baseline.** Our fork is on upstream `master` (0 commits behind) plus 46 of
 our own commits. We don't have upstream `dev`. We already have: launcher +
 splash, retro-core (NES, SNES + SuperFX, GB/GBC, SMS/GG/SG-1000, PCE, Lynx,
-G&W, Coleco), gwenesis, fmsx, prboom-go, duke3d-go, retro-extra (NGP via RACE,
+G&W, Coleco), gwenesis, prboom-go, duke3d-go, retro-extra (NGP via RACE,
 Atari 2600 via stella-odroid-go), mame-go (MAME 0.37b5 subset, 8-bit and
 68000 boards), wolf3d-go and quake-go (both from pcgamer404/retro-go-pro).
 Overclock support for the ESP32-S3 is already in `master`.
@@ -161,7 +161,8 @@ wireless second controller.
 target and has nothing to reuse for us. It has two small generic fixes worth
 cherry-picking: a stack buffer overflow fix in `rg_system_vlog`, and a
 `rg_task_create` queue-creation race fix. It also adds gzip-compressed MSX
-ROMs in fmsx and an unchecked `fopen` fix in `msx_fopen`. Effort: very low.
+ROMs in fmsx and an unchecked `fopen` fix in `msx_fopen` (moot here: fmsx was
+removed 2026-09-29). Effort: very low.
 Value: medium, because these are real bugs that are probably in our tree too.
 
 ### Fri3dCamp/badge_retro-go (and tomvanbraeckel copy)

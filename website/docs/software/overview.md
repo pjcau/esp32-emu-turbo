@@ -45,7 +45,7 @@ test ROMs and fixes are in
 | gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 59.4 fps, BUSY 94%, 29 drawn (YM2612 on core 1) |
 | RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps, BUSY 93–99%, ~29 drawn |
 | Stella | Atari 2600 | 160x192 | — | ✅ 60 fps, BUSY 55%, 30 drawn |
-| fMSX | MSX (free C-BIOS) | 256x192 | — | ✅ 59 fps, BUSY 62% |
+| ~~fMSX~~ | MSX | — | — | removed 2026-09-29: not needed; its partition went to GBA (`gbsp`) |
 | mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
 | mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 Sonic Wings 2 38–50 emulated fps; Metal Slug 2 (49 MB) 28–33 in play — see [Neo Geo on v3](/docs/next-steps/arcade#neo-geo-on-v3-sprites-paged-from-the-sd-card-2026-09-27) |
 | snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on 6 of 7 test scenes, 19–26 drawn; Super Mario Kart 57 (DSP-1) |
