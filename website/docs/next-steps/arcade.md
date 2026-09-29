@@ -374,7 +374,7 @@ puzzldpr, puzzledp, quizdai2, quizdais, roboarmy, sengokh, sengoku,
 sengoku2, socbrawl, sonicwi2, sonicwi2m, spinmast, ssideki, stakwin,
 strhoop, superspy, tpgolf, trally, wh1, wjammers.
 
-## Capcom CPS1 on v3 (2026-09-27, PC-verified, board pending)
+## Capcom CPS1 on v3 (2026-09-27, on the board 2026-09-28/29)
 
 **Where the games go:** CPS1 zips go in the **Arcade** tab (`/sd/roms/arcade/`,
 repo folder `test-roms/cps1/`); mame-go picks the driver from the zip.
@@ -394,11 +394,11 @@ repo folder `test-roms/cps1/`); mame-go picks the driver from the zip.
 
 | Game | Set | fps (attract/title) | Notes |
 |:---|:---|:---|:---|
-| Final Fight | `ffight` | 40 | tiles streamed to flash (2 MB) |
-| Carrier Air Wing | `cawing` | 37–44 | |
+| Final Fight | `ffight` | 40 → **45** | tiles in PSRAM (2 MB); 45 with the 68000 prefetch off (2026-09-29) |
+| Carrier Air Wing | `cawing` | 37–44 → **42** | |
 | Ghouls'n Ghosts | `ghouls` | 43–51 | graphics not plain `ROM_LOAD`s: ROM loaded and converted into flash |
 | Knights of the Round | `knights` | 36 | 16-bit colour, one display surface (no room for two) |
-| SF2 Champion Edition | `sf2cem` (modern set) | 33–35 | 4 MB tiles in flash + 2 MB in PSRAM; the display reads the core's frame buffer |
+| SF2 Champion Edition | `sf2cem` (modern set) | 33–35 → **38–40** | 4 MB tiles in flash + 2 MB in PSRAM; the display reads the core's frame buffer. Stage backgrounds only since 2026-09-29 (see below) |
 | SF2 Hyper Fighting | `sf2hf` (modern set) | 32–38 | the 0.37b5 name is `sf2t`: matched by its chips |
 
 Board-only fixes found on the way: ESP-IDF's `malloc(0)` returns NULL (CPS1's
@@ -408,17 +408,55 @@ read one tile past the flash mapping, the 2 MB `CODE_SIZE` trimmed to the
 program's size, pen-usage masks in 16 bits. Speed is below 60: CPS1 needs
 the same 68000 work as the Neo Geo (see the Metal Slug 2 section).
 
+**2026-09-29: SF2 backgrounds, SF2 panic, speed (fork `46de8600`, `afe6ecc3`):**
+
+| Change | Effect |
+|:---|:---|
+| Modern sets look up the CPS1 board table through their parent (`clone_of`) | `sf2cem` / `sf2hf` are not in the 0.37b5 table: they got the empty entry, every layer masked off. SF2 showed fighters and life bars on black, in the wrong colours |
+| `mixer_need_samples_this_frame` in signed arithmetic, clamped at 0 | two unsigned counts: a stream one sample ahead of the frame (the sound board on core 1 fills its streams to the end) wrapped to ~124000 samples and the YM2151 update wrote 64 KB past its buffer, into the chip's state. SF2 panicked on core 1 after 1–3 minutes; 5 minutes clean after the fix |
+| 68000 prefetch emulation off on mame-go | 68000 11.0 → 8.7 ms a frame on Final Fight (42 → 45 fps). Only code that rewrites its next instruction could tell; CPS1 and Neo Geo frames and audio unchanged on the PC |
+| Tile draw: 8-pixel groups all in the transparent pen skipped, tiles without transparent pens drawn by the opaque path | same frames; no measurable gain on the board (the tile reads dominate) |
+| Tiles in PSRAM when they leave 2 MB free | Final Fight / Carrier Air Wing (2 MB of tiles) read from PSRAM instead of the flash mapping |
+| OKI ADPCM: the sample after the generated chunk is held | a random click, from the interpolation reading one sample past the chunk |
+
 **Checked on the PC harness:** Final Fight, Carrier Air Wing, Ghouls'n
 Ghosts, Knights of the Round, SF2 Champion Edition reach attract / title /
 select screens; the flash and streamed paths give the same frames and audio
 as the in-RAM conversion. In use after start: ~5.6 MB for SF2 CE (program
 1.5 MB, 2 MB of tiles, 2 MB scroll-2 cache bitmap).
 
-**Not yet:** speed on the board (one 10–12 MHz 68000 + Z80 + YM2151 + a
-384-wide renderer: expect it at the limit, like the Neo Geo), Q-Sound games
+**Not yet:** 60 fps (the 68000 and the 384-wide renderer each take
+7–9 ms a frame; the sound board is already on core 1), Q-Sound games
 (Cadillacs and Dinosaurs, Warriors of Fate, Punisher: kabuki-encrypted Z80 +
 4 MB of Q-Sound samples) untested.
 
+
+## Neo Geo with the 68000 prefetch off (2026-09-29)
+
+Same board, same 45 s of attract per game, average fps of 15 one-second
+readings; the only change since 2026-09-28 is the 68000 prefetch model off
+(fork `46de8600`) and the mixer fix (`afe6ecc3`).
+
+| Game | 2026-09-28 | 2026-09-29 |
+|:---|:---|:---|
+| Sonic Wings 2 | crashed (sound handover, fixed since) | **57.7** |
+| Metal Slug 2 | 43.5 | **45.9** |
+| Puzzle Bobble 2 | 44.8 | **47.8** |
+| Alpha Mission II | 50.3 | **53.2** |
+| Blazing Star | 42.2 | **43.1** |
+| Cyber-Lip | 51.5 | **51.8** |
+| King of Fighters '95 | 52.4 | **56.9** |
+| Magician Lord | 55.2 | **56.5** |
+| Metal Slug | 42.7 | **46.9** |
+| NAM-1975 | 59.9 | **59.9** |
+| Neo Drift Out | 56.7 | **59.1** |
+| Sonic Wings 3 | 59.8 | **59.7** |
+| Windjammers | 53.9 | **52.7** |
+| Shock Troopers | 55.9 | **56.6** |
+| Thrash Rally | 53.5 | **52.7** |
+
++2 to +4 fps where the 68000 was the limit; the last three are within the
+run-to-run spread of the attract loops. No panics.
 
 ## Metal Slug 2 toward 60 fps: board measurements (2026-09-28)
 
