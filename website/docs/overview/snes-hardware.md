@@ -146,11 +146,7 @@ The bring-up firmware asserts this independently — `config.gpio_unique` report
 
 The SNES has a sophisticated audio system (SPC700 + S-DSP) with 8 channels of BRR-compressed audio. Our implementation:
 
-```
-ESP32-S3 (PDM TX + DMA) ──> C22 (DC block) ──> PAM8403 Class-D Amp ──> 28mm 8Ω Speaker
-     │                                              │
-     GPIO17 (I2S_DOUT)                       R20/R21 bias to VREF (pin 8)
-```
+![Audio chain: ESP32-S3 PDM on GPIO17 through C22 into the PAM8403, biased by R20/R21 to VREF, driving the 28 mm 8 Ω speaker](/img/diagrams/wiring-audio-chain.svg)
 
 - **Sample rate:** 32 kHz (matches SNES native rate)
 - **Bit depth:** 16-bit

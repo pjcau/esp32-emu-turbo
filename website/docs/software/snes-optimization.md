@@ -415,18 +415,7 @@ Progressive optimization of the snes9x core (Snes9x 2005 via Retro-Go) in 3 sub-
 
 The SNES has three CPU-intensive subsystems that must be emulated in real-time:
 
-```
-Frame time budget: 16.67 ms (for 60 fps)
-
-┌────────────────────────────────────────────┐
-│ 65C816 CPU emulation         ~4.5 ms  27%  │
-│ PPU rendering (2 BG layers)  ~5.0 ms  30%  │
-│ SPC700 audio DSP             ~8.0 ms  48%  │  ← bottleneck
-│ Display transfer             ~1.5 ms   9%  │
-├────────────────────────────────────────────┤
-│ TOTAL                       ~19.0 ms 114%  │  ← over budget
-└────────────────────────────────────────────┘
-```
+![Pre-hardware estimate of the SNES frame: CPU, PPU, SPC700 DSP and display transfer add up to 19 ms against a 16.67 ms budget](/img/diagrams/sw-frame-budget.svg)
 
 :::caution Estimate, superseded by measurement
 This breakdown was the pre-hardware estimate. On the first article the CPU+APU
@@ -533,16 +522,7 @@ With 8 taps fully unrolled, each `MULL` is scheduled while the next sample load 
 
 This is the single most impactful change in the entire plan. Freeing Core 0 from all audio emulation virtually doubles the available CPU budget for CPU+PPU.
 
-```
-Core 0 (main):                 Core 1 (audio):
-  65C816 CPU emulation           SPC700 CPU emulation
-  PPU rendering                  DSP (assembly from Phase 4.1)
-  Display transfer               I2S DMA output feed
-  Input polling
-
-  ~10.5 ms/frame                 ~8.0 ms/frame → ~5 ms with ASM
-  → bottleneck at 11ms           (runs fully in parallel)
-```
+![Dual-core split: CPU, PPU and display on Core 0, SPC700 and DSP on Core 1, in parallel](/img/diagrams/sw-dual-core.svg)
 
 #### 4.2.2 — Memory Layout Optimization
 

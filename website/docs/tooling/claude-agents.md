@@ -13,15 +13,7 @@ This project uses **Claude Code** as its AI-powered development assistant, with 
 The system uses a **team-lead + 3 specialist agents** model, plus two
 stand-alone agents — **6 agent definitions** in `.claude/agents/`:
 
-```
-team-lead (Sonnet) ──── orchestrator, task coordination
-  ├── pcb-engineer (Opus) ───── 27 skills, PCB design + manufacturing
-  ├── software-dev (Opus) ───── 6 skills, firmware + website + docs
-  └── cad-engineer (Sonnet) ─── 3 skills, OpenSCAD enclosure
-
-plan-reviewer (Opus) ──── review only, no skills — vets plans before implementation
-scout (Opus) ─────────── 1 skill, GitHub pattern discovery (weekly via GitHub Action)
-```
+![Agent definitions: team-lead over pcb-engineer, software-dev and cad-engineer, plus stand-alone plan-reviewer and scout](/img/diagrams/wf-agent-tree.svg)
 
 ### Architecture Graph
 
@@ -105,11 +97,7 @@ The scout agent runs **autonomously** via a weekly GitHub Action (Monday 02:00 U
 
 ## Cross-Agent Dependencies
 
-```
-PCB ↔ SW:   config.py ↔ board_config.h   (GPIO pins sync)
-PCB ↔ CAD:  board.py 160×75mm ↔ enclosure.scad   (dimensions sync)
-SW  ↔ CAD:  website/docs/   (renders + documentation)
-```
+![Cross-agent dependencies: PCB and SW share GPIO pins, PCB and CAD share dimensions, SW and CAD share docs and renders](/img/diagrams/wf-cross-agent.svg)
 
 The `/firmware-sync` skill verifies GPIO consistency between the schematic Python scripts and the C firmware header, preventing hardware/software mismatches.
 

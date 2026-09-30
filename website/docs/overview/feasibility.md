@@ -20,46 +20,7 @@ The ESP32-S3 is **the mandatory choice for SNES**: SIMD instructions accelerate 
 
 ## Hardware Schematic
 
-```
-                         +------------------+
-                         |                  |  +5V_VOUT  +------+  +5V
-    USB-C ──────────────>│   IP5306 Module  │───────────| Q2   |───── (loads)
-                         │  (charge+boost)  │  SW16 ──► | PMOS |
-                         +--------+---------+  (gate)   +------+
-                                  |
-                          +-------+-------+
-                          |               |
-                    +-----+-----+   +-----+-----+
-                    | LiPo Batt |   | SY8089     |
-                    | 3.7V      |   | 5V -> 3.3V |
-                    | 5000 mAh  |   +-----+------+
-                    |           |         |
-                    +-----------+         | 3.3V
-                                          |
-                              +-----------+-----------+
-                              |                       |
-                              |     ESP32-S3 N16R8    |
-                              |   (16MB Flash, 8MB    |
-                              |    Octal PSRAM)       |
-                              |                       |
-                              +--+--+--+--+--+--+--+-+
-                                 |  |  |  |  |  |  |
-                    +------------+  |  |  |  |  |  +----------+
-                    |               |  |  |  |  |             |
-              +-----+-----+  +-----+--+  |  +--+-----+  +----+----+
-              | Display    |  | SD Card|  |  | Audio  |  | Buttons |
-              | ILI9488    |  | Module |  |  | DAC -> |  | D-pad   |
-              | 3.95"      |  | SPI    |  |  | PAM8403|  | A,B,X,Y |
-              | 8-bit par  |  +--------+  |  | Speaker|  | Start   |
-              | (8080)     |              |  +--------+  | Select  |
-              +------------+              |              | L, R    |
-                                          |              +---------+
-                                    +-----+-----+
-                                    | USB Data  |
-                                    | D-/D+     |
-                                    | (native)  |
-                                    +-----------+
-```
+![Hardware block diagram: power chain from USB-C and the LiPo cell to the ESP32-S3 and its peripherals](/img/diagrams/system-block.svg)
 
 ## GPIO Connections (estimate)
 

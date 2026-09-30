@@ -14,23 +14,7 @@ SDL2-based hardware simulator that runs on macOS/Linux without physical hardware
 
 ### Architecture
 
-```
-┌─── ESP32 Hardware (PCB) ───┐    ┌─── Simulator (SDL2) ──────────┐
-│                             │    │                                 │
-│ ILI9488 480×320             │    │ SDL2 window 480×320             │
-│  └─ 8080 parallel bus       │◄──►│  └─ sim_display_write()         │
-│  └─ GPIO 4-11,12-14,46     │    │                                 │
-│                             │    │                                 │
-│ 12 tact switches            │    │ Keyboard WASD/JK/UI             │
-│  └─ GPIO 40,41,42,1,...     │◄──►│  └─ sim_buttons_read()          │
-│                             │    │                                 │
-│ PDM → PAM8403 → Speaker    │    │ SDL2 audio 32kHz mono           │
-│  └─ GPIO 17 (DOUT only)     │◄──►│  └─ sim_audio_write()           │
-│                             │    │                                 │
-│ SPI → SD card (TF-01A)     │    │ Host filesystem (test-roms/)    │
-│  └─ GPIO 44,43,38,39        │◄──►│  └─ sdcard_sim_load_rom()       │
-└─────────────────────────────┘    └─────────────────────────────────┘
-```
+![ESP32 hardware vs the SDL2 simulator: display, buttons, audio and storage behind the same HAL](/img/diagrams/sw-simulator.svg)
 
 ### Quick Start
 

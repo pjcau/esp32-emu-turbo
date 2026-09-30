@@ -56,49 +56,7 @@ make render-schematics    # Export SVG + PDF
 
 ## System Block Diagram
 
-```
-                         ┌──────────────────┐
-                         │                  │   +5V_VOUT
-    USB-C ──────────────>│   IP5306 Module  │──────────────────┐
-                         │  (charge+boost)  │                  │
-                         └────────┬─────────┘                  ▼
-                                  │ BAT+                ┌────────────┐
-                          ┌───────┴───────┐             │ Q2 AO3401A │
-                          │ Q1 AO3401A RPP│   gate ────►│ high-side  │
-                          ├───────────────┤   SW16 +    │ P-MOSFET   │
-                          │ LiPo Batt     │   R32/R33/  └─────┬──────┘
-                          │ 3.7V 5000 mAh │   C32 net;        │
-                          │ (105080)      │   C33 → KEY       │
-                          └───────────────┘   (wake)          │
-                                                              │ +5V (loads)
-                                          ┌────────────────────┼─────────┐
-                                          │                    │         │
-                                    ┌─────┴──────┐       PAM8403 (U5)  R27 →
-                                    │  SY8089    │       + speaker     backlight
-                                    │ 5V -> 3.3V │
-                                    └─────┬──────┘
-                                          │ 3.3V
-                              ┌───────────┴───────────┐
-                              │   ESP32-S3-WROOM-1    │
-                              │   N16R8 (240MHz ×2)   │
-                              └──┬──┬──┬──┬──┬──┬──┬──┘
-                                 │  │  │  │  │  │  │
-                    ┌────────────┘  │  │  │  │  │  └──────────┐
-                    │               │  │  │  │  │             │
-              ┌─────┴─────┐  ┌─────┴──┘  │  └──┴─────┐  ┌────┴────┐
-              │ Display   │  │ SD Card│  │  │ SPI    │  │ Controls│
-              │ ILI9488   │  │ SPI    │  │  │(coproc)│  │ 12 btns │
-              │ 8080 ‖    │  └────────┘  │  └───┬────┘  └─────────┘
-              └───────────┘              │      │
-                                   ┌─────┴──┐  ┌┴─────────────┐
-                                   │USB Data│  │ESP32-S3-MINI │
-                                   │(D-/D+) │  │  -1 (v2)     │
-                                   └────────┘  │  I2S → Audio │
-                                               └──────────────┘
-
-  SW16 OFF: Q2 open → all +5V loads dead, USB still charges the cell.
-  SW16 ON:  C33 couples a wake pulse into IP5306 KEY, Q2 closes.
-```
+![System block diagram: IP5306 charge and boost, Q1 reverse-polarity protection, Q2 high-side switch driven by SW16, SY8089 buck, ESP32-S3 and its peripherals](/img/diagrams/system-block.svg)
 
 ---
 
@@ -198,44 +156,7 @@ Topology of the **respin** (branch `respin/sw16-5v-switch`). The battery and
 USB front ends are unchanged; what is new is that the +5V rail is cut between
 the IP5306's VOUT pin and every load by the high-side P-MOSFET **Q2**:
 
-```
-  MAIN PATH — the switch cuts the load rail only, never the charge path
-
-                          ┌─────────────┐
-  USB-C ─VBUS_IN─► F1 ────┤ pin 1 (VIN) │
-  (5V)            (PTC)   │             │
-                          │   IP5306    │            +5V_VOUT       +5V
-                          │    (U2)     │──pin 8──┬────────► Q2 ──────┬──► SY8089 ──► +3V3
-  Battery ─BAT_IN─► Q1 ───┤ pin 6 (BAT) │ (VOUT)  │       (PMOS)      │     (U3)   (ESP32, LCD, SD)
-  (3.7V)   (J3)   (RPP)   │             │        C27                  ├──► PAM8403 (U5)
-                   BAT+   │             │──pin 7 ── L1 ──► BAT+       └──► R27 ──► backlight
-                          │             │  (LX)
-                          │ pin 5 (KEY) │
-                          └───┬─────┬───┘
-                            KEY     GND
-                              │
-  GATE NETWORK — SW16 does nothing but pull PWR_SW to GND
-
-                    +5V_VOUT
-                        │
-             ┌──────────┴──────────┐
-            R32 22k              C32 1µF          default = OFF; C32 = soft start
-             │                     │
-             └──────────┬──────────┘
-                        │
-                  PWR_SW_GATE ──────────────────► Q2 gate
-                        │
-                      R33 1k                      τ = (R32‖R33)·C32 = 957 µs
-                        │
-      ┌─────────────────┴─────────────────┬──────────────────┐
-      │                                   │                  │
-   SW16 pad 2                         R34 1M              C33 4.7µF
-   (common) = PWR_SW                     │                  │
-      pad 1 = GND  ← ON position        BAT+           IP5306_KEY
-      pad 3 = OPEN                  (defines the node    (wake pulse
-      tabs 4a–4d = mechanical        when the throw       on the ON
-      anchors (4b/4d on BTN_SELECT)  is open)             transition)
-```
+![Power path: USB-C and battery into the IP5306, VOUT through Q2 to the +5V loads, and the SW16 gate network R32, C32, R33, R34, C33](/img/diagrams/power-path.svg)
 
 **Key design points:**
 - **Q1 (AO3401A P-MOSFET)** sits in series between J3 (net **BAT_IN**) and the **BAT+** rail, with the **cell on the drain and the IP5306 on the source**. That direction is the protection, not a detail: a P-channel body diode conducts drain→source, so a correctly-inserted cell pre-charges the rail through the diode and then V<sub>GS</sub> = −V<sub>BAT</sub> (gate held at GND by R24) turns the channel on, while a reversed cell reverse-biases the diode *and* holds the channel off. Wired the other way round the part conducts identically in normal use and does nothing at all in the fault — which is why this shipped undetected through v4.5.0 and was fixed as R31-HIGH-1 by turning the package around.
@@ -533,16 +454,7 @@ SPI bus up to 20MHz. The SD module has a built-in level shifter (3.3V safe). On 
 
 ### Button Circuit (repeated 13×)
 
-```
-+3V3 ──[10kΩ R]──┬──── GPIO_x (global label)
-                  │
-                [100nF C]
-                  │
-                 GND
-
-     [SW tact]──┤
-                └── GND
-```
+![Button circuit: 10 kΩ pull-up from +3V3 to the GPIO, 100 nF to GND, tact switch to GND](/img/diagrams/circuit-button-pullup.svg)
 
 **Idle** = HIGH (3.3V via pull-up), **Pressed** = LOW (grounded through switch).
 

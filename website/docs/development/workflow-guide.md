@@ -26,34 +26,7 @@ How to use the 6 agents, 46 skills, and 6 lifecycle commands to design, verify, 
 
 ## Scenario 1 — New PCB from Scratch
 
-```
-/bootstrap-new-pcb              scaffold project structure
-        |
-        v
-/design-pcb                     composes 4 skills:
-   |-- /pcb-schematic           define GPIO_NETS, regenerate .kicad_sch
-   |-- /pcb-board               set outline, layers, mounting holes
-   |-- /pcb-components          place footprints in board.py
-   '-- /pcb-routing             route traces + vias in routing.py
-        |
-        v
-/generate-pcb                   composes 2 skills:
-   |-- /generate                Python -> .kicad_pcb + BOM + CPL
-   '-- /check                   DRC + 3D + gerbers + DFM
-        |
-        v
-/verify-pcb                     composes 8 verification skills
-        |
-        v
-    [failures?] --yes--> /fix-pcb --> /generate-pcb (loop)
-        |
-        no
-        v
-/pcb-to-firmware                sync board_config.h
-        |
-        v
-/release-pcb                    gerbers + renders + git tag
-```
+![New PCB from scratch: bootstrap, design, generate, verify with a fix loop, sync firmware, release](/img/diagrams/wf-new-pcb.svg)
 
 ### When to invoke the team-lead agent
 
@@ -67,35 +40,7 @@ Use `/team-lead` (or just describe a complex task) when changes span **multiple 
 
 After JLCPCB DFM report or `verify_dfm_v2.py` failure:
 
-```
-JLCPCB DFM report (PDF)
-    or
-/verify  -->  failures found
-        |
-        v
-/dfm-fix <report>              read report, categorize, fix source files
-        |                      (board.py / routing.py / footprints.py)
-        |
-        +-- /fix-rotation      if CPL rotation wrong
-        +-- /jlcpcb-check      if 3D alignment wrong
-        +-- /jlcpcb-parts      if BOM parts out of stock
-        |
-        v
-/generate                      regenerate .kicad_pcb
-        |
-        v
-/verify                        confirm all 124 DFM tests pass
-        |
-        v
-/dfm-test                      add regression guard test
-        |
-        v
-    [still failing?] --yes--> repeat /dfm-fix
-        |
-        no
-        v
-/release-prep                  sync release_jlcpcb/ (no git commit)
-```
+![Fix a DFM issue: from the report or /verify to /dfm-fix, regenerate, re-verify, guard test, release-prep](/img/diagrams/wf-dfm-fix.svg)
 
 ### Key: the fix cycle
 
@@ -107,18 +52,7 @@ JLCPCB DFM report (PDF)
 
 Full verification sweep before ordering from JLCPCB:
 
-```
-/verify-pcb                composes ALL verification skills:
-    |
-    |-- /verify            124 DFM + 9 DFA + 24 JLCPCB
-    |-- /drc-native        KiCad native DRC + baseline delta
-    |-- /drc-audit         full electrical classification
-    |-- /pad-analysis      pad spacing table
-    |-- /jlcpcb-validate   24 JLCPCB manufacturing rules
-    |-- /datasheet-verify  267 pin-to-net checks vs datasheets
-    |-- /design-intent     357 cross-source consistency checks
-    '-- /pcb-review        8-domain 100-point scored review
-```
+![Pre-release verification: the eight skills /verify-pcb composes](/img/diagrams/wf-pre-release.svg)
 
 ### Hard gates (must pass for release)
 
@@ -133,19 +67,7 @@ Full verification sweep before ordering from JLCPCB:
 
 ## Scenario 4 — Release to JLCPCB
 
-```
-/release-pcb               composes /full-release:
-    |
-    |-- 1. /generate       regenerate from Python
-    |-- 2. /verify         124 DFM + 9 DFA + 24 JLCPCB
-    |-- 3. /drc-native     KiCad DRC
-    |-- 4. /render         SVG layers + animation
-    |-- 5. /pcba-render    13 raytraced 3D PCBA views
-    |-- 6. Export gerbers  kicad-cli + Docker zone fill
-    |-- 7. BOM + CPL       JLCPCB formatting
-    |-- 8. Sync            release_jlcpcb/ updated
-    '-- 9. Commit + tag    git commit + version tag + push
-```
+![Release to JLCPCB: the nine steps /release-pcb runs through /full-release](/img/diagrams/wf-release.svg)
 
 After release:
 1. Upload `release_jlcpcb/gerbers.zip` to [jlcpcb.com](https://jlcpcb.com/)
@@ -157,44 +79,7 @@ After release:
 
 ## Scenario 5 — Hardware Audit (Deep Review)
 
-```
-/hardware-audit
-    |
-    |-- Layer 1: Automated gates (22 scripts, 1200+ checks)
-    |   HARD BLOCK if ANY fail - fix before Layer 2
-    |
-    |   verify_trace_through_pad   (fab shorts)
-    |   verify_trace_crossings     (same-layer crossings)
-    |   verify_copper_clearance    (Shapely polygon gaps)
-    |   verify_net_connectivity    (per-net copper graph)
-    |   verify_dfm_v2             (124 DFM tests)
-    |   verify_dfa                (9 assembly tests)
-    |   validate_jlcpcb           (24 JLCPCB rules)
-    |   verify_polarity           (48 pin-to-net)
-    |   verify_datasheet_nets     (267 checks)
-    |   verify_datasheet          (29 physical)
-    |   verify_design_intent      (357 cross-source)
-    |   verify_schematic_pcb_sync (R4 guard)
-    |   verify_strapping_pins     (12 ESP32 boot)
-    |   verify_decoupling_adequacy (23 cap checks)
-    |   verify_power_sequence     (29 power chain)
-    |   verify_power_paths        (10+11 copper paths)
-    |   erc_check + KiCad DRC     (0 real shorts)
-    |   ... and more
-    |
-    '-- Layer 2: Domain-by-domain prose review (8 domains)
-        |
-        |-- Step 1: Power chain (USB-C -> IP5306 -> Q2 switch -> SY8089 -> ESP32)
-        |-- Step 2: ESP32 boot (strapping pins, PSRAM mode)
-        |-- Step 3: Display (ILI9488 8080 parallel, FPC)
-        |-- Step 4: Audio (I2S PDM -> PAM8403 -> speaker)
-        |-- Step 5: SD card (SPI 1-bit, TF-01A)
-        |-- Step 6: Buttons (12 + menu combo D1; SW16 belongs to Step 1 since the respin)
-        |-- Step 7: USB (native FS, CC pull-downs, ESD TVS)
-        '-- Step 8: Emulator performance (PSRAM, DMA, LCD)
-
-    Output: hardware-audit-bugs.md with CRIT/HIGH/MED/LOW findings
-```
+![Hardware audit: Layer 1 automated gates, then Layer 2 domain-by-domain review, output hardware-audit-bugs.md](/img/diagrams/wf-hardware-audit.svg)
 
 ---
 
@@ -202,25 +87,7 @@ After release:
 
 When you change a GPIO assignment or add/remove a component:
 
-```
-1. Edit scripts/generate_schematics/config.py    (master GPIO map)
-        |
-        v
-2. /pcb-to-firmware                               auto-sync:
-   |-- board_config.h updated
-   |-- datasheet_specs.py updated
-   |-- routing.py button assignments updated
-   '-- website/docs/ updated
-        |
-        v
-3. /generate-pcb                                  regen PCB + quick verify
-        |
-        v
-4. /verify-pcb                                    full sweep
-        |
-        v
-5. /firmware-sync                                 confirm GPIO match
-```
+![GPIO or component change: edit config.py, /pcb-to-firmware, /generate-pcb, /verify-pcb, /firmware-sync](/img/diagrams/wf-gpio-change.svg)
 
 ---
 
@@ -228,15 +95,7 @@ When you change a GPIO assignment or add/remove a component:
 
 After PCB board outline or component position changes:
 
-```
-1. /enclosure-design       update OpenSCAD parameters
-        |                  (pcb_w, pcb_h, cutouts, screw holes)
-        v
-2. /enclosure-render       PNG views via Docker
-        |
-        v
-3. /enclosure-export       STL files for 3D printing
-```
+![Enclosure update: design, render, export](/img/diagrams/wf-enclosure.svg)
 
 ---
 
@@ -351,22 +210,7 @@ After PCB board outline or component position changes:
 
 ## Source of Truth Hierarchy
 
-```
- config.py          <-- MASTER: GPIO assignments
-     |
-     v
- board_config.h     <-- firmware (must match config.py)
-     |
-     v
- datasheet_specs.py <-- pin-to-net specs (37 components)
-     |
-     v
- routing.py         <-- PCB traces + vias
-     |
-     v
- .kicad_pcb         <-- GENERATED (never edit directly!)
- .kicad_sch         <-- GENERATED (never edit directly!)
-```
+![Source of truth hierarchy: config.py down to the generated .kicad_pcb and .kicad_sch](/img/diagrams/wf-source-of-truth.svg)
 
 **Rule**: changes flow DOWN this hierarchy. Never edit `.kicad_pcb` directly. Never let `board_config.h` drive `config.py`. Use `/pcb-to-firmware` to propagate changes downward.
 

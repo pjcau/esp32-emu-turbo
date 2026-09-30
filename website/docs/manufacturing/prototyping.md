@@ -22,19 +22,7 @@ Step-by-step guide to assemble the ESP32 Emu Turbo prototype on a breadboard.
 
 Connect the IP5306 USB-C module to provide 5V power, then regulate down to 3.3V with a buck module. On breadboard an MP1584 mini module is the easiest stand-in for the SY8089AAAC used on the PCB — set its trimmer to 3.3V with NO load connected before wiring it to anything.
 
-```
-[IP5306 Module]
-  OUT+ ──> Breadboard 5V rail
-  OUT- ──> Breadboard GND rail
-  BAT+ ──> LiPo battery (+)
-  BAT- ──> LiPo battery (-)
-  USB  ──> USB-C cable (for charging + power)
-
-[Buck 5V->3.3V]
-  VIN  ──> 5V rail (through 10µF cap)
-  GND  ──> GND rail
-  VOUT ──> Breadboard 3.3V rail (through 22µF cap)
-```
+![Breadboard power: IP5306 module OUT+/OUT- to the 5V and GND rails, battery and USB-C on its inputs, buck module VIN/GND/VOUT to the 5V, GND and 3.3V rails](/img/diagrams/wiring-breadboard-power.svg)
 
 :::caution Capacitors are mandatory
 The buck needs an input cap (22µF ceramic), an output cap (22µF ceramic) and its inductor close together — the input loop is the high di/dt path. Use **ceramic, not tantalum**: the ESR window that made a tantalum mandatory belonged to the old LDO, and a reversed tantalum is what destroyed prototype #1 ([incident](/docs/rework/incident-c2-reversed)).
@@ -44,13 +32,7 @@ The buck needs an input cap (22µF ceramic), an output cap (22µF ceramic) and i
 
 Place the ESP32-S3 N16R8 DevKitC-1 on the breadboard.
 
-```
-DevKit VIN  ──> 5V rail (if USB not connected directly)
-  — OR —
-DevKit USB  ──> Direct USB-C (for programming/debug)
-
-DevKit GND  ──> GND rail
-```
+![DevKit power: VIN to the 5V rail or USB directly to USB-C, GND to the GND rail](/img/diagrams/wiring-devkit-power.svg)
 
 Add decoupling capacitors:
 - 100nF ceramic cap between 3V3 and GND (close to the module)
@@ -121,13 +103,7 @@ cap reconstruct the waveform, so GPIO15/16 stay unused.
 
 For each button, wire a 6x6mm tact switch with a 10kΩ pull-up resistor:
 
-```
-3.3V ──[10kΩ]──┬── GPIO pin
-               │
-            [switch]
-               │
-              GND
-```
+![Breadboard button: 10 kΩ pull-up from 3.3 V to the GPIO pin, switch to GND](/img/diagrams/circuit-button-breadboard.svg)
 
 **Button wiring table:**
 

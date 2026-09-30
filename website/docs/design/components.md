@@ -55,17 +55,7 @@ Both controllers are equivalent for 8-bit 8080 parallel with RGB565 (~20 MB/s). 
 
 ### Display Orientation (landscape for gaming)
 
-```
-Portrait (native)          Landscape (gaming mode)
-┌──────────┐               ┌─────────────────────┐
-│          │               │                     │
-│  320px   │    rotate     │      480px          │
-│    ×     │   -------->   │       ×             │
-│  480px   │    90° CW     │      320px          │
-│          │               │                     │
-│  FPC ══  │               │              FPC ══ │
-└──────────┘               └─────────────────────┘
-```
+![Display orientation: native 320×480 portrait rotated 90° CW to 480×320 landscape, FPC tail ending up on the left](/img/diagrams/display-rotation.svg)
 
 ### FPC 40-Pin Pinout (ILI9488 panel datasheet)
 
@@ -162,11 +152,7 @@ is computed.
 :::
 
 :::info Power architecture
-```
-USB-C -> [IP5306] -> +5V_VOUT -> [Q2 PMOS] -> +5V -> [SY8089 buck] -> 3.3V -> ESP32-S3
-            |                        ^
-       [LiPo Battery]           SW16 (gate)
-```
+![Power architecture: USB-C, IP5306, Q2 PMOS switched by SW16, SY8089 buck, ESP32-S3](/img/diagrams/power-chain.svg)
 The IP5306 manages battery charge/discharge and provides a stable 5V output on
 `+5V_VOUT`. Since the SW16 respin, the high-side P-MOSFET **Q2** separates that
 boost output from the `+5V` load rail: SW16 only drives Q2's gate, so OFF kills

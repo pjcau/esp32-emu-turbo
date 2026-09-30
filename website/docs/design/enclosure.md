@@ -172,31 +172,7 @@ From the PCB-side face of the boss inward: socket **Ø3.1 × 4.5 deep** for the 
 
 ## Physical Layout
 
-```
-FRONT (display side):
-┌──────────────────────────────────────────────────────────┐
-│  ○                                                   ○   │  ← top-shell columns at (±70, 30.5)
-│              ┌────────────────────────────┐              │
-│              │                            │     [A]      │
-│      ┌─┐     │  83.5 x 55.7 active area   │              │
-│    ┌─┤ ├─┐   │      (panel 94.6 x 60.9,   │ [Y]     [B]  │
-│    └─┤ ├─┘   │       tail exits right ►)  │              │
-│      └─┘     │                            │     [X]      │
-│     D-pad    └────────────────────────────┘              │
-│ (START) (Sel)                                  (MENU)    │
-│  ○     ∘ ∘  LEDs                                     ○   │
-│            ┌─PWR─┐    ┌──USB-C──┐         ┌──SD Card──┐  │
-└────────────┴─────┴────┴─────────┴─────────┴───────────┴──┘
-
-BACK (as physically seen from behind — left/right MIRRORED vs front):
-┌──────────────────────────────────────────────────────────┐
-│  ●  ┌──R lever──┐                  ┌──L lever──┐  ●      │  ● = M2.5 counterbore
-│                                                          │
-│                                          (( Speaker ))   │
-│                                                          │
-│  ●                                                ●      │
-└──────────────────────────────────────────────────────────┘
-```
+![Enclosure layout to scale: front with display, D-pad, ABXY, Start/Select/Menu, LEDs and bottom-edge ports; back with mirrored L/R levers, speaker grille and screw counterbores](/img/diagrams/enclosure-layout.svg)
 
 :::note Left/right convention
 The FRONT view is what the player sees; the BACK view is what you see when

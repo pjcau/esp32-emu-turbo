@@ -111,21 +111,7 @@ Static electrical analysis — verifies power budget, signal timing, component v
 conversion stages in [Power Budget](/docs/design/schematics#power-budget) — that
 page is the single place the number is computed.
 
-```
-LiPo 3.7V 5000mAh
-  |
-  +--[IP5306 boost]--> +5V_VOUT --[Q2 PMOS]--> +5V (387mA max)
-  |                       ^                     |
-  |          SW16 -> PWR_SW -> R33 ->           +--[SY8089 buck]--> +3V3 (2A max)
-  |          PWR_SW_GATE (R32/C32 to VOUT,      |    |-- ESP32-S3 (200mA)
-  |          C33 wake pulse -> IP5306_KEY)      |    |-- Display (100mA)
-  |                                             |    +-- SD card (30mA)
-  |                                             |
-  |                                             +-- PAM8403 (50mA)
-  |                                             +-- LEDs (2.4mA)
-  |
-  +--[USB-C VBUS]--> charge input (1A max)  (upstream of Q2: charges with SW16 OFF)
-```
+![Power tree with current budget: +5V 387 mA max, +3V3 2 A max, per-load currents, SW16 gate path and USB charge input](/img/diagrams/power-tree.svg)
 
 ### Signal Timing
 
@@ -193,13 +179,7 @@ These warnings appear in every test run and are **expected behavior**, not defec
 
 ### GPIO0 — SELECT button / Download Mode
 
-```
-+3.3V ──[10k R9]──┬── GPIO0 (ESP32)
-                   │
-              [SW10 SELECT]
-                   │
-                  GND
-```
+![GPIO0: R9 10 k pull-up from +3.3V, SW10 SELECT to GND](/img/diagrams/circuit-gpio0-select.svg)
 
 ESP32-S3 reads GPIO0 at boot: HIGH = normal boot, LOW = download mode. If SELECT is pressed during power-on, the ESP32 enters USB programming mode instead of running the game.
 

@@ -106,17 +106,7 @@ firmware had never actually built. The namespace is **`atanisoft/`** — see
 [Virtual Bench findings](/docs/vbench/findings-and-limits).
 :::
 
-```
-ESP32-S3                      ILI9488 (3.95" 320x480)
-─────────                     ──────────────────────────
-GPIO 4-11  (D0-D7) ────────► DB0-DB7 (8-bit data bus)
-GPIO 12    (CS)     ────────► CS  (chip select)
-GPIO 14    (DC)     ────────► DC  (data/command)
-GPIO 46    (WR)     ────────► WR  (write strobe)
-+3V3       (RD)     ────────► RD  (tied HIGH, no read-back)
-GPIO 13    (RST)    ────────► RST (reset)
-+5V via R27 (20 Ω)  ────────► LED-A (always-on backlight, net LED_BLA)
-```
+![ESP32-S3 to ILI9488 8080 wiring: GPIO4-11 data bus, CS GPIO12, DC GPIO14, WR GPIO46, RD tied to +3V3, RST GPIO13, backlight from +5V via R27](/img/diagrams/wiring-lcd-8080.svg)
 
 GPIO4–11 form a contiguous 8-bit bus, enabling efficient DMA transfers.
 
@@ -155,30 +145,7 @@ Every core fits inside 480x320 with less than 1.5x scaling, so the 20 MHz
 
 ## Memory Map
 
-```
-┌─────────────────────────────────────────────────┐
-│ Internal SRAM (520 KB)                          │
-│   ├─ FreeRTOS stacks          ~32 KB            │
-│   ├─ DMA buffers (display)    ~40 KB            │
-│   ├─ I2S audio DMA            ~8 KB             │
-│   ├─ Emulator hot buffers     ~150 KB (SNES)    │
-│   ├─ Input / misc             ~10 KB            │
-│   └─ Free                     ~280 KB           │
-├─────────────────────────────────────────────────┤
-│ Octal PSRAM (8 MB)                              │
-│   ├─ ROM image                up to 6 MB        │
-│   ├─ Emulator state / VRAM    ~512 KB           │
-│   ├─ Frame buffer (x2)        ~300 KB           │
-│   ├─ Save states              ~256 KB           │
-│   └─ Free                     ~1 MB             │
-├─────────────────────────────────────────────────┤
-│ Flash (16 MB)                                   │
-│   ├─ Firmware                 ~2-4 MB           │
-│   ├─ NVS (settings)          ~64 KB             │
-│   ├─ OTA partition            ~4 MB (optional)  │
-│   └─ Free / SPIFFS            ~8 MB             │
-└─────────────────────────────────────────────────┘
-```
+![Memory map: internal SRAM 520 KB, Octal PSRAM 8 MB and flash 16 MB, with what lives in each](/img/diagrams/sw-memory-map.svg)
 
 ---
 

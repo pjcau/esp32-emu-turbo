@@ -145,17 +145,7 @@ P4 means a handful of systems or most of them.
 The console runs **two binaries** on two chips that talk to each other all
 the time.
 
-```
-┌──────────────────────── ESP32-P4 (our firmware) ────────────────────────┐
-│ retro-go launcher + emulators                                           │
-│ lwIP network stack · Bluedroid Bluetooth host (HID host for controllers)│
-│ esp_hosted + esp_wifi_remote: Wi-Fi calls look local (esp_wifi_*)       │
-└───────────────┬─────────────────────────────────────────────────────────┘
-                │ SDIO (4-bit, 40 MHz) or SPI  ·  RESET line  ·  UART pads
-┌───────────────┴──────── radio chip (Espressif firmware) ────────────────┐
-│ ESP-Hosted slave: Wi-Fi driver + Bluetooth controller (HCI over VHCI)   │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+![ESP32-P4 firmware talking over SDIO or SPI to the radio chip running the ESP-Hosted slave firmware](/img/diagrams/sw-p4-hosted.svg)
 
 - **The P4 binary** is the one we develop every day: retro-go and the
   emulators, as today. It includes the `esp_hosted` component, so
