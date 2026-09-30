@@ -31,35 +31,7 @@ The roster below is `VERIFY_ALL_SCRIPTS` in the `Makefile` (95 gates) plus the
 
 ### Pipeline
 
-```mermaid
-flowchart TD
-    GEN(["make generate<br/><i>board + schematic from Python</i>"])
-
-    S1["<b>1 · Source sync</b><br/>11 gates<br/><i>copper vs the drawing</i>"]
-    S2["<b>2 · Copper integrity</b><br/>14 gates<br/><i>opens, shorts, orphan copper</i>"]
-    S3["<b>3 · Fabrication</b><br/>14 gates<br/><i>DRC, DFM, drill, stackup</i>"]
-    S4["<b>4 · Assembly</b><br/>13 gates<br/><i>rotation, polarity, BOM, stencil</i>"]
-    S5["<b>5 · Electrical</b><br/>22 gates<br/><i>ERC, sim, power, ESD, boot</i>"]
-    S6["<b>6 · Signal integrity / EMC</b><br/>8 gates<br/><i>impedance, return path, coupling</i>"]
-    S7["<b>7 · Release integrity</b><br/>11 gates<br/><i>ordered == verified</i>"]
-    S8["<b>8 · Meta / blind-spot</b><br/>6 gates<br/><i>can the network still notice?</i>"]
-
-    ORDER(["JLCPCB order<br/><i>gerbers + BOM + CPL</i>"])
-
-    GEN --> S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7 --> ORDER
-    S8 -.->|"audits every stage"| S1
-    S8 -.-> S7
-
-    classDef dead fill:#fde2e2,stroke:#ef4444,stroke-width:2px,color:#1a1a1a
-    classDef degr fill:#fdeecd,stroke:#f59e0b,stroke-width:2px,color:#1a1a1a
-    classDef blind fill:#eddcfb,stroke:#a855f7,stroke-width:2px,color:#1a1a1a
-    classDef edge fill:#e8eef5,stroke:#64748b,stroke-width:2px,color:#1a1a1a
-
-    class S1,S2,S3,S4,S5 dead
-    class S6 degr
-    class S7,S8 blind
-    class GEN,ORDER edge
-```
+![Production test pipeline: eight gate stages between make generate and the JLCPCB order](/img/diagrams/test-pipeline.svg)
 
 <p style={{fontSize: "0.8rem", opacity: 0.7, marginTop: "-0.5rem"}}>
 Stage colour = the severity most of its gates carry. Individual gates vary — the roster below is per-gate.
@@ -286,29 +258,7 @@ pair rather than every net.
 
 ## C. Version improvements
 
-```mermaid
-timeline
-    title Quality improvements per release
-    section v2-v3 first packages
-      v2.9 : NPTH positioning holes fixed
-      v3.2 : first full JLCPCB package
-      v3.4 : Layer-1 and 2 hardware audit over 10 rounds
-      v3.5 : pin-1 markers plus 10 DFM checks
-      v3.6 : R13 copper-clearance sweep and gate
-      v3.7 : JLCDFM cleanup
-    section v4 the gate network
-      v4.0 : reverse-polarity protection : thermal vias : 5 verification scripts
-      v4.1 : community DFM and DFA gap analysis
-      v4.2 : USB-C footprint fixes
-      v4.3 : polarity fixes : PAM8403 plus 5V bridge
-      v4.3.1 : systemic CPL rotation incident : first-article-check protocol born
-      v4.4.0 : four new blocking gates : 10 live bugs fixed : order-manifest SHAs
-      v4.5.0 : diagnostic LED tree for photo-diagnosable rails
-      v4.5.1 : R31 respin : Q1 RPP orientation : BTN_R off card-detect pad
-    section next
-      v3 silk : silkscreen pass
-      EMC : crosstalk : plane split : length match : via discontinuity
-```
+![Quality improvements per release, v2.9 to v4.5.1 and what comes next](/img/diagrams/release-timeline.svg)
 
 ---
 

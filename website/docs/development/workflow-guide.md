@@ -12,32 +12,7 @@ How to use the 6 agents, 46 skills, and 6 lifecycle commands to design, verify, 
 
 ## Architecture Overview
 
-```mermaid
-graph TB
-    USER["User"]
-
-    TL["TEAM-LEAD<br/><i>sonnet - orchestrator</i>"]
-    PCB["PCB-ENGINEER<br/><i>opus - 27 skills</i>"]
-    SW["SOFTWARE-DEV<br/><i>opus - 6 skills</i>"]
-    CAD["CAD-ENGINEER<br/><i>sonnet - 3 skills</i>"]
-    PR["PLAN-REVIEWER<br/><i>opus - review only</i>"]
-    SC["SCOUT<br/><i>opus - weekly auto</i>"]
-
-    USER -->|complex task| TL
-    USER -->|direct PCB task| PCB
-    USER -->|firmware task| SW
-    USER -->|enclosure task| CAD
-    USER -->|review plan| PR
-    SC -->|weekly cron| SC
-
-    TL -->|coordinates| PCB
-    TL -->|coordinates| SW
-    TL -->|coordinates| CAD
-
-    PCB <-.->|"GPIO sync<br/>config.py ↔ board_config.h"| SW
-    PCB <-.->|"dimensions sync<br/>board.py ↔ enclosure.scad"| CAD
-    SW <-.->|"docs update<br/>website/docs/"| CAD
-```
+![Agent architecture: the user, the team-lead, the three worker agents and their sync points](/img/diagrams/agents.svg)
 
 ---
 
@@ -45,35 +20,7 @@ graph TB
 
 ### Decision Tree
 
-```mermaid
-flowchart TD
-    START["What do you need?"]
-
-    START --> NEW["New PCB from scratch?"]
-    START --> CHANGE["Change existing design?"]
-    START --> BUG["Fix a bug/DFM issue?"]
-    START --> CHECK["Verify before release?"]
-    START --> SHIP["Ship to JLCPCB?"]
-    START --> AUDIT["Full hardware audit?"]
-    START --> FW["Firmware change?"]
-    START --> CASE["3D enclosure?"]
-
-    NEW --> CMD_DESIGN["/design-pcb"]
-    CHANGE --> CMD_GEN["/generate-pcb"]
-    BUG --> CMD_FIX["/fix-pcb"]
-    CHECK --> CMD_VERIFY["/verify-pcb"]
-    SHIP --> CMD_RELEASE["/release-pcb"]
-    AUDIT --> CMD_AUDIT["/hardware-audit"]
-    FW --> CMD_FW["/pcb-to-firmware"]
-    CASE --> CMD_CAD["/enclosure-design"]
-
-    CMD_DESIGN --> PIPELINE_A["Pipeline A"]
-    CMD_GEN --> PIPELINE_E["Pipeline E"]
-    CMD_FIX --> PIPELINE_B["Pipeline B"]
-    CMD_VERIFY --> PIPELINE_C["Pipeline C"]
-    CMD_RELEASE --> PIPELINE_D["Pipeline D"]
-    CMD_AUDIT --> PIPELINE_F["Pipeline F"]
-```
+![Which command to run for each need, and the pipeline it starts](/img/diagrams/decision-tree.svg)
 
 ---
 
@@ -152,15 +99,7 @@ JLCPCB DFM report (PDF)
 
 ### Key: the fix cycle
 
-```mermaid
-flowchart LR
-    A["/verify<br/>find failures"] --> B["/dfm-fix<br/>edit source"]
-    B --> C["/generate<br/>regen PCB"]
-    C --> D["/verify<br/>confirm fix"]
-    D -->|still failing| B
-    D -->|all pass| E["/dfm-test<br/>add guard"]
-    E --> F["/release-prep"]
-```
+![The fix cycle: verify, fix, regenerate, re-verify, then add a guard and release](/img/diagrams/fix-cycle.svg)
 
 ---
 
