@@ -69,13 +69,13 @@ newer esp_develop 9.2.2 emulates the board's 8 MB octal PSRAM
 | Step | What | Where | Board needed? |
 |:---|:---|:---|:---|
 | **0. Harness** ✅ 2026-09-29 | Standalone test app `retro-go/xjit-test` (ESP-IDF). Machine code written at run time runs in QEMU from internal RAM and from PSRAM mapped for instruction fetch (`esp_mmu_map` exec + cache sync). | PC + QEMU | No |
-| **1. Emitter** | Port Dragonfruit's emitter to `xjit`. For every instruction: encode on the PC, disassemble with `objdump`, compare with the assembler's bytes. | PC | No |
-| **2. Generated code runs** | Generate small functions (add, loop, load/store, call back into C) with the emitter, run them from IRAM and from PSRAM mapped executable. | QEMU, then board | Board once, to confirm the cache sync on real hardware |
-| **3. Speed (decision gate)** | Microbenchmarks: a generated loop from IRAM and from PSRAM, the same loop in compiled C, the cost of an I-cache miss, entering and leaving a block. Decide where the code cache lives and what speedup to expect. | Board | **Yes**: timing only on the board |
-| **4. Mini frontend** | A small Thumb subset (ALU, compare, branch, load/store) translated by `xjit`. Differential test: random instruction sequences run through gpSP's interpreter and through the JIT, registers and memory compared. | PC (interpreter) + QEMU (JIT) | No; one board spot check |
-| **5. GBA backend** | The full gpSP Xtensa backend. Run the existing level save states in QEMU (ROM in a flash partition, frame and audio hashes on the UART) and compare with the PC interpreter's reference hashes, bit for bit. | QEMU | No |
-| **6. GBA on the board** | Sonic Advance, Metal Slug Advance, TMNT and more games: on-screen fps, webcam shots of every game, save and load. Interpreter kept as the fallback (a setting, and automatic for games that fail). | Board | **Yes** |
-| **7. GBA speed** | Profile on the board, tune the code cache, register allocation, block linking. | Board | **Yes** |
+| **1. Emitter** ✅ 2026-09-29 | `components/xjit/include/xjit_emit.h`: byte-identical to `xtensa-esp32s3-elf-as` on ~125 KB of random instructions of every kind (`components/xjit/test/run_emit_test.sh`). | PC | No |
+| **2. Generated code runs** ✅ 2026-09-29 | Blocks with labels, literal pool, calls into C, 26 branch kinds, loads/stores, plus 2000 random ALU programs against a C reference: 16/16 in QEMU and on the board, from IRAM and from PSRAM. The board found what QEMU cannot: the instruction-cache invalidate must cover whole lines. | QEMU, then board | Done |
+| **3. Speed (decision gate)** ✅ GO, 2026-09-29 | Board: generated ALU code 1.0–1.3 cycles/op (gcc C 0.94); block call+return 13 cycles; call into C 14; code bigger than the 32 KB I-cache runs at 1.0 cycles/op from IRAM but 11.6 from PSRAM. So: native speed, and the hot code must stay in IRAM or fit the I-cache (see below). | Board | Done |
+| **4. Mini frontend** ✅ 2026-09-29 | Thumb formats 1–5 (shifts, ADD/SUB, imm8 ops, the 16 ALU ops, hi-register ops) translated by `xjit`: equal to a reference interpreter on 3000 random sequences × 6 states in QEMU (IRAM and PSRAM), and the reference equal to gpSP's own interpreter on 18000 runs on the PC (`xjit-test/host/run_thumb_gpsp_check.sh`). | PC + QEMU | No |
+| **5. GBA backend** ✅ 2026-09-29 | `gbsp-libretro/xtensa/`: a port of gpSP's x86 backend (ARM state and flags in memory, memory handlers and trampolines in C) on `xjit`. In QEMU (`retro-go/gbajit-test`, 8 MB PSRAM) its frame and audio hashes equal the x86 dynarec's on Sonic Advance, Metal Slug Advance and TMNT (300/600 frames of the level states). The reference is the x86 dynarec, not the interpreter: the dynarec counts cycles per block, so its frames differ from the interpreter's. | QEMU | No |
+| **6. GBA on the board** ✅ 2026-09-30 | `GBAJIT=1` build of gbsp: Sonic Advance, Metal Slug Advance and TMNT run correctly on the board (webcam checked). Interpreter kept as the fallback (normal build). | Board | Done |
+| **7. GBA speed** 🔄 in progress | Profile on the board, tune the code cache, register allocation, block linking. So far: hot C helpers and the core-1 renderer in IRAM, 16-bit density forms, direct loads/stores; the dynarec beats the interpreter on TMNT and is at par on Sonic/Metal Slug. How it all fits together: [GBA Dynarec (Xtensa JIT)](../software/gba-dynarec.md). | Board | **Yes** |
 | **8. 68000 frontend** | Dragonfruit's 68000 frontend on `xjit` in the test app. Differential test against the MAME 68000 interpreter (instruction sequences, then whole frames of a Neo Geo attract). | PC + QEMU | No |
 | **9. Neo Geo and CPS1** | Into mame-go behind a switch: Metal Slug 2 in play (goal 55–60 fps), CPS1 games, webcam checks. | Board | **Yes** |
 | **10. Mega Drive** | The same 68000 frontend in gwenesis, if it helps there. | Board | **Yes** |
@@ -159,6 +159,17 @@ Every new system also needs flash: about 700 KB are free today.
 - Licenses: gpSP is GPL-2, Dragonfruit and MicroPython are MIT, both usable
   in this GPL project; code from repos without a license (ESPB) is read,
   never copied.
+
+## Step 3 results and what they mean
+
+Generated code runs as fast as compiled C, so a translated ARM or 68000
+instruction costs what its few Xtensa instructions cost, against ~78 cycles
+per ARM instruction in today's GBA interpreter. The limit is where the code
+lives: PSRAM code is fine while the hot blocks fit the 32 KB instruction
+cache (shared with the emulator's own code in flash), and 11x slower when
+they do not. Internal RAM has no such cliff, but gbsp and mame-go have little
+of it free (~12 KB in gbsp): making room for an IRAM code cache (moving
+tables or buffers to PSRAM) is part of the GBA work.
 
 ## Known risks
 
