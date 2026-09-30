@@ -12,6 +12,20 @@ How the Game Boy Advance core (gpSP, `retro-go/gbsp`) translates ARM/Thumb code 
 Step 7 of the plan (tuning on the board). The dynarec produces the **same video and audio as gpSP's own x86 dynarec** (bit-identical hashes in QEMU on Sonic Advance, Metal Slug Advance and TMNT). On the board the games now run at 56-59 emulated fps and show 54-59 fps (Sonic, Metal Slug, TMNT, played): most of the late gains came from the two cores and the display, not from the generated code.
 :::
 
+## Source code: `xtensa-68000-dynarec`
+
+The dynarec has its own public repository, **[pjcau/xtensa-68000-dynarec](https://github.com/pjcau/xtensa-68000-dynarec)** (GPL-2.0, as gpSP), with its full development history and English documentation (architecture, verification, performance, interpreter fallback, 68000 roadmap). retro-go includes it as a git submodule at `retro-go/xtensa-68000-dynarec`, and the `gbsp` app picks its components from there.
+
+| Folder in the repository | Content |
+|---|---|
+| `components/gbsp-libretro/` | gpSP with the Xtensa backend (`xtensa/`) and the esp32-emu-turbo changes (two-core renderer, VRAM copy, m4a mixer HLE, battery-save flags) |
+| `components/xjit/` | the shared Xtensa JIT core, reused by the future 68000 frontend (Neo Geo, CPS1, Mega Drive) |
+| `test/xjit-test/` | encoder tests against the assembler, generated-code tests in QEMU and on the board |
+| `test/gbajit-test/` | gpSP in QEMU (8 MB octal PSRAM) from a ROM and a level state; `x86ref/` builds the x86 dynarec reference |
+| `docker/Dockerfile` | `espressif/idf:v5.4` plus Espressif's QEMU 9.2.2 (the one with ESP32-S3 PSRAM), built locally |
+
+No ROM, save state or battery save is in the repository: the test benches read them from a local directory (`XJIT_ROMS`).
+
 ## Interpreter vs dynarec in one picture
 
 ![Interpreter vs dynarec](/img/gba-dynarec/interp-vs-dynarec.svg)
@@ -28,7 +42,7 @@ From the silicon up to the game. Each layer only talks to the one next to it; th
 
 ### As a player
 
-Nothing changes: pick a GBA game in the launcher, it starts in the `gbsp` app. Which CPU core runs the game is decided **at build time**: a `GBAJIT=1` build of `gbsp` uses the dynarec, a normal build uses the interpreter. Save states, menus and controls are the same in both.
+Nothing changes: pick a GBA game in the launcher, it starts in the `gbsp` app. A `GBAJIT=1` build of `gbsp` carries **both engines**: the dynarec, and the interpreter as a fallback. A game switches to the interpreter automatically when it keeps rewriting its own code (NFS Underground) or when the previous launch crashed or hung on the dynarec; the choice is remembered per game, and the options menu has **Fast CPU (dynarec)** to change it by hand. Save states, battery saves, menus and controls are the same on both engines (a slot saved on one loads on the other).
 
 ### As a developer
 
@@ -63,12 +77,12 @@ If a later instruction reads the flags, the translator asks for them and `xt_add
 
 | Piece | File(s) | Role |
 |---|---|---|
-| Shared JIT core | `components/xjit/` | Xtensa encoders (byte-identical to `as`), block/label/literal helpers, executable memory in IRAM or PSRAM. Reused later by the 68000 frontend (Neo Geo, CPS1, Mega Drive). |
-| Translator | `gbsp-libretro/cpu_threaded.c` | gpSP's own: decodes ARM/Thumb, splits blocks, computes which flags are live, looks blocks up in hash tables, flushes on self-modifying code. Unchanged except small `XTENSA_ARCH` hooks. |
-| Backend | `gbsp-libretro/xtensa/xtensa_emit*.h` | Turns each guest instruction into Xtensa code. Port of gpSP's x86 backend, so its results can be compared with the x86 dynarec instruction by instruction. |
-| Runtime stubs | `gbsp-libretro/xtensa/xtensa_stub.c` | The C side the generated code calls: memory handlers per region, `update_gba` at the end of a time slice, indirect-branch lookup, CPSR/SPSR, SWI, HLE divide, m4a mixer hook; also generates the `xt_enter` trampoline. |
-| App | `gbsp/main/main.c` | Allocates the code cache, runs the frame loop, profiler (`GBAPROF`) and deterministic benchmark (`GBABENCH`). |
-| Test benches | `retro-go/xjit-test`, `retro-go/gbajit-test`, `gbajit-test/x86ref` | Encoder test vs objdump, generated-code tests in QEMU and on the board, gpSP in QEMU with ROM + level state, x86 dynarec reference. |
+| Shared JIT core | `xtensa-68000-dynarec/components/xjit/` | Xtensa encoders (byte-identical to `as`), block/label/literal helpers, executable memory in IRAM or PSRAM. Reused later by the 68000 frontend (Neo Geo, CPS1, Mega Drive). |
+| Translator | `xtensa-68000-dynarec/components/gbsp-libretro/cpu_threaded.c` | gpSP's own: decodes ARM/Thumb, splits blocks, computes which flags are live, looks blocks up in hash tables, flushes on self-modifying code. Unchanged except small `XTENSA_ARCH` hooks. |
+| Backend | `.../gbsp-libretro/xtensa/xtensa_emit*.h` | Turns each guest instruction into Xtensa code. Port of gpSP's x86 backend, so its results can be compared with the x86 dynarec instruction by instruction. |
+| Runtime stubs | `.../gbsp-libretro/xtensa/xtensa_stub.c` | The C side the generated code calls: memory handlers per region, `update_gba` at the end of a time slice, indirect-branch lookup, CPSR/SPSR, SWI, HLE divide, m4a mixer hook; also generates the `xt_enter` trampoline. |
+| App | `retro-go/gbsp/main/main.c` | Allocates the code cache, runs the frame loop, engine choice and fallback, battery saves, profiler (`GBAPROF`) and deterministic benchmark (`GBABENCH`). |
+| Test benches | `xtensa-68000-dynarec/test/xjit-test`, `test/gbajit-test`, `test/gbajit-test/x86ref` | Encoder test vs objdump, generated-code tests in QEMU and on the board, gpSP in QEMU with ROM + level state, x86 dynarec reference. |
 
 ## Where everything lives
 

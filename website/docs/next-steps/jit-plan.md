@@ -21,6 +21,10 @@ no emulator depends on. The emulators that work today stay untouched until
 the core passes its tests. Then the core goes into the emulators one at a
 time, behind a switch, with the interpreter as the fallback.
 
+:::note Where the code is now
+Since 2026-09-30 `components/xjit`, `gbsp-libretro`, `xjit-test` and `gbajit-test` live in the public repository [pjcau/xtensa-68000-dynarec](https://github.com/pjcau/xtensa-68000-dynarec) (`components/` and `test/`), a submodule of retro-go. The paths below are the ones they had when each step was done.
+:::
+
 ## What already exists
 
 Nobody has a GBA or 68000 dynarec for Xtensa (the ESP32-S3 CPU), but the
