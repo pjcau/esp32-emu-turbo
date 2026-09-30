@@ -8,8 +8,8 @@ sidebar_position: 6
 
 How the Game Boy Advance core (gpSP, `retro-go/gbsp`) translates ARM/Thumb code into native ESP32-S3 (Xtensa LX7) code at run time: the pieces, where each one lives in memory, how a frame runs, how every change is verified, and what the measurements taught us. The step-by-step plan and the other systems that can reuse the same core are in [JIT (dynarec) plan](../next-steps/jit-plan.md).
 
-:::info Status (2026-09-30)
-Step 7 of the plan (tuning on the board). The dynarec produces the **same video and audio as gpSP's own x86 dynarec** (bit-identical hashes in QEMU on Sonic Advance, Metal Slug Advance and TMNT). On the board the games now run at 56-59 emulated fps and show 54-59 fps (Sonic, Metal Slug, TMNT, played): most of the late gains came from the two cores and the display, not from the generated code.
+:::info Status (2026-10-01)
+Steps 0-7 of the plan are done: the dynarec is the default `gbsp` build, with the interpreter as automatic fallback. The dynarec produces the **same video and audio as gpSP's own x86 dynarec** (bit-identical hashes in QEMU on Sonic Advance, Metal Slug Advance and TMNT). On the board the games now run at 56-59 emulated fps and show 54-59 fps (Sonic, Metal Slug, TMNT, played): most of the late gains came from the two cores and the display, not from the generated code.
 :::
 
 ## Source code: `xtensa-68000-dynarec`
@@ -42,7 +42,7 @@ From the silicon up to the game. Each layer only talks to the one next to it; th
 
 ### As a player
 
-Nothing changes: pick a GBA game in the launcher, it starts in the `gbsp` app. A `GBAJIT=1` build of `gbsp` carries **both engines**: the dynarec, and the interpreter as a fallback. A game switches to the interpreter automatically when it keeps rewriting its own code (NFS Underground) or when the previous launch crashed or hung on the dynarec; the choice is remembered per game, and the options menu has **Fast CPU (dynarec)** to change it by hand. Save states, battery saves, menus and controls are the same on both engines (a slot saved on one loads on the other).
+Nothing changes: pick a GBA game in the launcher, it starts in the `gbsp` app. The `gbsp` app is built with **both engines** (the default since 2026-10-01; `GBAJIT=0` builds the interpreter alone): the dynarec, and the interpreter as a fallback. A game switches to the interpreter automatically when it keeps rewriting its own code (NFS Underground) or when the previous launch crashed or hung on the dynarec; the choice is remembered per game, and the options menu has **Fast CPU (dynarec)** to change it by hand. Save states, battery saves, menus and controls are the same on both engines (a slot saved on one loads on the other).
 
 ### As a developer
 
@@ -50,7 +50,7 @@ Nothing changes: pick a GBA game in the launcher, it starts in the `gbsp` app. A
 
 | Build flag | What it adds |
 |---|---|
-| `GBAJIT=1` | the dynarec instead of the interpreter (`HAVE_DYNAREC XTENSA_ARCH`) |
+| `GBAJIT=0` | interpreter only (the default build has the dynarec, `HAVE_DYNAREC XTENSA_ARCH`, with the interpreter as fallback) |
 | `GBAPROF=1` | once a second: ms per frame (CPU, render, display, sound), a 1 kHz PC sampler for both cores, cache-sync / flush / notify counters |
 | `GBABENCH=1` | the game plays itself from the save state with a frame-numbered input script; every 300 frames prints the work time per frame and a screen hash |
 | `GBAJIT_IRAM=1` | experiment: code cache in internal RAM (needs memory protection off, does not fit today) |
