@@ -9,7 +9,7 @@ sidebar_position: 6
 How the Game Boy Advance core (gpSP, `retro-go/gbsp`) translates ARM/Thumb code into native ESP32-S3 (Xtensa LX7) code at run time: the pieces, where each one lives in memory, how a frame runs, how every change is verified, and what the measurements taught us. The step-by-step plan and the other systems that can reuse the same core are in [JIT (dynarec) plan](../next-steps/jit-plan.md).
 
 :::info Status (2026-09-30)
-Step 7 of the plan (tuning on the board). The dynarec produces the **same video and audio as gpSP's own x86 dynarec** (bit-identical hashes in QEMU on Sonic Advance, Metal Slug Advance and TMNT). On the board it beats the interpreter on TMNT and is at par on Sonic and Metal Slug; the next steps below target the remaining gap.
+Step 7 of the plan (tuning on the board). The dynarec produces the **same video and audio as gpSP's own x86 dynarec** (bit-identical hashes in QEMU on Sonic Advance, Metal Slug Advance and TMNT). On the board the games now run at 56-59 emulated fps and show 54-59 fps (Sonic, Metal Slug, TMNT, played): most of the late gains came from the two cores and the display, not from the generated code.
 :::
 
 ## Interpreter vs dynarec in one picture
@@ -81,10 +81,17 @@ Rules that came out of the measurements:
 - **Translated code is fetched from PSRAM through the I-cache.** Metal Slug generates ~900 KB of it; whatever is hot must stay small and dense.
 - **Everything else that runs every frame goes to IRAM** so it does not evict translated code: the C helpers called by the generated code (`XT_HOT`) and the core-1 renderer's common case. This was the largest single gain.
 - A code cache in internal RAM was tried (`GBAJIT_IRAM=1`): with retro-go's memory use there is not enough internal RAM left (the file system stops loading the game), so it is off.
+- **Internal RAM is shared by both cores, and they contend for it.** Moving the renderer's 100 KB OBJ lists from internal RAM to PSRAM made Metal Slug's display faster (19-20 → 11.5-13.5 ms per frame); drawing lines into an internal-RAM buffer made both cores ~5% slower. Keep core-1 data in PSRAM, core-0 hot data (IWRAM, `reg[]`) internal.
+- **Watch the internal RAM budget.** Every function moved to IRAM takes internal RAM: at 13 KB free the file system can no longer open the ROM. The dynarec build boots with ~113 KB free.
 
 ## How a frame runs
 
 ![How a frame runs](/img/gba-dynarec/frame.svg)
+
+Two mechanisms keep the cores from waiting on each other:
+
+- **The renderer has its own copy of VRAM.** Core 1 draws lines late (core 0 emulates the 160 visible lines in ~3 ms, the renderer needs ~6 ms), so when the game writes VRAM at the start of the vblank the queued lines still need the old contents. Instead of waiting for them, CPU stores, dynarec stores and DMA mark the 1 KB pages they write, and the dirty pages are copied into the renderer's copy when the next line is queued, by which time the renderer has long caught up. This removed ~2 ms of waiting per frame on Sonic (vblank DMA) and TMNT (sprite tiles). OAM and palette use per-line copies.
+- **Three frame buffers.** Core 1 draws into one, the display task sends another, and a finished frame waits in the third until the display is free (checked every 32 lines): emulation never waits for the LCD. The render task runs below the display task, so the LCD's DMA buffers are refilled as soon as they free up.
 
 ### Host register map
 
@@ -93,16 +100,17 @@ Rules that came out of the measurements:
 | `a0`, `a1` | return address and stack of `xt_enter` (windowed ABI) |
 | `a2` | `&reg[0]`: guest registers, flags, helper table |
 | `a3` | cycles left in the time slice |
-| `a4` | temporary that survives helper calls (x86 `esi`) |
+| `a4`, `a6`, `a7` | guest `r0`, `r1`, `r2` (survive `callx8`; synced with `reg[]` only on entry/exit and around the HLE divide, m4a, cheats) |
 | `a5` | start PC of the block (PC-relative constants) |
 | `a10`, `a11`, `a12` | x86 `eax`/`edx`/`ecx`: operands, helper arguments, result |
-| `a8` | helper call target; `a9`, `a13`–`a15` scratch |
+| `a8` | helper call target, x86 `esi`; `a9`, `a13`–`a15` scratch |
 
-Guest registers and flags live in `reg[]` (flags as 0/1 words), exactly as in the x86 backend: every guest instruction loads its operands, computes, stores the result. `callx8` preserves only `a0`–`a7`, which is why nothing else is kept in registers yet (see next steps).
+The other guest registers and the flags live in `reg[]` (flags as 0/1 words), as in the x86 backend. The common Thumb ALU ops (`add`/`sub`, `and`/`eor`/`orr`, `cmp`/`cmn`/`tst`, `mov` immediate) work on the mapped registers directly. `callx8` preserves only `a0`–`a7`, so more mapped registers would need `call0` stubs that save them around every C call.
 
 ### Code shape
 
-- **Exits** are patchable: `j over; .word target; l32r; jx`. Once the target block exists, the first `j` is rewritten into a direct jump.
+- **Exits** are patchable: in the hot path a branch is `bgez a3, +2; j cold; j exit`. The end-of-slice `update_gba` call, the exit literal (`.word target; l32r; jx`) and the redirect after a store go to a cold area at the end of the block. Once the target block exists, the exit `j` is rewritten into a direct jump.
+- **Stores** pass the PC and the cycles left as arguments; the handler writes them to `reg[]` (the x86 code stored them before every call).
 - **Constants** use `movi`, a PC-relative `addi` from `a5`, or an inline literal.
 - **Flags** are computed only when the translator says they are live (`saltu`/`nsau`/`extui`), then stored.
 - **16-bit density forms** (`l32i.n`, `s32i.n`, `mov.n`, `add.n`, `addi.n`, `movi.n`) wherever they fit. All guest registers sit within reach of `l32i.n` (offset ≤ 60).
@@ -117,28 +125,35 @@ Guest registers and flags live in `reg[]` (flags as 0/1 words), exactly as in th
 
 ## Results so far
 
-Board, release builds, same save states, same played input on all three games (fps on screen, 35 s):
+Board, release builds, same save states, same played input on all three games (right held, B and A tapped; fps on the on-screen counter, 35 s). *Emulated* is the game speed, *shown* the frames that reach the LCD:
 
-| Game | Interpreter | Dynarec (first run) | Dynarec (now) |
+| Game | Interpreter | Dynarec, first run | Dynarec now: emulated / shown |
 |---|---|---|---|
-| Sonic Advance | 55.5 | 48 | 49.7–54.7 |
-| Metal Slug Advance | 47.4 | 29 | 44.9–49.8 |
-| TMNT | 44.7 | 52 | 55.5–58.7 |
+| Sonic Advance | 55.5 | 48 | 58.8 / 54.5 |
+| Metal Slug Advance | 47.4 | 29 | 55.7 / 55.6 |
+| TMNT | 44.7 | 52 | 59.5 / 58.7 |
 
-The range is the spread between runs (the played input hits enemies differently each time). What each step gave, on Metal Slug in action:
+What each step gave (Metal Slug in action for the early ones, the deterministic benchmark for the later ones):
 
-| Change | Metal Slug fps |
+| Change | Effect |
 |---|---|
-| first correct board run | ~29 |
-| direct aligned loads/stores (no `memcpy`) | ~31 |
-| 16-bit density instructions | ~35 |
-| hot C helpers in IRAM (`XT_HOT`) | 40–45 (60 in light scenes) |
+| direct aligned loads/stores (no `memcpy`) | ~29 → ~31 fps |
+| 16-bit density instructions | ~31 → ~35 fps |
+| hot C helpers in IRAM (`XT_HOT`) | ~35 → 40-45 fps |
+| three frame buffers (emulation stops waiting for the LCD) | Sonic 49.7 → 57.5 emulated fps |
+| renderer VRAM copy | CPU time per frame −9 to −13 % (Sonic, TMNT) |
+| render task below the display task | Sonic 46.6 → 54.5 shown fps |
+| cold code out of line, compact stores, `r0`–`r2` in registers | 0-2 % each |
+
+### What the counters say
+
+The deterministic benchmark (`GBABENCH`) also reads the LX7 performance counters around the CPU emulation. On a Sonic window the dynarec executes 1.3 M host instructions per frame against the interpreter's 2.0 M, at 2.4 cycles per instruction (interpreter 1.6), with ~0.8 M cycles per frame of extra instruction-fetch stall: the translated code comes from PSRAM. The translated code itself is only ~29 % of core 0; the rest is the GBA hardware model in C (timers, DMA, sound, memory handlers, block lookup), which is why code-generation tweaks now give little.
+
+The LCD is a hard limit: a full-screen 2x frame is ~307 KB, 15.4 ms at the 20 MHz 8-bit bus (already above the ILI9488's rated write cycle). Scrolling games cannot show much more than ~60 fps even with a free core 1.
 
 ## Next steps
 
-From the profile (translated code ≈ 37–40 % of core 0) and the [research on other gpSP backends and ESP32-S3 cache features](../next-steps/jit-plan.md):
-
-1. **Guest registers in host registers.** The MIPS/arm64/RISC-V gpSP backends keep all guest registers and flags in registers. Here that needs `call0` assembly stubs that save and restore them around C calls, because `callx8` only preserves `a0`–`a7`.
-2. **Cold code out of line.** The end-of-slice `update_gba` call and the exit literals move away from the hot path, so the hot blocks stay dense in the I-cache.
-3. **Inline memory fast paths** for IWRAM/EWRAM, with the C helper only as the slow path.
-4. **I-cache lock/preload** of a small hot region, using the ESP32-S3 ROM cache functions (experiment).
+1. **Faster renderer on core 1** (tile layers, sprites): less work per line, and the display task gets more of core 1.
+2. **Guest registers in host registers** with `call0` stubs, as in the MIPS/arm64/RISC-V gpSP backends: bounded by the ~29 % share of translated code.
+3. **The C hardware model** (timers, DMA, sound mixing, memory handlers): now the largest part of core 0.
+4. **LCD bus clock** above 20 MHz: a hardware decision (signal margin), to be tried with the webcam.

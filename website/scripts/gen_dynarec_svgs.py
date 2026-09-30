@@ -101,11 +101,11 @@ def memory():
     s.box(36, 56, 268, 120, "hot C helpers (XT_HOT)", ["xt_load / xt_store · update_gba", "timers · sound_timer · IRQ",
                                                         "block lookup · m4a_run"], "green")
     s.box(36, 188, 268, 84, "core-1 renderer hot path", ["render_scanline_text<u16>", "display_task"], "green")
-    s.box(36, 284, 268, 60, "reg[]", ["ARM registers · flags · helper table"], "green")
+    s.box(36, 284, 268, 60, "reg[] · IWRAM", ["ARM state · the game's hot RAM"], "green")
     s.text(170, 380, "fetched directly: no cache, no misses", 12, color=C["green"][0], weight=600)
     s.group(350, 20, 300, 400, "PSRAM 8 MB · slow for code", "orange")
-    s.box(366, 56, 268, 70, "GBA memory", ["EWRAM · VRAM · IWRAM · ROM pages"], "orange")
-    s.box(366, 138, 268, 56, "block hash tables", [], "orange")
+    s.box(366, 56, 268, 70, "GBA memory", ["EWRAM · VRAM · ROM pages"], "orange")
+    s.box(366, 138, 268, 56, "core-1 data", ["renderer VRAM copy · OBJ lists"], "orange")
     s.box(366, 206, 268, 120, "translation caches", ["ROM 2 MB + RAM 384 KB", "mapped twice: data + exec",
                                                      "Metal Slug: ~900 KB of code"], "orange")
     s.group(680, 20, 300, 400, "flash · XIP", "gray")
