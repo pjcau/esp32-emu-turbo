@@ -95,22 +95,16 @@ Rules for every step:
 Expected gain: 3-4.5 ms. Risk: medium. This is the largest video gain, and it attacks
 the PSRAM bottleneck directly.
 
-1. **V0: Measure.** Split the video time into clear, sprites and fix layer, and count
-   how many PSRAM bytes each part reads and writes.
-2. **V1: Draw in bands in internal RAM.** Use 16-line bands of 304 pixels at 8-bit
-   pens: two buffers of 4.9 KB each in internal RAM (22 KB free).
-   - Each band is cleared to the backdrop in internal RAM.
-   - The sprite strips are drawn clipped to the band.
-   - The fix layer is drawn per band.
-   - Before the first band, one pass over the 381 strips sorts them into a list per
-     band, so that a band does not walk every strip.
-3. **V2: Hand bands to the display.** The display task scales each finished band and
-   sends it, with the per-line change hash kept. Core 0 draws band N+1 while core 1
-   sends band N. The PSRAM frame bitmap disappears: no 72 KB clear, no 72 KB write,
-   no 72 KB read.
-4. **V3: Raster effects.** Games that change the scroll in the middle of a frame (the
-   `ssideki`-style partial refresh) have to cut bands at the changes, or fall back to
-   the full-frame path.
+Every step has a PC part (development, correctness on the x86 harness
+`scripts/neogeo_frames.py`) and a board part (timing with MAMEBENCH, the webcam);
+the **Board?** column says what cannot be done without the board.
+
+| Step | What | Board? |
+|---|---|---|
+| **V0** | **Measure.** Split the video time into palette, clear, sprites and fix layer, and count how many PSRAM bytes each part reads and writes. | **Yes, all of it**: the timings and the PSRAM counts only mean something on the board (`board_run.sh v0 mslug`). |
+| **V1** | **Draw in bands in internal RAM.** 16-line bands of 304 pixels at 8-bit pens, two buffers of 4.9 KB each in internal RAM (22 KB free). Each band is cleared to the backdrop in internal RAM, the sprite strips are drawn clipped to the band, the fix layer is drawn per band. Before the first band, one pass over the 381 strips sorts them into a list per band, so that a band does not walk every strip. | **Only the timing** (about an hour). The correctness — the band image byte-identical to the full frame — is proven on the PC: `neogeo_frames.py compare` must say IDENTICAL on Metal Slug, Metal Slug 2, Sonic Wings 2 and KOF95. |
+| **V2** | **Hand bands to the display.** The display task scales each finished band and sends it, with the per-line change hash kept. Core 0 draws band N+1 while core 1 sends band N. The PSRAM frame bitmap disappears: no 72 KB clear, no 72 KB write, no 72 KB read. | **Yes, all of it**: display task, DMA, core sync; the longest board block of the plan. |
+| **V3** | **Raster effects.** Games that change the scroll in the middle of a frame (the `ssideki`-style partial refresh) have to cut bands at the changes, or fall back to the full-frame path. | **Only the timing and the webcam** on a raster game; the correctness on the PC as for V1. |
 
 Exit criterion: hashes identical (the band image must equal the full-frame image),
 and video at 6 ms or less.
@@ -120,10 +114,10 @@ and video at 6 ms or less.
 Expected gain: 1-2 ms on core 1. Risk: low. It gives the audio more room on core 1,
 and the bands of phase V more room on the display side.
 
-1. **D1.** A cheaper line hash (a 32-bit sum or xor over words, instead of byte-wise
-   FNV), or a SIMD (PIE) version of it.
-2. **D2.** Scaling 304 to 434 pixels from a precomputed pattern, unrolled; with SIMD
-   if D1 shows that PIE pays.
+| Step | What | Board? |
+|---|---|---|
+| **D1** | A cheaper line hash (a 32-bit sum or xor over words, instead of byte-wise FNV), or a SIMD (PIE) version of it. | **Only the timing and the screen**; the new hash is checked against the current one on the PC. |
+| **D2** | Scaling 304 to 434 pixels from a precomputed pattern, unrolled; with SIMD if D1 shows that PIE pays. | **Only the timing and the screen**; the scaled lines are compared with the current function's on the PC. |
 
 ### Phase J: a denser dynarec (all 68000 games)
 
@@ -132,15 +126,15 @@ The interpreter is now at 7.72 ms, and that is the number to beat. The dynarec i
 through the 32 KB instruction cache. The steps follow the code-generator review
 (F0-F6), with the corrections listed below.
 
-| Step | What | Time, risk |
-|---|---|---|
-| **F0** | Starting measurement: bytes per 68000 instruction by kind (register-only, memory, call-out), cache flushes per minute, 68000 ms on MAMEBENCH. **Added:** decide whether the cost is instruction-cache misses or instruction count. Use Xtensa performance counters if the IDF exposes them; if not, run the same blocks with a small hot set and compare. | 0.5 day, low |
-| **F1** | 16-bit narrow instructions (`l32i.n`/`s32i.n` for 68000 registers at offsets of 60 or less, `mov.n`, `add.n`, `addi.n`, `movi.n`, `beqz.n`/`bnez.n`). Expected 20-25 % less code, same results. | 1 day, low |
-| **F2** | Interrupts taken only between instructions (`m68k_set_irq` marks the interrupt, and the next instruction boundary takes it, as on the real 68000 and in Musashi 4.x). Same change in the interpreter and the dynarec. **Added, first:** count how often an IRQ is raised from inside a memory handler. If it never happens on Neo Geo or CPS1, the hashes do not change at all. If it does, take new reference hashes once, validated in play with the webcam. Then `mem_may_interrupt = false`: no PPC/IR/PC stores and no flag materialisation before each access. Expected 30-40 % less code on memory instructions. | 2-3 days, medium |
-| **F3** | Direct RAM/ROM access in the generated code. **Changed:** start from the interpreter fast path that already exists, MAME's first-level table (a shift, a byte load, a compare, the bank base, a 16-bit load), emitted inline, with the slow call kept outside the block. A dedicated direct-pointer page table (FAME/C `Fetch[]` style) comes later, only if F0 shows the extra loads matter; it must follow `cpu_setbank` and CPU context switches. Writes keep the idle-loop write hash. | 2-3 days, medium |
-| **F4** | 68000 registers held in Xtensa registers across a block. `callx8` keeps only the caller's a0-a7, so the review's switch to `callx12` (which keeps a0-a11) is correct. **Added:** `callx12` rotates the window further and causes more window-overflow spills, so measure it. Keep the 4 most-used 68000 registers (chosen from F0's statistics) in a8-a11, and write them back only before a handler call and at block exit. | 2-3 days, medium |
-| **F5** | Lazy flags, only if F0 repeated after F2 shows that flags are still more than 15 % of the code. | only if needed |
-| **F6** | JIT cache in IRAM: postponed. It needs at least 24 KB of free internal RAM, and below ~13 KB free the file system no longer opens ROMs. Phase V takes ~10 KB, so F6 is out unless something else frees memory. | postponed |
+| Step | What | Time, risk | Board? |
+|---|---|---|---|
+| **F0** | Starting measurement: bytes per 68000 instruction by kind (register-only, memory, call-out), cache flushes per minute, 68000 ms on MAMEBENCH. **Added:** decide whether the cost is instruction-cache misses or instruction count. Use Xtensa performance counters if the IDF exposes them; if not, run the same blocks with a small hot set and compare. | 0.5 day, low | **Yes, all of it**: instruction cache behaviour and MAMEBENCH timings exist only on the board. |
+| **F1** | 16-bit narrow instructions (`l32i.n`/`s32i.n` for 68000 registers at offsets of 60 or less, `mov.n`, `add.n`, `addi.n`, `movi.n`, `beqz.n`/`bnez.n`). Expected 20-25 % less code, same results. | 1 day, low | **Only the final timing** (about an hour). The development and the QEMU fuzz at 0 mismatches are on the PC. |
+| **F2** | Interrupts taken only between instructions (`m68k_set_irq` marks the interrupt, and the next instruction boundary takes it, as on the real 68000 and in Musashi 4.x). Same change in the interpreter and the dynarec. **Added, first:** count how often an IRQ is raised from inside a memory handler. If it never happens on Neo Geo or CPS1, the hashes do not change at all. If it does, take new reference hashes once, validated in play with the webcam. Then `mem_may_interrupt = false`: no PPC/IR/PC stores and no flag materialisation before each access. Expected 30-40 % less code on memory instructions. | 2-3 days, medium | **Partly**: counting the IRQs raised inside handlers, the hashes and a real game with the webcam are on the board; the development is on the PC. |
+| **F3** | Direct RAM/ROM access in the generated code. **Changed:** start from the interpreter fast path that already exists, MAME's first-level table (a shift, a byte load, a compare, the bank base, a 16-bit load), emitted inline, with the slow call kept outside the block. A dedicated direct-pointer page table (FAME/C `Fetch[]` style) comes later, only if F0 shows the extra loads matter; it must follow `cpu_setbank` and CPU context switches. Writes keep the idle-loop write hash. | 2-3 days, medium | **Only the final timing**; development and fuzz on the PC. |
+| **F4** | 68000 registers held in Xtensa registers across a block. `callx8` keeps only the caller's a0-a7, so the review's switch to `callx12` (which keeps a0-a11) is correct. **Added:** `callx12` rotates the window further and causes more window-overflow spills, so measure it. Keep the 4 most-used 68000 registers (chosen from F0's statistics) in a8-a11, and write them back only before a handler call and at block exit. | 2-3 days, medium | **Only the final timing** (the window-spill cost is a board measurement); development and fuzz on the PC. |
+| **F5** | Lazy flags, only if F0 repeated after F2 shows that flags are still more than 15 % of the code. | only if needed | **Only the final timing**; development and fuzz on the PC. |
+| **F6** | JIT cache in IRAM: postponed. It needs at least 24 KB of free internal RAM, and below ~13 KB free the file system no longer opens ROMs. Phase V takes ~10 KB, so F6 is out unless something else frees memory. | postponed | — |
 
 Target: 20-25 bytes per 68000 instruction, so that the hot working set fits the
 instruction cache, and **68000 time below the interpreter's 7.72 ms**, aiming at
@@ -173,18 +167,6 @@ The dynarec steps are developed and fuzzed in the public
 the detailed F0-F6 design is its
 [`docs/codegen-plan.md`](https://github.com/pjcau/xtensa-68000-dynarec/blob/main/docs/codegen-plan.md).
 The mame-go steps live in the retro-go fork.
-
-## Board or PC
-
-| Step | Board | PC (x86 harness, QEMU, host fuzz) |
-|---|---|---|
-| V0 | all (timings, PSRAM) | |
-| V1, V3 | timing, webcam on 4-5 games | correctness: the band image byte-identical to the full frame (x86 mame-go harness, frame dumps) |
-| V2 | all (display task, DMA, core sync); the longest board block | |
-| D1, D2 | timing, screen | correctness against the current functions |
-| F0 | all (instruction cache, MAMEBENCH) | |
-| F1, F3, F4, F5 | the final timing of each step (about an hour) | all the development, fuzz at 0 mismatches |
-| F2 | counting IRQs raised inside handlers, hashes, a real game with the webcam | the development |
 
 ## Status and how to resume
 
