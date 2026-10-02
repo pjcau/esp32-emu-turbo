@@ -1,0 +1,21 @@
+Already up to date.
+hashes 300:d26de693 600:18f0c216 900:4b82b950 1200:d14c1cce 1500:7a2d2ee7 1800:beaa3e8b 2100:fba4fa44 2400:adfc02c7
+avg over 39: 68000 8.42 video 10.12 other 2.61 mixer 0.89 -> core0 22.42 ms
+core1 over 38: ym2610 10.95 display 14.43 ms | busy core0 99% core1 69%
+video split over 39: palette 2.35 clear 0.61 sprites 5.59 fix 0.86 rest 0.56 copy 0.15 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 44.6 w<=88.6 (880 strips) | fix r 8.2 w<=8.2 (131 tiles) | copy w 18.3 | total r 52.8 w<=115.1
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   c078739..e331b01  main -> main
+pushed scripts/mamebench/results/2026-10-02-v2pool-mslug.txt
