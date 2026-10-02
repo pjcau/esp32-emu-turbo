@@ -1,0 +1,2 @@
+pong from the board PC
+/dev/ttyACM0
