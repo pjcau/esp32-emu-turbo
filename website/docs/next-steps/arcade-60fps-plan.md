@@ -154,7 +154,41 @@ phase J. The remaining "other" (MAME's frame loop, input, the mixer, the wait fo
 the display) gets its own profiling pass after phase V. If phase J falls short,
 the fallback is an automatic frameskip of 1 frame in 2, only under load.
 
-## Order
+## Revised plan (2026-10-02, evening)
+
+Three measurements of the day change the order of the plan.
+
+1. **The LCD bus is the display's wall.** 434 × 320 × 2 bytes at 20 MHz is 13.9 ms a
+   frame when every line changes; D1 + D2 removed the CPU work that hid it. Core 0
+   must never wait for the display, and the pipeline must absorb bursts without
+   PSRAM traffic: the V2 run without a frame in PSRAM ran the 68000 at 6.96 ms
+   against 8.2-8.3 with one (PSRAM contention, fact 1 of this plan), 1.2 ms
+   that a PSRAM stage would give back.
+2. **The dynarec is I-cache bound.** 78 host cycles per 68000 instruction against
+   the interpreter's 46 (13.08 vs 7.72 ms), with 635 KB of code in PSRAM behind
+   a 32 KB instruction cache and the code cache flushed 12 times in 70 s. Denser
+   code helps at the margin (F1: −10 % bytes, −0.8 ms); beating the interpreter
+   needs an internal-RAM code cache (F6), and the internal RAM is spoken for.
+   Phase J is a bet, not a plan.
+3. **Core 0 after V2 is ~18.5 ms with the interpreter**: 68000 7-8, sprites 4.7,
+   palette + strip walk 2.25, fix 0.8, other 2.6, mixer 0.9. The 2 ms to 16.7 are
+   in the parts never profiled (other, mixer, palette), not only in the 68000.
+
+### The order now
+
+| Step | What | Expected | Board? |
+|---|---|---|---|
+| **V2h** | **Hybrid band hand-over.** The display task scales a band straight from its internal-RAM buffer while it keeps up; when the next band arrives before it is done, only the rows not yet scaled are copied to a PSRAM stage and the buffer is released. Zero PSRAM traffic in steady state (the bus, 13.9 ms, is faster than core 0's 18.5), the stage only as a shock absorber. Replaces the "stage everything" V2 of job 060 (kept as a data point). | core 0 ~18.5 ms, 68000 back near 7 | timing + screen |
+| **B1** | **LCD bus at 25 MHz** (`RG_LCD_I80_CLK_HZ`), now that the bus shows: 13.9 → 11.1 ms a frame, more slack for the band pipeline. The earlier "no gain" was measured when the display's CPU work was the limit. Signal margin: the webcam decides (artefacts), the hashes cannot see the bus. | display pipeline slack | **yes, all** |
+| **O1** | **Mixer to core 1** (0.9 ms; core 1 is 50-60 % busy and the YM2610 already runs there). | −0.9 ms core 0 | timing |
+| **O2** | **Palette:** `palette_recalc()` over 4096 entries every frame and the strip walk (2.25 ms together). Dirty tracking of the pens actually used, and the walk's list kept across frames when the sprite list did not change. | −1 ms | PC + timing |
+| **O3** | **"Other" 2.6 ms:** profile the frame loop, input, the waits (MAMEPROF on core 0 with the interpreter). | −0.5-1 ms | profile |
+| **J (optional)** | Only steps with a measurable gate: the code-cache flush policy and hot threshold (12 flushes/70 s; `hot_threshold` is a host parameter), then F3 as an IRAM stub for the memory fast path, then the decision on F4 from the register counts (Metal Slug: pending job 050). The dynarec stays off by default until a MAMEBENCH run beats the interpreter's 7.72 ms. | 68000 < 7.72 or stop | timing |
+
+With V2h and O1-O3, core 0 lands at **~16-16.5 ms with the interpreter**: 60 fps
+without the dynarec. J then buys margin for heavier games (Puzzle Bobble 2).
+
+## Order (original)
 
 1. Phase V (V0 → V1 → V2 → V3), Neo Geo.
 2. Phase D (D1 → D2), all emulators.
