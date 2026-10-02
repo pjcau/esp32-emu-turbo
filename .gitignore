@@ -132,4 +132,5 @@ hardware/kicad/drc-report.json
 
 # PC-side generated files (scripts/neogeo_prepare.py: Neo Geo sprite/sample files for the SD card)
 /build/neogeo-prepare/
-/build/              # host builds of the PC harness (scripts/neogeo_frames.py: build/neoframes/)
+# host builds of the PC harness (scripts/neogeo_frames.py: build/neoframes/)
+/build/
