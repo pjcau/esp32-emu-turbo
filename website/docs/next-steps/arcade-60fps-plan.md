@@ -201,6 +201,17 @@ The mame-go steps live in the retro-go fork.
   370 entries of 12 bytes on Metal Slug, in order, bucketed per band) and the
   pen masks, then `palette_recalc()`, then the bands draw from the list without
   reading the video RAM again. **Next: V1** (PC first, `neogeo_frames.py compare`).
+- **2026-10-02, V1 written, not yet proven** (fork, `NEOBAND=1` builds,
+  `vidhrdw/neogeo_band.c`): the one walk records the ~370 visible tile strips in
+  a list per 16-line band (PSRAM, 16 bytes each) and the pen masks, then each
+  band is cleared, drawn and fix-layered in a 5.6 KB internal-RAM buffer and
+  copied to the frame bitmap (304 visible columns). Builds for the PC (both
+  variants) and for the board. **Two gates before it counts**: (1) on the PC,
+  `scripts/neogeo_frames.py compare <sysdir> <rom> 3000 --input attract` must
+  say IDENTICAL on Metal Slug, Metal Slug 2, Sonic Wings 2 and KOF95 (needs the
+  ROMs on the development machine); (2) on the board,
+  `NEOBAND=1 scripts/mamebench/board_run.sh v1 mslug 70`: the 7 hashes must be
+  the reference ones, and the `copy` part of the split shows what V2 will remove.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.

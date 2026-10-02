@@ -5,7 +5,7 @@ They need the board on `/dev/ttyACM0` and the retro-go Docker build image.
 
 | Script | What it does |
 |---|---|
-| `mamebench.sh <JIT 0\|1> <rom> [secs]` | Builds mame-go with `MAMEBENCH` + `NEOPROF` (and `M68KJIT=<JIT>`), installs it through the SD updater, resumes save slot 0 of `<rom>` and prints the hash and profile lines. Env: `NOBUILD=1` skips the build, `RESUME=0` cold-boots, `MAMEPROF=1` (or `core1`) turns on the sampling profiler. |
+| `mamebench.sh <JIT 0\|1> <rom> [secs]` | Builds mame-go with `MAMEBENCH` + `NEOPROF` (and `M68KJIT=<JIT>`), installs it through the SD updater, resumes save slot 0 of `<rom>` and prints the hash and profile lines. Env: `NOBUILD=1` skips the build, `RESUME=0` cold-boots, `MAMEPROF=1` (or `core1`) turns on the sampling profiler, `NEOBAND=1` builds the band renderer (V1). |
 | `mbsum.py <log>` | The 7 MAMEBENCH hashes and the average ms per frame (68000, video, other, core 0), plus the V0 video split (palette, clear, sprites, fix layer) and the KB each part moves per frame, from the `NEOPROF video ms/frame:` line. The sprite and fix write counts are upper bounds (the plotters skip transparent pixels); the clear and the reads are exact. |
 | `profsym.sh <log> [n]` | Turns the `MAMESAMPLE` lines of a `MAMEPROF=1` run into a per-function profile (addr2line on `mame-go/build/mame-go.elf`). |
 | `wait_launcher.py` | Waits until the launcher answers `ping`. |

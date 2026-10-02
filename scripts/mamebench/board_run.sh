@@ -2,6 +2,7 @@
 # board_run.sh <step> <rom-name> [secs] [JIT 0|1]: one MAMEBENCH run on the board PC,
 # saved under results/ and pushed, so the development machine can read it.
 #   scripts/mamebench/board_run.sh v0 mslug 70
+#   NEOBAND=1 scripts/mamebench/board_run.sh v1 mslug 70     (band renderer build)
 set -e
 cd "$(dirname "$0")/../.."
 STEP=$1; GAME=$2; SECS=${3:-70}; JIT=${4:-0}
