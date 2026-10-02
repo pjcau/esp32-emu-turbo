@@ -22,6 +22,7 @@ for job in $(ls $Q/*.sh 2>/dev/null | sort); do
     git commit -q -m "board: job $name $status
 
 $(tail -8 "$log")"
+    git pull --rebase -q || true
     git push -q
     echo "=== job $name: $status, pushed"
 done

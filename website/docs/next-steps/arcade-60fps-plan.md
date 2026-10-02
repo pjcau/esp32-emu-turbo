@@ -279,7 +279,17 @@ The mame-go steps live in the retro-go fork.
   of it.) D1 and D2 take 4.2 ms off the display task, and the sound task on the
   same core gains 2 ms from the lower contention. Core 0 is unchanged by them
   (22.79 ms), as expected. V0's single-line "8.42" quoted above was one sample;
-  the window average is 12.18.
+  the window average is 12.18. V1 + D1 + D2 (`results/2026-10-02-v1d12-mslug.txt`,
+  hashes identical): core 0 22.64 ms, display 8.12 ms, core 1 61 % busy.
+- **2026-10-02, phase J started on the PC** (dynarec repo `89b5513`, QEMU in the
+  arm64 image): F0's counters measure Xtensa bytes per kind of 68000 instruction
+  and the flag share; F1's density forms are in. Fuzz ROMs, bytes per
+  instruction, 24-bit forms → density forms: register-only 32.7 → 29.8, memory
+  100.7 → 90.0, handler call 46.9 → 42.1, branch 51.5 → 48.4 (about −10 %, not
+  the −20-25 % hoped: most of a memory instruction is not loads and stores);
+  flag code 8 % (below F5's 15 % rule). 0 mismatches on every QEMU pass. The
+  memory instruction at 90 bytes is the target of F2 and F3. Board: a
+  `M68KJIT=1` MAMEBENCH run prints the same counters on Metal Slug (pending).
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.

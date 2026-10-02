@@ -16,5 +16,6 @@ git add "$OUT"
 git commit -q -m "mamebench: $STEP run on $GAME ($(git -C retro-go rev-parse --short HEAD))
 
 $(scripts/mamebench/mbsum.py "$OUT")"
+git pull --rebase -q || true    # the development machine pushes too: rebase, then push
 git push
 echo "pushed $OUT"
