@@ -1,0 +1,25 @@
+Already up to date.
+hashes 300:d26de693 600:18f0c216 900:4b82b950 1200:d14c1cce 1500:7a2d2ee7 1800:beaa3e8b 2100:fba4fa44 2400:adfc02c7
+avg over 38: 68000 8.29 video 9.74 other 2.58 mixer 0.86 -> core0 22.64 ms
+video split over 38: palette 2.26 clear 0.17 sprites 4.92 fix 0.78 rest 0.22 copy 1.39 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 44.3 w<=88.0 (539 strips) | fix r 8.1 w<=8.1 (130 tiles) | copy w 66.5 | total r 52.4 w<=162.6
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+ ! [rejected]        main -> main (fetch first)
+error: failed to push some refs to 'github.com:pjcau/esp32-emu-turbo.git'
+hint: Updates were rejected because the remote contains work that you do not
+hint: have locally. This is usually caused by another repository pushing to
+hint: the same ref. If you want to integrate the remote changes, use
+hint: 'git pull' before pushing again.
+hint: See the 'Note about fast-forwards' in 'git push --help' for details.
