@@ -223,6 +223,37 @@ The mame-go steps live in the retro-go fork.
   (determinism, alignment, every 1-bit change seen, 0 collisions in 1e6).
   It is in every build from now on: the gain is the `display` ms of the
   `NEOPROF core1` line against V0's 8.42 ms, at the same NEOBAND setting.
+- **2026-10-02, D2 written, proven on the PC, not yet timed** (fork,
+  `components/retro-go/rg_scale_line.h`): the horizontal scaling is driven by
+  the per-source-pixel repeat pattern (304 source pixels walked once, no map
+  lookup per output pixel) and the horizontal filter is fused into the same
+  loop, so the separate filter pass over the 434-pixel line is gone.
+  `test/run_scale_line_test.sh` proves it byte-identical to the map loop + filter
+  pass on 2400 cases (the Neo Geo's 304→434, 1:1, downscales, 3x, random
+  sizes; palette, 565 LE/BE; filter on/off), including the map's habit of
+  reading one pixel past the source line on some sizes. The board runs for
+  D1+D2 and V1+D1+D2 are queued (`scripts/mamebench/queue/`).
+- **2026-10-02, V1 proven and timed** (fork `4d1c24c0`: two fixes from the
+  board PC's session — the fix layer's row pitch, and y-zoomed sprites cut at a
+  band edge — then IDENTICAL on Metal Slug, Metal Slug 2, Sonic Wings 2 and
+  KOF95 over 3000 attract frames; `results/2026-10-02-v1-mslug.txt`, hashes
+  identical, 38 samples):
+
+  | Core 0 | V0 | V1 | | Video part | V0 | V1 |
+  |---|---|---|---|---|---|---|
+  | 68000 | 7.94 | 8.30 | | palette + walk | 1.73 | 2.25 |
+  | video | 10.13 | 9.67 | | clear | 1.53 | 0.17 |
+  | other | 2.48 | 2.56 | | sprites | 6.05 | 4.90 |
+  | mixer | 0.85 | 0.86 | | fix layer | 0.76 | 0.75 |
+  | **total** | **23.20** | **22.90** | | band copy | — | 1.36 |
+
+  As expected: the clear and the sprite writes in internal RAM gain 2.5 ms, the
+  list walk costs 0.5 ms more than the old palette walk, and the band copy to
+  PSRAM (66.5 KB) costs 1.36 ms — the part V2 removes, together with the
+  display task's read of the PSRAM bitmap. The 68000 lost 0.36 ms; to be
+  watched in the next runs (PSRAM contention from the copy, or noise). The
+  strip count (539 vs 369) counts a strip once per band it touches.
+  **Next: V2** (board), with D1+D2 measured first by the queued jobs.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.

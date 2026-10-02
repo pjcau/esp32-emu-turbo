@@ -23,6 +23,11 @@ git only:
    submodules, runs the benchmark, commits the log to `results/` and pushes.
 3. Development machine: `git pull`, `mbsum.py scripts/mamebench/results/<file>`.
 
+Hands-free variant: the development machine commits jobs to `queue/` and the
+board PC keeps `scripts/mamebench/board_agent.sh` running from a `/loop`
+(`/loop 3m run scripts/mamebench/board_agent.sh and show me its last 15 lines`);
+it pulls, runs each job, pushes the log and the results.
+
 
 Reference run (Metal Slug, save slot 0 = level 1):
 
