@@ -34,12 +34,13 @@ def component_sources():
     return srcs, defines
 
 
-def build(out):
+def build(out, tool=TOOL, name="neoprep", extra_flags=()):
+    """Build a tools/*.c libretro frontend with the component's sources (PC build)."""
     objdir = os.path.join(out, "obj")
     os.makedirs(objdir, exist_ok=True)
     srcs, defines = component_sources()
     incs = ["-I" + os.path.join(COMP, d) for d in ("src", "src/libretro", "src/libretro/libretro-common/include")]
-    cflags = FLAGS + defines + incs
+    cflags = FLAGS + list(extra_flags) + defines + incs
     # gcc writes each object's real dependencies (#included .c files too:
     # drivers/neogeo.c, m68kmame.c) and they decide what to rebuild
     def compile_one(src):
@@ -55,8 +56,8 @@ def build(out):
 
     with ThreadPoolExecutor(os.cpu_count()) as pool:
         objs = list(pool.map(compile_one, srcs))
-    exe = os.path.join(out, "neoprep")
-    subprocess.run(["gcc", *cflags, TOOL, *objs, "-lm", "-o", exe], check=True)
+    exe = os.path.join(out, name)
+    subprocess.run(["gcc", *cflags, tool, *objs, "-lm", "-o", exe], check=True)
     return exe
 
 
