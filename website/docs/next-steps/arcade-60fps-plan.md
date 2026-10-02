@@ -344,6 +344,16 @@ The mame-go steps live in the retro-go fork.
   `rg_display.c`): core 0 should drop to its own work, ~18.5 ms. Queued as
   `060-v2s-mslug.sh`. The bus itself is the next question: 25 MHz would make it
   11.1 ms; the plan kept 20 MHz for signal margin.
+- **2026-10-02, V2h written and built** (fork `rg_display.c`): the hybrid
+  hand-over of the revised plan, queued as `070-v2h-mslug.sh`; the LCD clock
+  switch (`LCD_MHZ=25`, B1) built and queued as `080-v2h25-mslug.sh`. Board
+  profile of the dynarec (`results/2026-10-02-jitprof-mslug.prof.txt`): the
+  sampler sees ~9 % of core 0 in translation (`xjb_finalize`, `xjb_lit`,
+  `classify`, `mem_ea`, `lookup`) and ~7 % in the cache synchronisation of
+  new code (`cpu_utility_ll_unstall_cpu`, the other core stalled for it) —
+  the churn of 12 flushes in 70 s; the generated code itself is not
+  symbolised by the sampler (PSRAM). First J step if J goes on: the flush
+  policy and the hot threshold.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
