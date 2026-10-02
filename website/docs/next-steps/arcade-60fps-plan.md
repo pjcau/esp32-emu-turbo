@@ -265,6 +265,21 @@ The mame-go steps live in the retro-go fork.
   is brought up to date before the first band (`mamego_apply_palette8`). The
   MAMEBENCH hash is taken band by band over the same bytes in the same order, so
   the reference hashes still apply. Queued as `030-v2-mslug.sh`.
+- **2026-10-02, D1 + D2 timed** (`results/2026-10-02-d12-mslug.txt`, full-frame
+  renderer, hashes identical; core-1 averages over the same 37-sample window,
+  `mbsum.py` now prints them):
+
+  | Core 1, ms per frame | V0 | V1 + D1 | D1 + D2 |
+  |---|---|---|---|
+  | display task | 12.18 | 8.58 | 7.95 |
+  | YM2610 + Z80 | 8.87 | 6.87 | 6.87 |
+  | core 1 busy | 77 % | 62 % | 60 % |
+
+  (The V1 run already carried D1: the board PC's V1 fixes were rebased on top
+  of it.) D1 and D2 take 4.2 ms off the display task, and the sound task on the
+  same core gains 2 ms from the lower contention. Core 0 is unchanged by them
+  (22.79 ms), as expected. V0's single-line "8.42" quoted above was one sample;
+  the window average is 12.18.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
