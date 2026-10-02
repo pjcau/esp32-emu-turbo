@@ -9,6 +9,20 @@ They need the board on `/dev/ttyACM0` and the retro-go Docker build image.
 | `mbsum.py <log>` | The 7 MAMEBENCH hashes and the average ms per frame (68000, video, other, core 0), plus the V0 video split (palette, clear, sprites, fix layer) and the KB each part moves per frame, from the `NEOPROF video ms/frame:` line. The sprite and fix write counts are upper bounds (the plotters skip transparent pixels); the clear and the reads are exact. |
 | `profsym.sh <log> [n]` | Turns the `MAMESAMPLE` lines of a `MAMEPROF=1` run into a per-function profile (addr2line on `mame-go/build/mame-go.elf`). |
 | `wait_launcher.py` | Waits until the launcher answers `ping`. |
+| `board_run.sh <step> <rom-name> [secs] [JIT]` | The whole board side of a step: pull, submodules, one `mamebench.sh` run saved under `results/`, summary, commit and push. |
+
+## Two machines
+
+Development happens on a machine without the board (the Mac); the board, its
+`/dev/ttyACM0` console and the webcam are on the Linux PC. The two sync through
+git only:
+
+1. Development machine: commit and push the retro-go fork **and** this repo
+   (the submodule pointer must move with the fork).
+2. Board PC: `scripts/mamebench/board_run.sh v0 mslug 70` — pulls, updates the
+   submodules, runs the benchmark, commits the log to `results/` and pushes.
+3. Development machine: `git pull`, `mbsum.py scripts/mamebench/results/<file>`.
+
 
 Reference run (Metal Slug, save slot 0 = level 1):
 
