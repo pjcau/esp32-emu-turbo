@@ -1,0 +1,3 @@
+mame-go.bin binary size 0x1c18f0 bytes. Smallest app partition is 0x300000 bytes. 0x13e710 bytes (41%) free.
+CTL put done 1841392 bytes 10245 ms (usb 3331, sd 10186, wait 6580) crc 9b15c721 (176 KB/s)
+CTL resume0 mame-go neogeo /sd/roms/neogeo/mslug.zip
