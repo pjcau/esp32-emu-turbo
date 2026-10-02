@@ -12,8 +12,8 @@ for l in open(sys.argv[1], errors="replace"):
     m = re.search(r"NEOPROF video ms/frame: palette ([\d.]+) clear ([\d.]+) sprites ([\d.]+) fix ([\d.]+) rest ([\d.]+)(?: copy ([\d.]+))?"
                   r" \| KB/frame: clear w ([\d.]+) sprites r ([\d.]+) w<=([\d.]+) strips ([\d.]+) fix r ([\d.]+) w<=([\d.]+) tiles ([\d.]+)(?: copy w ([\d.]+))?", l)
     if m: split.append([float(x or 0) for x in m.groups()])   # copy: NEOBAND builds only
-    m = re.search(r"NEOPROF core1 ms/frame: .*ym2610 ([\d.]+) display ([\d.]+) \| busy core0 (\d+)% .*core1 (\d+)%", l)
-    if m: core1.append([float(x) for x in m.groups()])
+    m = re.search(r"NEOPROF core1 ms/frame: .*ym2610 ([\d.]+) display ([\d.]+)(?: dmawait ([\d.]+) sends ([\d.]+))? \| busy core0 (\d+)% .*core1 (\d+)%", l)
+    if m: core1.append([float(x or 0) for x in m.groups()])
 print("hashes", " ".join(hashes))
 def window(rows):
     return rows[2:] if len(rows) > 4 else rows      # skip the warm-up
@@ -24,7 +24,7 @@ if rows:
 if core1:
     r = window(core1)
     a = [sum(c) / len(r) for c in zip(*r)]
-    print("core1 over %d: ym2610 %.2f display %.2f ms | busy core0 %.0f%% core1 %.0f%%" % (len(r), a[0], a[1], a[2], a[3]))
+    print("core1 over %d: ym2610 %.2f display %.2f ms (dma wait %.2f, %.0f sends) | busy core0 %.0f%% core1 %.0f%%" % (len(r), a[0], a[1], a[2], a[3], a[4], a[5]))
 if split:
     r = window(split)
     a = [sum(c) / len(r) for c in zip(*r)]
