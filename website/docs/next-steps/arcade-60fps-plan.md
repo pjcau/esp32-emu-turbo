@@ -368,7 +368,11 @@ The mame-go steps live in the retro-go fork.
 
   | 097 | + LCD bus at 25 MHz | 22.15 | 0.06 | no change again (29.7 KB spilled): the clock either does not reach the bus or the bus is not the limit; jobs 101/103 measure the DMA wait at 20 and 25 MHz |
   | 099 | + 3 internal band buffers (display DMA buffers 5 → 3) | 22.08 | 0.05 | spill halved (16.4 KB) but no net gain: the display task was copying almost every internal band to the PSRAM stage (its "give waiting bands precedence" policy with a deep queue) — V1's traffic on core 1: 68000 8.6, YM2610 11.4 |
+  | 101 | the bus measured at 20 MHz | 22.15 | 0.05 | DMA wait 0.23 ms, 29 buffers sent a frame: D1 skips two thirds of the blocks in the attract scene, the bus is nowhere near its limit |
+  | 103 | the same at 25 MHz | hang | | frozen on the state-load hourglass, only at 25 MHz: **the LCD stays at 20 MHz**, as the plan said for signal margin |
   | 105 (queued) | V2i: accepted bands scaled in place, the stage only when the emulator is short of buffers | | | expected: the 68000 back near 7.5, YM2610 near 7, core 0 near 20 |
+  | 107 (held) | PSRAM at 120 MHz | | | waits for the user's go: an experimental clock |
+  | 109 (queued) | faster sprite plotter (opaque/empty words, pens on the stack) | | | sprites 5.1 → ~3.5 expected; PC proof at HEAD requested |
 
   Also found: **the MAMEBENCH scene is the attract loop, not level 1** — the
   slot-0 state (519976 bytes) is 4280 bytes longer than what the current build
