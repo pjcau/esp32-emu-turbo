@@ -352,6 +352,20 @@ The mame-go steps live in the retro-go fork.
   `rg_display.c`): core 0 should drop to its own work, ~18.5 ms. Queued as
   `060-v2s-mslug.sh`. The bus itself is the next question: 25 MHz would make it
   11.1 ms; the plan kept 20 MHz for signal margin.
+- **2026-10-02, night: the hand-over, run by run** (all hashes identical, screen
+  clean on every webcam check):
+
+  | Job | Change | core 0 | band wait | note |
+  |---|---|---|---|---|
+  | 060/070 | V2h, 16-line bands, 2 buffers, 1-deep queue | 25.4 | 6.0 | the display lags on the cheap bottom bands, the next frame waits |
+  | 080 | + LCD bus at 25 MHz | 25.4 | 5.9 | no change: latency, not bandwidth |
+  | 085 | + frame-deep pipeline, 8-line bands, 4 buffers | 28.3 | 0.1 (+9.2 queue) | the 1-deep queue now the wait, 28 bands |
+  | 087/055/089 | + 4-deep queue | hang | | the state-load hourglass interleaved its i80 stream with the band stream (`rg_display_sync` saw an empty queue): fixed, sync waits for the band frame |
+  | 091 | + sync fix | 24.1 | 3.75 | internal RAM buffers 32 lines of slack, ~2 ms of bus time: not enough for Metal Slug's cheap bands |
+  | 093 | + buffer pool: 4 internal, 32 PSRAM reserve, 36-deep queue | **22.42** | 0.15 | 18 KB/frame drawn in PSRAM; the 8-line bands cost ~2 ms of per-band overhead (sprites 5.6, clear 0.6, 68000 8.4) |
+
+  Next: the pool with 16-line bands (2 internal + reserve), `NB_LINES=16`, to get
+  the per-band overhead back (job 095).
 - **2026-10-02, V2h written and built** (fork `rg_display.c`): the hybrid
   hand-over of the revised plan, queued as `070-v2h-mslug.sh`; the LCD clock
   switch (`LCD_MHZ=25`, B1) built and queued as `080-v2h25-mslug.sh`. Board
