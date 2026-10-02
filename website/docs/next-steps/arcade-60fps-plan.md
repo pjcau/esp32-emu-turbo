@@ -298,6 +298,18 @@ The mame-go steps live in the retro-go fork.
   unchanged, so the hashes cannot move. NEOPROF builds count any interrupt
   raised inside a memory call-out (must read 0 in the `M68KJIT` report). QEMU
   against Musashi 3.1: 0 mismatches. Board jobs 040 (F1) and 050 (F2) queued.
+- **2026-10-02, V2 run, correct but slower, fixed on the PC**
+  (`results/2026-10-02-v2-mslug.txt`, hashes identical, screen clean): core 0
+  26.25 ms, of which 7.75 ms waiting in the band submit. With D1 + D2 the
+  display task has almost no CPU work left and runs at the pace of the LCD bus:
+  434 × 320 × 2 bytes at 20 MHz is **13.9 ms a frame when every line changes**,
+  the next wall. With a one-message queue and two band buffers, core 0 stalled
+  whenever it was ahead. No internal RAM for more buffers (the file system
+  needs ~13 KB free), so the display task now copies each band into a PSRAM
+  stage on arrival and scales it later, giving waiting bands precedence (fork
+  `rg_display.c`): core 0 should drop to its own work, ~18.5 ms. Queued as
+  `060-v2s-mslug.sh`. The bus itself is the next question: 25 MHz would make it
+  11.1 ms; the plan kept 20 MHz for signal margin.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
