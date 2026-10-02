@@ -290,6 +290,14 @@ The mame-go steps live in the retro-go fork.
   flag code 8 % (below F5's 15 % rule). 0 mismatches on every QEMU pass. The
   memory instruction at 90 bytes is the target of F2 and F3. Board: a
   `M68KJIT=1` MAMEBENCH run prints the same counters on Metal Slug (pending).
+- **2026-10-02, F2 on the PC** (dynarec `glue_musashi31.c`): mame-go's glue
+  no longer asks for the flags before every memory call-out
+  (`mem_may_interrupt = false`): the 68000's interrupts on Neo Geo and CPS1
+  arrive through MAME's timers, between instructions — the only direct
+  `cpu_set_irq_line()` calls from handlers go to the Z80 — and Musashi itself is
+  unchanged, so the hashes cannot move. NEOPROF builds count any interrupt
+  raised inside a memory call-out (must read 0 in the `M68KJIT` report). QEMU
+  against Musashi 3.1: 0 mismatches. Board jobs 040 (F1) and 050 (F2) queued.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
