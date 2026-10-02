@@ -1,0 +1,35 @@
+Already up to date.
+Submodule path 'retro-go': checked out '512ff258f0902db1f69fac517172d46595a049f8'
+Submodule path 'retro-go/xtensa-68000-dynarec': checked out 'db7933041414bd6dd019a50028c9768a08eecf1d'
+hashes 300:d26de693 600:18f0c216 900:4b82b950 1200:d14c1cce 1500:7a2d2ee7 1800:beaa3e8b
+avg over 28: 68000 15.76 video 8.93 other 3.14 mixer 0.89 -> core0 29.38 ms
+core1 over 27: ym2610 5.97 display 7.37 ms | busy core0 98% core1 46%
+video split over 28: palette 2.22 clear 0.17 sprites 4.21 fix 0.71 rest 0.23 copy 1.39 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 42.7 w<=84.5 (566 strips) | fix r 7.3 w<=7.3 (116 tiles) | copy w 66.5 | total r 49.9 w<=158.3
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   2093314..6adbe23  main -> main
+pushed scripts/mamebench/results/2026-10-02-jitprof-mslug.txt
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
