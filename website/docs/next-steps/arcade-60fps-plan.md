@@ -364,8 +364,12 @@ The mame-go steps live in the retro-go fork.
   | 091 | + sync fix | 24.1 | 3.75 | internal RAM buffers 32 lines of slack, ~2 ms of bus time: not enough for Metal Slug's cheap bands |
   | 093 | + buffer pool: 4 internal, 32 PSRAM reserve, 36-deep queue | **22.42** | 0.15 | 18 KB/frame drawn in PSRAM; the 8-line bands cost ~2 ms of per-band overhead (sprites 5.6, clear 0.6, 68000 8.4) |
 
-  Next: the pool with 16-line bands (2 internal + reserve), `NB_LINES=16`, to get
-  the per-band overhead back (job 095).
+  | 095 | pool with 16-line bands: 2 internal + 32 PSRAM | **22.06** | 0.06 | 30 KB/frame drawn in PSRAM (5-6 bands of 14): those bands cost (clear 0.87, sprites 5.14, 68000 8.39 from contention) |
+
+  What is left is the PSRAM spill. Two levers, queued: the LCD bus at 25 MHz
+  (now it matters: the display consumes at the bus rate, job 097) and a third
+  internal band buffer paid for by the display's DMA buffers (5 → 3, 7.5 KB
+  back, job 099).
 - **2026-10-02, V2h written and built** (fork `rg_display.c`): the hybrid
   hand-over of the revised plan, queued as `070-v2h-mslug.sh`; the LCD clock
   switch (`LCD_MHZ=25`, B1) built and queued as `080-v2h25-mslug.sh`. Board
