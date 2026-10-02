@@ -1,0 +1,34 @@
+Already up to date.
+Submodule path 'retro-go': checked out '3a7b821d332624748b9eeeb7af45c8323376a4af'
+hashes 300:d26de693 600:18f0c216 900:4b82b950 1200:d14c1cce 1500:7a2d2ee7 1800:beaa3e8b 2100:fba4fa44
+avg over 33: 68000 7.28 video 15.48 other 2.56 mixer 0.89 -> core0 26.40 ms
+core1 over 32: ym2610 7.19 display 16.29 ms | busy core0 99% core1 52%
+video split over 33: palette 2.26 clear 0.16 sprites 4.82 fix 0.75 rest 0.89 copy 6.60 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 43.7 w<=86.7 (552 strips) | fix r 7.8 w<=7.8 (124 tiles) | copy w 0.0 | total r 51.5 w<=94.5
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   59808c3..9165590  main -> main
+pushed scripts/mamebench/results/2026-10-02-prof-mslug.txt
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
