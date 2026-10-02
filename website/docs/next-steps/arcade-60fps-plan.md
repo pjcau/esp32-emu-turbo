@@ -254,6 +254,17 @@ The mame-go steps live in the retro-go fork.
   watched in the next runs (PSRAM contention from the copy, or noise). The
   strip count (539 vs 369) counts a strip once per band it touches.
   **Next: V2** (board), with D1+D2 measured first by the queued jobs.
+- **2026-10-02, V2 written, builds, not yet run** (fork, `NEOBAND=2` builds): each
+  finished band goes to the display task (`rg_display_submit_band`), which scales
+  and sends it while core 0 draws the next band into the other of two internal-RAM
+  buffers; the PSRAM frame bitmap is neither written nor read. The display
+  writer now works on a range of viewport lines with the frame state kept
+  across bands; at a band edge whose next viewport line repeats the band's last
+  row, that row's lines are written with the next band from a kept copy, so the
+  vertical filter sees the same neighbours as before. The 8-bit palette table
+  is brought up to date before the first band (`mamego_apply_palette8`). The
+  MAMEBENCH hash is taken band by band over the same bytes in the same order, so
+  the reference hashes still apply. Queued as `030-v2-mslug.sh`.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
