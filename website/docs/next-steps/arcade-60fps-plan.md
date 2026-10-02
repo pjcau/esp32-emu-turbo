@@ -212,6 +212,17 @@ The mame-go steps live in the retro-go fork.
   ROMs on the development machine); (2) on the board,
   `NEOBAND=1 scripts/mamebench/board_run.sh v1 mslug 70`: the 7 hashes must be
   the reference ones, and the `copy` part of the split shows what V2 will remove.
+- **2026-10-02, D1 written, proven on the PC, not yet timed** (fork,
+  `components/retro-go/rg_line_hash.h`, `rg_display.c`): the display task's
+  "did this line change" test now hashes the **source** line (304 pens on the
+  Neo Geo instead of 868 bytes of scaled RGB565) plus, once per frame, the
+  palette, with a 2-operations-per-word hash; a block of lines that are all
+  unchanged is not rendered at all. The decision is the same as before by
+  construction (same source and palette, same rendered line);
+  `components/retro-go/test/run_line_hash_test.sh` proves the hash
+  (determinism, alignment, every 1-bit change seen, 0 collisions in 1e6).
+  It is in every build from now on: the gain is the `display` ms of the
+  `NEOPROF core1` line against V0's 8.42 ms, at the same NEOBAND setting.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
