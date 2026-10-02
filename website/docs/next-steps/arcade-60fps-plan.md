@@ -192,6 +192,30 @@ Three measurements of the day change the order of the plan.
 With V2h and O1-O3, core 0 lands at **~16-16.5 ms with the interpreter**: 60 fps
 without the dynarec. J then buys margin for heavier games (Puzzle Bobble 2).
 
+### Resume checklist (2026-10-03, agreed with the user: nothing starts before this is read)
+
+The board holds the known-good play build: fork `bbcf99f5`, `NB_LINES=16 NEOBAND=2`
+(22 ms a frame on Metal Slug's attract loop). The steps, in order, each gated by
+identical hashes and, for drawing changes, by the 4-game PC proof before any board run:
+
+1. **V2i on the board** — job `111-v2i-mslug.sh` (held): fork `c654abbc`, the
+   fixed first-frame logic, original plotter. Expect the 68000 near 7.5, YM2610
+   on core 1 near 7, core 0 ~21 ms.
+2. **A level-1 save state saved by hand** with the current build (the old one is
+   4280 bytes longer and never loads): MAMEBENCH then measures play, not attract.
+3. **Phase O, core 1 takes the SD paging and the mixer** (`neosnd_update`,
+   `sdspi` and `mixer` in the core-0 profile): −1.5 ms.
+4. **Palette**: pens of unchanged strips kept across frames, `palette_recalc`
+   dirty set: −0.8 ms.
+5. **The sprite plotter again**, PC proof first (the 2026-10-02 attempt broke the
+   zoomed strips): −1 ms.
+6. Reserves, only if short: the LCD bus at 25 MHz on play scenes (not the cause of
+   the 103 hang), the dynarec's cache policy. PSRAM at 120 MHz: out, by the user's
+   decision (experimental clock).
+
+Expected: 22 → 17-18 ms, 55-58 fps with the interpreter; the last 1-2 ms are the
+uncertain part.
+
 ## Order (original)
 
 1. Phase V (V0 → V1 → V2 → V3), Neo Geo.
