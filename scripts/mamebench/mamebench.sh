@@ -21,5 +21,5 @@ b.launch("neogeo", sys.argv[1], resume=os.environ.get("RESUME", "1") != "0", slo
 t0 = time.time()
 while time.time() - t0 < float(sys.argv[2]):
     l = b.readline()
-    if l and re.search(r"MAMEBENCH|MAMESAMPLE|MAMEGO|NEOPROF|M68KJIT|CLEARCHECK|Guru|panic", l): print(l.strip()[:800], flush=True)
+    if l and not l.startswith("[debug] STACK"): print(l.strip()[:800], flush=True)   # everything but the periodic stats: a hang shows its last words
 PY
