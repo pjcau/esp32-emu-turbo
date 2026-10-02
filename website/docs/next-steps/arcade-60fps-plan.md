@@ -366,10 +366,49 @@ The mame-go steps live in the retro-go fork.
 
   | 095 | pool with 16-line bands: 2 internal + 32 PSRAM | **22.06** | 0.06 | 30 KB/frame drawn in PSRAM (5-6 bands of 14): those bands cost (clear 0.87, sprites 5.14, 68000 8.39 from contention) |
 
-  What is left is the PSRAM spill. Two levers, queued: the LCD bus at 25 MHz
-  (now it matters: the display consumes at the bus rate, job 097) and a third
-  internal band buffer paid for by the display's DMA buffers (5 → 3, 7.5 KB
-  back, job 099).
+  | 097 | + LCD bus at 25 MHz | 22.15 | 0.06 | no change again (29.7 KB spilled): the clock either does not reach the bus or the bus is not the limit; jobs 101/103 measure the DMA wait at 20 and 25 MHz |
+  | 099 | + 3 internal band buffers (display DMA buffers 5 → 3) | 22.08 | 0.05 | spill halved (16.4 KB) but no net gain: the display task was copying almost every internal band to the PSRAM stage (its "give waiting bands precedence" policy with a deep queue) — V1's traffic on core 1: 68000 8.6, YM2610 11.4 |
+  | 105 (queued) | V2i: accepted bands scaled in place, the stage only when the emulator is short of buffers | | | expected: the 68000 back near 7.5, YM2610 near 7, core 0 near 20 |
+
+  Also found: **the MAMEBENCH scene is the attract loop, not level 1** — the
+  slot-0 state (519976 bytes) is 4280 bytes longer than what the current build
+  serialises (515696), so `rg_emu_load_state` fails on every run ("file larger
+  than the state"); the reference hashes are attract hashes. A new level-1 state
+  must be saved by hand with a current build (the play scene has more sprites).
+
+### What the research says (2026-10-02, night)
+
+- **PSRAM at 120 MHz.** ESP-IDF allows octal PSRAM at 120 MHz DDR with the
+  N16R8's quad flash at 120 MHz SDR (`CONFIG_IDF_EXPERIMENTAL_FEATURES`,
+  `CONFIG_SPIRAM_SPEED_120M`, `CONFIG_ESPTOOLPY_FLASHFREQ_120M`), +50 % PSRAM
+  bandwidth — the resource every part of this plan is bound by. Experimental:
+  after a ~20 °C drift from power-on, accesses may crash unless the timing point
+  is retuned from the temperature sensor
+  (`CONFIG_SPIRAM_TIMING_TUNING_POINT_VIA_TEMPERATURE_SENSOR`); some modules
+  fail to boot at 120 MHz. Prepared as `targets/esp32-emu-turbo/sdkconfig.psram120`
+  (`RG_SDKCONFIG_EXTRA=sdkconfig.psram120`): a measurement, not a shipping config.
+- **PSRAM bandwidth, measured by others** (esp32-s3-memorycopy): PSRAM → internal
+  ~312 MB/s sequential, internal → PSRAM ~82 MB/s, PSRAM → PSRAM ~35 MB/s. Writes
+  are the expensive side, three to four times the reads: every change that moves
+  writes out of PSRAM (bands) pays, every PSRAM copy on core 1 costs both cores.
+- **The i80 bus.** Espressif: 8-bit i8080 "recommended below 80 MHz", panel
+  limit (ST7796S write cycle 30 ns) ~33 MHz; the IDF derives the real pixel
+  clock from a PLL with an integer divider, so 25 MHz may land on another value.
+  Measured by jobs 101/103 before anything else is decided about it.
+- **esp-box-emu / other handhelds**: the same recipe we have (strips to the
+  display from internal RAM, the second core for sound and present, no full
+  frame in PSRAM); nothing beyond it.
+
+### The path to 60 fps (core 0, with the interpreter)
+
+| | now (095) | target | lever |
+|---|---|---|---|
+| 68000 | 8.4 | 7.0 | V2i (no PSRAM traffic on core 1), then PSRAM 120 MHz |
+| sprites | 5.1 | 3.5 | the writes are internal now: retry the faster plotter dropped when PSRAM-bound (opaque-word fast path, skip empty words) |
+| palette + walk | 2.3 | 1.5 | pens of the unchanged strips kept across frames; `palette_recalc` dirty set |
+| clear + fix + rest | 1.7 | 1.2 | V2i, 16-line bands |
+| other + mixer | 3.6 | 2.0 | SD paging (sprite pages, samples: `sdspi`, `neosnd_update` in the core-0 profile) and the mixer to core 1 |
+| **total** | **21.1** | **15.2** | **60 fps with margin, no dynarec** |
 - **2026-10-02, V2h written and built** (fork `rg_display.c`): the hybrid
   hand-over of the revised plan, queued as `070-v2h-mslug.sh`; the LCD clock
   switch (`LCD_MHZ=25`, B1) built and queued as `080-v2h25-mslug.sh`. Board

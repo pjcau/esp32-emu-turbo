@@ -3,7 +3,7 @@
 # print MAMEBENCH hashes and the 68000/video ms (NEOPROF) lines
 cd "$(dirname "$0")/../.."
 if [ -z "$NOBUILD" ]; then
-OUT=$(timeout 1500 docker compose -f docker-compose.retro-go.yml run --rm -e M68KJIT=$1 -e NEOPROF=1 -e MAMEBENCH=1 -e MAMEPROF=${MAMEPROF:-0} -e MAMEGO_CLEARCHECK=${MAMEGO_CLEARCHECK:-0} -e NEOBAND=${NEOBAND:-0} -e LCD_MHZ=${LCD_MHZ:-} -e NB_LINES=${NB_LINES:-} -e LCD_BUFS=${LCD_BUFS:-} -e BAND_INTERNAL=${BAND_INTERNAL:-} retro-go-build sh -c "python rg_tool.py --target=esp32-emu-turbo build mame-go" 2>&1 | grep -E "error:|binary size" | head -3)
+OUT=$(timeout 1500 docker compose -f docker-compose.retro-go.yml run --rm -e M68KJIT=$1 -e NEOPROF=1 -e MAMEBENCH=1 -e MAMEPROF=${MAMEPROF:-0} -e MAMEGO_CLEARCHECK=${MAMEGO_CLEARCHECK:-0} -e NEOBAND=${NEOBAND:-0} -e LCD_MHZ=${LCD_MHZ:-} -e NB_LINES=${NB_LINES:-} -e LCD_BUFS=${LCD_BUFS:-} -e BAND_INTERNAL=${BAND_INTERNAL:-} -e RG_SDKCONFIG_EXTRA=${RG_SDKCONFIG_EXTRA:-} retro-go-build sh -c "python rg_tool.py --target=esp32-emu-turbo build mame-go" 2>&1 | grep -E "error:|binary size" | head -3)
 echo "$OUT"
 echo "$OUT" | grep -q "binary size" || { echo "BUILD FAILED, nothing installed"; exit 1; }
 timeout 400 python3 scripts/sd_update.py --console mame-go 2>&1 | grep -E "Error|error|put done" | head -2
