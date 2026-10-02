@@ -190,6 +190,13 @@ The mame-go steps live in the retro-go fork.
 
 - **2026-10-02:** plan written. Interpreter memory work done (retro-go fork
   `9a9ec1f1`): 68000 at 7.72 ms. **Next: V0.**
+- **2026-10-02, later:** V0 instrumentation in place (retro-go fork, `NEOPROF`
+  builds): the video time is split into palette / clear / sprites / fix layer, with
+  the bytes each part moves (`NEOPROF video ms/frame:` line, summarised by
+  `mbsum.py`). The normal build is untouched. **Next: run V0 on the board** —
+  `scripts/mamebench/mamebench.sh 0 /sd/roms/neogeo/mslug.zip 70 > mb.txt` then
+  `mbsum.py mb.txt`; hashes must stay the reference ones. Record the split here,
+  then V1.
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
