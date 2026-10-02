@@ -179,6 +179,28 @@ The mame-go steps live in the retro-go fork.
   `scripts/mamebench/mamebench.sh 0 /sd/roms/neogeo/mslug.zip 70 > mb.txt` then
   `mbsum.py mb.txt`; hashes must stay the reference ones. Record the split here,
   then V1.
+- **2026-10-02, V0 done** (`results/2026-10-02-v0-mslug.txt`, fork `cec99363`,
+  hashes identical, 38 samples):
+
+  | Core 0 | ms | | Video part | ms | PSRAM KB/frame |
+  |---|---|---|---|---|---|
+  | 68000 | 7.94 | | palette (`neogeo_palette`) | 1.73 | vidram reads only |
+  | video | 10.13 | | clear | 1.53 | 66.5 written |
+  | other | 2.48 | | sprites (369 tile strips) | 6.05 | 44.3 read, up to 88.0 written |
+  | mixer | 0.85 | | fix layer (130 tiles) | 0.76 | 8.1 read, up to 8.1 written |
+  | **total** | **23.20** | | rest | 0.06 | |
+
+  Two findings for V1. (1) The clear writes 66.5 KB at ~43 MB/s and the sprites
+  write up to 88 KB: with bands both go to internal RAM, which is the 3-4.5 ms
+  the plan expects. V1 alone copies each finished band to the PSRAM bitmap
+  (66.5 KB sequential, ~1.5 ms), so its full gain only shows with V2.
+  (2) **The sprite list is walked twice per frame**: `neogeo_palette()` walks all
+  381 strips and their tiles to find the pens in use (`colmask`) before
+  `palette_recalc()`, then `screenrefresh_()` walks them again to draw. V1's
+  pre-pass does both in one walk: it records every visible tile strip (about
+  370 entries of 12 bytes on Metal Slug, in order, bucketed per band) and the
+  pen masks, then `palette_recalc()`, then the bands draw from the list without
+  reading the video RAM again. **Next: V1** (PC first, `neogeo_frames.py compare`).
 - Benchmark tools: [`scripts/mamebench/`](https://github.com/pjcau/esp32-emu-turbo/tree/main/scripts/mamebench)
   (`mamebench.sh`, `mbsum.py`, `profsym.sh`; the README has the reference hashes).
 - Estimates: phase V 2-3 days, phase D about 1 day, phase J 8-12 days.
