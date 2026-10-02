@@ -216,6 +216,17 @@ identical hashes and, for drawing changes, by the 4-game PC proof before any boa
 Expected: 22 → 17-18 ms, 55-58 fps with the interpreter; the last 1-2 ms are the
 uncertain part.
 
+Two more items for tomorrow, asked by the user on 2026-10-03 (launcher, not
+performance):
+
+7. **CPS1 in its own launcher section**, separate from the 8-bit "arcade" games,
+   as the Neo Geo already has (`/sd/roms/neogeo/`): its own folder, tab and icon
+   (Final Fight, SF2, Carrier Air Wing, Knights of the Round, Ghouls'n Ghosts, ...).
+8. **The artwork for all of them**: launcher covers and previews (the `romart`
+   images and the per-game `.png` previews) for every Neo Geo and CPS1 set on the
+   card, fetched and named the way the launcher expects, so no game shows without
+   a picture.
+
 ## Order (original)
 
 1. Phase V (V0 → V1 → V2 → V3), Neo Geo.
