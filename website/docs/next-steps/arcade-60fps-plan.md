@@ -372,7 +372,8 @@ The mame-go steps live in the retro-go fork.
   | 103 | the same at 25 MHz, on the first V2i build | hang | | frozen on the state-load hourglass: not the clock — a V2i bug (the first band of a run filed under a frame that never began, so the sync spun forever), fixed in the fork; 25 MHz stays an open option for play scenes |
   | 105 | V2i: accepted bands scaled in place, the stage only when the emulator is short of buffers | hang | | the same bug; the fixed build runs as job 109 (with the plotter) |
   | 107 (held) | PSRAM at 120 MHz | | | waits for the user's go: an experimental clock |
-  | 109 (queued) | faster sprite plotter (opaque/empty words, pens on the stack) | | | sprites 5.1 → ~3.5 expected; PC proof at HEAD requested |
+  | 109 | faster sprite plotter (opaque/empty words, pens on the stack) + V2i | **wrong** | | hashes not the reference ones, scrambled picture on the board; the PC proof found it at frame 133 of Metal Slug (the zoomed title letters). Reverted. Rule restated: a drawing change reaches the board only after the PC proof says IDENTICAL — the queue pulls HEAD, so the proof comes first |
+  | 111 (queued) | V2i with the first-frame fix, original plotter | | | the run 105 should have been |
 
   Also found: **the MAMEBENCH scene is the attract loop, not level 1** — the
   slot-0 state (519976 bytes) is 4280 bytes longer than what the current build
