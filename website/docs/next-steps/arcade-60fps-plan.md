@@ -52,6 +52,10 @@ Two facts drive the whole plan:
 | Hot code in IRAM, CPU state in DRAM | all MAME games | 0.4 ms |
 | Aligned 16-bit RAM/ROM accesses and opcode fetch (`ALIGN_SHORTS` made every word access two byte loads) | all 16-bit MAME CPUs, the 68000 opcode fetch | 0.6 ms |
 | Inline RAM/ROM fast path in Musashi (no call into `memory.c`) | all 68000 games | 0.13 ms |
+| V1: Neo Geo frame drawn in 16-line bands in internal RAM, one strip walk for pens and list (2026-10-02) | all Neo Geo games | 0.3 ms on its own (the band copy eats the rest; V2 removes it) |
+| D1: the display's change test on the source line + palette, unchanged blocks not rendered (2026-10-02) | all emulators | core 1: display task 12.2 → 8.6 ms |
+| D2: pattern-driven horizontal scaling with the filter fused in (2026-10-02) | all emulators | core 1: 8.6 → 8.0 ms |
+| F1: 16-bit forms in the dynarec (2026-10-02) | all 68000 games on the dynarec | 68000 13.9 → 13.1 ms (dynarec only) |
 
 ## Tried and dropped
 
@@ -323,7 +327,11 @@ The mame-go steps live in the retro-go fork.
   the −20-25 % hoped: most of a memory instruction is not loads and stores);
   flag code 8 % (below F5's 15 % rule). 0 mismatches on every QEMU pass. The
   memory instruction at 90 bytes is the target of F2 and F3. Board: a
-  `M68KJIT=1` MAMEBENCH run prints the same counters on Metal Slug (pending).
+  `M68KJIT=1` MAMEBENCH run (`results/2026-10-02-jitf1-mslug.txt`, hashes identical):
+  68000 13.08 ms with the dynarec (13.9 before F1); Metal Slug bytes per
+  instruction reg 28.0, mem 72.3, call 37.5, branch 45.1, flags 9 %; 12 code-cache
+  flushes in 70 s. That run had already pulled the F2 glue, so jobs 040 and 050
+  measured the same code generation (050: 12.90 ms).
 - **2026-10-02, F2 on the PC** (dynarec `glue_musashi31.c`): mame-go's glue
   no longer asks for the flags before every memory call-out
   (`mem_may_interrupt = false`): the 68000's interrupts on Neo Geo and CPS1
