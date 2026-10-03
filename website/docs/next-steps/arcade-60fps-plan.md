@@ -236,7 +236,14 @@ identical hashes and, for drawing changes, by the 4-game PC proof before any boa
    0.4-0.6 ms off the `palette` part, not 0.8: the walk over the sprite list
    (1.3 of the 2.2 ms) stays.
 5. **The sprite plotter again**, PC proof first (the 2026-10-02 attempt broke the
-   zoomed strips): −1 ms.
+   zoomed strips): −1 ms. **Re-applied 2026-10-03, job `119-plotter2-mslug.sh`.**
+   The cause of the scrambled picture was one line: the strip's 16 pens were
+   copied to the stack from the stack copy itself, not from the colour table,
+   so every sprite drew with garbage (first seen on the title letters because
+   they are the first sprites of the attract loop, not because of the zoom).
+   Gate: `scripts/neogeo_frames.py ref <harness built before the change>
+   <sysdir> <rom> 3000` on Metal Slug and Sonic Wings 2, attract and in game
+   (the two 8-bit games; the raster games use the untouched 16-bit plotter).
 6. Reserves, only if short: the LCD bus at 25 MHz on play scenes (not the cause of
    the 103 hang), the dynarec's cache policy. PSRAM at 120 MHz: out, by the user's
    decision (experimental clock).
@@ -254,6 +261,13 @@ performance):
    images and the per-game `.png` previews) for every Neo Geo and CPS1 set on the
    card, fetched and named the way the launcher expects, so no game shows without
    a picture.
+
+Found on the way (2026-10-03): **core 1 is the limit, not core 0's own work.**
+The display task takes 12.6-14.9 ms of core 1 a frame and the sound board
+9.6-11 ms of wall time under it; whenever the display starts late core 0 has
+no free band buffer and copies (1.8-2.1 ms a frame, 4.3 with the sound task
+above the display). The next measurement after the plotter is where the
+display task's time goes with two thirds of the blocks skipped.
 
 ## Order (original)
 

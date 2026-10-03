@@ -5,6 +5,7 @@
     scripts/neogeo_frames.py compare <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py mix <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py pal <sysdir> <game.zip> <frames> [neoframes options...]
+    scripts/neogeo_frames.py ref <reference-exe> <sysdir> <game.zip> <frames> [neoframes options...]
 
 `run` prints the harness output. `compare` builds the harness twice, with
 NEOBAND=0 (full-frame renderer) and NEOBAND=1 (band renderer, V1 of the Arcade
@@ -15,7 +16,11 @@ the sound board's job (the default, core 1 on the board), and requires the same
 picture AND the same samples, with sound actually playing. `pal` does the same for the palette work
 of step O2: the band build with PALFAST=0 (every colour walked every frame)
 against the default with PALCHECK=1 (the palettes kept across frames, each
-frame's array checked against the full rebuild); same picture required. <sysdir> is the MAME system directory (BIOS
+frame's array checked against the full rebuild); same picture required. `ref`
+is for a change with no switch (the sprite plotter): the band build of the
+current tree against a harness built BEFORE the change (copy
+build/neoframes/band/neoframes aside before pulling); same picture and same
+samples required. <sysdir> is the MAME system directory (BIOS
 `neogeo.zip` next to the game is found by mame-go itself; neospr/ files prepared
 by neogeo_prepare.py are used when present).
 
@@ -50,6 +55,33 @@ def run(exe, args, env=None, audio=None):
             else:
                 audio[int(p[1])] = p[3]
     return r, hashes
+
+
+def ref(ref_exe, args):
+    """The current band build against a reference harness built before a change."""
+    if not os.path.isfile(ref_exe):
+        print("no reference harness at", ref_exe); return 1
+    exe = build("band", ["-DNEOBAND=1"])
+    if os.path.samefile(ref_exe, exe) or open(ref_exe, "rb").read() == open(exe, "rb").read():
+        print("the reference harness is the current build: nothing proven"); return 1
+    a0, a1 = {}, {}
+    r0, h0 = run(ref_exe, args, audio=a0)
+    r1, h1 = run(exe, args, audio=a1)
+    sys.stderr.write(r0.stderr + r1.stderr)
+    if r0.returncode or r1.returncode:
+        print("harness failed: reference", r0.returncode, "current", r1.returncode); return 1
+    if not h0:
+        print("no frames hashed"); return 1
+    bad = [n for n in sorted(h0) if h1.get(n) != h0[n]]
+    bada = [n for n in sorted(k for k in a0 if k != "all") if a1.get(n) != a0[n]]
+    print("frames hashed", len(h0), "| picture differs on", len(bad), "| sound differs from frame", bada[0] if bada else "-")
+    if bad:
+        print("first difference at frame %d: reference %s current %s" % (bad[0], h0[bad[0]], h1.get(bad[0])))
+        print("dump both with: --dump <dir>@%d" % bad[0])
+    if bad or bada or len(h1) != len(h0):
+        return 1
+    print("IDENTICAL")
+    return 0
 
 
 def pal(args):
@@ -113,13 +145,15 @@ def mix(args):
 
 
 def main():
-    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal"):
+    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal", "ref"):
         print(__doc__); return 2
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "mix":
         return mix(args)
     if cmd == "pal":
         return pal(args)
+    if cmd == "ref":
+        return ref(args[0], args[1:])
     if cmd == "run":
         exe = build("full", [])
         r, _ = run(exe, args)
