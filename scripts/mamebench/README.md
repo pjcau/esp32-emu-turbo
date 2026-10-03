@@ -11,6 +11,56 @@ They need the board on `/dev/ttyACM0` and the retro-go Docker build image.
 | `wait_launcher.py` | Waits until the launcher answers `ping`. |
 | `board_run.sh <step> <rom-name> [secs] [JIT]` | The whole board side of a step: pull, submodules, one `mamebench.sh` run saved under `results/`, summary, commit and push. |
 
+## What a run can be told (2026-10-03)
+
+Environment of `mamebench.sh` / `board_run.sh` (each becomes a build option of
+`retro-go/mame-go/CMakeLists.txt`):
+
+| Variable | Meaning |
+|---|---|
+| `MAMEBENCH=2` | **the play benchmark**: the script inserts a coin, presses START and plays mission 1 (frames 1200 to ~3450 on Metal Slug). Use with `RESUME=0`. `1` (the default) only watches the attract loop: a save state cannot be used, it loads only in the firmware that wrote it |
+| `MAMEBENCH=3` | the play benchmark with every other frame not drawn (a fixed one-in-two frameskip): twice the per-frame average is a drawn frame plus a skipped one |
+| `MAMEPROF=1` / `core1` | sampling profiler of core 0 / core 1; with `MAMEBENCH>=2` it samples frames 1300-2800 |
+| `NEOBAND=2 NB_LINES=16 LCD_BUFS=3 BAND_INTERNAL=3` | the band renderer handed to the display, as the play build has it |
+| `AUDIO_MIX_HZ=16000` | the sound chips render at 16 kHz, doubled to the 32 kHz the speaker always gets |
+| `LCD_MHZ=25` | LCD write clock (really 26.7 MHz, outside the ILI9488's 40 ns write cycle: measurement only, the play build stays at 20) |
+| `NEOSND_PRIO`, `SD_HOLD_CS` | sound task priority, SD chip select held: both measured, no gain |
+
+Switch files on the card, read at start, no rebuild (`/sd/retro-go/mame/<name>`):
+`neo_nomix1` (sound mix on core 0), `neo_nosnd1` (sound board on core 0),
+`neo_nocount` (counting wait loops not skipped), `neo_uclock` containing a
+percentage (main CPU underclocked), `neo_program` (first program MB in PSRAM:
+measured, a loss). A benchmark must start with none of them on the card unless
+it is the thing being measured, and remove what it added.
+
+Reading a run: compare two runs on the same NEOPROF samples (20 to 48 is
+mission 1 on Metal Slug), never on `mbsum.py`'s average over runs of different
+lengths. The `mixer` column is core 0 waiting for core 1's sound job once the
+mix runs there. `NEOPROF card reads/frame` gives the SD reads of the sprite
+and sample pagers and their cost. MAMEBENCH hashes one frame in 300: the
+frame-by-frame proof is the PC's.
+
+One job at a time: the three board scripts hold `/tmp/esp32-emu-turbo-board.lock`.
+
+## The PC gates (`scripts/neogeo_frames.py`)
+
+Every change to what is drawn or computed is proven on the PC before a board
+run. All commands run the harness with the Neo Geo's clock frozen
+(`FIXEDTIME=1`), otherwise two runs differ by the time they were started.
+
+| Command | Proves |
+|---|---|
+| `compare` | band renderer against the full-frame one: same picture |
+| `ref <harness built before the change>` | a change with no switch: same picture and samples as before |
+| `mix` | sound mix inside the sound board's job: same picture and samples |
+| `pal` | palette kept across frames: same picture, every frame's array checked |
+| `count` | exact skip of counting wait loops: same picture and samples, and the share of cycles skipped by each run |
+| `run` with `--input play`, `--rate N`, `--dump DIR@N`, `PALSTAT=1`, `IDLESTAT=1`, a `-DPCHIST` build | measurements: page reads (`PAGES`), loudness (`LEVEL`), palette work, idle loops, where the 68000's cycles go |
+
+A gate must say when a game does not reach the changed code ("NOT
+APPLICABLE", "nothing proven"): Metal Slug 2 and KOF95 are 16-bit raster
+games and take other paths.
+
 ## Two machines
 
 Development happens on a machine without the board (the Mac); the board, its
