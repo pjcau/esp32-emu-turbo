@@ -12,6 +12,10 @@ the same scene (`--align` finds the offset from the loudness envelopes).
 A 16 kHz file is first doubled exactly as the firmware does (each sample, and
 between two of them a 12-tap interpolation; `--midpoint` gives the first
 version, the plain midpoint), so the comparison is of what the speaker gets.
+Any other rate (a 44.1 kHz dump, a microphone) is resampled to 32 kHz.
+Comparing a 32 kHz dump with a 44.1 kHz one of the same frames gives the
+difference between two renderings nobody would call different: the yardstick
+for the 16 kHz one.
 `--same-frames` is for two dumps of the same frames: the core emits a whole
 number of samples a frame (533 at 32 kHz, 266 at 16), so the two files drift
 apart by 0.1 s a minute and the test is stretched to the reference's length.
@@ -44,6 +48,18 @@ EDGES = [89, 112, 141, 178, 224, 282, 355, 447, 562, 708, 891, 1122, 1413, 1778,
          3548, 4467, 5623, 7079, 8913, 11220, 14125, 16000]
 
 
+def fit(x, n):
+    """x stretched to n samples, band-limited (Fourier): for two runs of the same frames
+    whose sample counts differ slightly (the core emits a whole number of samples a frame)."""
+    if len(x) == n:
+        return x
+    spec = np.fft.rfft(x)
+    out = np.zeros(n // 2 + 1, dtype=complex)
+    m = min(len(spec), len(out))
+    out[:m] = spec[:m]
+    return np.fft.irfft(out, n) * (n / len(x))
+
+
 def load(path):
     w = wave.open(path, "rb")
     rate, ch, width, n = w.getframerate(), w.getnchannels(), w.getsampwidth(), w.getnframes()
@@ -67,9 +83,8 @@ def load(path):
         x = y
     elif rate == RATE:
         how = "32 kHz"
-    else:                                       # anything else (a microphone): linear resampling
-        t = np.arange(0, len(x) * RATE // rate) * (rate / RATE)
-        x = np.interp(t, np.arange(len(x)), x)
+    else:                                       # anything else (a microphone, a 44.1 kHz dump): band-limited
+        x = fit(x, int(round(len(x) * RATE / rate)))
         how = "%d Hz, resampled" % rate
     return x, how
 
@@ -105,18 +120,6 @@ def align(a, b):
         if c > best:
             best, lag = c, l
     return lag * step
-
-
-def fit(x, n):
-    """x stretched to n samples, band-limited (Fourier): for two runs of the same frames
-    whose sample counts differ slightly (the core emits a whole number of samples a frame)."""
-    if len(x) == n:
-        return x
-    spec = np.fft.rfft(x)
-    out = np.zeros(n // 2 + 1, dtype=complex)
-    m = min(len(spec), len(out))
-    out[:m] = spec[:m]
-    return np.fft.irfft(out, n) * (n / len(x))
 
 
 def main():
