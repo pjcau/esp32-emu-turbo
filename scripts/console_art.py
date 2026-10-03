@@ -11,6 +11,14 @@
     scripts/console_art.py tabs
         The launcher tabs this script knows and the thumbnail sets behind them.
 
+    scripts/console_art.py shot <outdir> <tab> <rom file> <screenshot.png>
+        For a game the server has nothing for (homebrew, native ports): its own
+        screenshot, scaled the same way, as the cover.
+
+    scripts/console_art.py card <outdir> <tab> <rom file> ["Title to print"]
+        Last resort: a plain card with the game's name, so that no entry of the
+        launcher is left without a picture.
+
 The images come from the libretro thumbnails server (thumbnails.libretro.com),
 whose files are named after the No-Intro game names. A ROM file is matched by
 its name: first exactly (region tags and punctuation aside), then by the
@@ -154,6 +162,53 @@ def fetch(outdir, tab, roms):
     return 1 if missing else 0
 
 
+def shot(outdir, tab, rom, picture):
+    from PIL import Image
+    dest = os.path.join(outdir, "romart", tab)
+    os.makedirs(dest, exist_ok=True)
+    im = Image.open(picture).convert("RGB")
+    im.thumbnail(BOX, Image.LANCZOS)
+    path = os.path.join(dest, os.path.splitext(os.path.basename(rom))[0] + ".png")
+    im.save(path, optimize=True)
+    print("%s: %dx%d from %s" % (path, im.width, im.height, picture))
+    return 0
+
+
+def card(outdir, tab, rom, title=None):
+    from PIL import Image, ImageDraw, ImageFont
+    dest = os.path.join(outdir, "romart", tab)
+    os.makedirs(dest, exist_ok=True)
+    stem = os.path.splitext(os.path.basename(rom))[0]
+    title = title or re.sub(r"[_\-]+", " ", re.sub(r"[\(\[][^\)\]]*[\)\]]", "", stem)).strip()
+    try:
+        font = ImageFont.load_default(size=22)
+    except TypeError:                       # Pillow before 10.1: the small bitmap font
+        font = ImageFont.load_default()
+    w, h = 240, 150
+    im = Image.new("RGB", (w, h), (28, 40, 72))
+    d = ImageDraw.Draw(im)
+    d.rectangle([4, 4, w - 5, h - 5], outline=(245, 200, 40), width=2)
+    words, lines, line = title.split(), [], ""
+    for word in words:                      # wrap to the card's width
+        t = (line + " " + word).strip()
+        if d.textlength(t, font=font) <= w - 24 or not line:
+            line = t
+        else:
+            lines.append(line)
+            line = word
+    lines.append(line)
+    lines = lines[:5]
+    step = 26 if d.textlength("M", font=font) > 8 else 12
+    y = (h - step * len(lines)) // 2
+    for l in lines:
+        d.text(((w - d.textlength(l, font=font)) // 2, y), l, font=font, fill=(255, 255, 255))
+        y += step
+    path = os.path.join(dest, stem + ".png")
+    im.save(path, optimize=True)
+    print("%s: card \"%s\"" % (path, title))
+    return 0
+
+
 def main():
     a = sys.argv[1:]
     if a == ["tabs"]:
@@ -162,6 +217,10 @@ def main():
         return 0
     if len(a) >= 4 and a[0] == "fetch":
         return fetch(a[1], a[2], a[3:])
+    if len(a) == 5 and a[0] == "shot":
+        return shot(a[1], a[2], a[3], a[4])
+    if len(a) in (4, 5) and a[0] == "card":
+        return card(a[1], a[2], a[3], a[4] if len(a) == 5 else None)
     print(__doc__)
     return 2
 
