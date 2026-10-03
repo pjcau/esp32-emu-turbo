@@ -30,35 +30,50 @@ Retro-Go is a multi-system emulator for ESP32 devices. It provides a launcher UI
 ### Supported Emulators
 
 Measured on the v4.9.0 first article (article 0003) with `scripts/emu_check.py`
-and `scripts/snes_bench.py`, last rerun 2026-09-27. "Drawn" is how many of the
-60 emulated frames reach the display each second; the full per-step table,
+and `scripts/snes_bench.py`; the rows dated 2026-10-03 or 2026-10-04 were
+measured again on those days, after the display scaler was rewritten, the
+others stand from 2026-09-27/29. "Drawn" is how many of the 60 emulated frames
+reach the display each second; the full per-step table,
 test ROMs and fixes are in
 [Firmware — Phase 3](/docs/software/firmware#phase-3--all-emulators-at-full-speed).
 
 | Core | System | Native res | QEMU benchmark | Measured on the board |
 |:---|:---|:---|:---|:---|
-| nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | ✅ 60 fps, BUSY 36%, 30 drawn |
+| nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | ✅ 60 fps, BUSY 39%, 55–60 drawn (2026-10-03) |
 | gnuboy | Game Boy | 160x144 | 432 fps (7.2x) | ✅ 60 fps, BUSY 34%, 30 drawn |
 | gnuboy | Game Boy Color | 160x144 | 393 fps (6.5x) | ✅ 60 fps, BUSY 35–53%, 30 drawn |
-| smsplus | Master System / Game Gear / SG-1000 / ColecoVision | 256x192 | 481 fps (8.0x) | ✅ 60 fps, BUSY 31–40%, 55 drawn |
-| pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | ✅ 60 fps, BUSY 33–43%, 30 drawn |
-| gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 59.4 fps, BUSY 94%, 29 drawn (YM2612 on core 1) |
-| RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps, BUSY 93–99%, ~29 drawn |
-| Stella | Atari 2600 | 160x192 | — | ✅ 60 fps, BUSY 68% (Halo 2600, 2026-10-03). Removed 2026-09-29, brought back 2026-10-03 with its cartridge database cut to fit `retro-extra` |
+| smsplus | Master System / Game Gear / SG-1000 / ColecoVision | 256x192 | 481 fps (8.0x) | ✅ Game Gear: 6 games at 60 fps, BUSY 31–41%, 32–55 drawn (2026-10-03); GG Aleste 3 runs but the screen stays black. Master System not measured again |
+| pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | ✅ 60 fps (SF2' CE and OutRun, title screens, 2026-10-03) |
+| gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 60 fps, 30 drawn, BUSY 85% (94% before the 2026-10-03 scaler; YM2612 on core 1) |
+| RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps on 8 games, BUSY 70–89%, ~30 drawn (2026-10-03); opens `.zip` files; a 4 MB cartridge must stay unzipped |
+| Stella | Atari 2600 | 160x192 | — | ✅ 60 fps (NTSC: Halo, Donkey Kong, Mario Bros.) and 50 fps (PAL), BUSY 30–68%, half the frames drawn (2026-10-03). Removed 2026-09-29, brought back 2026-10-03 with its cartridge database cut to fit `retro-extra`; opens `.zip` files |
 | ~~fMSX~~ | MSX | — | — | removed 2026-09-29: not needed; its partition went to GBA (`gbsp`) |
 | mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
-| mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 13 games 43–60 fps in attract (2026-09-29); Metal Slug 2 (49 MB) ~42–46 in play — see [Neo Geo, prefetch off](/docs/next-steps/arcade#neo-geo-with-the-68000-prefetch-off-2026-09-29) |
-| mame-go (CPS1 driver) | Capcom CPS1 | 384x224 | — | 🟡 Final Fight 45, SF2 CE 38–40, Ghouls 43–51, Knights 36 — see [CPS1](/docs/next-steps/arcade#capcom-cps1-on-v3-2026-09-27-on-the-board-2026-09-2829) |
-| gbsp (gpSP interpreter) | Game Boy Advance | 240x160 | — | 🟡 on screen: Sonic 59, TMNT 52, Metal Slug 46 fps (2026-09-29, lines drawn on core 1) |
-| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on every test scene, 19–26 drawn; Super Mario Kart 57–62, mostly 60 (S-DSP on core 1, 2026-09-28) |
+| mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 Metal Slug in play: 58 game frames a second, 19 drawn (2026-10-03); every frame drawn: 44 fps. Metal Slug 2 ~42–46 in play (2026-09-28) — see the [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
+| mame-go (CPS1 driver) | Capcom CPS1 | 384x224 | — | 🟡 in play with every frame drawn: Final Fight 23, SF2 CE 22 fps (2026-10-04); with the frameskip the game runs near full speed and shows about 20 frames a second. The frame is 24 ms of video — see the [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
+| gbsp (gpSP, Xtensa dynarec) | Game Boy Advance | 240x160 | — | ✅ 56–60 fps in play, 60 of 60 drawn at 30% busy on a title screen (2026-10-03); Mario Kart 44–51 — see [GBA dynarec](/docs/software/gba-dynarec) |
+| snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on every test scene; Donkey Kong Country 60 fps, 28.5 drawn, BUSY 80% (2026-10-04); Super Mario Kart 57–62, mostly 60 (S-DSP on core 1) |
 | snes9x + SuperFX | SNES Star Fox | 256x224 | — | ✅ 53–60 emulated fps, 7–10 drawn (GSU on core 1) |
 | prboom-go | DOOM (Freedoom) | 320x200 | — | ✅ 35 fps (engine rate), BUSY 100% |
 | wolf3d-go | Wolfenstein 3D (shareware) | 320x200 | — | ✅ 62 fps, BUSY 34% |
 | opentyrian-go | OpenTyrian (Tyrian 2.1 freeware) | 320x200 | — | ✅ 36 fps (engine rate 35), BUSY ~30% |
 | duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1 |
-| quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ runs, 21–44 fps (mostly 25–35) in the attract demo |
+| quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ 34–41 fps in the attract demo, every frame drawn, BUSY 100% (2026-10-03) |
 | handy | Atari Lynx | 160x102 | — | ✅ 56-60 fps on 5 PD demos (2026-10-03, after fixing the BS93 homebrew loader and a divide by zero on silent frames). Removed 2026-09-29, brought back 2026-10-03 |
+| cannonball | OutRun (Cannonball engine, native) | 320x224 | — | ✅ 30 fps, the engine's own rate, every frame drawn, BUSY 35–44% (2026-10-04); needs the OutRun rev. B ROM files |
+| arcade3d (in `retro-extra`) | Arcade 3D Racing (native OutRun-style game) | 320x240 | — | 🟡 starts, 23–36 fps on its start screen at BUSY 100% (2026-10-04); the race itself not checked yet |
+| mame-go (System 16 driver) | Sega System 16 (Shinobi, Golden Axe, Altered Beast…) | 320x224 | — | ❔ compiled in, never run: no ROM set at hand (2026-10-04) |
 | ~~gw-emulator~~ | Game & Watch | — | — | removed 2026-09-29: not needed |
+
+**What "60 fps" means here.** Every 8-bit and 16-bit console core runs its
+game at full speed (60 emulated frames a second, 50 for PAL), and the GBA
+reaches 56–60 in play. Not all of those frames are drawn: the NES, the GBA and
+the Game Gear draw nearly all of them, the SNES, the Mega Drive, the Neo Geo
+Pocket and the 2600 about one in two. What does **not** run at 60: the 68000
+arcade boards (Neo Geo and CPS1: near full game speed with about 20 frames
+drawn a second), DOOM 35, OpenTyrian 36, OutRun 30 (their own engine rates),
+Quake 34–41 and Duke Nukem 3D 45–53. Game Boy / Color and Master System were
+not measured again in October.
 
 The QEMU column is a CPU-only benchmark (6.5–10.9x headroom for the 8-bit
 cores). It could never show the SNES bottleneck: the snes9x PPU renderer, not
