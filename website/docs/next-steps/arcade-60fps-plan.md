@@ -268,6 +268,16 @@ performance):
    images and the per-game `.png` previews) for every Neo Geo and CPS1 set on the
    card, fetched and named the way the launcher expects, so no game shows without
    a picture.
+   **Both written 2026-10-03** (fork `02bfd752`): the launcher has a "Capcom
+   CPS-1" tab on `/sd/roms/cps1/` with its own background, banner and logo;
+   `scripts/arcade_art.py sets cps1` lists the CPS1 set names from mame-go's
+   driver sources (which zips to move out of `/sd/roms/arcade/`), and
+   `scripts/arcade_art.py fetch <outdir> <tab> <set>...` writes each game's
+   title screen, scaled to the launcher's preview box, as
+   `romart/<tab>/<set>.png` (ArcadeDB by set name; a clone falls back to its
+   parent). The images are not kept in the repository. To do on the board PC:
+   launcher build and install, the zips moved, the art fetched and copied to
+   the card.
 
 **State at the end of the 2026-10-03 session.** Best build: fork `01f02b9d`
 (V2i + sound mix on core 1 + palette), `NB_LINES=16 LCD_BUFS=3
