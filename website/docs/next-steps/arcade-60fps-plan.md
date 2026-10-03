@@ -77,6 +77,51 @@ FAME/C; the 68000 dynarec (see [68000 dynarec](../software/m68k-dynarec.md)).
    a pixel off); one unexplained loss of sound in one of three takes of the
    16 kHz bench build, not reproduced in four minutes on the play build.
 
+### The build left on the board (evening of 2026-10-03)
+
+Every app and the launcher from fork `0423ff54`; `mame-go` built with
+`NB_LINES=16 LCD_BUFS=3 BAND_INTERNAL=3 NEOBAND=2 AUDIO_MIX_HZ=16000`, LCD bus
+at 20 MHz. The full record is `scripts/mamebench/results/2026-10-03-final-checks.md`.
+
+The figures below are the game's own speed with the automatic frameskip on
+(the play build), filmed and driven from the console; they are not the
+benchmark's "every frame drawn" figures of the table above.
+
+| Check | Result |
+|---|---|
+| Metal Slug in play | 57.9 game frames/s, 19.3 drawn/s (was 50.3 and 16.8) |
+| Final Fight, moving intro | 59.2 / 21.7 drawn with the turn skip; 51.7 / 17.2 without (`cps1_noturn`) |
+| CPS1 save, resume, load | pass on Carrier Air Wing, Final Fight, Ghouls'n Ghosts, Knights of the Round (314 KB states); **fail on SF2 CE and SF2 HF**: 77 KB of PSRAM left in play, the state cannot be allocated |
+| Sound through the microphone | same level and click rate as the afternoon's 32 kHz and 16 kHz builds, no dropout in 2 x 85 s |
+| Lowest internal heap | Metal Slug 0 to 5 KB, Final Fight 18 KB |
+| Other emulators (NES, SNES, Mega Drive, GBA, PC Engine, Doom) | boot, picture, sound and buttons right after the generalised scaler; no before/after timing was taken |
+
+Two things were added for the user the same evening:
+
+- **A loading percentage under the hourglass**, in every emulator.
+  `rg_storage_read_file()`, `rg_storage_unzip_file()` and the new
+  `rg_storage_fread()` report their progress to `rg_gui_draw_loading()` from
+  `rg_system_init()` to the first `rg_system_tick()`; files under 256 KB and
+  the launcher draw nothing. `mame-go` counts the ROM bytes of the set in
+  `src/common.c` (`mamego_load_add()`). Filmed: smooth on SNES, PC Engine and
+  CPS1; Metal Slug shows nothing for 1.5 s (the program ROM is inflated in one
+  go) and stands at 90 % for 3 s (copy to flash and machine start, not
+  counted). **No figure yet on GBA and Doom** (their own loaders), nor on
+  Duke Nukem 3D, Wolfenstein 3D, Quake and OpenTyrian.
+- **`board_install.sh` refuses a bench build.** The user was handed a board on
+  which no button worked in the arcade games: the firmware on it was a one-off
+  measurement build, and a bench build replaces the gamepad with its script.
+  That binary was overwritten before it could be checked, so the cause is the
+  likely one, not a proven one. A play build is now proven from the binary
+  itself (it must not contain the bench-only string `MAMEBENCH frames`), and
+  the build directory is cleaned in the container when switching between
+  bench and play.
+
+Added to the open defects: the SF2 saves above; Final Fight, Ghouls'n Ghosts
+and Knights of the Round do not take the scripted coin and START (console and
+PC harness alike), so their play figures are still missing; Mega Drive sound
+was not confirmed by the microphone (quiet title screen).
+
 How to work on it: `scripts/mamebench/README.md` (the run options, the switch
 files, the PC gates). The rule that paid every time: measure in play before
 changing anything, prove the change frame by frame on the PC, then measure on
