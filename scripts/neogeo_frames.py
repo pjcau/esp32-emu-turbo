@@ -46,8 +46,10 @@ def build(variant, flags):
 def run(exe, args, env=None, audio=None):
     """Runs the harness; returns it and {frame: picture hash}. `audio`, a dict,
     receives {frame: running sample hash} and "all": (hash, samples, nonzero)."""
+    # the Neo Geo RTC (uPD4990A) starts from the wall clock and the games read
+    # it: two runs started a second apart are different runs. FIXEDTIME freezes it
     r = subprocess.run([exe, *args], capture_output=True, text=True,
-                       env=dict(os.environ, **env) if env else None)
+                       env=dict({"FIXEDTIME": "1"}, **os.environ, **(env or {})))
     hashes = {}
     for l in r.stdout.splitlines():
         p = l.split()

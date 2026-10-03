@@ -166,7 +166,9 @@ def check_rom(b, tab, rom, shots_dir):
                 loaded = "rg_emu_load_state" in l or FAIL_RE.search(l) is not None
         if not loaded:
             log.append("no 'rg_emu_load_state' line within 90 s")
-        drain(b, 1.5, log)                   # a few frames of the loaded state, before the game moves on
+        # the load line comes before the first frame is drawn: 1.5 s gave an undrawn
+        # framebuffer (GBC stripes) or no picture at all (SNES); 4 s is drawn and still close
+        drain(b, 4.0, log)
         # the app switch itself reboots (rst:0xc) before the load: a reset counts only after the load line
         at = next((i for i, l in enumerate(log) if "rg_emu_load_state" in l), len(log))
         bad = [l for i, l in enumerate(log)
