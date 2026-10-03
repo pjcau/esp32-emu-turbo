@@ -573,6 +573,27 @@ samples, and the cycles each run skipped). Job 157 measures it on the board,
 same configuration as job 133. On paper it removes about half of the 68000's
 executed cycles in this scene.
 
+**The counting-loop skip, measured (job 157, fork `b9928c9f`, and the same
+build with `neo_nocount`; PC gate IDENTICAL on 19 runs with equal cycle
+totals once the harness froze the Neo Geo's clock, `FIXEDTIME`):**
+
+| play window | skip off | skip on |
+|---|---|---|
+| 68000 | 12.05 | **7.31** |
+| core 0 | 25.32 | 24.31 |
+| sound wait (`mixer`) | 1.92 | 5.45 |
+| core 1 sound job (wall) | 21.68 | 21.76 |
+
+The hashes equal job 133's in both runs: exact on the board too. The 68000
+loses 4.7 ms and core 0 gains only 1.0: it now waits 3.5 ms longer for core
+1's sound job, whose 21.7 ms of wall time is the frame's floor. On the PC the
+skip takes the 68000 from 87.5 % of its cycles executed to 39.7 % in play
+(Metal Slug only: none of the other 15 games gated has such a loop). The
+sound job's CPU share is about half of that wall time; the rest is the display
+task ahead of it and, to be measured, the card reads of its sample pager
+(fork `6284092f` prints them: `NEOPROF card reads/frame`). Jobs 159 and 161
+add the 16 kHz mix, all frames drawn and one in two.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
