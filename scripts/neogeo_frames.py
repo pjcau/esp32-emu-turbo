@@ -7,6 +7,7 @@
     scripts/neogeo_frames.py pal <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py ref <reference-exe> <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py count <sysdir> <game.zip> <frames> [neoframes options...]
+    scripts/neogeo_frames.py turn <sysdir> <game.zip> <frames> [neoframes options...]
 
 `run` prints the harness output. `compare` builds the harness twice, with
 NEOBAND=0 (full-frame renderer) and NEOBAND=1 (band renderer, V1 of the Arcade
@@ -24,7 +25,9 @@ build/neoframes/band/neoframes aside before pulling); same picture and same
 samples required. `count` proves the exact skip of wait loops that count
 (m68kcpu.c): the band build with M68KCOUNT=0 against the default; same picture
 and same samples required, and it prints how many of the 68000's cycles each
-run skipped, so a run where the skip never fired is seen. <sysdir> is the MAME system directory (BIOS
+run skipped, so a run where the skip never fired is seen. `turn` is the same
+proof for the skip of idle turns longer than one loop (M68KTURN, CPS1's task
+scheduler). <sysdir> is the MAME system directory (BIOS
 `neogeo.zip` next to the game is found by mame-go itself; neospr/ files prepared
 by neogeo_prepare.py are used when present).
 
@@ -63,12 +66,13 @@ def run(exe, args, env=None, audio=None):
     return r, hashes
 
 
-def count(args):
-    """The exact skip of counting wait loops: same picture, same samples, fewer cycles."""
+def count(args, switch="M68KCOUNT"):
+    """An exact idle skip (M68KCOUNT: counting wait loops; M68KTURN: idle turns longer
+    than one loop): same picture, same samples, fewer cycles."""
     exe = build("band", ["-DNEOBAND=1"])
     a0, a1 = {}, {}
-    r0, h0 = run(exe, args, env={"M68KCOUNT": "0", "IDLESTAT": "1"}, audio=a0)
-    r1, h1 = run(exe, args, env={"M68KCOUNT": "1", "IDLESTAT": "1"}, audio=a1)
+    r0, h0 = run(exe, args, env={switch: "0", "IDLESTAT": "1"}, audio=a0)
+    r1, h1 = run(exe, args, env={switch: "1", "IDLESTAT": "1"}, audio=a1)
     if r0.returncode or r1.returncode:
         sys.stderr.write(r0.stderr + r1.stderr)
         print("harness failed: off", r0.returncode, "on", r1.returncode); return 1
@@ -182,7 +186,7 @@ def mix(args):
 
 
 def main():
-    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal", "ref", "count"):
+    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal", "ref", "count", "turn"):
         print(__doc__); return 2
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "mix":
@@ -193,6 +197,8 @@ def main():
         return ref(args[0], args[1:])
     if cmd == "count":
         return count(args)
+    if cmd == "turn":
+        return count(args, "M68KTURN")
     if cmd == "run":
         exe = build("full", [])
         r, _ = run(exe, args)

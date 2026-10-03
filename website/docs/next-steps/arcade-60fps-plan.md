@@ -686,6 +686,18 @@ rerun. Two real failures, both open:
 Also seen: `targ.zip` shows MAME's "colortable out of range" message over the
 picture after a resume.
 
+**Survey of the other games (PC, `IDLESTAT` and `PCHIST`, 2026-10-03 night).**
+No other Neo Geo set has a wait like Metal Slug's (Thrash Rally's hot blocks
+are real work and a polling loop with a timeout; Blazing Star and Magician
+Lord are borderline, not looked into). **Every CPS1 set spends 50 to 66 % of
+its 68000 cycles in Capcom's task scheduler**, a scan of 16 task slots that
+waits for the vertical blank (Final Fight 66.5 %, SF2 CE 60.1, Carrier Air
+Wing 58.8, Knights 58.6, SF2 HF 54.1, Ghouls 51.6), and the plain idle skip
+catches none of it (0.0 % skipped): the turn is an outer loop around a DBRA.
+That is Final Fight's 31 fps on a still screen. Fork: idle turns longer than
+one loop are skipped exactly (`turn_check` in `m68kcpu.c`, on for the CPS1
+only), gate `scripts/neogeo_frames.py turn`, bench switch `cps1_noturn`.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
