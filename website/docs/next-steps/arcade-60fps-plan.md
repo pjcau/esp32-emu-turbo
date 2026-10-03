@@ -505,10 +505,19 @@ instead of being reloaded. Next candidates: the idle-loop analysis
 (`IDLESTAT`) on the play scene, and direct reads of work RAM and ROM instead
 of MAME's handler tables.
 
-**Open: the dark rectangle of job 151.** MAMEBENCH hashes one frame in 300, so
-a wrong frame between two hashes goes unseen. To check on the PC with the same
-timing (`NEOUCLOCK=20`): the `pal` gate over the whole run, every frame
-hashed, and the frames of that scene dumped and looked at.
+**The dark rectangle of job 151: the emulator's own picture, not today's
+changes.** On the PC with the same timing (`NEOUCLOCK=20`, `--input play`):
+the `pal` gate over 3600 frames, every frame compared, is IDENTICAL with the
+per-frame array check, so the palette change is not it; and of the frames
+dumped through the helicopter scene only frame 2880 has it: the explosion's
+flash, a white disc in frames 2440, 3240, 3360 and 3400, is drawn solid black
+there, byte for byte the same in the full-frame build, the band build, the
+harness from before the palette work and with `PALFAST=0`. A defect that was
+already there, probably MAME 0.37b5's 8-bit palette out of its 256 pens on a
+frame with many colours (not yet proven: to confirm, count the colours that
+frame asks for). Open as a picture bug of its own, apart from the speed work.
+Lesson for the benchmark: MAMEBENCH hashes one frame in 300, the PC gates
+compare every frame.
 
 `MAMEBENCH=3` draws every other frame (job 155): what a fixed one-in-two
 frameskip costs per pair of frames.
