@@ -668,6 +668,24 @@ from: the branch-free scaler (−4.0), the exact skip of the counting wait loop
 (−1.0 on the frame, −4.7 on the 68000), the chips at 16 kHz doubled to 32
 (−1.5), the multi-sector card reads (−0.9). Not yet in a play build.
 
+**Save and load on every game (sweep of 2026-10-03, play build `6d54a7e7`,
+table in `scripts/mamebench/results/2026-10-03-saveload.md`,
+`scripts/saveload_check.py`).** Save, resume at boot and in-session load pass
+on NES, SNES, Game Boy, GBC, GBA, SG-1000, Master System, Game Gear, Mega
+Drive, ColecoVision, PC Engine, Neo Geo Pocket, the arcade set and the Neo
+Geo, after the rows that had failed only on a screenshot taken too early were
+rerun. Two real failures, both open:
+
+- **CPS1: the save never completes** on Carrier Air Wing, Final Fight, Street
+  Fighter II CE and HF (`save queued`, no `save done` in 30 s); Ghouls'n Ghosts
+  and Knights of the Round pass. The save runs on the emulator's main task and
+  waits for the sound job first; where it stops is not known yet.
+- **`robby.zip` (arcade): resume at boot gives a black screen** for about 20 s
+  after the state loads; the in-session load is fine.
+
+Also seen: `targ.zip` shows MAME's "colortable out of range" message over the
+picture after a resume.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
