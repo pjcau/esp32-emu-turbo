@@ -702,6 +702,31 @@ That is Final Fight's 31 fps on a still screen. Fork: idle turns longer than
 one loop are skipped exactly (`turn_check` in `m68kcpu.c`, on for the CPS1
 only), gate `scripts/neogeo_frames.py turn`, bench switch `cps1_noturn`.
 
+**Can the 16 kHz mix be heard? Measured, 2026-10-03 night
+(`scripts/audio_compare.py`).** On the PC, same frames: against a 32 kHz
+rendering the 16 kHz one is about 0.5 dB further off per frame in the bass
+than a 44.1 kHz rendering is (the yardstick for two good renderings, itself
+0.5 to 1.5 dB), has about 1 dB more between 2.2 and 7 kHz (what the chips
+produce above 8 kHz folds back), and nothing above 8 kHz. The first doubling,
+the midpoint of two samples, also lost 1.2 to 3.3 dB between 5 and 8 kHz and
+was replaced by a 12-tap interpolation, flat to 6 kHz. At the speaker, with
+the webcam's microphone, two takes of each build: two takes of the SAME build
+differ by 5 to 6 dB per frame (room, microphone), the two builds by the same
+amount, the level by 0.2 dB, and less than 0.02 % of the energy that leaves
+the speaker is above 8 kHz in either build. **Not detectable through this
+speaker**; the play build gets `AUDIO_MIX_HZ=16000`. Open: in one of three
+takes of the 16 kHz build the sound stopped after 34 s and did not come back;
+not reproduced, to be watched on the play build.
+
+**The CPS1 turn skip, gate and review (fork `80176a94`).** PC gate on
+`08c08686`: picture and samples identical with equal cycle totals on six
+sets, skipped 49 to 81 % of the cycles (Carrier Air Wing 67/81, Knights 67,
+SF2 HF 63/76, SF2 CE 75/77, Ghouls 49); Final Fight 0 %, its turn closes 92
+bytes back, beyond the 64 looked at: now 96. The board session's adversarial
+reading found two holes, both closed: a turn could span two time slices (a
+slice serial is now stored), and reads in the I/O window were not seen (now
+tracked while the skip is on, and they refuse the turn).
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
