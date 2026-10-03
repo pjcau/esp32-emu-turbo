@@ -208,6 +208,49 @@ Judged out of reach, by reasoning from the measured 68000 cost and not by
 trying: the 32X and the Saturn (two SH-2 each), OutRunners (System 32, V60),
 and the arcade OutRun through MAME (two 68000, which is why Cannonball).
 
+### Resume checklist (left open at the close of 2026-10-04)
+
+On the board when it was switched off: every app from the fork at `8f76577d`
+(launcher with the OutRun and Arcade 3D tab art; `mame-go` with the System 16
+driver; `retro-extra` with Arcade 3D Racing), 20 of 22 new covers on the card.
+
+To check first, none of it seen on screen yet:
+
+1. The tab art of "OutRun (Cannonball)" and "Arcade 3D Racing" in the launcher
+   (the user saw them black before the install; not confirmed after it).
+2. **Arcade 3D Racing**: the race picture, steering (LEFT/RIGHT), brake (B),
+   MENU. Its start screen is right; it runs at 23 to 36 frames a second with
+   the CPU full, so speed is the first thing to improve if the user keeps it.
+3. `retro-extra` after Arcade 3D went in: one Atari 2600 and one Neo Geo
+   Pocket game still start.
+4. The last 2 covers and the screenshots for the 5 Lynx demos.
+5. OutRun (Cannonball): brake (B) and gears (X/Y), by hand.
+
+Needs something from the user:
+
+6. **System 16** has never run a game: a MAME 0.37b5 set (`shinobi.zip`,
+   `goldnaxe.zip`, …) in `/sd/roms/arcade/`. Then PC harness first, board
+   after.
+7. Game Gear "GG Aleste 3": runs at 60 with a black screen (smsplus), not
+   investigated.
+
+Open leads, in the order of what they would give:
+
+8. The CPS1's video: 24 ms of a 32 ms frame in play. The Neo Geo's band
+   rendering does not cover it.
+9. The CPS1's load: Street Fighter II spends 28 s copying its graphics to the
+   flash cache at every launch; skip the copy when the cache already holds the
+   game.
+10. The Neo Geo raster games' 16-bit video path (Metal Slug 2, KOF '95).
+11. A fixed one-in-two frameskip; `robby.zip` resuming to a black screen; the
+    two "Surface allocation failed" lines of Street Fighter II at start; the
+    unexplained dead buttons of 2026-10-03.
+
+Limits to keep in mind: the flash has 64 KB left outside the app partitions
+(no new app without removing one), the launcher has about 18 KB left in its
+partition, and raw flash writes on the board PC need the user's own approval
+in that session.
+
 How to work on it: `scripts/mamebench/README.md` (the run options, the switch
 files, the PC gates). The rule that paid every time: measure in play before
 changing anything, prove the change frame by frame on the PC, then measure on
