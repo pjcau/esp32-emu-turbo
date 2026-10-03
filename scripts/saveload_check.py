@@ -221,7 +221,8 @@ def main():
     tabs = [t for t in (a.tabs.split(",") if a.tabs else sorted(ls_dirs(b, "/sd/roms"))) if t]
     day = datetime.date.today().isoformat()
     out = a.out or os.path.join(os.path.dirname(os.path.abspath(__file__)), "mamebench", "results", f"{day}-saveload.md")
-    shots_dir = os.path.join(os.path.dirname(out), f"{day}-saveload-shots")
+    # pictures stay on the bench PC (not in git): only the Markdown table is committed
+    shots_dir = os.path.join(os.path.expanduser("~"), "saveload-shots", day)
     os.makedirs(shots_dir, exist_ok=True)
     rows, notes = [], []
     for tab in tabs:
