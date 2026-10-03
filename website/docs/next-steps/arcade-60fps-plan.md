@@ -401,6 +401,23 @@ scaler outruns the LCD bus, so the rest of its 12.5 ms is the bus, not CPU
 After step 1 core 0's own work (22.4 ms: 68000 10.9, video 10.4, other 1.1)
 is the larger part of the 25.1 ms frame; the sound job is next.
 
+**The LCD bus at 25 MHz in play (job 135, `LCD_MHZ=25`, same window):**
+core 0 25.12 → 24.67, display 12.55 → 11.27, DMA wait 1.45 → 0.36, hashes
+identical, screen clean on 8 shots (no sparkle, no shifted rows). Unlike
+yesterday's attract runs the bus now shows, because the scaler no longer hides
+it. The clock the driver really sets is not logged: with an integer divider of
+80 MHz it would be 26.7 MHz (37.5 ns a write, inside the ST7796S's 30 ns
+cycle); to be confirmed from `LCD_CAM_LCD_CLOCK_REG`. Kept for the play build.
+
+**The 68000's program in PSRAM (fork `355aaeeb`, job `137-play-program-mslug.sh`).**
+Metal Slug's whole 2 MB program is served from the flash partition through
+the data cache, and about 850 KB of PSRAM are free in play. With the file
+`/sd/retro-go/mame/neo_program` on the card the first MB stays in PSRAM (the
+split the 5 MB programs already use, `mamego_prog_hi`) and the sprite page
+cache gives up the room (1152 → about 832 KB). The reason to expect a gain is
+the bus, not a measurement: a cache line of 64 bytes takes about 32 clocks
+from the octal PSRAM and about 128 from the quad flash. Compare with job 135.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
