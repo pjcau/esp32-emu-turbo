@@ -343,6 +343,15 @@ Without the filter the display task still takes 14 ms to scale 304x224 to
 434x320: about 24 CPU cycles per output pixel, with the bus idle (DMA wait
 0.19 ms). That is the next thing to open up.
 
+**The objective, set by the user on 2026-10-03: halve the 68000's time and the
+display's time, measured in play.** From the job-125 window that is the 68000
+from 10.8 to about 5.4 ms and the display task from 15.9 to about 8 ms. Core 0
+would then be 5.4 + video 10.4 + other 1.1 = 16.9 ms and core 1 about 8 +
+sound 10 = 18 ms: at the edge of 16.7 on both, so the sound job and the video
+each have to give another millisecond or two. First step: sampling profiles of
+both cores in the play window (jobs 129 and 131, `MAMEPROF` with `MAMEBENCH=2`
+samples frames 1300-2800), then the display task's inner loops.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
