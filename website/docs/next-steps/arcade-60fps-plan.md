@@ -482,6 +482,37 @@ sound (the builds boot at different speeds); not confirmed, to be closed with a
 capture at the same frame or by ear. Job 151 runs both together: the near
 target, a drawn frame plus a skipped one inside 33.3 ms.
 
+**Both levers together (job 151, chips at 16 kHz and the 68000's clock −20 %):**
+core 0 **22.72 ms** (68000 9.02, video 10.32, other 1.23, sound wait 2.15),
+core 1 87 % busy; hashes equal job 143's. One of six webcam shots showed a
+dark rectangle beside an explosion in the helicopter scene, not seen in the
+earlier runs of that scene: open, see below.
+
+**The 68000's run loop, at the level of addresses (job 131's samples against
+the disassembly of `m68k_execute`).** 14.5 % of core 0 falls in one 64-byte
+window that holds the loop's dozen instructions: five loads before the handler
+(PC, address mask, the `OP_RAM` pointer, the opcode word, the handler's
+address) and four after it (the cycle table's pointer, the opcode again, the
+cycles left, the cycle count). The two opcode-indexed tables are in PSRAM
+(`m68ki_instruction_jump_table` 256 KB, `m68ki_cycles` 192 KB), and so is the
+`OP_RAM` pointer. Fifteen host cycles per 68000 instruction for a dozen
+instructions is their plain cost, not a stall: the opcode fetch is not waiting
+for memory, which is also what job 139 said. The 68000's cost is structural,
+about a third dispatch and the rest the handlers; halving it with this
+interpreter is not realistic, 8 ms is. First trim (fork `7a2f7312`, job 153):
+the opcode and the cycle table's address stay in registers across the handler
+instead of being reloaded. Next candidates: the idle-loop analysis
+(`IDLESTAT`) on the play scene, and direct reads of work RAM and ROM instead
+of MAME's handler tables.
+
+**Open: the dark rectangle of job 151.** MAMEBENCH hashes one frame in 300, so
+a wrong frame between two hashes goes unseen. To check on the PC with the same
+timing (`NEOUCLOCK=20`): the `pal` gate over the whole run, every frame
+hashed, and the frames of that scene dumped and looked at.
+
+`MAMEBENCH=3` draws every other frame (job 155): what a fixed one-in-two
+frameskip costs per pair of frames.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 

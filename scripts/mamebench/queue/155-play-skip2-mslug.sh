@@ -1,0 +1,1 @@
+MAMEBENCH=3 AUDIO_MIX_HZ=16000 RESUME=0 NB_LINES=16 LCD_BUFS=3 BAND_INTERNAL=3 NEOBAND=2 scripts/mamebench/board_run.sh play-skip2 mslug 90
