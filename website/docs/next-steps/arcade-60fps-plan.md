@@ -465,6 +465,23 @@ to the two table lookups every instruction makes (the 256 KB handler table and
 the 64 KB cycle table, indexed by opcode). Which of those loads stalls is the
 next thing to measure, at the level of addresses, before changing anything.
 
+**Measured that evening, play window, 20 MHz (baseline job 133: 25.12 ms):**
+
+| Run | core 0 | 68000 | sound wait | core 1 busy | note |
+|---|---|---|---|---|---|
+| 133, baseline | 25.12 | 10.89 | 2.70 | 87 % | |
+| 143, 68000 clock −20 % (at 25 MHz, against 135's 24.67) | 23.75 | 9.64 | 2.95 | | −11 % of 68000 time, not −20: the idle skip already removed part of those cycles. New hashes (the game's timing moves). The scripted play gets exactly as far; nothing slow or flickering in 10 stills |
+| 149, chips at 16 kHz, doubled to 32 kHz out | **23.77** | 10.30 | 1.68 | 83 % | hashes identical; the 68000 gains 0.6 ms from a quieter core 1 |
+
+The 16 kHz mix keeps the speaker at 32000 Hz (`rg_audio_init ... samplerate=32000`,
+`audio 16000 Hz` for the core). Its level is the same as at 32 kHz: on the PC,
+same scene, the rms of every 300-frame window differs by 1 to 6 %
+(`neoframes --rate`, `LEVEL` lines). A microphone comparison on the board
+showed 12 dB less, but the two recordings were not the same moment of the
+sound (the builds boot at different speeds); not confirmed, to be closed with a
+capture at the same frame or by ear. Job 151 runs both together: the near
+target, a drawn frame plus a skipped one inside 33.3 ms.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
