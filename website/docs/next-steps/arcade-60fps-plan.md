@@ -616,6 +616,18 @@ seek and the read apart; `neoframes` prints the page reads of a run for given
 cache sizes, to see what larger caches would save with the ~850 KB of PSRAM
 free in play).
 
+**Larger caches do not remove the card reads** (PC, same run, the reads are
+deterministic): Metal Slug 182 sprite pages and 294 sample pages over 3600
+frames with today's 1152 / 512 KB, 181-182 and 272-294 with any larger pair;
+Metal Slug 2 170 and 166 whatever the size. They are first-touch reads, not
+evictions. The lever is the cost of one read. From the sources: the card runs
+at 20 MHz on its own SPI bus (40 MHz was unreliable on this board's traces),
+FATFS fast seek is on with a 64-entry cluster map, and
+`RG_STORAGE_SDSPI_HOLD_CS` is not set for this target although `rg_storage.c`
+says it is needed with IDF 5 on an unshared bus (esp-idf issue 10493, slow
+SDSPI accesses). Job 163 times the seek and the read apart; job 165 is the
+same run with the chip select held (`SD_HOLD_CS=1`).
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
