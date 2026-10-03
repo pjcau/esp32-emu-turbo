@@ -300,6 +300,26 @@ a coin and presses START before the input script and measures mission 1 from a
 cold boot (job `125-play-mslug.sh`, `neoframes --input play` on the PC). From
 here on the target is measured in play, not in attract.
 
+**The play benchmark (job 125, `MAMEBENCH=2`, fork `be5e7fd5`, cold boot,
+`results/2026-10-03-play-mslug.txt`).** The script takes the coin, starts and
+plays mission 1 from frame 1200 until the player dies at the helicopter
+(~3450); `compare --input play` is IDENTICAL on the PC. Averages per frame:
+
+| Window | core 0 | 68000 | video | other | sound wait (`mixer`) | core 1 sound job (wall) | core 1 display | core 1 busy |
+|---|---|---|---|---|---|---|---|---|
+| boot + attract (samples 2-14) | 19.0 | 4.7 | 6.8 | 5.7 | 1.8 | 11.1 | 7.4 | 64 % |
+| **mission 1 (samples 20-48)** | **29.1** | 10.8 | 10.4 | 1.1 | **6.7** | **25.7** | **15.9** | **90 %** |
+
+In play the frame is set by **core 1**: the display task takes 15.9 ms of CPU
+(not the bus: DMA wait 0.22 ms, 40 buffers sent a frame, the picture scrolls
+so D1 skips little) and the sound board about 10 ms, 26 ms of work for one
+core; core 0, whose own work is 22.4 ms, waits 6.7 ms a frame for the sound
+job. Neither core fits 16.7 ms. The levers in play, in order of size: the
+display task's scaling and filtering (15.9 ms), the YM2610's cost (sample
+rate), then core 0's 68000 and sprites. The sound mix moved to core 1 today
+(O1) was a gain in the attract loop and is probably a loss here: job 127
+measures it with the `neo_nomix1` switch.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
