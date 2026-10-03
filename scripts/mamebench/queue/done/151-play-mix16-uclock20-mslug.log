@@ -1,0 +1,21 @@
+Already up to date.
+hashes 300:e0c1eb44 600:a36ad1e8 900:a5cdabcc 1200:b2e20530 1500:9d983b6d 1800:d7ac99f6 2100:97441466 2400:2ebdb46f 2700:7c9aa295 3000:f786a729 3300:5b39b731 3600:b7fd8b96
+avg over 58: 68000 7.83 video 9.29 other 2.47 mixer 1.61 -> core0 21.30 ms
+core1 over 57: ym2610 16.63 display 10.63 ms (dma wait 1.12, 31 sends) | busy core0 99% core1 79%
+video split over 58: palette 2.02 clear 0.44 sprites 4.12 fix 0.98 rest 0.42 copy 1.31 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 42.3 w<=84.6 (398 strips) | fix r 8.2 w<=8.2 (131 tiles) | copy w 11.8 | total r 50.5 w<=104.5
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   6a0bc6d..e9a9793  main -> main
+pushed scripts/mamebench/results/2026-10-03-play-mix16-uclock20-mslug.txt
