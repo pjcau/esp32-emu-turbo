@@ -1,0 +1,23 @@
+From github.com:pjcau/esp32-emu-turbo
+ * branch              main       -> FETCH_HEAD
+Already up to date.
+hashes 300:dfbec473 600:dfbec473 900:fb4f346d 1200:95e29c40 1500:30783fa3 1800:c1484cf9 2100:e8a827e4
+avg over 37: 68000 2.59 video 15.95 other 2.07 mixer 0.34 -> core0 31.36 ms
+core1 over 36: ym2610 0.00 display 5.51 ms (dma wait 0.20, 6 sends) | busy core0 84% core1 41%
+video split over 37: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 15.95 copy 0.00 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 0.0 w<=0.0 (0 strips) | fix r 0.0 w<=0.0 (0 tiles) | copy w 0.0 | total r 0.0 w<=0.0
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   afd9fb52..6e0f15f3  main -> main
+pushed scripts/mamebench/results/2026-10-03-final-play-cps1-ffight.txt
