@@ -44,7 +44,7 @@ APPS = {  # app short name -> partition (launcher/main/applications.c)
     "sms": "retro-core", "gg": "retro-core", "pce": "retro-core",
     "gba": "gbsp", "gen": "gwenesis", "md": "gwenesis", "doom": "prboom-go",
     "sg1": "retro-core", "col": "retro-core",
-    "ngp": "retro-extra", "duke3d": "duke3d-go", "arcade": "mame-go", "neogeo": "mame-go",
+    "ngp": "retro-extra", "duke3d": "duke3d-go", "arcade": "mame-go", "neogeo": "mame-go", "cps1": "mame-go",
     "wolf3d": "wolf3d-go", "quake": "quake-go", "opentyrian": "opentyrian-go",
 }
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
