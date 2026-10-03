@@ -26,6 +26,19 @@ git -C retro-go submodule update --init --recursive
 ENVS=""
 for kv in "$@"; do ENVS="$ENVS -e $kv"; done
 docker compose -f docker-compose.retro-go.yml run --rm $ENVS retro-go-build sh -c "rm -f mame-go/sdkconfig; python rg_tool.py --target=esp32-emu-turbo build mame-go" 2>&1 | grep -E "error:|binary size" | head -3
+# A play build must read the gamepad. The bench code replaces it with a script and
+# is the only place that prints "MAMEBENCH frames": the binary itself says which
+# build it is, whatever the environment was (2026-10-03: the user got a board on
+# which no button worked in the arcade games).
+BIN=$(find retro-go/mame-go/build -maxdepth 1 -name "mame-go.bin" | head -1)
+if [ -z "$BIN" ]; then
+    echo "no retro-go/mame-go/build/mame-go.bin after the build: not installing" >&2
+    exit 1
+fi
+if grep -a -q "MAMEBENCH frames" "$BIN"; then
+    echo "$BIN is a BENCH build (it ignores the gamepad): not installing. Delete retro-go/mame-go/build and run again" >&2
+    exit 1
+fi
 python3 scripts/sd_update.py --console mame-go 2>&1 | grep -E "Error|error|put done" | head -2
 python3 scripts/board_ctl.py launcher >/dev/null 2>&1 || true
 git -C retro-go checkout -q - 2>/dev/null || true
