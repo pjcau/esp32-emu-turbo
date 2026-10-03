@@ -109,13 +109,15 @@ Two things were added for the user the same evening:
   counted). **No figure yet on GBA and Doom** (their own loaders), nor on
   Duke Nukem 3D, Wolfenstein 3D, Quake and OpenTyrian.
 - **`board_install.sh` refuses a bench build.** The user was handed a board on
-  which no button worked in the arcade games: the firmware on it was a one-off
-  measurement build, and a bench build replaces the gamepad with its script.
-  That binary was overwritten before it could be checked, so the cause is the
-  likely one, not a proven one. A play build is now proven from the binary
-  itself (it must not contain the bench-only string `MAMEBENCH frames`), and
-  the build directory is cleaned in the container when switching between
-  bench and play.
+  which no button worked in the arcade games, across several launches. The
+  firmware on it was a one-off measurement build (`NEOPROF`, no `MAMEBENCH`).
+  The first explanation, bench flags left in the build directory, was
+  **disproven**: the same two builds repeated in a row give a binary without
+  the bench code. The sources show no difference on any input path either, so
+  the cause is not known yet; the play build installed right after works. The
+  guard stays as cheap insurance (a play build must not contain the bench-only
+  string `MAMEBENCH frames`), and the rule is to hand the board over only on a
+  build installed by that script and checked with a key press.
 
 Added to the open defects: the SF2 saves above; Final Fight, Ghouls'n Ghosts
 and Knights of the Round do not take the scripted coin and START (console and
