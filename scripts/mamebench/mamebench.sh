@@ -17,9 +17,12 @@ from board_ctl import Board
 b = Board('/dev/ttyACM0')
 b.send("volume 0", wait=r"^CTL volume", timeout=3, echo=False)
 import os
-b.launch("neogeo", sys.argv[1], resume=os.environ.get("RESUME", "1") != "0", slot=0)
+tab = os.path.basename(os.path.dirname(sys.argv[1])) or "neogeo"   # /sd/roms/<tab>/<game>.zip: neogeo, cps1, arcade
+b.launch(tab, sys.argv[1], resume=os.environ.get("RESUME", "1") != "0", slot=0)
 t0 = time.time()
 while time.time() - t0 < float(sys.argv[2]):
     l = b.readline()
-    if l and not l.startswith("[debug] STACK"): print(l.strip()[:800], flush=True)   # everything but the periodic stats: a hang shows its last words
+    # everything but the periodic stats (a hang shows its last words); KEEPSTATS=1 keeps them:
+    # rg_system's line has the frames per second really run (FPS) and the busy share
+    if l and (os.environ.get("KEEPSTATS") or not l.startswith("[debug] STACK")): print(l.strip()[:800], flush=True)
 PY

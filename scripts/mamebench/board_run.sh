@@ -20,9 +20,16 @@ STEP=$1; GAME=$2; SECS=${3:-70}; JIT=${4:-0}
 [ -n "$STEP" ] && [ -n "$GAME" ] || { echo "usage: $0 <step> <rom-name> [secs] [JIT]"; exit 1; }
 git pull --ff-only origin main
 git submodule update --init --recursive
+# FORK_REV=<commit>: measure an older retro-go fork (a "before" run); the submodule goes back afterwards
+if [ -n "$FORK_REV" ]; then
+    git -C retro-go fetch -q origin
+    git -C retro-go checkout -q "$FORK_REV"
+    git -C retro-go submodule update --init --recursive
+fi
 OUT=scripts/mamebench/results/$(date +%F)-$STEP-$GAME.txt
-scripts/mamebench/mamebench.sh "$JIT" /sd/roms/neogeo/$GAME.zip "$SECS" > "$OUT"
+scripts/mamebench/mamebench.sh "$JIT" /sd/roms/${ROMDIR:-neogeo}/$GAME.zip "$SECS" > "$OUT"   # ROMDIR=cps1 for a CPS1 set
 scripts/mamebench/mbsum.py "$OUT"
+[ -n "$FORK_REV" ] && git submodule update --init --recursive
 git add "$OUT"
 git commit -q -m "mamebench: $STEP run on $GAME ($(git -C retro-go rev-parse --short HEAD))
 
