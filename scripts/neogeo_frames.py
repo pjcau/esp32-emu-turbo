@@ -66,7 +66,12 @@ def pal(args):
     if not h0:
         print("no frames hashed"); return 1
     kept = [l for l in r1.stdout.splitlines() if l.startswith("PALCHECK ok:")]
-    if not kept or int(kept[0].split()[2]) == 0:
+    stat = [l for l in r1.stdout.splitlines() if l.startswith("PALSTAT")]
+    if not kept and not stat:
+        # 16-bit games (the raster ones: Metal Slug 2, KOF95) reach neither
+        # neoband_palette() nor palette_recalc_8(): the change does not touch them
+        print("NOT APPLICABLE: this game runs neither changed function (16-bit palette path); the picture is still compared")
+    elif not kept or int(kept[0].split()[2]) == 0:
         print("no frame took the kept-palette path: nothing proven"); return 1
     bad = [n for n in sorted(h0) if h1.get(n) != h0[n]]
     print("frames hashed", len(h0), "| picture differs on", len(bad))
