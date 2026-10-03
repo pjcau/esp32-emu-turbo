@@ -6,19 +6,70 @@ sidebar_position: 7
 
 # 68000 Dynarec (Neo Geo, CPS1, MAME)
 
-How the arcade emulator (`mame-go`: Neo Geo, Capcom CPS1 and the other 68000 MAME boards) is getting a dynarec: blocks of Motorola 68000 code translated into native ESP32-S3 (Xtensa LX7) code at run time, instead of interpreted one instruction at a time. It is the second frontend on the shared `xjit` core built for the [GBA dynarec](gba-dynarec.md). The step-by-step plan is in [JIT (dynarec) plan](../next-steps/jit-plan.md).
+The arcade emulator (`mame-go`: Neo Geo, Capcom CPS1 and the other 68000 MAME boards) has a dynarec for the Motorola 68000: blocks of 68000 code translated into native ESP32-S3 (Xtensa LX7) code at run time, instead of interpreted one instruction at a time. It is the second frontend on the shared `xjit` core built for the [GBA dynarec](gba-dynarec.md).
 
-:::info Status (2026-10-01)
-Step 8 of the plan is done: `m68kjit` translates 68000 blocks, with native Xtensa code for the common instructions, and it is **bit-exact against the Musashi interpreter** on 600 random-code seeds in QEMU. Step 9 is in progress: the glue for mame-go's Musashi 3.1, then Neo Geo and CPS1 games on the board. No board speed has been measured yet.
+:::info Status (2026-10-03)
+The dynarec **works and is exact, and it is slower than the interpreter** on the board: 13.1 ms of 68000 per frame against 7.7 ms on Metal Slug's attract loop. It is switched off and on hold. This page says why, what would have to change for it to win, and what is being done instead to make the 68000 cheaper. The open work is in the [Arcade 60 fps plan](../next-steps/arcade-60fps-plan.md).
 :::
 
-## Why the 68000
+## What is expensive, measured
 
-On the Neo Geo and CPS1 the 68000 is the largest single cost of a frame, and the usual tricks are already spent: the idle-loop skip is on, the YM2610 and the display copy already run on core 1. Metal Slug 2 in play runs at 42 fps, and 12 of its 23.6 ms per frame on core 0 are the 68000 (source: [Arcade (MAME)](../next-steps/arcade.md)).
+Everything below is Metal Slug, mission 1 being played (the play benchmark of the Arcade 60 fps plan), 2026-10-03, with the interpreter.
 
-![Metal Slug 2 frame budget](/img/m68k-dynarec/frame-budget.svg)
+**The frame.** A drawn frame takes 24.7 ms; 60 fps needs 16.7.
 
-The plan's estimate for the 68000 is 1.5-2.5x faster CPU emulation. At 2.5x the frame fits 16.67 ms, which means 60 fps. At 1.5x it lands near 19 ms (~52 fps). Video, Z80 and sound are untouched by the dynarec, so the next gains after it come from moving more of them to core 1.
+| Core | Part | ms per frame |
+|---|---|---|
+| 0 | 68000 (interpreter) | 10.9 |
+| 0 | video: sprite list, palette, sprites, fix layer | 10.4 |
+| 0 | everything else | 1.1 |
+| 0 | waiting for core 1's sound job | 2.3 |
+| 1 | sound board: Z80, YM2610, ADPCM, mixer | about 12 |
+| 1 | display: scaling, filter, the LCD bus | 11.3 |
+
+The 68000 is the largest single item on core 0, but it is under half of that core's work, and core 1 is as full as core 0. A faster 68000 alone does not reach 60 fps.
+
+**Inside the 68000.** The sampling profile of core 0 in play:
+
+| Where the samples land | Share of core 0 |
+|---|---|
+| reading the next opcode word (`m68ki_read_imm_16`) | 15 % |
+| the opcode handlers, memory handlers and dispatch, together | about 29 % |
+
+The opcode read is one array access with prefetch emulation off, so its 15 % is not instructions being executed: it is the CPU waiting for memory. Metal Slug's 2 MB program is served from the flash partition through the 64 KB data cache, which it shares with everything the game keeps in PSRAM. The interpreter runs at about 46 host cycles per 68000 instruction, and a third of that is this wait.
+
+## Does a dynarec make sense here?
+
+The usual argument for a dynarec is that it removes the interpreter's decode and dispatch. On this chip the argument fails on memory, not on instruction counts.
+
+| | Interpreter | Dynarec (measured) |
+|---|---|---|
+| Host cycles per 68000 instruction | 46 | 78 |
+| 68000 per frame, Metal Slug attract | 7.7 ms | 13.1 ms |
+| Bytes fetched per 68000 instruction | 2-6 (the guest code itself) | 70-80 (translated Xtensa code) |
+| Which cache they come through | data cache, 64 KB | instruction cache, 32 KB, shared with all the firmware's code |
+| Where they live | flash partition | PSRAM, 1 MB code cache |
+
+- The interpreter's code (Musashi's handlers) is a few tens of kilobytes that stay hot; what streams through the cache is the guest program, 2 to 6 bytes per instruction.
+- The dynarec turns every guest instruction into 70-80 bytes of host code. On Metal Slug that was 635 KB of translated code behind a 32 KB instruction cache, with the code cache flushed 12 times in 70 seconds. The sampler put about 9 % of core 0 in translation and 7 % in synchronising the caches for new code.
+- So the dynarec trades the interpreter's memory wait for a larger one, fifteen to twenty times more bytes through a cache half the size.
+
+**What would have to be true for it to win**, in order:
+
+1. The hot translated code in internal RAM, not PSRAM. There is no internal RAM for it: 5 to 15 KB are free while a game runs, and the file system needs them.
+2. Or the translated code three times denser, about 25 bytes per instruction, which is steps F3 to F5 of the code generation plan (direct ROM and RAM access, guest registers pinned in host registers, lazy flags) and 8 to 12 days of work, with the gain still decided by the cache.
+3. And a game whose hot code per frame fits what the cache can hold. Neo Geo games run a lot of distinct code every frame.
+
+The steps already done confirm the direction: 16-bit instruction forms gave 10 % less code and 0.8 ms (F1); taking interrupts between instructions removed the flag bookkeeping before every memory access (F2). Neither changes the order of magnitude.
+
+**Decision (2026-10-03).** The 68000 dynarec stays off and on hold. It is not the way to halve the 68000 on this hardware. It is reopened only if one of these is measured: a build that frees 64 KB or more of internal RAM for a code cache, or a step of the code generation plan that brings a full MAMEBENCH run under the interpreter's time. The estimate that started this work (1.5 to 2.5 times faster 68000, 55-60 fps on Metal Slug 2) was made before any board measurement and did not hold.
+
+**What is done instead**, on the interpreter, where the memory wait is the target:
+
+- the first megabyte of the program in PSRAM instead of flash (a cache line fills about three times faster from the octal PSRAM than from the quad flash); being measured as job 137 of the plan;
+- candidates after it, each to be measured the same way: the hot opcode handlers and the memory fast paths in internal RAM where they are not already, and the Neo Geo memory map's common cases (work RAM, program ROM) read without going through MAME's handler tables.
+
+The rest of this page describes the dynarec as built, for when it is reopened and because the same design serves the GBA.
 
 ## Built on top of the interpreter
 
@@ -94,7 +145,7 @@ An exit with a known target jumps through a slot. The first time, the slot holds
 1. **Lengths**: `m68kjit_insn_len()` equals Musashi's disassembler on all 45799 opcodes valid on the 68000 (PC).
 2. **Block model**: the C form of the blocks against `m68k_execute()` on random machines, with four mutations the fuzz must catch (PC).
 3. **Generated code in QEMU**: 300 seeds of random valid code, 300 seeds whose ROM is 85 % native forms, and 20 seeds for each of the 23 instruction families alone. They are compared after each of 32 time slices with random interrupt levels: registers, SR, USP/ISP, cycles used and left, RAM hash.
-4. **Board** (step 9): the speed guard against the interpreter, then games played with the webcam.
+4. **Board** (step 9): MAMEBENCH with the dynarec gives the interpreter's 7 screen hashes on Metal Slug; the speed guard against the interpreter is what keeps it off.
 
 ## Rules (same as the GBA)
 
@@ -109,9 +160,11 @@ Lessons carried over from the GBA: hot C helpers in IRAM, core-1 work kept out o
 
 ![68000 dynarec steps](/img/m68k-dynarec/roadmap.svg)
 
-| Step | Goal |
+| Step | State |
 |---|---|
-| 9 | mame-go: Musashi 3.1 glue, build switch, fallback, speed guard; Metal Slug 2 in play toward 55-60 fps, CPS1 games |
-| 10 | gwenesis (Mega Drive), if it helps there: its 68000 takes 5.5 ms, the VDP (11.3 ms) is the main cost |
+| 8 | done: `m68kjit` translates 68000 blocks, bit-exact against Musashi on the QEMU fuzz |
+| 9 | done as far as the measurement: the glue for mame-go's Musashi 3.1, the build switch, Metal Slug on the board with the 7 screen hashes of the interpreter. Slower than the interpreter, so the switch stays off |
+| 9f | the code generation plan ([`docs/codegen-plan.md`](https://github.com/pjcau/xtensa-68000-dynarec/blob/main/docs/codegen-plan.md)): F0 counters, F1 16-bit forms and F2 interrupts between instructions done; F3 direct ROM and RAM access, F4 pinned registers and F5 lazy flags on hold; F6, a code cache in internal RAM, has no RAM to live in |
+| 10 | gwenesis (Mega Drive): not started. Its 68000 takes 5.5 ms and the VDP 11.3 ms, and the same cache limit applies |
 
-The 68000 frontend also covers Sega System 16/18 and the other 68000 MAME boards at no extra cost, and the CPU side of CPS2 (see [JIT (dynarec) plan](../next-steps/jit-plan.md)).
+The 68000 frontend would also cover Sega System 16/18 and the other 68000 MAME boards, and the CPU side of CPS2 (see [JIT (dynarec) plan](../next-steps/jit-plan.md)), under the same condition.

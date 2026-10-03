@@ -109,6 +109,15 @@ The plan has two: ARM7 and 68000.
 | Z80 systems (SMS, GG, SG-1000, Coleco, 8-bit MAME), NES, SNES, GB/GBC, PC Engine, NGP | various | None | Already at 60 fps, or (SNES) limited by the renderer and DSP-1, not the CPU. No frontend planned |
 | DOOM, Quake, Duke3D, Wolf3D | native | None | Native ports, nothing is emulated |
 
+:::caution Measured since (2026-10-03)
+The 68000 rows of the tables in this section are the estimates made before any
+board run. On the board the 68000 dynarec is exact but slower than the
+interpreter (13.1 against 7.7 ms per frame on Metal Slug): the pessimistic case
+below, the code cache in PSRAM losing to instruction-cache misses. It is on
+hold; see [68000 Dynarec](../software/m68k-dynarec.md) for the measurements and
+the conditions for reopening it.
+:::
+
 Expected speedup (estimate):
 
 | | Pessimistic | Realistic | Optimistic |
