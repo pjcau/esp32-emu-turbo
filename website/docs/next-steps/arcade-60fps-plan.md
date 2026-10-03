@@ -733,6 +733,33 @@ reading found two holes, both closed: a turn could span two time slices (a
 slice serial is now stored), and reads in the I/O window were not seen (now
 tracked while the skip is on, and they refuse the turn).
 
+**Before and after, measured on the board (2026-10-03 night, play benchmark,
+every frame drawn; "before" is fork `be5e7fd5`, the code of that morning,
+"after" is fork `80176a94` with the chips at 16 kHz; FPS is `rg_system`'s
+count of the frames really run per second):**
+
+| Game | core 0, ms | 68000, ms | video, ms | FPS |
+|---|---|---|---|---|
+| Metal Slug | 29.2 → **22.6** | 10.8 → 7.0 | 10.5 → 10.4 | 34 → **44.2** |
+| Metal Slug 2 | 36.2 → 33.5 | 12.9 → 12.8 | 17.1 → 15.9 | 27.1 → 29.2 |
+| Final Fight (CPS1) | 31.2 → 28.0 | 7.4 → **2.7** | 16.7 → 17.4 | 27.8 → 30.5 |
+| Street Fighter II CE (CPS1) | 32.7 → 27.8 | 8.3 → **3.6** | 20.2 → 19.2 | 27.1 → 31.2 |
+
+(Metal Slug's "before" FPS is 1000 / 29.2; that run did not keep the line.)
+Metal Slug with one frame in two drawn: 20.0 ms a frame, 49.8 frames run a
+second, 25 drawn.
+
+What the table says:
+- Metal Slug gained a third. Metal Slug 2 has no counting wait loop and draws
+  through the 16-bit raster path: its video is 16 ms, its 68000 untouched.
+- **On the CPS1 the 68000 is no longer the cost**: 2.7 and 3.6 ms after the
+  turn skip. The frame is the video, 17 to 19 ms on core 0, while core 1 is
+  30 to 40 % busy. The CPS1's next step is its renderer, or giving part of it
+  to the idle core.
+- `other` rose from about 1.1 to 2.1 ms in every "after" run: the first
+  12-tap doubling shifted its history for every sample. Rewritten without the
+  shift (fork `9c920b47`, same samples; job 187 measures it).
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
