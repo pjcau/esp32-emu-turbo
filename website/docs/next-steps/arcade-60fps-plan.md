@@ -639,6 +639,35 @@ through a DMA-capable buffer of 4 KB taken from the internal RAM for the time
 of the read, so the file system can ask for eight sectors in one command.
 `SD_HOLD_CS` is not made a default.
 
+**Job 167, multi-sector page reads (fork `e477135c`): every read 2.4 times
+faster, hashes exact, the buffer always obtained.**
+
+| play window | 163 | 167 |
+|---|---|---|
+| sprite page read | 17.1 ms | **7.2 ms** |
+| sample page read | 11.7 ms | **4.9 ms** |
+| card reads, ms a frame (both) | 2.04 | 0.86 |
+| core 0 | 22.77 | **21.91** |
+
+What is left is the card's own latency per block (0.45 ms a sector against
+0.2 ms of transfer at 20 MHz): only a faster card, reading ahead of need, or
+40 MHz (ruled out by the traces) would hide it.
+
+**Where the play benchmark stands at the end of 2026-10-03** (Metal Slug,
+mission 1, every frame drawn, 20 MHz LCD bus, 32 kHz at the speaker):
+
+| | morning | night |
+|---|---|---|
+| core 0, a frame | 29.08 | **21.91** |
+| 68000 | 10.82 | 6.72 |
+| video | 10.43 | 10.34 |
+| sound wait | 6.73 | 3.64 |
+| core 1 display | 15.92 | 12.39 |
+
+from: the branch-free scaler (−4.0), the exact skip of the counting wait loop
+(−1.0 on the frame, −4.7 on the 68000), the chips at 16 kHz doubled to 32
+(−1.5), the multi-sector card reads (−0.9). Not yet in a play build.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
