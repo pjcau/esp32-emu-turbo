@@ -244,6 +244,13 @@ identical hashes and, for drawing changes, by the 4-game PC proof before any boa
    Gate: `scripts/neogeo_frames.py ref <harness built before the change>
    <sysdir> <rom> 3000` on Metal Slug and Sonic Wings 2, attract and in game
    (the two 8-bit games; the raster games use the untouched 16-bit plotter).
+   **Result (job 119): exact, and slower.** Picture and samples IDENTICAL on
+   the PC (six runs) and the reference hashes on the board, screen clean, but
+   the sprites went from 4.87 to 5.58 ms a frame and core 0 from 21.75 to
+   22.10. The plotter is bound by the tile reads from PSRAM; the word tests
+   and the 16-pen copy per strip cost more than they save. Reverted (fork
+   `01f02b9d`). Do not try this a third time: the lever on the sprites is
+   fewer PSRAM reads, not fewer instructions.
 6. Reserves, only if short: the LCD bus at 25 MHz on play scenes (not the cause of
    the 103 hang), the dynarec's cache policy. PSRAM at 120 MHz: out, by the user's
    decision (experimental clock).
@@ -261,6 +268,14 @@ performance):
    images and the per-game `.png` previews) for every Neo Geo and CPS1 set on the
    card, fetched and named the way the launcher expects, so no game shows without
    a picture.
+
+**State at the end of the 2026-10-03 session.** Best build: fork `01f02b9d`
+(V2i + sound mix on core 1 + palette), `NB_LINES=16 LCD_BUFS=3
+BAND_INTERNAL=3 NEOBAND=2`: core 0 21.75 ms on the common 31-sample window
+(22.11 at the start of the day). Steps 1, 3 (mixer part), 4 and 5 are closed;
+step 2 (the hand-saved level-1 state) waits for the user at the board; the SD
+paging part of step 3 was not started (the profile shows ~0.1 ms of it on
+core 0); steps 7 and 8 (launcher) are open.
 
 Found on the way (2026-10-03): **core 1 is the limit, not core 0's own work.**
 The display task takes 12.6-14.9 ms of core 1 a frame and the sound board
