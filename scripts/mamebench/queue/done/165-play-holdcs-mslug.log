@@ -1,0 +1,25 @@
+From github.com:pjcau/esp32-emu-turbo
+ * branch            main       -> FETCH_HEAD
+Auto packing the repository in background for optimum performance.
+See "git help gc" for manual housekeeping.
+Already up to date.
+hashes 300:d26de693 600:d3eb2650 900:e8b55a05 1200:3b8c7a75 1500:90755343 1800:a8bf3428 2100:a4a362fb 2400:5d31d62c 2700:16077174 3000:85198b97 3300:9dc44355
+avg over 57: 68000 5.84 video 9.77 other 2.53 mixer 3.09 -> core0 21.33 ms
+core1 over 56: ym2610 16.73 display 10.98 ms (dma wait 1.09, 32 sends) | busy core0 99% core1 79%
+video split over 57: palette 2.08 clear 0.48 sprites 4.35 fix 0.98 rest 0.43 copy 1.46 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 42.9 w<=85.7 (410 strips) | fix r 8.2 w<=8.2 (131 tiles) | copy w 13.2 | total r 51.0 w<=107.0
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   4f936e0f..5b363cb1  main -> main
+pushed scripts/mamebench/results/2026-10-03-play-holdcs-mslug.txt
