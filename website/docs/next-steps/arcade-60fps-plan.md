@@ -424,7 +424,8 @@ The mame-go steps live in the retro-go fork.
   | 107 (held) | PSRAM at 120 MHz | | | waits for the user's go: an experimental clock |
   | 109 | faster sprite plotter (opaque/empty words, pens on the stack) + V2i | **wrong** | | hashes not the reference ones, scrambled picture on the board; the PC proof found it at frame 133 of Metal Slug (the zoomed title letters). Reverted. Rule restated: a drawing change reaches the board only after the PC proof says IDENTICAL — the queue pulls HEAD, so the proof comes first |
   | 111 (2026-10-03) | V2i with the first-frame fix, original plotter | 22.11 | copy 1.96 | hashes identical, no hang; 68000 7.38 as hoped, but core 0 waits for or copies bands again (13.6 KB/frame) and core 1 is at 64 % (YM2610 9.39, display 12.68): no net gain over job 095 |
-  | 113 (queued) | + the sound mix on core 1 (O1) | | | PC gate first: `neogeo_frames.py mix`, picture and samples identical |
+  | 113 (2026-10-03) | + the sound mix on core 1 (O1, fork `cbabb161`) | 21.87 (111: 22.02, same 31 samples) | copy 2.10 | PC gate IDENTICAL on the four games (picture and samples); hashes identical. The mix left core 0 (0.02 ms in calm samples, with the stream copy 1.0 before) but core 0 now waits 0.4-0.9 ms for the sound job at the frame end: the job is 0.9 ms longer and the display task (priority 6) runs before it (priority 5) on core 1. Steady samples 10-33: 23.40 → 23.04. `mbsum.py`'s 22.95 is over 40 samples, 111's 22.11 over 33: not comparable |
+  | 115 (queued) | + the sound task above the display (`NEOSND_PRIO=7`) | | | the measurement: does the wait go, and what does the delayed display cost in band copies |
 
   Also found: **the MAMEBENCH scene is the attract loop, not level 1** — the
   slot-0 state (519976 bytes) is 4280 bytes longer than what the current build
