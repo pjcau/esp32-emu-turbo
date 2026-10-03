@@ -628,6 +628,17 @@ says it is needed with IDF 5 on an unshared bus (esp-idf issue 10493, slow
 SDSPI accesses). Job 163 times the seek and the read apart; job 165 is the
 same run with the chip select held (`SD_HOLD_CS=1`).
 
+**Jobs 163 and 165: the chip select held changes nothing; the read is a
+command per sector.** Sprite page 17.1 ms (seek 1.5), sample page 11.7 ms
+(seek 2.0), with or without `SD_HOLD_CS`; the card mounts at 20 MHz at the
+first attempt, no fast-seek warning. 8 KB in 15 ms is 0.5 MB/s against the
+2.5 MB/s of the bus: about 1 ms per 512-byte sector. The pagers read straight
+into their PSRAM caches, and the SD driver cannot use PSRAM for DMA, so it
+reads each sector into its own buffer and copies. Fork (job 167): the pages go
+through a DMA-capable buffer of 4 KB taken from the internal RAM for the time
+of the read, so the file system can ask for eight sectors in one command.
+`SD_HOLD_CS` is not made a default.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
