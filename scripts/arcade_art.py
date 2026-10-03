@@ -10,7 +10,9 @@
         Writes <outdir>/romart/<tab>/<set>.png for each set: the game's title
         screen (in-game shot, then flyer, when there is no title), scaled to fit
         the launcher's preview box (240x224 on the 480x320 panel). A clone
-        without art of its own gets its parent's. Copy the folder to the card
+        without art of its own gets its parent's. A zip with a descriptive name
+        is given as "<file name>=<set>" ("King of Fighters 95=kof95"): the art
+        of the set, saved under the file's name. Copy the folder to the card
         as /sd/romart/<tab>/: the launcher looks for /sd/romart/<tab>/<rom
         file name>.png (launcher/main/gui.c, cover "based on filename").
 
@@ -72,10 +74,14 @@ def fetch(outdir, tab, names):
     os.makedirs(dest, exist_ok=True)
     missing = []
     for name in names:
-        name = os.path.splitext(os.path.basename(name))[0]
-        used, (kind, data) = name, download(name)
-        if not data and parents.get(name):
-            used = parents[name]
+        name, _, setname = name.partition("=")
+        name = os.path.basename(name)
+        if name.lower().endswith(".zip"):
+            name = name[:-4]
+        setname = setname or name
+        used, (kind, data) = setname, download(setname)
+        if not data and parents.get(setname):
+            used = parents[setname]
             kind, data = download(used)
         if not data:
             missing.append(name)
@@ -85,7 +91,7 @@ def fetch(outdir, tab, names):
         im.thumbnail(BOX, Image.LANCZOS)
         path = os.path.join(dest, name + ".png")
         im.save(path, optimize=True)
-        print("%-12s %s%s %dx%d %d bytes" % (name, kind, "" if used == name else " of parent " + used,
+        print("%-12s %s%s %dx%d %d bytes" % (name, kind, "" if used == name else " of " + used,
                                              im.width, im.height, os.path.getsize(path)))
         time.sleep(0.3)
     print("done: %d written, %d without art%s" % (len(names) - len(missing), len(missing),
