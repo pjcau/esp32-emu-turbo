@@ -31,14 +31,29 @@ measured on the board, playing the game, every frame drawn (the play benchmark,
 
 :::caution The two CPS1 rows are not play
 Found on 2026-10-04: the play script's coin and START came too early for the
-CPS1. Final Fight reads no coin before about frame 800 (its WARNING screen),
-and Street Fighter II's title ignores START until about frame 900. Final Fight
-stayed in its intro story and Street Fighter II on its title screen with one
-credit, in the "before" run and in the "after" run alike. The rows compare
-like with like, but on screens where the game mostly waits, which is where the
-idle-turn skip gains most. The play figures need `MAMEBENCH=4` (coin and START
-given a second time, later) and are being measured.
+CPS1 (Final Fight reads no coin before about frame 800, Street Fighter II's
+title ignores START until about 900). Both rows are the intro story and the
+title screen, before and after alike. The play figures are below.
 :::
+
+**CPS1 in play** (2026-10-04, `MAMEBENCH=4`, every frame drawn, fork
+`53309d96`; "before" is the same build with the idle-turn skip switched off by
+`cps1_noturn`, the only 68000 change the CPS1 got):
+
+| Game, in play | Frames a second | core 0, ms a frame | 68000, ms | video, ms |
+|---|---|---|---|---|
+| Final Fight | 21.8 → 23.0 | 35.5 → 33.1 | 9.7 → 6.8 | 23.8 → 24.3 |
+| Street Fighter II CE | 20.1 → 21.9 | 36.1 → 32.2 | 9.8 → 6.1 | 24.6 → 24.5 |
+
+The skip is exact in play too (PC harness, pictures and sound identical;
+65 to 70 % of the 68000's cycles skipped on Final Fight, SF2 CE and Knights of
+the Round, 49 % on Ghouls'n Ghosts). It gives 3 to 4 ms a frame. **The CPS1's
+frame in play is its video: 24 ms of 32**, half as much again as on the intro
+screens measured before. That is the first thing to work on for the CPS1.
+
+A CPS1 launch also spends most of its time loading: Street Fighter II CE takes
+28 s under the hourglass (its graphics are decoded and copied to the flash
+partition at every launch) before the first frame.
 
 With the automatic frameskip the games run at or near full speed and show
 about a third of the frames; a fixed one-in-two frameskip at full speed needs a
@@ -140,7 +155,9 @@ test). The `MAMEBENCH=4` script presses again later. A tap by hand once the
 title is up is taken, so nothing changes in the input code. The SF2 saves are
 fixed (fork `a90c42f0`: the state buffer is lent by the scroll-2 cache), checked
 in play on SF2 CE and SF2 HF; SF2 logs two "Surface allocation failed" at start
-under PSRAM pressure, picture right, still to look at.
+under PSRAM pressure, picture right, still to look at. Mega Drive sound is
+confirmed by the microphone (6 to 8 dB above the room on the one game on the
+card, which is a quiet one).
 
 How to work on it: `scripts/mamebench/README.md` (the run options, the switch
 files, the PC gates). The rule that paid every time: measure in play before
