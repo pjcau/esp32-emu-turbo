@@ -406,8 +406,17 @@ core 0 25.12 → 24.67, display 12.55 → 11.27, DMA wait 1.45 → 0.36, hashes
 identical, screen clean on 8 shots (no sparkle, no shifted rows). Unlike
 yesterday's attract runs the bus now shows, because the scaler no longer hides
 it. The clock the driver really sets is not logged: with an integer divider of
-80 MHz it would be 26.7 MHz (37.5 ns a write, inside the ST7796S's 30 ns
-cycle); to be confirmed from `LCD_CAM_LCD_CLOCK_REG`. Kept for the play build.
+80 MHz it would be 26.7 MHz, 37.5 ns a write. **Correction (same day): the panel's
+controller is an ILI9488, not an ST7796S** (the driver file is named after the
+compatible command set), and its datasheet, kept in
+`hardware/datasheets/DS1_ILI9488-controller_ILITEK.pdf` (DBI type B timing
+table, page 329), gives a minimum write cycle of **40 ns** with 15 ns minimum
+for each half. So 20 MHz (50 ns) is inside the datasheet and `LCD_MHZ=25`,
+which esp_lcd rounds to 80 MHz / 3 = 26.7 MHz, is 2.5 ns under the minimum:
+it works on this unit at room temperature and is outside the specification.
+The "30 ns, about 33 MHz" figure quoted earlier in this page was for another
+controller. It went into the play build of 2026-10-03 on the wrong figure; the
+user decides whether it stays.
 
 **The 68000's program in PSRAM (fork `355aaeeb`, job `137-play-program-mslug.sh`).**
 Metal Slug's whole 2 MB program is served from the flash partition through
