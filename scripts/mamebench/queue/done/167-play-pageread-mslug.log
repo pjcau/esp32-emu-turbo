@@ -1,0 +1,23 @@
+From github.com:pjcau/esp32-emu-turbo
+ * branch              main       -> FETCH_HEAD
+Already up to date.
+hashes 300:d26de693 600:d3eb2650 900:e8b55a05 1200:3b8c7a75 1500:90755343 1800:a8bf3428 2100:a4a362fb 2400:5d31d62c 2700:16077174 3000:85198b97 3300:9dc44355 3600:432bd7bf
+avg over 60: 68000 5.87 video 9.26 other 2.49 mixer 2.84 -> core0 20.56 ms
+core1 over 59: ym2610 16.51 display 10.57 ms (dma wait 1.09, 31 sends) | busy core0 99% core1 81%
+video split over 60: palette 2.08 clear 0.48 sprites 3.85 fix 1.00 rest 0.42 copy 1.44 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 43.4 w<=86.7 (414 strips) | fix r 8.2 w<=8.2 (131 tiles) | copy w 13.0 | total r 51.6 w<=107.9
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+To github.com:pjcau/esp32-emu-turbo.git
+   7d378291..4428111a  main -> main
+pushed scripts/mamebench/results/2026-10-03-play-pageread-mslug.txt
