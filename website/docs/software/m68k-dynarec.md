@@ -66,7 +66,7 @@ The steps already done confirm the direction: 16-bit instruction forms gave 10 %
 
 **What is done instead**, on the interpreter, where the memory wait is the target:
 
-- the first megabyte of the program in PSRAM instead of flash (a cache line fills about three times faster from the octal PSRAM than from the quad flash); being measured as job 137 of the plan;
+- the first megabyte of the program in PSRAM instead of flash, on the reasoning that a cache line fills about three times faster from the octal PSRAM than from the quad flash: **measured, no gain** (68000 10.88 → 10.62 ms, and the sprite page cache that gave up the memory cost more than that). The wait is the cache's size, not the speed of what is behind it;
 - candidates after it, each to be measured the same way: the hot opcode handlers and the memory fast paths in internal RAM where they are not already, and the Neo Geo memory map's common cases (work RAM, program ROM) read without going through MAME's handler tables.
 
 The rest of this page describes the dynarec as built, for when it is reopened and because the same design serves the GBA.

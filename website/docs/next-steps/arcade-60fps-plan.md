@@ -418,6 +418,22 @@ cache gives up the room (1152 → about 832 KB). The reason to expect a gain is
 the bus, not a measurement: a cache line of 64 bytes takes about 32 clocks
 from the octal PSRAM and about 128 from the quad flash. Compare with job 135.
 
+**Result of the program in PSRAM (job 139; job 137 was not a valid run, the
+first cache sizing left the display surfaces without memory):** 68000 10.88 →
+10.62 ms, sprites 4.94 → 5.75 (the sprite page cache at 448 KB instead of
+1152 misses more), display +0.6: core 0 24.67 → 25.06, a loss. Dropped; the
+switch stays in the code, off. What it says about the opcode-fetch wait: it is
+not the flash's line-fill time against PSRAM's, since moving the hot megabyte
+to the faster memory gave 0.26 ms. The wait is the cache being too small for
+what both cores keep reading, wherever the lines come from.
+
+**Next 68000 measurement: the main CPU's clock (job 141, fork `6d54a7e7`).**
+mame2000 already has the option (`underclock_cpu`, a percentage), unused. The
+file `/sd/retro-go/mame/neo_uclock` with `20` in it runs the 68000 for 20 %
+fewer cycles a frame. The hashes change by construction (the game's timing
+moves); the screen and the play window tell what it costs and what it gives.
+A user-visible trade, to be decided by the user from the numbers.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
