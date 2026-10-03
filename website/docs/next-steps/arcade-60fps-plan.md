@@ -681,9 +681,15 @@ rerun. Two real failures, both open:
   board's logs: the state is one allocation of its full size, 401 KB, and
   Final Fight's largest free PSRAM block in play is 384 KB (Ghouls has
   2176 KB). The firmware then shows its "Save failed" dialog and waits for a
-  key, which the test took for a hang. Fix (fork, to be proven): the state no
-  longer carries the 96 KB of the sound Z80's region, only its 2 KB of RAM
-  (`mamego_region_ram`), about 316 KB.
+  key, which the test took for a hang. Fix: the state no longer carries the
+  96 KB of the sound Z80's region, only its 2 KB of RAM (`mamego_region_ram`):
+  316644 bytes, saved and loaded on the PC. A CPS1 state was never an exact
+  continuation, before or after this change (same result with a harness of
+  the old format): Final Fight runs the same for about 128 frames after a
+  load, then its intro text is one character behind; Knights differs by one
+  pixel in the last column from the sixth frame. Something the games read is
+  not in the state (a timer or frame phase, a video latch). A known limit,
+  small on screen, not fixed.
 - **`robby.zip` (arcade): resume at boot gives a black screen** for about 20 s
   after the state loads; the in-session load is fine.
 
