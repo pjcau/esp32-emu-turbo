@@ -198,13 +198,28 @@ The board holds the known-good play build: fork `bbcf99f5`, `NB_LINES=16 NEOBAND
 (22 ms a frame on Metal Slug's attract loop). The steps, in order, each gated by
 identical hashes and, for drawing changes, by the 4-game PC proof before any board run:
 
-1. **V2i on the board** — job `111-v2i-mslug.sh` (held): fork `c654abbc`, the
-   fixed first-frame logic, original plotter. Expect the 68000 near 7.5, YM2610
-   on core 1 near 7, core 0 ~21 ms.
+1. **V2i on the board** — **done 2026-10-03** (job 111, fork `c654abbc`,
+   `results/2026-10-03-v2i-mslug.txt`): hashes the reference ones, no hang,
+   core 0 22.11 ms (68000 7.38, video 10.61, other 2.78, mixer 0.88). Not the
+   ~21 expected: the video's `copy` part is back at 1.96 ms (13.6 KB a frame,
+   core 0 short of band buffers), and core 1 is busier (YM2610 9.39, display
+   12.68). The screen was not checked: the webcam no longer frames the panel.
 2. **A level-1 save state saved by hand** with the current build (the old one is
    4280 bytes longer and never loads): MAMEBENCH then measures play, not attract.
 3. **Phase O, core 1 takes the SD paging and the mixer** (`neosnd_update`,
-   `sdspi` and `mixer` in the core-0 profile): −1.5 ms.
+   `sdspi` and `mixer` in the core-0 profile): −1.5 ms. **The mixer part is
+   written (2026-10-03, fork `cbabb161`), job `113-o1mix-mslug.sh`**: the
+   frame's mix (`sound_update_mix()`: the YM2610 stream's copy, the SSG, the
+   mixer) is the first part of the sound board's job on core 1; core 0 only
+   hands over the frame's commands and, before the samples go out, waits for
+   the mix. Gate before the board: `scripts/neogeo_frames.py mix <sysdir>
+   <rom> 3000 --input attract` must say IDENTICAL (same picture and same
+   samples as with `NEOMIX1=0`, sound playing) on the four games. Expect the
+   `mixer` column near 0 and core 0 ~21.2 ms; core 1's `ym2610` column now
+   includes the mix (~+0.9). Bench switch on the card:
+   `/sd/retro-go/mame/neo_nomix1`. The SD paging part waits for a count of the
+   sprite page misses per frame on core 0 (the profile shows ~0.1 ms of
+   `sdspi`, not the 0.6 the estimate assumed).
 4. **Palette**: pens of unchanged strips kept across frames, `palette_recalc`
    dirty set: −0.8 ms.
 5. **The sprite plotter again**, PC proof first (the 2026-10-02 attempt broke the
@@ -408,7 +423,8 @@ The mame-go steps live in the retro-go fork.
   | 105 | V2i: accepted bands scaled in place, the stage only when the emulator is short of buffers | hang | | the same bug; the fixed build runs as job 109 (with the plotter) |
   | 107 (held) | PSRAM at 120 MHz | | | waits for the user's go: an experimental clock |
   | 109 | faster sprite plotter (opaque/empty words, pens on the stack) + V2i | **wrong** | | hashes not the reference ones, scrambled picture on the board; the PC proof found it at frame 133 of Metal Slug (the zoomed title letters). Reverted. Rule restated: a drawing change reaches the board only after the PC proof says IDENTICAL — the queue pulls HEAD, so the proof comes first |
-  | 111 (queued) | V2i with the first-frame fix, original plotter | | | the run 105 should have been |
+  | 111 (2026-10-03) | V2i with the first-frame fix, original plotter | 22.11 | copy 1.96 | hashes identical, no hang; 68000 7.38 as hoped, but core 0 waits for or copies bands again (13.6 KB/frame) and core 1 is at 64 % (YM2610 9.39, display 12.68): no net gain over job 095 |
+  | 113 (queued) | + the sound mix on core 1 (O1) | | | PC gate first: `neogeo_frames.py mix`, picture and samples identical |
 
   Also found: **the MAMEBENCH scene is the attract loop, not level 1** — the
   slot-0 state (519976 bytes) is 4280 bytes longer than what the current build

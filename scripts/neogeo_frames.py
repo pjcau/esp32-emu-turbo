@@ -3,11 +3,15 @@
 
     scripts/neogeo_frames.py run <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py compare <sysdir> <game.zip> <frames> [neoframes options...]
+    scripts/neogeo_frames.py mix <sysdir> <game.zip> <frames> [neoframes options...]
 
 `run` prints the harness output. `compare` builds the harness twice, with
 NEOBAND=0 (full-frame renderer) and NEOBAND=1 (band renderer, V1 of the Arcade
 60 fps plan), runs both with the same input and reports the first frame whose
-hash differs, or "IDENTICAL". <sysdir> is the MAME system directory (BIOS
+hash differs, or "IDENTICAL". `mix` runs the band build twice, with the frame's
+sound mix where it was (NEOMIX1=0, inside the YM2610 stream update) and inside
+the sound board's job (the default, core 1 on the board), and requires the same
+picture AND the same samples, with sound actually playing. <sysdir> is the MAME system directory (BIOS
 `neogeo.zip` next to the game is found by mame-go itself; neospr/ files prepared
 by neogeo_prepare.py are used when present).
 
@@ -26,20 +30,60 @@ def build(variant, flags):
     return prep.build(os.path.join(BUILD, variant), tool=TOOL, name="neoframes", extra_flags=flags)
 
 
-def run(exe, args):
-    r = subprocess.run([exe, *args], capture_output=True, text=True)
+def run(exe, args, env=None, audio=None):
+    """Runs the harness; returns it and {frame: picture hash}. `audio`, a dict,
+    receives {frame: running sample hash} and "all": (hash, samples, nonzero)."""
+    r = subprocess.run([exe, *args], capture_output=True, text=True,
+                       env=dict(os.environ, **env) if env else None)
     hashes = {}
     for l in r.stdout.splitlines():
         p = l.split()
         if p and p[0] == "FRAME":
             hashes[int(p[1])] = p[4]
+        elif audio is not None and p and p[0] == "AUDIO":
+            if p[1] == "all":
+                audio["all"] = (p[2], int(p[4]), int(p[6]))
+            else:
+                audio[int(p[1])] = p[3]
     return r, hashes
 
 
+def mix(args):
+    """The sound mix moved into the sound board's job: same picture, same samples."""
+    exe = build("band", ["-DNEOBAND=1"])
+    a0, a1 = {}, {}
+    r0, h0 = run(exe, args, env={"NEOMIX1": "0"}, audio=a0)
+    r1, h1 = run(exe, args, env={"NEOMIX1": "1"}, audio=a1)
+    sys.stderr.write(r0.stderr + r1.stderr)
+    if r0.returncode or r1.returncode:
+        print("harness failed: mix on core 0", r0.returncode, "in the job", r1.returncode); return 1
+    for name, r, want in (("NEOMIX1=0", r0, "(Z80 + YM2610)"), ("NEOMIX1=1", r1, "(Z80 + YM2610 + mix)")):
+        if want not in r.stdout + r.stderr:
+            print("%s: the run did not report '%s': the switch did not take" % (name, want)); return 1
+    if not h0 or "all" not in a0 or "all" not in a1:
+        print("no frames or no samples hashed"); return 1
+    if a0["all"][1] == 0 or a0["all"][2] == 0:
+        print("the reference run is silent (%d samples, %d non-zero): nothing proven" % a0["all"][1:]); return 1
+    badv = [n for n in sorted(h0) if h1.get(n) != h0[n]]
+    bada = [n for n in sorted(k for k in a0 if k != "all") if a1.get(n) != a0[n]]
+    print("frames hashed", len(h0), "| picture differs on", len(badv), "| samples", a0["all"][1],
+          "non-zero", a0["all"][2], "| sound differs from frame", bada[0] if bada else "-")
+    if badv:
+        print("first picture difference at frame %d: %s vs %s" % (badv[0], h0[badv[0]], h1.get(badv[0])))
+    if bada:
+        print("first sound difference at frame %d: %s vs %s" % (bada[0], a0[bada[0]], a1.get(bada[0])))
+    if badv or bada or a0["all"] != a1["all"]:
+        return 1
+    print("IDENTICAL")
+    return 0
+
+
 def main():
-    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare"):
+    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix"):
         print(__doc__); return 2
     cmd, args = sys.argv[1], sys.argv[2:]
+    if cmd == "mix":
+        return mix(args)
     if cmd == "run":
         exe = build("full", [])
         r, _ = run(exe, args)
