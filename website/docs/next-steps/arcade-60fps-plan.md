@@ -16,7 +16,76 @@ Neo Geo steps every Neo Geo game. Metal Slug is only the reference benchmark.
 Related pages: [Arcade (MAME)](arcade.md), [JIT (dynarec) plan](jit-plan.md),
 [68000 dynarec](../software/m68k-dynarec.md).
 
-## Where we are (2026-10-02)
+## Where we stand (close of 2026-10-03)
+
+**60 frames a second is not reached on any 68000 arcade game.** What is
+measured on the board, playing the game, every frame drawn (the play benchmark,
+`MAMEBENCH=2`; "before" is the code of the morning of 2026-10-03):
+
+| Game | Frames a second | core 0, ms a frame | 68000, ms | Limit now |
+|---|---|---|---|---|
+| Metal Slug (Neo Geo) | 34 → **44** | 29.2 → 22.6 | 10.8 → 7.0 | video 10.4 ms on core 0, the sound job on core 1 |
+| Metal Slug 2 (Neo Geo, raster) | 27 → 29 | 36.2 → 33.5 | 12.9 → 12.8 | video 16 ms (16-bit raster path), 68000 |
+| Final Fight (CPS1) | 28 → 30.5 | 31.2 → 28.0 | 7.4 → 2.7 | video 17 ms plus 5 ms of output, all on core 0; core 1 at 42 % |
+| Street Fighter II CE (CPS1) | 27 → 31 | 32.7 → 27.8 | 8.3 → 3.6 | video 19 ms; core 1 at 29 % |
+
+With the automatic frameskip the games run at or near full speed and show
+about a third of the frames; a fixed one-in-two frameskip at full speed needs a
+drawn frame plus a skipped one in 33.3 ms, and Metal Slug takes 39.8.
+
+**Kept from 2026-10-03** (each proven on the PC frame by frame, then measured
+on the board):
+
+| Change | Scope | Gain |
+|---|---|---|
+| Palette scaler without a test per pixel, vertical blend two pixels a word, blend colour fix | every emulator drawing through a palette at 1x-2x | Metal Slug −4.0 ms a frame |
+| Exact skip of wait loops that count (`cl_verify`) | Neo Geo; fires on Metal Slug only among 16 sets | 68000 −4.7 ms, frame −1.0 |
+| Exact skip of idle turns longer than one loop (`turn_check`) | CPS1, all six sets | 68000 −4.7 ms (49-82 % of its cycles) |
+| Sound chips at 16 kHz, doubled to the 32 kHz output with a 12-tap interpolation | mame-go | frame −1.5 ms; not detectable through the speaker |
+| Card pages read through a DMA-capable buffer (multi-sector) | Neo Geo sprite and sample pagers | 17 → 7 ms and 12 → 5 ms a read |
+| Sound mix on core 1, palette kept across frames | Neo Geo | about −0.5 ms together |
+| Resume at boot loads the state where saves are made; CPS1 states 94 KB smaller | Neo Geo, CPS1 | resume works; CPS1 saves fit in memory |
+| Launcher: a CPS-1 tab, covers for every game of every system | launcher | |
+
+**Measured and dropped** (do not retry without a new reason): the sound task
+above the display; a sprite plotter with fewer instructions; the program's
+first megabyte in PSRAM; two fewer loads in the 68000's run loop; the LCD bus
+at 25 MHz (really 26.7, outside the ILI9488's 40 ns write cycle); the SD chip
+select held; larger sprite and sample caches (the reads are first touches);
+FAME/C; the 68000 dynarec (see [68000 dynarec](../software/m68k-dynarec.md)).
+
+**What is left, in the order of what it could give:**
+
+1. **CPS1: the video.** 17 to 19 ms of rendering and about 5 ms of output on
+   core 0 while core 1 is 30 to 40 % busy. The CPS1 does not use the band
+   path the Neo Geo has. Largest single gain available, and the largest job.
+2. **The Neo Geo raster games** (Metal Slug 2, KOF '95): their 16-bit video
+   path costs 16 ms and takes neither the bands nor the palette work.
+3. **Internal RAM.** The play build has 5 KB free, 1 KB at times: the
+   multi-sector card read then falls back to the slow path, and anything new
+   has nowhere to go. A lead: the file system's buffers are 4 KB per open file
+   (`CONFIG_FATFS_SECTOR_4096`), a card needs 512 bytes. Board-wide, to be
+   measured with care.
+4. **A fixed one-in-two frameskip** once a pair of frames fits 33.3 ms: even
+   motion at 30 frames instead of an uneven third. Metal Slug is 6.5 ms short
+   a pair; the 68000's clock at −20 % (measured: −1.2 ms a frame, nothing
+   visible in stills) is an option for the user to judge by playing.
+5. **Metal Slug's remaining frame**: sprites 4.9 ms and the sprite list walk
+   2.3 ms on core 0, the sound job on core 1 (FM synthesis 4 ms).
+6. **Open defects found on the way:** `robby.zip` resumes to a black screen
+   for 20 s; a CPS1 state is not an exact continuation (a character of text or
+   a pixel off); one unexplained loss of sound in one of three takes of the
+   16 kHz bench build, not reproduced in four minutes on the play build.
+
+How to work on it: `scripts/mamebench/README.md` (the run options, the switch
+files, the PC gates). The rule that paid every time: measure in play before
+changing anything, prove the change frame by frame on the PC, then measure on
+the board on the same samples.
+
+The sections below are the record: the numbers of 2026-10-02 (attract loop,
+which flattered every figure), the plan as it was, and the log of 2026-10-03.
+
+## Where we were on 2026-10-02 (attract-loop figures)
 
 Reference: `MAMEBENCH`, a deterministic on-board benchmark. It loads a save state of
 Metal Slug at level 1, plays a scripted input, and hashes the frame every 300
@@ -192,7 +261,7 @@ Three measurements of the day change the order of the plan.
 With V2h and O1-O3, core 0 lands at **~16-16.5 ms with the interpreter**: 60 fps
 without the dynarec. J then buys margin for heavier games (Puzzle Bobble 2).
 
-### Resume checklist (2026-10-03, agreed with the user: nothing starts before this is read)
+### Log of 2026-10-03: the morning's checklist and what each step gave
 
 The board holds the known-good play build: fork `bbcf99f5`, `NB_LINES=16 NEOBAND=2`
 (22 ms a frame on Metal Slug's attract loop). The steps, in order, each gated by
