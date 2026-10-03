@@ -6,6 +6,7 @@
     scripts/neogeo_frames.py mix <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py pal <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py ref <reference-exe> <sysdir> <game.zip> <frames> [neoframes options...]
+    scripts/neogeo_frames.py count <sysdir> <game.zip> <frames> [neoframes options...]
 
 `run` prints the harness output. `compare` builds the harness twice, with
 NEOBAND=0 (full-frame renderer) and NEOBAND=1 (band renderer, V1 of the Arcade
@@ -20,7 +21,10 @@ frame's array checked against the full rebuild); same picture required. `ref`
 is for a change with no switch (the sprite plotter): the band build of the
 current tree against a harness built BEFORE the change (copy
 build/neoframes/band/neoframes aside before pulling); same picture and same
-samples required. <sysdir> is the MAME system directory (BIOS
+samples required. `count` proves the exact skip of wait loops that count
+(m68kcpu.c): the band build with M68KCOUNT=0 against the default; same picture
+and same samples required, and it prints how many of the 68000's cycles each
+run skipped, so a run where the skip never fired is seen. <sysdir> is the MAME system directory (BIOS
 `neogeo.zip` next to the game is found by mame-go itself; neospr/ files prepared
 by neogeo_prepare.py are used when present).
 
@@ -55,6 +59,37 @@ def run(exe, args, env=None, audio=None):
             else:
                 audio[int(p[1])] = p[3]
     return r, hashes
+
+
+def count(args):
+    """The exact skip of counting wait loops: same picture, same samples, fewer cycles."""
+    exe = build("band", ["-DNEOBAND=1"])
+    a0, a1 = {}, {}
+    r0, h0 = run(exe, args, env={"M68KCOUNT": "0", "IDLESTAT": "1"}, audio=a0)
+    r1, h1 = run(exe, args, env={"M68KCOUNT": "1", "IDLESTAT": "1"}, audio=a1)
+    if r0.returncode or r1.returncode:
+        sys.stderr.write(r0.stderr + r1.stderr)
+        print("harness failed: off", r0.returncode, "on", r1.returncode); return 1
+    skipped = []
+    for name, r in (("off", r0), ("on ", r1)):
+        line = [l for l in r.stderr.splitlines() if l.startswith("IDLESTAT cycles")]
+        print("skip %s: %s" % (name, line[0] if line else "no IDLESTAT line"))
+        m = line and __import__("re").search(r"skipped as idle (\d+)", line[0])
+        skipped.append(int(m.group(1)) if m else -1)
+    if not h0:
+        print("no frames hashed"); return 1
+    bad = [n for n in sorted(h0) if h1.get(n) != h0[n]]
+    bada = [n for n in sorted(k for k in a0 if k != "all") if a1.get(n) != a0[n]]
+    print("frames hashed", len(h0), "| picture differs on", len(bad), "| sound differs from frame", bada[0] if bada else "-")
+    if bad:
+        print("first picture difference at frame %d: off %s on %s" % (bad[0], h0[bad[0]], h1.get(bad[0])))
+    if bad or bada or len(h1) != len(h0) or a0.get("all") != a1.get("all"):
+        return 1
+    if skipped[1] <= skipped[0]:
+        print("IDENTICAL, but the skip removed no extra cycles in this run: nothing proven for this game")
+        return 0
+    print("IDENTICAL")
+    return 0
 
 
 def ref(ref_exe, args):
@@ -145,7 +180,7 @@ def mix(args):
 
 
 def main():
-    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal", "ref"):
+    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal", "ref", "count"):
         print(__doc__); return 2
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "mix":
@@ -154,6 +189,8 @@ def main():
         return pal(args)
     if cmd == "ref":
         return ref(args[0], args[1:])
+    if cmd == "count":
+        return count(args)
     if cmd == "run":
         exe = build("full", [])
         r, _ = run(exe, args)

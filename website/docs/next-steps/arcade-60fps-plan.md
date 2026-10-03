@@ -547,6 +547,32 @@ pair are still missing; they are in the 68000 (18 ms a pair), the sound wait
 `MAMEBENCH=3` draws every other frame (job 155): what a fixed one-in-two
 frameskip costs per pair of frames.
 
+**The 68000's time in play is mostly a wait loop (PC analysis, `IDLESTAT` and
+`PCHIST`, Metal Slug, 3600 frames of play).** The idle skip removes 12.5 % of
+the cycles asked; of the 87.5 % executed, **55.7 % are sixteen bytes of code at
+`0x1FE0-0x200F`**, the game's wait for the vertical blank:
+
+    001fe2 addq.w #1,$106ee0     a counter of the loop's own turns
+    001fe8 clr.b  $106edd
+    001fee cmpi.b #0,$106ede ; beq.w $2004
+    001ffa cmpi.b #1,$106ed9 ; bls.b $1fe2
+    002004 tst.b  $106ed8    ; beq.b $1fe2      the flag the vblank interrupt sets
+
+about 970 turns a frame. The skip calls it busy because the counter makes the
+loop's writes differ every turn ("busy writes 3484676, regs changed 0").
+Sonic Wings 2 has no such single loop (its top loop changes registers).
+
+**Fork `57790088`: such loops are skipped exactly.** The loop is proven first
+(its code decodes to one ADDQ/SUBQ on an absolute address, CLR, TST, CMPI,
+BTST on absolute addresses and forward branches; nothing else touches the
+counter; nothing in the I/O window; registers unchanged; two consecutive turns
+of equal cost that each moved the counter one step), then N turns become N
+times the turn's cycles and N steps of the counter. Gate:
+`scripts/neogeo_frames.py count` (the skip off against on: same picture, same
+samples, and the cycles each run skipped). Job 157 measures it on the board,
+same configuration as job 133. On paper it removes about half of the 68000's
+executed cycles in this scene.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
