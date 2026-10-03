@@ -443,6 +443,24 @@ fewer cycles a frame. The hashes change by construction (the game's timing
 moves); the screen and the play window tell what it costs and what it gives.
 A user-visible trade, to be decided by the user from the numbers.
 
+**Decisions of the evening (2026-10-03, the user's):** the LCD bus goes back
+to 20 MHz for good (0.45 ms does not pay for running the ILI9488 outside its
+datasheet; the baseline for every later comparison is job 133, 25.12 ms). The
+next lever is the sound board's cost through the output rate: the chips render
+at the output rate, so 24 kHz and 16 kHz are measured (jobs 145 and 147,
+`AUDIO_HZ`, 32 kHz today) on a 28 mm speaker that does not reproduce the top
+octave anyway. The near target is a fixed one-in-two frameskip at full game
+speed (30 even frames a second): a drawn frame plus a skipped one must fit
+33.3 ms, and today they take about 37.
+
+On the 68000's opcode fetch: `m68ki_read_imm_16` is already inlined everywhere
+(no out-of-line copy in the object file); the profiler names it because
+addr2line reports the innermost inlined function. The 15 % is therefore time
+at the fetch's own instructions inside `m68k_execute` and the handlers, next
+to the two table lookups every instruction makes (the 256 KB handler table and
+the 64 KB cycle table, indexed by opcode). Which of those loads stalls is the
+next thing to measure, at the level of addresses, before changing anything.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
