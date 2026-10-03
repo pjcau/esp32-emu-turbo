@@ -676,10 +676,14 @@ Drive, ColecoVision, PC Engine, Neo Geo Pocket, the arcade set and the Neo
 Geo, after the rows that had failed only on a screenshot taken too early were
 rerun. Two real failures, both open:
 
-- **CPS1: the save never completes** on Carrier Air Wing, Final Fight, Street
-  Fighter II CE and HF (`save queued`, no `save done` in 30 s); Ghouls'n Ghosts
-  and Knights of the Round pass. The save runs on the emulator's main task and
-  waits for the sound job first; where it stops is not known yet.
+- **CPS1: the save fails** on Carrier Air Wing, Final Fight, Street Fighter II
+  CE and HF; Ghouls'n Ghosts and Knights of the Round pass. Cause, from the
+  board's logs: the state is one allocation of its full size, 401 KB, and
+  Final Fight's largest free PSRAM block in play is 384 KB (Ghouls has
+  2176 KB). The firmware then shows its "Save failed" dialog and waits for a
+  key, which the test took for a hang. Fix (fork, to be proven): the state no
+  longer carries the 96 KB of the sound Z80's region, only its 2 KB of RAM
+  (`mamego_region_ram`), about 316 KB.
 - **`robby.zip` (arcade): resume at boot gives a black screen** for about 20 s
   after the state loads; the in-session load is fine.
 
