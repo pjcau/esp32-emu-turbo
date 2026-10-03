@@ -277,6 +277,29 @@ step 2 (the hand-saved level-1 state) waits for the user at the board; the SD
 paging part of step 3 was not started (the profile shows ~0.1 ms of it on
 core 0); steps 7 and 8 (launcher) are open.
 
+**The real game, measured 2026-10-03 (play build `01f02b9d`, the user's own
+save at the end of mission 1, 64 s driven from the console, `rg_system`'s
+counters once a second):**
+
+| Scene | Game speed | Frames drawn | Frames skipped | Busy |
+|---|---|---|---|---|
+| attract (before the load) | 60-61 fps | 20 /s | 40 /s | 100 % |
+| in play | **50.3 fps average (84 %)**, 41-55 | **16.8 /s** | 33.5 /s | 99 % |
+
+The auto frameskip sits at its limit (two frames skipped for one drawn) and in
+play the game still runs below full speed, so the sound underruns: that is the
+crackle the user hears, and it predates today's changes. **Every MAMEBENCH
+number in this page is the attract loop**, where a drawn frame costs ~22 ms; in
+play a drawn frame costs about 30 ms. Two things were wrong with the benchmark
+and are fixed: (1) no state saved in play ever loaded at boot (the Neo Geo
+state includes the core-1 sound board from the third frame; the resume loaded
+after one; fork `54120339` loads after six); (2) a state only loads in the
+firmware that wrote it (the header's fingerprint is a function address), so a
+bench build can never load a play build's save. `MAMEBENCH=2` therefore inserts
+a coin and presses START before the input script and measures mission 1 from a
+cold boot (job `125-play-mslug.sh`, `neoframes --input play` on the PC). From
+here on the target is measured in play, not in attract.
+
 Found on the way (2026-10-03): **core 1 is the limit, not core 0's own work.**
 The display task takes 12.6-14.9 ms of core 1 a frame and the sound board
 9.6-11 ms of wall time under it; whenever the display starts late core 0 has
