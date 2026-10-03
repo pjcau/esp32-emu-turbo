@@ -6,6 +6,17 @@
 #   scripts/mamebench/board_install.sh bbcf99f5 NB_LINES=16 NEOBAND=2
 set -e
 cd "$(dirname "$0")/../.."
+# One board, one console: two of these at once drive the same serial port and
+# build directory and spoil both runs (2026-10-03: twice). The lock is held for
+# the life of this process; a job script started from here inherits the mark.
+if [ -z "$BOARD_LOCK_HELD" ]; then
+    exec 9> /tmp/esp32-emu-turbo-board.lock
+    if ! flock -n 9; then
+        echo "another board job is running (lock /tmp/esp32-emu-turbo-board.lock): not starting" >&2
+        exit 75
+    fi
+    export BOARD_LOCK_HELD=1
+fi
 REV=$1; shift
 git pull --ff-only origin main
 git submodule update --init --recursive

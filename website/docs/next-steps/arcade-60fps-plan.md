@@ -525,6 +525,14 @@ around 2880, dumped one by one, say which: a regular alternation is the game.
 Lesson for the benchmark: MAMEBENCH hashes one frame in 300, the PC gates
 compare every frame.
 
+**Job 153, the run-loop trim: no measurable gain** (68000 10.83 against 10.89
+ms, core 0 25.08 against 25.12, hashes identical; the PC gate was IDENTICAL on
+five games). Reverted (fork `b485c1fd`): two loads fewer in a dozen
+instructions are inside the noise.
+
+The board scripts now take a lock (`/tmp/esp32-emu-turbo-board.lock`): twice on
+2026-10-03 two job loops ran at once on the board PC and spoiled both runs.
+
 `MAMEBENCH=3` draws every other frame (job 155): what a fixed one-in-two
 frameskip costs per pair of frames.
 
