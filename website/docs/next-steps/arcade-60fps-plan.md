@@ -594,6 +594,28 @@ task ahead of it and, to be measured, the card reads of its sample pager
 (fork `6284092f` prints them: `NEOPROF card reads/frame`). Jobs 159 and 161
 add the 16 kHz mix, all frames drawn and one in two.
 
+**Skip plus the 16 kHz mix (jobs 159 and 161, hashes exact, screen clean):**
+
+| play window | 157, skip | 159, skip + 16 kHz mix | 161, the same, one frame in two |
+|---|---|---|---|
+| core 0 | 24.31 | **22.65** | 20.15 a frame = 40.3 a pair |
+| 68000 | 7.31 | 6.63 | 7.71 |
+| video | 10.42 | 10.90 | 6.82 |
+| sound wait | 5.45 | 3.92 | 4.33 |
+| core 1 sound job (wall) | 21.76 | 19.30 | 18.41 |
+| core 1 busy | 90 % | 86 % | 93 % |
+
+The frame is 22.65 ms with every frame drawn; a drawn frame plus a skipped one
+is still 40 ms against 33.3. **The card reads are the new finding:** one
+sprite-page read every ~17 frames and one sample-page read every ~12, rare,
+but about **17 ms and 12 ms each** — a whole frame lost when one lands, on
+core 0 for the sprites and inside the sound job (so core 0 waits) for the
+samples, about 1 ms a frame each on average. A read of 8 KB at the card's
+20 MHz should take about 4 ms: the rest is to be found (job 163 times the
+seek and the read apart; `neoframes` prints the page reads of a run for given
+cache sizes, to see what larger caches would save with the ~850 KB of PSRAM
+free in play).
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
