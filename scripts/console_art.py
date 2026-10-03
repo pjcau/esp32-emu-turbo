@@ -52,6 +52,8 @@ SYSTEMS = {
     "col": ["Coleco - ColecoVision"],
     "pce": ["NEC - PC Engine - TurboGrafx 16"],
     "ngp": ["SNK - Neo Geo Pocket Color", "SNK - Neo Geo Pocket"],
+    "a26": ["Atari - 2600"],
+    "lnx": ["Atari - Lynx"],
     "doom": ["DOOM"],
     "quake": ["Quake"],
     "wolf3d": ["Wolfenstein 3D"],

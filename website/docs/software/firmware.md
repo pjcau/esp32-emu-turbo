@@ -276,6 +276,21 @@ A new system is one line in the script's `SYSTEMS` table (tab short name →
 theme folder). Imported so far: Arcade (MAME), Duke Nukem 3D (the theme's
 `pc` art), SG-1000, and the missing pieces of GBA and Neo Geo
 Pocket (the MSX art went with fMSX, removed 2026-09-29; the Atari 2600 art came back with Stella on 2026-10-03).
+OutRun (Cannonball) and Arcade 3D Racing (2026-10-03) take the theme's `mame`
+cabinet and `ports` joystick for background and logo; their banners are the
+tab name as text (`TEXT_BANNERS` in the script), in the colours of the
+Capcom CPS-1 banner, because the theme's logo would read "MAME" / "PORTS".
+
+**Game covers** (`/sd/romart/<tab>/<rom file name>.png`, 240×224 box) come from
+the [libretro thumbnails](https://thumbnails.libretro.com/) server
+(`scripts/console_art.py`, No-Intro names; Atari 2600 and Lynx added
+2026-10-03) and, for the arcade boards, from
+[ArcadeDB](http://adb.arcadeitalia.net/) (`scripts/arcade_art.py`; OutRun is
+the `outrun` set's title screen). Games the servers do not have get a
+screenshot (`console_art.py shot`: Arcade 3D Racing uses the screenshot of
+its own repository,
+[davidmonterocrespo24/esp32s3-arcade-3d](https://github.com/davidmonterocrespo24/esp32s3-arcade-3d))
+or, as a last resort, a card with the name (`console_art.py card`).
 
 ---
 
