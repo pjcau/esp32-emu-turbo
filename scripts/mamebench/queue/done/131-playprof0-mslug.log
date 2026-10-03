@@ -1,0 +1,24 @@
+Already up to date.
+Submodule path 'retro-go': checked out 'a6fd8bf5913c4c179925280a7484209d274e0053'
+hashes 300:d26de693 600:d3eb2650 900:e8b55a05 1200:3b8c7a75 1500:90755343 1800:a8bf3428 2100:a4a362fb 2400:5d31d62c 2700:16077174 3000:85198b97 3300:9dc44355
+avg over 53: 68000 9.21 video 9.43 other 2.45 mixer 2.08 -> core0 23.25 ms
+core1 over 52: ym2610 18.56 display 10.79 ms (dma wait 1.18, 32 sends) | busy core0 99% core1 80%
+video split over 53: palette 2.03 clear 0.42 sprites 4.39 fix 0.98 rest 0.43 copy 1.18 ms
+PSRAM KB/frame: clear w 0.0 | sprites r 42.2 w<=84.4 (407 strips) | fix r 8.1 w<=8.1 (130 tiles) | copy w 10.7 | total r 50.4 w<=103.3
+
+==========================================
+  Pre-production verification
+==========================================
+
+[verify] DFA (SMT DFM) ....... RESULT: PASS — 10 passed, 0 failed
+[verify] DRC Check ............ RESULT: PASS — 0 errors, 0 warnings
+[verify] Circuit Simulation ... RESULT: PASS — 0 errors, 6 warnings
+[verify] Schematic-PCB ........ PASS
+
+[verify] All pre-production checks passed
+
+error: cannot pull with rebase: You have unstaged changes.
+error: Please commit or stash them.
+To github.com:pjcau/esp32-emu-turbo.git
+   07b031f..98f81f7  main -> main
+pushed scripts/mamebench/results/2026-10-03-play-prof-core0-mslug.txt
