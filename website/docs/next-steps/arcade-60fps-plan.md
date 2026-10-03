@@ -368,6 +368,39 @@ one step too bright. Open question the profiles answer: how much of the
 display task's 14-16 ms is CPU and how much is the LCD bus (434 x 320 x 2
 bytes at 20 MHz is 13.9 ms when every line changes).
 
+**Display step 1, measured (job 133, same play window, hashes identical,
+screen clean on 8 shots with the webcam's focus locked):**
+
+| | core 0 | sound wait | core 1 display | core 1 sound job (wall) | DMA wait |
+|---|---|---|---|---|---|
+| 125, before | 29.08 | 6.73 | 15.92 | 25.72 | 0.22 |
+| 133, new scaler | **25.12** | 2.70 | 12.55 | 21.60 | 1.45 |
+
+Four milliseconds a frame. The display task now waits for DMA buffers: the
+scaler outruns the LCD bus, so the rest of its 12.5 ms is the bus, not CPU
+(the core-1 profile gives the display about 18 % of the samples, ~4.5 ms:
+`rg_scale_line_pal12` 6.1, `rg_blend_line` + `rg_blend_pixels` 5.9,
+`source_row` 1.9, `write_lines` 1.0). Job 135 runs the bus at 25 MHz in play.
+
+**The play profiles (jobs 129 and 131, fork `a6fd8bf5`, frames 1300-2800):**
+
+- **Core 1**: the sound board is about 47 % of the samples (~12 ms a frame):
+  `FM_CALC_CH` 16.7, the Z80 about 11 (`z80snd_execute` 5.6, `neosnd_z80_rm`
+  3.1, `ROP` 2.9, `RM16` 1.3), ADPCM A and B 6.5, `YM2610UpdateOne_` 3.1, the
+  SSG 2.1, the mixer 1.1. The display about 18 %. Timers, IPC and the idle
+  hook about 17 % (mostly idle time being measured).
+- **Core 0**: `cpu_utility_ll_unstall_cpu` 21.7 (stalled or waiting),
+  **`m68ki_read_imm_16` 15.0**, `NeoMVSDrawGfx` 9.1, `neoband_walk` 3.6,
+  `neoband_draw` 2.5. The opcode fetch is one array read
+  (`READ_WORD_A(&OP_RAM[address])`, prefetch emulation is off): 15 % there is
+  time waiting for memory, the 68000 program being read through the data cache
+  (64 KB, already the largest setting, shared with everything in PSRAM). That
+  is where "half the 68000" has to come from: the program's hot pages in
+  faster or closer memory, not fewer instructions.
+
+After step 1 core 0's own work (22.4 ms: 68000 10.9, video 10.4, other 1.1)
+is the larger part of the 25.1 ms frame; the sound job is next.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
