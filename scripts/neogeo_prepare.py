@@ -42,11 +42,14 @@ def component_sources():
 
 def build(out, tool=TOOL, name="neoprep", extra_flags=()):
     """Build a tools/*.c libretro frontend with the component's sources (PC build)."""
-    objdir = os.path.join(out, "obj")
-    os.makedirs(objdir, exist_ok=True)
     srcs, defines = component_sources()
     incs = ["-I" + os.path.join(COMP, d) for d in ("src", "src/libretro", "src/libretro/libretro-common/include")]
     cflags = FLAGS + list(extra_flags) + defines + incs
+    # one object directory per set of flags: an object compiled before a define
+    # existed must not be reused (2026-10-04: i8039.c without HAS_N7751 broke the link)
+    import hashlib
+    objdir = os.path.join(out, "obj-" + hashlib.sha1(" ".join(cflags).encode()).hexdigest()[:10])
+    os.makedirs(objdir, exist_ok=True)
     # gcc writes each object's real dependencies (#included .c files too:
     # drivers/neogeo.c, m68kmame.c) and they decide what to rebuild
     def compile_one(src):
