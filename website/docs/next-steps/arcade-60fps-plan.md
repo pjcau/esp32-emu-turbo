@@ -330,6 +330,19 @@ rate), then core 0's 68000 and sprites. The sound mix moved to core 1 today
 (O1) was a gain in the attract loop and is probably a loss here: job 127
 measures it with the `neo_nomix1` switch.
 
+A/B runs on the same play benchmark, same window (hashes identical in all):
+
+| Run | core 0 | of it, sound wait | core 1 display | core 1 sound job (wall) | verdict |
+|---|---|---|---|---|---|
+| 125, reference | 29.08 | 6.73 | 15.92 | 25.72 | |
+| 127, mix back on core 0 (`neo_nomix1`) | 28.83 | 7.02 | 15.99 | 24.35 | no difference: core 1 paces the frame either way; the mix stays on core 1 |
+| display filter off (`DispFilter 0`, the user has 3 = both) | **27.16** | 4.85 | **13.99** | 23.63 | the filter costs 1.9 ms of core 1, and core 0 waits 1.9 ms less; sharper pixels |
+| scaling off | not run | | | | mame-go forces `RG_DISPLAY_SCALING_FIT` for `/neogeo/` at every boot (`mame_task`), the setting is overridden: needs a build switch |
+
+Without the filter the display task still takes 14 ms to scale 304x224 to
+434x320: about 24 CPU cycles per output pixel, with the bus idle (DMA wait
+0.19 ms). That is the next thing to open up.
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
