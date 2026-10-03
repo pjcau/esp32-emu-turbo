@@ -24,6 +24,12 @@ COMP = os.path.join(ROOT, "retro-go", "mame-go", "components", "mame2000")
 TOOL = os.path.join(ROOT, "retro-go", "mame-go", "tools", "neoprep.c")
 FLAGS = ("-O2 -w -fsigned-char -fcommon -DALIGN_INTS -DALIGN_SHORTS -DMAME_UNDERCLOCK -DMAME_FASTSOUND "
          "-DBIGCASE -D__LIBRETRO__ -DLSB_FIRST -DMAMEGO").split()
+# A save state holds function pointers of the CPU cores and is stamped with the
+# address of a function of the binary that wrote it (cpuintrf.c). A
+# position-independent executable loads at another address on every run, so
+# neoframes' --load refused every state another run had saved: fixed addresses.
+if sys.platform.startswith("linux"):
+    FLAGS += ["-fno-pie", "-no-pie"]
 
 
 def component_sources():
