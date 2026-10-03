@@ -295,3 +295,17 @@ NEOPROF ms/frame: other 1.18 68000 11.47 z80 0.00 ym2610 0.00 video 6.37 mixer 2
 NEOPROF video ms/frame: palette 1.34 clear 0.35 sprites 2.79 fix 0.55 rest 0.22 copy 1.12 | KB/frame: clear w 0.0 sprites r 26.6 w<=53.2 strips 240 fix r 4.1 w<=4.1 tiles 65 copy w 11.5
 NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 20.12 display 8.87 dmawait 1.08 sends 34 | busy core0 99% (without blit/wait) core1 94% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
 NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF ms/frame: other 1.16 68000 12.41 z80 0.00 ym2610 0.00 video 7.53 mixer 2.35 blit 0.08 out 0.01
+NEOPROF video ms/frame: palette 2.46 clear 0.42 sprites 2.61 fix 0.55 rest 0.23 copy 1.27 | KB/frame: clear w 0.0 sprites r 26.8 w<=53.7 strips 250 fix r 4.1 w<=4.1 tiles 65 copy w 14.2
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 20.84 display 10.86 dmawait 1.61 sends 47 | busy core0 99% (without blit/wait) core1 93% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF ms/frame: other 1.17 68000 12.10 z80 0.00 ym2610 0.00 video 6.24 mixer 1.57 blit 0.09 out 0.01
+NEOPROF video ms/frame: palette 1.49 clear 0.35 sprites 2.55 fix 0.55 rest 0.22 copy 1.08 | KB/frame: clear w 0.0 sprites r 26.9 w<=53.8 strips 246 fix r 4.1 w<=4.1 tiles 65 copy w 11.4
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 19.43 display 9.63 dmawait 1.25 sends 39 | busy core0 99% (without blit/wait) core1 93% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+MAMEBENCH frames 2700 hash 16077174
+NEOPROF ms/frame: other 1.20 68000 11.46 z80 0.00 ym2610 0.00 video 6.37 mixer 1.54 blit 0.08 out 0.01
+NEOPROF video ms/frame: palette 1.54 clear 0.39 sprites 2.33 fix 0.58 rest 0.25 copy 1.28 | KB/frame: clear w 0.0 sprites r 26.8 w<=53.6 strips 244 fix r 4.1 w<=4.1 tiles 65 copy w 13.1
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 19.30 display 9.53 dmawait 1.17 sends 39 | busy core0 99% (without blit/wait) core1 96% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+T        m00CTLsdesrm34[eu]SAK57,HA:+7 562,BS:0% P:9(:4R:)BT0
