@@ -519,6 +519,9 @@ there are pens (`PALSHORT total: 0 frames short of pens`). What is left: the
 game's own picture (a flash that alternates white and black frames is a common
 arcade effect) or an emulation fault in the sprite's palette. The frames
 around 2880, dumped one by one, say which: a regular alternation is the game.
+**Result: the game's own effect.** Frames 2880-2881 black, 2882-2883 white
+(the game updates every second frame), then a smaller dark-then-bright pair at
+2896-2899: a black-then-white flash at each explosion. Closed, nothing to fix.
 Lesson for the benchmark: MAMEBENCH hashes one frame in 300, the PC gates
 compare every frame.
 
