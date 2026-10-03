@@ -447,9 +447,13 @@ A user-visible trade, to be decided by the user from the numbers.
 to 20 MHz for good (0.45 ms does not pay for running the ILI9488 outside its
 datasheet; the baseline for every later comparison is job 133, 25.12 ms). The
 next lever is the sound board's cost through the output rate: the chips render
-at the output rate, so 24 kHz and 16 kHz are measured (jobs 145 and 147,
-`AUDIO_HZ`, 32 kHz today) on a 28 mm speaker that does not reproduce the top
-octave anyway. The near target is a fixed one-in-two frameskip at full game
+at the rate the core is given. **The speaker's rate stays 32000 Hz**, the
+project's rule since 2026-09-26 (at other output rates the PDM driver's
+clocks misbehave: the volume ignored at 22050, crackle in other apps), so the
+measurement is `AUDIO_MIX_HZ=16000`: the chips render at 16 kHz and the
+samples are doubled, with the midpoint interpolated, on the way out, as DOOM,
+Duke Nukem 3D and the Neo Geo Pocket already do (job 149; the two jobs that
+changed the output rate were withdrawn before they ran). The near target is a fixed one-in-two frameskip at full game
 speed (30 even frames a second): a drawn frame plus a skipped one must fit
 33.3 ms, and today they take about 37.
 
