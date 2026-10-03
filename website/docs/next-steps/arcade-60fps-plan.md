@@ -30,12 +30,14 @@ measured on the board, playing the game, every frame drawn (the play benchmark,
 | Street Fighter II CE (CPS1) | 27 → 31 | 32.7 → 27.8 | 8.3 → 3.6 | video 19 ms; core 1 at 29 % |
 
 :::caution The two CPS1 rows are not play
-Found on 2026-10-04: the CPS1 does not take the play script's 6-frame coin and
-START. Final Fight stayed in its intro story and Street Fighter II on its title
-screen with one credit, in the "before" run and in the "after" run alike. The
-rows compare like with like, but on screens where the game mostly waits, which
-is where the idle-turn skip gains most. The play figures need `MAMEBENCH=4`
-(30-frame presses, given twice) and are being measured.
+Found on 2026-10-04: the play script's coin and START came too early for the
+CPS1. Final Fight reads no coin before about frame 800 (its WARNING screen),
+and Street Fighter II's title ignores START until about frame 900. Final Fight
+stayed in its intro story and Street Fighter II on its title screen with one
+credit, in the "before" run and in the "after" run alike. The rows compare
+like with like, but on screens where the game mostly waits, which is where the
+idle-turn skip gains most. The play figures need `MAMEBENCH=4` (coin and START
+given a second time, later) and are being measured.
 :::
 
 With the automatic frameskip the games run at or near full speed and show
@@ -131,9 +133,14 @@ Two things were added for the user the same evening:
 Added to the open defects: the SF2 saves above; Mega Drive sound was not
 confirmed by the microphone (quiet title screen). Final Fight, Street Fighter II
 and Ghouls'n Ghosts do not take the play script's coin and START: explained on
-2026-10-04 (the CPS1 needs presses of about 30 frames, and Ghouls'n Ghosts is
-still in its RAM test at frame 600), fixed by the `MAMEBENCH=4` script. Whether
-a quick tap by hand can be missed the same way is being measured.
+2026-10-04. The length of the press is not the cause (a 4-frame press is taken);
+the presses came before the game reads its inputs (Final Fight's WARNING
+screen, Street Fighter II's title for its first seconds, Ghouls'n Ghosts' RAM
+test). The `MAMEBENCH=4` script presses again later. A tap by hand once the
+title is up is taken, so nothing changes in the input code. The SF2 saves are
+fixed (fork `a90c42f0`: the state buffer is lent by the scroll-2 cache), checked
+in play on SF2 CE and SF2 HF; SF2 logs two "Surface allocation failed" at start
+under PSRAM pressure, picture right, still to look at.
 
 How to work on it: `scripts/mamebench/README.md` (the run options, the switch
 files, the PC gates). The rule that paid every time: measure in play before
