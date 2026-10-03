@@ -36,7 +36,8 @@ if [ -z "$BIN" ]; then
     exit 1
 fi
 if grep -a -q "MAMEBENCH frames" "$BIN"; then
-    echo "$BIN is a BENCH build (it ignores the gamepad): not installing. Delete retro-go/mame-go/build and run again" >&2
+    echo "$BIN is a BENCH build (it ignores the gamepad): not installing. The build directory belongs to root (Docker): clean it in the container and run again:" >&2
+    echo "  docker compose -f docker-compose.retro-go.yml run --rm retro-go-build sh -c 'rm -rf mame-go/build'" >&2
     exit 1
 fi
 python3 scripts/sd_update.py --console mame-go 2>&1 | grep -E "Error|error|put done" | head -2
