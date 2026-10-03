@@ -44,7 +44,7 @@ test ROMs and fixes are in
 | pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | ✅ 60 fps, BUSY 33–43%, 30 drawn |
 | gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 59.4 fps, BUSY 94%, 29 drawn (YM2612 on core 1) |
 | RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps, BUSY 93–99%, ~29 drawn |
-| ~~Stella~~ | Atari 2600 | — | — | removed 2026-09-29: not needed |
+| Stella | Atari 2600 | 160x192 | — | ✅ 60 fps, BUSY 68% (Halo 2600, 2026-10-03). Removed 2026-09-29, brought back 2026-10-03 with its cartridge database cut to fit `retro-extra` |
 | ~~fMSX~~ | MSX | — | — | removed 2026-09-29: not needed; its partition went to GBA (`gbsp`) |
 | mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
 | mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 13 games 43–60 fps in attract (2026-09-29); Metal Slug 2 (49 MB) ~42–46 in play — see [Neo Geo, prefetch off](/docs/next-steps/arcade#neo-geo-with-the-68000-prefetch-off-2026-09-29) |
@@ -57,7 +57,7 @@ test ROMs and fixes are in
 | opentyrian-go | OpenTyrian (Tyrian 2.1 freeware) | 320x200 | — | ✅ 36 fps (engine rate 35), BUSY ~30% |
 | duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1 |
 | quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ runs, 21–44 fps (mostly 25–35) in the attract demo |
-| ~~handy~~ | Atari Lynx | — | — | removed 2026-09-29: not needed |
+| handy | Atari Lynx | 160x102 | — | ⏳ untested, no ROM yet. Removed 2026-09-29, brought back 2026-10-03 |
 | ~~gw-emulator~~ | Game & Watch | — | — | removed 2026-09-29: not needed |
 
 The QEMU column is a CPU-only benchmark (6.5–10.9x headroom for the 8-bit

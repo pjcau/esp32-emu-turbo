@@ -33,6 +33,8 @@ GAMES = [
     ("doom", "prboom-go", None),
     ("sg1", "retro-core", None),
     ("ngp", "retro-extra", None),
+    ("a26", "retro-extra", None),
+    ("lnx", "retro-core", None),   # back 2026-10-03; skipped while the card has no .lnx
     ("duke3d", "duke3d-go", "/sd/roms/duke3d/DUKE3D.GRP"),  # the folder also holds .CON/.RTS/.DMO
     ("arcade", "mame-go", "/sd/roms/arcade/pacman.zip"),
     ("arcade", "mame-go", "/sd/roms/arcade/robby.zip"),

@@ -275,7 +275,7 @@ python3 tools/gen_images.py      # re-embed themes/default/*.png in launcher/mai
 A new system is one line in the script's `SYSTEMS` table (tab short name →
 theme folder). Imported so far: Arcade (MAME), Duke Nukem 3D (the theme's
 `pc` art), SG-1000, and the missing pieces of GBA and Neo Geo
-Pocket (the MSX art went with fMSX, the Atari 2600 art with Stella, both removed 2026-09-29).
+Pocket (the MSX art went with fMSX, removed 2026-09-29; the Atari 2600 art came back with Stella on 2026-10-03).
 
 ---
 
@@ -330,12 +330,12 @@ the SNES benchmark scenes and prints a comparison table;
 | 3.4 | smsplus (SMS) | Silver Valley | 60 fps | ✅ 60 fps, BUSY 35%, 55 drawn |
 | 3.5 | smsplus (GG) | Swabby | 60 fps | ✅ 60 fps, BUSY 40%, 55 drawn |
 | 3.6 | pce-go (PCE) | Reflectron / Street Fighter II' CE (2.5 MB HuCard) | 60 fps | ✅ 60 fps, BUSY 43%, 30 drawn; SF2' CE 60 fps, BUSY 33-43% (2026-09-26). Audio moved from 22050 to 32000 Hz: it crackled |
-| 3.7 | ~~handy (Lynx)~~ | — | — | removed 2026-09-29: not needed (core, launcher tab and art deleted) |
+| 3.7 | handy (Lynx, `retro-core`) | — | — | ⏳ brought back 2026-10-03 (removed 2026-09-29); untested until a real ROM is on the card |
 | 3.8 | gwenesis (Genesis) | miniplanets | 50-60 fps | ✅ 59.4 fps, BUSY 94%, 29 drawn — YM2612 synthesis on core 1; audio resampled from 26633 to 32000 Hz (2026-09-27) |
 | 3.9 | ~~gw-emulator (G&W)~~ | — | — | removed 2026-09-29: not needed (core, launcher tab and art deleted) |
 | 3.10 | smsplus (SG-1000) | GP World | 60 fps | ✅ 60 fps, BUSY 33%, 55 drawn (START is pause: `emu_check` presses none) |
 | 3.11 | RACE (Neo Geo Pocket / Color, `retro-extra`) | Metal Slug 1st Mission | 60 fps | ✅ 60 fps, ~29 drawn, BUSY 93–99%; sound chip at 16 kHz doubled to 32 kHz (2026-09-27) |
-| 3.12 | ~~Stella (Atari 2600, `retro-extra`)~~ | — | — | removed 2026-09-29: not needed (core, launcher tab and art deleted) |
+| 3.12 | Stella (Atari 2600, `retro-extra`) | Halo 2600 | 60 fps | ✅ 60 fps, BUSY 68% (2026-10-03). Brought back 2026-10-03 (removed 2026-09-29): Stella's cartridge database is cut to the 936 entries that change the emulation (`compact_props.py`, 540 KB → ~45 KB) so `retro-extra` fits its 1.25 MB partition |
 | 3.13 | duke3d-go (Duke Nukem 3D) | Duke3D 1.3D shareware `.grp` | playable | ✅ playable 2026-09-27: E1L1 48–53 fps with movement and fire, menus 73 fps, audio 16 kHz mix doubled to 32 kHz. Fixed on the way: FatFs overwritten by an ODROID-GO audio conversion, START arriving as Insert, the frame drawn into the surface being sent (broken menus), a non-volatile spin-wait hanging the level start |
 | 3.14 | mame-go (arcade, MAME 0.37b5) | Pac-Man, 1942, 1943, free mamedev.org ROMs, Blood Bros., Aero Fighters | 60 fps / native | ✅ Pac-Man, 1942, Robby Roto 60; Exidy/Circus boards 57 (native); 1943 60 emulated / 27 drawn; Blood Bros. 60, Aero Fighters 47–57 after the idle-loop speed-ups — see [Arcade (MAME)](../next-steps/arcade) |
 | 3.15 | ~~fMSX (MSX)~~ | — | — | removed 2026-09-29 (not needed): the 640 KB partition went to the GBA app `gbsp` |
