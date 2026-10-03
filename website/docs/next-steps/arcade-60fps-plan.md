@@ -300,6 +300,21 @@ a coin and presses START before the input script and measures mission 1 from a
 cold boot (job `125-play-mslug.sh`, `neoframes --input play` on the PC). From
 here on the target is measured in play, not in attract.
 
+**The sound, measured the same day** (the user's idea: the webcam's microphone
+next to the firmware's own capture, `acap`/`adump`, same play scene):
+
+| | Firmware capture (as submitted to the driver) | Microphone |
+|---|---|---|
+| game silent (volume 0) | | floor −62.3 dBFS, 0 clicks/s, mains hum at 100, 250, 50, 300 Hz |
+| in play | no run of zeros, no repeated 1/60 s block (0 of 179), no jump tied to the frame boundaries | −42.9 dBFS, **1.81 clicks/s** |
+
+The samples leave the mixer clean and the clicks exist only at the speaker in
+play: the crackle is delivery timing, the game at 50 of 60 fps feeding the PDM
+driver 17 % too slowly (8 DMA descriptors, no underrun counter in
+`drivers/audio/pdm.c`). The background noise is another thing: a steady
+50/100 Hz hum present with the volume at 0, analog, consistent with USB power
+and no battery. The crackle goes when the game holds full speed.
+
 Found on the way (2026-10-03): **core 1 is the limit, not core 0's own work.**
 The display task takes 12.6-14.9 ms of core 1 a frame and the sound board
 9.6-11 ms of wall time under it; whenever the display starts late core 0 has
