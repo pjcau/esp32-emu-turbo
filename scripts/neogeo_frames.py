@@ -4,6 +4,7 @@
     scripts/neogeo_frames.py run <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py compare <sysdir> <game.zip> <frames> [neoframes options...]
     scripts/neogeo_frames.py mix <sysdir> <game.zip> <frames> [neoframes options...]
+    scripts/neogeo_frames.py pal <sysdir> <game.zip> <frames> [neoframes options...]
 
 `run` prints the harness output. `compare` builds the harness twice, with
 NEOBAND=0 (full-frame renderer) and NEOBAND=1 (band renderer, V1 of the Arcade
@@ -11,7 +12,10 @@ NEOBAND=0 (full-frame renderer) and NEOBAND=1 (band renderer, V1 of the Arcade
 hash differs, or "IDENTICAL". `mix` runs the band build twice, with the frame's
 sound mix where it was (NEOMIX1=0, inside the YM2610 stream update) and inside
 the sound board's job (the default, core 1 on the board), and requires the same
-picture AND the same samples, with sound actually playing. <sysdir> is the MAME system directory (BIOS
+picture AND the same samples, with sound actually playing. `pal` does the same for the palette work
+of step O2: the band build with PALFAST=0 (every colour walked every frame)
+against the default with PALCHECK=1 (the palettes kept across frames, each
+frame's array checked against the full rebuild); same picture required. <sysdir> is the MAME system directory (BIOS
 `neogeo.zip` next to the game is found by mame-go itself; neospr/ files prepared
 by neogeo_prepare.py are used when present).
 
@@ -48,6 +52,31 @@ def run(exe, args, env=None, audio=None):
     return r, hashes
 
 
+def pal(args):
+    """The palette kept across frames and the sparse palette_recalc_8(): same picture."""
+    exe = build("band", ["-DNEOBAND=1"])
+    r0, h0 = run(exe, args, env={"PALFAST": "0"})
+    r1, h1 = run(exe, args, env={"PALFAST": "1", "PALCHECK": "1", "PALSTAT": "1"})
+    sys.stderr.write(r0.stderr + r1.stderr)
+    for l in r1.stdout.splitlines():
+        if l.startswith(("PALCHECK", "PALSTAT")):
+            print(l)
+    if r0.returncode or r1.returncode:
+        print("harness failed: PALFAST=0", r0.returncode, "PALFAST=1", r1.returncode); return 1
+    if not h0:
+        print("no frames hashed"); return 1
+    kept = [l for l in r1.stdout.splitlines() if l.startswith("PALCHECK ok:")]
+    if not kept or int(kept[0].split()[2]) == 0:
+        print("no frame took the kept-palette path: nothing proven"); return 1
+    bad = [n for n in sorted(h0) if h1.get(n) != h0[n]]
+    print("frames hashed", len(h0), "| picture differs on", len(bad))
+    if bad:
+        print("first difference at frame %d: %s vs %s" % (bad[0], h0[bad[0]], h1.get(bad[0])))
+        return 1
+    print("IDENTICAL")
+    return 0
+
+
 def mix(args):
     """The sound mix moved into the sound board's job: same picture, same samples."""
     exe = build("band", ["-DNEOBAND=1"])
@@ -79,11 +108,13 @@ def mix(args):
 
 
 def main():
-    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix"):
+    if len(sys.argv) < 5 or sys.argv[1] not in ("run", "compare", "mix", "pal"):
         print(__doc__); return 2
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "mix":
         return mix(args)
+    if cmd == "pal":
+        return pal(args)
     if cmd == "run":
         exe = build("full", [])
         r, _ = run(exe, args)

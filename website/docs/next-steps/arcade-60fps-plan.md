@@ -221,7 +221,20 @@ identical hashes and, for drawing changes, by the 4-game PC proof before any boa
    sprite page misses per frame on core 0 (the profile shows ~0.1 ms of
    `sdspi`, not the 0.6 the estimate assumed).
 4. **Palette**: pens of unchanged strips kept across frames, `palette_recalc`
-   dirty set: −0.8 ms.
+   dirty set: −0.8 ms. **Written 2026-10-03, job `117-o2pal-mslug.sh`.**
+   Measured first on the PC (`PALSTAT=1`, 3000 attract frames): Metal Slug
+   changes nothing on 65 % of the frames and ~25 colours in 3 of the 256
+   palettes on the others (Sonic Wings 2: 61 %, ~6 colours in 2 palettes);
+   Metal Slug 2 and KOF95 take the 16-bit palette path, not `palette_recalc_8`.
+   So: the band path keeps `palette_used_colors` across frames and rebuilds
+   only the 16-colour blocks whose pens changed (before: 4096 colours copied
+   and marked every frame), and `palette_recalc_8()` skips 8 colours at a time
+   where its four loops have nothing to do. Gate:
+   `scripts/neogeo_frames.py pal <sysdir> <rom> 3000 --input attract` (the old
+   behaviour with `PALFAST=0` against the new with every frame's array checked
+   against the full rebuild) must say IDENTICAL on the four games. Expect
+   0.4-0.6 ms off the `palette` part, not 0.8: the walk over the sprite list
+   (1.3 of the 2.2 ms) stays.
 5. **The sprite plotter again**, PC proof first (the 2026-10-02 attempt broke the
    zoomed strips): −1 ms.
 6. Reserves, only if short: the LCD bus at 25 MHz on play scenes (not the cause of
@@ -425,7 +438,8 @@ The mame-go steps live in the retro-go fork.
   | 109 | faster sprite plotter (opaque/empty words, pens on the stack) + V2i | **wrong** | | hashes not the reference ones, scrambled picture on the board; the PC proof found it at frame 133 of Metal Slug (the zoomed title letters). Reverted. Rule restated: a drawing change reaches the board only after the PC proof says IDENTICAL — the queue pulls HEAD, so the proof comes first |
   | 111 (2026-10-03) | V2i with the first-frame fix, original plotter | 22.11 | copy 1.96 | hashes identical, no hang; 68000 7.38 as hoped, but core 0 waits for or copies bands again (13.6 KB/frame) and core 1 is at 64 % (YM2610 9.39, display 12.68): no net gain over job 095 |
   | 113 (2026-10-03) | + the sound mix on core 1 (O1, fork `cbabb161`) | 21.87 (111: 22.02, same 31 samples) | copy 2.10 | PC gate IDENTICAL on the four games (picture and samples); hashes identical. The mix left core 0 (0.02 ms in calm samples, with the stream copy 1.0 before) but core 0 now waits 0.4-0.9 ms for the sound job at the frame end: the job is 0.9 ms longer and the display task (priority 6) runs before it (priority 5) on core 1. Steady samples 10-33: 23.40 → 23.04. `mbsum.py`'s 22.95 is over 40 samples, 111's 22.11 over 33: not comparable |
-  | 115 (queued) | + the sound task above the display (`NEOSND_PRIO=7`) | | | the measurement: does the wait go, and what does the delayed display cost in band copies |
+  | 115 (2026-10-03) | + the sound task above the display (`NEOSND_PRIO=7`) | 22.84 (same 31 samples) | copy 4.27 | the wait is gone (mixer 0.03) but the display starts later and the band copies more than double (14.8 → 33.5 KB a frame): +0.9 ms. Dropped; the task stays at priority 5 |
+  | 117 (queued) | O2, the palette (fork, default priority) | | | PC gate first: `neogeo_frames.py pal` |
 
   Also found: **the MAMEBENCH scene is the attract loop, not level 1** — the
   slot-0 state (519976 bytes) is 4280 bytes longer than what the current build
