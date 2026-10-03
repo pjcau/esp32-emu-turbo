@@ -352,6 +352,22 @@ each have to give another millisecond or two. First step: sampling profiles of
 both cores in the play window (jobs 129 and 131, `MAMEPROF` with `MAMEBENCH=2`
 samples frames 1300-2800), then the display task's inner loops.
 
+**Display, step 1 (2026-10-03, fork `a6fd8bf5`, job `133-play-scaler-mslug.sh`).**
+The palette scaler's loop compiled to about 35 instructions per source pixel
+(two nested loops, five or six branches, the palette pointer reloaded every
+pixel); `rg_display.c` is already built `-O2`, so it is the loop's shape, not
+the compiler. For upscales between 1x and 2x (the Neo Geo's 304 → 434, the
+CPS1's 384 → 480) `rg_scale_line_pal12` stores each pixel twice and moves the
+pointer by its repeat count, unrolled by four, no test per pixel; the vertical
+filter blends two pixels per 32-bit word (`rg_blend_line`). Proven on the PC
+by `components/retro-go/test/run_scale_line_test.sh` (same output as the map
+loop, nothing written past the line; mutation-checked). Also fixed there:
+`rg_blend_pixels` left the pixels' high byte in bits 16-23 after its swaps and
+OR-ed it back, so every blended pixel had its low green bits and blue up to
+one step too bright. Open question the profiles answer: how much of the
+display task's 14-16 ms is CPU and how much is the LCD bus (434 x 320 x 2
+bytes at 20 MHz is 13.9 ms when every line changes).
+
 **The sound, measured the same day** (the user's idea: the webcam's microphone
 next to the firmware's own capture, `acap`/`adump`, same play scene):
 
