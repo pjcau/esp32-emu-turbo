@@ -7,7 +7,7 @@ set -e
 cd "$(dirname "$0")/../.."
 STEP=$1; GAME=$2; SECS=${3:-70}; JIT=${4:-0}
 [ -n "$STEP" ] && [ -n "$GAME" ] || { echo "usage: $0 <step> <rom-name> [secs] [JIT]"; exit 1; }
-git pull --ff-only
+git pull --ff-only origin main
 git submodule update --init --recursive
 OUT=scripts/mamebench/results/$(date +%F)-$STEP-$GAME.txt
 scripts/mamebench/mamebench.sh "$JIT" /sd/roms/neogeo/$GAME.zip "$SECS" > "$OUT"
@@ -16,6 +16,6 @@ git add "$OUT"
 git commit -q -m "mamebench: $STEP run on $GAME ($(git -C retro-go rev-parse --short HEAD))
 
 $(scripts/mamebench/mbsum.py "$OUT")"
-git pull --rebase -q || true    # the development machine pushes too: rebase, then push
+git pull --rebase -q origin main || true    # the development machine pushes too: rebase, then push
 git push
 echo "pushed $OUT"

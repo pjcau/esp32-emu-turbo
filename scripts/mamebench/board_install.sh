@@ -7,7 +7,7 @@
 set -e
 cd "$(dirname "$0")/../.."
 REV=$1; shift
-git pull --ff-only
+git pull --ff-only origin main
 git submodule update --init --recursive
 git -C retro-go fetch -q origin
 git -C retro-go checkout -q "$REV"

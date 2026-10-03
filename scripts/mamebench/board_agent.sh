@@ -8,7 +8,7 @@
 #   /loop 3m run scripts/mamebench/board_agent.sh and show me its last 15 lines
 set -e
 cd "$(dirname "$0")/../.."
-git pull --ff-only -q
+git pull --ff-only -q origin main
 git submodule update --init --recursive -q
 Q=scripts/mamebench/queue
 for job in $(ls $Q/*.sh 2>/dev/null | sort); do
@@ -22,7 +22,7 @@ for job in $(ls $Q/*.sh 2>/dev/null | sort); do
     git commit -q -m "board: job $name $status
 
 $(tail -8 "$log")"
-    git pull --rebase -q || true
+    git pull --rebase -q origin main || true
     git push -q
     echo "=== job $name: $status, pushed"
 done
