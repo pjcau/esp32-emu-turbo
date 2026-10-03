@@ -512,10 +512,13 @@ per-frame array check, so the palette change is not it; and of the frames
 dumped through the helicopter scene only frame 2880 has it: the explosion's
 flash, a white disc in frames 2440, 3240, 3360 and 3400, is drawn solid black
 there, byte for byte the same in the full-frame build, the band build, the
-harness from before the palette work and with `PALFAST=0`. A defect that was
-already there, probably MAME 0.37b5's 8-bit palette out of its 256 pens on a
-frame with many colours (not yet proven: to confirm, count the colours that
-frame asks for). Open as a picture bug of its own, apart from the speed work.
+harness from before the palette work and with `PALFAST=0`. Not today's work,
+then. The first guess, MAME 0.37b5's 8-bit palette out of its 256 pens, was
+measured and is wrong: over the whole run no frame asks for more colours than
+there are pens (`PALSHORT total: 0 frames short of pens`). What is left: the
+game's own picture (a flash that alternates white and black frames is a common
+arcade effect) or an emulation fault in the sprite's palette. The frames
+around 2880, dumped one by one, say which: a regular alternation is the game.
 Lesson for the benchmark: MAMEBENCH hashes one frame in 300, the PC gates
 compare every frame.
 
