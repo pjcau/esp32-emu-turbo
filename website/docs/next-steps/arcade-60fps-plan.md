@@ -533,6 +533,17 @@ instructions are inside the noise.
 The board scripts now take a lock (`/tmp/esp32-emu-turbo-board.lock`): twice on
 2026-10-03 two job loops ran at once on the board PC and spoiled both runs.
 
+**Job 155, one frame in two drawn (16 kHz mix, 68000 clock −20 %), play
+window:** core 0 averages 19.20 ms a frame, so a drawn frame plus a skipped one
+take **38.4 ms against the 33.3 needed** for full game speed at 30 drawn
+frames. Per frame: 68000 9.12, video 6.65, other 1.32, sound wait 2.09; core 1
+92 % busy, and it sends a whole screen for every drawn frame (81 buffers: after
+a skipped frame every line has changed). Skipping does not halve the video:
+its average only falls from 10.3 to 6.65 ms, so the drawn frames cost about
+13 ms each here against 10.3 when every frame is drawn. Five milliseconds a
+pair are still missing; they are in the 68000 (18 ms a pair), the sound wait
+(4 ms a pair) and the dearer drawn frames.
+
 `MAMEBENCH=3` draws every other frame (job 155): what a fixed one-in-two
 frameskip costs per pair of frames.
 
