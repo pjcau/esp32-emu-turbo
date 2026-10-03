@@ -19,6 +19,7 @@ Environment of `mamebench.sh` / `board_run.sh` (each becomes a build option of
 | Variable | Meaning |
 |---|---|
 | `MAMEBENCH=2` | **the play benchmark**: the script inserts a coin, presses START and plays mission 1 (frames 1200 to ~3450 on Metal Slug). Use with `RESUME=0`. `1` (the default) only watches the attract loop: a save state cannot be used, it loads only in the firmware that wrote it |
+| `MAMEBENCH=4` | **the play benchmark for CPS1 games**: 30-frame coin at 600 and 1500, 30-frame START at 900 and 1800, the script from 1900 (`--input play2` on the PC). `MAMEBENCH=2`'s 6-frame presses are not taken by the CPS1: Final Fight ignores the coin, Street Fighter II the START, and Ghouls'n Ghosts is still in its RAM test at frame 600, so every CPS1 "play" figure taken with `2` before 2026-10-04 is the intro or the title screen |
 | `MAMEBENCH=3` | the play benchmark with every other frame not drawn (a fixed one-in-two frameskip): twice the per-frame average is a drawn frame plus a skipped one |
 | `MAMEPROF=1` / `core1` | sampling profiler of core 0 / core 1; with `MAMEBENCH>=2` it samples frames 1300-2800 |
 | `NEOBAND=2 NB_LINES=16 LCD_BUFS=3 BAND_INTERNAL=3` | the band renderer handed to the display, as the play build has it |
