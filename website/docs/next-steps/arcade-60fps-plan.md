@@ -29,6 +29,15 @@ measured on the board, playing the game, every frame drawn (the play benchmark,
 | Final Fight (CPS1) | 28 → 30.5 | 31.2 → 28.0 | 7.4 → 2.7 | video 17 ms plus 5 ms of output, all on core 0; core 1 at 42 % |
 | Street Fighter II CE (CPS1) | 27 → 31 | 32.7 → 27.8 | 8.3 → 3.6 | video 19 ms; core 1 at 29 % |
 
+:::caution The two CPS1 rows are not play
+Found on 2026-10-04: the CPS1 does not take the play script's 6-frame coin and
+START. Final Fight stayed in its intro story and Street Fighter II on its title
+screen with one credit, in the "before" run and in the "after" run alike. The
+rows compare like with like, but on screens where the game mostly waits, which
+is where the idle-turn skip gains most. The play figures need `MAMEBENCH=4`
+(30-frame presses, given twice) and are being measured.
+:::
+
 With the automatic frameskip the games run at or near full speed and show
 about a third of the frames; a fixed one-in-two frameskip at full speed needs a
 drawn frame plus a skipped one in 33.3 ms, and Metal Slug takes 39.8.
@@ -119,10 +128,12 @@ Two things were added for the user the same evening:
   string `MAMEBENCH frames`), and the rule is to hand the board over only on a
   build installed by that script and checked with a key press.
 
-Added to the open defects: the SF2 saves above; Final Fight, Ghouls'n Ghosts
-and Knights of the Round do not take the scripted coin and START (console and
-PC harness alike), so their play figures are still missing; Mega Drive sound
-was not confirmed by the microphone (quiet title screen).
+Added to the open defects: the SF2 saves above; Mega Drive sound was not
+confirmed by the microphone (quiet title screen). Final Fight, Street Fighter II
+and Ghouls'n Ghosts do not take the play script's coin and START: explained on
+2026-10-04 (the CPS1 needs presses of about 30 frames, and Ghouls'n Ghosts is
+still in its RAM test at frame 600), fixed by the `MAMEBENCH=4` script. Whether
+a quick tap by hand can be missed the same way is being measured.
 
 How to work on it: `scripts/mamebench/README.md` (the run options, the switch
 files, the PC gates). The rule that paid every time: measure in play before
@@ -861,7 +872,9 @@ count of the frames really run per second):**
 | Final Fight (CPS1) | 31.2 → 28.0 | 7.4 → **2.7** | 16.7 → 17.4 | 27.8 → 30.5 |
 | Street Fighter II CE (CPS1) | 32.7 → 27.8 | 8.3 → **3.6** | 20.2 → 19.2 | 27.1 → 31.2 |
 
-(Metal Slug's "before" FPS is 1000 / 29.2; that run did not keep the line.)
+(Metal Slug's "before" FPS is 1000 / 29.2; that run did not keep the line.
+The two CPS1 rows are the intro and the title screen, not play: see the
+caution under the table at the top of this page.)
 Metal Slug with one frame in two drawn: 20.0 ms a frame, 49.8 frames run a
 second, 25 drawn.
 
