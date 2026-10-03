@@ -17,7 +17,7 @@ for the full list.
 | Atari 2600 (Stella) | ✅ 60 fps, 68% busy (Halo 2600, 2026-10-03) | brought back 2026-10-03 after the 2026-09-29 removal |
 | Duke Nukem 3D | ✅ playable, 48–53 fps in E1L1, menus 73 fps | four fixes: an ODROID-GO audio conversion overwrote FatFs (crash), keypad names aliased RETURN (no menu input), the game drew into the frame being sent (broken menus), a non-volatile spin-wait hung the level start; audio moved to 32 kHz |
 | ~~MSX (fMSX)~~ | removed 2026-09-29 | not needed; the partition went to GBA (`gbsp`) |
-| Atari Lynx (Handy) | still untested | brought back 2026-10-03; needs a real `.lnx` ROM on the card |
+| Atari Lynx (Handy) | ✅ 56-60 fps on 5 PD demos (2026-10-03) | brought back 2026-10-03; BS93 loader and silent-frame divide by zero fixed |
 | ~~Game & Watch~~ | removed 2026-09-29: not needed | core, launcher tab and art deleted |
 
 ## Known bugs

@@ -57,7 +57,7 @@ test ROMs and fixes are in
 | opentyrian-go | OpenTyrian (Tyrian 2.1 freeware) | 320x200 | — | ✅ 36 fps (engine rate 35), BUSY ~30% |
 | duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1 |
 | quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ runs, 21–44 fps (mostly 25–35) in the attract demo |
-| handy | Atari Lynx | 160x102 | — | ⏳ untested, no ROM yet. Removed 2026-09-29, brought back 2026-10-03 |
+| handy | Atari Lynx | 160x102 | — | ✅ 56-60 fps on 5 PD demos (2026-10-03, after fixing the BS93 homebrew loader and a divide by zero on silent frames). Removed 2026-09-29, brought back 2026-10-03 |
 | ~~gw-emulator~~ | Game & Watch | — | — | removed 2026-09-29: not needed |
 
 The QEMU column is a CPU-only benchmark (6.5–10.9x headroom for the 8-bit
