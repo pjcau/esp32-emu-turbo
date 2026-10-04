@@ -50,7 +50,7 @@ test ROMs and fixes are in
 | ~~fMSX~~ | MSX | — | — | removed 2026-09-29: not needed; its partition went to GBA (`gbsp`) |
 | mame-go (MAME 0.37b5) | Arcade (8-bit boards, 68000 boards) | various | — | ✅ Pac-Man / 1942 / Blood Bros. 60 fps; Aero Fighters 47–57 — see [Arcade](/docs/next-steps/arcade) |
 | mame-go (Neo Geo driver) | Neo Geo MVS (sprites paged from the SD) | 304x224 | — | 🟡 Metal Slug in play: 58 game frames a second, 19 drawn (2026-10-03); every frame drawn: 44 fps. Metal Slug 2 ~42–46 in play (2026-09-28) — see the [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
-| mame-go (CPS1 driver) | Capcom CPS1 | 384x224 | — | 🟡 in play with every frame drawn: Final Fight 23, SF2 CE 22 fps (2026-10-04); with the frameskip the game runs near full speed and shows about 20 frames a second. The frame is 24 ms of video — see the [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
+| mame-go (CPS1 driver) | Capcom CPS1 | 384x224 | — | 🟡 in play: Final Fight 55 fps (18 drawn), SF2 CE 46 (15 drawn) (2026-10-04); with every frame drawn 34 and 28 fps — see the [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
 | gbsp (gpSP, Xtensa dynarec) | Game Boy Advance | 240x160 | — | ✅ 56–60 fps in play, 60 of 60 drawn at 30% busy on a title screen (2026-10-03); Mario Kart 44–51 — see [GBA dynarec](/docs/software/gba-dynarec) |
 | snes9x | **SNES / Super Famicom** | 256x224 | 556 fps CPU (9.3x) | ✅ 60 emulated fps on every test scene; Donkey Kong Country 60 fps, 28.5 drawn, BUSY 80% (2026-10-04); Super Mario Kart 57–62, mostly 60 (S-DSP on core 1) |
 | snes9x + SuperFX | SNES Star Fox | 256x224 | — | ✅ 53–60 emulated fps, 7–10 drawn (GSU on core 1) |
@@ -61,8 +61,8 @@ test ROMs and fixes are in
 | quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ 34–41 fps in the attract demo, every frame drawn, BUSY 100% (2026-10-03) |
 | handy | Atari Lynx | 160x102 | — | ✅ 56-60 fps on 5 PD demos (2026-10-03, after fixing the BS93 homebrew loader and a divide by zero on silent frames). Removed 2026-09-29, brought back 2026-10-03 |
 | cannonball | OutRun (Cannonball engine, native) | 320x224 | — | ✅ 30 fps, the engine's own rate, every frame drawn, BUSY 35–44% (2026-10-04); needs the OutRun rev. B ROM files |
-| arcade3d (in `retro-extra`) | Arcade 3D Racing (native OutRun-style game) | 320x240 | — | 🟡 starts, 23–36 fps on its start screen at BUSY 100% (2026-10-04); the race itself not checked yet |
-| mame-go (System 16 driver) | Sega System 16 (Shinobi, Golden Axe, Altered Beast…) | 320x224 | — | ❔ compiled in, never run: no ROM set at hand (2026-10-04) |
+| arcade3d (in `retro-extra`) | Arcade 3D Racing (native OutRun-style game) | 320x240 | — | ✅ 35–71 fps, mostly 47–64 (2026-10-04); steering, brake and menu work; BUSY 100% (it runs as fast as it can) |
+| mame-go (System 16 driver) | Sega System 16 (Golden Axe, Alien Syndrome, Wonder Boy III…) | 320x224 | — | 🟡 Golden Axe 50 fps in play (17 drawn), Alien Syndrome 48, Wonder Boy III 45; picture and sound right (2026-10-04, first runs of the driver). Shinobi and Altered Beast not tried |
 | ~~gw-emulator~~ | Game & Watch | — | — | removed 2026-09-29: not needed |
 
 **What "60 fps" means here.** Every 8-bit and 16-bit console core runs its

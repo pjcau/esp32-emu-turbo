@@ -16,6 +16,50 @@ Neo Geo steps every Neo Geo game. Metal Slug is only the reference benchmark.
 Related pages: [Arcade (MAME)](arcade.md), [JIT (dynarec) plan](jit-plan.md),
 [68000 dynarec](../software/m68k-dynarec.md).
 
+## Summary (close of 2026-10-04)
+
+**The goal of this plan, 60 drawn frames a second with no frameskip, is not
+reached on any 68000 arcade game, and on this hardware it is not in sight for
+most of them.** What was reached is the game running at or near full speed
+while a third of its frames is drawn.
+
+| Game | Every frame drawn: core 0 ms a frame (16.7 needed) | In play with the frameskip: game fps / drawn |
+|---|---|---|
+| Metal Slug (Neo Geo) | 29.2 → 22.4 | 58 / 20-21 |
+| Metal Slug 2 (Neo Geo, raster) | 36.2 → 33.5 | 46 / 15-16 |
+| Final Fight (CPS1) | 40.1 → 29.5 | 55 / 18 |
+| Street Fighter II CE (CPS1) | 38.9 → 36.1 | 46 / 15 |
+| Golden Axe (System 16, new) | not measured | 50 / 17 |
+
+The intermediate objective set on 2026-10-03, halving the 68000 and the
+display time in play: the 68000 came down by a third (Metal Slug 10.8 → 7.0 ms,
+Final Fight 9.7 → 6.8), not by half; the display's CPU work came down with the
+branch-free scaler, the LCD bus stays at its 20 MHz.
+
+What it would take from here, as far as the measurements say:
+
+- **Metal Slug** is 6 ms from 60 drawn frames, with 10 ms of video on core 0
+  and 7 ms of 68000. No measured lead gives that.
+- **The CPS1 and the raster Neo Geo games** are at twice the frame budget. The
+  one large move left for the CPS1 is its whole renderer on core 1, which is
+  half idle; estimated at about 25 drawn frames a second, not 60, and it is a
+  large and risky change.
+- **The realistic target on this board** is the game always at full speed
+  (60 frames of logic a second, clean sound) with 20 to 30 drawn. Metal Slug
+  and Final Fight are nearly there; Street Fighter II, Metal Slug 2 and the
+  System 16 games still run at 45 to 50.
+
+What the two days added besides speed: Sega System 16 in `mame-go` (Golden
+Axe, Alien Syndrome and Wonder Boy III run), OutRun through Cannonball, Arcade
+3D Racing, a loading percentage everywhere, SD reads about twice as fast for
+the large console games, the launch times explained (a change of arcade game
+rewrites the 4 MB flash cache: 20 to 28 s, against 9 to 13 s for the same game
+again). A module with 32 MB of flash would remove both the cache rewrite and
+the lack of room for apps (64 KB left); see
+[Remediation: hardware](/docs/remediation/hardware) for the respin list.
+
+The sections below are the day-by-day record, newest first.
+
 ## Where we stand (close of 2026-10-03)
 
 **60 frames a second is not reached on any 68000 arcade game.** What is
@@ -298,10 +342,31 @@ barely move: their time is inflating the zips and, on the Neo Geo, elsewhere
 same drawn frames a second as the frame-by-frame decision on five games, so it
 is off (file `skip_even`).
 
+**Sega System 16, first runs** (the user's sets, late on 2026-10-04):
+
+| Set | Loads as | In play, fps avg / min | Drawn | Sound | Internal heap |
+|---|---|---|---|---|---|
+| `goldnaxe.zip` | Golden Axe (Version 2), 13 of 13 ROMs by CRC | 50.1 / 37 | 16.7 | right, quiet | 31 KB, flat |
+| `aliensyn.zip` | Alien Syndrome | 47.9 / 40 | 16.0 | right | 31 KB |
+| `wb3.zip` | Wonder Boy III | 44.7 / 41 | 14.9 | right | 31 KB |
+| `fantzn2x.zip` | not supported: a 2008 System 16C conversion, not in MAME 0.37b5 | | | | |
+
+Picture, coin and START right on the three. BUSY 100 % in play: the driver was
+ported, not tuned. The CPS1's exact idle-code skips are enabled for it (fork
+`72a7e789`, I/O window 0xc40000, file `sys16_noturn` to turn them off); their
+PC gate and board figures were being taken when the session closed.
+
+**The arcade launch times, explained.** Warm (the same game again): Metal Slug
+9.0 s, Metal Slug 2 11.2 s, Street Fighter II 13.1 s, Final Fight 9.1 s. Cold
+(another arcade game was played before): 20 to 28 s, of which up to 15 s is
+the flash cache being rewritten at about 215 KB/s; it holds one game. The
+screen now says "game cache NN%" during that write.
+
 ### Resume checklist (open at the close of 2026-10-04, second session)
 
-1. **System 16** has never run a game: needs a MAME 0.37b5 set (`shinobi.zip`,
-   `goldnaxe.zip`, …) in `/sd/roms/arcade/`, from the user.
+1. **System 16**: finish the gate of the idle skips per game (`turn` on the PC
+   harness), then a play profile of Golden Axe to see where its frame goes.
+   Shinobi and Altered Beast have not been tried (no set at hand).
 2. **The CPS1's drawn frames** are bounded by the display side (scaler and LCD
    bus on core 1, about 18 a second at full game speed): the next gain for
    what the eye sees is there, not on core 0.
