@@ -14,7 +14,7 @@ the current console is under [Remediation](/docs/remediation).
 
 | Topic | State |
 |:---|:---|
-| Console emulators | NES, GB/GBC, Master System, Game Gear, PC Engine, Mega Drive, SNES, Neo Geo Pocket, Atari 2600 and Lynx run at full speed (56–60 fps); the GBA at 56–60 in play on its dynarec. Table: [Software overview](/docs/software/overview) |
+| Console emulators | NES, GB/GBC, Master System, Game Gear, PC Engine, Mega Drive, SNES, Neo Geo Pocket, Atari 2600 and Lynx run at full speed (56–60 fps); the GBA at 56–60 in play on its dynarec. Table: [Software overview](/docs/software) |
 | Arcade (`mame-go`) | 8-bit boards at full speed; Neo Geo, CPS1 and Sega System 16 near full speed with a third of the frames drawn: [Arcade (MAME)](/docs/next-steps/arcade) |
 | 60 drawn frames on the 68000 arcade games | **not reached, not in sight on this hardware**; work stopped on 2026-10-04: [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
 | JIT | GBA finished and in use; 68000 finished, exact and switched off (slower than the interpreter): [JIT plan](/docs/next-steps/jit-plan) |
