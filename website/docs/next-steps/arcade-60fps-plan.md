@@ -208,48 +208,89 @@ Judged out of reach, by reasoning from the measured 68000 cost and not by
 trying: the 32X and the Saturn (two SH-2 each), OutRunners (System 32, V60),
 and the arcade OutRun through MAME (two 68000, which is why Cannonball).
 
-### Resume checklist (left open at the close of 2026-10-04)
+### The checklist worked through (2026-10-04, second session)
 
-On the board when it was switched off: every app from the fork at `8f76577d`
-(launcher with the OutRun and Arcade 3D tab art; `mame-go` with the System 16
-driver; `retro-extra` with Arcade 3D Racing), all 20 new covers on the card (a26 5, gg 6, ngp 7, OutRun 1, Arcade 3D 1).
+On the board: `mame-go` from fork `88491b7e`, `retro-extra` from `663a83ca`,
+`cannonball` from `7a35838a`, the launcher from `8f76577d`.
 
-To check first, none of it seen on screen yet:
+**CPS1 video, from a profile of play** (`MAMEBENCH=4 MAMEPROF=1`, sf2ce and
+ffight). Core 0 was 39 to 40 ms a frame: the frame's two clears 17 to 18 %,
+the conversion and copy of the frame to the display 10 to 21 %, the layers and
+sprites 25 to 35 %, the 68000 5 ms. Core 1 is half idle (FM synthesis 26 %,
+scaler 14 %).
 
-1. The tab art of "OutRun (Cannonball)" and "Arcade 3D Racing" in the launcher
-   (the user saw them black before the install; not confirmed after it).
-2. **Arcade 3D Racing**: the race picture, steering (LEFT/RIGHT), brake (B),
-   MENU. Its start screen is right; it runs at 23 to 36 frames a second with
-   the CPU full, so speed is the first thing to improve if the user keeps it.
-3. `retro-extra` after Arcade 3D went in: one Atari 2600 and one Neo Geo
-   Pocket game still start.
-4. Covers for the 5 Lynx demos: screenshots taken on the board (`board_ctl.py raw "shot /sd/...png"`), the thumbnail server has none.
-5. OutRun (Cannonball): brake (B) and gears (X/Y), by hand.
+| Change | SF2 CE, core 0 ms | Final Fight, core 0 ms |
+|---|---|---|
+| before | 38.9 | 40.1 |
+| clears cut to the visible 384x224 (was the whole 448x320 bitmap, twice) | 36.1 | 37.9 |
+| and the 8-bit frame handed to the display task (the Neo Geo's path) | no room: stays as is | 29.5 |
 
-Needs something from the user:
+Pictures identical on the PC harness (four games, 4000 frames of play). In
+play with the frameskip, Final Fight goes from 48.6 to 55.3 game frames a
+second and from 16.2 to 18.4 drawn: the game reaches full speed, the drawn
+frames are bounded by the display side. The hand-over is on by default for the
+8-bit CPS1 games; Street Fighter II has no room for the second bitmap and
+falls back by itself; the 16-bit ones (Knights of the Round: 19.5 to 22 drawn
+on its intro) need the file `cps1_indexed`. "No clear when scroll 2 is the
+bottom layer" never applies in play on these games.
 
-6. **System 16** has never run a game: a MAME 0.37b5 set (`shinobi.zip`,
-   `goldnaxe.zip`, …) in `/sd/roms/arcade/`. Then PC harness first, board
-   after.
-7. Game Gear "GG Aleste 3": runs at 60 with a black screen (smsplus), not
-   investigated.
+Also found there: a CPS1 launch of the same game twice writes nothing to the
+flash cache (Street Fighter II 15 s, 8.4 s of them decoding tiles; Final Fight
+10 s); the 28 s measured before was a launch after another game. The two
+"Surface allocation failed" lines of Street Fighter II are its display falling
+back to the core's own frame buffer for lack of PSRAM, not a defect.
 
-Open leads, in the order of what they would give:
+**Screenshots in `mame-go`.** On the indexed path the screenshot read a buffer
+that path never writes (fixed: it takes the frame shown), then showed
+half-cleared rows on moving scenes (fixed: the frame is copied at the
+emulator's frame boundary and the file written from the copy; 0 bad shots in
+10, was 4 in 9; nothing was ever wrong on the LCD). **The Neo Geo in band mode
+has no screenshot**: a first attempt (running one more frame from the handler)
+hung Metal Slug with corrupted tiles and was removed the same hour; a save
+state there works, without a preview.
 
-8. The CPS1's video: 24 ms of a 32 ms frame in play. The Neo Geo's band
-   rendering does not cover it.
-9. The CPS1's load: Street Fighter II spends 28 s copying its graphics to the
-   flash cache at every launch; skip the copy when the cache already holds the
-   game.
-10. The Neo Geo raster games' 16-bit video path (Metal Slug 2, KOF '95).
-11. A fixed one-in-two frameskip; `robby.zip` resuming to a black screen; the
-    two "Surface allocation failed" lines of Street Fighter II at start; the
-    unexplained dead buttons of 2026-10-03.
+**Arcade 3D Racing** (`retro-extra`): 22-36 frames a second at the start of the
+day, 35-71 (mostly 47-64) at the end. The frame is drawn in strips of internal
+RAM, triangle edges are stepped in fixed point (the road went from 9-18 to
+3-10 ms), the car's texture span is fixed point, the text uses TFT_eSPI's own
+5x7 font, and the 1-px spans sticking out of the car (upstream's edges
+extrapolated on the row of a vertex) are gone. Steering, brake and MENU work.
+35 KB of internal RAM are left while it runs. Traffic cars exist but upstream
+draws them about 11 px wide and only when very near.
 
-Limits to keep in mind: the flash has 64 KB left outside the app partitions
-(no new app without removing one), the launcher has about 18 KB left in its
-partition, and raw flash writes on the board PC need the user's own approval
-in that session.
+**OutRun (Cannonball)**: gas and brake reach the engine (console line `CBDBG`);
+the gearbox shifted up by itself at 195 km/h, Y selects low and X high.
+
+**Launcher**: the OutRun and Arcade 3D tabs show their art; it starts in
+carousel mode, where A opens the list.
+
+**Rule added**: every bench or profile session ends with the play build back
+(`board_install.sh`), the switch files removed and coin + START proven on Metal
+Slug; the report says so.
+
+### Resume checklist (open at the close of 2026-10-04, second session)
+
+1. **System 16** has never run a game: needs a MAME 0.37b5 set (`shinobi.zip`,
+   `goldnaxe.zip`, …) in `/sd/roms/arcade/`, from the user.
+2. **The CPS1's drawn frames** are bounded by the display side (scaler and LCD
+   bus on core 1, about 18 a second at full game speed): the next gain for
+   what the eye sees is there, not on core 0.
+3. Street Fighter II cannot take the indexed path for 70 KB of PSRAM; its
+   2 MB of tiles in PSRAM are the reason.
+4. The CPS1's tile decoding at launch (8.4 s on Street Fighter II) could be
+   cached.
+5. Knights of the Round and the other 16-bit CPS1 games on the indexed path:
+   measure in play before turning it on.
+6. A screenshot for the Neo Geo band mode, with a PC reproduction first.
+7. Arcade 3D Racing, if the user keeps it: larger traffic, a gas button, the
+   car's 6 to 7 ms.
+8. Still open from before: the Neo Geo raster games' video path, a fixed
+   one-in-two frameskip, `robby.zip` resuming to a black screen, Game Gear
+   "GG Aleste 3" black screen, the unexplained dead buttons of 2026-10-03.
+
+Limits: 64 KB of flash left outside the app partitions, about 18 KB left in
+the launcher's partition, raw flash writes on the board PC need the user's own
+approval in that session.
 
 How to work on it: `scripts/mamebench/README.md` (the run options, the switch
 files, the PC gates). The rule that paid every time: measure in play before
