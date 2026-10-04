@@ -287,7 +287,12 @@ def main():
         b.send("rm " + " ".join(a.args), wait=r"^CTL rm", timeout=5)
     elif a.cmd == "shot":   # board_ctl.py shot out.png : screenshot of the running emulator
         remote = "/sd/shot.raw"   # raw RGB565 + width/height (mame-go screenshot handler)
-        b.send("shot " + remote, wait=r"^CTL shot", timeout=20)
+        # delete the previous file first and require "done": a failed shot used to read
+        # the previous game's picture back (2026-10-04, Neo Geo band mode)
+        b.send("rm " + remote, wait=r"^CTL rm", timeout=5)
+        reply = b.send("shot " + remote, wait=r"^CTL shot", timeout=20)
+        if not any(l.startswith("CTL shot done") for l in reply or []):
+            sys.exit("screenshot failed: " + " ".join(l for l in (reply or []) if l.startswith("CTL shot")))
         import struct
         data = fetch(b, remote)
         out = a.args[0] if a.args else "shot.png"
