@@ -1,0 +1,336 @@
+mame-go.bin binary size 0x1d7030 bytes. Smallest app partition is 0x300000 bytes. 0x128fd0 bytes (39%) free.
+CTL put done 1929264 bytes 9879 ms (usb 3516, sd 9818, wait 5642) crc 514d6d85 (191 KB/s)
+CTL launch mame-go cps1 /sd/roms/cps1/sf2ce.zip
+[info] write_image: 'mame-go': written and verified
+[info] rg_system_switch_app: Switching to app mame-go (cps1)
+[warn] rg_system_restart: Restarting system!
+[info] rg_audio_deinit: Audio terminated. sink='PDM'
+[info] rg_storage_deinit: Storage unmounted.
+[info] rg_input_deinit: Input terminated.
+[info] rg_display_deinit: Display terminated.
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40379769
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x135c
+load:0x403c8700,len:0x4
+load:0x403c8704,len:0xe08
+load:0x403cb700,len:0x30c0
+entry 0x403c892c
+I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+I (26) boot: compile time Sep 13 2026 16:41:14
+I (26) boot: Multicore bootloader
+I (27) boot: chip revision: v0.2
+I (27) boot: efuse block revision: v1.4
+I (27) qio_mode: Enabling default flash chip QIO
+I (27) boot.esp32s3: Boot SPI Speed : 80MHz
+I (27) boot.esp32s3: SPI Mode       : QIO
+I (27) boot.esp32s3: SPI Flash Size : 16MB
+I (28) boot: Enabling RNG early entropy source...
+I (28) boot: Partition Table:
+I (28) boot: ## Label            Usage          Type ST Offset   Length
+I (28) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+I (29) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+I (29) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+I (30) boot:  3 launcher         OTA app          00 10 00010000 00120000
+I (30) boot:  4 retro-core       OTA app          00 11 00130000 00140000
+I (30) boot:  5 prboom-go        OTA app          00 12 00270000 000d0000
+I (31) boot:  6 gwenesis         OTA app          00 13 00340000 00100000
+I (31) boot:  7 duke3d-go        OTA app          00 14 00440000 00100000
+I (32) boot:  8 retro-extra      OTA app          00 15 00540000 00140000
+I (32) boot:  9 mame-go          OTA app          00 16 00680000 00200000
+I (32) boot: 10 wolf3d-go        OTA app          00 17 00880000 000a0000
+I (33) boot: 11 quake-go         OTA app          00 18 00920000 000c0000
+I (33) boot: 12 gbsp             OTA app          00 19 009e0000 000d0000
+I (34) boot: 13 opentyrian-go    OTA app          00 1a 00ab0000 000a0000
+I (34) boot: 14 cannonball       OTA app          00 1b 00b50000 000a0000
+I (34) boot: 15 mamerom          Unknown data     01 40 00bf0000 00400000
+I (35) boot: End of partition table
+I (35) esp_image: segment 0: paddr=00680020 vaddr=3c100020 size=b6fe8h (749544) map
+I (147) esp_image: segment 1: paddr=00737010 vaddr=3fc9a200 size=09008h ( 36872) load
+I (153) esp_image: segment 2: paddr=00740020 vaddr=42000020 size=f4b78h (1002360) map
+I (303) esp_image: segment 3: paddr=00834ba0 vaddr=3fca3208 size=10338h ( 66360) load
+I (314) esp_image: segment 4: paddr=00844ee0 vaddr=40378000 size=12100h ( 73984) load
+I (329) esp_image: segment 5: paddr=00856fe8 vaddr=600fe100 size=0001ch (    28) load
+I (341) boot: Loaded app from partition at offset 0x680000
+I (341) boot: Disabling RNG early entropy source...
+========================================================
+mame-go unknown (Oct  4 2026 12:01:24)
+built for: ESP32-EMU-TURBO. type: dev
+========================================================
+[info] rg_storage_init: Looking for SD Card using SDSPI...
+[info] rg_storage_init: Storage mounted at /sd.
+[info] rg_input_init: Initializing GPIO gamepad driver...
+[info] rg_input_init: Console gamepad control enabled (stdin)
+[info] rg_input_init: Input ready. state=00000000 00000000
+[info] json_root: Config file loaded: '/sd/retro-go/config/global.json'
+[info] json_root: Config file loaded: '/sd/retro-go/config/boot.json'
+[info] rg_display_init: Initialization...
+[info] json_root: Config file loaded: '/sd/retro-go/config/cps1.json'
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc5a44
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc6948
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc784c
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc8750
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc9654
+[info] rg_display_init: Display ready.
+[info] rg_alloc: SIZE=17280, CAPS=SPIRAM|8BIT, PTR=0x3c2fec1c
+[info] rg_gui_set_language_id: Language set to: English (0)
+[info] rg_gui_set_font: Font set to: VeraBold 11 (height=13, scaling=1.00)
+[info] rg_gui_set_theme: Using built-in theme!
+[info] rg_audio_init: Audio ready. sink='PDM', samplerate=32000, volume=0
+[info] rg_system_load_time: Time loaded from storage
+[info] rg_system_load_time: Time is now: Tue Sep 29 03:39:20 2026
+[info] rg_system_init: Available memory: 168/263 + 6899/6958
+[info] rg_system_init: Retro-Go ready.
+CONTENT_DIRECTORY: /sd/roms/cps1/
+SYSTEM_DIRECTORY: /sd/retro-go/mame
+SAVE_DIRECTORY: /sd/retro-go/saves/arcade
+MAME2000_SYS_DIRECTORY: /sd/retro-go/mame/mame2000
+MAME2000_SAVE_DIRECTORY: /sd/retro-go/saves/arcade/mame2000
+mamego: sf2ce.zip holds the Street Fighter II': Champion Edition (World 920513) (modern set) set, using driver sf2cem
+loading s92e_23b.8f
+loading s92_22b.7f
+loading s92_21a.6f
+loading sf2.09
+loading sf2.18
+loading sf2.19
+
+mamego: CPS1 program region 2048 -> 1536 KB
+mem after regions to flash: internal 54 KB (largest 31), PSRAM 4659 KB (largest 4096)
+width 384, height 224
+cps1: PSRAM 3663 KB free (largest 3648) for 6144 KB of tiles: flash
+cps1: 6144 KB of tiles streamed: 4096 KB in flash, 2048 KB in PSRAM
+[info] mame_task: mame-go: 384x224 @ 60.00 fps, audio 32000 Hz
+[error] rg_surface_create: Surface allocation failed!
+[error] rg_surface_create: Surface allocation failed!
+[info] update_viewport_scaling: 384x224@1.714 => 480x280@1.714 left:0 top:20 step_x:0.80 step_y:0.80
+cps1: sound board (Z80 + YM2151 + OKI) on the second core
+NEOPROF ms/frame: other 0.90 68000 19.42 z80 0.26 ym2610 0.00 video 8.72 mixer 0.43 blit 5.01 out 3.15
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 8.72 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.06 dmawait 0.26 sends 2 | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.92 68000 11.62 z80 0.00 ym2610 0.00 video 10.67 mixer 0.44 blit 4.91 out 2.96
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 10.67 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.90 dmawait 0.20 sends 1 | busy core0 84% (without blit/wait) core1 33% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+[info] system_monitor_task: Raised frameskip to 2
+[info] system_monitor_task: Raised frameskip to 3
+NEOPROF ms/frame: other 0.98 68000 2.67 z80 0.00 ym2610 0.00 video 12.87 mixer 0.45 blit 4.65 out 3.09
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.87 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.02 dmawait 0.20 sends 2 | busy core0 81% (without blit/wait) core1 42% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+[info] system_monitor_task: Raised frameskip to 4
+NEOPROF ms/frame: other 0.98 68000 2.00 z80 0.00 ym2610 0.00 video 12.64 mixer 0.45 blit 4.64 out 2.83
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.64 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.76 dmawait 0.20 sends 0 | busy core0 80% (without blit/wait) core1 44% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+[info] system_monitor_task: Raised frameskip to 5
+NEOPROF ms/frame: other 0.99 68000 2.33 z80 0.00 ym2610 0.00 video 12.75 mixer 0.45 blit 4.64 out 2.94
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.75 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.88 dmawait 0.20 sends 1 | busy core0 80% (without blit/wait) core1 43% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 300 hash 00f95ad1
+NEOPROF ms/frame: other 0.98 68000 3.61 z80 0.00 ym2610 0.00 video 12.13 mixer 0.45 blit 4.73 out 3.08
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.13 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.97 dmawait 0.20 sends 2 | busy core0 81% (without blit/wait) core1 42% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.99 68000 2.94 z80 0.00 ym2610 0.00 video 12.86 mixer 0.45 blit 4.62 out 3.15
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.86 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.08 dmawait 0.20 sends 2 | busy core0 81% (without blit/wait) core1 42% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.99 68000 2.30 z80 0.00 ym2610 0.00 video 12.76 mixer 0.45 blit 4.64 out 3.18
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.76 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.12 dmawait 0.20 sends 2 | busy core0 80% (without blit/wait) core1 44% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.99 68000 2.28 z80 0.00 ym2610 0.00 video 12.91 mixer 0.46 blit 4.68 out 3.14
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 12.91 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.07 dmawait 0.20 sends 2 | busy core0 80% (without blit/wait) core1 43% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.99 68000 2.29 z80 0.00 ym2610 0.00 video 13.06 mixer 0.46 blit 4.71 out 3.23
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 13.06 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.16 dmawait 0.20 sends 3 | busy core0 80% (without blit/wait) core1 43% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 600 hash 4dc86bfa
+NEOPROF ms/frame: other 1.01 68000 2.30 z80 0.00 ym2610 0.00 video 13.96 mixer 0.46 blit 4.75 out 3.28
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 13.96 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.17 dmawait 0.20 sends 3 | busy core0 81% (without blit/wait) core1 49% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.00 68000 2.29 z80 0.00 ym2610 0.00 video 14.86 mixer 0.46 blit 4.79 out 3.21
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 14.86 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.15 dmawait 0.20 sends 2 | busy core0 81% (without blit/wait) core1 56% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.99 68000 2.07 z80 0.00 ym2610 0.00 video 14.42 mixer 0.45 blit 4.81 out 2.92
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 14.42 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.85 dmawait 0.20 sends 1 | busy core0 81% (without blit/wait) core1 51% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 0.99 68000 2.98 z80 0.00 ym2610 0.00 video 14.72 mixer 0.45 blit 4.81 out 4.01
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 14.72 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.94 dmawait 0.20 sends 9 | busy core0 82% (without blit/wait) core1 50% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.00 68000 5.76 z80 0.00 ym2610 0.00 video 15.58 mixer 0.45 blit 4.87 out 5.50
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 15.58 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 5.43 dmawait 0.88 sends 19 | busy core0 85% (without blit/wait) core1 42% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 900 hash 9f8df82a
+NEOPROF ms/frame: other 1.00 68000 3.74 z80 0.00 ym2610 0.00 video 18.16 mixer 0.45 blit 4.81 out 5.75
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 18.16 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 5.65 dmawait 0.94 sends 20 | busy core0 85% (without blit/wait) core1 37% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 6.02 z80 0.00 ym2610 0.00 video 18.64 mixer 0.46 blit 4.84 out 6.17
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 18.64 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 6.11 dmawait 0.89 sends 24 | busy core0 86% (without blit/wait) core1 45% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.07 z80 0.00 ym2610 0.00 video 20.82 mixer 0.46 blit 4.76 out 3.49
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 20.82 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.42 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 51% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.04 68000 4.06 z80 0.00 ym2610 0.00 video 20.58 mixer 0.46 blit 4.76 out 3.50
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 20.58 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.43 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 49% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.06 z80 0.00 ym2610 0.00 video 20.81 mixer 0.46 blit 4.76 out 3.50
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 20.81 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.43 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 51% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 1200 hash 2fd0d530
+NEOPROF ms/frame: other 1.06 68000 4.06 z80 0.00 ym2610 0.00 video 21.96 mixer 0.46 blit 4.76 out 3.54
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 21.96 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.42 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 62% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.06 z80 0.00 ym2610 0.00 video 22.14 mixer 0.46 blit 4.76 out 3.50
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.14 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.43 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 63% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.07 z80 0.00 ym2610 0.00 video 22.07 mixer 0.46 blit 4.76 out 3.48
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.07 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.41 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 62% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.06 z80 0.00 ym2610 0.00 video 22.04 mixer 0.47 blit 4.76 out 3.50
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.04 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.42 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 62% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.06 68000 4.06 z80 0.00 ym2610 0.00 video 22.25 mixer 0.46 blit 4.76 out 3.49
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.25 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.42 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 63% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 1500 hash 1e7aca94
+NEOPROF ms/frame: other 1.06 68000 4.07 z80 0.00 ym2610 0.00 video 22.18 mixer 0.46 blit 4.77 out 3.55
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.18 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.43 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 63% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.08 z80 0.00 ym2610 0.00 video 22.53 mixer 0.46 blit 4.77 out 3.53
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.53 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.46 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 64% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.08 z80 0.00 ym2610 0.00 video 22.19 mixer 0.46 blit 4.76 out 3.53
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.19 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.46 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 63% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.08 z80 0.00 ym2610 0.00 video 22.14 mixer 0.47 blit 4.76 out 3.51
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.14 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.44 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 62% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.08 z80 0.00 ym2610 0.00 video 22.07 mixer 0.47 blit 4.76 out 3.53
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.07 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 3.46 dmawait 0.20 sends 5 | busy core0 86% (without blit/wait) core1 62% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 1800 hash 40b75391
+NEOPROF ms/frame: other 1.05 68000 3.89 z80 0.00 ym2610 0.00 video 22.49 mixer 0.46 blit 4.77 out 2.98
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.49 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.87 dmawait 0.21 sends 1 | busy core0 86% (without blit/wait) core1 65% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 3.88 z80 0.00 ym2610 0.00 video 22.47 mixer 0.46 blit 4.77 out 2.91
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.47 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 2.84 dmawait 0.20 sends 1 | busy core0 86% (without blit/wait) core1 65% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 3.78 z80 0.00 ym2610 0.00 video 22.74 mixer 0.46 blit 4.78 out 5.51
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.74 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 5.44 dmawait 0.78 sends 19 | busy core0 87% (without blit/wait) core1 61% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.09 68000 4.95 z80 0.00 ym2610 0.00 video 19.41 mixer 0.45 blit 5.32 out 5.83
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 19.41 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 5.76 dmawait 0.98 sends 21 | busy core0 85% (without blit/wait) core1 68% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.05 68000 4.48 z80 0.00 ym2610 0.00 video 21.78 mixer 0.45 blit 4.87 out 4.65
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 21.78 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 4.58 dmawait 0.65 sends 13 | busy core0 86% (without blit/wait) core1 69% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 2100 hash 3ee87ea1
+NEOPROF ms/frame: other 1.16 68000 6.90 z80 0.00 ym2610 0.00 video 18.24 mixer 0.56 blit 5.64 out 6.53
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 18.24 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 6.42 dmawait 0.87 sends 26 | busy core0 85% (without blit/wait) core1 51% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.07 68000 4.90 z80 0.00 ym2610 0.00 video 20.82 mixer 0.46 blit 4.71 out 4.17
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 20.82 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 4.11 dmawait 0.33 sends 11 | busy core0 86% (without blit/wait) core1 34% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.07 68000 4.97 z80 0.00 ym2610 0.00 video 22.27 mixer 0.46 blit 4.71 out 4.15
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 22.27 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 4.08 dmawait 0.33 sends 10 | busy core0 87% (without blit/wait) core1 45% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.11 68000 5.89 z80 0.00 ym2610 0.00 video 23.41 mixer 0.47 blit 4.72 out 8.56
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 23.41 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 8.50 dmawait 0.89 sends 42 | busy core0 89% (without blit/wait) core1 56% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.11 68000 6.04 z80 0.00 ym2610 0.00 video 23.50 mixer 0.47 blit 4.72 out 10.01
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 23.50 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 9.94 dmawait 1.21 sends 52 | busy core0 89% (without blit/wait) core1 57% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+MAMEBENCH frames 2400 hash eaf98068
+NEOPROF ms/frame: other 1.11 68000 6.30 z80 0.00 ym2610 0.00 video 24.34 mixer 0.47 blit 4.73 out 9.33
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 24.34 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 9.22 dmawait 1.01 sends 47 | busy core0 89% (without blit/wait) core1 55% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.11 68000 6.38 z80 0.00 ym2610 0.00 video 24.48 mixer 0.47 blit 4.73 out 9.07
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 24.48 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 9.01 dmawait 1.13 sends 45 | busy core0 89% (without blit/wait) core1 59% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
+NEOPROF ms/frame: other 1.13 68000 6.92 z80 0.00 ym2610 0.00 video 25.12 mixer 0.47 blit 4.74 out 13.50
+NEOPROF video ms/frame: palette 0.00 clear 0.00 sprites 0.00 fix 0.00 rest 25.12 copy 0.00 | KB/frame: clear w 0.0 sprites r 0.0 w<=0.0 strips 0 fix r 0.0 w<=0.0 tiles 0 copy w 0.0
+NEOPROF core1 ms/frame: sprites 0.00 convert+display 0.00 ym2610 0.00 display 13.43 dmawait 2.04 sends 75 | busy core0 90% (without blit/wait) core1 60% (idle-measured) | sprites deferred 0 on core1 0 fallback 0
+NEOPROF core0 waits ms/frame: ym2610 0.00 present 0.00
+NEOPROF card reads/frame: sprites 0.00 (0.00 ms) samples 0.00 (0.00 ms) | ms per read: sprites 0.0 (seek 0.0) samples 0.0 (seek 0.0)
