@@ -1,0 +1,165 @@
+CTL launch mame-go cps1 /sd/roms/cps1/sf2ce.zip
+[info] rg_system_switch_app: Switching to app mame-go (cps1)
+[warn] rg_system_restart: Restarting system!
+[info] rg_storage_deinit: Storage unmounted.
+[info] rg_input_deinit: Input terminated.
+[info] rg_display_deinit: Display terminated.
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40379859
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x135c
+load:0x403c8700,len:0x4
+load:0x403c8704,len:0xe08
+load:0x403cb700,len:0x30c0
+entry 0x403c892c
+I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+I (26) boot: compile time Sep 13 2026 16:41:14
+I (26) boot: Multicore bootloader
+I (27) boot: chip revision: v0.2
+I (27) boot: efuse block revision: v1.4
+I (27) qio_mode: Enabling default flash chip QIO
+I (27) boot.esp32s3: Boot SPI Speed : 80MHz
+I (27) boot.esp32s3: SPI Mode       : QIO
+I (27) boot.esp32s3: SPI Flash Size : 16MB
+I (28) boot: Enabling RNG early entropy source...
+I (28) boot: Partition Table:
+I (28) boot: ## Label            Usage          Type ST Offset   Length
+I (28) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+I (29) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+I (29) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+I (30) boot:  3 launcher         OTA app          00 10 00010000 00120000
+I (30) boot:  4 retro-core       OTA app          00 11 00130000 00140000
+I (30) boot:  5 prboom-go        OTA app          00 12 00270000 000d0000
+I (31) boot:  6 gwenesis         OTA app          00 13 00340000 00100000
+I (31) boot:  7 duke3d-go        OTA app          00 14 00440000 00100000
+I (32) boot:  8 retro-extra      OTA app          00 15 00540000 00140000
+I (32) boot:  9 mame-go          OTA app          00 16 00680000 00200000
+I (32) boot: 10 wolf3d-go        OTA app          00 17 00880000 000a0000
+I (33) boot: 11 quake-go         OTA app          00 18 00920000 000c0000
+I (33) boot: 12 gbsp             OTA app          00 19 009e0000 000d0000
+I (33) boot: 13 opentyrian-go    OTA app          00 1a 00ab0000 000a0000
+I (34) boot: 14 cannonball       OTA app          00 1b 00b50000 000a0000
+I (34) boot: 15 mamerom          Unknown data     01 40 00bf0000 00400000
+I (35) boot: End of partition table
+I (35) esp_image: segment 0: paddr=00680020 vaddr=3c100020 size=b6fe8h (749544) map
+I (147) esp_image: segment 1: paddr=00737010 vaddr=3fc9a200 size=09008h ( 36872) load
+I (153) esp_image: segment 2: paddr=00740020 vaddr=42000020 size=f4b78h (1002360) map
+I (302) esp_image: segment 3: paddr=00834ba0 vaddr=3fca3208 size=10338h ( 66360) load
+I (314) esp_image: segment 4: paddr=00844ee0 vaddr=40378000 size=12100h ( 73984) load
+I (329) esp_image: segment 5: paddr=00856fe8 vaddr=600fe100 size=0001ch (    28) load
+I (340) boot: Loaded app from partition at offset 0x680000
+I (341) boot: Disabling RNG early entropy source...
+========================================================
+mame-go unknown (Oct  4 2026 12:01:24)
+built for: ESP32-EMU-TURBO. type: dev
+========================================================
+[info] rg_storage_init: Looking for SD Card using SDSPI...
+[info] rg_storage_init: Storage mounted at /sd.
+[info] rg_input_init: Initializing GPIO gamepad driver...
+[info] rg_input_init: Console gamepad control enabled (stdin)
+[info] rg_input_init: Input ready. state=00000000 00000000
+[info] json_root: Config file loaded: '/sd/retro-go/config/global.json'
+[info] rg_display_init: Initialization...
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc596c
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc6870
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc7774
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc8678
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc957c
+[info] rg_display_init: Display ready.
+[info] rg_alloc: SIZE=17280, CAPS=SPIRAM|8BIT, PTR=0x3c2fec1c
+[info] rg_gui_set_language_id: Language set to: English (0)
+[info] rg_gui_set_font: Font set to: VeraBold 11 (height=13, scaling=1.00)
+[info] rg_gui_set_theme: Using built-in theme!
+[info] rg_audio_init: Audio ready. sink='PDM', samplerate=32000, volume=0
+[info] rg_system_load_time: Time loaded from storage
+[info] rg_system_load_time: Time is now: Tue Sep 29 03:39:20 2026
+[info] rg_system_init: Available memory: 168/263 + 6899/6958
+[info] rg_system_init: Retro-Go ready.
+CONTENT_DIRECTORY:
+SYSTEM_DIRECTORY: /sd/retro-go/mame
+SAVE_DIRECTORY: /sd/retro-go/saves/arcade
+MAME2000_SYS_DIRECTORY: /sd/retro-go/mame/mame2000
+MAME2000_SAVE_DIRECTORY: /sd/retro-go/saves/arcade/mame2000
+Game "" not supported
+*** RG_PANIC() CALLED IN 'mame_task' ***
+*** This game is not supported, or its ROM set is incomplete ***
+abort() was called at PC 0x420c87af on core 0
+Backtrace: 0x40379915:0x3fcd5fa0 0x40381fd5:0x3fcd5fc0 0x4038811e:0x3fcd5fe0 0x420c87af:0x3fcd6050 0x4200ac97:0x3fcd6070 0x420c8486:0x3fcd60f0
+ELF file SHA256: e66bb1529
+Rebooting...
+ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+Saved PC:0x40379859
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce2820,len:0x135c
+load:0x403c8700,len:0x4
+load:0x403c8704,len:0xe08
+load:0x403cb700,len:0x30c0
+entry 0x403c892c
+I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+I (26) boot: compile time Sep 13 2026 16:41:14
+I (26) boot: Multicore bootloader
+I (27) boot: chip revision: v0.2
+I (27) boot: efuse block revision: v1.4
+I (27) qio_mode: Enabling default flash chip QIO
+I (27) boot.esp32s3: Boot SPI Speed : 80MHz
+I (27) boot.esp32s3: SPI Mode       : QIO
+I (27) boot.esp32s3: SPI Flash Size : 16MB
+I (28) boot: Enabling RNG early entropy source...
+I (28) boot: Partition Table:
+I (28) boot: ## Label            Usage          Type ST Offset   Length
+I (28) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+I (29) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+I (29) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+I (29) boot:  3 launcher         OTA app          00 10 00010000 00120000
+I (30) boot:  4 retro-core       OTA app          00 11 00130000 00140000
+I (30) boot:  5 prboom-go        OTA app          00 12 00270000 000d0000
+I (31) boot:  6 gwenesis         OTA app          00 13 00340000 00100000
+I (31) boot:  7 duke3d-go        OTA app          00 14 00440000 00100000
+I (31) boot:  8 retro-extra      OTA app          00 15 00540000 00140000
+I (32) boot:  9 mame-go          OTA app          00 16 00680000 00200000
+I (32) boot: 10 wolf3d-go        OTA app          00 17 00880000 000a0000
+I (33) boot: 11 quake-go         OTA app          00 18 00920000 000c0000
+I (33) boot: 12 gbsp             OTA app          00 19 009e0000 000d0000
+I (33) boot: 13 opentyrian-go    OTA app          00 1a 00ab0000 000a0000
+I (34) boot: 14 cannonball       OTA app          00 1b 00b50000 000a0000
+I (34) boot: 15 mamerom          Unknown data     01 40 00bf0000 00400000
+I (35) boot: End of partition table
+I (35) esp_image: segment 0: paddr=00680020 vaddr=3c100020 size=b6fe8h (749544) map
+I (147) esp_image: segment 1: paddr=00737010 vaddr=3fc9a200 size=09008h ( 36872) load
+I (153) esp_image: segment 2: paddr=00740020 vaddr=42000020 size=f4b78h (1002360) map
+I (302) esp_image: segment 3: paddr=00834ba0 vaddr=3fca3208 size=10338h ( 66360) load
+I (314) esp_image: segment 4: paddr=00844ee0 vaddr=40378000 size=12100h ( 73984) load
+I (329) esp_image: segment 5: paddr=00856fe8 vaddr=600fe100 size=0001ch (    28) load
+I (340) boot: Loaded app from partition at offset 0x680000
+I (341) boot: Disabling RNG early entropy source...
+========================================================
+mame-go unknown (Oct  4 2026 12:01:24)
+built for: ESP32-EMU-TURBO. type: dev
+========================================================
+[info] rg_storage_init: Looking for SD Card using SDSPI...
+[info] rg_storage_init: Storage mounted at /sd.
+[info] rg_input_init: Initializing GPIO gamepad driver...
+[info] rg_input_init: Console gamepad control enabled (stdin)
+[info] rg_input_init: Input ready. state=00000000 00000000
+[info] rg_display_init: Initialization...
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc5638
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc653c
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc7440
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc8344
+[info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc9248
+[info] rg_display_init: Display ready.
+[info] rg_alloc: SIZE=17280, CAPS=SPIRAM|8BIT, PTR=0x3c2fec1c
+[info] rg_gui_set_language_id: Language set to: English (0)
+[info] rg_gui_set_font: Font set to: VeraBold 11 (height=13, scaling=1.00)
+[info] rg_gui_set_theme: Using built-in theme!
+[error] rg_system_init: Recoverying from panic!
+[info] rg_system_init: Panic log found, saving to sdcard...
+[info] rg_system_save_trace: Saving debug trace to '/sd/crash.log'...
+[debug] rg_gui_draw_text: Textbox (pos: 125x0, size: 365x15) will be truncated!
+[debug] rg_gui_draw_text: Textbox (pos: 125x0, size: 365x15) will be truncated!
