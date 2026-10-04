@@ -268,6 +268,36 @@ carousel mode, where A opens the list.
 (`board_install.sh`), the switch files removed and coin + START proven on Metal
 Slug; the report says so.
 
+**Launch time and the SD card** (later the same day). On the board: `mame-go`
+and the console apps from fork `5be5e485`.
+
+- The CPS1 tile decode went from 64 bit tests a word to four table reads
+  (0.77 s on Street Fighter II, 0.26 s on Final Fight). It was never the cost.
+- A cache of the decoded tiles on the card was written, gated and **dropped**:
+  correct, but slower (Street Fighter II 19.1 s against 14.1 s), because the
+  decoded data is twice the size of the zip and the card read at 575 KB/s.
+- That figure was the finding. ESP-IDF's `sdmmc_read_sectors()` reads **one
+  512-byte sector per command** when the destination is PSRAM, and stdio adds
+  its own small buffer. `rg_storage_fread_raw()` now reads with `read()` into a
+  16 KB internal DMA buffer and copies out; it serves every console core,
+  mame-go's zip reader, the GBA's ROM load and on-demand pages, and Doom.
+
+| Launch to first frame, seconds | before | after |
+|---|---|---|
+| SNES, Donkey Kong Country (4 MB) | 10.9 | 5.8 |
+| GBA, Metal Slug Advance (8 MB) | 10.8 | 6.8 |
+| Doom, freedoom1 | 7.9 | 6.9 |
+| CPS1, Street Fighter II CE | 14.1 | 13.2 |
+| CPS1, Final Fight | 9.1 | 9.1 |
+| Neo Geo, Metal Slug / Metal Slug 2 | 20.4 / 26.7 | 20.5 / 26.6 |
+| Mega Drive (256 KB), NES (512 KB) | 4.9 / 4.9 | 4.9 / 4.8 |
+
+Every game checked ran right after it, no CRC warning. The arcade launches
+barely move: their time is inflating the zips and, on the Neo Geo, elsewhere
+(not profiled). An even frameskip cadence (one frame in N) was also tried: the
+same drawn frames a second as the frame-by-frame decision on five games, so it
+is off (file `skip_even`).
+
 ### Resume checklist (open at the close of 2026-10-04, second session)
 
 1. **System 16** has never run a game: needs a MAME 0.37b5 set (`shinobi.zip`,
@@ -277,8 +307,9 @@ Slug; the report says so.
    what the eye sees is there, not on core 0.
 3. Street Fighter II cannot take the indexed path for 70 KB of PSRAM; its
    2 MB of tiles in PSRAM are the reason.
-4. The CPS1's tile decoding at launch (8.4 s on Street Fighter II) could be
-   cached.
+4. Launch times of the arcade games: Metal Slug 20 s, Metal Slug 2 27 s,
+   Street Fighter II 13 s. Not profiled; the zip inflate is the suspect on the
+   CPS1 (a cache of decoded tiles on the card was tried and is slower).
 5. Knights of the Round and the other 16-bit CPS1 games on the indexed path:
    measure in play before turning it on.
 6. A screenshot for the Neo Geo band mode, with a PC reproduction first.
