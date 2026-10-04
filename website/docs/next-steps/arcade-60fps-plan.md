@@ -353,8 +353,16 @@ is off (file `skip_even`).
 
 Picture, coin and START right on the three. BUSY 100 % in play: the driver was
 ported, not tuned. The CPS1's exact idle-code skips are enabled for it (fork
-`72a7e789`, I/O window 0xc40000, file `sys16_noturn` to turn them off); their
-PC gate and board figures were being taken when the session closed.
+`72a7e789`, I/O window 0xc40000, file `sys16_noturn` to turn them off). The
+PC gate passes on the three games (pictures and sound identical over 4000
+frames of play): 43.8 % of the 68000's cycles skipped on Alien Syndrome,
+64.6 % on Wonder Boy III, **0 % on Golden Axe** (its wait does not match, so
+nothing is gained and about 4 % of core 0 goes to the checks). On the board
+that is +1.6 fps on Alien Syndrome and +3.7 on Wonder Boy III: the 68000 is
+not where these games spend their frame. Golden Axe's profile in play: YM2151
+synthesis about 13 % (on core 0 here; the Neo Geo's and the CPS1's sound runs
+on core 1), the conversion and copy of the frame 18 %, the 8-bit tile drawers
+16 %, the 68000 5 %. Full table: `scripts/mamebench/results/2026-10-04-system16.md`.
 
 **The arcade launch times, explained.** Warm (the same game again): Metal Slug
 9.0 s, Metal Slug 2 11.2 s, Street Fighter II 13.1 s, Final Fight 9.1 s. Cold
@@ -364,8 +372,9 @@ screen now says "game cache NN%" during that write.
 
 ### Resume checklist (open at the close of 2026-10-04, second session)
 
-1. **System 16**: finish the gate of the idle skips per game (`turn` on the PC
-   harness), then a play profile of Golden Axe to see where its frame goes.
+1. **System 16**, from Golden Axe's profile: its sound board (Z80 + YM2151) to
+   core 1 as on the CPS1, the frame handed to the display task as on the CPS1
+   (about 18 % of core 0), and why the idle skip never fires on Golden Axe.
    Shinobi and Altered Beast have not been tried (no set at hand).
 2. **The CPS1's drawn frames** are bounded by the display side (scaler and LCD
    bus on core 1, about 18 a second at full game speed): the next gain for
