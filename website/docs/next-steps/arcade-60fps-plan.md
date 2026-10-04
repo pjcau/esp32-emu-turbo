@@ -212,7 +212,7 @@ and the arcade OutRun through MAME (two 68000, which is why Cannonball).
 
 On the board when it was switched off: every app from the fork at `8f76577d`
 (launcher with the OutRun and Arcade 3D tab art; `mame-go` with the System 16
-driver; `retro-extra` with Arcade 3D Racing), 20 of 22 new covers on the card.
+driver; `retro-extra` with Arcade 3D Racing), all 20 new covers on the card (a26 5, gg 6, ngp 7, OutRun 1, Arcade 3D 1).
 
 To check first, none of it seen on screen yet:
 
@@ -223,7 +223,7 @@ To check first, none of it seen on screen yet:
    the CPU full, so speed is the first thing to improve if the user keeps it.
 3. `retro-extra` after Arcade 3D went in: one Atari 2600 and one Neo Geo
    Pocket game still start.
-4. The last 2 covers and the screenshots for the 5 Lynx demos.
+4. Covers for the 5 Lynx demos: screenshots taken on the board (`board_ctl.py raw "shot /sd/...png"`), the thumbnail server has none.
 5. OutRun (Cannonball): brake (B) and gears (X/Y), by hand.
 
 Needs something from the user:
