@@ -19,6 +19,7 @@ the current console is under [Remediation](/docs/remediation).
 | 60 drawn frames on the 68000 arcade games | **not reached, not in sight on this hardware**; work stopped on 2026-10-04: [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) |
 | JIT | GBA finished and in use; 68000 finished, exact and switched off (slower than the interpreter): [JIT plan](/docs/next-steps/jit-plan) |
 | Native games | DOOM, Duke Nukem 3D, Wolfenstein 3D, Quake, OpenTyrian, OutRun (Cannonball), Arcade 3D Racing |
+| Nintendo 64 | no emulator; Super Mario 64 runs from its decompilation (2026-10-05, not installed, no sound), Mario Kart 64 started: [Nintendo 64 through native ports](/docs/next-steps/n64-native-ports) |
 | Flash | full: 64 KB left of 16 MB. A new app means removing one, or [Plan D](/docs/next-steps/plan-esp32-s3-n32r16v) |
 
 **What it took, in short.** Emulators were brought up one by one and measured
@@ -44,6 +45,7 @@ rule. The feasibility tiers are estimates until a port is measured.
 | [More Systems](/docs/next-steps/more-systems) | which consoles fit the ESP32-S3, up to the PlayStation |
 | [Arcade (MAME)](/docs/next-steps/arcade) | which arcade boards run, how they fit, and where MAME stops |
 | [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan) | the speed work on the 68000 arcade games: where it stands, what was done, what is left |
+| [Nintendo 64 through native ports](/docs/next-steps/n64-native-ports) | Super Mario 64 runs on the board from its decompilation; Mario Kart 64 started |
 | [JIT plan](/docs/next-steps/jit-plan) | the dynarecs: GBA in use, 68000 on hold |
 | [Next Console (v4)](/docs/next-steps/v4-platform) | PS1, N64, HDMI and wireless controllers: which platform, in one step or several |
 | [Plan A: ESP32-P4 + ESP32-C6](/docs/next-steps/plan-esp32-p4) | stay on Espressif: changes, time, cost, which requirements it meets |

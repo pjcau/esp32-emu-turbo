@@ -119,6 +119,7 @@ development board.
 | Module | U1 → ESP32-S3-WROOM-2-N32R16V (same footprint) |
 | PCB | none expected; regenerate BOM/CPL, re-run the full gate suite and `/pcba-readiness` |
 | Firmware | retro-go target variant: octal flash, 32 MB partition table (larger app partitions + a larger `mamerom`), 16 MB PSRAM |
+| Launcher | a "Nintendo 64" section with the native ports ([Super Mario 64, later Mario Kart 64](/docs/next-steps/n64-native-ports)): their apps (about 1.5 MB each, assets on the card) get partitions in the 32 MB table. Decided on 2026-10-05: they wait for this module, nothing is removed from the 16 MB layout for them |
 | Display, audio, power, enclosure | unchanged |
 
 ## Study plan with gates
