@@ -33,3 +33,22 @@ d38ed380 (System 16 frames to the display) drew sprites only on every other
 frame: sprite.c kept the screen bitmap's base from sprite_init(). Seen by the
 user; webcam bursts confirmed (background only on alternate frames). Fixed in
 c613bc47: sprite_draw() takes the current Machine->scrbitmap.
+
+## Neo Geo 16-bit games: frames to the display (open item 4), fork 6781e2de
+
+Metal Slug 2, KOF '95 and Shock Troopers are not raster games: they are
+`GAME_REQUIRES_16BIT` (more than 256 colours a frame), so they cannot take the
+8-bit band path. Their drawn frames were converted to RGB565 by core 1
+(convert+display ~20 ms a frame in Metal Slug 2, core 1 at 90-96 %). The
+display now reads the 16-bit pen bitmap and looks the colours up while it
+scales (new surface format RG_PIXEL_PAL16_BE). Switch: `neo_noindexed16`.
+
+40 s play window (FPS avg / min, drawn per second, internal heap min):
+
+| game | converted on core 1 (before) | pens to the display (after) |
+|---|---|---|
+| Metal Slug 2 | 45.5 / 36, 15.2, 12 KB | 52.0 / 42, 17.3, 18 KB |
+| Shock Troopers | - | 60.0 / 58, 27-28, 22 KB |
+| KOF '95 | - | 54.9 / 47, 22.7, 22 KB |
+
+Webcam bursts: picture correct on every frame, both paths.
