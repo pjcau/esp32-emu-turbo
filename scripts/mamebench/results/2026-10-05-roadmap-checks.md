@@ -59,3 +59,17 @@ Knights of the Round, same play window: 43.3 / 40 (core path) -> 47.5 / 42
 (pens to the display), drawn 14.5 -> 15.9, internal heap 18 KB; picture
 correct (webcam). Final Fight (8-bit, unchanged path) 54.6 / 50, 18.2 drawn.
 `cps1_noindexed16` keeps the 16-bit games on core 0's path.
+
+## CPS1: bottom scroll 3 drawn opaque (fork, after a6a3dc2e)
+
+Scroll 3 is the bottom layer in almost every frame of play (PC: Final Fight
+3599 of 3600, SF2 3594), so the visible area was cleared each drawn frame.
+Now scroll 3 as bottom is drawn opaque with pen 15 mapped to the clear's pen;
+only uncovered strips and empty cells are cleared. PC gate IDENTICAL on
+ffight, sf2ce, ghouls, cawing, knights (4000 frames, play2).
+Board, MAMEBENCH=4 MAMEPROF=1 Final Fight, core 0 video: 20.18 -> 19.70 ms a
+frame; fillbitmap 15.7 % -> 7.9 % of samples (the opaque drawer takes part of
+it back: it now writes every scroll-3 pixel). Play window: ffight 55.2 / 48,
+18.4 drawn; ghouls 60.3, 51.5 drawn; sf2ce 43.2 (a fight scene, not
+comparable with the morning's 50.2). Webcam bursts clean.
+Discarded: priority bitmap cleared by rows (dbd44046): no measurable change.
