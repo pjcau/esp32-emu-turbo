@@ -392,8 +392,8 @@ screen now says "game cache NN%" during that write.
 7. Arcade 3D Racing, if the user keeps it: larger traffic, a gas button, the
    car's 6 to 7 ms.
 8. Still open from before: the Neo Geo raster games' video path, a fixed
-   one-in-two frameskip, `robby.zip` resuming to a black screen, Game Gear
-   "GG Aleste 3" black screen, the unexplained dead buttons of 2026-10-03.
+   one-in-two frameskip, `robby.zip` resuming to a black screen, the
+   unexplained dead buttons of 2026-10-03.
 
 Limits: 64 KB of flash left outside the app partitions, about 18 KB left in
 the launcher's partition, raw flash writes on the board PC need the user's own

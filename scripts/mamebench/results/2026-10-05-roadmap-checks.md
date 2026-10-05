@@ -26,14 +26,6 @@ Fixed in the fork (a75d9c9f): the Astrocade video registers are saved
 (mamego_extra_state). PC: the maze is back 30 frames after loading a state in
 a new run (was 100 black frames). Board check pending.
 
-## GG Aleste 3 black screen (open item 6)
-
-Not an emulator defect. The "(Aleste Collection)" dump is M2's encrypted
-build: a PC harness of smsplus shows the game resetting every ~5 frames; the
-IRQ handler pointer at 0xC2F7 is cleared through the RAM mirror (0xE2F7) by a
-loop entered at 0x404C, because the call to 0x4006 lands in bank 3 data. No
-emulator runs this dump unpatched (Genesis Plus GX lists it as its one
-exception); a patched ROM is needed.
 
 ## System 16 sprite flicker (introduced and fixed the same day)
 
