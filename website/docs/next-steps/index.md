@@ -20,7 +20,7 @@ the current console is under [Remediation](/docs/remediation).
 | JIT | GBA finished and in use; 68000 finished, exact and switched off (slower than the interpreter): [JIT plan](/docs/next-steps/jit-plan) |
 | Native games | DOOM, Duke Nukem 3D, Wolfenstein 3D, Quake, OpenTyrian, OutRun (Cannonball), Arcade 3D Racing |
 | Nintendo 64 | no emulator; Super Mario 64 runs from its decompilation (2026-10-05, not installed, no sound), Mario Kart 64 started: [Nintendo 64 through native ports](/docs/next-steps/n64-native-ports) |
-| Flash | full: 64 KB left of 16 MB. A new app means removing one, or [Plan D](/docs/next-steps/plan-esp32-s3-n32r16v) |
+| Flash | full: 64 KB left of 16 MB. A new app means removing one, or [Plan D](/docs/next-steps/plan-esp32-s3-n32r16v). On 2026-10-05 Duke Nukem 3D and Quake were set aside for Super Mario 64 |
 
 **What it took, in short.** Emulators were brought up one by one and measured
 on the board (September); the SNES needed its own renderer work; the GBA

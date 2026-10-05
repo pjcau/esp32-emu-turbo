@@ -91,4 +91,43 @@ port and the code that unpacks data for a big-endian console fixed first.
 | Super Mario 64: sound | 2.4 MB of sound data still to be read from the card; the app links a stand-in |
 | Super Mario 64: internal RAM | 4 KB free is too little to rely on |
 | Mario Kart 64: PC build, reference frames, assets on the card, board | the plan is in the repo's README |
-| A place in the flash and a "Nintendo 64" section in the launcher | **decided by the user on 2026-10-05: wait for the 32 MB module** ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)). No app is removed and the arcade game cache is not shrunk on the current board; until then N64 games are a temporary test |
+| Super Mario 64: sound | see above; after the launcher install |
+| Mario Kart 64 in the launcher | it will need its own partition: on the 16 MB flash that means another app set aside, or the 32 MB module ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)) |
+
+## In the launcher
+
+Decided by the user on 2026-10-05, after playing it: Super Mario 64 gets a place
+on the current board, in a **Nintendo 64** section of the launcher, as it is
+now (320x240, no sound), to be improved afterwards. An earlier decision the same
+day had been to wait for the 32 MB module; this replaces it for Super Mario 64.
+
+- Partition `sm64-go`, 1.75 MB, binary 1.55 MB.
+- The launcher tab "Nintendo 64" lists the files `*.sm64` in `/sd/roms/n64`. An
+  empty file there, for example `Super Mario 64.sm64`, starts the game; its
+  assets are the pack `/sd/retro-go/sm64/sm64.seg`, which must come from the
+  same build as the app.
+- The app is not built by `rg_tool.py` like the others, because its assets come
+  from the user's ROM and stay out of git: `retro-go/sm64-go/build_esp32.sh
+  <baserom.us.z64>` builds it and leaves `sm64-go/build/sm64-go.bin`, which the
+  image build then takes as it is.
+
+### Duke Nukem 3D and Quake, set aside
+
+The 16 MB flash was full (64 KB free), so the room came from two apps the user
+chose: Duke Nukem 3D (1 MB) and Quake (0.75 MB), exactly the 1.75 MB of the new
+partition. The arcade game cache (`mamerom`, 4 MB) and every other app are
+untouched and at the same addresses as before.
+
+Nothing of the two was deleted:
+
+- their sources are still in the fork (`retro-go/duke3d-go`, `retro-go/quake-go`)
+  and still build: `python rg_tool.py --target=esp32-emu-turbo build duke3d-go`;
+- their launcher tabs and art are still in the launcher; a tab shows only when
+  its partition exists, so they are hidden, not removed;
+- their game files on the SD card (`/sd/roms/duke3d`, `/sd/roms/quake`) and
+  their saves are not touched.
+
+To put them back: in `retro-go/rg_tool.py` restore the two commented lines in
+`PROJECT_APPS`, add the two names to `DEFAULT_APPS`, find 1.75 MB (remove
+`sm64-go`, or another app, or use the 32 MB module), build the image and flash
+it. That is a full flash write, like this change was.
