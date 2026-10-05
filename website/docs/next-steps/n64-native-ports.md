@@ -18,15 +18,24 @@ route as DOOM, Quake and Duke Nukem 3D here.
 | **Super Mario 64** | **runs on the board.** Title, demos and Peach's castle grounds were played by the user. No sound yet. Not installed: the flash has no room for it, so it is tested in the arcade app's slot and the arcade app is put back afterwards |
 | **Mario Kart 64** | started the same day: the decompilation is imported, nothing builds for the board yet |
 
-What was measured on Super Mario 64, and what was only seen:
+What was measured on Super Mario 64 (board, 2026-10-05; the 3D picture is drawn
+at the size given and the HUD and text are always 320x240):
 
-- Title screen: 30 game frames per second (the game's own rate), 13 to 15 of them
-  drawn. **Inside a level nothing has been measured yet.**
-- By eye (the user playing): smooth at 160x120, about half as fast at 320x240,
-  "ok, better" at 240x180. The 3D picture is drawn at that size and scaled to
-  320x240; the HUD and text are always 320x240.
-- Internal RAM free while it runs: 4 KB. PSRAM free: about 1.4 MB.
-- App 1.38 MB, plus a 7.9 MB asset pack on the SD card.
+| Render size | Scene | Game ticks per second (30 = full speed) | Drawn frames per second |
+|:---|:---|:---|:---|
+| 160x120, first build | castle grounds | 28.3 | 7.4 |
+| 320x240, first build | castle grounds | 14.5 | 3.6 |
+| **320x240, now** | castle grounds | **30.5** | 4.1 |
+| **320x240, now** | Bowser demo | **30.9** | 6.1 |
+
+- At 320x240 the game now runs at full speed; what is left is the drawn-frame
+  rate. A drawn frame costs about 230 ms in the castle grounds (rasteriser 164,
+  display list 47, copy to the screen format 18).
+- No crash in a 5.5-minute cycle of title and demos and a walk through the
+  castle grounds. Entering the castle (a level load during play) is not tested yet.
+- Internal RAM free: 80 KB (it was 1 to 4 KB in the first builds). PSRAM free:
+  about 765 KB.
+- App 1.6 MB, plus a 7.9 MB asset pack on the SD card. No sound.
 
 ## What was done
 
@@ -52,6 +61,16 @@ so the work was to take the assets out of the program:
    data from the wrong place when internal RAM was too short for its buffer;
    fixed in the retro-go fork. After that the game played.
 
+5. Speed at 320x240, measured step by step on the board with a profile line the
+   app logs once a second. What moved it: drawing the sky and other white-vertex
+   triangles as plain texture (the sky alone was 77 of 220 ms), and above all
+   **rendering on the second core**: the game task only builds each tick's
+   display list and goes on ticking, a render task draws the newest one. What
+   did not: removing the per-pixel division, integer arithmetic alone, inlining,
+   hand-written pixel loops (a few percent each). A benchmark run on the board
+   showed why: memory was never the cost (122 ns for the depth test and both
+   stores, against 1000 ns a pixel for the sky).
+
 One command builds it from the user's ROM, in a work directory outside git:
 `retro-go/sm64-go/build_esp32.sh <baserom.us.z64>` (`SM64_RENDER=WxH` for
 another render size). **No ROM and no extracted asset is in any repository**; the
@@ -67,8 +86,8 @@ port and the code that unpacks data for a big-endian console fixed first.
 
 | Item | Notes |
 |:---|:---|
-| Super Mario 64: measured speed inside a level, at the three render sizes | needs a session with the board in the arcade slot |
-| Super Mario 64: a faster rasteriser, to make 240x180 or 320x240 worth it | only after the measurement says where the time goes |
+| Super Mario 64: more drawn frames at 320x240 (4 to 6 a second now) | writing the screen format directly (the copy is 18 ms), part of the rasteriser on the first core, which is 70 % idle |
+| Super Mario 64: level loads during play (castle door, paintings) with the render task | to be tried by hand on the board |
 | Super Mario 64: sound | 2.4 MB of sound data still to be read from the card; the app links a stand-in |
 | Super Mario 64: internal RAM | 4 KB free is too little to rely on |
 | Mario Kart 64: PC build, reference frames, assets on the card, board | the plan is in the repo's README |
