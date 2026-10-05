@@ -52,3 +52,10 @@ scales (new surface format RG_PIXEL_PAL16_BE). Switch: `neo_noindexed16`.
 | KOF '95 | - | 54.9 / 47, 22.7, 22 KB |
 
 Webcam bursts: picture correct on every frame, both paths.
+
+## CPS1 16-bit games on the same path (fork ced95664, default)
+
+Knights of the Round, same play window: 43.3 / 40 (core path) -> 47.5 / 42
+(pens to the display), drawn 14.5 -> 15.9, internal heap 18 KB; picture
+correct (webcam). Final Fight (8-bit, unchanged path) 54.6 / 50, 18.2 drawn.
+`cps1_noindexed16` keeps the 16-bit games on core 0's path.
