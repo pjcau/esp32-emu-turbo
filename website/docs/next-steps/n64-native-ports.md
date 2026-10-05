@@ -35,7 +35,12 @@ at the size given and the HUD and text are always 320x240):
   castle grounds. Entering the castle (a level load during play) is not tested yet.
 - Internal RAM free: 80 KB (it was 1 to 4 KB in the first builds). PSRAM free:
   about 765 KB.
-- App 1.6 MB, plus a 7.9 MB asset pack on the SD card. No sound.
+- Sound (2026-10-06): plays, read from the pack on the card, about 2.5 ms a
+  game tick; the game stays at 30 ticks a second with it (castle grounds, 5.6
+  frames drawn). Not yet judged by ear: the board tests run at volume 0.
+- One hang seen once and not reproduced (after 160 s in the castle grounds, no
+  log output, frozen frame; a hard reset recovered it). Cause unknown.
+- App 1.6 MB, plus a 10.3 MB asset pack on the SD card.
 
 ## What was done
 
@@ -88,10 +93,9 @@ port and the code that unpacks data for a big-endian console fixed first.
 |:---|:---|
 | Super Mario 64: more drawn frames at 320x240 (4 to 6 a second now) | writing the screen format directly (the copy is 18 ms), part of the rasteriser on the first core, which is 70 % idle |
 | Super Mario 64: level loads during play (castle door, paintings) with the render task | to be tried by hand on the board |
-| Super Mario 64: sound | 2.4 MB of sound data still to be read from the card; the app links a stand-in |
+| Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
 | Super Mario 64: internal RAM | 4 KB free is too little to rely on |
 | Mario Kart 64: PC build, reference frames, assets on the card, board | the plan is in the repo's README |
-| Super Mario 64: sound | see above; after the launcher install |
 | Mario Kart 64 in the launcher | it will need its own partition: on the 16 MB flash that means another app set aside, or the 32 MB module ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)) |
 
 ## In the launcher
