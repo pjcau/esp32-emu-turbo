@@ -25,7 +25,16 @@ git -C retro-go checkout -q "$REV"
 git -C retro-go submodule update --init --recursive
 ENVS=""
 for kv in "$@"; do ENVS="$ENVS -e $kv"; done
-docker compose -f docker-compose.retro-go.yml run --rm $ENVS retro-go-build sh -c "rm -f mame-go/sdkconfig; python rg_tool.py --target=esp32-emu-turbo build mame-go" 2>&1 | grep -E "error:|binary size" | head -3
+# the old binary goes first: a failed build must not leave it to be installed
+# (2026-10-05: a link error, and the previous build went to the board as the new one)
+OUT=$(docker compose -f docker-compose.retro-go.yml run --rm $ENVS retro-go-build sh -c "rm -f mame-go/sdkconfig mame-go/build/mame-go.bin; python rg_tool.py --target=esp32-emu-turbo build mame-go" 2>&1)
+echo "$OUT" | grep -E "error:|undefined reference|binary size" | head -5
+if echo "$OUT" | grep -q -E "error:|undefined reference|FAILED:"; then
+    echo "the build failed: not installing" >&2
+    git -C retro-go checkout -q - 2>/dev/null || true
+    git submodule update --init --recursive
+    exit 1
+fi
 # A play build must read the gamepad. The bench code replaces it with a script and
 # is the only place that prints "MAMEBENCH frames": the binary itself says which
 # build it is, whatever the environment was (2026-10-03: the user got a board on
