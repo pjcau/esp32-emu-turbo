@@ -28,8 +28,8 @@ stopped here by the user's decision.
 | Metal Slug 2 (Neo Geo, raster) | 36.2 → 33.5 | 46 / 15-16 |
 | Final Fight (CPS1) | 40.1 → 29.5 | 55 / 18 |
 | Street Fighter II CE (CPS1) | 38.9 → 36.1 | 46 / 15 |
-| Golden Axe (System 16) | not measured | 50 / 17 |
-| Alien Syndrome, Wonder Boy III (System 16) | not measured | 50 / 17, 49 / 16 |
+| Golden Axe (System 16) | not measured | 54 / 18 |
+| Alien Syndrome, Wonder Boy III (System 16) | not measured | 58 / 19, 57 / 19-20 |
 
 - The 68000 came down by a third (Metal Slug 10.8 → 7.0 ms, Final Fight
   9.7 → 6.8 in play), not by the half that was the intermediate objective.
@@ -38,8 +38,8 @@ stopped here by the user's decision.
 - The CPS1 and the raster Neo Geo games are at twice the frame budget.
 - **The realistic target on this board**: the game always at full speed
   (60 frames of logic a second, clean sound) with 20 to 30 frames drawn. Metal
-  Slug and Final Fight are nearly there; Street Fighter II, Metal Slug 2 and
-  the System 16 games run at 45 to 50.
+  Slug and Final Fight are nearly there, and since 2026-10-05 the System 16
+  games (54 to 58); Street Fighter II and Metal Slug 2 run at 45 to 50.
 
 Launch times: the same arcade game again starts in 9 to 13 s; after another
 arcade game it takes 20 to 28 s, because the 4 MB flash cache holds one game
@@ -82,10 +82,11 @@ Arcade 3D Racing.
 
 In the order of what it could give.
 
-1. **System 16** (ported, not tuned): its sound board to core 1 and its frame
-   to the display task, as on the CPS1 (about 13 % and 18 % of core 0 in
-   Golden Axe's profile); why the idle skip never fires on Golden Axe.
-   Shinobi and Altered Beast were not tried (no set at hand).
+1. **System 16**: done on 2026-10-05 (sound board on core 1, frames handed to
+   the display, idle skips stepping aside where the driver has its own idle
+   hack, full screen): Golden Axe 50 -> 54 fps in play, Alien Syndrome
+   50 -> 58, Wonder Boy III 49 -> 57. Left: Shinobi and Altered Beast (no set
+   at hand); the System 16 save states, which keep only the CPUs and RAM.
 2. **The CPS1's renderer on core 1**, which is half idle: the one large move
    left for the CPS1. Estimated at about 25 drawn frames, large and risky.
 3. **Street Fighter II** has about 70 KB of PSRAM free in play, so it cannot
@@ -93,10 +94,11 @@ In the order of what it could give.
    measured in play on it.
 4. **The Neo Geo raster games' 16-bit video path** (Metal Slug 2, KOF '95): 16 ms.
 5. **A screenshot for the Neo Geo band mode**, with a PC reproduction first.
-6. **Open defects**: `robby.zip` resumes to a black screen for 20 s; a CPS1
-   state is not an exact continuation; Game Gear "GG Aleste 3" runs with a
-   black screen; the dead buttons of 2026-10-03 were never explained (the
-   binary and the card were cleared).
+6. **Open defects**: a CPS1 state is not an exact continuation; the dead
+   buttons of 2026-10-03 were never explained (the binary and the card were
+   cleared). `robby.zip` resuming black was fixed on 2026-10-05 (the
+   Astrocade video registers are now in the save state), and Street Fighter
+   II's saves complete again.
 
 What the hardware would change: a module with 32 MB of flash and 16 MB of
 PSRAM removes the flash cache rewrite, the lack of room for apps (64 KB left)

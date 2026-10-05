@@ -42,7 +42,7 @@ test ROMs and fixes are in
 | nofrendo | NES / Famicom | 256x240 | 655 fps (10.9x) | ✅ 60 fps, BUSY 39%, 55–60 drawn (2026-10-03) |
 | gnuboy | Game Boy | 160x144 | 432 fps (7.2x) | ✅ 60 fps, BUSY 34%, 30 drawn |
 | gnuboy | Game Boy Color | 160x144 | 393 fps (6.5x) | ✅ 60 fps, BUSY 35–53%, 30 drawn |
-| smsplus | Master System / Game Gear / SG-1000 / ColecoVision | 256x192 | 481 fps (8.0x) | ✅ Game Gear: 6 games at 60 fps, BUSY 31–41%, 32–55 drawn (2026-10-03); GG Aleste 3 runs but the screen stays black. Master System not measured again |
+| smsplus | Master System / Game Gear / SG-1000 / ColecoVision | 256x192 | 481 fps (8.0x) | ✅ Game Gear: 6 games at 60 fps, BUSY 31–41%, 32–55 drawn (2026-10-03). Master System not measured again |
 | pce-go | PC Engine / TurboGrafx-16 | 256x240 | 617 fps (10.3x) | ✅ 60 fps (SF2' CE and OutRun, title screens, 2026-10-03) |
 | gwenesis | Sega Genesis / Mega Drive | 320x224 | — | ✅ 60 fps, 30 drawn, BUSY 85% (94% before the 2026-10-03 scaler; YM2612 on core 1) |
 | RACE | Neo Geo Pocket / Color | 160x152 | — | ✅ 60 fps on 8 games, BUSY 70–89%, ~30 drawn (2026-10-03); opens `.zip` files; a 4 MB cartridge must stay unzipped |
