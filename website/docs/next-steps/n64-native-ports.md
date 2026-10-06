@@ -15,7 +15,7 @@ route as DOOM, Quake and Duke Nukem 3D here.
 
 | Game | State (2026-10-06) |
 |:---|:---|
-| **Super Mario 64** | **runs on the board, in the launcher, with sound, at the game's full speed**: 30 ticks a second on the title, in the demos and in the castle grounds, about 6 frames drawn a second at 320x240. Open: more drawn frames (see below: at this size it is the arithmetic of every pixel), a hang seen twice on the way back to the launcher, a music level never measured |
+| **Super Mario 64** | **runs on the board, in the launcher, with sound, at the game's full speed**: 30 ticks a second on the title, in the demos and in the castle grounds, about 6 frames drawn a second at 320x240. Open: more drawn frames (see below: at this size it is the arithmetic of every pixel), a music level never measured |
 | **Mario Kart 64** | **runs on the board, in the launcher, without sound**: title 8 frames a second, menus 7 to 9, a race 3 to 4 (Luigi Raceway). Colours right. In a race all the time is drawing. Still wrong: the portraits on player select, the course previews. On a PC: the logo, the title, the demo race and, with a scripted pad, a Grand Prix race from the menus |
 
 What was measured on Super Mario 64 (board; the 3D picture is drawn at the size
@@ -39,15 +39,18 @@ given and the HUD and text are always 320x240):
   7.5 a second and one under 100 ms gives 10. At 320x240 a frame of the castle
   grounds takes about 150 ms (rasteriser 120 to 130, display list 20).
 - Sound: plays from the pack on the card. Where there is music the synthesis
-  takes 8 to 12 ms of each tick (it was 12 to 16 before the mixer's loops were
-  rewritten; 2.5 ms in the castle grounds, which have no music); the game holds
-  30 ticks with it. Not yet judged by ear: the board tests run at volume 0, and
+  takes 8 to 14 ms of each tick (about 8 on the title, 12 to 14 in the Bowser
+  demo; the title was at 12 before the mixer's loops were rewritten; 2.5 ms in
+  the castle grounds, which have no music); the game holds 30 ticks with it. Not yet judged by ear: the board tests run at volume 0, and
   a microphone only confirms the sound is there.
-- A hang, seen twice, both times on the way back to the launcher: the last
-  line is "Restarting system!", the game task is stuck in the shutdown, a hard
-  reset recovers it. A likely cause is fixed in the fork (the render task could
-  send a frame to the display while the shutdown was clearing it) but the fix
-  is not proven: the hang is rare.
+- A hang on the way back to the launcher, found and fixed (2026-10-06). The
+  last line was "Restarting system!", the game task stuck in the shutdown; a
+  hard reset recovered it. The render task could send a frame to the display
+  while the shutdown was clearing and closing it, and two streams to the panel
+  at once hang its driver. The shutdown now stops frames first. Measured on
+  the board with the same loop (start the game, 42 s into the Bowser demo,
+  back to the launcher): 2 hangs in 20 with the old build, 0 in 30 with the
+  fix; at the old rate 30 clean runs in a row would happen 4 times in 100.
 - No crash in the cycles of title, demos and a walk through the castle grounds.
   Entering the castle (a level load during play) is not tested yet.
 - Internal RAM free: 48 to 64 KB. External RAM free: 270 KB at least.
@@ -64,7 +67,10 @@ Mario Kart 64 on the board (2026-10-06, 320x240, no sound, one core drawing):
 The first builds ran a race at 1.3 frames a second: the game asks for the
 karts' pictures all the time, a few hundred bytes from places far apart in the
 pack, and every request was a 32 KB read of the SD card, 58 ms. The app now
-keeps 128 blocks of 8 KB of the pack in memory and reads nothing in a race.
+keeps 128 blocks of 8 KB of the pack in memory. A race still starts slowly
+while they fill: the first second after the course loads does about 70 card
+reads (2.4 frames that second), then for some 25 s (the opening camera and the
+line-up) a few reads a second of 15 ms each; after that it reads nothing.
 
 ## What was done
 
@@ -145,7 +151,6 @@ What was done on it (2026-10-06):
 | Item | Notes |
 |:---|:---|
 | Super Mario 64: more drawn frames | about 6 a second at 320x240. Either a deeper rewrite of the pixel loops (long, uncertain) or a smaller render size, which is measured: 7.5 at 240x180, 10.5 at 160x120. A render-size choice in the game's menu does not exist yet (the size is a build constant) |
-| Super Mario 64: the hang on the way back to the launcher | seen twice; a likely cause is fixed, not proven |
 | Super Mario 64: a level with music, level loads during play (castle door, paintings) | never measured: the castle grounds have no music, and the board's tests have not entered a painting yet |
 | Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
 | Super Mario 64: a percentage while a level loads | the screen stands still for 1 to 1.5 s; the SD app copy and Mario Kart 64's course load show one |
