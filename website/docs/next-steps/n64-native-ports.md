@@ -15,7 +15,7 @@ route as DOOM, Quake and Duke Nukem 3D here.
 
 | Game | State (2026-10-06) |
 |:---|:---|
-| **Super Mario 64** | **runs on the board, installed in the launcher** (see below), with sound. The game keeps its speed in the levels (30 ticks a second) and draws about 6 frames a second at 320x240. Open: the sound. The user heard it stutter on 2026-10-06; the microphone test cannot tell the builds apart (the build that measured fine the day before measured the same as the new ones when repeated), so it is being judged by ear. On the title screen it has to stutter: the game runs at 22 ticks a second there and makes sound for 22 thirtieths of each second |
+| **Super Mario 64** | **runs on the board, installed in the launcher** (see below), with sound. The game keeps its speed in the levels (30 ticks a second) and draws about 6 frames a second at 320x240. Open: the sound. It stutters wherever the game is under 30 ticks a second (the title at 22, the demos at 25), because one tick's worth of sound was made per tick; a version that makes sound by the clock is being measured on the board (the first attempt filled the gaps but halved the game's speed and was taken off) |
 | **Mario Kart 64** | **runs on a PC, without sound**: the Nintendo logo, the title screen, the demo race, and with a scripted pad a Grand Prix race from the menus (player and course selection, the cup's introduction, Lakitu's start, Luigi Raceway with the whole HUD). All data is read from a pack file built from the user's ROM. Some menu pictures are still wrong. Nothing builds for the board yet |
 
 What was measured on Super Mario 64 (board, 2026-10-05; the 3D picture is drawn
@@ -101,7 +101,7 @@ What was done on it (2026-10-06):
 
 | Item | Notes |
 |:---|:---|
-| Super Mario 64: the sound | stutters by ear (2026-10-06). The microphone figures that first blamed the two-core builds were not repeatable: the control run on the previous build gave the same figures, and the castle grounds are quiet anyway (birds and water, no music). To settle by listening, build by build. Known cause on the title screen: 22 ticks a second there, and the game makes one tick's worth of sound per tick. A 3 KB list on the render task's stack was moved off it meanwhile, and the stack margins are now printed (`SM64STACK`) |
+| Super Mario 64: the sound | one tick's worth of sound per tick starves the sound device at the title's 22 and the demos' 25 ticks a second. Sound made by the clock fills the gaps (measured with the microphone on the title) but its first version made the game task wait for the device and halved the game's speed; the second makes sound only when the device has room, and is on the board to be measured. The microphone cannot judge the castle grounds, which are quiet (birds and water, no music). A suspected stack overflow in the render task was measured and ruled out (20 KB free) |
 | Super Mario 64: more drawn frames at 320x240 (about 6 a second now) | the rasteriser is shared between the two cores, band by band: the second core saves 20-25 ms of the 125 ms a frame's rasteriser takes, at no cost in game speed. Still to try: writing the screen format directly (the copy is 18 ms) |
 | Super Mario 64: level loads during play (castle door, paintings) with the render task | to be tried by hand on the board |
 | Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
