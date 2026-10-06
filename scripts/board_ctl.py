@@ -321,14 +321,20 @@ def main():
         out = a.args[1] if len(a.args) > 1 else "capture.wav"
         b.send(f"acap {secs}", wait=r"^CTL acap", timeout=3, echo=False)
         time.sleep(secs + 1)
-        data, rate = bytearray(), 32000
+        data, rate, bad = bytearray(), 32000, 0
         for l in b.send("adump", wait=r"^CTL adump done", timeout=120, echo=False):
             if l.startswith("CTL a "):
-                data += base64.b64decode(l[6:].strip())
+                # a log line written straight to the UART by another task can
+                # land inside a chunk: keep the length (zeros) and count it
+                try:
+                    data += base64.b64decode(l[6:].strip(), validate=True)
+                except ValueError:
+                    data += bytes(72)
+                    bad += 1
             elif l.startswith("CTL adump done"):
                 rate = int(l.split()[4])
         w = wave.open(out, "wb"); w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate); w.writeframes(bytes(data)); w.close()
-        print(f"{out}: {len(data) // 2} samples at {rate} Hz")
+        print(f"{out}: {len(data) // 2} samples at {rate} Hz" + (f", {bad} garbled chunks zeroed" if bad else ""))
     elif a.cmd == "volume":
         b.send("volume " + (a.args[0] if a.args else ""), wait=r"^CTL volume", timeout=3)
     elif a.cmd == "raw":
