@@ -16,7 +16,7 @@ route as DOOM, Quake and Duke Nukem 3D here.
 | Game | State (2026-10-06) |
 |:---|:---|
 | **Super Mario 64** | **runs on the board, installed in the launcher** (see below), with sound. The game keeps its speed in the levels (30 ticks a second) and draws about 6 frames a second at 320x240. Open: the sound. The user heard it stutter on 2026-10-06; the microphone test cannot tell the builds apart (the build that measured fine the day before measured the same as the new ones when repeated), so it is being judged by ear. On the title screen it has to stutter: the game runs at 22 ticks a second there and makes sound for 22 thirtieths of each second |
-| **Mario Kart 64** | **runs on a PC, without sound**: the Nintendo logo, the title screen and the demo race on Mario Raceway (track, karts, shadows, clouds), 900 frames without a fault, all data read from a pack file built from the user's ROM. Nothing builds for the board yet |
+| **Mario Kart 64** | **runs on a PC, without sound**: the Nintendo logo, the title screen, the demo race, and with a scripted pad a Grand Prix race from the menus (player and course selection, the cup's introduction, Lakitu's start, Luigi Raceway with the whole HUD). All data is read from a pack file built from the user's ROM. Some menu pictures are still wrong. Nothing builds for the board yet |
 
 What was measured on Super Mario 64 (board, 2026-10-05; the 3D picture is drawn
 at the size given and the HUD and text are always 320x240):
@@ -106,7 +106,7 @@ What was done on it (2026-10-06):
 | Super Mario 64: level loads during play (castle door, paintings) with the render task | to be tried by hand on the board |
 | Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
 | Super Mario 64: internal RAM | 4 KB free is too little to rely on |
-| Mario Kart 64: the rest of the game on the PC | menus between the title and a race, the HUD, the other 19 courses, split screen, and a run driven by recorded input: only the title and the demo race have been looked at |
+| Mario Kart 64: the rest of the game on the PC | some menu pictures (name plates, course preview), the other 18 courses, split screen, battle, the ceremony: two courses have been seen so far |
 | Mario Kart 64: sound | same engine family as Super Mario 64's; not started (the game's sound requests only queue up) |
 | Mario Kart 64: the ESP32 app | the pack on the SD card, the game's 1 MB of working memory in external RAM, then measurements. Speed will be the problem, as it is for Super Mario 64 |
 | Mario Kart 64 in the launcher | it will need its own partition: on the 16 MB flash that means another app set aside, or the 32 MB module ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)) |
