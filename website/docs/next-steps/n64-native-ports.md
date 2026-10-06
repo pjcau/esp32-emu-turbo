@@ -16,7 +16,7 @@ route as DOOM, Quake and Duke Nukem 3D here.
 | Game | State (2026-10-06) |
 |:---|:---|
 | **Super Mario 64** | **runs on the board, installed in the launcher** (see below), with sound. The game keeps its speed in the levels (30 ticks a second) and draws about 6 frames a second at 320x240. Open: the sound. It stutters wherever the game is under 30 ticks a second (the title at 22, the demos at 25), because one tick's worth of sound was made per tick; a version that makes sound by the clock is being measured on the board (the first attempt filled the gaps but halved the game's speed and was taken off) |
-| **Mario Kart 64** | **runs on a PC, without sound**: the Nintendo logo, the title screen, the demo race, and with a scripted pad a Grand Prix race from the menus (player and course selection, the cup's introduction, Lakitu's start, Luigi Raceway with the whole HUD). All data is read from a pack file built from the user's ROM. Some menu pictures are still wrong. Nothing builds for the board yet |
+| **Mario Kart 64** | **runs on a PC, without sound**: the Nintendo logo, the title screen, the demo race, and with a scripted pad a Grand Prix race from the menus (player and course selection, the cup's introduction, Lakitu's start, Luigi Raceway with the whole HUD). All data is read from a pack file built from the user's ROM. Some menu pictures are still wrong. **The ESP32 app builds** (1.26 MB, plus an 8.6 MB pack for the SD card) but has not been run on the board: there is no free partition for it, and the ROM it is built from is not on the PC the board is attached to |
 
 What was measured on Super Mario 64 (board, 2026-10-05; the 3D picture is drawn
 at the size given and the HUD and text are always 320x240):
@@ -102,13 +102,13 @@ What was done on it (2026-10-06):
 | Item | Notes |
 |:---|:---|
 | Super Mario 64: the sound | one tick's worth of sound per tick starves the sound device at the title's 22 and the demos' 25 ticks a second. Sound made by the clock fills the gaps (measured with the microphone on the title) but its first version made the game task wait for the device and halved the game's speed; the second makes sound only when the device has room, and is on the board to be measured. The microphone cannot judge the castle grounds, which are quiet (birds and water, no music). A suspected stack overflow in the render task was measured and ruled out (20 KB free) |
-| Super Mario 64: more drawn frames at 320x240 (about 6 a second now) | the rasteriser is shared between the two cores, band by band: the second core saves 20-25 ms of the 125 ms a frame's rasteriser takes, at no cost in game speed. Still to try: writing the screen format directly (the copy is 18 ms) |
+| Super Mario 64: more drawn frames at 320x240 (6 a second installed, 7.3 measured) | the rasteriser keeps a frame's triangles and draws them in bands on both cores: on the board the castle grounds went from 6.1 to 7.3 drawn frames a second, but the game's ticks jittered and external RAM ran short, so that build was taken off; a corrected one (second core below the game in priority, a smaller queue, the display conversion done by the bands) is being measured |
 | Super Mario 64: level loads during play (castle door, paintings) with the render task | to be tried by hand on the board |
 | Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
 | Super Mario 64: internal RAM | 4 KB free is too little to rely on |
 | Mario Kart 64: the rest of the game on the PC | some menu pictures (name plates, course preview), the other 18 courses, split screen, battle, the ceremony: two courses have been seen so far |
 | Mario Kart 64: sound | same engine family as Super Mario 64's; not started (the game's sound requests only queue up) |
-| Mario Kart 64: the ESP32 app | the pack on the SD card, the game's 1 MB of working memory in external RAM, then measurements. Speed will be the problem, as it is for Super Mario 64 |
+| Mario Kart 64: first run on the board | the app builds; it needs the user's ROM on the machine that builds it, a partition to test in (the arcade app's slot, as Super Mario 64's first test did, or one made by setting another app aside), then measurements. Speed will be the problem, as it is for Super Mario 64 |
 | Mario Kart 64 in the launcher | it will need its own partition: on the 16 MB flash that means another app set aside, or the 32 MB module ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)) |
 
 ## In the launcher
