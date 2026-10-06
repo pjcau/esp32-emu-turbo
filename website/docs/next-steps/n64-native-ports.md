@@ -15,7 +15,7 @@ route as DOOM, Quake and Duke Nukem 3D here.
 
 | Game | State (2026-10-06) |
 |:---|:---|
-| **Super Mario 64** | **runs on the board, in the launcher, with sound, at the game's full speed**: 30 ticks a second on the title, in the demos and in the castle grounds, about 6 frames drawn a second at 320x240. Open: more drawn frames (see below: at this size it is the arithmetic of every pixel), a music level never measured |
+| **Super Mario 64** | **runs on the board, in the launcher, with sound, at the game's full speed**: 30 ticks a second on the title, in the demos and in the castle grounds, about 6 frames drawn a second at 320x240. Open: more drawn frames (see below: at this size it is the arithmetic of every pixel) |
 | **Mario Kart 64** | **runs on the board, in the launcher, without sound**: title 8 frames a second, menus 7 to 9, a race 3 to 4 (Luigi Raceway). Colours right. In a race all the time is drawing. Still wrong: the portraits on player select, the course previews. On a PC: the logo, the title, the demo race and, with a scripted pad, a Grand Prix race from the menus |
 
 What was measured on Super Mario 64 (board; the 3D picture is drawn at the size
@@ -30,6 +30,7 @@ given and the HUD and text are always 320x240):
 | **320x240** | **2026-10-06, with sound, installed** | castle grounds | **30.0** | **6.0** |
 | **320x240** | the same | Bowser demo (music) | **30.4** | **6.4** |
 | **320x240** | the same | title (music) | **29.4** | **6.4** |
+| **320x240** | the same | Bob-omb Battlefield (music), standing and running | **30.0** | **6.0 to 6.2** |
 | 240x180 | 2026-10-06, with sound, second core not helping | castle grounds | 30.0 | 7.5 |
 | 160x120 | the same | castle grounds | 30.0 | 10.5 |
 
@@ -39,9 +40,10 @@ given and the HUD and text are always 320x240):
   7.5 a second and one under 100 ms gives 10. At 320x240 a frame of the castle
   grounds takes about 150 ms (rasteriser 120 to 130, display list 20).
 - Sound: plays from the pack on the card. Where there is music the synthesis
-  takes 8 to 14 ms of each tick (about 8 on the title, 12 to 14 in the Bowser
-  demo; the title was at 12 before the mixer's loops were rewritten; 2.5 ms in
-  the castle grounds, which have no music); the game holds 30 ticks with it. Not yet judged by ear: the board tests run at volume 0, and
+  takes 4 to 14 ms of each tick (4 to 6.5 in Bob-omb Battlefield, about 8 on
+  the title, 12 to 14 in the Bowser demo; the title was at 12 before the
+  mixer's loops were rewritten; 2.5 ms in the castle grounds, which have no
+  music); the game holds 30 ticks with it everywhere it was measured. Not yet judged by ear: the board tests run at volume 0, and
   a microphone only confirms the sound is there.
 - A hang on the way back to the launcher, found and fixed (2026-10-06). The
   last line was "Restarting system!", the game task stuck in the shutdown; a
@@ -151,7 +153,7 @@ What was done on it (2026-10-06):
 | Item | Notes |
 |:---|:---|
 | Super Mario 64: more drawn frames | about 6 a second at 320x240. Either a deeper rewrite of the pixel loops (long, uncertain) or a smaller render size, which is measured: 7.5 at 240x180, 10.5 at 160x120. A render-size choice in the game's menu does not exist yet (the size is a build constant) |
-| Super Mario 64: a level with music, level loads during play (castle door, paintings) | never measured: the castle grounds have no music, and the board's tests have not entered a painting yet |
+| Super Mario 64: level loads during play (castle door, paintings) | not tried: the board's timed keys cannot walk there. Bob-omb Battlefield was entered through the game's own stage list (a file switch, `levelselect` next to the pack, for measurements only) |
 | Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
 | Super Mario 64: a percentage while a level loads | the screen stands still for 1 to 1.5 s; the SD app copy and Mario Kart 64's course load show one |
 | Mario Kart 64: speed in a race | 3 to 4 frames a second, all of it drawing, on one core. The banded two-core drawing of the Super Mario 64 port is not brought over yet; a smaller render size is not tried yet |
