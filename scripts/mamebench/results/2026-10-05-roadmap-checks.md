@@ -80,3 +80,19 @@ it back: it now writes every scroll-3 pixel). Play window: ffight 55.2 / 48,
 18.4 drawn; ghouls 60.3, 51.5 drawn; sf2ce 43.2 (a fight scene, not
 comparable with the morning's 50.2). Webcam bursts clean.
 Discarded: priority bitmap cleared by rows (dbd44046): no measurable change.
+
+## Dead buttons of 2026-10-03 (open item)
+
+What is known: the one-off binary on the board that day ignored the gamepad.
+The "stale bench flags" explanation was tested on the PC on 2026-10-03 and
+not reproduced: a MAMEBENCH=0 build after a MAMEBENCH=2 build in the same
+directory has no "MAMEBENCH frames" string and no -DMAMEBENCH (rg_tool.py
+passes -D cache entries to idf.py, which re-runs CMake each time). The cause
+of that one binary stays unexplained. What guards against it since then:
+`board_install.sh` refuses any binary that contains "MAMEBENCH frames" (a
+bench build ignores the pad) or that a failed build left behind.
+
+2026-10-06, the play build now on the board, Aero Fighters (the game the
+user reported): SELECT puts a coin in ("PRESS 1P or 2P BUTTON"), START opens
+player select and the mission, the D-pad moves the plane (webcam). Input
+works; nothing to fix without a new occurrence.
