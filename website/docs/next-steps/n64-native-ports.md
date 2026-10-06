@@ -13,10 +13,10 @@ route as DOOM, Quake and Duke Nukem 3D here.
 
 ## Where we are
 
-| Game | State (2026-10-05) |
+| Game | State (2026-10-06) |
 |:---|:---|
-| **Super Mario 64** | **runs on the board.** Title, demos and Peach's castle grounds were played by the user. No sound yet. Not installed: the flash has no room for it, so it is tested in the arcade app's slot and the arcade app is put back afterwards |
-| **Mario Kart 64** | started the same day: the decompilation is imported, nothing builds for the board yet |
+| **Super Mario 64** | **runs on the board, installed in the launcher** (see below), with sound. The game keeps its speed in the levels (30 ticks a second) and draws about 6 frames a second at 320x240. Open: the sound. The user heard it stutter on 2026-10-06; the microphone test cannot tell the builds apart (the build that measured fine the day before measured the same as the new ones when repeated), so it is being judged by ear. On the title screen it has to stutter: the game runs at 22 ticks a second there and makes sound for 22 thirtieths of each second |
+| **Mario Kart 64** | **runs on a PC, without sound**: the Nintendo logo, the title screen and the demo race on Mario Raceway (track, karts, shadows, clouds), 900 frames without a fault, all data read from a pack file built from the user's ROM. Nothing builds for the board yet |
 
 What was measured on Super Mario 64 (board, 2026-10-05; the 3D picture is drawn
 at the size given and the HUD and text are always 320x240):
@@ -87,15 +87,28 @@ Super Mario 64 no port to a small machine exists (the PC port, SpaghettiKart, is
 C++ on a GPU), so the PC layer has to be brought over from the Super Mario 64
 port and the code that unpacks data for a big-endian console fixed first.
 
+What was done on it (2026-10-06):
+
+| Step | Result |
+|:---|:---|
+| The game's data, native | the decompilation's own build steps run with a native 32-bit compiler: courses, common models, logo and ceremony compiled, linked alone at their segment address and MIO0-compressed as the game expects; kart frames and compressed textures taken as they are. One link lays everything out like the cartridge: `mk64.seg`, 8.6 MB |
+| Checked against the ROM | where the bytes must be the same they are looked for, whole, in the ROM: the 20 packed display lists, the 20 courses' vertices (swapped back and compressed) and the kart, texture and menu segments are all found |
+| The game keeps the console's way of loading | segment table, reads by ROM offset (now pack offset), MIO0 and TKMK00 decompression in C. Far fewer changes to the game than in the Super Mario 64 port, which removes the segments |
+| One step per frame | the console's threads are gone: one start, one step per frame told how many vertical blanks went by, which is how the game keeps its speed when a frame is slow |
+| Renderer | the one of the Super Mario 64 port, plus what this game needs: the early F3DEX quadrangle command, pictures drawn in strips, textures of any size, a general colour combiner (the inherited one knew a fixed set of formulas), intensity textures with alpha |
+
 ## What is left
 
 | Item | Notes |
 |:---|:---|
-| Super Mario 64: more drawn frames at 320x240 (4 to 6 a second now) | writing the screen format directly (the copy is 18 ms), part of the rasteriser on the first core, which is 70 % idle |
+| Super Mario 64: the sound | stutters by ear (2026-10-06). The microphone figures that first blamed the two-core builds were not repeatable: the control run on the previous build gave the same figures, and the castle grounds are quiet anyway (birds and water, no music). To settle by listening, build by build. Known cause on the title screen: 22 ticks a second there, and the game makes one tick's worth of sound per tick. A 3 KB list on the render task's stack was moved off it meanwhile, and the stack margins are now printed (`SM64STACK`) |
+| Super Mario 64: more drawn frames at 320x240 (about 6 a second now) | the rasteriser is shared between the two cores, band by band: the second core saves 20-25 ms of the 125 ms a frame's rasteriser takes, at no cost in game speed. Still to try: writing the screen format directly (the copy is 18 ms) |
 | Super Mario 64: level loads during play (castle door, paintings) with the render task | to be tried by hand on the board |
 | Super Mario 64: sound by ear | built and measured, never listened to at a normal volume |
 | Super Mario 64: internal RAM | 4 KB free is too little to rely on |
-| Mario Kart 64: PC build, reference frames, assets on the card, board | the plan is in the repo's README |
+| Mario Kart 64: the rest of the game on the PC | menus between the title and a race, the HUD, the other 19 courses, split screen, and a run driven by recorded input: only the title and the demo race have been looked at |
+| Mario Kart 64: sound | same engine family as Super Mario 64's; not started (the game's sound requests only queue up) |
+| Mario Kart 64: the ESP32 app | the pack on the SD card, the game's 1 MB of working memory in external RAM, then measurements. Speed will be the problem, as it is for Super Mario 64 |
 | Mario Kart 64 in the launcher | it will need its own partition: on the 16 MB flash that means another app set aside, or the 32 MB module ([Plan D](/docs/next-steps/plan-esp32-s3-n32r16v)) |
 
 ## In the launcher
