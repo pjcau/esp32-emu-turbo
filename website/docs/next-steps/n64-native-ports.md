@@ -128,6 +128,40 @@ day had been to wait for the 32 MB module; this replaces it for Super Mario 64.
   <baserom.us.z64>` builds it and leaves `sm64-go/build/sm64-go.bin`, which the
   image build then takes as it is.
 
+### Mario Kart 64's place, and apps started from the SD card
+
+Decided by the user on 2026-10-06; assembled into an image, **not flashed or
+run yet**.
+
+- Partition `mk64-go`, 1344 KB (the binary is 1.26 MB without sound): the room
+  of Wolfenstein 3D and OpenTyrian, plus 64 KB from `retro-core`.
+- In the "Nintendo 64" tab an empty file `<name>.mk64` in `/sd/roms/n64` starts
+  it; its data is the pack `/sd/retro-go/mk64/mk64.seg`.
+- Wolfenstein 3D, OpenTyrian and OutRun stay in the launcher, but their
+  programs are files on the SD card (`/sd/retro-go/apps/<app>.bin`) and share
+  one 640 KB partition, `sdapp`, which was OutRun's. An ESP32 program runs from
+  the flash, not from the card: starting one of the three copies its file into
+  that partition first, unless it is the one already there, and then boots it.
+  The price is that copy (a few seconds, to be measured) when switching among
+  the three.
+
+| Partition | Offset | Size |
+|:---|:---|:---|
+| launcher | 0x010000 | 1152 KB |
+| retro-core | 0x130000 | 1216 KB |
+| prboom-go | 0x260000 | 832 KB |
+| gwenesis | 0x330000 | 1024 KB |
+| sm64-go | 0x430000 | 1792 KB |
+| retro-extra | 0x5f0000 | 1280 KB |
+| mame-go | 0x730000 | 2048 KB |
+| mk64-go | 0x930000 | 1344 KB |
+| gbsp | 0xa80000 | 832 KB |
+| sdapp (OutRun, Wolfenstein 3D, OpenTyrian in turn) | 0xb50000 | 640 KB |
+| mamerom (arcade game cache) | 0xbf0000 | 4096 KB |
+
+The last 64 KB of the flash are left free on purpose: the image ends with a
+256-byte footer, and `rg_tool.py` refuses an image larger than the flash.
+
 ### Duke Nukem 3D and Quake, set aside
 
 The 16 MB flash was full (64 KB free), so the room came from two apps the user
