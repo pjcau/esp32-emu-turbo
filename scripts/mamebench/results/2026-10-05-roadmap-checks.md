@@ -6,7 +6,14 @@ Board, sf2ce from the CPS1 tab: `save 0` -> "CTL save done slot 0" (the
 2026-10-03 failure, "save queued" with no "done", does not reproduce; the
 state buffer is borrowed from the scroll-2 cache as designed). In-session
 `load 0` and `resume` from the launcher both return to the saved boot-screen
-scene and continue (webcam). Not yet repeated with a save taken in a fight.
+scene and continue (webcam). 
+
+2026-10-06, in a fight (Ryu vs Chun-Li, round 1): `save 0` -> "CTL save
+done slot 0"; 12 s of play later (Ryu lost more health) `load 0` -> "CTL
+load done slot 0" and the webcam shows the saved scene again: same
+positions, same health bars, and the fight goes on. Leaving to the launcher
+and `resume` from slot 0 also comes back into the fight and keeps playing.
+SF2 save states in a fight: closed.
 
 ## Knights of the Round, 16-bit frames to the display (`cps1_indexed`)
 
