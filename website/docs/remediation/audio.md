@@ -14,7 +14,7 @@ rework.
 | Fix | Applied today | Proposal |
 |:---|:---|:---|
 | **R38 RC filter**: 1 kΩ in series + 10 nF to GND at the PAM8403 input (C22 / `PAM_IN_AC`) | by hand, article 0004 (rework sheet from 2026-09-12) | Bench-test 22 nF (cut-off ≈ 7 kHz), since 10 nF reduced the hiss but did not remove it. Two 10 nF give 20 nF (≈ 8 kHz) only **in parallel**: stack the second one on top of the first, same two ends; in series they give 5 nF. Record the final values, then either put the RC in the schematic or drop the whole chain on the respin (next row). |
-| **Replace the PDM chain** | — | Respin: an I2S class-D amplifier with integrated DAC instead of PDM → RC → PAM8403. See [why audio stays on the main chip](/docs/software/snes-optimization#audio-no-coprocessor). |
+| **Replace the PDM chain** | — | Respin: an I2S class-D amplifier with integrated DAC instead of PDM → RC → PAM8403. See [why audio stays on the main chip](/docs/software/optimizations#audio-no-coprocessor). |
 | **PDM channel off when silent** | firmware, done (`pdm.c`) | Keep: an enabled channel emits its carrier even at volume 0. |
 | **Default volume 0** | firmware (`RG_AUDIO_DEFAULT_VOLUME`) | Raise it once the hiss is gone. On the bench the console command `volume N` (`board_ctl.py raw "volume 40"`) sets it without the menu. |
 | **32 kHz in every app** | firmware, done (2026-09-26/27) | Keep: at other rates the PDM DAC-mode clocks (rate / 100) misbehave — mame-go ignored the volume at 22050, PC Engine and DOOM crackled. Cores whose chip runs at another rate resample (Genesis) or double a 16 kHz mix (Duke Nukem 3D, Neo Geo Pocket). |

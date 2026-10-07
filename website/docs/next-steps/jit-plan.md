@@ -16,8 +16,8 @@ repository: `docs/archived/jit-plan-2026-09-29.md`.
 
 | Frontend | State | Result |
 |:---|:---|:---|
-| **Game Boy Advance** (ARM7TDMI / Thumb, an Xtensa backend for gpSP) | **finished and in use** | 56–60 fps in play, 11 of 12 tested games on the dynarec, video and audio bit-identical to gpSP's x86 dynarec; automatic fallback to the interpreter. See [GBA dynarec](../software/gba-dynarec.md) |
-| **Motorola 68000** (`m68kjit`, blocks on top of Musashi) | **finished, exact, switched off** | slower than the interpreter on the board: 13.1 ms against 7.7 ms of 68000 a frame on Metal Slug. See [68000 dynarec](../software/m68k-dynarec.md) |
+| **Game Boy Advance** (ARM7TDMI / Thumb, an Xtensa backend for gpSP) | **finished and in use** | 56–60 fps in play, 11 of 12 tested games on the dynarec, video and audio bit-identical to gpSP's x86 dynarec; automatic fallback to the interpreter. See [GBA dynarec](../software/optimizations.md#game-boy-advance-the-xtensa-dynarec) |
+| **Motorola 68000** (`m68kjit`, blocks on top of Musashi) | **finished, exact, switched off** | slower than the interpreter on the board: 13.1 ms against 7.7 ms of 68000 a frame on Metal Slug. See [68000 dynarec](../software/optimizations.md#arcade-the-68000) |
 | Mega Drive, other systems | not started | nothing to gain until the 68000 frontend wins somewhere |
 
 The code is public: [pjcau/xtensa-68000-dynarec](https://github.com/pjcau/xtensa-68000-dynarec)

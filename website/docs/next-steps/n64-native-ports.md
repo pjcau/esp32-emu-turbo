@@ -21,7 +21,7 @@ not deleted. To put them back: restore `n64app` in `retro-go/rg_tool.py`
 (three commented lines: `DEFAULT_APPS`, `SD_APPS`, `PROJECT_APPS`), move the
 two `.bin` files back to `/retro-go/apps/`, build the image and write it. The
 release without them is
-[Firmware release 2026-10-07](/docs/software/firmware-release).
+[Firmware release 2026-10-07](/docs/software/firmware#current-build).
 :::
 
 

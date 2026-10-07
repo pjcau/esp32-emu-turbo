@@ -54,7 +54,8 @@ Details: [first-boot session log](docs/first-boot-session-2026-08-29.md).
 Firmware = our [Retro-Go](https://github.com/ducalex/retro-go) fork (`retro-go/`
 submodule). Per-step tables and measurements live in the docs:
 [firmware](website/docs/software/firmware.md),
-[SNES optimization](website/docs/software/snes-optimization.md),
+[emulators: tests and speed](website/docs/software/emulators.md),
+[optimizations](website/docs/software/optimizations.md),
 [emulator remediation](website/docs/remediation/emulators.md).
 
 | Step | What | Status |
@@ -235,7 +236,7 @@ All project documentation lives in `website/docs/` and is published via Docusaur
 - [Enclosure Design](website/docs/design/enclosure.md)
 - [Manufacturing (JLCPCB)](website/docs/manufacturing/manufacturing.md)
 - [First boot — staged session](website/docs/manufacturing/first-boot.md)
-- [Software overview](website/docs/software/overview.md) · [Firmware](website/docs/software/firmware.md) · [SNES Optimization](website/docs/software/snes-optimization.md)
+- [Software overview](website/docs/software/overview.md) · [Firmware](website/docs/software/firmware.md) · [Emulators](website/docs/software/emulators.md) · [Optimizations](website/docs/software/optimizations.md)
 
 Engineering notes live in `docs/`:
 

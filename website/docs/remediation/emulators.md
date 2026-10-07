@@ -9,7 +9,7 @@ sidebar_position: 2
 ## Cores measured on the board (2026-09-26/27)
 
 The cores that had never run on the board have been measured; see the
-[firmware table](/docs/software/firmware#phase-3--all-emulators-at-full-speed)
+[firmware table](/docs/software/emulators)
 for the full list.
 
 | Core | Result | What it took |
@@ -53,4 +53,4 @@ frame.
 
 **Proof:** `scripts/emu_check.py` and `scripts/snes_bench.py`, with the
 numbers copied into the
-[firmware table](/docs/software/firmware#phase-3--all-emulators-at-full-speed).
+[firmware table](/docs/software/emulators).

@@ -155,5 +155,5 @@ Check:
 - I2S PDM TX on DMA (no CPU loop)
 - Parallel LCD bus uses LCD Camera peripheral or DMA
 - WiFi is disabled during emulation (frees CPU + 3V3 headroom)
-- Check `website/docs/software/snes-optimization.md` for current profile
+- Check `website/docs/software/optimizations.md` (SNES section) for the current profile
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draw the SVG figures of docs/software/gba-dynarec.md.
+"""Draw the SVG figures of the GBA dynarec page (merged into docs/software/optimizations.md on 2026-10-08; the figures are no longer shown).
 
 Hand-placed boxes and arrows, one palette, one font stack: the figures stay
 vector, readable in both site themes (each has its own card background) and

@@ -1,7 +1,7 @@
 ---
 id: retro-go-forks-survey
 title: Retro-Go Forks Survey
-sidebar_position: 99
+sidebar_position: 6
 description: Survey of the forks and derivatives of ducalex/retro-go (2026-09-27) — new emulators, game ports, launcher features and performance work that could be pulled into the ESP32 Emu Turbo firmware, with port effort, license and value.
 ---
 

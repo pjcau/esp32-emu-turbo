@@ -1,7 +1,7 @@
 ---
 id: simulator
 title: Desktop Simulator & QEMU
-sidebar_position: 3
+sidebar_position: 5
 ---
 
 # Desktop Simulator & QEMU

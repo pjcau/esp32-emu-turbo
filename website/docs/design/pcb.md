@@ -364,5 +364,5 @@ make export-gerbers
 ### Next revision (v4)
 
 1. Apply the first-article backlog: R37 top-contact J4, J3 "+" and SPK silkscreen
-2. Replace the PDM audio chain (GPIO 17 → R38 RC filter → PAM8403) with an I2S class-D amplifier with integrated DAC — see [why audio stays on the main chip](/docs/software/snes-optimization#audio-no-coprocessor)
+2. Replace the PDM audio chain (GPIO 17 → R38 RC filter → PAM8403) with an I2S class-D amplifier with integrated DAC — see [why audio stays on the main chip](/docs/software/optimizations#audio-no-coprocessor)
 3. Re-export Gerbers, BOM and CPL for JLCPCB

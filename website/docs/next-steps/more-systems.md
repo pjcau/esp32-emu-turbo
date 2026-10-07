@@ -13,7 +13,7 @@ only a port and a measurement settle them.
 | Tier | Systems | Why |
 |:---|:---|:---|
 | 🟢 **Should fit** | Atari 7800, Atari 5200/800, WonderSwan / Color, Vectrex, Intellivision, Odyssey² / Videopac, ZX Spectrum, Amstrad CPC | 1–4 MHz 8/16-bit CPUs, small ROMs, lighter than the NES/SMS cores that already run at 60 |
-| 🟡 **Possible with work** | PC Engine CD, Commodore 64, Game Boy Advance | PCE CD reuses the PCE core (60 fps at 43% busy) plus CD audio streamed from the SD. C64 needs a cycle-accurate video chip. GBA runs since 2026-09-29 (`gbsp`, gpSP interpreter): Sonic 59, TMNT 52, Metal Slug 46 fps on screen; 60 on the heavy games likely needs a dynarec ([existing building blocks](/docs/software/retro-go-forks-survey#jit--dynarec-building-blocks-checked-2026-09-29)) |
+| 🟡 **Possible with work** | PC Engine CD, Commodore 64, Game Boy Advance | PCE CD reuses the PCE core (60 fps at 43% busy) plus CD audio streamed from the SD. C64 needs a cycle-accurate video chip. GBA runs since 2026-09-29 (`gbsp`, gpSP interpreter): Sonic 59, TMNT 52, Metal Slug 46 fps on screen; 60 on the heavy games likely needs a dynarec ([existing building blocks](/docs/next-steps/retro-go-forks-survey#jit--dynarec-building-blocks-checked-2026-09-29)) |
 | 🔴 **Out of reach on this chip** | Sega CD, 32X, Virtual Boy, PlayStation, Saturn, N64 | Too many fast CPUs (32X: two SH-2 at 23 MHz; Sega CD: a second 68000). Sega CD is also **not wanted** (user, 2026-09-29: the games are too big), ROMs larger than the 8 MB PSRAM, or 3D hardware. Neo Geo was listed here: it now runs at part speed with its ROMs paged from the SD card (see [Arcade (MAME)](/docs/next-steps/arcade#where-we-are-2026-10-04)) |
 
 **PlayStation.** A MIPS R3000A at 33.9 MHz plus a geometry coprocessor, a

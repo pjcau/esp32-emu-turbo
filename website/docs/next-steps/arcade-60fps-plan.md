@@ -12,7 +12,7 @@ frameskip. This page says where that stands, what was done and what is left.
 The day-by-day record (every measurement, the original phases, the logs) is
 in the repository: `docs/archived/arcade-60fps-plan-log.md`.
 
-Related pages: [Arcade (MAME)](arcade.md), [68000 dynarec](../software/m68k-dynarec.md),
+Related pages: [Arcade (MAME)](arcade.md), [68000 dynarec](../software/optimizations.md#arcade-the-68000),
 [JIT plan](jit-plan.md), [Software overview](../software/overview.md).
 
 ## Where we are (2026-10-04)
@@ -69,7 +69,7 @@ Arcade 3D Racing.
 
 **Tried and dropped** (measured; do not retry without a new reason):
 
-- the 68000 dynarec: exact, slower than the interpreter here (see [68000 dynarec](../software/m68k-dynarec.md));
+- the 68000 dynarec: exact, slower than the interpreter here (see [68000 dynarec](../software/optimizations.md#arcade-the-68000));
 - PSRAM at 120 MHz and the LCD bus at 25 MHz: out of spec, excluded by the user;
 - 16-bit bitmaps for the Neo Geo, sprites on core 1, a faster sprite plotter,
   the program's first megabyte in PSRAM, FAME/C, lazy cycle counting;

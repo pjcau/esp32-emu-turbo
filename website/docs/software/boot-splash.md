@@ -1,7 +1,7 @@
 ---
 id: boot-splash
 title: Boot Splash
-sidebar_position: 5
+sidebar_position: 6
 ---
 
 # Boot Splash
