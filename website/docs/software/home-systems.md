@@ -11,9 +11,31 @@ the Commodore 64 and the MSX 1/2 that weigh little and play with the
 handheld's buttons. Amiga was asked too; see [Amiga](#amiga) for why it is not
 in this round.
 
-:::caution Not run on the board yet
-Everything on this page builds; none of it has run on the handheld yet. The
-figures below are binary sizes, not speeds.
+:::info On the board since 2026-10-07
+Flashed on 2026-10-07 (fork branch `home-computers`, `fmsx` from 97ae8890 /
+9543588b, `retro-home` from 23934129) and checked with the webcam and the
+serial console:
+
+| System | Game checked | Result |
+|---|---|---|
+| MSX 1 | Nemesis | ✅ runs, keys work, 61 fps, core 21–26 % busy |
+| MSX 2 | Metal Gear 2 | ✅ runs (Konami logo, title) with the real MSX2 BIOS pair |
+| Atari 5200 | Galaxian, Pole Position, Space Invaders | ✅ all three in play, 60 fps, 33 % busy |
+| Commodore 64 | Ghostbusters (.d64) | ✅ loads by itself to the title, 50 fps (PAL), 70 % busy |
+| Atari 7800 | Donkey Kong | ⚠️ plays, keys work, but **42 fps of 60**: the MARIA display chip takes 17.1 ms of a 23.7 ms frame, the 6502 6.5 ms |
+
+The first round found three faults, all fixed on the branch: the 5200 loader
+overflowed a 64-byte log buffer with the cartridge's path (crashes or a jump
+into zero page), fMSX quit when `MSX2.ROM` was missing (it now starts as an
+MSX1), and the 7800 looked only for the US BIOS file (it takes either now).
+The 7800's speed is the open item.
+
+BIOS files used for the check (none is in any repository): MSX `MSX.ROM` =
+Sharp HotBit 1.1, `MSX2.ROM` + `MSX2EXT.ROM` = MSX System v2.1 (a matching
+pair: C-BIOS's `MSX2.ROM` with the real `MSX2EXT.ROM` gives a black screen),
+`DISK.ROM`; Atari `5200.rom` (US), `7800 BIOS (E).rom`; C64 KERNAL 901227-03,
+BASIC 901226-01, CHARGEN 901225-01. The C64GS KERNAL (390852-01, 16 KB) is not
+a C64 KERNAL and does not work.
 :::
 
 ## Where each one lives

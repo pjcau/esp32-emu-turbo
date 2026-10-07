@@ -59,7 +59,7 @@ test ROMs and fixes are in
 | opentyrian-go | OpenTyrian (Tyrian 2.1 freeware) | 320x200 | — | ✅ 36 fps (engine rate 35), BUSY ~30% |
 | duke3d-go | Duke Nukem 3D (shareware) | 320x200 | — | ✅ playable, 48–53 fps in E1L1. **Not on the board since 2026-10-05**: set aside to make room for Super Mario 64, see [how to put it back](/docs/next-steps/n64-native-ports#duke-nukem-3d-and-quake-set-aside) |
 | quake-go | Quake (shareware, software renderer) | 320x200 | — | ✅ 34–41 fps in the attract demo, every frame drawn, BUSY 100% (2026-10-03). **Not on the board since 2026-10-05**, set aside with Duke Nukem 3D |
-| sm64-go | **Super Mario 64** (native port from the decompilation, not emulated) | 320x240 | — | game at full speed (30 ticks a second), 4–6 frames drawn a second, no sound yet (2026-10-05): [Nintendo 64 through native ports](/docs/next-steps/n64-native-ports) |
+| ~~sm64-go, mk64-go~~ | Super Mario 64, Mario Kart 64 (native ports) | — | — | out of the flash since 2026-10-07 (user's request), programs kept on the card: [Nintendo 64 through native ports](/docs/next-steps/n64-native-ports) |
 | handy | Atari Lynx | 160x102 | — | ✅ 56-60 fps on 5 PD demos (2026-10-03, after fixing the BS93 homebrew loader and a divide by zero on silent frames). Removed 2026-09-29, brought back 2026-10-03 |
 | cannonball | OutRun (Cannonball engine, native) | 320x224 | — | ✅ 30 fps, the engine's own rate, every frame drawn, BUSY 35–44% (2026-10-04); needs the OutRun rev. B ROM files |
 | arcade3d (in `retro-extra`) | Arcade 3D Racing (native OutRun-style game) | 320x240 | — | ✅ 35–71 fps, mostly 47–64 (2026-10-04); steering, brake and menu work; BUSY 100% (it runs as fast as it can) |

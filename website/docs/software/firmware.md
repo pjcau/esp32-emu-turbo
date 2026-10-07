@@ -388,6 +388,10 @@ webcam, then fix what breaks — expected suspects: button mapping, audio
 sample rates (NGP 22 kHz, 2600 31.4 kHz, Duke 11 kHz mono→stereo), Duke3D
 file paths (`Engine/cache.c game_dir`), Stella frame height per ROM.
 
+**Partition table (2026-10-07), the current one.** The Nintendo 64 ports are
+out of the flash and 1856 KB are left free; the full table, the image and its
+checks are in [Firmware release 2026-10-07](/docs/software/firmware-release).
+
 **Partition table (2026-09-26).** Since the arcade app: launcher 1.125 MB
 (it had filled 1 MB), mame-go 2 MB, and a 4 MB `mamerom` data partition
 where mame-go keeps big read-only ROM regions memory-mapped (arcade page).

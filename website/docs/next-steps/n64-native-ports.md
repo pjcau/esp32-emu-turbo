@@ -13,6 +13,18 @@ route as DOOM, Quake and Duke Nukem 3D here.
 
 ## Where we are
 
+:::note Out of the flash since 2026-10-07
+At the user's request the two ports left the board's flash on 2026-10-07 and
+their partition (`n64app`, 1792 KB) was removed; the room is left free. Their
+programs are kept on the card in `/retro-go/apps-n64-off/`. The work is paused,
+not deleted. To put them back: restore `n64app` in `retro-go/rg_tool.py`
+(three commented lines: `DEFAULT_APPS`, `SD_APPS`, `PROJECT_APPS`), move the
+two `.bin` files back to `/retro-go/apps/`, build the image and write it. The
+release without them is
+[Firmware release 2026-10-07](/docs/software/firmware-release).
+:::
+
+
 | Game | State (2026-10-06) |
 |:---|:---|
 | **Super Mario 64** | **runs on the board, in the launcher, with sound, at the game's full speed**: 30 ticks a second on the title, in the demos and in the castle grounds, about 6 frames drawn a second at 320x240. Open: more drawn frames (see below: at this size it is the arithmetic of every pixel) |
@@ -182,7 +194,9 @@ day had been to wait for the 32 MB module; this replaces it for Super Mario 64.
 ### One partition for the Nintendo 64 games, and apps started from the SD card
 
 Asked by the user on 2026-10-06; **flashed and checked on the board the same
-day** (arcade, every app, the saves).
+day** (arcade, every app, the saves). **Removed again on 2026-10-07** with the
+two ports (see the note at the top): the table below is the layout of
+2026-10-06, kept as a record.
 
 An ESP32 program runs from the flash, not from the card. But a program can be
 kept on the card as a file and copied into a partition when it is started, and
