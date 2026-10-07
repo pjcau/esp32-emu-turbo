@@ -54,6 +54,10 @@ SYSTEMS = {
     "ngp": ["SNK - Neo Geo Pocket Color", "SNK - Neo Geo Pocket"],
     "a26": ["Atari - 2600"],
     "lnx": ["Atari - Lynx"],
+    "a52": ["Atari - 5200"],          # retro-home (2026-10-07)
+    "a78": ["Atari - 7800"],
+    "c64": ["Commodore - 64"],
+    "msx": ["Microsoft - MSX", "Microsoft - MSX2"],
     "doom": ["DOOM"],
     "quake": ["Quake"],
     "wolf3d": ["Wolfenstein 3D"],
