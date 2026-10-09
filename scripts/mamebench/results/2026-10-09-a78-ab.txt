@@ -1,0 +1,72 @@
+# Atari 7800 A/B, 2026-10-09, Donkey Kong (USA) in play (START, then right held 16 s), retro-home only
+Board: production handheld, play builds via /retro-go/update, volume 0. Medians of 11 consecutive A78PROF lines per build, same session.
+
+| build | A78PROF frames/s | emulation us | MARIA us | 6502+rest us | outside us | stats FPS |
+|---|---|---|---|---|---|---|
+| 07cd18f2 | 50 | 19574 | 13008 | 6565 | 433 | 50/50 |
+| a7bef40f | 56 | 17432 | 10870 | 6564 | 443 | 56/56 |
+| 37ab1acf | 59 | 16341 | 9701 | 6635 | 894 | 58/58 |
+| e21a7296 | 59 | 15864 | 9197 | 6666 | 1328 | 58/58 |
+
+Raw lines:
+```
+== a7bef40f CTL ls f   695472 retro-home.done
+    25.6 [info] a78_main: A78PROF frames=57 emulation=17415 us a frame (MARIA 10870, the 6502 and the rest 6544), outside it 483 us
+    26.7 [info] a78_main: A78PROF frames=57 emulation=17405 us a frame (MARIA 10862, the 6502 and the rest 6543), outside it 438 us
+    27.6 [info] a78_main: A78PROF frames=56 emulation=17415 us a frame (MARIA 10864, the 6502 and the rest 6551), outside it 443 us
+    28.6 [info] a78_main: A78PROF frames=56 emulation=17437 us a frame (MARIA 10874, the 6502 and the rest 6563), outside it 489 us
+    29.6 [info] a78_main: A78PROF frames=56 emulation=17432 us a frame (MARIA 10876, the 6502 and the rest 6555), outside it 444 us
+    30.7 [info] a78_main: A78PROF frames=56 emulation=17447 us a frame (MARIA 10877, the 6502 and the rest 6570), outside it 443 us
+    31.7 [info] a78_main: A78PROF frames=56 emulation=17426 us a frame (MARIA 10862, the 6502 and the rest 6564), outside it 499 us
+    32.7 [info] a78_main: A78PROF frames=56 emulation=17427 us a frame (MARIA 10856, the 6502 and the rest 6570), outside it 443 us
+    33.7 [info] a78_main: A78PROF frames=56 emulation=17455 us a frame (MARIA 10875, the 6502 and the rest 6579), outside it 442 us
+    34.7 [info] a78_main: A78PROF frames=56 emulation=17459 us a frame (MARIA 10875, the 6502 and the rest 6583), outside it 488 us
+    35.7 [info] a78_main: A78PROF frames=56 emulation=17441 us a frame (MARIA 10858, the 6502 and the rest 6583), outside it 442 us
+    34.3 [debug] STACK:4996, HEAP:140+7658 (80+7552), BUSY:100%, FPS:56 (S:47 R:9+0), BATT:0
+    35.3 [debug] STACK:4996, HEAP:140+7658 (80+7552), BUSY:100%, FPS:56 (S:46 R:10+0), BATT:0
+== 07cd18f2 CTL ls f   695280 retro-home.done
+    25.6 [info] a78_main: A78PROF frames=50 emulation=19574 us a frame (MARIA 13029, the 6502 and the rest 6545), outside it 435 us
+    26.6 [info] a78_main: A78PROF frames=50 emulation=19583 us a frame (MARIA 13040, the 6502 and the rest 6542), outside it 483 us
+    27.6 [info] a78_main: A78PROF frames=50 emulation=19568 us a frame (MARIA 13021, the 6502 and the rest 6546), outside it 433 us
+    28.6 [info] a78_main: A78PROF frames=50 emulation=19571 us a frame (MARIA 13007, the 6502 and the rest 6564), outside it 433 us
+    29.6 [info] a78_main: A78PROF frames=50 emulation=19587 us a frame (MARIA 13010, the 6502 and the rest 6576), outside it 481 us
+    30.7 [info] a78_main: A78PROF frames=50 emulation=19572 us a frame (MARIA 13015, the 6502 and the rest 6556), outside it 430 us
+    31.6 [info] a78_main: A78PROF frames=50 emulation=19584 us a frame (MARIA 13008, the 6502 and the rest 6575), outside it 430 us
+    32.6 [info] a78_main: A78PROF frames=50 emulation=19587 us a frame (MARIA 13008, the 6502 and the rest 6579), outside it 482 us
+    33.7 [info] a78_main: A78PROF frames=51 emulation=19561 us a frame (MARIA 12995, the 6502 and the rest 6565), outside it 425 us
+    34.6 [info] a78_main: A78PROF frames=50 emulation=19569 us a frame (MARIA 12998, the 6502 and the rest 6571), outside it 432 us
+    35.6 [info] a78_main: A78PROF frames=50 emulation=19589 us a frame (MARIA 13004, the 6502 and the rest 6584), outside it 480 us
+    34.3 [debug] STACK:5004, HEAP:143+7656 (80+7552), BUSY:100%, FPS:50 (S:41 R:9+0), BATT:0
+    35.3 [debug] STACK:5004, HEAP:143+7656 (80+7552), BUSY:100%, FPS:50 (S:42 R:8+0), BATT:0
+== 37ab1acf CTL ls f   695520 retro-home.done
+    25.6 [info] a78_main: A78PROF frames=59 emulation=16255 us a frame (MARIA 9676, the 6502 and the rest 6578), outside it 881 us
+    26.6 [info] a78_main: A78PROF frames=59 emulation=16278 us a frame (MARIA 9658, the 6502 and the rest 6620), outside it 912 us
+    27.6 [info] a78_main: A78PROF frames=59 emulation=16312 us a frame (MARIA 9699, the 6502 and the rest 6612), outside it 912 us
+    28.6 [info] a78_main: A78PROF frames=59 emulation=16306 us a frame (MARIA 9701, the 6502 and the rest 6605), outside it 869 us
+    29.7 [info] a78_main: A78PROF frames=58 emulation=16337 us a frame (MARIA 9708, the 6502 and the rest 6628), outside it 927 us
+    30.7 [info] a78_main: A78PROF frames=59 emulation=16341 us a frame (MARIA 9705, the 6502 and the rest 6635), outside it 869 us
+    31.7 [info] a78_main: A78PROF frames=58 emulation=16344 us a frame (MARIA 9694, the 6502 and the rest 6650), outside it 927 us
+    32.7 [info] a78_main: A78PROF frames=59 emulation=16366 us a frame (MARIA 9721, the 6502 and the rest 6645), outside it 868 us
+    33.7 [info] a78_main: A78PROF frames=58 emulation=16381 us a frame (MARIA 9716, the 6502 and the rest 6665), outside it 927 us
+    34.7 [info] a78_main: A78PROF frames=58 emulation=16350 us a frame (MARIA 9688, the 6502 and the rest 6662), outside it 894 us
+    35.7 [info] a78_main: A78PROF frames=58 emulation=16383 us a frame (MARIA 9724, the 6502 and the rest 6659), outside it 884 us
+    34.3 [debug] STACK:5124, HEAP:140+7658 (80+7552), BUSY:100%, FPS:58 (S:39 R:19+0), BATT:0
+    35.3 [debug] STACK:5124, HEAP:140+7658 (80+7552), BUSY:100%, FPS:58 (S:38 R:20+0), BATT:0
+== e21a7296 CTL ls f   695840 retro-home.done
+    25.6 [info] a78_main: A78PROF frames=59 emulation=15736 us a frame (MARIA 9114, the 6502 and the rest 6622), outside it 1349 us
+    26.7 [info] a78_main: A78PROF frames=59 emulation=15799 us a frame (MARIA 9168, the 6502 and the rest 6630), outside it 1306 us
+    27.7 [info] a78_main: A78PROF frames=59 emulation=15782 us a frame (MARIA 9130, the 6502 and the rest 6651), outside it 1349 us
+    28.7 [info] a78_main: A78PROF frames=59 emulation=15826 us a frame (MARIA 9177, the 6502 and the rest 6649), outside it 1306 us
+    29.7 [info] a78_main: A78PROF frames=59 emulation=15848 us a frame (MARIA 9179, the 6502 and the rest 6669), outside it 1349 us
+    30.7 [info] a78_main: A78PROF frames=59 emulation=15884 us a frame (MARIA 9229, the 6502 and the rest 6655), outside it 1305 us
+    31.7 [info] a78_main: A78PROF frames=59 emulation=15864 us a frame (MARIA 9197, the 6502 and the rest 6666), outside it 1349 us
+    32.7 [info] a78_main: A78PROF frames=58 emulation=15941 us a frame (MARIA 9244, the 6502 and the rest 6696), outside it 1328 us
+    33.7 [info] a78_main: A78PROF frames=58 emulation=15968 us a frame (MARIA 9277, the 6502 and the rest 6691), outside it 1328 us
+    34.7 [info] a78_main: A78PROF frames=58 emulation=15999 us a frame (MARIA 9315, the 6502 and the rest 6684), outside it 1328 us
+    35.8 [info] a78_main: A78PROF frames=58 emulation=16009 us a frame (MARIA 9342, the 6502 and the rest 6667), outside it 1340 us
+    34.3 [debug] STACK:5092, HEAP:140+7658 (80+7552), BUSY:100%, FPS:58 (S:29 R:29+0), BATT:0
+    35.3 [debug] STACK:5092, HEAP:140+7658 (80+7552), BUSY:100%, FPS:58 (S:29 R:28+0), BATT:0
+```
+
+Picture: Donkey Kong title -> START -> board 1 identical in layout and colours on every build (webcam). Sound not judged (volume 0 by rule).
+Left installed: e21a7296 (play build). START verified (title -> game); D-pad/fire: Mario moves on the webcam stills but the fire (jump) itself is not clearly visible.
