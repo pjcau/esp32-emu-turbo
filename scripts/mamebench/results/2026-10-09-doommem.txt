@@ -1,0 +1,3148 @@
+DOOMMEM free-heap run, 2026-10-09, prboom-go fork 5aba5b8b built with DOOMMEM=1, volume 0.
+WAD: freedoom1.wad (doom1.wad is not on the card). Log times are seconds since the logger started.
+
+Run: launched at ~13 s, attract demo until 62 s; MENU (DOOM's Escape) opened the DOOM main menu
+once, before the measurement, then New Game / episode 1 / skill. E1M1 loaded at 62.8-66.4 s,
+confirmed on the webcam (start room, 100% health). Then 420 s of scripted play (up/fire/use/turns),
+no menu opened. At the end the player is still in E1M1 (webcam: 103% health, ammo 0, fists).
+E1M2 was NOT reached: the scripted input never found the exit, and there is no level-warp on the pad.
+
+Headers (first / middle / last):
+   23.3 DOOMMEM up=10s  int=58799(31744) ext=3968324(3932160) zone 4189900 B   (demo, before the game)
+  263.5 DOOMMEM up=250s int=75187(31744) ext=2318396(1441792) zone 5797544 B   (E1M1, 3 min of play)
+  503.7 DOOMMEM up=491s int=75187(31744) ext=2278872(1441792) zone 5836364 B   (E1M1, 7 min of play)
+
+In E1M1 (66 s -> 534 s): static 2635116 B and level 402468 B flat, int 75187 flat, purges 0+0
+in every header. The cache grows while new sprites and textures are drawn and stops (2.78-2.80 MB);
+ext free falls with it and has stayed at 2.278 MB from 330 s to the end (+0 in the last 4 headers).
+The largest external block has been 1408 KB (1441792) since the level load.
+Static rose once at the level load (demo 2529292 -> game 2635116, +106 KB); an earlier demo-only run
+(three demo levels, 500 s) also showed static stepping only at level loads (+82 KB).
+
+Verdict: by design. No growth during play: the zone fills its cache to a plateau and holds it,
+nothing is purged, internal RAM untouched. To watch: the one-time static step at each level load
+(a long session crossing many levels), not measured here because E1M2 was not reached.
+
+---- full log ----
+     0.6 [debug] STACK:4924, HEAP:73+2427 (31+1216), BUSY:100%, FPS:[debug] STACK:4924, HEAP:73+2427 (31+1216), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+     1.6 [debug] STACK:4924, HEAP:73+2427 (31+1216), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+     2.6 [debug] STACK:4924, HEAP:73+2427 (31+1216), BUSY:100%, FPS:35 (S:0 R:34+1), BATT:0
+     3.0 >>> volume 0
+     3.1 [info] rg_audio_set_volume: Volume set to 0%
+     3.1 CTL volume 0
+     3.6 [debug] STACK:4924, HEAP:73+2427 (31+1216), BUSY:100%, FPS:35 (S:0 R:34+1), BATT:0
+     4.0 >>> launcher
+     4.0 CTL launcher
+     4.0 [info] rg_system_switch_app: Switching to app launcher (launcher)
+     4.2 [warn] rg_system_restart: Restarting system!
+     4.3 [info] rg_audio_deinit: Audio terminated. sink='PDM'
+     4.3 [info] rg_storage_deinit: Storage unmounted.
+     4.3 [info] rg_input_deinit: Input terminated.
+     4.3 [info] rg_display_deinit: Display terminated.
+     4.3 ESP-ROM:esp32s3-20210327
+     4.3 Build:Mar 27 2021
+     4.3 rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+     4.3 Saved PC:0x40379705
+     4.3 SPIWP:0xee
+     4.3 mode:DIO, clock div:1
+     4.3 load:0x3fce2820,len:0x135c
+     4.3 load:0x403c8700,len:0x4
+     4.3 load:0x403c8704,len:0xe08
+     4.3 load:0x403cb700,len:0x30c0
+     4.3 entry 0x403c892c
+     4.3 I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+     4.3 I (26) boot: compile time Sep 13 2026 16:41:14
+     4.3 I (26) boot: Multicore bootloader
+     4.3 I (27) boot: chip revision: v0.2
+     4.3 I (27) boot: efuse block revision: v1.4
+     4.3 I (27) qio_mode: Enabling default flash chip QIO
+     4.3 I (27) boot.esp32s3: Boot SPI Speed : 80MHz
+     4.3 I (27) boot.esp32s3: SPI Mode       : QIO
+     4.3 I (27) boot.esp32s3: SPI Flash Size : 16MB
+     4.3 I (28) boot: Enabling RNG early entropy source...
+     4.3 I (28) boot: Partition Table:
+     4.3 I (28) boot: ## Label            Usage          Type ST Offset   Length
+     4.3 I (28) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+     4.3 I (29) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+     4.3 I (29) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+     4.3 I (29) boot:  3 launcher         OTA app          00 10 00010000 00120000
+     4.3 I (30) boot:  4 retro-core       OTA app          00 11 00130000 00130000
+     4.3 I (30) boot:  5 prboom-go        OTA app          00 12 00260000 000d0000
+     4.3 I (31) boot:  6 gwenesis         OTA app          00 13 00330000 00100000
+     4.3 I (31) boot:  7 retro-extra      OTA app          00 14 00430000 00140000
+     4.3 I (31) boot:  8 mame-go          OTA app          00 15 00570000 00200000
+     4.3 I (32) boot:  9 wolf3d-go        OTA app          00 16 00770000 000a0000
+     4.3 I (32) boot: 10 opentyrian-go    OTA app          00 17 00810000 000b0000
+     4.3 I (33) boot: 11 gbsp             OTA app          00 18 008c0000 000d0000
+     4.3 I (33) boot: 12 sdapp            OTA app          00 19 00990000 000a0000
+     4.3 I (33) boot: 13 fmsx             OTA app          00 1a 00a30000 000b0000
+     4.3 I (34) boot: 14 retro-home       OTA app          00 1b 00ae0000 00110000
+     4.3 I (34) boot: 15 mamerom          Unknown data     01 40 00bf0000 00400000
+     4.3 I (35) boot: End of partition table
+     4.3 I (35) esp_image: segment 0: paddr=00010020 vaddr=3c0c0020 size=4b108h (307464) map
+     4.3 I (81) esp_image: segment 1: paddr=0005b130 vaddr=3fc9e700 size=0448ch ( 17548) load
+     4.3 I (84) esp_image: segment 2: paddr=0005f5c4 vaddr=40378000 size=00a54h (  2644) load
+     4.3 I (85) esp_image: segment 3: paddr=00060020 vaddr=42000020 size=b0280h (721536) map
+     4.5 I (193) esp_image: segment 4: paddr=001102a8 vaddr=40378a54 size=15bcch ( 89036) load
+     4.5 I (210) esp_image: segment 5: paddr=00125e7c vaddr=600fe100 size=0001ch (    28) load
+     4.5 I (219) boot: Loaded app from partition at offset 0x10000
+     4.5 I (219) boot: Disabling RNG early entropy source...
+     4.8 
+     4.8 ========================================================
+     4.8 launcher unknown (Oct  7 2026 17:44:22)
+     4.8  built for: ESP32-EMU-TURBO. type: dev
+     4.8 ========================================================
+     4.8 
+     4.8 [info] rg_storage_init: Looking for SD Card using SDSPI...
+     4.8 [info] rg_storage_init: Storage mounted at /sd.
+     4.8 [info] rg_input_init: Initializing GPIO gamepad driver...
+     4.8 [info] rg_input_init: Console gamepad control enabled (stdin)
+     4.8 [info] rg_input_init: Input ready. state=00000000 00000000
+     4.8 [info] json_root: Config file loaded: '/sd/retro-go/config/global.json'
+     4.8 [info] json_root: Config file loaded: '/sd/retro-go/config/boot.json'
+     4.8 [info] rg_display_init: Initialization...
+     4.9 [info] json_root: Config file loaded: '/sd/retro-go/config/launcher.json'
+     4.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcb6868
+     4.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcb776c
+     4.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcb8670
+     4.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcb9574
+     4.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcba478
+     5.4 [info] rg_display_init: Display ready.
+     5.4 [info] rg_alloc: SIZE=17280, CAPS=SPIRAM|8BIT, PTR=0x3c11e53c
+     5.4 [info] rg_gui_set_language_id: Language set to: English (0)
+     5.4 [info] rg_gui_set_font: Font set to: VeraBold 11 (height=13, scaling=1.00)
+     5.4 [info] rg_gui_set_theme: Using built-in theme!
+     5.4 [info] rg_audio_init: Audio ready. sink='PDM', samplerate=32000, volume=0
+     5.4 [info] rg_system_load_time: Time loaded from storage
+     5.4 [info] rg_system_load_time: Time is now: Tue Sep 29 03:39:20 2026
+     5.4 
+     5.5 [info] rg_system_init: Available memory: 229/327 + 8117/8176
+     5.5 [info] rg_system_init: Retro-Go ready.
+     5.5 
+     5.5 [info] rg_alloc: SIZE=307236, CAPS=SPIRAM|8BIT, PTR=0x3c122b60
+     5.5 [info] gui_add_tab: Tab 'nes' added at index 0
+     5.5 [info] gui_add_tab: Tab 'snes' added at index 1
+     5.5 [info] gui_add_tab: Tab 'gb' added at index 2
+     5.5 [info] gui_add_tab: Tab 'gbc' added at index 3
+     5.5 [info] gui_add_tab: Tab 'gba' added at index 4
+     5.5 [info] gui_add_tab: Tab 'sg1' added at index 5
+     5.5 [info] gui_add_tab: Tab 'sms' added at index 6
+     5.5 [info] gui_add_tab: Tab 'gg' added at index 7
+     5.5 [info] gui_add_tab: Tab 'md' added at index 8
+     5.5 [info] gui_add_tab: Tab 'col' added at index 9
+     5.5 [info] gui_add_tab: Tab 'pce' added at index 10
+     5.5 [info] gui_add_tab: Tab 'lnx' added at index 11
+     5.5 [info] gui_add_tab: Tab 'a26' added at index 12
+     5.5 [info] gui_add_tab: Tab 'a52' added at index 13
+     5.5 [info] gui_add_tab: Tab 'a78' added at index 14
+     5.5 [info] gui_add_tab: Tab 'c64' added at index 15
+     5.5 [info] gui_add_tab: Tab 'msx' added at index 16
+     5.5 [info] gui_add_tab: Tab 'ngp' added at index 17
+     5.5 [info] gui_add_tab: Tab 'doom' added at index 18
+     5.5 [info] application: Application 'Duke Nukem 3D' (duke3d-go) not present, skipping
+     5.5 [info] gui_add_tab: Tab 'wolf3d' added at index 19
+     5.5 [info] application: Application 'Quake' (quake-go) not present, skipping
+     5.5 [info] gui_add_tab: Tab 'opentyrian' added at index 20
+     5.5 [info] gui_add_tab: Tab 'cannonball' added at index 21
+     5.5 [info] gui_add_tab: Tab 'arcade3d' added at index 22
+     5.5 [info] application: Application 'Nintendo 64' (sm64-go) not present, skipping
+     5.5 [info] gui_add_tab: Tab 'arcade' added at index 23
+     5.5 [info] gui_add_tab: Tab 'neogeo' added at index 24
+     5.5 [info] gui_add_tab: Tab 'cps1' added at index 25
+     5.5 [info] gui_add_tab: Tab 'favorite' added at index 26
+     5.5 [info] gui_add_tab: Tab 'recent' added at index 27
+     5.6 [info] gui_resize_list: Resized list 'recent' from 0 to 44 items (new capacity: 54)
+     5.6 [info] json_root: Config file loaded: '/sd/retro-go/config/wifi.json'
+     5.6 [debug] rg_network_wifi_read_config: Looking for 'ssid0' (slot 0)
+     5.6 [debug] rg_network_wifi_read_config: Looking for 'ssid' (slot 0)
+     5.6 [info] webui_start: Web server started
+     5.7 [info] application_init: Initializing application 'Nintendo Gameboy Advance' (gbsp)
+     5.7 [info] update_viewport_scaling: 480x320@1.500 => 480x320@1.500 left:0 top:0 step_x:1.00 step_y:1.00
+     5.7 [info] gui_resize_list: Resized list 'gba' from 0 to 20 items (new capacity: 30)
+     5.8 [debug] gui_load_preview: Looking for /sd/retro-go/saves/gba/Mario Kart - Super Circuit (Europe).gba.png
+     5.8 [debug] gui_load_preview: Looking for /sd/romart/gba/Mario Kart - Super Circuit (Europe).png
+     7.5 [debug] STACK:4396, HEAP:125+7044 (64+6656), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+     8.5 [debug] STACK:4396, HEAP:125+7044 (64+6656), BUSY:4%, FPS:106 (S:105 R:1+0), BATT:0
+     9.4 [debug] STACK:4396, HEAP:125+7044 (64+6656), BUSY:4%, FPS:105 (S:104 R:1+0), BATT:0
+    10.4 [debug] STACK:4396, HEAP:125+7044 (64+6656), BUSY:4%, FPS:105 (S:104 R:1+0), BATT:0
+    11.5 [debug] STACK:4396, HEAP:125+7044 (64+6656), BUSY:4%, FPS:105 (S:104 R:1+0), BATT:0
+    12.0 >>> launch prboom-go doom /sd/roms/doom/freedoom1.wad
+    12.1 CTL launch prboom-go doom /sd/roms/doom/freedoom1.wad
+    12.2 [info] rg_system_switch_app: Switching to app prboom-go (doom)
+    12.2 [warn] rg_system_restart: Restarting system!
+    12.2 [info] rg_audio_deinit: Audio terminated. sink='PDM'
+    12.2 [info] rg_storage_deinit: Storage unmounted.
+    12.2 [info] rg_input_deinit: Input terminated.
+    12.2 [info] rg_display_deinit: Display terminated.
+    12.2 ESP-ROM:esp32s3-20210327
+    12.2 Build:Mar 27 2021
+    12.2 rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+    12.2 Saved PC:0x40379769
+    12.2 SPIWP:0xee
+    12.2 mode:DIO, clock div:1
+    12.2 load:0x3fce2820,len:0x135c
+    12.2 load:0x403c8700,len:0x4
+    12.2 load:0x403c8704,len:0xe08
+    12.2 load:0x403cb700,len:0x30c0
+    12.2 entry 0x403c892c
+    12.2 I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+    12.2 I (26) boot: compile time Sep 13 2026 16:41:14
+    12.2 I (26) boot: Multicore bootloader
+    12.2 I (27) boot: chip revision: v0.2
+    12.2 I (27) boot: efuse block revision: v1.4
+    12.2 I (27) qio_mode: Enabling default flash chip QIO
+    12.2 I (27) boot.esp32s3: Boot SPI Speed : 80MHz
+    12.2 I (27) boot.esp32s3: SPI Mode       : QIO
+    12.2 I (27) boot.esp32s3: SPI Flash Size : 16MB
+    12.2 I (28) boot: Enabling RNG early entropy source...
+    12.2 I (28) boot: Partition Table:
+    12.2 I (28) boot: ## Label            Usage          Type ST Offset   Length
+    12.2 I (28) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+    12.2 I (29) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+    12.2 I (29) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+    12.2 I (29) boot:  3 launcher         OTA app          00 10 00010000 00120000
+    12.2 I (30) boot:  4 retro-core       OTA app          00 11 00130000 00130000
+    12.2 I (30) boot:  5 prboom-go        OTA app          00 12 00260000 000d0000
+    12.2 I (31) boot:  6 gwenesis         OTA app          00 13 00330000 00100000
+    12.2 I (31) boot:  7 retro-extra      OTA app          00 14 00430000 00140000
+    12.2 I (32) boot:  8 mame-go          OTA app          00 15 00570000 00200000
+    12.2 I (32) boot:  9 wolf3d-go        OTA app          00 16 00770000 000a0000
+    12.2 I (32) boot: 10 opentyrian-go    OTA app          00 17 00810000 000b0000
+    12.2 I (33) boot: 11 gbsp             OTA app          00 18 008c0000 000d0000
+    12.2 I (33) boot: 12 sdapp            OTA app          00 19 00990000 000a0000
+    12.2 I (33) boot: 13 fmsx             OTA app          00 1a 00a30000 000b0000
+    12.2 I (34) boot: 14 retro-home       OTA app          00 1b 00ae0000 00110000
+    12.2 I (34) boot: 15 mamerom          Unknown data     01 40 00bf0000 00400000
+    12.2 I (35) boot: End of partition table
+    12.2 I (35) esp_image: segment 0: paddr=00260020 vaddr=3c080020 size=3ca30h (248368) map
+    12.3 I (72) esp_image: segment 1: paddr=0029ca58 vaddr=3fc98200 size=035c0h ( 13760) load
+    12.3 I (75) esp_image: segment 2: paddr=002a0020 vaddr=42000020 size=745e8h (476648) map
+    12.3 I (146) esp_image: segment 3: paddr=00314610 vaddr=3fc9b7c0 size=078a4h ( 30884) load
+    12.3 I (152) esp_image: segment 4: paddr=0031bebc vaddr=40378000 size=10150h ( 65872) load
+    12.4 I (165) esp_image: segment 5: paddr=0032c014 vaddr=600fe100 size=0001ch (    28) load
+    12.4 I (173) boot: Loaded app from partition at offset 0x260000
+    12.4 I (173) boot: Disabling RNG early entropy source...
+    12.7 
+    12.7 ========================================================
+    12.7 prboom-go unknown (Oct  9 2026 18:01:46)
+    12.7  built for: ESP32-EMU-TURBO. type: dev
+    12.7 ========================================================
+    12.7 
+    12.7 [info] rg_storage_init: Looking for SD Card using SDSPI...
+    12.7 [info] rg_storage_init: Storage mounted at /sd.
+    12.7 [info] rg_input_init: Initializing GPIO gamepad driver...
+    12.7 [info] rg_input_init: Console gamepad control enabled (stdin)
+    12.7 [info] rg_input_init: Input ready. state=00000000 00000000
+    12.7 [info] json_root: Config file loaded: '/sd/retro-go/config/global.json'
+    12.7 [info] json_root: Config file loaded: '/sd/retro-go/config/boot.json'
+    12.7 [info] rg_display_init: Initialization...
+    12.7 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc5b6c
+    12.7 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc6a70
+    12.7 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc7974
+    12.7 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc8878
+    12.7 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcc977c
+    13.3 [info] rg_display_init: Display ready.
+    13.3 [info] rg_alloc: SIZE=17280, CAPS=SPIRAM|8BIT, PTR=0x3c0caefc
+    13.3 [info] rg_gui_set_language_id: Language set to: English (0)
+    13.3 [info] rg_gui_set_font: Font set to: VeraBold 11 (height=13, scaling=1.00)
+    13.3 [info] rg_gui_set_theme: Using built-in theme!
+    13.3 [info] rg_audio_init: Audio ready. sink='PDM', samplerate=32000, volume=0
+    13.3 [info] rg_system_load_time: Time loaded from storage
+    13.3 [info] rg_system_load_time: Time is now: Tue Sep 29 03:39:20 2026
+    13.3 
+    13.3 [info] rg_system_init: Available memory: 168/263 + 8130/8189
+    13.3 [info] rg_system_init: Retro-Go ready.
+    13.3 
+    13.3 [info] rg_alloc: SIZE=77348, CAPS=INTERNAL|8BIT, PTR=0x3fcce55c
+    13.4 [=] M_LoadDefaults: Load system defaults.
+    13.4 [=]  failed to read config from: /sd/roms/doom/prboom.cfg
+    13.5 [=] IWAD found: /sd/roms/doom/freedoom1.wad
+    13.5 [=] prboom-go 2.5.0 (built Oct  9 2026), playing: The Ultimate DOOM
+    13.5 PrBoom is released under the GNU General Public license v2.0.
+    13.5 You are welcome to redistribute it under certain conditions.
+    13.5 It comes with ABSOLUTELY NO WARRANTY. See the file COPYING for details.
+    13.5 [=] Save path set to: /sd/retro-go/saves/doom
+    13.5 [=] I_Init: Setting up machine state.
+    13.5 [=] D_InitNetGame: Checking for network game.
+    13.5 [=] W_Init: Init WADfiles.
+    13.6 [=]  added file:/sd/roms/doom/freedoom1.wad (3163 lumps)
+    13.6 [=]  added data:prboom.wad (79 lumps)
+    13.6 [=] V_Init: Setting up video.
+    13.6 [=] V_InitMode: using 8 bit video mode
+    13.6 [=] M_Init: Init miscellaneous info.
+    13.6 [=] R_Init: Init DOOM refresh daemon:
+    13.6 [=] R_InitData:
+    13.6 [=] R_InitData: Textures
+    13.7 [=] R_InitData: Flats
+    13.7 [=] R_InitData: Sprites
+    13.7 [=] R_InitData: Translucency
+    13.7 [=] R_InitTranMap: Gen from PLAYPAL(396)...
+    14.8 [=] done.
+    14.8 [=] R_InitData: Colourmaps
+    14.8 [=] R_InitLightTables
+    14.8 [=] R_InitSkyMap
+    14.8 [=] R_InitTranslationsTables
+    14.8 [=] R_InitPatches
+    14.8 [=] R_InitInterpolation
+    14.8 [=] P_Init: Init Playloop state.
+    14.8 [=] S_Init: Setting up sound.
+    14.8 [=] S_Init: channels=8, sfx=1, music=1
+    15.3 [debug] STACK:4796, HEAP:75+6966 (31+6912), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    16.3 [debug] STACK:4796, HEAP:75+5992 (31+5888), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    16.7 [=] HU_Init: Setting up heads up display.
+    16.7 [=] ST_Init: Init status bar.
+    16.9 [=]
+    17.0 [info] update_viewport_scaling: 320x240@1.333 => 426x320@1.331 left:27 top:0 step_x:0.75 step_y:0.75
+    17.4 [debug] STACK:4796, HEAP:73+5632 (31+5632), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    18.3 [debug] STACK:4796, HEAP:73+5632 (31+5632), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    19.3 [debug] STACK:4796, HEAP:73+5632 (31+5632), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    20.3 [debug] STACK:4796, HEAP:73+5632 (31+5632), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    21.3 [debug] STACK:4796, HEAP:73+5632 (31+5632), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    21.6 [=] G_DoPlayDemo: playing demo with ultimate doom compatibility
+    21.7 [=] P_GetNodesVersion: using normal BSP nodes
+    22.3 [debug] STACK:4796, HEAP:72+4534 (31+4480), BUSY:100%, FPS:35 (S:3 R:32+0), BATT:0
+    22.5 [=] R_PrecacheLevel: pre-cached 51 flats
+    23.3 [debug] STACK:4796, HEAP:57+3882 (31+3840), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    23.3 [info] app_main: doom_main stack free: 12464 bytes of 16384
+    23.3 [=] DOOMMEM up=10s int=58799(31744) ext=3968324(3932160) zone 4189900 B (+4189900 since last)
+    23.3 [=]  static 2263568/1203
+    23.3 [=]  level 878768/399
+    23.3 [=]  levspec 1212/24
+    23.3 [=]  cache 1046352/149
+    23.3 [=]  allocs 2164 purges 0+0
+    23.3 [=] DOOMMEM   site 0x4204704d 2550924 B 222 blk (+2550924)
+    23.3 [=] DOOMMEM   site 0x4202f6b0 304344 B 1 blk (+304344)
+    23.3 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+166080)
+    23.3 [=] DOOMMEM   site 0x42030d78 158724 B 1 blk (+158724)
+    23.3 [=] DOOMMEM   site 0x4204c42f 153820 B 10 blk (+153820)
+    23.3 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+116712)
+    23.3 [=] DOOMMEM   site 0x42046e75 103744 B 1 blk (+103744)
+    23.3 [=] DOOMMEM   site 0x4202f686 95328 B 1 blk (+95328)
+    23.8 [=] R_PrecacheLevel: pre-cached 421 textures
+    24.4 [debug] STACK:4796, HEAP:72+3483 (31+3456), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    25.3 [debug] STACK:4796, HEAP:72+3161 (31+3136), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    25.5 [=] R_PrecacheLevel: pre-cached 1113 sprites
+    26.3 [debug] STACK:4796, HEAP:73+2421 (31+2368), BUSY:1379%, FPS:90 (S:0 R:14+72), BATT:0
+    27.3 [debug] STACK:4796, HEAP:73+2529 (31+2496), BUSY:100%, FPS:19 (S:0 R:17+2), BATT:0
+    27.3 [info] system_monitor_task: Raised frameskip to 2
+    28.3 [debug] STACK:4796, HEAP:73+2340 (31+2304), BUSY:100%, FPS:35 (S:14 R:0+23), BATT:0
+    29.3 [debug] STACK:4796, HEAP:73+2273 (31+2240), BUSY:100%, FPS:35 (S:12 R:0+23), BATT:0
+    30.4 [debug] STACK:4796, HEAP:73+2187 (31+2176), BUSY:100%, FPS:35 (S:12 R:0+23), BATT:0
+    31.4 [debug] STACK:4796, HEAP:73+2107 (31+2048), BUSY:100%, FPS:35 (S:13 R:0+21), BATT:0
+    32.0 >>> key a 200
+    32.1 CTL key 0x0100 200ms
+    32.4 [debug] STACK:4796, HEAP:73+2066 (31+2048), BUSY:100%, FPS:35 (S:11 R:0+25), BATT:0
+    33.3 [debug] STACK:4796, HEAP:73+2015 (31+1984), BUSY:100%, FPS:35 (S:10 R:1+24), BATT:0
+    33.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    33.4 [=] DOOMMEM up=20s int=75187(31744) ext=2063868(2031616) zone 6046956 B (+1857056 since last)
+    33.4 [=]  static 2529292/1270
+    33.4 [=]  level 880088/402
+    33.4 [=]  levspec 1212/24
+    33.4 [=]  cache 2636364/818
+    33.4 [=]  allocs 767 purges 0+0
+    33.4 [=] DOOMMEM   site 0x4204704d 3377668 B 685 blk (+826744)
+    33.4 [=] DOOMMEM   site 0x420425ab 478068 B 184 blk (+478068)
+    33.4 [=] DOOMMEM   site 0x4202f6b0 304344 B 1 blk (+0)
+    33.4 [=] DOOMMEM   site 0x42042a38 281724 B 21 blk (+281724)
+    33.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    33.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+159088)
+    33.4 [=] DOOMMEM   site 0x42030d78 158724 B 1 blk (+0)
+    33.4 [=] DOOMMEM   site 0x4204c42f 153820 B 10 blk (+0)
+    34.3 [debug] STACK:4796, HEAP:73+1987 (31+1984), BUSY:100%, FPS:35 (S:13 R:0+22), BATT:0
+    35.3 [debug] STACK:4796, HEAP:73+1982 (31+1952), BUSY:100%, FPS:35 (S:11 R:0+24), BATT:0
+    36.4 [debug] STACK:4796, HEAP:73+1979 (31+1952), BUSY:100%, FPS:35 (S:12 R:0+23), BATT:0
+    37.4 [debug] STACK:4796, HEAP:73+1976 (31+1952), BUSY:100%, FPS:35 (S:12 R:0+23), BATT:0
+    38.4 [debug] STACK:4796, HEAP:73+1931 (31+1920), BUSY:100%, FPS:35 (S:9 R:5+21), BATT:0
+    39.3 [debug] STACK:4796, HEAP:73+1911 (31+1888), BUSY:100%, FPS:35 (S:5 R:3+27), BATT:0
+    40.3 [debug] STACK:4796, HEAP:73+1883 (31+1856), BUSY:100%, FPS:35 (S:6 R:0+29), BATT:0
+    41.3 [debug] STACK:4796, HEAP:73+1794 (31+1760), BUSY:100%, FPS:35 (S:4 R:0+30), BATT:0
+    42.3 [debug] STACK:4796, HEAP:73+1794 (31+1760), BUSY:100%, FPS:35 (S:3 R:0+32), BATT:0
+    43.4 [debug] STACK:4796, HEAP:73+1624 (31+1600), BUSY:100%, FPS:35 (S:8 R:0+28), BATT:0
+    43.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    43.4 [=] DOOMMEM up=30s int=75187(31744) ext=1663668(1638400) zone 6438932 B (+391976 since last)
+    43.4 [=]  static 2529292/1270
+    43.4 [=]  level 879464/399
+    43.4 [=]  levspec 1212/24
+    43.4 [=]  cache 3028964/888
+    43.4 [=]  allocs 121 purges 0+0
+    43.4 [=] DOOMMEM   site 0x4204704d 3413308 B 703 blk (+35640)
+    43.4 [=] DOOMMEM   site 0x420425ab 618756 B 224 blk (+140688)
+    43.4 [=] DOOMMEM   site 0x42042a38 497996 B 33 blk (+216272)
+    43.4 [=] DOOMMEM   site 0x4202f6b0 304344 B 1 blk (+0)
+    43.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    43.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+    43.4 [=] DOOMMEM   site 0x42030d78 158724 B 1 blk (+0)
+    43.4 [=] DOOMMEM   site 0x4204c42f 153820 B 10 blk (+0)
+    44.4 [debug] STACK:4796, HEAP:73+1626 (31+1600), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    45.4 [debug] STACK:4796, HEAP:73+1624 (31+1600), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    46.3 [debug] STACK:4796, HEAP:73+1615 (31+1600), BUSY:100%, FPS:35 (S:6 R:0+29), BATT:0
+    46.4 >>> key menu 150
+    46.4 CTL key 0x0040 150ms
+    47.3 [debug] STACK:4796, HEAP:73+1563 (31+1536), BUSY:100%, FPS:35 (S:10 R:0+25), BATT:0
+    48.3 [debug] STACK:4796, HEAP:73+1560 (31+1536), BUSY:100%, FPS:35 (S:5 R:0+30), BATT:0
+    49.3 [debug] STACK:4796, HEAP:73+1555 (31+1536), BUSY:100%, FPS:35 (S:9 R:0+26), BATT:0
+    50.4 [debug] STACK:4796, HEAP:73+1546 (31+1536), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    51.4 [debug] STACK:4796, HEAP:73+1544 (31+1536), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    52.4 [debug] STACK:4796, HEAP:73+1678 (31+1504), BUSY:100%, FPS:35 (S:5 R:0+30), BATT:0
+    53.3 [debug] STACK:4796, HEAP:73+1631 (31+1504), BUSY:100%, FPS:35 (S:6 R:0+28), BATT:0
+    53.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    53.4 [=] DOOMMEM up=40s int=75187(31744) ext=1670956(1540096) zone 6430672 B (-8260 since last)
+    53.4 [=]  static 2529292/1270
+    53.4 [=]  level 878008/392
+    53.4 [=]  levspec 1212/24
+    53.4 [=]  cache 3022160/942
+    53.4 [=]  allocs 138 purges 0+0
+    53.4 [=] DOOMMEM   site 0x4204704d 3266624 B 722 blk (-146684)
+    53.4 [=] DOOMMEM   site 0x420425ab 726880 B 256 blk (+108124)
+    53.4 [=] DOOMMEM   site 0x42042a38 529752 B 36 blk (+31756)
+    53.4 [=] DOOMMEM   site 0x4202f6b0 304344 B 1 blk (+0)
+    53.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    53.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+    53.4 [=] DOOMMEM   site 0x42030d78 158724 B 1 blk (+0)
+    53.4 [=] DOOMMEM   site 0x4204c42f 153820 B 10 blk (+0)
+    54.3 [debug] STACK:4796, HEAP:73+1631 (31+1504), BUSY:100%, FPS:35 (S:7 R:0+29), BATT:0
+    55.3 [debug] STACK:4796, HEAP:73+1631 (31+1504), BUSY:100%, FPS:35 (S:5 R:0+30), BATT:0
+    56.3 [debug] STACK:4796, HEAP:73+1622 (31+1504), BUSY:100%, FPS:35 (S:4 R:0+31), BATT:0
+    57.4 [debug] STACK:4796, HEAP:73+1622 (31+1504), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    58.4 [debug] STACK:4796, HEAP:73+1620 (31+1504), BUSY:100%, FPS:35 (S:6 R:0+28), BATT:0
+    59.4 [debug] STACK:4796, HEAP:73+1616 (31+1504), BUSY:100%, FPS:35 (S:11 R:0+25), BATT:0
+    59.6 >>> key a 150
+    59.7 CTL key 0x0100 150ms
+    60.3 [debug] STACK:4796, HEAP:73+1569 (31+1504), BUSY:100%, FPS:35 (S:14 R:0+21), BATT:0
+    61.1 >>> key a 150
+    61.2 CTL key 0x0100 150ms
+    61.3 [debug] STACK:4796, HEAP:73+1575 (31+1504), BUSY:100%, FPS:35 (S:14 R:0+21), BATT:0
+    62.3 [debug] STACK:4796, HEAP:73+1564 (31+1504), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+    62.6 >>> key a 150
+    62.7 CTL key 0x0100 150ms
+    62.8 [=] P_GetNodesVersion: using normal BSP nodes
+    63.3 [=] R_PrecacheLevel: pre-cached 44 flats
+    63.3 [debug] STACK:4796, HEAP:72+4689 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    63.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    63.4 [=] DOOMMEM up=50s int=74671(31744) ext=4783896(1441792) zone 3388740 B (-3041932 since last)
+    63.4 [=]  static 2639508/1299
+    63.4 [=]  level 404756/228
+    63.4 [=]  levspec 432/9
+    63.4 [=]  cache 344044/58
+    63.4 [=]  allocs 428 purges 0+0
+    63.4 [=] DOOMMEM   site 0x4204704d 1855968 B 133 blk (-1410656)
+    63.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+97640)
+    63.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    63.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+    63.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (-177444)
+    63.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+    63.4 [=] DOOMMEM   site 0x42046e75 103744 B 1 blk (+0)
+    63.4 [=] DOOMMEM   site 0x42030d78 74052 B 1 blk (-84672)
+    64.4 [debug] STACK:4796, HEAP:72+3986 (31+1408), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    65.0 [=] R_PrecacheLevel: pre-cached 405 textures
+    65.4 [debug] STACK:4796, HEAP:57+3478 (31+1408), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    66.4 [debug] STACK:4796, HEAP:72+3157 (31+1408), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+    66.4 [=] R_PrecacheLevel: pre-cached 931 sprites
+    67.4 [debug] STACK:4796, HEAP:73+2551 (31+1408), BUSY:1622%, FPS:113 (S:0 R:25+88), BATT:0
+    68.3 [debug] STACK:4796, HEAP:73+2679 (31+1408), BUSY:100%, FPS:21 (S:0 R:21+0), BATT:0
+    68.3 [info] system_monitor_task: Raised frameskip to 3
+    69.3 [debug] STACK:4796, HEAP:73+2679 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    70.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    71.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    72.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    73.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    73.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    73.4 [=] DOOMMEM up=60s int=75187(31744) ext=2741640(1441792) zone 5384156 B (+1995416 since last)
+    73.4 [=]  static 2635116/1298
+    73.4 [=]  level 404756/228
+    73.4 [=]  levspec 432/9
+    73.4 [=]  cache 2343852/595
+    73.4 [=]  allocs 541 purges 0+0
+    73.4 [=] DOOMMEM   site 0x4204704d 3439336 B 611 blk (+1583368)
+    73.4 [=] DOOMMEM   site 0x42042a38 337668 B 17 blk (-192084)
+    73.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+    73.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    73.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+    73.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+    73.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+    73.4 [=] DOOMMEM   site 0x42046e75 103744 B 1 blk (+0)
+    74.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    75.3 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    76.3 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    77.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    78.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    79.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    80.4 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    81.3 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    82.3 [debug] STACK:4796, HEAP:73+2677 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+    82.7 >>> hold up
+    82.7 CTL hold 0x0001
+    83.4 [debug] STACK:4796, HEAP:73+2667 (31+1408), BUSY:100%, FPS:35 (S:2 R:14+18), BATT:0
+    83.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    83.4 [=] DOOMMEM up=70s int=75187(31744) ext=2731652(1441792) zone 5393888 B (+9732 since last)
+    83.4 [=]  static 2635116/1298
+    83.4 [=]  level 404756/228
+    83.4 [=]  levspec 432/9
+    83.4 [=]  cache 2353584/596
+    83.4 [=]  allocs 1 purges 0+0
+    83.4 [=] DOOMMEM   site 0x4204704d 3439336 B 611 blk (+0)
+    83.4 [=] DOOMMEM   site 0x42042a38 347400 B 18 blk (+9732)
+    83.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+    83.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    83.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+    83.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+    83.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+    83.4 [=] DOOMMEM   site 0x42046e75 103744 B 1 blk (+0)
+    84.3 >>> release up
+    84.4 CTL hold 0x0000
+    84.4 [debug] STACK:4796, HEAP:73+2667 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+    84.5 >>> key a 120
+    84.6 CTL key 0x0100 120ms
+    84.9 >>> key a 120
+    85.0 CTL key 0x0100 120ms
+    85.3 >>> key start 150
+    85.4 CTL key 0x0020 150ms
+    85.4 [debug] STACK:4796, HEAP:73+2627 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+33), BATT:0
+    85.9 >>> hold left
+    86.0 CTL hold 0x0008
+    86.4 [debug] STACK:4796, HEAP:73+2628 (31+1408), BUSY:100%, FPS:35 (S:0 R:14+21), BATT:0
+    86.4 >>> release left
+    86.5 CTL hold 0x0000
+    86.6 >>> hold up
+    86.7 CTL hold 0x0001
+    87.4 [debug] STACK:4796, HEAP:73+2623 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+29), BATT:0
+    87.8 >>> release up
+    87.9 CTL hold 0x0000
+    88.0 >>> key a 120
+    88.1 CTL key 0x0100 120ms
+    88.3 [debug] STACK:4796, HEAP:73+2621 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    88.4 >>> hold right
+    88.5 CTL hold 0x0002
+    89.3 [debug] STACK:4796, HEAP:73+2574 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+    89.3 >>> release right
+    89.4 CTL hold 0x0000
+    89.5 >>> key start 150
+    89.6 CTL key 0x0020 150ms
+    90.2 >>> hold down
+    90.2 CTL hold 0x0004
+    90.4 [debug] STACK:4796, HEAP:73+2574 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+    90.8 >>> release down
+    90.8 CTL hold 0x0000
+    91.0 >>> hold up
+    91.0 CTL hold 0x0001
+    91.4 [debug] STACK:4796, HEAP:73+2574 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+34), BATT:0
+    92.4 [debug] STACK:4796, HEAP:73+2574 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    92.5 >>> release up
+    92.6 CTL hold 0x0000
+    92.8 >>> key a 120
+    92.8 CTL key 0x0100 120ms
+    93.2 >>> key a 120
+    93.2 CTL key 0x0100 120ms
+    93.4 [debug] STACK:4796, HEAP:73+2573 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+    93.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+    93.4 [=] DOOMMEM up=80s int=75187(31744) ext=2635224(1441792) zone 5487892 B (+94004 since last)
+    93.4 [=]  static 2635116/1298
+    93.4 [=]  level 404964/229
+    93.4 [=]  levspec 432/9
+    93.4 [=]  cache 2447380/639
+    93.4 [=]  allocs 50 purges 0+0
+    93.4 [=] DOOMMEM   site 0x4204704d 3453072 B 628 blk (+13736)
+    93.4 [=] DOOMMEM   site 0x42042a38 352268 B 19 blk (+4868)
+    93.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+    93.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+    93.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+    93.4 [=] DOOMMEM   site 0x420425ab 149572 B 66 blk (-577308)
+    93.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+    93.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+    93.6 >>> key start 150
+    93.6 CTL key 0x0020 150ms
+    94.1 >>> hold left
+    94.2 CTL hold 0x0008
+    94.3 [debug] STACK:4796, HEAP:73+2573 (31+1408), BUSY:100%, FPS:36 (S:0 R:13+22), BATT:0
+    94.6 >>> release left
+    94.7 CTL hold 0x0000
+    94.8 >>> hold up
+    94.9 CTL hold 0x0001
+    95.3 [debug] STACK:4796, HEAP:73+2571 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+    96.1 >>> release up
+    96.1 CTL hold 0x0000
+    96.3 >>> key a 120
+    96.3 CTL key 0x0100 120ms
+    96.4 [debug] STACK:4796, HEAP:73+2571 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+    96.7 >>> hold right
+    96.7 CTL hold 0x0002
+    97.4 [debug] STACK:4796, HEAP:73+2551 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+35), BATT:0
+    97.6 >>> release right
+    97.6 CTL hold 0x0000
+    97.8 >>> key start 150
+    97.8 CTL key 0x0020 150ms
+    98.4 [debug] STACK:4796, HEAP:73+2551 (31+1408), BUSY:100%, FPS:36 (S:0 R:26+10), BATT:0
+    98.4 >>> hold down
+    98.4 CTL hold 0x0004
+    99.0 >>> release down
+    99.0 CTL hold 0x0000
+    99.2 >>> hold up
+    99.2 CTL hold 0x0001
+    99.4 [debug] STACK:4796, HEAP:73+2551 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+32), BATT:0
+   100.4 [debug] STACK:4796, HEAP:73+2551 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   100.8 >>> release up
+   100.8 CTL hold 0x0000
+   101.0 >>> key a 120
+   101.0 CTL key 0x0100 120ms
+   101.4 [debug] STACK:4796, HEAP:73+2550 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   101.4 >>> key a 120
+   101.4 CTL key 0x0100 120ms
+   101.8 >>> key start 150
+   101.8 CTL key 0x0020 150ms
+   102.3 [debug] STACK:4796, HEAP:73+2549 (31+1408), BUSY:100%, FPS:35 (S:0 R:25+10), BATT:0
+   102.4 >>> hold left
+   102.4 CTL hold 0x0008
+   102.9 >>> release left
+   102.9 CTL hold 0x0000
+   103.1 >>> hold up
+   103.1 CTL hold 0x0001
+   103.3 [debug] STACK:4796, HEAP:73+2549 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+24), BATT:0
+   103.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   103.4 [=] DOOMMEM up=90s int=75187(31744) ext=2611068(1441792) zone 5511368 B (+23476 since last)
+   103.4 [=]  static 2639212/1299
+   103.4 [=]  level 404756/228
+   103.4 [=]  levspec 432/9
+   103.4 [=]  cache 2466968/644
+   103.4 [=]  allocs 9 purges 0+0
+   103.4 [=] DOOMMEM   site 0x4204704d 3453704 B 630 blk (+632)
+   103.4 [=] DOOMMEM   site 0x42042a38 374164 B 21 blk (+21896)
+   103.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   103.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   103.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   103.4 [=] DOOMMEM   site 0x420425ab 150728 B 68 blk (+1156)
+   103.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   103.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   104.3 >>> release up
+   104.4 CTL hold 0x0000
+   104.4 [debug] STACK:4796, HEAP:73+2549 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+   104.5 >>> key a 120
+   104.6 CTL key 0x0100 120ms
+   104.9 >>> hold right
+   105.0 CTL hold 0x0002
+   105.4 [debug] STACK:4796, HEAP:73+2549 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+35), BATT:0
+   105.8 >>> release right
+   105.9 CTL hold 0x0000
+   106.0 >>> key start 150
+   106.1 CTL key 0x0020 150ms
+   106.4 [debug] STACK:4796, HEAP:73+2491 (31+1408), BUSY:100%, FPS:36 (S:0 R:16+19), BATT:0
+   106.6 >>> hold down
+   106.7 CTL hold 0x0004
+   107.2 >>> release down
+   107.3 CTL hold 0x0000
+   107.4 [debug] STACK:4796, HEAP:73+2487 (31+1408), BUSY:100%, FPS:35 (S:1 R:11+24), BATT:0
+   107.4 >>> hold up
+   107.5 CTL hold 0x0001
+   108.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+33), BATT:0
+   109.0 >>> release up
+   109.1 CTL hold 0x0000
+   109.2 >>> key a 120
+   109.3 CTL key 0x0100 120ms
+   109.3 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+33), BATT:0
+   109.6 >>> key a 120
+   109.7 CTL key 0x0100 120ms
+   110.0 >>> key start 150
+   110.1 CTL key 0x0020 150ms
+   110.3 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:3 R:0+33), BATT:0
+   110.6 >>> hold left
+   110.7 CTL hold 0x0008
+   111.2 >>> release left
+   111.2 CTL hold 0x0000
+   111.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   111.4 >>> hold up
+   111.4 CTL hold 0x0001
+   112.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   112.6 >>> release up
+   112.6 CTL hold 0x0000
+   112.8 >>> key a 120
+   112.8 CTL key 0x0100 120ms
+   113.2 >>> hold right
+   113.2 CTL hold 0x0002
+   113.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   113.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   113.4 [=] DOOMMEM up=100s int=75187(31744) ext=2543084(1441792) zone 5577636 B (+66268 since last)
+   113.4 [=]  static 2635116/1298
+   113.4 [=]  level 404756/228
+   113.4 [=]  levspec 432/9
+   113.4 [=]  cache 2537332/651
+   113.4 [=]  allocs 10 purges 0+0
+   113.4 [=] DOOMMEM   site 0x4204704d 3453768 B 631 blk (+64)
+   113.4 [=] DOOMMEM   site 0x42042a38 432540 B 23 blk (+58376)
+   113.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   113.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   113.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   113.4 [=] DOOMMEM   site 0x420425ab 158556 B 71 blk (+7828)
+   113.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   113.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   114.1 >>> release right
+   114.1 CTL hold 0x0000
+   114.3 >>> key start 150
+   114.3 CTL key 0x0020 150ms
+   114.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+27), BATT:0
+   114.9 >>> hold down
+   114.9 CTL hold 0x0004
+   115.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+15), BATT:0
+   115.5 >>> release down
+   115.5 CTL hold 0x0000
+   115.7 >>> hold up
+   115.7 CTL hold 0x0001
+   116.3 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   117.3 >>> release up
+   117.4 CTL hold 0x0000
+   117.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   117.5 >>> key a 120
+   117.6 CTL key 0x0100 120ms
+   117.9 >>> key a 120
+   118.0 CTL key 0x0100 120ms
+   118.3 >>> key start 150
+   118.4 CTL key 0x0020 150ms
+   118.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   118.9 >>> hold left
+   119.0 CTL hold 0x0008
+   119.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   119.4 >>> release left
+   119.4 CTL hold 0x0000
+   119.6 >>> hold up
+   119.6 CTL hold 0x0001
+   120.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+27), BATT:0
+   120.8 >>> release up
+   120.8 CTL hold 0x0000
+   121.0 >>> key a 120
+   121.0 CTL key 0x0100 120ms
+   121.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   121.4 >>> hold right
+   121.4 CTL hold 0x0002
+   122.3 >>> release right
+   122.3 CTL hold 0x0000
+   122.3 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   122.5 >>> key start 150
+   122.5 CTL key 0x0020 150ms
+   123.1 >>> hold down
+   123.1 CTL hold 0x0004
+   123.4 [debug] STACK:4796, HEAP:73+2483 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   123.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   123.4 [=] DOOMMEM up=110s int=75187(31744) ext=2543084(1441792) zone 5577636 B (+0 since last)
+   123.4 [=]  static 2635116/1298
+   123.4 [=]  level 404756/228
+   123.4 [=]  levspec 432/9
+   123.4 [=]  cache 2537332/651
+   123.4 [=]  allocs 3 purges 0+0
+   123.5 [=] DOOMMEM   site 0x4204704d 3453768 B 631 blk (+0)
+   123.5 [=] DOOMMEM   site 0x42042a38 432540 B 23 blk (+0)
+   123.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   123.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   123.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   123.5 [=] DOOMMEM   site 0x420425ab 158556 B 71 blk (+0)
+   123.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   123.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   123.7 >>> release down
+   123.8 CTL hold 0x0000
+   123.9 >>> hold up
+   124.0 CTL hold 0x0001
+   124.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+33), BATT:0
+   125.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   125.5 >>> release up
+   125.6 CTL hold 0x0000
+   125.7 >>> key a 120
+   125.8 CTL key 0x0100 120ms
+   126.1 >>> key a 120
+   126.2 CTL key 0x0100 120ms
+   126.4 [debug] STACK:4796, HEAP:73+2476 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   126.5 >>> key start 150
+   126.6 CTL key 0x0020 150ms
+   127.1 >>> hold left
+   127.2 CTL hold 0x0008
+   127.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:18+17), BATT:0
+   127.6 >>> release left
+   127.7 CTL hold 0x0000
+   127.8 >>> hold up
+   127.9 CTL hold 0x0001
+   128.3 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   129.0 >>> release up
+   129.1 CTL hold 0x0000
+   129.2 >>> key a 120
+   129.3 CTL key 0x0100 120ms
+   129.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   129.6 >>> hold right
+   129.7 CTL hold 0x0002
+   130.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   130.5 >>> release right
+   130.6 CTL hold 0x0000
+   130.7 >>> key start 150
+   130.8 CTL key 0x0020 150ms
+   131.3 >>> hold down
+   131.4 CTL hold 0x0004
+   131.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:27+8), BATT:0
+   131.9 >>> release down
+   132.0 CTL hold 0x0000
+   132.1 >>> hold up
+   132.2 CTL hold 0x0001
+   132.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:1+34), BATT:0
+   133.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   133.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   133.4 [=] DOOMMEM up=120s int=75187(31744) ext=2536828(1441792) zone 5583024 B (+5388 since last)
+   133.4 [=]  static 2635116/1298
+   133.4 [=]  level 404340/226
+   133.4 [=]  levspec 432/9
+   133.4 [=]  cache 2543136/683
+   133.4 [=]  allocs 39 purges 0+0
+   133.4 [=] DOOMMEM   site 0x4204704d 3455704 B 647 blk (+1936)
+   133.4 [=] DOOMMEM   site 0x42042a38 432540 B 23 blk (+0)
+   133.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   133.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   133.4 [=] DOOMMEM   site 0x420425ab 162424 B 87 blk (+3868)
+   133.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   133.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   133.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   133.7 >>> release up
+   133.8 CTL hold 0x0000
+   133.9 >>> key a 120
+   134.0 CTL key 0x0100 120ms
+   134.3 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   134.3 >>> key a 120
+   134.4 CTL key 0x0100 120ms
+   134.7 >>> key start 150
+   134.8 CTL key 0x0020 150ms
+   135.3 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   135.3 >>> hold left
+   135.4 CTL hold 0x0008
+   135.8 >>> release left
+   135.9 CTL hold 0x0000
+   136.1 >>> hold up
+   136.1 CTL hold 0x0001
+   136.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:9+26), BATT:0
+   137.3 >>> release up
+   137.3 CTL hold 0x0000
+   137.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   137.5 >>> key a 120
+   137.5 CTL key 0x0100 120ms
+   137.9 >>> hold right
+   137.9 CTL hold 0x0002
+   138.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   138.8 >>> release right
+   138.8 CTL hold 0x0000
+   139.0 >>> key start 150
+   139.0 CTL key 0x0020 150ms
+   139.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   139.6 >>> hold down
+   139.6 CTL hold 0x0004
+   140.2 >>> release down
+   140.2 CTL hold 0x0000
+   140.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+24), BATT:0
+   140.4 >>> hold up
+   140.4 CTL hold 0x0001
+   141.3 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   141.9 >>> release up
+   142.0 CTL hold 0x0000
+   142.1 >>> key a 120
+   142.2 CTL key 0x0100 120ms
+   142.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   142.6 >>> key a 120
+   142.6 CTL key 0x0100 120ms
+   143.0 >>> key start 150
+   143.0 CTL key 0x0020 150ms
+   143.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:31+4), BATT:0
+   143.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   143.5 [=] DOOMMEM up=130s int=75187(31744) ext=2536828(1441792) zone 5583024 B (+0 since last)
+   143.5 [=]  static 2635116/1298
+   143.5 [=]  level 404340/226
+   143.5 [=]  levspec 432/9
+   143.5 [=]  cache 2543136/683
+   143.5 [=]  allocs 4 purges 0+0
+   143.5 [=] DOOMMEM   site 0x4204704d 3455704 B 647 blk (+0)
+   143.5 [=] DOOMMEM   site 0x42042a38 432540 B 23 blk (+0)
+   143.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   143.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   143.5 [=] DOOMMEM   site 0x420425ab 162424 B 87 blk (+0)
+   143.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   143.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   143.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   143.6 >>> hold left
+   143.6 CTL hold 0x0008
+   144.1 >>> release left
+   144.1 CTL hold 0x0000
+   144.3 >>> hold up
+   144.3 CTL hold 0x0001
+   144.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+19), BATT:0
+   145.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:34+1), BATT:0
+   145.5 >>> release up
+   145.5 CTL hold 0x0000
+   145.7 >>> key a 120
+   145.7 CTL key 0x0100 120ms
+   146.1 >>> hold right
+   146.1 CTL hold 0x0002
+   146.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   147.0 >>> release right
+   147.0 CTL hold 0x0000
+   147.2 >>> key start 150
+   147.2 CTL key 0x0020 150ms
+   147.3 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:11+24), BATT:0
+   147.8 >>> hold down
+   147.8 CTL hold 0x0004
+   148.3 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   148.4 >>> release down
+   148.4 CTL hold 0x0000
+   148.6 >>> hold up
+   148.6 CTL hold 0x0001
+   149.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+33), BATT:0
+   150.2 >>> release up
+   150.3 CTL hold 0x0000
+   150.4 [debug] STACK:4796, HEAP:73+2477 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   150.4 >>> key a 120
+   150.5 CTL key 0x0100 120ms
+   150.8 >>> key a 120
+   150.9 CTL key 0x0100 120ms
+   151.2 >>> key start 150
+   151.2 CTL key 0x0020 150ms
+   151.4 [debug] STACK:4796, HEAP:73+2472 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   151.8 >>> hold left
+   151.8 CTL hold 0x0008
+   152.3 >>> release left
+   152.3 CTL hold 0x0000
+   152.3 [debug] STACK:4796, HEAP:73+2468 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+26), BATT:0
+   152.5 >>> hold up
+   152.5 CTL hold 0x0001
+   153.3 [debug] STACK:4796, HEAP:73+2465 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   153.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   153.4 [=] DOOMMEM up=140s int=75187(31744) ext=2524328(1441792) zone 5595264 B (+12240 since last)
+   153.4 [=]  static 2648880/1299
+   153.4 [=]  level 404340/226
+   153.4 [=]  levspec 432/9
+   153.4 [=]  cache 2541612/687
+   153.4 [=]  allocs 7 purges 0+0
+   153.4 [=] DOOMMEM   site 0x4204704d 3458256 B 649 blk (+2552)
+   153.4 [=] DOOMMEM   site 0x42042a38 432540 B 23 blk (+0)
+   153.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   153.4 [=] DOOMMEM   site 0x420425ab 172112 B 90 blk (+9688)
+   153.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   153.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   153.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   153.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   153.7 >>> release up
+   153.8 CTL hold 0x0000
+   153.9 >>> key a 120
+   154.0 CTL key 0x0100 120ms
+   154.3 >>> hold right
+   154.4 CTL hold 0x0002
+   154.4 [debug] STACK:4796, HEAP:73+2461 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+35), BATT:0
+   155.2 >>> release right
+   155.3 CTL hold 0x0000
+   155.4 [debug] STACK:4796, HEAP:73+2453 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   155.4 >>> key start 150
+   155.5 CTL key 0x0020 150ms
+   156.0 >>> hold down
+   156.1 CTL hold 0x0004
+   156.4 [debug] STACK:4796, HEAP:73+2453 (31+1408), BUSY:100%, FPS:35 (S:0 R:21+14), BATT:0
+   156.6 >>> release down
+   156.7 CTL hold 0x0000
+   156.8 >>> hold up
+   156.9 CTL hold 0x0001
+   157.4 [debug] STACK:4796, HEAP:73+2453 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   158.3 [debug] STACK:4796, HEAP:73+2453 (31+1408), BUSY:100%, FPS:35 (S:0 R:34+1), BATT:0
+   158.4 >>> release up
+   158.5 CTL hold 0x0000
+   158.6 >>> key a 120
+   158.7 CTL key 0x0100 120ms
+   159.0 >>> key a 120
+   159.1 CTL key 0x0100 120ms
+   159.3 [debug] STACK:4796, HEAP:73+2453 (31+1408), BUSY:100%, FPS:35 (S:0 R:32+3), BATT:0
+   159.4 >>> key start 150
+   159.5 CTL key 0x0020 150ms
+   160.1 >>> hold left
+   160.1 CTL hold 0x0008
+   160.4 [debug] STACK:4796, HEAP:73+2453 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   160.6 >>> release left
+   160.6 CTL hold 0x0000
+   160.8 >>> hold up
+   160.8 CTL hold 0x0001
+   161.4 [debug] STACK:4796, HEAP:73+2449 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   162.0 >>> release up
+   162.0 CTL hold 0x0000
+   162.2 >>> key a 120
+   162.2 CTL key 0x0100 120ms
+   162.4 [debug] STACK:4796, HEAP:73+2439 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   162.6 >>> hold right
+   162.6 CTL hold 0x0002
+   163.4 [debug] STACK:4796, HEAP:73+2439 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   163.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   163.4 [=] DOOMMEM up=150s int=75187(31744) ext=2495880(1441792) zone 5623144 B (+27880 since last)
+   163.4 [=]  static 2635116/1298
+   163.4 [=]  level 404548/227
+   163.4 [=]  levspec 432/9
+   163.4 [=]  cache 2583048/701
+   163.4 [=]  allocs 29 purges 0+0
+   163.4 [=] DOOMMEM   site 0x4204704d 3460308 B 652 blk (+2052)
+   163.4 [=] DOOMMEM   site 0x42042a38 432540 B 23 blk (+0)
+   163.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   163.4 [=] DOOMMEM   site 0x420425ab 197732 B 100 blk (+25620)
+   163.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   163.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   163.4 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   163.4 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   163.4 >>> release right
+   163.5 CTL hold 0x0000
+   163.6 >>> key start 150
+   163.7 CTL key 0x0020 150ms
+   164.2 >>> hold down
+   164.3 CTL hold 0x0004
+   164.4 [debug] STACK:4796, HEAP:73+2427 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   164.8 >>> release down
+   164.9 CTL hold 0x0000
+   165.0 >>> hold up
+   165.1 CTL hold 0x0001
+   165.3 [debug] STACK:4796, HEAP:73+2424 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   166.4 [debug] STACK:4796, HEAP:73+2425 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   166.7 >>> release up
+   166.7 CTL hold 0x0000
+   166.9 >>> key a 120
+   166.9 CTL key 0x0100 120ms
+   167.3 >>> key a 120
+   167.3 CTL key 0x0100 120ms
+   167.4 [debug] STACK:4796, HEAP:73+2422 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   167.7 >>> key start 150
+   167.7 CTL key 0x0020 150ms
+   168.3 >>> hold left
+   168.3 CTL hold 0x0008
+   168.4 [debug] STACK:4796, HEAP:73+2420 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   168.8 >>> release left
+   168.8 CTL hold 0x0000
+   169.0 >>> hold up
+   169.0 CTL hold 0x0001
+   169.4 [debug] STACK:4796, HEAP:73+2418 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   170.2 >>> release up
+   170.2 CTL hold 0x0000
+   170.4 [debug] STACK:4796, HEAP:73+2418 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   170.4 >>> key a 120
+   170.4 CTL key 0x0100 120ms
+   170.8 >>> hold right
+   170.8 CTL hold 0x0002
+   171.3 [debug] STACK:4796, HEAP:73+2418 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   171.7 >>> release right
+   171.7 CTL hold 0x0000
+   171.9 >>> key start 150
+   171.9 CTL key 0x0020 150ms
+   172.4 [debug] STACK:4796, HEAP:73+2418 (31+1408), BUSY:100%, FPS:35 (S:0 R:21+14), BATT:0
+   172.5 >>> hold down
+   172.6 CTL hold 0x0004
+   173.1 >>> release down
+   173.2 CTL hold 0x0000
+   173.3 >>> hold up
+   173.4 CTL hold 0x0001
+   173.4 [debug] STACK:4796, HEAP:73+2415 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   173.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   173.5 [=] DOOMMEM up=160s int=75187(31744) ext=2473864(1441792) zone 5644440 B (+21296 since last)
+   173.5 [=]  static 2635116/1298
+   173.5 [=]  level 404340/226
+   173.5 [=]  levspec 432/9
+   173.5 [=]  cache 2604552/714
+   173.5 [=]  allocs 39 purges 0+0
+   173.5 [=] DOOMMEM   site 0x4204704d 3464696 B 658 blk (+4388)
+   173.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+9732)
+   173.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   173.5 [=] DOOMMEM   site 0x420425ab 205116 B 106 blk (+7384)
+   173.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   173.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   173.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   173.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   174.4 [debug] STACK:4796, HEAP:73+2413 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   174.9 >>> release up
+   175.0 CTL hold 0x0000
+   175.1 >>> key a 120
+   175.2 CTL key 0x0100 120ms
+   175.4 [debug] STACK:4796, HEAP:73+2411 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   175.5 >>> key a 120
+   175.6 CTL key 0x0100 120ms
+   175.9 >>> key start 150
+   176.0 CTL key 0x0020 150ms
+   176.3 [debug] STACK:4796, HEAP:73+2411 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   176.5 >>> hold left
+   176.5 CTL hold 0x0008
+   177.0 >>> release left
+   177.0 CTL hold 0x0000
+   177.2 >>> hold up
+   177.2 CTL hold 0x0001
+   177.3 [debug] STACK:4796, HEAP:73+2411 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   178.3 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   178.4 >>> release up
+   178.5 CTL hold 0x0000
+   178.6 >>> key a 120
+   178.7 CTL key 0x0100 120ms
+   179.0 >>> hold right
+   179.1 CTL hold 0x0002
+   179.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:21+14), BATT:0
+   179.9 >>> release right
+   180.0 CTL hold 0x0000
+   180.1 >>> key start 150
+   180.2 CTL key 0x0020 150ms
+   180.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:1+34), BATT:0
+   180.7 >>> hold down
+   180.8 CTL hold 0x0004
+   181.3 >>> release down
+   181.4 CTL hold 0x0000
+   181.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   181.5 >>> hold up
+   181.6 CTL hold 0x0001
+   182.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   183.1 >>> release up
+   183.2 CTL hold 0x0000
+   183.3 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   183.3 >>> key a 120
+   183.4 CTL key 0x0100 120ms
+   183.4 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   183.4 [=] DOOMMEM up=170s int=75187(31744) ext=2467028(1441792) zone 5651028 B (+6588 since last)
+   183.4 [=]  static 2635128/1299
+   183.4 [=]  level 404340/226
+   183.4 [=]  levspec 504/10
+   183.4 [=]  cache 2611056/720
+   183.4 [=]  allocs 18 purges 0+0
+   183.4 [=] DOOMMEM   site 0x4204704d 3467156 B 661 blk (+2460)
+   183.4 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   183.4 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   183.4 [=] DOOMMEM   site 0x420425ab 209160 B 109 blk (+4044)
+   183.4 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   183.4 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   183.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   183.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   183.7 >>> key a 120
+   183.8 CTL key 0x0100 120ms
+   184.1 >>> key start 150
+   184.2 CTL key 0x0020 150ms
+   184.3 [debug] STACK:4796, HEAP:73+2408 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   184.8 >>> hold left
+   184.8 CTL hold 0x0008
+   185.3 >>> release left
+   185.3 CTL hold 0x0000
+   185.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:11+24), BATT:0
+   185.5 >>> hold up
+   185.5 CTL hold 0x0001
+   186.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   186.7 >>> release up
+   186.7 CTL hold 0x0000
+   186.9 >>> key a 120
+   186.9 CTL key 0x0100 120ms
+   187.2 >>> hold right
+   187.3 CTL hold 0x0002
+   187.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   188.1 >>> release right
+   188.2 CTL hold 0x0000
+   188.3 >>> key start 150
+   188.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   188.4 CTL key 0x0020 150ms
+   188.9 >>> hold down
+   189.0 CTL hold 0x0004
+   189.3 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:22+13), BATT:0
+   189.5 >>> release down
+   189.6 CTL hold 0x0000
+   189.7 >>> hold up
+   189.8 CTL hold 0x0001
+   190.3 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   191.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   191.4 >>> release up
+   191.4 CTL hold 0x0000
+   191.6 >>> key a 120
+   191.6 CTL key 0x0100 120ms
+   192.0 >>> key a 120
+   192.0 CTL key 0x0100 120ms
+   192.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   192.4 >>> key start 150
+   192.4 CTL key 0x0020 150ms
+   193.0 >>> hold left
+   193.0 CTL hold 0x0008
+   193.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:21+14), BATT:0
+   193.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   193.5 [=] DOOMMEM up=180s int=75187(31744) ext=2467392(1441792) zone 5650748 B (-280 since last)
+   193.5 [=]  static 2635116/1298
+   193.5 [=]  level 403716/223
+   193.5 [=]  levspec 432/9
+   193.5 [=]  cache 2611484/722
+   193.5 [=]  allocs 13 purges 0+0
+   193.5 [=] DOOMMEM   site 0x4204704d 3467304 B 662 blk (+148)
+   193.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   193.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   193.5 [=] DOOMMEM   site 0x420425ab 209440 B 110 blk (+280)
+   193.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   193.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   193.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   193.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   193.5 >>> release left
+   193.5 CTL hold 0x0000
+   193.7 >>> hold up
+   193.7 CTL hold 0x0001
+   194.4 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   194.9 >>> release up
+   194.9 CTL hold 0x0000
+   195.1 >>> key a 120
+   195.1 CTL key 0x0100 120ms
+   195.3 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+15), BATT:0
+   195.5 >>> hold right
+   195.5 CTL hold 0x0002
+   196.3 [debug] STACK:4796, HEAP:73+2409 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   196.4 >>> release right
+   196.5 CTL hold 0x0000
+   196.6 >>> key start 150
+   196.7 CTL key 0x0020 150ms
+   197.2 >>> hold down
+   197.3 CTL hold 0x0004
+   197.4 [debug] STACK:4796, HEAP:73+2395 (31+1408), BUSY:100%, FPS:35 (S:0 R:29+6), BATT:0
+   197.8 >>> release down
+   197.9 CTL hold 0x0000
+   198.0 >>> hold up
+   198.1 CTL hold 0x0001
+   198.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   199.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   199.6 >>> release up
+   199.7 CTL hold 0x0000
+   199.8 >>> key a 120
+   199.9 CTL key 0x0100 120ms
+   200.2 >>> key a 120
+   200.3 CTL key 0x0100 120ms
+   200.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:30+5), BATT:0
+   200.6 >>> key start 150
+   200.7 CTL key 0x0020 150ms
+   201.2 >>> hold left
+   201.2 CTL hold 0x0008
+   201.3 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:31+4), BATT:0
+   201.7 >>> release left
+   201.7 CTL hold 0x0000
+   201.9 >>> hold up
+   201.9 CTL hold 0x0001
+   202.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+15), BATT:0
+   203.1 >>> release up
+   203.2 CTL hold 0x0000
+   203.3 >>> key a 120
+   203.4 CTL key 0x0100 120ms
+   203.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   203.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   203.5 [=] DOOMMEM up=190s int=75187(31744) ext=2438960(1441792) zone 5678736 B (+27988 since last)
+   203.5 [=]  static 2635116/1298
+   203.5 [=]  level 403508/222
+   203.5 [=]  levspec 432/9
+   203.5 [=]  cache 2639680/731
+   203.5 [=]  allocs 13 purges 0+0
+   203.5 [=] DOOMMEM   site 0x4204704d 3467304 B 662 blk (+0)
+   203.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   203.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   203.5 [=] DOOMMEM   site 0x420425ab 237636 B 119 blk (+28196)
+   203.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   203.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   203.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   203.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   203.7 >>> hold right
+   203.8 CTL hold 0x0002
+   204.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:13+22), BATT:0
+   204.6 >>> release right
+   204.7 CTL hold 0x0000
+   204.8 >>> key start 150
+   204.9 CTL key 0x0020 150ms
+   205.4 [debug] STACK:4796, HEAP:73+2381 (31+1408), BUSY:100%, FPS:35 (S:0 R:24+11), BATT:0
+   205.4 >>> hold down
+   205.5 CTL hold 0x0004
+   206.0 >>> release down
+   206.1 CTL hold 0x0000
+   206.2 >>> hold up
+   206.3 CTL hold 0x0001
+   206.4 [debug] STACK:4796, HEAP:73+2374 (31+1408), BUSY:100%, FPS:35 (S:0 R:4+31), BATT:0
+   207.3 [debug] STACK:4796, HEAP:73+2363 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   207.8 >>> release up
+   207.9 CTL hold 0x0000
+   208.0 >>> key a 120
+   208.1 CTL key 0x0100 120ms
+   208.3 [debug] STACK:4796, HEAP:73+2355 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+34), BATT:0
+   208.4 >>> key a 120
+   208.5 CTL key 0x0100 120ms
+   208.9 >>> key start 150
+   208.9 CTL key 0x0020 150ms
+   209.4 [debug] STACK:4796, HEAP:73+2355 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+24), BATT:0
+   209.5 >>> hold left
+   209.5 CTL hold 0x0008
+   210.0 >>> release left
+   210.0 CTL hold 0x0000
+   210.2 >>> hold up
+   210.2 CTL hold 0x0001
+   210.4 [debug] STACK:4796, HEAP:73+2355 (31+1408), BUSY:100%, FPS:35 (S:0 R:13+22), BATT:0
+   211.4 [debug] STACK:4796, HEAP:73+2352 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   211.4 >>> release up
+   211.4 CTL hold 0x0000
+   211.6 >>> key a 120
+   211.6 CTL key 0x0100 120ms
+   212.0 >>> hold right
+   212.0 CTL hold 0x0002
+   212.4 [debug] STACK:4796, HEAP:73+2352 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   212.9 >>> release right
+   212.9 CTL hold 0x0000
+   213.1 >>> key start 150
+   213.1 CTL key 0x0020 150ms
+   213.3 [debug] STACK:4796, HEAP:73+2352 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+21), BATT:0
+   213.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   213.5 [=] DOOMMEM up=200s int=75187(31744) ext=2408528(1441792) zone 5708628 B (+29892 since last)
+   213.5 [=]  static 2635116/1298
+   213.5 [=]  level 403508/222
+   213.5 [=]  levspec 432/9
+   213.5 [=]  cache 2669572/739
+   213.5 [=]  allocs 12 purges 0+0
+   213.5 [=] DOOMMEM   site 0x4204704d 3467304 B 662 blk (+0)
+   213.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   213.5 [=] DOOMMEM   site 0x420425ab 267528 B 127 blk (+29892)
+   213.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   213.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   213.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   213.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   213.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   213.7 >>> hold down
+   213.7 CTL hold 0x0004
+   214.2 >>> release down
+   214.3 CTL hold 0x0000
+   214.4 [debug] STACK:4796, HEAP:73+2348 (31+1408), BUSY:100%, FPS:35 (S:0 R:14+20), BATT:0
+   214.5 >>> hold up
+   214.5 CTL hold 0x0001
+   215.4 [debug] STACK:4796, HEAP:73+2348 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   216.1 >>> release up
+   216.1 CTL hold 0x0000
+   216.3 >>> key a 120
+   216.3 CTL key 0x0100 120ms
+   216.4 [debug] STACK:4796, HEAP:73+2348 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   216.7 >>> key a 120
+   216.7 CTL key 0x0100 120ms
+   217.1 >>> key start 150
+   217.1 CTL key 0x0020 150ms
+   217.4 [debug] STACK:4796, HEAP:73+2348 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+29), BATT:0
+   217.7 >>> hold left
+   217.7 CTL hold 0x0008
+   218.2 >>> release left
+   218.2 CTL hold 0x0000
+   218.4 [debug] STACK:4796, HEAP:73+2348 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+18), BATT:0
+   218.4 >>> hold up
+   218.4 CTL hold 0x0001
+   219.3 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:34 (S:1 R:3+31), BATT:0
+   219.6 >>> release up
+   219.6 CTL hold 0x0000
+   219.8 >>> key a 120
+   219.8 CTL key 0x0100 120ms
+   220.2 >>> hold right
+   220.3 CTL hold 0x0002
+   220.4 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+35), BATT:0
+   221.1 >>> release right
+   221.2 CTL hold 0x0000
+   221.3 >>> key start 150
+   221.4 CTL key 0x0020 150ms
+   221.4 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   221.9 >>> hold down
+   222.0 CTL hold 0x0004
+   222.4 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+14), BATT:0
+   222.5 >>> release down
+   222.6 CTL hold 0x0000
+   222.7 >>> hold up
+   222.8 CTL hold 0x0001
+   223.4 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+   223.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   223.5 [=] DOOMMEM up=210s int=75187(31744) ext=2400712(1441792) zone 5716304 B (+7676 since last)
+   223.5 [=]  static 2635116/1298
+   223.5 [=]  level 403508/222
+   223.5 [=]  levspec 432/9
+   223.5 [=]  cache 2677248/741
+   223.5 [=]  allocs 5 purges 0+0
+   223.5 [=] DOOMMEM   site 0x4204704d 3467304 B 662 blk (+0)
+   223.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   223.5 [=] DOOMMEM   site 0x420425ab 275204 B 129 blk (+7676)
+   223.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   223.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   223.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   223.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   223.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   224.3 >>> release up
+   224.3 CTL hold 0x0000
+   224.3 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   224.5 >>> key a 120
+   224.5 CTL key 0x0100 120ms
+   224.9 >>> key a 120
+   224.9 CTL key 0x0100 120ms
+   225.3 >>> key start 150
+   225.3 CTL key 0x0020 150ms
+   225.3 [debug] STACK:4796, HEAP:73+2344 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   225.9 >>> hold left
+   226.0 CTL hold 0x0008
+   226.4 [debug] STACK:4796, HEAP:73+2333 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+20), BATT:0
+   226.4 >>> release left
+   226.5 CTL hold 0x0000
+   226.6 >>> hold up
+   226.7 CTL hold 0x0001
+   227.4 [debug] STACK:4796, HEAP:73+2333 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+27), BATT:0
+   227.8 >>> release up
+   227.9 CTL hold 0x0000
+   228.0 >>> key a 120
+   228.1 CTL key 0x0100 120ms
+   228.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+   228.4 >>> hold right
+   228.5 CTL hold 0x0002
+   229.3 >>> release right
+   229.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   229.4 CTL hold 0x0000
+   229.5 >>> key start 150
+   229.6 CTL key 0x0020 150ms
+   230.1 >>> hold down
+   230.2 CTL hold 0x0004
+   230.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   230.7 >>> release down
+   230.8 CTL hold 0x0000
+   230.9 >>> hold up
+   231.0 CTL hold 0x0001
+   231.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   232.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   232.6 >>> release up
+   232.6 CTL hold 0x0000
+   232.8 >>> key a 120
+   232.8 CTL key 0x0100 120ms
+   233.2 >>> key a 120
+   233.2 CTL key 0x0100 120ms
+   233.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   233.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   233.5 [=] DOOMMEM up=220s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+81240 since last)
+   233.5 [=]  static 2644848/1299
+   233.5 [=]  level 403300/221
+   233.5 [=]  levspec 432/9
+   233.5 [=]  cache 2748964/752
+   233.5 [=]  allocs 15 purges 0+0
+   233.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+25852)
+   233.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   233.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+55596)
+   233.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   233.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   233.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   233.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   233.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   233.6 >>> key start 150
+   233.6 CTL key 0x0020 150ms
+   234.2 >>> hold left
+   234.2 CTL hold 0x0008
+   234.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:9+26), BATT:0
+   234.6 >>> release left
+   234.7 CTL hold 0x0000
+   234.9 >>> hold up
+   234.9 CTL hold 0x0001
+   235.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:1 R:9+26), BATT:0
+   236.0 >>> release up
+   236.1 CTL hold 0x0000
+   236.2 >>> key a 120
+   236.3 CTL key 0x0100 120ms
+   236.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+33), BATT:0
+   236.6 >>> hold right
+   236.7 CTL hold 0x0002
+   237.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+33), BATT:0
+   237.6 >>> release right
+   237.6 CTL hold 0x0000
+   237.8 >>> key start 150
+   237.8 CTL key 0x0020 150ms
+   238.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:36 (S:0 R:24+12), BATT:0
+   238.4 >>> hold down
+   238.4 CTL hold 0x0004
+   239.0 >>> release down
+   239.0 CTL hold 0x0000
+   239.2 >>> hold up
+   239.2 CTL hold 0x0001
+   239.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   240.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   240.8 >>> release up
+   240.8 CTL hold 0x0000
+   241.0 >>> key a 120
+   241.0 CTL key 0x0100 120ms
+   241.4 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   241.4 >>> key a 120
+   241.4 CTL key 0x0100 120ms
+   241.8 >>> key start 150
+   241.8 CTL key 0x0020 150ms
+   242.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:11+24), BATT:0
+   242.4 >>> hold left
+   242.4 CTL hold 0x0008
+   242.9 >>> release left
+   242.9 CTL hold 0x0000
+   243.1 >>> hold up
+   243.1 CTL hold 0x0001
+   243.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   243.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   243.5 [=] DOOMMEM up=230s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   243.5 [=]  static 2635116/1298
+   243.5 [=]  level 403300/221
+   243.5 [=]  levspec 432/9
+   243.5 [=]  cache 2758696/753
+   243.5 [=]  allocs 3 purges 0+0
+   243.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   243.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   243.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   243.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   243.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   243.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   243.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   243.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   244.3 >>> release up
+   244.4 CTL hold 0x0000
+   244.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   244.5 >>> key a 120
+   244.6 CTL key 0x0100 120ms
+   244.9 >>> hold right
+   245.0 CTL hold 0x0002
+   245.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   245.8 >>> release right
+   245.8 CTL hold 0x0000
+   246.0 >>> key start 150
+   246.0 CTL key 0x0020 150ms
+   246.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:18+17), BATT:0
+   246.6 >>> hold down
+   246.6 CTL hold 0x0004
+   247.2 >>> release down
+   247.2 CTL hold 0x0000
+   247.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:13+22), BATT:0
+   247.4 >>> hold up
+   247.4 CTL hold 0x0001
+   248.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:3+32), BATT:0
+   249.0 >>> release up
+   249.0 CTL hold 0x0000
+   249.2 >>> key a 120
+   249.2 CTL key 0x0100 120ms
+   249.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   249.6 >>> key a 120
+   249.7 CTL key 0x0100 120ms
+   250.0 >>> key start 150
+   250.1 CTL key 0x0020 150ms
+   250.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   250.6 >>> hold left
+   250.7 CTL hold 0x0008
+   251.1 >>> release left
+   251.2 CTL hold 0x0000
+   251.3 >>> hold up
+   251.4 CTL hold 0x0001
+   251.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   252.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   252.5 >>> release up
+   252.6 CTL hold 0x0000
+   252.7 >>> key a 120
+   252.8 CTL key 0x0100 120ms
+   253.1 >>> hold right
+   253.2 CTL hold 0x0002
+   253.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:27+8), BATT:0
+   253.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   253.5 [=] DOOMMEM up=240s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   253.5 [=]  static 2654576/1299
+   253.5 [=]  level 403300/221
+   253.5 [=]  levspec 432/9
+   253.5 [=]  cache 2739236/752
+   253.5 [=]  allocs 5 purges 0+0
+   253.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   253.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   253.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   253.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   253.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   253.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   253.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   253.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   254.0 >>> release right
+   254.1 CTL hold 0x0000
+   254.2 >>> key start 150
+   254.3 CTL key 0x0020 150ms
+   254.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:9+26), BATT:0
+   254.8 >>> hold down
+   254.9 CTL hold 0x0004
+   255.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   255.5 >>> release down
+   255.5 CTL hold 0x0000
+   255.7 >>> hold up
+   255.7 CTL hold 0x0001
+   256.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   257.2 >>> release up
+   257.3 CTL hold 0x0000
+   257.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:4+31), BATT:0
+   257.4 >>> key a 120
+   257.5 CTL key 0x0100 120ms
+   257.8 >>> key a 120
+   257.9 CTL key 0x0100 120ms
+   258.2 >>> key start 150
+   258.3 CTL key 0x0020 150ms
+   258.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+   258.8 >>> hold left
+   258.9 CTL hold 0x0008
+   259.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   259.3 >>> release left
+   259.4 CTL hold 0x0000
+   259.5 >>> hold up
+   259.6 CTL hold 0x0001
+   260.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+   260.8 >>> release up
+   260.8 CTL hold 0x0000
+   261.0 >>> key a 120
+   261.0 CTL key 0x0100 120ms
+   261.4 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:31+4), BATT:0
+   261.4 >>> hold right
+   261.4 CTL hold 0x0002
+   262.3 >>> release right
+   262.3 CTL hold 0x0000
+   262.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:3+32), BATT:0
+   262.5 >>> key start 150
+   262.5 CTL key 0x0020 150ms
+   263.1 >>> hold down
+   263.1 CTL hold 0x0004
+   263.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:27+8), BATT:0
+   263.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   263.5 [=] DOOMMEM up=250s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   263.5 [=]  static 2635116/1298
+   263.5 [=]  level 403300/221
+   263.5 [=]  levspec 432/9
+   263.5 [=]  cache 2758696/753
+   263.5 [=]  allocs 3 purges 0+0
+   263.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   263.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   263.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   263.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   263.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   263.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   263.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   263.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   263.7 >>> release down
+   263.7 CTL hold 0x0000
+   263.9 >>> hold up
+   263.9 CTL hold 0x0001
+   264.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   265.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   265.4 >>> release up
+   265.5 CTL hold 0x0000
+   265.7 >>> key a 120
+   265.7 CTL key 0x0100 120ms
+   266.1 >>> key a 120
+   266.1 CTL key 0x0100 120ms
+   266.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+   266.5 >>> key start 150
+   266.5 CTL key 0x0020 150ms
+   267.1 >>> hold left
+   267.1 CTL hold 0x0008
+   267.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   267.6 >>> release left
+   267.6 CTL hold 0x0000
+   267.8 >>> hold up
+   267.8 CTL hold 0x0001
+   268.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+29), BATT:0
+   269.0 >>> release up
+   269.0 CTL hold 0x0000
+   269.2 >>> key a 120
+   269.2 CTL key 0x0100 120ms
+   269.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   269.6 >>> hold right
+   269.6 CTL hold 0x0002
+   270.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   270.5 >>> release right
+   270.5 CTL hold 0x0000
+   270.7 >>> key start 150
+   270.7 CTL key 0x0020 150ms
+   271.3 >>> hold down
+   271.3 CTL hold 0x0004
+   271.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+10), BATT:0
+   271.9 >>> release down
+   272.0 CTL hold 0x0000
+   272.1 >>> hold up
+   272.2 CTL hold 0x0001
+   272.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   273.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   273.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   273.5 [=] DOOMMEM up=260s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   273.5 [=]  static 2635116/1298
+   273.5 [=]  level 403300/221
+   273.5 [=]  levspec 432/9
+   273.5 [=]  cache 2758696/753
+   273.5 [=]  allocs 1 purges 0+0
+   273.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   273.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   273.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   273.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   273.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   273.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   273.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   273.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   273.7 >>> release up
+   273.8 CTL hold 0x0000
+   273.9 >>> key a 120
+   274.0 CTL key 0x0100 120ms
+   274.3 >>> key a 120
+   274.4 CTL key 0x0100 120ms
+   274.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   274.7 >>> key start 150
+   274.8 CTL key 0x0020 150ms
+   275.3 >>> hold left
+   275.4 CTL hold 0x0008
+   275.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+15), BATT:0
+   275.8 >>> release left
+   275.9 CTL hold 0x0000
+   276.0 >>> hold up
+   276.1 CTL hold 0x0001
+   276.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+26), BATT:0
+   277.2 >>> release up
+   277.3 CTL hold 0x0000
+   277.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+34), BATT:0
+   277.4 >>> key a 120
+   277.5 CTL key 0x0100 120ms
+   277.8 >>> hold right
+   277.9 CTL hold 0x0002
+   278.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+   278.7 >>> release right
+   278.8 CTL hold 0x0000
+   278.9 >>> key start 150
+   279.0 CTL key 0x0020 150ms
+   279.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:36 (S:0 R:18+18), BATT:0
+   279.5 >>> hold down
+   279.6 CTL hold 0x0004
+   280.1 >>> release down
+   280.2 CTL hold 0x0000
+   280.3 >>> hold up
+   280.4 CTL hold 0x0001
+   280.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   281.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:1+34), BATT:0
+   281.9 >>> release up
+   282.0 CTL hold 0x0000
+   282.1 >>> key a 120
+   282.2 CTL key 0x0100 120ms
+   282.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   282.5 >>> key a 120
+   282.6 CTL key 0x0100 120ms
+   282.9 >>> key start 150
+   283.0 CTL key 0x0020 150ms
+   283.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:9+27), BATT:0
+   283.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   283.6 [=] DOOMMEM up=270s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   283.6 [=]  static 2635116/1298
+   283.6 [=]  level 403300/221
+   283.6 [=]  levspec 432/9
+   283.6 [=]  cache 2758696/753
+   283.6 [=]  allocs 0 purges 0+0
+   283.6 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   283.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   283.6 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   283.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   283.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   283.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   283.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   283.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   283.6 >>> hold left
+   283.6 CTL hold 0x0008
+   284.1 >>> release left
+   284.1 CTL hold 0x0000
+   284.3 >>> hold up
+   284.3 CTL hold 0x0001
+   284.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+18), BATT:0
+   285.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   285.5 >>> release up
+   285.5 CTL hold 0x0000
+   285.7 >>> key a 120
+   285.7 CTL key 0x0100 120ms
+   286.1 >>> hold right
+   286.1 CTL hold 0x0002
+   286.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+34), BATT:0
+   287.0 >>> release right
+   287.0 CTL hold 0x0000
+   287.2 >>> key start 150
+   287.2 CTL key 0x0020 150ms
+   287.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:11+24), BATT:0
+   287.8 >>> hold down
+   287.8 CTL hold 0x0004
+   288.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+17), BATT:0
+   288.4 >>> release down
+   288.4 CTL hold 0x0000
+   288.6 >>> hold up
+   288.6 CTL hold 0x0001
+   289.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   290.2 >>> release up
+   290.2 CTL hold 0x0000
+   290.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+35), BATT:0
+   290.4 >>> key a 120
+   290.4 CTL key 0x0100 120ms
+   290.8 >>> key a 120
+   290.8 CTL key 0x0100 120ms
+   291.2 >>> key start 150
+   291.2 CTL key 0x0020 150ms
+   291.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:2 R:0+33), BATT:0
+   291.8 >>> hold left
+   291.8 CTL hold 0x0008
+   292.3 >>> release left
+   292.3 CTL hold 0x0000
+   292.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:1 R:9+25), BATT:0
+   292.5 >>> hold up
+   292.5 CTL hold 0x0001
+   293.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:36 (S:0 R:7+28), BATT:0
+   293.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   293.5 [=] DOOMMEM up=280s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   293.5 [=]  static 2635116/1298
+   293.5 [=]  level 403300/221
+   293.5 [=]  levspec 432/9
+   293.5 [=]  cache 2758696/753
+   293.5 [=]  allocs 0 purges 0+0
+   293.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   293.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   293.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   293.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   293.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   293.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   293.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   293.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   293.7 >>> release up
+   293.7 CTL hold 0x0000
+   293.9 >>> key a 120
+   293.9 CTL key 0x0100 120ms
+   294.3 >>> hold right
+   294.3 CTL hold 0x0002
+   294.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   295.2 >>> release right
+   295.2 CTL hold 0x0000
+   295.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:4+32), BATT:0
+   295.4 >>> key start 150
+   295.4 CTL key 0x0020 150ms
+   296.0 >>> hold down
+   296.0 CTL hold 0x0004
+   296.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:24+11), BATT:0
+   296.6 >>> release down
+   296.7 CTL hold 0x0000
+   296.8 >>> hold up
+   296.9 CTL hold 0x0001
+   297.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   298.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   298.4 >>> release up
+   298.5 CTL hold 0x0000
+   298.6 >>> key a 120
+   298.7 CTL key 0x0100 120ms
+   299.0 >>> key a 120
+   299.1 CTL key 0x0100 120ms
+   299.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   299.4 >>> key start 150
+   299.5 CTL key 0x0020 150ms
+   300.0 >>> hold left
+   300.1 CTL hold 0x0008
+   300.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   300.5 >>> release left
+   300.6 CTL hold 0x0000
+   300.7 >>> hold up
+   300.8 CTL hold 0x0001
+   301.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   301.9 >>> release up
+   302.0 CTL hold 0x0000
+   302.1 >>> key a 120
+   302.2 CTL key 0x0100 120ms
+   302.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   302.5 >>> hold right
+   302.5 CTL hold 0x0002
+   303.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   303.4 >>> release right
+   303.5 CTL hold 0x0000
+   303.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   303.6 [=] DOOMMEM up=290s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   303.6 [=]  static 2635116/1298
+   303.6 [=]  level 403300/221
+   303.6 [=]  levspec 432/9
+   303.6 [=]  cache 2758696/753
+   303.6 [=]  allocs 0 purges 0+0
+   303.6 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   303.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   303.6 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   303.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   303.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   303.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   303.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   303.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   303.6 >>> key start 150
+   303.7 CTL key 0x0020 150ms
+   304.2 >>> hold down
+   304.3 CTL hold 0x0004
+   304.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   304.8 >>> release down
+   304.9 CTL hold 0x0000
+   305.0 >>> hold up
+   305.1 CTL hold 0x0001
+   305.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   306.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:13+22), BATT:0
+   306.6 >>> release up
+   306.7 CTL hold 0x0000
+   306.8 >>> key a 120
+   306.9 CTL key 0x0100 120ms
+   307.2 >>> key a 120
+   307.3 CTL key 0x0100 120ms
+   307.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:30+5), BATT:0
+   307.6 >>> key start 150
+   307.7 CTL key 0x0020 150ms
+   308.2 >>> hold left
+   308.3 CTL hold 0x0008
+   308.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:29+6), BATT:0
+   308.8 >>> release left
+   308.8 CTL hold 0x0000
+   309.0 >>> hold up
+   309.0 CTL hold 0x0001
+   309.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   310.2 >>> release up
+   310.2 CTL hold 0x0000
+   310.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   310.4 >>> key a 120
+   310.4 CTL key 0x0100 120ms
+   310.8 >>> hold right
+   310.8 CTL hold 0x0002
+   311.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   311.7 >>> release right
+   311.7 CTL hold 0x0000
+   311.9 >>> key start 150
+   311.9 CTL key 0x0020 150ms
+   312.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:22+13), BATT:0
+   312.5 >>> hold down
+   312.5 CTL hold 0x0004
+   313.1 >>> release down
+   313.1 CTL hold 0x0000
+   313.3 >>> hold up
+   313.3 CTL hold 0x0001
+   313.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   313.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   313.5 [=] DOOMMEM up=300s int=75187(31744) ext=2318396(1441792) zone 5797544 B (+0 since last)
+   313.5 [=]  static 2635116/1298
+   313.5 [=]  level 403300/221
+   313.5 [=]  levspec 432/9
+   313.5 [=]  cache 2758696/753
+   313.5 [=]  allocs 3 purges 0+0
+   313.5 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   313.5 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   313.5 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   313.5 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   313.5 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   313.5 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   313.5 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   313.5 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   314.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   314.9 >>> release up
+   314.9 CTL hold 0x0000
+   315.1 >>> key a 120
+   315.1 CTL key 0x0100 120ms
+   315.4 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   315.5 >>> key a 120
+   315.5 CTL key 0x0100 120ms
+   315.9 >>> key start 150
+   315.9 CTL key 0x0020 150ms
+   316.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+   316.5 >>> hold left
+   316.5 CTL hold 0x0008
+   317.0 >>> release left
+   317.0 CTL hold 0x0000
+   317.2 >>> hold up
+   317.2 CTL hold 0x0001
+   317.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:13+22), BATT:0
+   318.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   318.4 >>> release up
+   318.4 CTL hold 0x0000
+   318.6 >>> key a 120
+   318.6 CTL key 0x0100 120ms
+   319.0 >>> hold right
+   319.0 CTL hold 0x0002
+   319.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   319.9 >>> release right
+   319.9 CTL hold 0x0000
+   320.1 >>> key start 150
+   320.1 CTL key 0x0020 150ms
+   320.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   320.7 >>> hold down
+   320.8 CTL hold 0x0004
+   321.3 >>> release down
+   321.4 CTL hold 0x0000
+   321.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:14+21), BATT:0
+   321.5 >>> hold up
+   321.6 CTL hold 0x0001
+   322.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   323.1 >>> release up
+   323.2 CTL hold 0x0000
+   323.3 >>> key a 120
+   323.4 CTL key 0x0100 120ms
+   323.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   323.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   323.6 [=] DOOMMEM up=310s int=75187(31744) ext=2318160(1441792) zone 5797752 B (+208 since last)
+   323.6 [=]  static 2635116/1298
+   323.6 [=]  level 403508/222
+   323.6 [=]  levspec 432/9
+   323.6 [=]  cache 2758696/753
+   323.6 [=]  allocs 4 purges 0+0
+   323.6 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   323.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   323.6 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   323.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   323.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   323.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   323.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   323.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   323.7 >>> key a 120
+   323.8 CTL key 0x0100 120ms
+   324.1 >>> key start 150
+   324.2 CTL key 0x0020 150ms
+   324.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:24+11), BATT:0
+   324.7 >>> hold left
+   324.8 CTL hold 0x0008
+   325.2 >>> release left
+   325.3 CTL hold 0x0000
+   325.3 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   325.4 >>> hold up
+   325.5 CTL hold 0x0001
+   326.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   326.6 >>> release up
+   326.7 CTL hold 0x0000
+   326.8 >>> key a 120
+   326.9 CTL key 0x0100 120ms
+   327.2 >>> hold right
+   327.3 CTL hold 0x0002
+   327.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:30+5), BATT:0
+   328.1 >>> release right
+   328.2 CTL hold 0x0000
+   328.3 >>> key start 150
+   328.4 CTL key 0x0020 150ms
+   328.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   328.9 >>> hold down
+   329.0 CTL hold 0x0004
+   329.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:22+13), BATT:0
+   329.5 >>> release down
+   329.6 CTL hold 0x0000
+   329.7 >>> hold up
+   329.8 CTL hold 0x0001
+   330.4 [debug] STACK:4796, HEAP:73+2264 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+34), BATT:0
+   331.3 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+36), BATT:0
+   331.3 >>> release up
+   331.4 CTL hold 0x0000
+   331.5 >>> key a 120
+   331.6 CTL key 0x0100 120ms
+   331.9 >>> key a 120
+   332.0 CTL key 0x0100 120ms
+   332.3 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   332.3 >>> key start 150
+   332.4 CTL key 0x0020 150ms
+   333.0 >>> hold left
+   333.0 CTL hold 0x0008
+   333.4 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+27), BATT:0
+   333.5 >>> release left
+   333.5 CTL hold 0x0000
+   333.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   333.6 [=] DOOMMEM up=320s int=75187(31744) ext=2318256(1441792) zone 5797628 B (-124 since last)
+   333.6 [=]  static 2635128/1299
+   333.6 [=]  level 403300/221
+   333.6 [=]  levspec 504/10
+   333.6 [=]  cache 2758696/753
+   333.6 [=]  allocs 7 purges 0+0
+   333.6 [=] DOOMMEM   site 0x4204704d 3493156 B 668 blk (+0)
+   333.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   333.6 [=] DOOMMEM   site 0x420425ab 330800 B 135 blk (+0)
+   333.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   333.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   333.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   333.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   333.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   333.7 >>> hold up
+   333.7 CTL hold 0x0001
+   334.4 [debug] STACK:4796, HEAP:73+2263 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   334.9 >>> release up
+   334.9 CTL hold 0x0000
+   335.1 >>> key a 120
+   335.1 CTL key 0x0100 120ms
+   335.4 [debug] STACK:4796, HEAP:73+2253 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   335.5 >>> hold right
+   335.5 CTL hold 0x0002
+   336.4 [debug] STACK:4796, HEAP:73+2227 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   336.4 >>> release right
+   336.4 CTL hold 0x0000
+   336.6 >>> key start 150
+   336.6 CTL key 0x0020 150ms
+   337.1 >>> hold down
+   337.2 CTL hold 0x0004
+   337.3 [debug] STACK:4796, HEAP:73+2227 (31+1408), BUSY:100%, FPS:35 (S:0 R:27+8), BATT:0
+   337.7 >>> release down
+   337.8 CTL hold 0x0000
+   337.9 >>> hold up
+   338.0 CTL hold 0x0001
+   338.3 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   339.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   339.6 >>> release up
+   339.6 CTL hold 0x0000
+   339.8 >>> key a 120
+   339.8 CTL key 0x0100 120ms
+   340.2 >>> key a 120
+   340.2 CTL key 0x0100 120ms
+   340.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   340.6 >>> key start 150
+   340.6 CTL key 0x0020 150ms
+   341.2 >>> hold left
+   341.2 CTL hold 0x0008
+   341.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+15), BATT:0
+   341.7 >>> release left
+   341.7 CTL hold 0x0000
+   341.9 >>> hold up
+   341.9 CTL hold 0x0001
+   342.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   343.1 >>> release up
+   343.1 CTL hold 0x0000
+   343.3 >>> key a 120
+   343.3 CTL key 0x0100 120ms
+   343.3 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   343.5 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   343.5 [=] DOOMMEM up=330s int=75187(31744) ext=2277928(1441792) zone 5837196 B (+39568 since last)
+   343.5 [=]  static 2654576/1299
+   343.5 [=]  level 403300/221
+   343.5 [=]  levspec 432/9
+   343.6 [=]  cache 2778888/763
+   343.6 [=]  allocs 20 purges 0+0
+   343.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+100)
+   343.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   343.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+39552)
+   343.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   343.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   343.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   343.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   343.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   343.7 >>> hold right
+   343.7 CTL hold 0x0002
+   344.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   344.6 >>> release right
+   344.7 CTL hold 0x0000
+   344.8 >>> key start 150
+   344.9 CTL key 0x0020 150ms
+   345.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:24+11), BATT:0
+   345.4 >>> hold down
+   345.5 CTL hold 0x0004
+   346.0 >>> release down
+   346.1 CTL hold 0x0000
+   346.2 >>> hold up
+   346.3 CTL hold 0x0001
+   346.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:4+31), BATT:0
+   347.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   347.8 >>> release up
+   347.8 CTL hold 0x0000
+   348.0 >>> key a 120
+   348.0 CTL key 0x0100 120ms
+   348.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   348.4 >>> key a 120
+   348.4 CTL key 0x0100 120ms
+   348.8 >>> key start 150
+   348.8 CTL key 0x0020 150ms
+   349.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   349.4 >>> hold left
+   349.4 CTL hold 0x0008
+   349.9 >>> release left
+   349.9 CTL hold 0x0000
+   350.1 >>> hold up
+   350.1 CTL hold 0x0001
+   350.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   351.3 >>> release up
+   351.4 CTL hold 0x0000
+   351.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   351.5 >>> key a 120
+   351.6 CTL key 0x0100 120ms
+   351.9 >>> hold right
+   352.0 CTL hold 0x0002
+   352.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   352.8 >>> release right
+   352.9 CTL hold 0x0000
+   353.0 >>> key start 150
+   353.1 CTL key 0x0020 150ms
+   353.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   353.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   353.6 [=] DOOMMEM up=340s int=75187(31744) ext=2278400(1441792) zone 5836780 B (-416 since last)
+   353.6 [=]  static 2635116/1298
+   353.6 [=]  level 402884/219
+   353.6 [=]  levspec 432/9
+   353.6 [=]  cache 2798348/764
+   353.6 [=]  allocs 5 purges 0+0
+   353.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   353.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   353.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   353.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   353.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   353.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   353.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   353.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   353.6 >>> hold down
+   353.7 CTL hold 0x0004
+   354.2 >>> release down
+   354.3 CTL hold 0x0000
+   354.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:11+24), BATT:0
+   354.4 >>> hold up
+   354.5 CTL hold 0x0001
+   355.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   356.0 >>> release up
+   356.1 CTL hold 0x0000
+   356.2 >>> key a 120
+   356.3 CTL key 0x0100 120ms
+   356.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   356.6 >>> key a 120
+   356.7 CTL key 0x0100 120ms
+   357.1 >>> key start 150
+   357.1 CTL key 0x0020 150ms
+   357.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:23+12), BATT:0
+   357.7 >>> hold left
+   357.7 CTL hold 0x0008
+   358.2 >>> release left
+   358.2 CTL hold 0x0000
+   358.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   358.4 >>> hold up
+   358.4 CTL hold 0x0001
+   359.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   359.6 >>> release up
+   359.6 CTL hold 0x0000
+   359.8 >>> key a 120
+   359.8 CTL key 0x0100 120ms
+   360.2 >>> hold right
+   360.2 CTL hold 0x0002
+   360.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   361.0 >>> release right
+   361.1 CTL hold 0x0000
+   361.2 >>> key start 150
+   361.3 CTL key 0x0020 150ms
+   361.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:1+34), BATT:0
+   361.8 >>> hold down
+   361.9 CTL hold 0x0004
+   362.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   362.4 >>> release down
+   362.5 CTL hold 0x0000
+   362.6 >>> hold up
+   362.7 CTL hold 0x0001
+   363.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   363.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   363.6 [=] DOOMMEM up=350s int=75187(31744) ext=2278252(1441792) zone 5836864 B (+84 since last)
+   363.6 [=]  static 2635128/1299
+   363.6 [=]  level 402884/219
+   363.6 [=]  levspec 504/10
+   363.6 [=]  cache 2798348/764
+   363.6 [=]  allocs 7 purges 0+0
+   363.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   363.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   363.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   363.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   363.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   363.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   363.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   363.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   364.3 >>> release up
+   364.3 CTL hold 0x0000
+   364.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   364.5 >>> key a 120
+   364.5 CTL key 0x0100 120ms
+   364.9 >>> key a 120
+   364.9 CTL key 0x0100 120ms
+   365.3 >>> key start 150
+   365.3 CTL key 0x0020 150ms
+   365.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   365.9 >>> hold left
+   365.9 CTL hold 0x0008
+   366.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   366.4 >>> release left
+   366.4 CTL hold 0x0000
+   366.6 >>> hold up
+   366.6 CTL hold 0x0001
+   367.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   367.8 >>> release up
+   367.8 CTL hold 0x0000
+   368.0 >>> key a 120
+   368.0 CTL key 0x0100 120ms
+   368.3 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   368.4 >>> hold right
+   368.4 CTL hold 0x0002
+   369.3 >>> release right
+   369.4 CTL hold 0x0000
+   369.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:3+32), BATT:0
+   369.5 >>> key start 150
+   369.6 CTL key 0x0020 150ms
+   370.1 >>> hold down
+   370.2 CTL hold 0x0004
+   370.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   370.7 >>> release down
+   370.8 CTL hold 0x0000
+   370.9 >>> hold up
+   371.0 CTL hold 0x0001
+   371.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   372.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   372.5 >>> release up
+   372.5 CTL hold 0x0000
+   372.7 >>> key a 120
+   372.7 CTL key 0x0100 120ms
+   373.1 >>> key a 120
+   373.1 CTL key 0x0100 120ms
+   373.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   373.5 >>> key start 150
+   373.5 CTL key 0x0020 150ms
+   373.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   373.6 [=] DOOMMEM up=360s int=75187(31744) ext=2278400(1441792) zone 5836780 B (-84 since last)
+   373.6 [=]  static 2635116/1298
+   373.6 [=]  level 402884/219
+   373.6 [=]  levspec 432/9
+   373.6 [=]  cache 2798348/764
+   373.6 [=]  allocs 4 purges 0+0
+   373.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   373.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   373.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   373.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   373.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   373.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   373.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   373.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   374.1 >>> hold left
+   374.1 CTL hold 0x0008
+   374.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+19), BATT:0
+   374.6 >>> release left
+   374.6 CTL hold 0x0000
+   374.8 >>> hold up
+   374.9 CTL hold 0x0001
+   375.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   376.0 >>> release up
+   376.1 CTL hold 0x0000
+   376.2 >>> key a 120
+   376.3 CTL key 0x0100 120ms
+   376.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   376.6 >>> hold right
+   376.7 CTL hold 0x0002
+   377.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   377.5 >>> release right
+   377.6 CTL hold 0x0000
+   377.7 >>> key start 150
+   377.8 CTL key 0x0020 150ms
+   378.3 >>> hold down
+   378.4 CTL hold 0x0004
+   378.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:27+8), BATT:0
+   378.9 >>> release down
+   379.0 CTL hold 0x0000
+   379.1 >>> hold up
+   379.2 CTL hold 0x0001
+   379.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:1+34), BATT:0
+   380.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   380.7 >>> release up
+   380.8 CTL hold 0x0000
+   380.9 >>> key a 120
+   381.0 CTL key 0x0100 120ms
+   381.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   381.4 >>> key a 120
+   381.4 CTL key 0x0100 120ms
+   381.8 >>> key start 150
+   381.8 CTL key 0x0020 150ms
+   382.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:31+4), BATT:0
+   382.4 >>> hold left
+   382.4 CTL hold 0x0008
+   382.9 >>> release left
+   382.9 CTL hold 0x0000
+   383.1 >>> hold up
+   383.1 CTL hold 0x0001
+   383.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+19), BATT:0
+   383.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   383.6 [=] DOOMMEM up=370s int=75187(31744) ext=2278400(1441792) zone 5836780 B (+0 since last)
+   383.6 [=]  static 2635116/1298
+   383.6 [=]  level 402884/219
+   383.6 [=]  levspec 432/9
+   383.6 [=]  cache 2798348/764
+   383.6 [=]  allocs 3 purges 0+0
+   383.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   383.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   383.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   383.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   383.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   383.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   383.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   383.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   384.2 >>> release up
+   384.3 CTL hold 0x0000
+   384.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+   384.4 >>> key a 120
+   384.5 CTL key 0x0100 120ms
+   384.8 >>> hold right
+   384.9 CTL hold 0x0002
+   385.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+19), BATT:0
+   385.7 >>> release right
+   385.8 CTL hold 0x0000
+   385.9 >>> key start 150
+   386.0 CTL key 0x0020 150ms
+   386.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   386.5 >>> hold down
+   386.6 CTL hold 0x0004
+   387.2 >>> release down
+   387.2 CTL hold 0x0000
+   387.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+27), BATT:0
+   387.4 >>> hold up
+   387.4 CTL hold 0x0001
+   388.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:1 R:0+34), BATT:0
+   389.0 >>> release up
+   389.0 CTL hold 0x0000
+   389.2 >>> key a 120
+   389.2 CTL key 0x0100 120ms
+   389.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   389.6 >>> key a 120
+   389.6 CTL key 0x0100 120ms
+   390.0 >>> key start 150
+   390.0 CTL key 0x0020 150ms
+   390.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:20+15), BATT:0
+   390.6 >>> hold left
+   390.6 CTL hold 0x0008
+   391.1 >>> release left
+   391.1 CTL hold 0x0000
+   391.3 >>> hold up
+   391.3 CTL hold 0x0001
+   391.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   392.3 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   392.5 >>> release up
+   392.5 CTL hold 0x0000
+   392.7 >>> key a 120
+   392.7 CTL key 0x0100 120ms
+   393.1 >>> hold right
+   393.2 CTL hold 0x0002
+   393.4 [debug] STACK:4796, HEAP:73+2224 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   393.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   393.6 [=] DOOMMEM up=380s int=75187(31744) ext=2278252(1441792) zone 5836864 B (+84 since last)
+   393.6 [=]  static 2635128/1299
+   393.6 [=]  level 402884/219
+   393.6 [=]  levspec 504/10
+   393.6 [=]  cache 2798348/764
+   393.6 [=]  allocs 5 purges 0+0
+   393.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   393.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   393.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   393.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   393.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   393.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   393.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   393.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   394.0 >>> release right
+   394.0 CTL hold 0x0000
+   394.2 >>> key start 150
+   394.2 CTL key 0x0020 150ms
+   394.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   394.8 >>> hold down
+   394.8 CTL hold 0x0004
+   395.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+19), BATT:0
+   395.4 >>> release down
+   395.4 CTL hold 0x0000
+   395.6 >>> hold up
+   395.6 CTL hold 0x0001
+   396.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   397.2 >>> release up
+   397.2 CTL hold 0x0000
+   397.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   397.4 >>> key a 120
+   397.4 CTL key 0x0100 120ms
+   397.8 >>> key a 120
+   397.8 CTL key 0x0100 120ms
+   398.2 >>> key start 150
+   398.2 CTL key 0x0020 150ms
+   398.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   398.8 >>> hold left
+   398.8 CTL hold 0x0008
+   399.3 >>> release left
+   399.4 CTL hold 0x0000
+   399.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   399.5 >>> hold up
+   399.6 CTL hold 0x0001
+   400.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   400.7 >>> release up
+   400.8 CTL hold 0x0000
+   400.9 >>> key a 120
+   401.0 CTL key 0x0100 120ms
+   401.3 >>> hold right
+   401.4 CTL hold 0x0002
+   401.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   402.2 >>> release right
+   402.3 CTL hold 0x0000
+   402.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   402.4 >>> key start 150
+   402.5 CTL key 0x0020 150ms
+   403.0 >>> hold down
+   403.1 CTL hold 0x0004
+   403.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   403.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   403.6 [=] DOOMMEM up=390s int=75187(31744) ext=2278872(1441792) zone 5836364 B (-500 since last)
+   403.6 [=]  static 2635116/1298
+   403.6 [=]  level 402468/217
+   403.6 [=]  levspec 432/9
+   403.6 [=]  cache 2798348/764
+   403.6 [=]  allocs 6 purges 0+0
+   403.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   403.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   403.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   403.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   403.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   403.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   403.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   403.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   403.6 >>> release down
+   403.7 CTL hold 0x0000
+   403.8 >>> hold up
+   403.9 CTL hold 0x0001
+   404.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   405.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   405.4 >>> release up
+   405.5 CTL hold 0x0000
+   405.6 >>> key a 120
+   405.7 CTL key 0x0100 120ms
+   406.0 >>> key a 120
+   406.1 CTL key 0x0100 120ms
+   406.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   406.4 >>> key start 150
+   406.5 CTL key 0x0020 150ms
+   407.0 >>> hold left
+   407.1 CTL hold 0x0008
+   407.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   407.5 >>> release left
+   407.6 CTL hold 0x0000
+   407.7 >>> hold up
+   407.8 CTL hold 0x0001
+   408.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   408.9 >>> release up
+   409.0 CTL hold 0x0000
+   409.1 >>> key a 120
+   409.2 CTL key 0x0100 120ms
+   409.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   409.5 >>> hold right
+   409.6 CTL hold 0x0002
+   410.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:4+31), BATT:0
+   410.4 >>> release right
+   410.5 CTL hold 0x0000
+   410.6 >>> key start 150
+   410.7 CTL key 0x0020 150ms
+   411.2 >>> hold down
+   411.3 CTL hold 0x0004
+   411.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   411.9 >>> release down
+   411.9 CTL hold 0x0000
+   412.1 >>> hold up
+   412.1 CTL hold 0x0001
+   412.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   413.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   413.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   413.6 [=] DOOMMEM up=400s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   413.6 [=]  static 2635116/1298
+   413.6 [=]  level 402468/217
+   413.6 [=]  levspec 432/9
+   413.6 [=]  cache 2798348/764
+   413.6 [=]  allocs 4 purges 0+0
+   413.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   413.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   413.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   413.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   413.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   413.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   413.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   413.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   413.7 >>> release up
+   413.7 CTL hold 0x0000
+   413.9 >>> key a 120
+   413.9 CTL key 0x0100 120ms
+   414.3 >>> key a 120
+   414.3 CTL key 0x0100 120ms
+   414.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   414.7 >>> key start 150
+   414.7 CTL key 0x0020 150ms
+   415.3 >>> hold left
+   415.3 CTL hold 0x0008
+   415.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   415.8 >>> release left
+   415.8 CTL hold 0x0000
+   416.0 >>> hold up
+   416.0 CTL hold 0x0001
+   416.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   417.2 >>> release up
+   417.2 CTL hold 0x0000
+   417.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   417.4 >>> key a 120
+   417.4 CTL key 0x0100 120ms
+   417.8 >>> hold right
+   417.8 CTL hold 0x0002
+   418.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   418.7 >>> release right
+   418.7 CTL hold 0x0000
+   418.9 >>> key start 150
+   418.9 CTL key 0x0020 150ms
+   419.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:21+14), BATT:0
+   419.5 >>> hold down
+   419.6 CTL hold 0x0004
+   420.1 >>> release down
+   420.2 CTL hold 0x0000
+   420.3 >>> hold up
+   420.4 CTL hold 0x0001
+   420.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   421.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   421.9 >>> release up
+   422.0 CTL hold 0x0000
+   422.1 >>> key a 120
+   422.2 CTL key 0x0100 120ms
+   422.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:23+12), BATT:0
+   422.5 >>> key a 120
+   422.6 CTL key 0x0100 120ms
+   422.9 >>> key start 150
+   423.0 CTL key 0x0020 150ms
+   423.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+   423.5 >>> hold left
+   423.6 CTL hold 0x0008
+   423.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   423.6 [=] DOOMMEM up=410s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   423.6 [=]  static 2635116/1298
+   423.6 [=]  level 402468/217
+   423.6 [=]  levspec 432/9
+   423.6 [=]  cache 2798348/764
+   423.6 [=]  allocs 3 purges 0+0
+   423.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   423.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   423.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   423.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   423.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   423.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   423.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   423.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   424.0 >>> release left
+   424.1 CTL hold 0x0000
+   424.2 >>> hold up
+   424.3 CTL hold 0x0001
+   424.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   425.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   425.4 >>> release up
+   425.5 CTL hold 0x0000
+   425.6 >>> key a 120
+   425.7 CTL key 0x0100 120ms
+   426.0 >>> hold right
+   426.1 CTL hold 0x0002
+   426.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:1+34), BATT:0
+   426.9 >>> release right
+   427.0 CTL hold 0x0000
+   427.1 >>> key start 150
+   427.2 CTL key 0x0020 150ms
+   427.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:13+22), BATT:0
+   427.7 >>> hold down
+   427.8 CTL hold 0x0004
+   428.3 >>> release down
+   428.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:15+20), BATT:0
+   428.4 CTL hold 0x0000
+   428.5 >>> hold up
+   428.6 CTL hold 0x0001
+   429.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   430.1 >>> release up
+   430.2 CTL hold 0x0000
+   430.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   430.3 >>> key a 120
+   430.4 CTL key 0x0100 120ms
+   430.7 >>> key a 120
+   430.8 CTL key 0x0100 120ms
+   431.1 >>> key start 150
+   431.2 CTL key 0x0020 150ms
+   431.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   431.7 >>> hold left
+   431.8 CTL hold 0x0008
+   432.2 >>> release left
+   432.3 CTL hold 0x0000
+   432.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:18+17), BATT:0
+   432.4 >>> hold up
+   432.5 CTL hold 0x0001
+   433.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:18+17), BATT:0
+   433.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   433.6 [=] DOOMMEM up=420s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   433.6 [=]  static 2635116/1298
+   433.6 [=]  level 402468/217
+   433.6 [=]  levspec 432/9
+   433.6 [=]  cache 2798348/764
+   433.6 [=]  allocs 3 purges 0+0
+   433.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   433.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   433.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   433.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   433.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   433.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   433.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   433.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   433.7 >>> release up
+   433.7 CTL hold 0x0000
+   433.9 >>> key a 120
+   433.9 CTL key 0x0100 120ms
+   434.3 >>> hold right
+   434.3 CTL hold 0x0002
+   434.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:32+3), BATT:0
+   435.2 >>> release right
+   435.2 CTL hold 0x0000
+   435.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   435.4 >>> key start 150
+   435.4 CTL key 0x0020 150ms
+   436.0 >>> hold down
+   436.0 CTL hold 0x0004
+   436.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:23+12), BATT:0
+   436.6 >>> release down
+   436.6 CTL hold 0x0000
+   436.8 >>> hold up
+   436.8 CTL hold 0x0001
+   437.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   438.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   438.4 >>> release up
+   438.4 CTL hold 0x0000
+   438.6 >>> key a 120
+   438.6 CTL key 0x0100 120ms
+   439.0 >>> key a 120
+   439.0 CTL key 0x0100 120ms
+   439.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   439.4 >>> key start 150
+   439.4 CTL key 0x0020 150ms
+   440.0 >>> hold left
+   440.0 CTL hold 0x0008
+   440.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   440.5 >>> release left
+   440.5 CTL hold 0x0000
+   440.6 >>> hold up
+   440.7 CTL hold 0x0001
+   441.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   441.8 >>> release up
+   441.9 CTL hold 0x0000
+   442.0 >>> key a 120
+   442.1 CTL key 0x0100 120ms
+   442.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   442.4 >>> hold right
+   442.5 CTL hold 0x0002
+   443.3 >>> release right
+   443.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   443.4 CTL hold 0x0000
+   443.5 >>> key start 150
+   443.6 CTL key 0x0020 150ms
+   443.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   443.6 [=] DOOMMEM up=430s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   443.6 [=]  static 2635116/1298
+   443.6 [=]  level 402468/217
+   443.6 [=]  levspec 432/9
+   443.6 [=]  cache 2798348/764
+   443.6 [=]  allocs 4 purges 0+0
+   443.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   443.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   443.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   443.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   443.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   443.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   443.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   443.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   444.1 >>> hold down
+   444.2 CTL hold 0x0004
+   444.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   444.7 >>> release down
+   444.8 CTL hold 0x0000
+   444.9 >>> hold up
+   445.0 CTL hold 0x0001
+   445.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   446.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   446.5 >>> release up
+   446.6 CTL hold 0x0000
+   446.7 >>> key a 120
+   446.8 CTL key 0x0100 120ms
+   447.2 >>> key a 120
+   447.2 CTL key 0x0100 120ms
+   447.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   447.6 >>> key start 150
+   447.6 CTL key 0x0020 150ms
+   448.2 >>> hold left
+   448.2 CTL hold 0x0008
+   448.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:14+21), BATT:0
+   448.7 >>> release left
+   448.7 CTL hold 0x0000
+   448.9 >>> hold up
+   448.9 CTL hold 0x0001
+   449.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+27), BATT:0
+   450.1 >>> release up
+   450.1 CTL hold 0x0000
+   450.3 >>> key a 120
+   450.3 CTL key 0x0100 120ms
+   450.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   450.7 >>> hold right
+   450.7 CTL hold 0x0002
+   451.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   451.6 >>> release right
+   451.6 CTL hold 0x0000
+   451.8 >>> key start 150
+   451.8 CTL key 0x0020 150ms
+   452.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   452.4 >>> hold down
+   452.4 CTL hold 0x0004
+   453.0 >>> release down
+   453.0 CTL hold 0x0000
+   453.2 >>> hold up
+   453.2 CTL hold 0x0001
+   453.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   453.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   453.6 [=] DOOMMEM up=440s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   453.6 [=]  static 2635116/1298
+   453.6 [=]  level 402468/217
+   453.6 [=]  levspec 432/9
+   453.6 [=]  cache 2798348/764
+   453.6 [=]  allocs 3 purges 0+0
+   453.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   453.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   453.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   453.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   453.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   453.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   453.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   453.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   454.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   454.8 >>> release up
+   454.8 CTL hold 0x0000
+   455.0 >>> key a 120
+   455.0 CTL key 0x0100 120ms
+   455.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   455.4 >>> key a 120
+   455.4 CTL key 0x0100 120ms
+   455.8 >>> key start 150
+   455.8 CTL key 0x0020 150ms
+   456.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   456.4 >>> hold left
+   456.4 CTL hold 0x0008
+   456.9 >>> release left
+   456.9 CTL hold 0x0000
+   457.1 >>> hold up
+   457.1 CTL hold 0x0001
+   457.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   458.3 >>> release up
+   458.3 CTL hold 0x0000
+   458.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   458.5 >>> key a 120
+   458.5 CTL key 0x0100 120ms
+   458.9 >>> hold right
+   458.9 CTL hold 0x0002
+   459.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   459.8 >>> release right
+   459.8 CTL hold 0x0000
+   460.0 >>> key start 150
+   460.0 CTL key 0x0020 150ms
+   460.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   460.6 >>> hold down
+   460.6 CTL hold 0x0004
+   461.2 >>> release down
+   461.2 CTL hold 0x0000
+   461.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   461.4 >>> hold up
+   461.4 CTL hold 0x0001
+   462.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   463.0 >>> release up
+   463.1 CTL hold 0x0000
+   463.2 >>> key a 120
+   463.3 CTL key 0x0100 120ms
+   463.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   463.6 >>> key a 120
+   463.7 CTL key 0x0100 120ms
+   463.7 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   463.7 [=] DOOMMEM up=450s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   463.7 [=]  static 2635116/1298
+   463.7 [=]  level 402468/217
+   463.7 [=]  levspec 432/9
+   463.7 [=]  cache 2798348/764
+   463.7 [=]  allocs 4 purges 0+0
+   463.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   463.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   463.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   463.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   463.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   463.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   463.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   463.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   464.0 >>> key start 150
+   464.1 CTL key 0x0020 150ms
+   464.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   464.6 >>> hold left
+   464.7 CTL hold 0x0008
+   465.1 >>> release left
+   465.2 CTL hold 0x0000
+   465.3 >>> hold up
+   465.4 CTL hold 0x0001
+   465.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:18+17), BATT:0
+   466.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   466.5 >>> release up
+   466.6 CTL hold 0x0000
+   466.7 >>> key a 120
+   466.8 CTL key 0x0100 120ms
+   467.1 >>> hold right
+   467.2 CTL hold 0x0002
+   467.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:16+19), BATT:0
+   468.0 >>> release right
+   468.1 CTL hold 0x0000
+   468.2 >>> key start 150
+   468.3 CTL key 0x0020 150ms
+   468.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:10+25), BATT:0
+   468.8 >>> hold down
+   468.9 CTL hold 0x0004
+   469.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:18+17), BATT:0
+   469.4 >>> release down
+   469.5 CTL hold 0x0000
+   469.6 >>> hold up
+   469.7 CTL hold 0x0001
+   470.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   471.2 >>> release up
+   471.3 CTL hold 0x0000
+   471.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   471.4 >>> key a 120
+   471.5 CTL key 0x0100 120ms
+   471.8 >>> key a 120
+   471.9 CTL key 0x0100 120ms
+   472.2 >>> key start 150
+   472.3 CTL key 0x0020 150ms
+   472.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:32+3), BATT:0
+   472.8 >>> hold left
+   472.9 CTL hold 0x0008
+   473.3 >>> release left
+   473.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   473.4 CTL hold 0x0000
+   473.5 >>> hold up
+   473.6 CTL hold 0x0001
+   473.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   473.6 [=] DOOMMEM up=461s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   473.6 [=]  static 2635116/1298
+   473.6 [=]  level 402468/217
+   473.6 [=]  levspec 432/9
+   473.6 [=]  cache 2798348/764
+   473.6 [=]  allocs 3 purges 0+0
+   473.6 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   473.6 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   473.6 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   473.6 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   473.6 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   473.6 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   473.6 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   473.6 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   474.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:7+28), BATT:0
+   474.7 >>> release up
+   474.8 CTL hold 0x0000
+   474.9 >>> key a 120
+   475.0 CTL key 0x0100 120ms
+   475.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   475.3 >>> hold right
+   475.4 CTL hold 0x0002
+   476.3 >>> release right
+   476.3 CTL hold 0x0000
+   476.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:2+33), BATT:0
+   476.5 >>> key start 150
+   476.5 CTL key 0x0020 150ms
+   477.1 >>> hold down
+   477.1 CTL hold 0x0004
+   477.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:26+9), BATT:0
+   477.7 >>> release down
+   477.7 CTL hold 0x0000
+   477.9 >>> hold up
+   477.9 CTL hold 0x0001
+   478.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   479.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   479.5 >>> release up
+   479.5 CTL hold 0x0000
+   479.7 >>> key a 120
+   479.7 CTL key 0x0100 120ms
+   480.1 >>> key a 120
+   480.1 CTL key 0x0100 120ms
+   480.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:34+1), BATT:0
+   480.5 >>> key start 150
+   480.5 CTL key 0x0020 150ms
+   481.1 >>> hold left
+   481.1 CTL hold 0x0008
+   481.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:5+30), BATT:0
+   481.6 >>> release left
+   481.6 CTL hold 0x0000
+   481.8 >>> hold up
+   481.8 CTL hold 0x0001
+   482.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+27), BATT:0
+   483.0 >>> release up
+   483.0 CTL hold 0x0000
+   483.2 >>> key a 120
+   483.2 CTL key 0x0100 120ms
+   483.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   483.6 >>> hold right
+   483.6 CTL hold 0x0002
+   483.6 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   483.6 [=] DOOMMEM up=471s int=75187(31744) ext=2278724(1441792) zone 5836448 B (+84 since last)
+   483.6 [=]  static 2645692/1300
+   483.6 [=]  level 402468/217
+   483.6 [=]  levspec 504/10
+   483.6 [=]  cache 2787784/763
+   483.6 [=]  allocs 6 purges 0+0
+   483.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   483.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   483.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   483.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   483.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   483.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   483.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   483.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   484.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   484.5 >>> release right
+   484.5 CTL hold 0x0000
+   484.7 >>> key start 150
+   484.8 CTL key 0x0020 150ms
+   485.3 >>> hold down
+   485.4 CTL hold 0x0004
+   485.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   485.9 >>> release down
+   486.0 CTL hold 0x0000
+   486.1 >>> hold up
+   486.2 CTL hold 0x0001
+   486.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   487.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   487.7 >>> release up
+   487.8 CTL hold 0x0000
+   487.9 >>> key a 120
+   488.0 CTL key 0x0100 120ms
+   488.3 >>> key a 120
+   488.4 CTL key 0x0100 120ms
+   488.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:14+21), BATT:0
+   488.7 >>> key start 150
+   488.8 CTL key 0x0020 150ms
+   489.3 >>> hold left
+   489.4 CTL hold 0x0008
+   489.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:28+7), BATT:0
+   489.8 >>> release left
+   489.9 CTL hold 0x0000
+   490.0 >>> hold up
+   490.1 CTL hold 0x0001
+   490.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:8+27), BATT:0
+   491.3 >>> release up
+   491.3 CTL hold 0x0000
+   491.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   491.5 >>> key a 120
+   491.5 CTL key 0x0100 120ms
+   491.9 >>> hold right
+   491.9 CTL hold 0x0002
+   492.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   492.8 >>> release right
+   492.8 CTL hold 0x0000
+   493.0 >>> key start 150
+   493.0 CTL key 0x0020 150ms
+   493.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:19+16), BATT:0
+   493.6 >>> hold down
+   493.6 CTL hold 0x0004
+   493.7 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   493.7 [=] DOOMMEM up=481s int=75187(31744) ext=2278872(1441792) zone 5836364 B (-84 since last)
+   493.7 [=]  static 2635116/1298
+   493.7 [=]  level 402468/217
+   493.7 [=]  levspec 432/9
+   493.7 [=]  cache 2798348/764
+   493.7 [=]  allocs 5 purges 0+0
+   493.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   493.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   493.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   493.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   493.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   493.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   493.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   493.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   494.2 >>> release down
+   494.2 CTL hold 0x0000
+   494.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:9+26), BATT:0
+   494.4 >>> hold up
+   494.4 CTL hold 0x0001
+   495.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   496.0 >>> release up
+   496.0 CTL hold 0x0000
+   496.2 >>> key a 120
+   496.2 CTL key 0x0100 120ms
+   496.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:6+29), BATT:0
+   496.6 >>> key a 120
+   496.6 CTL key 0x0100 120ms
+   497.0 >>> key start 150
+   497.0 CTL key 0x0020 150ms
+   497.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:33+2), BATT:0
+   497.6 >>> hold left
+   497.6 CTL hold 0x0008
+   498.1 >>> release left
+   498.1 CTL hold 0x0000
+   498.3 >>> hold up
+   498.3 CTL hold 0x0001
+   498.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   499.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   499.5 >>> release up
+   499.5 CTL hold 0x0000
+   499.7 >>> key a 120
+   499.7 CTL key 0x0100 120ms
+   500.1 >>> hold right
+   500.1 CTL hold 0x0002
+   500.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   501.0 >>> release right
+   501.0 CTL hold 0x0000
+   501.2 >>> key start 150
+   501.2 CTL key 0x0020 150ms
+   501.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:12+23), BATT:0
+   501.8 >>> hold down
+   501.8 CTL hold 0x0004
+   502.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:17+18), BATT:0
+   502.4 >>> release down
+   502.4 CTL hold 0x0000
+   502.6 >>> release
+   502.6 CTL hold 0x0000
+   503.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:0+35), BATT:0
+   503.7 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   503.7 [=] DOOMMEM up=491s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   503.7 [=]  static 2635116/1298
+   503.7 [=]  level 402468/217
+   503.7 [=]  levspec 432/9
+   503.7 [=]  cache 2798348/764
+   503.7 [=]  allocs 3 purges 0+0
+   503.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   503.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   503.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   503.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   503.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   503.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   503.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   503.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   504.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:21+14), BATT:0
+   505.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   506.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   507.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   508.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   509.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   510.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   511.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   512.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   513.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   513.7 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   513.7 [=] DOOMMEM up=501s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   513.7 [=]  static 2635116/1298
+   513.7 [=]  level 402468/217
+   513.7 [=]  levspec 432/9
+   513.7 [=]  cache 2798348/764
+   513.7 [=]  allocs 0 purges 0+0
+   513.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   513.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   513.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   513.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   513.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   513.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   513.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   513.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   514.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   515.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   516.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   517.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   518.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   519.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   520.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   521.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   522.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   523.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   523.7 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   523.7 [=] DOOMMEM up=511s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   523.7 [=]  static 2635116/1298
+   523.7 [=]  level 402468/217
+   523.7 [=]  levspec 432/9
+   523.7 [=]  cache 2798348/764
+   523.7 [=]  allocs 0 purges 0+0
+   523.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   523.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   523.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   523.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   523.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   523.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   523.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   523.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   524.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   525.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   526.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   527.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   528.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   529.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   530.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   531.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   532.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   533.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   533.7 [info] app_main: doom_main stack free: 10176 bytes of 16384
+   533.7 [=] DOOMMEM up=521s int=75187(31744) ext=2278872(1441792) zone 5836364 B (+0 since last)
+   533.7 [=]  static 2654576/1299
+   533.7 [=]  level 402468/217
+   533.7 [=]  levspec 432/9
+   533.7 [=]  cache 2778888/763
+   533.7 [=]  allocs 0 purges 0+0
+   533.7 [=] DOOMMEM   site 0x4204704d 3493256 B 669 blk (+0)
+   533.7 [=] DOOMMEM   site 0x42042a38 442272 B 24 blk (+0)
+   533.7 [=] DOOMMEM   site 0x420425ab 370352 B 145 blk (+0)
+   533.7 [=] DOOMMEM   site 0x4204c42f 251460 B 18 blk (+0)
+   533.7 [=] DOOMMEM   site 0x42046806 166080 B 3 blk (+0)
+   533.7 [=] DOOMMEM   site 0x42042f95 159088 B 61 blk (+0)
+   533.7 [=] DOOMMEM   site 0x4202f6b0 126900 B 1 blk (+0)
+   533.7 [=] DOOMMEM   site 0x42040117 116712 B 1 blk (+0)
+   534.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   535.4 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
+   536.3 [debug] STACK:4796, HEAP:73+2225 (31+1408), BUSY:100%, FPS:35 (S:0 R:35+0), BATT:0
