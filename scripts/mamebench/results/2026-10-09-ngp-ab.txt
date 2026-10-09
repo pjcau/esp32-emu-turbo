@@ -1,0 +1,817 @@
+Neo Geo Pocket (RACE, retro-extra) profile and A/B on the board, 2026-10-09. Fork branch ngp-speed (bd7a8397), nothing merged.
+Each build: retro-extra only, clean build dir, NGPPROF=1 (1b: NGPPROF=gfx), installed via the SD updater, volume 0.
+
+Scene: Metal Slug - 1st Mission, save state slot 0 made on the board in mission 1 (enemies, the watch tower,
+grenades; the player dies a few seconds later, then GAME OVER). Each run: launch, `load 0`, no input after.
+Same input = same frames in every build, so two windows per run (one line a second, 60 frames):
+  heavy = load+1.5 s .. load+11 s (9 lines, the fight)      quiet = load+14 s .. load+31 s (17 lines, GAME OVER screen)
+Values below are medians over the window (ms/frame).
+
+1a. bd7a8397 NGPPROF=1
+  heavy: other 1.14 tlcs 8.96 z80 2.87 gfx 3.15 snd 0.24 mix 0.33 send 0.02 | frame 16.63, R drawn 45-61 (per second), BUSY 92-97%
+  quiet: other 3.62 tlcs 7.94 z80 2.62 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62, R 59-61, BUSY 78%
+  tlcs IS the largest column (54% of the heavy frame). "other" is the headroom left in the 16.6 ms frame.
+1b. bd7a8397 NGPPROF=gfx (relative split only)
+  heavy: palette 0.10 background 0.36 scroll 1.64 sprites 0.45 rest 1.16
+  quiet: palette 0.13 background 0.54 scroll 1.51 sprites 0.58 rest 1.53
+  scroll planes are the largest part of gfx (~44%), then "rest" (~31%); sprites ~12%.
+
+2. A/B (both NGPPROF=1; spread inside one window is about +-0.05 ms on quiet lines)
+                   heavy                                quiet
+  build      tlcs   gfx   mix   other  R drawn       tlcs  gfx   mix   other  R
+  d4d0ba5d   9.60  1.70  0.74   1.44   19-31         8.53  1.11  0.55  3.59   30
+  c2434027   9.54  1.69  0.72   1.50   20-31         8.53  1.11  0.55  3.59   30
+  74915a40   9.07  1.69  0.72   1.95   20-31         7.95  1.11  0.55  4.15   30
+  10e65785   9.07  1.69  0.32   2.42   20-31         7.92  1.11  0.23  4.52   30
+  bd7a8397   8.96  3.15  0.33   1.14   45-61         7.94  1.98  0.23  3.62   59-61
+
+  P1 c2434027 vs d4d0ba5d, gfx: 1.69 vs 1.70 and 1.11 vs 1.11 -> no change (null, as on the host).
+  P2 74915a40 vs c2434027, tlcs: -0.47 heavy, -0.58 quiet -> real gain.
+  P3 10e65785 vs 74915a40, mix: -0.40 heavy, -0.32 quiet -> inside the predicted -0.4..-1.0 (at its low end).
+     Sound: checked on the digital samples (board_ctl acap, 3 s right after `load 0`, 3+ captures per build), volume kept 0
+     (the user's rule; no microphone pass). Both builds: no DC offset (mean per 1000 samples near 0 outside the bursts), no hum.
+     Both builds show the same harsh full-scale burst a few seconds after the load (the game's explosion through the DAC):
+     74915a40 in 1 of 3 captures (0.21 s), 10e65785 in 2 of 4 (1.0-1.5 s). The capture start is not frame-exact, so the
+     burst lengths can not be compared sample for sample; the burst is NOT new in 10e65785. Not proven identical.
+  P4 bd7a8397 vs 10e65785: R (frames drawn a second) 30 -> 60 on the quiet scene, 20-31 -> 45-61 on the fight;
+     frame time stays 16.62-16.63 (emulation holds 60 fps), BUSY 73-89% -> 78-97%, S (skipped) 30 -> 0-8.
+     No "Raised/Reduced frameskip" line in any run. Win: Metal Slug draws ~60 where it drew 30.
+     Pictures match on the webcam (same scene, same frame). Tearing/stutter can not be judged from a still photo.
+
+3. P4 on a lighter game: Bust-A-Move Pocket (USA), title screen from boot, no state.
+  10e65785: STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0)  other 3.83 tlcs 8.31 gfx 1.31
+  bd7a8397: STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0)   other 2.68 tlcs 8.35 gfx 2.39
+  -> 30 -> 60 drawn, same picture.
+
+Installed at the end: bd7a8397 play build (no NGPPROF), 1 079 056 B, retro-extra.done.
+Buttons verified on the webcam in Metal Slug: A = RETRY on GAME OVER and fires (ammo 96 -> 52), RIGHT scrolls the
+mission forward, LEFT walks back.
+
+---- profile lines of every run (NGPPROF, FPS, frameskip, commands) ----
+== 1a-bd7a8397
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Metal Slug - 1st Mission.ngp
+     8.2 NGPPROF ms/frame: other 3.02 tlcs 7.90 z80 2.58 gfx 1.49 snd 0.23 mix 0.48 send 0.12
+     8.4 [debug] STACK:5000, HEAP:133+2794 (72+2752), BUSY:79%, FPS:62 (S:0 R:62+0), BATT:0
+     9.2 NGPPROF ms/frame: other 3.96 tlcs 7.81 z80 2.60 gfx 1.55 snd 0.23 mix 0.47 send 0.01 | frame 16.62 busy 100%
+     9.4 [debug] STACK:5000, HEAP:133+2794 (72+2752), BUSY:76%, FPS:60 (S:0 R:60+0), BATT:0
+    10.2 NGPPROF ms/frame: other 3.96 tlcs 7.80 z80 2.59 gfx 1.56 snd 0.23 mix 0.47 send 0.01 | frame 16.62 busy 100%
+    10.4 [debug] STACK:5000, HEAP:133+2794 (72+2752), BUSY:76%, FPS:60 (S:0 R:60+0), BATT:0
+    11.3 NGPPROF ms/frame: other 2.38 tlcs 8.39 z80 2.81 gfx 2.20 snd 0.24 mix 0.59 send 0.01 | frame 16.62 busy 100%
+    11.4 [debug] STACK:5000, HEAP:133+2794 (72+2752), BUSY:87%, FPS:60 (S:4 R:49+7), BATT:0
+    12.3 NGPPROF ms/frame: other 2.74 tlcs 7.90 z80 2.64 gfx 2.55 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    12.4 [debug] STACK:5000, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:59+0), BATT:0
+    13.2 NGPPROF ms/frame: other 2.71 tlcs 7.88 z80 2.65 gfx 2.57 snd 0.23 mix 0.58 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5000, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:61+0), BATT:0
+    14.0 >>> load 0
+    14.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:65%, FPS:45 (S:2 R:42+1), BATT:0
+    14.5 NGPPROF ms/frame: other 6.20 tlcs 8.18 z80 2.75 gfx 2.65 snd 0.23 mix 0.53 send 0.02 | frame 20.56 busy 100%
+    15.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:98%, FPS:62 (S:0 R:61+0), BATT:0
+    15.4 NGPPROF ms/frame: other 0.30 tlcs 9.02 z80 2.92 gfx 3.23 snd 0.24 mix 0.33 send 0.02 | frame 16.07 busy 100%
+    16.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:61+0), BATT:0
+    16.4 NGPPROF ms/frame: other 1.27 tlcs 8.73 z80 2.83 gfx 3.21 snd 0.23 mix 0.34 send 0.02 | frame 16.63 busy 100%
+    17.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:96%, FPS:60 (S:0 R:60+0), BATT:0
+    17.4 NGPPROF ms/frame: other 0.76 tlcs 9.10 z80 2.91 gfx 3.25 snd 0.24 mix 0.34 send 0.02 | frame 16.62 busy 99%
+    18.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:97%, FPS:60 (S:7 R:45+7), BATT:0
+    18.4 NGPPROF ms/frame: other 0.51 tlcs 9.55 z80 3.02 gfx 2.98 snd 0.25 mix 0.33 send 0.02 | frame 16.65 busy 100%
+    19.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:2 R:57+2), BATT:0
+    19.4 NGPPROF ms/frame: other 1.14 tlcs 8.87 z80 2.86 gfx 3.15 snd 0.24 mix 0.32 send 0.02 | frame 16.60 busy 99%
+    20.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:59+0), BATT:0
+    20.4 NGPPROF ms/frame: other 1.15 tlcs 8.82 z80 2.86 gfx 3.21 snd 0.24 mix 0.34 send 0.02 | frame 16.62 busy 100%
+    21.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:94%, FPS:60 (S:0 R:60+0), BATT:0
+    21.4 NGPPROF ms/frame: other 1.02 tlcs 8.96 z80 2.87 gfx 3.20 snd 0.24 mix 0.32 send 0.02 | frame 16.63 busy 99%
+    22.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:96%, FPS:60 (S:8 R:45+8), BATT:0
+    22.4 NGPPROF ms/frame: other 0.72 tlcs 9.41 z80 3.00 gfx 2.88 snd 0.25 mix 0.34 send 0.02 | frame 16.63 busy 100%
+    23.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    23.4 NGPPROF ms/frame: other 1.39 tlcs 8.71 z80 2.81 gfx 3.14 snd 0.24 mix 0.32 send 0.02 | frame 16.64 busy 100%
+    24.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:5 R:48+6), BATT:0
+    24.4 NGPPROF ms/frame: other 1.20 tlcs 9.12 z80 2.93 gfx 2.79 snd 0.25 mix 0.32 send 0.02 | frame 16.63 busy 100%
+    25.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:81%, FPS:60 (S:4 R:49+8), BATT:0
+    25.4 NGPPROF ms/frame: other 3.14 tlcs 8.41 z80 2.82 gfx 1.70 snd 0.24 mix 0.29 send 0.01 | frame 16.61 busy 99%
+    26.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:59+0), BATT:0
+    26.4 NGPPROF ms/frame: other 3.74 tlcs 7.83 z80 2.62 gfx 1.87 snd 0.23 mix 0.32 send 0.01 | frame 16.62 busy 99%
+    27.4 NGPPROF ms/frame: other 3.78[debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:77%, FPS:60 (S:0 R:61+0), BATT:0
+    28.4 NGPPROF ms/frame: other 3.59 tlcs 7.95 z80 2.65 gfx 1.96 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    28.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    29.4 NGPPROF ms/frame: other 3.49 tlcs 7.99 z80 2.67 gfx 1.98 snd 0.23 mix 0.26 send 0.02 | frame 16.63 busy 100%
+    29.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    30.4 NGPPROF ms/frame: other 3.52 tlcs 7.99 z80 2.65 gfx 1.99 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    30.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    31.4 NGPPROF ms/frame: other 3.53 tlcs 8.00 z80 2.64 gfx 1.98 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    31.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    32.4 NGPPROF ms/frame: other 3.62 tlcs 7.92 z80 2.64 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    32.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    33.4 NGPPROF ms/frame: other 3.63 tlcs 7.92 z80 2.61 gfx 1.99 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    33.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:59+0), BATT:0
+    34.4 NGPPROF ms/frame: other 3.62 tlcs 7.93 z80 2.63 gfx 1.97 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    34.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:61+0), BATT:0
+    35.4 NGPPROF ms/frame: other 3.62 tlcs 7.93 z80 2.62 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    35.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    36.4 NGPPROF ms/frame: other 3.61 tlcs 7.94 z80 2.63 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    36.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    37.4 NGPPROF ms/frame: other 3.63 tlcs 7.93 z80 2.61 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    37.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    38.4 NGPPROF ms/frame: other 3.61 tlcs 7.94 z80 2.62 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    38.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    39.4 NGPPROF ms/frame: other 3.62 tlcs 7.93 z80 2.61 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    39.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:59+0), BATT:0
+    40.4 NGPPROF ms/frame: other 3.64 tlcs 7.92 z80 2.62 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    40.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:61+0), BATT:0
+    41.4 NGPPROF ms/frame: other 3.63 tlcs 7.93 z80 2.61 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    41.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    42.4 NGPPROF ms/frame: other 3.61 tlcs 7.94 z80 2.62 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    42.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    43.4 NGPPROF ms/frame: other 3.62 tlcs 7.94 z80 2.61 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    43.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    44.4 NGPPROF ms/frame: other 3.61 tlcs 7.94 z80 2.64 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    44.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    45.4 NGPPROF ms/frame: other 3.63 tlcs 7.94 z80 2.61 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    45.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    46.3 NGPPROF ms/frame: other 3.61 tlcs 7.92 z80 2.62 gfx 1.99 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    46.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:59+0), BATT:0
+    47.3 NGPPROF ms/frame: other 3.64 tlcs 7.93 z80 2.61 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    47.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:61+0), BATT:0
+    48.3 NGPPROF ms/frame: other 3.61 tlcs 7.94 z80 2.62 gfx 1.98 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    48.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+    49.3 NGPPROF ms/frame: other 3.61 tlcs 7.96 z80 2.62 gfx 1.97 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    49.4 [debug] STACK:5000, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:0 R:60+0), BATT:0
+== 1b-gfx
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Metal Slug - 1st Mission.ngp
+     8.3 NGPPROF ms/frame: other 0.85 tlcs 7.92 z80 2.58 gfx 3.70 snd 0.23 mix 0.48 send 0.10
+     8.3 NGPPROF gfx ms/frame: palette 0.12 background 0.53 scroll 1.14 sprites 0.48 rest 1.43
+     8.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:94%, FPS:62 (S:0 R:62+0), BATT:0
+     9.3 NGPPROF ms/frame: other 1.62 tlcs 7.81 z80 2.60 gfx 3.88 snd 0.23 mix 0.47 send 0.02 | frame 16.62 busy 100%
+     9.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.20 sprites 0.51 rest 1.49
+     9.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:90%, FPS:60 (S:0 R:60+0), BATT:0
+    10.3 NGPPROF ms/frame: other 1.62 tlcs 7.84 z80 2.59 gfx 3.85 snd 0.23 mix 0.47 send 0.02 | frame 16.63 busy 99%
+    10.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.20 sprites 0.51 rest 1.48
+    10.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:90%, FPS:60 (S:0 R:60+0), BATT:0
+    11.3 NGPPROF ms/frame: other 0.38 tlcs 8.39 z80 2.78 gfx 4.36 snd 0.24 mix 0.58 send 0.02 | frame 16.74 busy 100%
+    11.3 NGPPROF gfx ms/frame: palette 0.12 background 0.52 scroll 1.76 sprites 0.50 rest 1.45
+    11.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:99%, FPS:60 (S:4 R:49+7), BATT:0
+    12.3 NGPPROF ms/frame: other 0.22 tlcs 7.96 z80 2.65 gfx 4.89 snd 0.23 mix 0.55 send 0.02 | frame 16.51 busy 99%
+    12.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 2.16 sprites 0.54 rest 1.51
+    12.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:99%, FPS:62 (S:0 R:61+0), BATT:0
+    13.2 NGPPROF ms/frame: other 0.28 tlcs 7.94 z80 2.67 gfx 4.90 snd 0.23 mix 0.58 send 0.02 | frame 16.63 busy 100%
+    13.2 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 2.16 sprites 0.54 rest 1.52
+    13.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:98%, FPS:60 (S:1 R:60+0), BATT:0
+    14.0 >>> load 0
+    14.4 NGPPROF ms/frame: other 2.69 tlcs 8.21 z80 2.72 gfx 4.73 snd 0.23 mix 0.53 send 0.02 | frame 19.15 busy 100%
+    14.4 NGPPROF gfx ms/frame: palette 0.13 background 0.51 scroll 2.09 sprites 0.53 rest 1.47
+    14.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:84%, FPS:51 (S:5 R:45+1), BATT:0
+    15.4 NGPPROF ms/frame: other 0.07 tlcs 9.12 z80 2.96 gfx 3.65 snd 0.25 mix 0.32 send 0.02 | frame 16.39 busy 100%
+    15.4 NGPPROF gfx ms/frame: palette 0.10 background 0.36 scroll 1.62 sprites 0.44 rest 1.14
+    15.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:100%, FPS:61 (S:22 R:39+0), BATT:0
+    16.3 NGPPROF ms/frame: other 0.07 tlcs 8.84 z80 2.86 gfx 3.86 snd 0.24 mix 0.33 send 0.02 | frame 16.21 busy 100%
+    16.3 NGPPROF gfx ms/frame: palette 0.11 background 0.37 scroll 1.72 sprites 0.47 rest 1.20
+    16.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:100%, FPS:62 (S:19 R:42+0), BATT:0
+    17.4 NGPPROF ms/frame: other 0.28 tlcs 9.28 z80 2.93 gfx 3.48 snd 0.25 mix 0.33 send 0.02 | frame 16.56 busy 100%
+    17.4 NGPPROF gfx ms/frame: palette 0.10 background 0.34 scroll 1.52 sprites 0.42 rest 1.10
+    17.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:98%, FPS:60 (S:25 R:35+0), BATT:0
+    18.4 NGPPROF ms/frame: other 0.64 tlcs 9.79 z80 3.10 gfx 2.88 snd 0.25 mix 0.32 send 0.01 | frame 17.01 busy 100%
+    18.4 NGPPROF gfx ms/frame: palette 0.08 background 0.27 scroll 1.24 sprites 0.34 rest 0.95
+    18.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:97%, FPS:59 (S:30 R:22+8), BATT:0
+    19.4 NGPPROF ms/frame: other 0.07 tlcs 9.06 z80 2.92 gfx 3.90 snd 0.25 mix 0.31 send 0.02 | frame 16.53 busy 99%
+    19.4 NGPPROF gfx ms/frame: palette 0.11 background 0.38 scroll 1.75 sprites 0.46 rest 1.21
+    19.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:100%, FPS:60 (S:18 R:42+0), BATT:0
+    20.3 NGPPROF ms/frame: other 0.15 tlcs 8.93 z80 2.92 gfx 3.71 snd 0.24 mix 0.33 send 0.02 | frame 16.30 busy 100%
+    20.3 NGPPROF gfx ms/frame: palette 0.10 background 0.36 scroll 1.65 sprites 0.45 rest 1.15
+    20.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:99%, FPS:61 (S:21 R:40+0), BATT:0
+    21.3 NGPPROF ms/frame: other 0.35 tlcs 9.07 z80 2.95 gfx 3.71 snd 0.24 mix 0.31 send 0.02 | frame 16.65 busy 100%
+    21.3 NGPPROF gfx ms/frame: palette 0.10 background 0.36 scroll 1.64 sprites 0.45 rest 1.16
+    21.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:97%, FPS:60 (S:23 R:38+0), BATT:0
+    22.4 NGPPROF ms/frame: other 0.22 tlcs 9.56 z80 3.06 gfx 3.44 snd 0.26 mix 0.33 send 0.02 | frame 16.90 busy 100%
+    22.4 NGPPROF gfx ms/frame: palette 0.09 background 0.33 scroll 1.51 sprites 0.41 rest 1.09
+    22.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:99%, FPS:59 (S:22 R:27+9), BATT:0
+    23.3 NGPPROF ms/frame: other 0.07 tlcs 8.82 z80 2.90 gfx 4.15 snd 0.24 mix 0.32 send 0.02 | frame 16.53 busy 99%
+    23.3 NGPPROF gfx ms/frame: palette 0.11 background 0.41 scroll 1.87 sprites 0.49 rest 1.27
+    23.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:100%, FPS:61 (S:17 R:44+0), BATT:0
+    24.3 NGPPROF ms/frame: other 0.23 tlcs 9.10 z80 2.95 gfx 3.71 snd 0.24 mix 0.32 send 0.02 | frame 16.57 busy 100%
+    24.3 NGPPROF gfx ms/frame: palette 0.11 background 0.39 scroll 1.56 sprites 0.45 rest 1.20
+    24.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:99%, FPS:61 (S:19 R:36+6), BATT:0
+    25.3 NGPPROF ms/frame: other 0.91 tlcs 8.45 z80 2.84 gfx 3.73 snd 0.25 mix 0.29 send 0.02 | frame 16.48 busy 100%
+    25.3 NGPPROF gfx ms/frame: palette 0.12 background 0.51 scroll 1.26 sprites 0.46 rest 1.38
+    25.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:94%, FPS:60 (S:4 R:49+7), BATT:0
+    26.3 NGPPROF ms/frame: other 1.36 tlcs 7.88 z80 2.63 gfx 4.19 snd 0.23 mix 0.31 send 0.02 | frame 16.62 busy 100%
+    26.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.52 rest 1.49
+    26.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    27.3 NGPPROF ms/frame: other 1.40 tlcs 7.86 z80 2.63 gfx 4.20 snd 0.23 mix 0.28 send 0.02 | frame 16.63 busy 99%
+    27.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.52 rest 1.50
+    27.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    28.3 NGPPROF ms/frame: other 1.23 tlcs 7.98 z80 2.65 gfx 4.28 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    28.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.56 rest 1.52
+    28.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:59+0), BATT:0
+    29.3 NGPPROF ms/frame: other 1.16 tlcs 8.01 z80 2.66 gfx 4.29 snd 0.23 mix 0.26 send 0.02 | frame 16.62 busy 100%
+    29.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.58 rest 1.53
+    29.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:61+0), BATT:0
+    30.3 NGPPROF ms/frame: other 1.16 tlcs 8.01 z80 2.66 gfx 4.31 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    30.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.59 rest 1.53
+    30.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    31.3 NGPPROF ms/frame: other 1.18 tlcs 8.00 z80 2.64 gfx 4.31 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    31.3 NGPPROF gfx ms/frame: palette 0.14 background 0.54 scroll 1.51 sprites 0.60 rest 1.53
+    31.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    32.3 NGPPROF ms/frame: other 1.25 tlcs 7.98 z80 2.62 gfx 4.29 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    32.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.58 rest 1.53
+    32.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    33.3 NGPPROF ms/frame: other 1.26 tlcs 7.96 z80 2.62 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    33.3 NGPPROF gfx ms/frame: palette 0.14 background 0.54 scroll 1.51 sprites 0.58 rest 1.53
+    33.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    34.3 NGPPROF ms/frame: other 1.23 tlcs 7.98 z80 2.63 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    34.3 NGPPROF gfx ms/frame: palette 0.13 background 0.55 scroll 1.50 sprites 0.58 rest 1.52
+    34.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    35.3 NGPPROF ms/frame: other 1.26 tlcs 7.98 z80 2.61 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    35.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.59 rest 1.52
+    35.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:59+0), BATT:0
+    36.3 NGPPROF ms/frame: other 1.25 tlcs 7.96 z80 2.62 gfx 4.31 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    36.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.52 sprites 0.58 rest 1.53
+    36.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:61+0), BATT:0
+    37.3 NGPPROF ms/frame: other 1.25 tlcs 7.98 z80 2.62 gfx 4.29 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    37.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.58 rest 1.52
+    37.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    38.3 NGPPROF ms/frame: other 1.25 tlcs 7.95 z80 2.62 gfx 4.32 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    38.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.52 sprites 0.58 rest 1.54
+    38.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    39.3 NGPPROF ms/frame: other 1.27 tlcs 7.97 z80 2.63 gfx 4.28 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    39.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.58 rest 1.52
+    39.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    40.3 NGPPROF ms/frame: other 1.25 tlcs 7.97 z80 2.62 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    40.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.59 rest 1.53
+    40.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    41.3 NGPPROF ms/frame: other 1.26 tlcs 7.97 z80 2.61 gfx 4.31 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    41.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.52 sprites 0.58 rest 1.52
+    41.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:59+0), BATT:0
+    42.3 NGPPROF ms/frame: other 1.26 tlcs 7.97 z80 2.63 gfx 4.28 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    42.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.58 rest 1.52
+    42.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:61+0), BATT:0
+    43.3 NGPPROF ms/frame: other 1.26 tlcs 7.95 z80 2.61 gfx 4.32 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    43.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.52 sprites 0.58 rest 1.53
+    43.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    44.3 NGPPROF ms/frame: other 1.25 tlcs 7.99 z80 2.61 gfx 4.29 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    44.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.58 rest 1.52
+    44.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    45.3 NGPPROF ms/frame: other 1.26 tlcs 7.96 z80 2.62 gfx 4.31 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    45.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.60 rest 1.53
+    45.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:60+0), BATT:0
+    46.3 NGPPROF ms/frame: other 1.25 tlcs 7.96 z80 2.63 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    46.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.58 rest 1.53
+    46.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    47.3 NGPPROF ms/frame: other 1.25 tlcs 7.97 z80 2.62 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    47.3 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.52 sprites 0.58 rest 1.52
+    47.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:0 R:60+0), BATT:0
+    48.2 NGPPROF ms/frame: other 1.26 tlcs 7.97 z80 2.61 gfx 4.30 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    48.2 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.51 sprites 0.59 rest 1.53
+    48.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:59+0), BATT:0
+    49.2 NGPPROF ms/frame: other 1.25 tlcs 7.98 z80 2.63 gfx 4.28 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    49.2 NGPPROF gfx ms/frame: palette 0.13 background 0.54 scroll 1.50 sprites 0.58 rest 1.52
+    49.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:0 R:61+0), BATT:0
+== p4a-10e65785
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Metal Slug - 1st Mission.ngp
+     8.2 NGPPROF ms/frame: other 3.53 tlcs 7.98 z80 2.63 gfx 0.88 snd 0.23 mix 0.48 send 0.01
+     8.4 [debug] STACK:5032, HEAP:133+2794 (72+2752), BUSY:75%, FPS:63 (S:32 R:31+0), BATT:0
+     9.2 NGPPROF ms/frame: other 4.66 tlcs 7.78 z80 2.59 gfx 0.89 snd 0.23 mix 0.46 send 0.01 | frame 16.62 busy 100%
+     9.4 [debug] STACK:5032, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    10.2 NGPPROF ms/frame: other 4.66 tlcs 7.79 z80 2.59 gfx 0.89 snd 0.23 mix 0.46 send 0.01 | frame 16.62 busy 100%
+    10.4 [debug] STACK:5032, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    11.2 NGPPROF ms/frame: other 3.61 tlcs 8.23 z80 2.74 gfx 1.25 snd 0.24 mix 0.56 send 0.01 | frame 16.63 busy 100%
+    11.4 [debug] STACK:5032, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:25+5), BATT:0
+    12.2 NGPPROF ms/frame: other 3.94 tlcs 7.89 z80 2.63 gfx 1.40 snd 0.23 mix 0.54 send 0.01 | frame 16.62 busy 100%
+    12.4 [debug] STACK:5032, HEAP:133+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    13.2 NGPPROF ms/frame: other 3.90 tlcs 7.87 z80 2.64 gfx 1.42 snd 0.23 mix 0.56 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5032, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    14.0 >>> load 0
+    14.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:60%, FPS:46 (S:23 R:22+1), BATT:0
+    14.4 NGPPROF ms/frame: other 7.30 tlcs 8.17 z80 2.71 gfx 1.46 snd 0.23 mix 0.54 send 0.01 | frame 20.41 busy 100%
+    15.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:90%, FPS:63 (S:31 R:31+0), BATT:0
+    15.4 NGPPROF ms/frame: other 1.70 tlcs 9.11 z80 2.98 gfx 1.71 snd 0.25 mix 0.32 send 0.01 | frame 16.08 busy 100%
+    16.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:84%, FPS:60 (S:30 R:31+0), BATT:0
+    16.4 NGPPROF ms/frame: other 2.72 tlcs 8.79 z80 2.85 gfx 1.70 snd 0.24 mix 0.32 send 0.01 | frame 16.62 busy 99%
+    17.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:85%, FPS:60 (S:30 R:30+0), BATT:0
+    17.4 NGPPROF ms/frame: other 2.42 tlcs 9.07 z80 2.85 gfx 1.71 snd 0.24 mix 0.33 send 0.01 | frame 16.63 busy 99%
+    18.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:88%, FPS:60 (S:30 R:22+7), BATT:0
+    18.4 NGPPROF ms/frame: other 1.96 tlcs 9.49 z80 2.97 gfx 1.70 snd 0.24 mix 0.31 send 0.01 | frame 16.68 busy 100%
+    19.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:87%, FPS:60 (S:30 R:27+4), BATT:0
+    19.4 NGPPROF ms/frame: other 2.17 tlcs 9.15 z80 2.96 gfx 1.69 snd 0.25 mix 0.33 send 0.01 | frame 16.57 busy 100%
+    20.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:85%, FPS:60 (S:31 R:30+0), BATT:0
+    20.4 NGPPROF ms/frame: other 2.55 tlcs 8.89 z80 2.92 gfx 1.69 snd 0.24 mix 0.33 send 0.01 | frame 16.63 busy 99%
+    21.4 NGPPROF ms/frame: other 2.63 tlcs 8.93 z80 2.82 gfx 1.69 snd 0.24 mix 0.30 send 0.01 | frame 16.63 busy 100%
+    21.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:84%, FPS:60 (S:30 R:30+0), BATT:0
+    22.4 NGPPROF ms/frame: other 1.83 tlcs 9.54 z80 2.99 gfx 1.69 snd 0.25 mix 0.32 send 0.01 | frame 16.63 busy 99%
+    22.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:89%, FPS:60 (S:30 R:20+10), BATT:0
+    23.4 NGPPROF ms/frame: other 2.62 tlcs 8.85 z80 2.89 gfx 1.70 snd 0.24 mix 0.32 send 0.01 | frame 16.62 busy 100%
+    23.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:85%, FPS:60 (S:30 R:30+0), BATT:0
+    24.4 NGPPROF ms/frame: other 2.34 tlcs 9.15 z80 2.95 gfx 1.62 snd 0.25 mix 0.31 send 0.01 | frame 16.62 busy 99%
+    24.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:86%, FPS:60 (S:30 R:24+6), BATT:0
+    25.4 NGPPROF ms/frame: other 3.77 tlcs 8.51 z80 2.84 gfx 0.97 snd 0.24 mix 0.28 send 0.01 | frame 16.62 busy 100%
+    25.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:21+9), BATT:0
+    26.4 NGPPROF ms/frame: other 4.56 tlcs 7.84 z80 2.62 gfx 1.06 snd 0.23 mix 0.32 send 0.01 | frame 16.62 busy 100%
+    26.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    27.4 NGPPROF ms/frame: other 4.61 tlcs 7.81 z80 2.63 gfx 1.06 snd 0.23 mix 0.28 send 0.01 | frame 16.62 busy 100%
+    27.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    28.3 NGPPROF ms/frame: other 4.52 tlcs 7.92 z80 2.63 gfx 1.09 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    28.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    29.4 NGPPROF ms/frame: other 4.38 tlcs 7.99 z80 2.65 gfx 1.11 snd 0.23 mix 0.25 send 0.01 | frame 16.63 busy 100%
+    29.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:74%, FPS:60 (S:30 R:30+0), BATT:0
+    30.4 NGPPROF ms/frame: other 4.44 tlcs 7.97 z80 2.63 gfx 1.12 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    30.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    31.4 NGPPROF ms/frame: other 4.43 tlcs 7.98 z80 2.64 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    31.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    32.4 NGPPROF ms/frame: other 4.53 tlcs 7.92 z80 2.61 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    32.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:31 R:30+0), BATT:0
+    33.4 NGPPROF ms/frame: other 4.54 tlcs 7.90 z80 2.62 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    33.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    34.4 NGPPROF ms/frame: other 4.54 tlcs 7.92 z80 2.61 gfx 1.10 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    34.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    35.3 NGPPROF ms/frame: other 4.53 tlcs 7.91 z80 2.62 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    35.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    36.3 NGPPROF ms/frame: other 4.51 tlcs 7.93 z80 2.61 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    36.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    37.4 NGPPROF ms/frame: other 4.51 tlcs 7.92 z80 2.63 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    37.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    38.4 NGPPROF ms/frame: other 4.52 tlcs 7.92 z80 2.61 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    38.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    39.4 NGPPROF ms/frame: other 4.51 tlcs 7.93 z80 2.62 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    39.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    40.4 NGPPROF ms/frame: other 4.53 tlcs 7.90 z80 2.62 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    40.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:31+0), BATT:0
+    41.3 NGPPROF ms/frame: other 4.52 tlcs 7.92 z80 2.62 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    41.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    42.3 NGPPROF ms/frame: other 4.52 tlcs 7.93 z80 2.61 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    42.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    43.3 NGPPROF ms/frame: other 4.51 tlcs 7.91 z80 2.63 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    43.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    44.3 NGPPROF ms/frame: other 4.51 tlcs 7.94 z80 2.61 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    44.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    45.3 NGPPROF ms/frame: other 4.52 tlcs 7.91 z80 2.63 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    45.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    46.3 NGPPROF ms/frame: other 4.52 tlcs 7.93 z80 2.60 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    46.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:31 R:30+0), BATT:0
+    47.3 NGPPROF ms/frame: other 4.53 tlcs 7.91 z80 2.62 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    47.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    48.3 NGPPROF ms/frame: other 4.54 tlcs 7.91 z80 2.61 gfx 1.11 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    48.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    49.3 NGPPROF ms/frame: other 4.50 tlcs 7.92 z80 2.62 gfx 1.12 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    49.4 [debug] STACK:5032, HEAP:132+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+== p3a-74915a40
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Metal Slug - 1st Mission.ngp
+     8.2 NGPPROF ms/frame: other 3.30 tlcs 7.99 z80 2.62 gfx 0.88 snd 0.23 mix 0.73 send 0.01
+     8.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:77%, FPS:63 (S:31 R:31+0), BATT:0
+     9.2 NGPPROF ms/frame: other 4.40 tlcs 7.78 z80 2.59 gfx 0.89 snd 0.23 mix 0.72 send 0.01 | frame 16.62 busy 100%
+     9.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:74%, FPS:60 (S:31 R:30+0), BATT:0
+    10.3 NGPPROF ms/frame: other 4.42 tlcs 7.79 z80 2.59 gfx 0.89 snd 0.23 mix 0.71 send 0.01 | frame 16.62 busy 100%
+    10.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:74%, FPS:60 (S:30 R:30+0), BATT:0
+    11.3 NGPPROF ms/frame: other 3.20 tlcs 8.25 z80 2.74 gfx 1.25 snd 0.24 mix 0.94 send 0.01 | frame 16.63 busy 100%
+    11.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:82%, FPS:60 (S:30 R:25+5), BATT:0
+    12.3 NGPPROF ms/frame: other 3.54 tlcs 7.91 z80 2.63 gfx 1.40 snd 0.23 mix 0.91 send 0.01 | frame 16.62 busy 100%
+    12.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    13.2 NGPPROF ms/frame: other 3.49 tlcs 7.89 z80 2.66 gfx 1.41 snd 0.23 mix 0.95 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    14.0 >>> load 0
+    14.4 NGPPROF ms/frame: other 5.29 tlcs 8.16 z80 2.72 gfx 1.47 snd 0.23 mix 0.93 send 0.01 | frame 18.81 busy 99%
+    14.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:71%, FPS:52 (S:26 R:25+1), BATT:0
+    15.3 NGPPROF ms/frame: other 1.59 tlcs 8.97 z80 2.87 gfx 1.70 snd 0.24 mix 0.72 send 0.01 | frame 16.09 busy 99%
+    15.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:90%, FPS:62 (S:31 R:31+0), BATT:0
+    16.3 NGPPROF ms/frame: other 2.54 tlcs 8.65 z80 2.77 gfx 1.68 snd 0.23 mix 0.74 send 0.01 | frame 16.62 busy 100%
+    16.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:85%, FPS:60 (S:30 R:30+0), BATT:0
+    17.3 NGPPROF ms/frame: other 1.80 tlcs 9.14 z80 2.93 gfx 1.72 snd 0.24 mix 0.78 send 0.01 | frame 16.62 busy 100%
+    17.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:89%, FPS:60 (S:30 R:30+0), BATT:0
+    18.3 NGPPROF ms/frame: other 1.22 tlcs 9.71 z80 3.06 gfx 1.72 snd 0.25 mix 0.76 send 0.01 | frame 16.73 busy 99%
+    18.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:30 R:22+8), BATT:0
+    19.3 NGPPROF ms/frame: other 1.95 tlcs 9.05 z80 2.87 gfx 1.69 snd 0.24 mix 0.71 send 0.01 | frame 16.52 busy 99%
+    19.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:88%, FPS:61 (S:30 R:31+0), BATT:0
+    20.3 NGPPROF ms/frame: other 2.30 tlcs 8.83 z80 2.86 gfx 1.67 snd 0.24 mix 0.72 send 0.01 | frame 16.62 busy 100%
+    20.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:86%, FPS:60 (S:30 R:30+0), BATT:0
+    21.3 NGPPROF ms/frame: other 1.97 tlcs 9.07 z80 2.92 gfx 1.71 snd 0.24 mix 0.71 send 0.01 | frame 16.62 busy 100%
+    21.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:88%, FPS:60 (S:30 R:30+0), BATT:0
+    22.3 NGPPROF ms/frame: other 1.27 tlcs 9.58 z80 3.05 gfx 1.70 snd 0.25 mix 0.75 send 0.01 | frame 16.63 busy 99%
+    22.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:93%, FPS:60 (S:31 R:21+9), BATT:0
+    23.3 NGPPROF ms/frame: other 2.47 tlcs 8.71 z80 2.81 gfx 1.68 snd 0.23 mix 0.70 send 0.01 | frame 16.63 busy 100%
+    23.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:85%, FPS:60 (S:30 R:30+0), BATT:0
+    24.3 NGPPROF ms/frame: other 1.95 tlcs 9.19 z80 2.98 gfx 1.58 snd 0.24 mix 0.70 send 0.01 | frame 16.66 busy 100%
+    24.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:89%, FPS:60 (S:30 R:20+10), BATT:0
+    25.3 NGPPROF ms/frame: other 3.51 tlcs 8.39 z80 2.80 gfx 0.96 snd 0.25 mix 0.68 send 0.01 | frame 16.58 busy 100%
+    25.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:25+5), BATT:0
+    26.3 NGPPROF ms/frame: other 4.14 tlcs 7.86 z80 2.63 gfx 1.06 snd 0.23 mix 0.70 send 0.01 | frame 16.62 busy 100%
+    26.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    27.3 NGPPROF ms/frame: other 4.20 tlcs 7.84 z80 2.64 gfx 1.06 snd 0.23 mix 0.65 send 0.01 | frame 16.63 busy 100%
+    27.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    28.3 NGPPROF ms/frame: other 4.09 tlcs 7.94 z80 2.66 gfx 1.10 snd 0.23 mix 0.60 send 0.01 | frame 16.63 busy 100%
+    28.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    29.3 NGPPROF ms/frame: other 4.01 tlcs 8.01 z80 2.65 gfx 1.11 snd 0.23 mix 0.61 send 0.01 | frame 16.62 busy 100%
+    29.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    30.3 NGPPROF ms/frame: other 4.06 tlcs 7.98 z80 2.65 gfx 1.12 snd 0.23 mix 0.58 send 0.01 | frame 16.63 busy 100%
+    30.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:31+0), BATT:0
+    31.3 NGPPROF ms/frame: other 4.06 tlcs 7.99 z80 2.65 gfx 1.11 snd 0.23 mix 0.57 send 0.01 | frame 16.62 busy 100%
+    31.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    32.3 NGPPROF ms/frame: other 4.14 tlcs 7.95 z80 2.62 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.62 busy 100%
+    32.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    33.3 NGPPROF ms/frame: other 4.15 tlcs 7.94 z80 2.63 gfx 1.11 snd 0.23 mix 0.57 send 0.01 | frame 16.63 busy 100%
+    33.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    34.3 NGPPROF ms/frame: other 4.15 tlcs 7.96 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    34.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    35.3 NGPPROF ms/frame: other 4.16 tlcs 7.93 z80 2.62 gfx 1.11 snd 0.23 mix 0.57 send 0.01 | frame 16.62 busy 100%
+    35.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:31 R:30+0), BATT:0
+    36.3 NGPPROF ms/frame: other 4.18 tlcs 7.94 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    36.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    37.2 NGPPROF ms/frame: other 4.17 tlcs 7.94 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    37.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    38.3 NGPPROF ms/frame: other 4.16 tlcs 7.94 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    38.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    39.3 NGPPROF ms/frame: other 4.14 tlcs 7.96 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    39.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    40.3 NGPPROF ms/frame: other 4.17 tlcs 7.95 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    40.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    41.3 NGPPROF ms/frame: other 4.15 tlcs 7.94 z80 2.63 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    41.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    42.3 NGPPROF ms/frame: other 4.17 tlcs 7.95 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    42.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    43.2 NGPPROF ms/frame: other 4.18 tlcs 7.93 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    43.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:31+0), BATT:0
+    44.2 NGPPROF ms/frame: other 4.16 tlcs 7.96 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    44.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    45.3 NGPPROF ms/frame: other 4.15 tlcs 7.95 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    45.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    46.3 NGPPROF ms/frame: other 4.16 tlcs 7.96 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    46.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    47.3 NGPPROF ms/frame: other 4.15 tlcs 7.96 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    47.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+    48.3 NGPPROF ms/frame: other 4.17 tlcs 7.94 z80 2.61 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.63 busy 100%
+    48.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:31 R:30+0), BATT:0
+    49.3 NGPPROF ms/frame: other 4.17 tlcs 7.94 z80 2.62 gfx 1.10 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    49.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:75%, FPS:60 (S:30 R:30+0), BATT:0
+== p2a-c2434027
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Metal Slug - 1st Mission.ngp
+     8.2 NGPPROF ms/frame: other 2.73 tlcs 8.56 z80 2.63 gfx 0.88 snd 0.24 mix 0.73 send 0.01
+     8.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:80%, FPS:63 (S:32 R:31+0), BATT:0
+     9.2 NGPPROF ms/frame: other 3.80 tlcs 8.40 z80 2.59 gfx 0.89 snd 0.23 mix 0.71 send 0.01 | frame 16.62 busy 100%
+     9.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    10.2 NGPPROF ms/frame: other 3.80 tlcs 8.41 z80 2.58 gfx 0.89 snd 0.23 mix 0.71 send 0.01 | frame 16.63 busy 100%
+    10.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    11.2 NGPPROF ms/frame: other 2.60 tlcs 8.86 z80 2.74 gfx 1.25 snd 0.24 mix 0.93 send 0.01 | frame 16.62 busy 100%
+    11.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:30 R:25+5), BATT:0
+    12.2 NGPPROF ms/frame: other 2.97 tlcs 8.48 z80 2.63 gfx 1.40 snd 0.23 mix 0.90 send 0.01 | frame 16.63 busy 100%
+    12.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:82%, FPS:60 (S:30 R:30+0), BATT:0
+    13.2 NGPPROF ms/frame: other 2.93 tlcs 8.48 z80 2.63 gfx 1.41 snd 0.23 mix 0.94 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5080, HEAP:133+2794 (72+2752), BUSY:82%, FPS:60 (S:30 R:30+0), BATT:0
+    14.0 >>> load 0
+    14.4 NGPPROF ms/frame: other 4.81 tlcs 8.73 z80 2.71 gfx 1.46 snd 0.23 mix 0.92 send 0.01 | frame 18.87 busy 100%
+    14.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:74%, FPS:52 (S:26 R:25+1), BATT:0
+    15.3 NGPPROF ms/frame: other 1.08 tlcs 9.45 z80 2.86 gfx 1.69 snd 0.24 mix 0.71 send 0.01 | frame 16.04 busy 99%
+    15.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:93%, FPS:62 (S:30 R:31+0), BATT:0
+    16.3 NGPPROF ms/frame: other 2.06 tlcs 9.11 z80 2.77 gfx 1.68 snd 0.24 mix 0.75 send 0.01 | frame 16.62 busy 100%
+    16.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:88%, FPS:60 (S:31 R:30+0), BATT:0
+    17.3 NGPPROF ms/frame: other 1.34 tlcs 9.61 z80 2.92 gfx 1.72 snd 0.25 mix 0.77 send 0.01 | frame 16.62 busy 100%
+    17.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:30 R:30+0), BATT:0
+    18.3 NGPPROF ms/frame: other 0.92 tlcs 10.16 z80 3.04 gfx 1.72 snd 0.25 mix 0.75 send 0.01 | frame 16.86 busy 100%
+    18.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:95%, FPS:59 (S:30 R:22+8), BATT:0
+    19.3 NGPPROF ms/frame: other 1.36 tlcs 9.52 z80 2.86 gfx 1.69 snd 0.24 mix 0.70 send 0.01 | frame 16.39 busy 100%
+    19.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:91%, FPS:61 (S:30 R:31+0), BATT:0
+    20.3 NGPPROF ms/frame: other 1.81 tlcs 9.31 z80 2.86 gfx 1.67 snd 0.25 mix 0.72 send 0.01 | frame 16.62 busy 100%
+    20.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:89%, FPS:60 (S:30 R:30+0), BATT:0
+    21.3 NGPPROF ms/frame: other 1.50 tlcs 9.54 z80 2.92 gfx 1.71 snd 0.25 mix 0.70 send 0.01 | frame 16.62 busy 100%
+    21.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:91%, FPS:60 (S:30 R:30+0), BATT:0
+    22.3 NGPPROF ms/frame: other 0.81 tlcs 10.05 z80 3.04 gfx 1.70 snd 0.26 mix 0.75 send 0.01 | frame 16.63 busy 99%
+    22.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:95%, FPS:60 (S:31 R:21+9), BATT:0
+    23.3 NGPPROF ms/frame: other 2.00 tlcs 9.19 z80 2.82 gfx 1.68 snd 0.24 mix 0.70 send 0.01 | frame 16.63 busy 100%
+    23.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:88%, FPS:60 (S:30 R:30+0), BATT:0
+    24.3 NGPPROF ms/frame: other 1.53 tlcs 9.66 z80 2.99 gfx 1.58 snd 0.25 mix 0.69 send 0.01 | frame 16.72 busy 100%
+    24.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:30 R:20+10), BATT:0
+    25.3 NGPPROF ms/frame: other 2.83 tlcs 9.02 z80 2.80 gfx 0.96 snd 0.24 mix 0.67 send 0.01 | frame 16.53 busy 100%
+    25.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:81%, FPS:60 (S:30 R:25+5), BATT:0
+    26.3 NGPPROF ms/frame: other 3.54 tlcs 8.47 z80 2.62 gfx 1.06 snd 0.23 mix 0.69 send 0.01 | frame 16.62 busy 100%
+    26.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    27.3 NGPPROF ms/frame: other 3.61 tlcs 8.44 z80 2.63 gfx 1.06 snd 0.23 mix 0.65 send 0.01 | frame 16.63 busy 100%
+    27.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    28.3 NGPPROF ms/frame: other 3.54 tlcs 8.53 z80 2.63 gfx 1.09 snd 0.23 mix 0.59 send 0.01 | frame 16.62 busy 100%
+    28.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:29 R:30+0), BATT:0
+    29.3 NGPPROF ms/frame: other 3.47 tlcs 8.57 z80 2.62 gfx 1.11 snd 0.23 mix 0.61 send 0.01 | frame 16.63 busy 99%
+    29.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:31 R:30+0), BATT:0
+    30.3 NGPPROF ms/frame: other 3.53 tlcs 8.56 z80 2.62 gfx 1.11 snd 0.23 mix 0.57 send 0.01 | frame 16.62 busy 100%
+    30.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:31+0), BATT:0
+    31.3 NGPPROF ms/frame: other 3.52 tlcs 8.58 z80 2.61 gfx 1.11 snd 0.23 mix 0.57 send 0.01 | frame 16.62 busy 100%
+    31.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    32.3 NGPPROF ms/frame: other 3.58 tlcs 8.54 z80 2.61 gfx 1.10 snd 0.23 mix 0.56 send 0.01 | frame 16.62 busy 100%
+    32.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    33.3 NGPPROF ms/frame: other 3.58 tlcs 8.53 z80 2.60 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.62 busy 100%
+    33.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    34.3 NGPPROF ms/frame: other 3.59 tlcs 8.53 z80 2.59 gfx 1.11 snd 0.24 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    34.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    35.3 NGPPROF ms/frame: other 3.60 tlcs 8.51 z80 2.60 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.63 busy 100%
+    35.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:31 R:30+0), BATT:0
+    36.3 NGPPROF ms/frame: other 3.62 tlcs 8.52 z80 2.59 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    36.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    37.2 NGPPROF ms/frame: other 3.60 tlcs 8.53 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    37.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    38.3 NGPPROF ms/frame: other 3.60 tlcs 8.53 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    38.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    39.3 NGPPROF ms/frame: other 3.58 tlcs 8.55 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    39.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    40.3 NGPPROF ms/frame: other 3.61 tlcs 8.53 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    40.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    41.3 NGPPROF ms/frame: other 3.59 tlcs 8.52 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    41.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    42.2 NGPPROF ms/frame: other 3.61 tlcs 8.53 z80 2.59 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    42.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    43.2 NGPPROF ms/frame: other 3.62 tlcs 8.52 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    43.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:31+0), BATT:0
+    44.2 NGPPROF ms/frame: other 3.60 tlcs 8.53 z80 2.61 gfx 1.10 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    44.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    45.3 NGPPROF ms/frame: other 3.60 tlcs 8.53 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    45.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    46.3 NGPPROF ms/frame: other 3.60 tlcs 8.54 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    46.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    47.2 NGPPROF ms/frame: other 3.59 tlcs 8.54 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    47.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    48.2 NGPPROF ms/frame: other 3.61 tlcs 8.52 z80 2.59 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 100%
+    48.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:31 R:30+0), BATT:0
+    49.2 NGPPROF ms/frame: other 3.61 tlcs 8.53 z80 2.60 gfx 1.10 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    49.4 [debug] STACK:5080, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+== p1a-d4d0ba5d
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Metal Slug - 1st Mission.ngp
+     8.2 NGPPROF ms/frame: other 2.72 tlcs 8.57 z80 2.62 gfx 0.88 snd 0.23 mix 0.73 send 0.01
+     8.4 [debug] STACK:5112, HEAP:133+2794 (72+2752), BUSY:80%, FPS:63 (S:32 R:31+0), BATT:0
+     9.2 NGPPROF ms/frame: other 3.80 tlcs 8.40 z80 2.59 gfx 0.90 snd 0.23 mix 0.70 send 0.01 | frame 16.62 busy 100%
+     9.4 [debug] STACK:5112, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    10.2 NGPPROF ms/frame: other 3.79 tlcs 8.41 z80 2.58 gfx 0.90 snd 0.23 mix 0.71 send 0.01 | frame 16.63 busy 99%
+    10.4 [debug] STACK:5112, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    11.2 NGPPROF ms/frame: other 2.59 tlcs 8.84 z80 2.75 gfx 1.26 snd 0.24 mix 0.93 send 0.01 | frame 16.62 busy 100%
+    11.4 [debug] STACK:5112, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:30 R:25+5), BATT:0
+    12.2 NGPPROF ms/frame: other 2.97 tlcs 8.48 z80 2.62 gfx 1.42 snd 0.23 mix 0.90 send 0.01 | frame 16.63 busy 100%
+    12.4 [debug] STACK:5112, HEAP:133+2794 (72+2752), BUSY:82%, FPS:60 (S:30 R:30+0), BATT:0
+    13.2 NGPPROF ms/frame: other 2.92 tlcs 8.47 z80 2.63 gfx 1.43 snd 0.23 mix 0.94 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5112, HEAP:133+2794 (72+2752), BUSY:83%, FPS:60 (S:30 R:30+0), BATT:0
+    14.0 >>> load 0
+    14.4 NGPPROF ms/frame: other 4.86 tlcs 8.74 z80 2.69 gfx 1.46 snd 0.23 mix 0.92 send 0.01 | frame 18.91 busy 99%
+    14.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:73%, FPS:52 (S:26 R:25+1), BATT:0
+    15.3 NGPPROF ms/frame: other 0.61 tlcs 9.67 z80 2.99 gfx 1.72 snd 0.25 mix 0.73 send 0.01 | frame 15.97 busy 100%
+    15.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:96%, FPS:63 (S:31 R:31+0), BATT:0
+    16.3 NGPPROF ms/frame: other 1.78 tlcs 9.25 z80 2.87 gfx 1.71 snd 0.24 mix 0.75 send 0.01 | frame 16.62 busy 100%
+    16.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:89%, FPS:60 (S:30 R:30+0), BATT:0
+    17.3 NGPPROF ms/frame: other 1.43 tlcs 9.60 z80 2.86 gfx 1.71 snd 0.24 mix 0.77 send 0.01 | frame 16.63 busy 100%
+    17.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:91%, FPS:60 (S:30 R:31+0), BATT:0
+    18.3 NGPPROF ms/frame: other 1.16 tlcs 10.03 z80 2.98 gfx 1.70 snd 0.25 mix 0.74 send 0.01 | frame 16.87 busy 99%
+    18.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:94%, FPS:59 (S:30 R:19+10), BATT:0
+    19.3 NGPPROF ms/frame: other 0.92 tlcs 9.74 z80 3.02 gfx 1.70 snd 0.26 mix 0.74 send 0.01 | frame 16.38 busy 100%
+    19.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:94%, FPS:61 (S:30 R:30+1), BATT:0
+    20.3 NGPPROF ms/frame: other 1.59 tlcs 9.44 z80 2.92 gfx 1.69 snd 0.24 mix 0.73 send 0.01 | frame 16.62 busy 100%
+    20.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:90%, FPS:60 (S:30 R:30+0), BATT:0
+    21.3 NGPPROF ms/frame: other 1.64 tlcs 9.50 z80 2.84 gfx 1.70 snd 0.24 mix 0.69 send 0.01 | frame 16.63 busy 99%
+    21.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:90%, FPS:60 (S:30 R:30+0), BATT:0
+    22.3 NGPPROF ms/frame: other 0.76 tlcs 10.14 z80 3.01 gfx 1.69 snd 0.26 mix 0.75 send 0.01 | frame 16.62 busy 100%
+    22.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:96%, FPS:60 (S:31 R:20+10), BATT:0
+    23.3 NGPPROF ms/frame: other 1.65 tlcs 9.39 z80 2.91 gfx 1.70 snd 0.25 mix 0.72 send 0.01 | frame 16.62 busy 99%
+    23.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:90%, FPS:60 (S:30 R:30+0), BATT:0
+    24.3 NGPPROF ms/frame: other 1.44 tlcs 9.69 z80 2.98 gfx 1.61 snd 0.25 mix 0.70 send 0.01 | frame 16.69 busy 100%
+    24.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:92%, FPS:60 (S:30 R:21+9), BATT:0
+    25.3 NGPPROF ms/frame: other 2.62 tlcs 9.17 z80 2.86 gfx 0.98 snd 0.25 mix 0.67 send 0.01 | frame 16.56 busy 100%
+    25.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:83%, FPS:60 (S:30 R:24+6), BATT:0
+    26.3 NGPPROF ms/frame: other 3.54 tlcs 8.47 z80 2.62 gfx 1.06 snd 0.23 mix 0.69 send 0.01 | frame 16.62 busy 100%
+    26.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    27.3 NGPPROF ms/frame: other 3.59 tlcs 8.44 z80 2.64 gfx 1.07 snd 0.23 mix 0.65 send 0.01 | frame 16.62 busy 100%
+    27.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    28.3 NGPPROF ms/frame: other 3.54 tlcs 8.52 z80 2.62 gfx 1.11 snd 0.23 mix 0.59 send 0.01 | frame 16.63 busy 100%
+    28.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    29.3 NGPPROF ms/frame: other 3.46 tlcs 8.57 z80 2.64 gfx 1.12 snd 0.23 mix 0.60 send 0.01 | frame 16.63 busy 99%
+    29.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:31+0), BATT:0
+    30.3 NGPPROF ms/frame: other 3.51 tlcs 8.56 z80 2.63 gfx 1.12 snd 0.23 mix 0.57 send 0.01 | frame 16.62 busy 100%
+    30.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    31.3 NGPPROF ms/frame: other 3.50 tlcs 8.57 z80 2.62 gfx 1.13 snd 0.23 mix 0.57 send 0.01 | frame 16.63 busy 99%
+    31.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    32.3 NGPPROF ms/frame: other 3.59 tlcs 8.53 z80 2.60 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.62 busy 100%
+    32.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    33.3 NGPPROF ms/frame: other 3.57 tlcs 8.53 z80 2.61 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.63 busy 99%
+    33.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    34.3 NGPPROF ms/frame: other 3.59 tlcs 8.54 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    34.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:31 R:30+0), BATT:0
+    35.3 NGPPROF ms/frame: other 3.61 tlcs 8.51 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    35.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    36.2 NGPPROF ms/frame: other 3.60 tlcs 8.53 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    36.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    37.3 NGPPROF ms/frame: other 3.59 tlcs 8.52 z80 2.62 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 99%
+    37.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    38.3 NGPPROF ms/frame: other 3.59 tlcs 8.52 z80 2.60 gfx 1.13 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    38.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    39.3 NGPPROF ms/frame: other 3.57 tlcs 8.54 z80 2.61 gfx 1.12 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 99%
+    39.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    40.2 NGPPROF ms/frame: other 3.60 tlcs 8.53 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    40.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    41.2 NGPPROF ms/frame: other 3.59 tlcs 8.53 z80 2.60 gfx 1.12 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 99%
+    41.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:29 R:30+0), BATT:0
+    42.2 NGPPROF ms/frame: other 3.60 tlcs 8.52 z80 2.59 gfx 1.11 snd 0.23 mix 0.56 send 0.01 | frame 16.62 busy 100%
+    42.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:31 R:31+0), BATT:0
+    43.3 NGPPROF ms/frame: other 3.59 tlcs 8.52 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 99%
+    43.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    44.3 NGPPROF ms/frame: other 3.58 tlcs 8.55 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    44.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    45.2 NGPPROF ms/frame: other 3.59 tlcs 8.53 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 99%
+    45.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    46.2 NGPPROF ms/frame: other 3.59 tlcs 8.53 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    46.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    47.2 NGPPROF ms/frame: other 3.59 tlcs 8.54 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 99%
+    47.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:31 R:30+0), BATT:0
+    48.2 NGPPROF ms/frame: other 3.61 tlcs 8.51 z80 2.60 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.62 busy 100%
+    48.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    49.2 NGPPROF ms/frame: other 3.59 tlcs 8.53 z80 2.61 gfx 1.11 snd 0.23 mix 0.55 send 0.01 | frame 16.63 busy 99%
+    49.4 [debug] STACK:5112, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+== p4l-10e65785
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Bust-A-Move Pocket (USA).zip
+     5.2 NGPPROF ms/frame: other 3.90 tlcs 7.61 z80 2.60 gfx 0.88 snd 0.24 mix 0.47 send 0.01
+     6.2 NGPPROF ms/frame: other 4.97 tlcs 7.44 z80 2.59 gfx 0.92 snd 0.23 mix 0.46 send 0.01 | frame 16.62 busy 100%
+     6.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:70%, FPS:60 (S:30 R:30+0), BATT:0
+     7.2 NGPPROF ms/frame: other 4.97 tlcs 7.44 z80 2.59 gfx 0.92 snd 0.23 mix 0.46 send 0.01 | frame 16.62 busy 100%
+     7.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:71%, FPS:60 (S:30 R:29+1), BATT:0
+     8.2 NGPPROF ms/frame: other 4.34 tlcs 7.68 z80 2.69 gfx 1.34 snd 0.23 mix 0.34 send 0.01 | frame 16.63 busy 100%
+     8.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:74%, FPS:60 (S:30 R:30+1), BATT:0
+     9.2 NGPPROF ms/frame: other 4.50 tlcs 7.53 z80 2.65 gfx 1.41 snd 0.23 mix 0.30 send 0.01 | frame 16.62 busy 100%
+     9.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    10.2 NGPPROF ms/frame: other 4.48 tlcs 7.52 z80 2.66 gfx 1.41 snd 0.23 mix 0.31 send 0.01 | frame 16.63 busy 100%
+    10.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    11.2 NGPPROF ms/frame: other 4.52 tlcs 7.51 z80 2.64 gfx 1.41 snd 0.23 mix 0.30 send 0.01 | frame 16.63 busy 100%
+    11.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    12.2 NGPPROF ms/frame: other 4.61 tlcs 7.54 z80 2.60 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    12.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    13.2 NGPPROF ms/frame: other 4.50 tlcs 7.53 z80 2.66 gfx 1.42 snd 0.23 mix 0.29 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:73%, FPS:60 (S:30 R:30+0), BATT:0
+    14.0 >>> 
+    14.2 NGPPROF ms/frame: other 4.62 tlcs 7.51 z80 2.62 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    14.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:31 R:30+0), BATT:0
+    15.2 NGPPROF ms/frame: other 4.66 tlcs 7.49 z80 2.61 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    15.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    16.2 NGPPROF ms/frame: other 4.67 tlcs 7.49 z80 2.61 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    16.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    17.2 NGPPROF ms/frame: other 4.64 tlcs 7.50 z80 2.61 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    17.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    18.2 NGPPROF ms/frame: other 4.64 tlcs 7.49 z80 2.62 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    18.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    19.2 NGPPROF ms/frame: other 4.64 tlcs 7.49 z80 2.61 gfx 1.42 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    19.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    20.2 NGPPROF ms/frame: other 4.64 tlcs 7.50 z80 2.62 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    20.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    21.2 NGPPROF ms/frame: other 4.63 tlcs 7.50 z80 2.61 gfx 1.42 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    21.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:31+0), BATT:0
+    22.2 NGPPROF ms/frame: other 4.66 tlcs 7.48 z80 2.61 gfx 1.42 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    22.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    23.2 NGPPROF ms/frame: other 4.65 tlcs 7.48 z80 2.62 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    23.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    24.2 NGPPROF ms/frame: other 4.66 tlcs 7.48 z80 2.62 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    24.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    25.2 NGPPROF ms/frame: other 4.64 tlcs 7.50 z80 2.61 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    25.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    26.2 NGPPROF ms/frame: other 4.64 tlcs 7.51 z80 2.61 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    26.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    27.2 NGPPROF ms/frame: other 4.64 tlcs 7.51 z80 2.61 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    27.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:31 R:30+0), BATT:0
+    28.1 NGPPROF ms/frame: other 4.66 tlcs 7.48 z80 2.61 gfx 1.41 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    28.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    29.1 NGPPROF ms/frame: other 4.65 tlcs 7.49 z80 2.61 gfx 1.40 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    29.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:72%, FPS:60 (S:30 R:30+0), BATT:0
+    30.2 NGPPROF ms/frame: other 4.56 tlcs 7.64 z80 2.65 gfx 1.31 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    30.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:74%, FPS:60 (S:30 R:27+3), BATT:0
+    31.2 NGPPROF ms/frame: other 3.81 tlcs 8.33 z80 2.72 gfx 1.27 snd 0.24 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    31.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    32.2 NGPPROF ms/frame: other 3.96 tlcs 8.22 z80 2.67 gfx 1.29 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 99%
+    32.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    33.1 NGPPROF ms/frame: other 3.16 tlcs 8.82 z80 2.82 gfx 1.33 snd 0.24 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    33.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:82%, FPS:60 (S:30 R:30+0), BATT:0
+    34.1 NGPPROF ms/frame: other 3.28 tlcs 8.71 z80 2.82 gfx 1.32 snd 0.25 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    34.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:30 R:30+0), BATT:0
+    35.1 NGPPROF ms/frame: other 3.88 tlcs 8.28 z80 2.69 gfx 1.30 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    35.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    36.1 NGPPROF ms/frame: other 3.74 tlcs 8.38 z80 2.72 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 99%
+    36.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    37.2 NGPPROF ms/frame: other 3.94 tlcs 8.25 z80 2.67 gfx 1.30 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    37.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:31+0), BATT:0
+    38.1 NGPPROF ms/frame: other 3.94 tlcs 8.24 z80 2.66 gfx 1.30 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 99%
+    38.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    39.1 NGPPROF ms/frame: other 3.89 tlcs 8.28 z80 2.68 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    39.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    40.1 NGPPROF ms/frame: other 3.55 tlcs 8.53 z80 2.75 gfx 1.32 snd 0.24 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    40.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    41.1 NGPPROF ms/frame: other 3.68 tlcs 8.44 z80 2.71 gfx 1.31 snd 0.24 mix 0.24 send 0.01 | frame 16.63 busy 99%
+    41.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:31 R:30+0), BATT:0
+    42.1 NGPPROF ms/frame: other 3.92 tlcs 8.22 z80 2.70 gfx 1.30 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    42.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    43.1 NGPPROF ms/frame: other 3.60 tlcs 8.47 z80 2.73 gfx 1.33 snd 0.24 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    43.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    44.1 NGPPROF ms/frame: other 3.94 tlcs 8.21 z80 2.68 gfx 1.32 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 99%
+    44.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:30+0), BATT:0
+    45.1 NGPPROF ms/frame: other 3.90 tlcs 8.26 z80 2.69 gfx 1.30 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    45.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    46.1 NGPPROF ms/frame: other 3.74 tlcs 8.38 z80 2.71 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    46.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    47.1 NGPPROF ms/frame: other 3.52 tlcs 8.49 z80 2.81 gfx 1.32 snd 0.24 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    47.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    48.1 NGPPROF ms/frame: other 3.87 tlcs 8.29 z80 2.67 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    48.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    49.1 NGPPROF ms/frame: other 3.88 tlcs 8.28 z80 2.67 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    49.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:77%, FPS:60 (S:30 R:30+0), BATT:0
+    50.1 NGPPROF ms/frame: other 3.86 tlcs 8.29 z80 2.68 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    50.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:76%, FPS:60 (S:30 R:31+0), BATT:0
+    51.1 NGPPROF ms/frame: other 3.83 tlcs 8.31 z80 2.70 gfx 1.31 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 100%
+    51.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    52.1 NGPPROF ms/frame: other 3.70 tlcs 8.41 z80 2.72 gfx 1.32 snd 0.24 mix 0.24 send 0.01 | frame 16.63 busy 99%
+    52.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:78%, FPS:60 (S:30 R:30+0), BATT:0
+    53.1 NGPPROF ms/frame: other 3.25 tlcs 8.76 z80 2.80 gfx 1.32 snd 0.25 mix 0.24 send 0.01 | frame 16.63 busy 99%
+    53.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:81%, FPS:60 (S:30 R:30+0), BATT:0
+    54.1 NGPPROF ms/frame: other 3.52 tlcs 8.54 z80 2.76 gfx 1.32 snd 0.24 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    54.4 [debug] STACK:5128, HEAP:132+2794 (72+2752), BUSY:79%, FPS:60 (S:31 R:30+0), BATT:0
+== p4l-bd7a8397
+     2.0 >>> launch retro-extra ngp /sd/roms/ngp/Bust-A-Move Pocket (USA).zip
+     5.2 NGPPROF ms/frame: other 3.35 tlcs 7.52 z80 2.57 gfx 1.52 snd 0.23 mix 0.48 send 0.15
+     6.2 NGPPROF ms/frame: other 4.28 tlcs 7.44 z80 2.61 gfx 1.60 snd 0.23 mix 0.47 send 0.01 | frame 16.63 busy 100%
+     6.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:74%, FPS:60 (S:0 R:60+0), BATT:0
+     7.2 NGPPROF ms/frame: other 4.27 tlcs 7.44 z80 2.61 gfx 1.59 snd 0.23 mix 0.47 send 0.01 | frame 16.62 busy 100%
+     7.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:75%, FPS:60 (S:0 R:59+1), BATT:0
+     8.2 NGPPROF ms/frame: other 3.31 tlcs 7.68 z80 2.69 gfx 2.36 snd 0.23 mix 0.35 send 0.01 | frame 16.63 busy 99%
+     8.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:81%, FPS:60 (S:1 R:57+1), BATT:0
+     9.2 NGPPROF ms/frame: other 3.29 tlcs 7.54 z80 2.66 gfx 2.58 snd 0.23 mix 0.32 send 0.01 | frame 16.63 busy 100%
+     9.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:80%, FPS:60 (S:1 R:60+0), BATT:0
+    10.2 NGPPROF ms/frame: other 3.29 tlcs 7.54 z80 2.66 gfx 2.57 snd 0.23 mix 0.32 send 0.02 | frame 16.63 busy 99%
+    10.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:80%, FPS:60 (S:0 R:60+0), BATT:0
+    11.2 NGPPROF ms/frame: other 3.32 tlcs 7.53 z80 2.65 gfx 2.57 snd 0.23 mix 0.31 send 0.01 | frame 16.62 busy 100%
+    11.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:80%, FPS:60 (S:0 R:60+0), BATT:0
+    12.2 NGPPROF ms/frame: other 3.44 tlcs 7.55 z80 2.60 gfx 2.56 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    12.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:80%, FPS:60 (S:0 R:60+0), BATT:0
+    13.2 NGPPROF ms/frame: other 3.30 tlcs 7.54 z80 2.65 gfx 2.59 snd 0.23 mix 0.30 send 0.01 | frame 16.62 busy 100%
+    13.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:80%, FPS:60 (S:0 R:60+0), BATT:0
+    14.0 >>> 
+    14.2 NGPPROF ms/frame: other 3.42 tlcs 7.50 z80 2.63 gfx 2.60 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    14.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    15.2 NGPPROF ms/frame: other 3.47 tlcs 7.51 z80 2.61 gfx 2.56 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 99%
+    15.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:59+0), BATT:0
+    16.2 NGPPROF ms/frame: other 3.48 tlcs 7.50 z80 2.61 gfx 2.56 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    16.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:61+0), BATT:0
+    17.2 NGPPROF ms/frame: other 3.44 tlcs 7.52 z80 2.61 gfx 2.58 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    17.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    18.2 NGPPROF ms/frame: other 3.46 tlcs 7.50 z80 2.61 gfx 2.58 snd 0.23 mix 0.24 send 0.01 | frame 16.62 busy 100%
+    18.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    19.2 NGPPROF ms/frame: other 3.46 tlcs 7.50 z80 2.63 gfx 2.57 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    19.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    20.2 NGPPROF ms/frame: other 3.46 tlcs 7.50 z80 2.64 gfx 2.56 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    20.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    21.2 NGPPROF ms/frame: other 3.45 tlcs 7.50 z80 2.63 gfx 2.57 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    21.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    22.2 NGPPROF ms/frame: other 3.46 tlcs 7.49 z80 2.61 gfx 2.58 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    22.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:59+0), BATT:0
+    23.2 NGPPROF ms/frame: other 3.48 tlcs 7.50 z80 2.61 gfx 2.56 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    23.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:61+0), BATT:0
+    24.2 NGPPROF ms/frame: other 3.48 tlcs 7.51 z80 2.61 gfx 2.55 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    24.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    25.1 NGPPROF ms/frame: other 3.45 tlcs 7.49 z80 2.61 gfx 2.59 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    25.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    26.2 NGPPROF ms/frame: other 3.45 tlcs 7.50 z80 2.61 gfx 2.59 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    26.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    27.2 NGPPROF ms/frame: other 3.46 tlcs 7.50 z80 2.63 gfx 2.56 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    27.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:60+0), BATT:0
+    28.2 NGPPROF ms/frame: other 3.47 tlcs 7.51 z80 2.61 gfx 2.57 snd 0.23 mix 0.23 send 0.01 | frame 16.62 busy 100%
+    28.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:59+0), BATT:0
+    29.2 NGPPROF ms/frame: other 3.47 tlcs 7.50 z80 2.61 gfx 2.57 snd 0.23 mix 0.23 send 0.01 | frame 16.63 busy 100%
+    29.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:79%, FPS:60 (S:0 R:61+0), BATT:0
+    30.1 NGPPROF ms/frame: other 3.50 tlcs 7.65 z80 2.66 gfx 2.34 snd 0.23 mix 0.24 send 0.01 | frame 16.63 busy 99%
+    30.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:80%, FPS:60 (S:3 R:54+3), BATT:0
+    31.1 NGPPROF ms/frame: other 2.72 tlcs 8.41 z80 2.72 gfx 2.28 snd 0.24 mix 0.25 send 0.02 | frame 16.62 busy 100%
+    31.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:83%, FPS:60 (S:0 R:60+0), BATT:0
+    32.2 NGPPROF ms/frame: other 2.85 tlcs 8.24 z80 2.67 gfx 2.36 snd 0.23 mix 0.25 send 0.02 | frame 16.63 busy 99%
+    32.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:83%, FPS:60 (S:0 R:60+0), BATT:0
+    33.2 NGPPROF ms/frame: other 1.93 tlcs 8.80 z80 2.83 gfx 2.56 snd 0.24 mix 0.25 send 0.02 | frame 16.64 busy 100%
+    33.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:90%, FPS:60 (S:0 R:59+0), BATT:0
+    34.1 NGPPROF ms/frame: other 2.11 tlcs 8.73 z80 2.82 gfx 2.45 snd 0.25 mix 0.24 send 0.02 | frame 16.61 busy 100%
+    34.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:86%, FPS:60 (S:1 R:60+0), BATT:0
+    35.1 NGPPROF ms/frame: other 2.70 tlcs 8.36 z80 2.68 gfx 2.38 snd 0.23 mix 0.25 send 0.02 | frame 16.63 busy 99%
+    35.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0), BATT:0
+    36.1 NGPPROF ms/frame: other 2.53 tlcs 8.41 z80 2.77 gfx 2.41 snd 0.23 mix 0.25 send 0.02 | frame 16.62 busy 99%
+    36.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:59+0), BATT:0
+    37.1 NGPPROF ms/frame: other 2.77 tlcs 8.30 z80 2.67 gfx 2.39 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 99%
+    37.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:61+0), BATT:0
+    38.1 NGPPROF ms/frame: other 2.80 tlcs 8.26 z80 2.70 gfx 2.36 snd 0.23 mix 0.25 send 0.02 | frame 16.62 busy 100%
+    38.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:83%, FPS:60 (S:0 R:60+0), BATT:0
+    39.1 NGPPROF ms/frame: other 2.71 tlcs 8.33 z80 2.70 gfx 2.39 snd 0.23 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    39.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0), BATT:0
+    40.1 NGPPROF ms/frame: other 2.36 tlcs 8.58 z80 2.74 gfx 2.44 snd 0.23 mix 0.25 send 0.02 | frame 16.62 busy 100%
+    40.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:0 R:60+0), BATT:0
+    41.1 NGPPROF ms/frame: other 2.52 tlcs 8.42 z80 2.75 gfx 2.45 snd 0.23 mix 0.25 send 0.02 | frame 16.63 busy 99%
+    41.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:0 R:60+0), BATT:0
+    42.1 NGPPROF ms/frame: other 2.71 tlcs 8.33 z80 2.72 gfx 2.38 snd 0.24 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    42.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0), BATT:0
+    43.1 NGPPROF ms/frame: other 2.38 tlcs 8.54 z80 2.76 gfx 2.44 snd 0.24 mix 0.25 send 0.02 | frame 16.63 busy 100%
+    43.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:0 R:60+0), BATT:0
+    44.1 NGPPROF ms/frame: other 2.73 tlcs 8.30 z80 2.69 gfx 2.40 snd 0.23 mix 0.25 send 0.02 | frame 16.62 busy 100%
+    44.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0), BATT:0
+    45.1 NGPPROF ms/frame: other 2.71 tlcs 8.32 z80 2.71 gfx 2.39 snd 0.24 mix 0.25 send 0.02 | frame 16.63 busy 99%
+    45.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0), BATT:0
+    46.1 NGPPROF ms/frame: other 2.59 tlcs 8.41 z80 2.71 gfx 2.41 snd 0.24 mix 0.25 send 0.02 | frame 16.62 busy 100%
+    46.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:0 R:60+0), BATT:0
+    47.1 NGPPROF ms/frame: other 2.34 tlcs 8.52 z80 2.79 gfx 2.49 snd 0.24 mix 0.24 send 0.02 | frame 16.62 busy 100%
+    47.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:0 R:60+0), BATT:0
+    48.1 NGPPROF ms/frame: other 2.74 tlcs 8.32 z80 2.70 gfx 2.38 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 99%
+    48.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:61 (S:0 R:60+0), BATT:0
+    49.1 NGPPROF ms/frame: other 2.71 tlcs 8.33 z80 2.68 gfx 2.39 snd 0.23 mix 0.26 send 0.02 | frame 16.63 busy 100%
+    49.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:1 R:59+0), BATT:0
+    50.1 NGPPROF ms/frame: other 2.67 tlcs 8.35 z80 2.73 gfx 2.39 snd 0.23 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    50.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:60+0), BATT:0
+    51.1 NGPPROF ms/frame: other 2.68 tlcs 8.36 z80 2.69 gfx 2.40 snd 0.23 mix 0.25 send 0.02 | frame 16.63 busy 99%
+    51.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:84%, FPS:60 (S:0 R:61+0), BATT:0
+    52.1 NGPPROF ms/frame: other 2.54 tlcs 8.40 z80 2.74 gfx 2.44 snd 0.24 mix 0.25 send 0.02 | frame 16.63 busy 99%
+    52.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:85%, FPS:60 (S:0 R:60+0), BATT:0
+    53.1 NGPPROF ms/frame: other 2.03 tlcs 8.81 z80 2.81 gfx 2.47 snd 0.24 mix 0.24 send 0.02 | frame 16.63 busy 100%
+    53.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:88%, FPS:60 (S:0 R:60+0), BATT:0
+    54.1 NGPPROF ms/frame: other 2.27 tlcs 8.59 z80 2.77 gfx 2.48 snd 0.24 mix 0.25 send 0.02 | frame 16.62 busy 100%
+    54.4 [debug] STACK:5128, HEAP:133+2794 (72+2752), BUSY:87%, FPS:60 (S:0 R:60+0), BATT:0
