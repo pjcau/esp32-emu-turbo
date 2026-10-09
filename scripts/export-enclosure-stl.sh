@@ -41,7 +41,7 @@ mkdir -p "$REF_DIR"
 echo "==> Assembly references + non-printed viewer parts"
 for p in case_top case_bottom part_display part_dpad part_btn_a part_btn_b \
          part_btn_x part_btn_y part_start part_menu part_select \
-         part_shoulder_l part_shoulder_r part_pcb part_straps; do
+         part_lr_caps part_power_slider part_lr_lever_l part_lr_lever_r part_pcb part_straps; do
     scad "3d/parts/$p.stl" "$p"
 done
 
@@ -52,7 +52,8 @@ for entry in case_top_print:case_top case_bottom:case_bottom \
              part_dpad:dpad part_btn_a:btn_a part_btn_b:btn_b \
              part_btn_x:btn_x part_btn_y:btn_y part_start:start \
              part_menu:menu part_select:select \
-             part_shoulder_l:lever_l part_shoulder_r:lever_r \
+             part_lr_cap_print:lr_cap_x2 part_power_slider_print:power_slider \
+             part_lr_lever_l_print:lr_lever_l part_lr_lever_r_print:lr_lever_r \
              part_strap_print:battery_strap_x2; do
     sel="${entry%%:*}"; name="${entry##*:}"
     scad "print/$name.stl" "$sel"

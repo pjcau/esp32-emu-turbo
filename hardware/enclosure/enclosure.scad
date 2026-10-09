@@ -1,7 +1,31 @@
 // ============================================================
-// ESP32 Emu Turbo — Handheld Console Enclosure — V2.1
+// ESP32 Emu Turbo — Handheld Console Enclosure — V3.0
 // Parametric design — all dimensions in mm
 // Form factor: landscape (similar to GBA / Switch Lite)
+//
+// V3 (2026-10-08) — the user's review of the V2.1 shell:
+//   * face caps stand 2 mm proud of the front (were 0.6) so they can be
+//     found by touch, with a 1.5 mm rounded head edge — no sharp caps.
+//   * L/R caps on the +Y edge, at the shell split, 2.5 mm proud —
+//     Switch-Lite style shoulder buttons. They press the ON-BOARD
+//     SW11/SW12 (TS-1187A on the PCB bottom, actuator facing -Z; the
+//     user keeps them soldered, 2026-10-08) through a printed BELL-CRANK
+//     LEVER per side: the cap pushes the lever's lower arm toward -Y, the
+//     lever turns on two pins (axis along X) seated in U-slot blocks on
+//     the floor, and its flat upper arm lifts the switch actuator +Z.
+//     Arms 5.6 / 5.6: cap travel = switch travel, cap force = switch
+//     force (160 gf), like the face buttons.
+//   * speaker on the player's LEFT (D-pad side, -X): the battery pocket
+//     slides +2.6 in X to make room for the Ø32 seat.
+//   * shells are rounded like the Switch Lite: 11 mm corners, an 8 mm
+//     fillet all round the back, a 2 mm fillet round the front; the
+//     bodies are hulls of fillet slices (convex, so hull() is exact).
+//   * the -Y edge openings are RECESSED into the face: USB-C in a 2 mm
+//     pocket (the plug overmold seats inside the shell), and SW16's
+//     1.6 mm knob — 5.1 mm inside the face, out of any finger's reach —
+//     is driven by a printed SLIDER captive in the wall (flange inside,
+//     tab in the lip groove). The SD card keeps the V2.1 16 x 3.5 slit
+//     (the V3 finger window was reverted by the user, 2026-10-08).
 //
 // V2 (2026-09-16) — lessons from the first printed shell (April 2026):
 //   * real panel: 94.57 x 60.88 x 3.90 mm outline, 83.52 x 55.68 active
@@ -59,7 +83,10 @@ side_wall = 2.6;        // perimeter walls of both shells: 1.2 skin outside
                         // flagged the old 0.7 mm skin as thin material)
 min_wall = 1.2;         // print-service "thin material" threshold — every
                         // printed wall/ring/strap is >= this (gate R8)
-corner_r = 8;           // Corner radius
+corner_r = 11;          // plan-view corner radius (V3: 8 -> 11, Switch Lite look)
+back_r = 8;             // V3: fillet all round the back face (bottom shell, Z 0..8)
+front_r = 2;            // V3: fillet round the front face (top shell)
+fillet_steps = 12;      // slices per quarter circle in the shell hulls
 
 // === PCB (KiCad: 160 x 75 mm, 4-layer 1.6mm, 6mm corner radius) ===
 pcb_w = 160;
@@ -124,6 +151,15 @@ led6_y = -20.5;
 led_d = 2.0;            // LED1/2 light pipe hole
 led_diag_d = 1.2;       // LED3-6 (between the Menu pill and the column)
 
+// === Brand engravings (user 2026-10-08): "GAME BRO!" above the screen on
+// the top cover, "CPJ & CP 2026" low on the back face, both engraved
+// brand_depth into the 2 mm walls ===
+brand_front_y = 36.3;   // between the bezel top (32.1) and the front fillet (40.5)
+brand_front_size = 4.5;
+brand_back_y = -27;     // under the battery pocket's -Y border, between the counterbores
+brand_back_size = 3;    // user 2026-10-08: "la metà" of the first 6 mm try
+brand_depth = 0.6;
+
 // === Display — ILI9488 3.95" bare panel WITH resistive touch ===
 // Vendor spec (website/static/img/ili9488-datasheet-specs.png):
 //   outline 60.88(W) x 94.57(H) x 3.90(T) with touch (2.60 without)
@@ -181,7 +217,9 @@ z_sw_top = z_pcb_top + sw_h;      // 19.1
 // Z=12.9-16  ESP32 module (3.1)    Z=24.6  ceiling;  Z=26.6 front face
 
 // === Face button caps (computed from the Z stack) ===
-btn_face_h = 0.6;       // cap face proud of the front surface
+btn_face_h = 2.0;       // cap face proud of the front surface (V3: 0.6 -> 2.0,
+                        // "devono fuoriuscire circa 2 mm" — found by touch)
+btn_face_r = 1.5;       // rounded head edge (V3: "smussati, non spigolosi")
 btn_guide_h = 3.0;      // guide well under the ceiling
 btn_flange_extra = 1.2; // flange radial growth beyond the body
 btn_flange_cone_h = 1.5;// conical part (in the countersink)
@@ -192,36 +230,6 @@ btn_cap_h = btn_face_h + wall + btn_guide_h + btn_flange_h + btn_stem_h;  // 7.9
 btn_well_t = 1.5;       // guide well ring thickness
 dpad_pivot_d = 3.0;     // D-pad rocks on a centre pivot resting on the PCB
 dpad_pivot_h = top_int - btn_guide_h - btn_flange_h;                      // 3.2
-
-// === Shoulder buttons (L/R on the back face) — board SHOULDER_*_ENC ===
-shoulder_inset_x = 65;  // switch centre |X|
-shoulder_y = 32;        // switch centre Y
-lever_len = 14;         // visible face length (X) — the hinge must stay
-                        // outside the 95 mm battery pocket (|x| >= 49.5)
-lever_w = 8.5;          // visible face width (Y)
-lever_tip_over = 0.8;   // face tip beyond the switch centre: the floor web
-                        // between the face cutout and the o5 counterbore
-                        // must stay >= min_wall (1.3 here); the nub (to
-                        // x 66.7) rides on the flange, which runs 1 mm past
-                        // the face tip
-lever_face_h = 1.0;     // face proud of the back surface
-lever_flange_t = 1.2;   // retention flange inside the floor (>= 1.2: slicer min wall)
-lever_flange_extra = 1.2;
-lever_nub_d = 3.4;
-lever_rod_d = 2.0;      // hinge rod printed with the shell
-lever_rod_z = 4.0;      // rod axis above the back face (floor top = 2)
-lever_tongue_w = 5.0;   // hinge tongue width (Y): 1.35 mm walls beside the o2.3 bore
-lever_tongue_top = lever_rod_z + 2.5;   // 1.35 mm of hook above the bore
-lever_tongue_front = 2.4;               // tongue end beyond the rod axis: 1.25 mm in front of the bore
-lever_min_wall = min_wall;
-lever_block_t = 2.0;    // hinge block thickness (Y)
-lever_block_gap = 4.5;  // block inner face from the lever centre line
-lever_tip_x = shoulder_inset_x + lever_tip_over;      // 65.8
-lever_x0 = lever_tip_x - lever_len;                   // 51.8
-lever_cx = lever_tip_x - lever_len / 2;               // 58.8
-lever_hinge_x = lever_x0 - 1.4;                       // 50.4
-lever_nub_top = pcb_z - sw_h - sw_pretravel;          // 14.3
-lever_cut_clear = 0.8;  // diametral clearance face vs floor cutout
 
 // === Screws — M2.5 through the PCB's 4 corner holes (drill 2.5, NPTH) ===
 screw_d_outer = 6;      // bottom column OD, 1.6 mm wall around the bore
@@ -274,30 +282,159 @@ rib_side_y = 0;         // one rib per short side at y = 0
 
 // === USB-C port (bottom edge, centre) — opening sized for the PLUG
 // overmold: the receptacle mouth is at the PCB edge, 5 mm inside ===
+// V3: the opening sits in a RECESS pocket in the face (user: ">= 2 mm")
+// so the overmold seats inside the shell; a pad on the inner wall face
+// keeps >= min_wall of plastic under the pocket floor (J1 body front is
+// at y -37.3, the pad ends at -38.9).
 usbc_x = 0;
 usbc_z = bot_d - 1.6;
 usbc_cut_w = 13;
 usbc_cut_h = 6.5;
+usbc_recess_d = 2.0;    // pocket depth into the face
+usbc_recess_w = 17;
+usbc_recess_h = 9;
+usbc_pad_t = usbc_recess_d + min_wall - side_wall + 1.0;   // 1.6 inward of the wall:
+                        // in the lip-groove zone the pad stands alone (the
+                        // skin outside the groove is cut by the recess), so
+                        // it must be >= min_wall by itself
 
-// === SD card slot (bottom edge, right) ===
+// === SD card slot (bottom edge, right) — TF-01A at board SD_ENC ===
+// The V2.1 card SLIT, cut through the bottom-shell wall only. V3 tried a
+// 20 mm finger window up into the top shell; the user reverted it to
+// this slit on 2026-10-08 (gate R13 pins the revert). Housing front =
+// SD_ENC y - 7.5 (14.5 x 15 body); latched card protrudes sd_card_out.
 sd_x = 60;
 sd_z = bot_d - 1.8;
 sd_cut_w = 16;
 sd_cut_h = 3.5;
 sd_shelf_top = 13.3;
+sd_card_out = 1.3;      // latched card beyond the housing front (typical push-push)
+sd_housing_front = 37.0;// |y| of the TF-01A housing front = SD_ENC 29.5 + 15/2 (sync gate)
+sd_card_reach = body_h/2 - (sd_housing_front + sd_card_out);   // 4.2: face -> card end
 
-// === Power switch (bottom edge, left of USB-C) — MSK12C02 ===
+// === Power switch (bottom edge, left of USB-C) — MSK12C02 at board
+// PWR_SWITCH_ENC, bottom side. Datasheet SW16_Slide-Switch_C431540.pdf:
+// body 8 x 2.8 x 1.4 (3.7 with feet), knob 1.6 wide, 1.5 long, travel
+// 1.6. Knob tip = -34.5 - 1.4 - 1.5 = -37.4: 5.1 mm inside the face,
+// 1 mm tall — unreachable by a finger (user: "da calcolare di modo che si
+// possa realmente switchare"). V3: a printed SLIDER captive in the wall
+// (flange inside, tab in the lip groove) carries the knob out to a nub
+// on the face; its slot is open to the split and bridged by the lip.
 pwr_sw_x = -40;
 pwr_sw_z = bot_d - 2.0;
-pwr_cut_w = 8;
+pwr_cut_w = 8;          // (kept for the sync gate)
 pwr_cut_h = 3.2;
+pwr_knob_w = 1.6;       // MSK12C02 knob width (X)
+pwr_knob_tip_y = -37.4; // knob tip (assembly Y)
+pwr_knob_root_y = -35.9;// knob root = body face
+pwr_knob_z = 15.3;      // knob centre height (bottom-side part, 1 mm knob)
+pwr_travel = 1.6;       // datasheet full travel
+pwr_nub_w = 4;          // slider nub on the face (X)
+pwr_nub_h = 3.0;        // nub height (Z)
+pwr_nub_proud = 1.0;    // nub above the face
+pwr_slot_w = pwr_nub_w + pwr_travel + 0.4;   // 6.0
+pwr_slot_z0 = 12.4;     // slot bottom; the slot is open to the split (bot_d)
+pwr_trough_w = 10;      // shallow finger trough round the slot
+pwr_trough_d = 0.6;
+pwr_trough_z0 = 12.0;
+pwr_fl_w = 10;          // slider flange (X): covers the slot at both ends of travel
+pwr_fl_z0 = 11.2;       // flange bottom (>= 1.2 below the slot)
+pwr_fl_t = 1.2;         // flange thickness (Y), against the inner wall face
+pwr_fork_t = 1.2;       // fork arm thickness (X)
+pwr_fork_z0 = 14.3;     // fork arms Z 14.3 .. 15.8 (PCB bottom at 16)
+pwr_fork_z1 = 15.8;
+pwr_tab_w = 4;          // tab up into the lip groove (X)
+pwr_tab_h = 1.4;        // tab height above the split (groove is 2 deep)
+pwr_notch_w = 6;        // tongue notch for the tab (travel + 2 x 1.2 clearance)
+// Horizontal GUIDE for the slider (user 2026-10-08): a block on the inner
+// wall face with a channel the flange runs in — the lip in front holds
+// the flange against the wall, the channel ends are the stops. Open at
+// the top: the slider drops in from above (nub down the slot, tab into
+// the tongue notch), then the PCB brings the SW16 knob down between the
+// fork arms. Travel to switch ON<->OFF = the datasheet's 1.6 mm, the
+// switch's own detents are the real stops; the channel gives +0.3 each way.
+pwr_guide_w = 16;       // guide block (X)
+pwr_guide_z0 = 10.0;    // guide block bottom
+pwr_guide_z1 = 13.8;    // guide block top: under the SW16 body (Z 14) and the fork arms
+pwr_guide_d = 2.9;      // block depth inward from the wall face (to y -37.0, under the PCB edge)
+pwr_chan_d = pwr_fl_t + 0.1;                           // 1.3: channel depth, flange + play
+pwr_chan_half = pwr_fl_w/2 + pwr_travel/2 + 0.3;       // 6.1: channel half-length = stops
+pwr_guide_lip = pwr_guide_d - pwr_chan_d;              // 1.6: lip in front of the flange
+pwr_guide_stop = pwr_guide_w/2 - pwr_chan_half;        // 1.9: end stop thickness
+
+// === L/R shoulder buttons — cap on the +Y edge + bell-crank lever ===
+// SW11/SW12 stay on the board (TS-1187A code A, actuator o2 facing -Z,
+// tip sw_h below the PCB, cover sw_cover_h below it). The cap slides in
+// -Y through a window at the split; behind its flange a printed lever per
+// side turns on pins along X:
+//   lower arm  — a bump on its +Y face touches the flange back at Z
+//                lr_bump_z (5.6 below the pivot): the cap pushes it -Y
+//   upper arm  — flat, its top lr_arm_top = actuator tip - pretravel,
+//                runs -Y under the actuator (5.6 from the pivot) and
+//                lifts it +Z when the lever turns
+//   pins       — o2 at the beam ends, dropped into U-slot blocks fused to
+//                the inner wall; the lever top is one plane (Z 14.3), so
+//                it prints upside down with no support
+// The PCB above and the actuator itself keep the lever in its slots.
+lr_x = 57.5;            // cap centre |X| (pads at 65, column at 70)
+lr_axis_z = 12.0;       // cap centre Z: cap Z 8 .. 16, top edge AT the split
+lr_sw_x = 65;           // SW11/SW12 centre |X| (board SHOULDER_*_ENC)
+lr_sw_y = 32;           // SW11/SW12 centre Y
+sw_cover_h = 1.2;       // TS-1187A cover face below the PCB (datasheet: 1.2)
+lr_cap_w = 14;          // cap face (X)
+lr_cap_h = 8;           // cap face (Z) — Z 8 .. 16, top edge AT the split
+lr_cap_proud = 2.5;     // beyond the wall face (user: "2-3 mm")
+lr_cap_r = 1.5;         // rounded outer edges
+lr_cap_clear = 0.3;     // diametral, cap body vs window
+lr_fl_t = 1.2;          // inner flange thickness (Y)
+lr_fl_extra = 1.2;      // flange beyond the body on 3 sides (not the top)
+lr_fl_gap = 0.05;       // flange face to the inner wall face (no coplanar contact)
+lr_fl_back_y = body_h/2 - side_wall - lr_fl_gap - lr_fl_t;     // 38.65: flange back face
+lr_arm_top = pcb_z - sw_h - sw_pretravel;      // 14.3: lever top plane (rest)
+lr_piv_y = 37.6;        // pivot axis Y (under the PCB edge, behind the flange)
+lr_piv_z = lr_arm_top - 1.0;                   // 13.3: pin top on the top plane
+lr_pin_d = 2.0;
+lr_slot_w = 2.3;        // U-slot width (pin + 0.3)
+lr_beam_y0 = 35.5;      // beam along X joining the pins and both arms
+lr_beam_y1 = 37.9;      // 0.3 short of the flange at full travel
+lr_beam_z0 = 11.6;
+lr_beam_x0 = 49.3;      // beam |X| span between the two blocks (0.4 end float)
+lr_beam_x1 = 66.9;
+lr_arm_w = 3.0;         // upper arm width (X), centred on the switch
+lr_arm_y_end = lr_sw_y; // upper arm end edge ON the actuator centre line: a
+                        // tilted flat arm touches first at its end edge, so the
+                        // push is centred and the arm is exactly lr_r_out long;
+                        // nothing of the arm lies beyond the actuator, so at full
+                        // travel no point of it rises above the actuator tip
+                        // (still 0.05 proud of the cover: 1.5 - 1.2 - 0.25)
+lr_arm_z0 = 12.6;
+lr_in_w = 4.0;          // lower arm width (X), centred on the cap
+lr_in_y0 = 36.4;
+lr_in_y1 = 38.0;
+lr_in_z0 = 7.0;
+lr_bump_r = 0.6;        // half-round bump along X on the lower arm's +Y face
+lr_bump_z = lr_piv_z - (lr_piv_y - lr_sw_y);   // 7.7: equal arms (5.6 / 5.6)
+lr_bump_gap = lr_fl_back_y - (lr_in_y1 + lr_bump_r);   // 0.05 to the flange at rest
+lr_blk_t = 2.0;         // pivot block thickness (X)
+lr_blk_gap = 0.4;       // beam end to block face (end float)
+lr_blk_wall = 1.4;      // slot wall on the -Y side (the +Y side is fused to the shell wall)
+lr_blk_top = pcb_z - 0.6;                      // 15.4: 0.6 under the PCB (off the 15.5 audit slice)
+lr_label_y = 30;        // "L"/"R" engraved on the flat back face beside the lever
+// derived: lever ratio and the swing at full switch travel
+lr_r_out = lr_piv_y - lr_sw_y;                 // 5.6: pivot -> actuator
+lr_r_in = lr_piv_z - lr_bump_z;                // 5.6: pivot -> cap contact
+lr_theta = (sw_pretravel + sw_travel) / lr_r_out;          // rad at full travel
+lr_cap_travel = lr_theta * lr_r_in;                        // 0.45
+lr_press = 0;           // RENDER ONLY: 0 = rest, 1 = switch fully pressed
 
 // === Speaker (28 mm driver, off-board, seats on the floor) ===
-// User 2026-09-16: grille top-LEFT when looking at the back = ABXY side,
-// toward the top edge in enclosure coords. Seat r15 clears the pocket
-// border (x 47.5), the R lever hinge (y >= 26.5), the side rib (x 78.5)
-// and the column (23.6 mm).
-spk_x = 63.5;
+// User 2026-10-07: "la cassa a sinistra" = the player's LEFT = the D-pad
+// side (-X), where board.py's SPEAKER_ENC silk marker also sits. Seat
+// r16 at x -62.5 clears the pocket border (x -46.5 after the +2.6 pocket
+// shift), the column (-70, 30.5) and the back fillet: the driver edge
+// (x -76.5) stays inside the inner floor outline (inset back_r = 8 ->
+// x -77).
+spk_x = -62.5;
 spk_y = 8;
 spk_diam = 22;          // grille pattern over the radiating cone
 spk_driver_d = 28;
@@ -311,14 +448,15 @@ spk_seat_od = 32;       // 1.7 mm ring wall around the o28.6 seat
 bat_w = 90;             // length (X) — measured
 bat_h = 50;             // width (Y) — measured
 bat_d = 10;             // thickness (Z) — measured
-bat_offset_x = -1.5;    // pocket x -49 .. 46: the speaker seat starts at 48,
-                        // the L/R lever hinges at |x| >= 49.5
+bat_offset_x = 2.6;     // pocket x -45 .. 50 (border to -46.5 / 51.5): the
+                        // speaker seat starts at -46.5, the R switch cradle
+                        // at x >= 52 (V3: was -1.5 with the speaker on +X)
 bat_offset_y = 5;       // pocket y -20 .. 30: clear of J3 (y <= -20.7)
 bat_border_w = 1.5;
 bat_border_h = 8;       // < 8.5 so J3 (Z 10.5..16) never meets the border
 bat_lead_notch_w = 8;
 bat_lead_notch_y = -14;
-bat_corner_notch = 2.5; // +Y corners of the border cut back (lever hinges)
+bat_corner_notch = 2.5; // +Y corners of the border cut back (lead routing)
 // Battery hold-down (user 2026-09-16: "vincolare la batteria per non
 // andare contro il bottom del PCB"). The cell top (Z 12) is 0.9 mm from
 // the ESP32 underside (12.9), so only a 1 mm strap fits: two printed
@@ -355,16 +493,80 @@ lip_h = 2.0;
 lip_t = 1.2;            // tongue thickness (>= min_wall)
 lip_clearance = 0.2;    // wall - lip_t - clearance = 1.2 skin outside the groove
 
-echo(str("V2.1 stack: body_d=", body_d, " top_int=", top_int,
+echo(str("V3.0 stack: body_d=", body_d, " top_int=", top_int,
          " btn_stem_h=", btn_stem_h, " btn_cap_h=", btn_cap_h,
          " glass_cx=", disp_glass_cx, " disp_x=", disp_x,
-         " lever_nub_h=", lever_nub_top - wall - lever_flange_t));
+         " lr_axis_z=", lr_axis_z, " lr_ratio=", lr_r_out / lr_r_in,
+         " lr_cap_travel=", lr_cap_travel,
+         " sd_card_reach=", sd_card_reach));
 
 // ============================================================
 // Primitives / geometry helpers
 // ============================================================
 module rounded_rect(w, h, r) {
     offset(r=r) offset(r=-r) square([w, h], center=true);
+}
+
+// V3 shell bodies: a rounded-rect prism whose z=0 edge is filleted with
+// radius rf — the hull of fillet_steps thin slices (every slice is a
+// convex rounded rect, so the hull IS the filleted solid). Plan size w x
+// h, corner radius rc, total height ht. rf = 0 -> plain prism.
+module filleted_prism(w, h, rc, ht, rf, steps=fillet_steps) {
+    hull() {
+        if (rf > 0)
+            for (i = [0 : steps]) {
+                t = 90 * i / steps;
+                z = rf - rf * cos(t);
+                inset = rf - rf * sin(t);
+                translate([0, 0, z])
+                linear_extrude(height=0.01)
+                rounded_rect(w - 2 * inset, h - 2 * inset, max(0.5, rc - inset));
+            }
+        else
+            linear_extrude(height=0.01) rounded_rect(w, h, rc);
+        translate([0, 0, ht - 0.01]) linear_extrude(height=0.01) rounded_rect(w, h, rc);
+    }
+}
+
+// The cavity of a filleted shell: inset side_wall at the sides, floor
+// thickness `floor`, inner fillet radius rf - side_wall about the same
+// corner centre (wall >= floor everywhere, = side_wall on the flanks).
+module filleted_cavity(w, h, rc, floor, ht, rf) {
+    ri = rf - side_wall;
+    if (ri > 0.2)
+        hull() {
+            for (i = [0 : fillet_steps]) {
+                t = 90 * i / fillet_steps;
+                z = floor + ri - ri * cos(t);
+                inset = side_wall + ri - ri * sin(t);
+                translate([0, 0, z])
+                linear_extrude(height=0.01)
+                rounded_rect(w - 2 * inset, h - 2 * inset, max(0.5, rc - inset));
+            }
+            translate([0, 0, ht]) linear_extrude(height=0.01)
+            rounded_rect(w - 2 * side_wall, h - 2 * side_wall, max(0.5, rc - side_wall));
+        }
+    else
+        translate([0, 0, floor])
+        linear_extrude(height=ht - floor + 0.01)
+        rounded_rect(w - 2 * side_wall, h - 2 * side_wall, max(0.5, rc - side_wall));
+}
+
+// 2D rounded rectangle for the edge caps / slider nub
+module rrect2d(w, h, r) { rounded_rect(w, h, min(r, w/2 - 0.01, h/2 - 0.01)); }
+
+// Extrude a 2D shape to height ht and round its TOP edge with radius r
+// (stacked inward offsets following a quarter circle): the "smussato"
+// head of every V3 cap. children(0) = the outline.
+module rounded_top_extrude(ht, r, steps=8) {
+    linear_extrude(height=ht - r + 0.01) children(0);
+    for (i = [0 : steps - 1]) {
+        z0 = ht - r + r * sin(90 * i / steps);
+        z1 = ht - r + r * sin(90 * (i + 1) / steps);
+        translate([0, 0, z0])
+        linear_extrude(height=z1 - z0 + 0.01)
+        offset(r=-(r - r * cos(90 * (i + 1) / steps))) children(0);
+    }
 }
 
 // Panel outline pocket (glass + clearance), 2D. Glass is centred at
@@ -385,11 +587,55 @@ module panel_pocket_shape() {
     square([panel_x1() - panel_x0(), panel_y1() - panel_y0()]);
 }
 
-// USB-C plug opening, ASSEMBLY coords (crosses the shell split)
+// USB-C plug opening, ASSEMBLY coords (crosses the shell split); through
+// the wall AND the V3 recess pad behind it
 module usbc_opening() {
     translate([usbc_x, -body_h/2 - 0.1, usbc_z])
     rotate([-90, 0, 0])
-    usbc_cutout(usbc_cut_w, usbc_cut_h, side_wall + 0.2);
+    usbc_cutout(usbc_cut_w, usbc_cut_h, side_wall + usbc_pad_t + 0.2);
+}
+
+// ---- V3 -Y edge features, ASSEMBLY coords (they cross the shell split) ----
+// extrude a 2D profile drawn in the XZ plane (local x = X, local y = Z)
+// from y0 to y1
+module xz_extrude(y0, y1) {
+    translate([0, y1, 0]) rotate([90, 0, 0]) linear_extrude(height=y1 - y0) children();
+}
+// USB-C: a pad thickening the wall inside (added), the recess pocket in
+// the face and the plug opening (subtracted)
+module usbc_pad() {
+    translate([usbc_x - (usbc_recess_w + 2*min_wall)/2, -body_h/2 + side_wall - 0.01,
+               usbc_z - (usbc_recess_h + 2*min_wall)/2])
+    cube([usbc_recess_w + 2*min_wall, usbc_pad_t + 0.01, usbc_recess_h + 2*min_wall]);
+}
+// (the lip tongue is notched over the recess width: the recess removes
+// the skin outside the groove there, so a tongue would stand alone)
+module usbc_recess() {
+    translate([usbc_x, 0, usbc_z]) xz_extrude(-body_h/2 - 0.1, -body_h/2 + usbc_recess_d)
+    rrect2d(usbc_recess_w, usbc_recess_h, 2);
+    translate([usbc_x - usbc_recess_w/2 - 0.2, -body_h/2 - 0.1, bot_d - 0.01])
+    cube([usbc_recess_w + 0.4, side_wall + 0.2, lip_h + 0.1]);
+}
+// Power slider: trough in the face, slot through the wall (open to the
+// split), notch in the lip tongue for the slider's tab
+module pwr_cuts() {
+    translate([pwr_sw_x - pwr_trough_w/2, -body_h/2 - 0.1, pwr_trough_z0])
+    cube([pwr_trough_w, pwr_trough_d + 0.1, bot_d - pwr_trough_z0 + 0.1]);
+    translate([pwr_sw_x - pwr_slot_w/2, -body_h/2 - 0.1, pwr_slot_z0])
+    cube([pwr_slot_w, side_wall + 0.2, bot_d - pwr_slot_z0 + 0.1]);
+    translate([pwr_sw_x - pwr_notch_w/2, -body_h/2 - 0.1, bot_d - 0.01])
+    cube([pwr_notch_w, side_wall + 0.2, lip_h + 0.1]);
+}
+// L/R cap windows in the +Y wall: rounded below, open to the split above
+// (the lip tongue and the top shell bridge them)
+module lr_windows() {
+    for (sx = [-1, 1])
+        translate([sx * lr_x, 0, lr_axis_z])
+        xz_extrude(body_h/2 - side_wall - 0.1, body_h/2 + 0.1) {
+            rrect2d(lr_cap_w + lr_cap_clear, lr_cap_h + lr_cap_clear, 2 + lr_cap_clear/2);
+            translate([-(lr_cap_w + lr_cap_clear)/2, 0])
+            square([lr_cap_w + lr_cap_clear, bot_d - lr_axis_z + 0.01]);
+        }
 }
 
 // Engraved label at (x, y). Readability depends only on the glyph's XY
@@ -403,6 +649,15 @@ module face_label(x, y, txt, size, mirrored=false) {
     translate([x, y, -0.1])
     mirror([mirrored ? 1 : 0, 0, 0])
     button_label(txt, size, 0.4);
+}
+
+// Brand text engraved brand_depth deep at (x, y); the back one is mirrored
+// about its own centre (read from -Z), like the bottom labels
+module brand_text(x, y, txt, size, mirrored=false) {
+    translate([x, y, -0.1])
+    mirror([mirrored ? 1 : 0, 0, 0])
+    linear_extrude(height=brand_depth + 0.1)
+    text(txt, size=size, halign="center", valign="center", font="Liberation Sans:style=Bold");
 }
 
 // Stepped 45° gusset (wedge) from a column: full height at radius r0,
@@ -421,13 +676,13 @@ module top_shell() {
     difference() {
         union() {
             difference() {
-                linear_extrude(height=top_d)
-                rounded_rect(body_w, body_h, corner_r);
-                translate([0, 0, wall])
-                linear_extrude(height=top_d)
-                rounded_rect(body_w - side_wall*2, body_h - side_wall*2, corner_r - side_wall);
+                filleted_prism(body_w, body_h, corner_r, top_d, front_r);
+                filleted_cavity(body_w, body_h, corner_r, wall, top_d + 1, front_r);
             }
             top_internals();
+            // USB-C recess pad (assembly coords -> local)
+            translate([0, 0, body_d]) mirror([0, 0, 1])
+            intersection() { usbc_pad(); translate([-body_w/2, -body_h/2, bot_d]) cube([body_w, body_h, top_d]); }
         }
 
         // Display viewport = active area + clearance
@@ -478,8 +733,8 @@ module top_shell() {
                           max(1, corner_r - side_wall));
         }
 
-        // USB-C plug opening crosses the split: notch the rim end
-        translate([0, 0, body_d]) mirror([0, 0, 1]) usbc_opening();
+        // -Y edge features crossing the split: USB-C opening + recess
+        translate([0, 0, body_d]) mirror([0, 0, 1]) { usbc_opening(); usbc_recess(); }
 
         top_labels();
     }
@@ -491,17 +746,24 @@ module top_shell() {
 }
 
 // Engraved labels, each beside ITS OWN button (board net mapping:
-// SW5=A top, SW6=B right, SW7=X bottom, SW8=Y left)
+// SW5=A top, SW6=B right, SW7=X bottom, SW8=Y left). The D-pad carries an
+// arrow beyond each of its four arms. Y is engraved ABOVE its cap, not on
+// its left: x = 46.5 there is under the raised display bezel (it ends at
+// 47.8), which swallowed the glyph (user 2026-10-08; R9 now rejects any
+// label under the bezel).
 module top_labels() {
     face_label(dpad_x, dpad_y + dpad_arm_len + 3, "^", 2.5);
     face_label(dpad_x, dpad_y - dpad_arm_len - 3, "v", 2.5);
+    face_label(dpad_x - dpad_arm_len - 3, dpad_y, "<", 2.5);
+    face_label(dpad_x + dpad_arm_len + 3, dpad_y, ">", 2.5);
     face_label(abxy_x + abxy_offsets[0][0], abxy_y + abxy_offsets[0][1] + abxy_diam/2 + 2, "A", 2.5);
     face_label(abxy_x + abxy_offsets[1][0] + abxy_diam/2 + 2, abxy_y + abxy_offsets[1][1], "B", 2.5);
     face_label(abxy_x + abxy_offsets[2][0], abxy_y + abxy_offsets[2][1] - abxy_diam/2 - 2, "X", 2.5);
-    face_label(abxy_x + abxy_offsets[3][0] - abxy_diam/2 - 2, abxy_y + abxy_offsets[3][1], "Y", 2.5);
+    face_label(abxy_x + abxy_offsets[3][0], abxy_y + abxy_offsets[3][1] + abxy_diam/2 + 2, "Y", 2.5);
     face_label(ss_x - ss_spacing/2, ss_y - ss_h/2 - 2.5, "START", 2);
     face_label(ss_x + ss_spacing/2, ss_y - ss_h/2 - 2.5, "SEL", 2);
     face_label(menu_x, menu_y - menu_h/2 - 2.5, "MENU", 2);
+    brand_text(disp_x, brand_front_y, "GAME BRO!", brand_front_size);
 }
 
 // Everything that hangs from the ceiling (local z = wall .. wall+top_int)
@@ -581,13 +843,11 @@ module bottom_shell() {
     difference() {
         union() {
             difference() {
-                linear_extrude(height=bot_d)
-                rounded_rect(body_w, body_h, corner_r);
-                translate([0, 0, wall])
-                linear_extrude(height=bot_d)
-                rounded_rect(body_w - side_wall*2, body_h - side_wall*2, corner_r - side_wall);
+                filleted_prism(body_w, body_h, corner_r, bot_d, back_r);
+                filleted_cavity(body_w, body_h, corner_r, wall, bot_d + 1, back_r);
             }
             bottom_internals();
+            intersection() { usbc_pad(); translate([-body_w/2, -body_h/2, 0]) cube([body_w, body_h, bot_d]); }
 
             // Alignment lip (tongue into the top shell)
             translate([0, 0, bot_d])
@@ -600,15 +860,15 @@ module bottom_shell() {
             }
         }
 
+        // -Y edge: USB-C opening in its recess, SD card slit, power slider cuts
         usbc_opening();
-
+        usbc_recess();
         translate([sd_x, -body_h/2 - 0.1, sd_z])
         rotate([-90, 0, 0])
         sd_slot_cutout(sd_cut_w, sd_cut_h, side_wall + 0.2);
-
-        translate([pwr_sw_x, -body_h/2 - 0.1, pwr_sw_z])
-        rotate([-90, 0, 0])
-        power_switch_cutout(pwr_cut_w, pwr_cut_h, side_wall + 0.2);
+        pwr_cuts();
+        // +Y edge: L/R cap windows
+        lr_windows();
 
         // Speaker grille (back face)
         translate([spk_x, spk_y, 0])
@@ -621,19 +881,16 @@ module bottom_shell() {
                 cylinder(h=bot_d + 0.2, d=screw_d_inner, $fn=24);
             }
 
-        // Shoulder lever face cutouts
-        for (sx = [-1, 1])
-            translate([sx * lever_cx, shoulder_y, 0])
-            pill_cutout(lever_len + lever_cut_clear, lever_w + lever_cut_clear, wall);
-
         bottom_labels();
     }
 }
 
-// L is the lever at -X (SW11 at (-65, 32)), R at +X — each label beside its lever
+// L is the cap at -X (wired to SW11), R at +X — each label on the flat
+// back face under its own cradle, read from the back (mirrored glyph)
 module bottom_labels() {
-    face_label(-lever_cx, shoulder_y + lever_w/2 + 3, "L", 2.5, true);
-    face_label(lever_cx, shoulder_y + lever_w/2 + 3, "R", 2.5, true);
+    face_label(-lr_x, lr_label_y, "L", 2.5, true);
+    face_label(lr_x, lr_label_y, "R", 2.5, true);
+    brand_text(0, brand_back_y, "CPJ & CP 2026", brand_back_size, true);
 }
 
 // Everything standing on the floor (z = wall ..)
@@ -649,7 +906,7 @@ module bottom_internals() {
                 cube([screw_d_outer, screw_d_outer, screw_boss_h + 1]);
             }
             // gussets point outward in X (±45°) and along ±Y: nothing
-            // toward the board centre, where the L/R lever flanges lie
+            // toward the board centre (battery pocket, L/R cradles)
             for (a = (pos[0] > 0 ? [45, 315, 90, 270] : [135, 225, 90, 270]))
                 rotate([0, 0, a])
                 gusset(screw_d_outer/2, boss_gusset_r, boss_gusset_h, boss_gusset_t);
@@ -673,7 +930,7 @@ module bottom_internals() {
 
     // Battery pocket border: locates the cell (held down by a foam pad
     // under the PCB, never pinched by clips). Lead notch on +X; +Y
-    // corners cut away where the L/R lever hinges stand.
+    // corners cut away for lead routing.
     translate([bat_offset_x, bat_offset_y, wall])
     difference() {
         linear_extrude(height=bat_border_h)
@@ -716,17 +973,69 @@ module bottom_internals() {
     translate([sd_x - (sd_cut_w + 2)/2, -body_h/2 + side_wall - 0.01, wall])
     cube([sd_cut_w + 2, body_h/2 - side_wall - pcb_h/2 - rib_clear, sd_shelf_top - wall]);
 
-    // Shoulder lever hinges: two blocks + a printed rod (bridged)
-    for (sx = [-1, 1]) {
-        for (sy = [-1, 1])
-            translate([sx * lever_hinge_x - 1.5,
-                       shoulder_y + sy * lever_block_gap - (sy > 0 ? 0 : lever_block_t),
-                       wall])
-            cube([3, lever_block_t, lever_rod_z - wall + 2]);
-        translate([sx * lever_hinge_x, shoulder_y - lever_block_gap - lever_block_t, lever_rod_z])
-        rotate([-90, 0, 0])
-        cylinder(h=2 * (lever_block_gap + lever_block_t), d=lever_rod_d, $fn=20);
+    // L/R switch cradles
+    for (sx = [-1, 1]) lr_bearings(sx);
+
+    // Power slider guide: block on the -Y inner wall face, channel cut
+    // for the flange (open at the top)
+    translate([pwr_sw_x, 0, 0])
+    difference() {
+        translate([-pwr_guide_w/2, -body_h/2 + side_wall - 0.01, pwr_guide_z0])
+        cube([pwr_guide_w, pwr_guide_d + 0.01, pwr_guide_z1 - pwr_guide_z0]);
+        translate([-pwr_chan_half, -body_h/2 + side_wall - 0.02, pwr_fl_z0 - 0.1])
+        cube([2 * pwr_chan_half, pwr_chan_d + 0.02, pwr_guide_z1 - pwr_fl_z0 + 0.3]);
     }
+}
+
+// L/R lever pivot blocks (bottom shell): one each side of the lever's
+// beam, from the floor to 0.5 under the PCB, fused to the +Y inner wall.
+// A U-slot open upward takes the lever pin; its -Y wall is lr_blk_wall.
+// The lever drops in from above before the PCB goes on.
+module lr_bearings(sx) {
+    y_in = body_h/2 - side_wall;
+    for (bx = [lr_beam_x0 - lr_blk_gap - lr_blk_t, lr_beam_x1 + lr_blk_gap])
+        translate([sx > 0 ? bx : -bx - lr_blk_t, 0, 0])
+        difference() {
+            translate([0, lr_piv_y - lr_slot_w/2 - lr_blk_wall, wall - 0.01])
+            cube([lr_blk_t, y_in + 0.5 - (lr_piv_y - lr_slot_w/2 - lr_blk_wall),
+                  lr_blk_top - wall + 0.01]);
+            translate([-0.1, lr_piv_y, lr_piv_z]) rotate([0, 90, 0])
+            cylinder(h=lr_blk_t + 0.2, d=lr_slot_w, $fn=24);
+            translate([-0.1, lr_piv_y - lr_slot_w/2, lr_piv_z])
+            cube([lr_blk_t + 0.2, lr_slot_w, lr_blk_top]);
+        }
+}
+
+// L/R bell-crank lever (printed), assembly coords; sx = +1 R, -1 L.
+// rot = turn about the pin axis in degrees (render only: + lifts the
+// upper arm toward the switch).
+module lr_lever(sx, rot=0) {
+    pz = lr_piv_z; py = lr_piv_y;
+    module body() {
+        // beam
+        translate([lr_beam_x0, lr_beam_y0, lr_beam_z0])
+        cube([lr_beam_x1 - lr_beam_x0, lr_beam_y1 - lr_beam_y0, lr_arm_top - lr_beam_z0]);
+        // pins, flush with the top plane
+        for (xs = [[lr_beam_x0 - lr_blk_gap - lr_blk_t + 0.3, lr_beam_x0 + 0.01],
+                   [lr_beam_x1 - 0.01, lr_beam_x1 + lr_blk_gap + lr_blk_t - 0.3]])
+            translate([xs[0], py, pz]) rotate([0, 90, 0])
+            cylinder(h=xs[1] - xs[0], d=lr_pin_d, $fn=24);
+        // upper arm, flat top under the actuator
+        translate([lr_sw_x - lr_arm_w/2, lr_arm_y_end, lr_arm_z0])
+        cube([lr_arm_w, lr_beam_y0 - lr_arm_y_end + 0.01, lr_arm_top - lr_arm_z0]);
+        // lower arm + bump toward the cap flange
+        translate([lr_x - lr_in_w/2, lr_in_y0, lr_in_z0])
+        cube([lr_in_w, lr_in_y1 - lr_in_y0, lr_beam_z0 - lr_in_z0 + 0.01]);
+        translate([lr_x - lr_in_w/2, lr_in_y1, lr_bump_z]) rotate([0, 90, 0])
+        cylinder(h=lr_in_w, r=lr_bump_r, $fn=16);
+    }
+    mirror([sx > 0 ? 0 : 1, 0, 0])
+    translate([0, py, pz]) rotate([-rot, 0, 0]) translate([0, -py, -pz])
+    body();
+}
+module lr_levers(press=lr_press) {
+    a = press * lr_theta * 180 / PI;
+    lr_lever(-1, a); lr_lever(1, a);
 }
 
 // ============================================================
@@ -791,7 +1100,7 @@ z_flange = z_ceiling - btn_guide_h;   // 21.6: well end face / flange plane
 // extreme on that side, in the cap's local frame.
 module _face_cap_body(glass_side=0, clip_x=0) {   // children(0) = nominal outline
     translate([0, 0, z_flange])
-    linear_extrude(height=btn_guide_h + wall + btn_face_h)
+    rounded_top_extrude(btn_guide_h + wall + btn_face_h, btn_face_r)
     offset(delta=-btn_clear/2) children(0);
     intersection() {
         translate([0, 0, z_flange])
@@ -841,43 +1150,49 @@ module cap_start()  { _pill_cap(ss_x - ss_spacing/2, ss_y, ss_w, ss_h); }
 module cap_select() { _pill_cap(ss_x + ss_spacing/2, ss_y, ss_w, ss_h, 1); }  // glass on +X
 module cap_menu()   { _pill_cap(menu_x, menu_y, menu_w, menu_h); }
 
-// ---- Shoulder levers (bottom shell, hinged); sx = +1 R, -1 L ----
-module _shoulder_lever(sx) {
-    mirror([sx < 0 ? 1 : 0, 0, 0])
-    translate([0, shoulder_y, 0]) {
-        translate([lever_cx, 0, -lever_face_h])
-        linear_extrude(height=lever_face_h + wall)
-        pill_shape(lever_len, lever_w);
-        translate([0, 0, wall])
-        linear_extrude(height=lever_flange_t)
-        intersection() {
-            translate([lever_cx, 0])
-            offset(delta=lever_flange_extra) pill_shape(lever_len, lever_w);
-            translate([lever_x0 + 1.2, -20]) square([lever_len - 1.2 + 1.0, 40]);
-        }
-        translate([shoulder_inset_x, 0, wall + lever_flange_t - 0.01])
-        cylinder(h=lever_nub_top - wall - lever_flange_t, d=lever_nub_d, $fn=20);
-        difference() {
-            union() {
-                // tongue over the floor (0.3 above it, so it can pivot)
-                translate([lever_hinge_x - lever_tongue_front, -lever_tongue_w/2, wall + 0.3])
-                cube([lever_x0 + 4 - (lever_hinge_x - lever_tongue_front), lever_tongue_w,
-                      lever_tongue_top - wall - 0.3]);
-                // ...and sunk into the face plate where it overlaps it —
-                // a solid 4 mm join, no thin bridge
-                translate([lever_x0 + 0.3, -lever_tongue_w/2, wall - 1.0])
-                cube([3.7, lever_tongue_w, lever_tongue_top - wall + 1.0]);
-            }
-            translate([lever_hinge_x, -lever_tongue_w/2 - 0.1, lever_rod_z])
-            rotate([-90, 0, 0])
-            cylinder(h=lever_tongue_w + 0.2, d=lever_rod_d + 0.3, $fn=20);
-            translate([lever_hinge_x - (lever_rod_d - 0.3)/2, -lever_tongue_w/2 - 0.1, wall])
-            cube([lever_rod_d - 0.3, lever_tongue_w + 0.2, lever_rod_z - wall + 0.01]);
-        }
+// ---- L/R edge caps (assembly coords); sx = +1 R, -1 L ----
+// Body through the +Y wall window and lr_cap_proud beyond it, outer edges
+// rounded; inner flange 1.2 wider on the two sides and the bottom (flush
+// on top: the cap's top edge is at the split, the top shell wall above
+// it keeps it down). The lever's bump rests on the flange's back.
+module cap_lr(sx) {
+    y_in = body_h/2 - side_wall;
+    translate([sx * lr_x, -lr_press * lr_cap_travel, lr_axis_z]) {
+        translate([0, y_in - lr_fl_gap - 0.01, 0]) rotate([-90, 0, 0])
+        rounded_top_extrude(side_wall + lr_cap_proud + lr_fl_gap + 0.01, lr_cap_r)
+        rrect2d(lr_cap_w - lr_cap_clear, lr_cap_h - lr_cap_clear, 2);
+        translate([0, y_in - lr_fl_gap - lr_fl_t, 0]) rotate([-90, 0, 0])
+        linear_extrude(height=lr_fl_t)
+        translate([0, lr_fl_extra/2])      // local +y = -Z: extra at the bottom
+        rrect2d(lr_cap_w - lr_cap_clear + 2 * lr_fl_extra,
+                lr_cap_h - lr_cap_clear + lr_fl_extra, 2);
     }
 }
-module cap_shoulder_l() { _shoulder_lever(-1); }
-module cap_shoulder_r() { _shoulder_lever(1); }
+module cap_lr_l() { cap_lr(-1); }
+module cap_lr_r() { cap_lr(1); }
+
+// ---- Power slider (assembly coords) ----
+// Flange against the inner wall face, tab up into the lip groove
+// (through the tongue notch), nub out through the slot to pwr_nub_proud
+// above the face, and a fork that straddles the MSK12C02 knob.
+module cap_power_slider() {
+    y_in = -body_h/2 + side_wall;
+    y_out = -body_h/2;
+    translate([pwr_sw_x, 0, 0]) {
+        translate([-pwr_fl_w/2, y_in, pwr_fl_z0])
+        cube([pwr_fl_w, pwr_fl_t, bot_d - pwr_fl_z0]);
+        translate([-pwr_tab_w/2, y_out + side_wall - lip_t + lip_clearance/2, bot_d - 0.01])
+        cube([pwr_tab_w, lip_t - lip_clearance/2 + pwr_fl_t, pwr_tab_h + 0.01]);
+        translate([0, y_in + 0.01, pwr_slot_z0 + 0.2 + pwr_nub_h/2]) rotate([90, 0, 0])
+        rounded_top_extrude(side_wall + pwr_nub_proud + 0.01, 0.8)
+        rrect2d(pwr_nub_w, pwr_nub_h, 0.8);
+        for (sg = [-1, 1])
+            translate([sg * (pwr_knob_w/2 + 0.2 + pwr_fork_t/2) - pwr_fork_t/2,
+                       y_in + pwr_fl_t - 0.01, pwr_fork_z0])
+            cube([pwr_fork_t, (pwr_knob_root_y - 0.6) - (y_in + pwr_fl_t) + 0.01,
+                  pwr_fork_z1 - pwr_fork_z0]);
+    }
+}
 
 module face_caps() {
     color([0.25, 0.25, 0.28]) cap_dpad();
@@ -889,10 +1204,14 @@ module face_caps() {
     color([0.35, 0.35, 0.38]) cap_menu();
     color([0.35, 0.35, 0.38]) cap_select();
 }
+module edge_caps() {
+    color([0.25, 0.25, 0.28]) cap_lr_l();
+    color([0.25, 0.25, 0.28]) cap_lr_r();
+    color([0.35, 0.35, 0.38]) cap_power_slider();
+}
 module button_caps() {
     face_caps();
-    color([0.25, 0.25, 0.28]) cap_shoulder_l();
-    color([0.25, 0.25, 0.28]) cap_shoulder_r();
+    edge_caps();
 }
 
 // ============================================================
@@ -942,7 +1261,9 @@ module assembly() {
     translate([0, 0, pcb_z]) pcb_model();
     display_sim();
     button_caps();
+    lever_parts();
 }
+module lever_parts() { color([0.9, 0.55, 0.15]) lr_levers(); }
 module assembly_internal() {
     assembly();
     battery_sim();
@@ -961,10 +1282,8 @@ module exploded_view() {
     translate([0, 0, explode_gap * 0.2]) translate([0, 0, pcb_z]) pcb_model();
     translate([0, 0, explode_gap * 0.5]) display_sim();
     translate([0, 0, explode_gap * 1.35]) face_caps();
-    translate([0, 0, -explode_gap * 0.3]) {
-        color([0.25, 0.25, 0.28]) cap_shoulder_l();
-        color([0.25, 0.25, 0.28]) cap_shoulder_r();
-    }
+    translate([0, 0, explode_gap * 0.1]) lever_parts();
+    translate([0, 0, explode_gap * 0.15]) edge_caps();
 }
 
 module cross_section() {
@@ -986,7 +1305,8 @@ module fit_check() {
     translate([0, 0, pcb_z]) pcb_model(alpha=0.35);
     battery_sim();
     bat_straps();
-    color([0.25, 0.25, 0.28]) { cap_shoulder_l(); cap_shoulder_r(); }
+    lever_parts();
+    edge_caps();
 }
 module top_inside() {
     top_shell();
@@ -1001,7 +1321,22 @@ module bottom_inside() {
     bottom_shell();
     battery_sim();
     bat_straps();
-    color([0.25, 0.25, 0.28]) { cap_shoulder_l(); cap_shoulder_r(); }
+    lever_parts();
+    edge_caps();
+}
+// Every printed part laid out flat, as it comes off the bed (viewer / docs)
+module parts_layout() {
+    translate([0, 0, 0]) rotate([180, 0, 0]) mirror([0, 0, 1]) top_shell();
+    translate([0, -100, 0]) bottom_shell();
+    translate([-20, 70, -z_flange + btn_flange_h + btn_stem_h]) face_caps();
+    translate([0, 170, 0]) {
+        color([0.25, 0.25, 0.28]) translate([-30, 0, 0]) rotate([90, 0, 0]) translate([lr_x, -(body_h/2 - side_wall - lr_fl_t), -lr_axis_z]) cap_lr_l();
+        color([0.25, 0.25, 0.28]) translate([0, 0, 0]) rotate([90, 0, 0]) translate([-lr_x, -(body_h/2 - side_wall - lr_fl_t), -lr_axis_z]) cap_lr_r();
+        color([0.35, 0.35, 0.38]) translate([30, 0, 0]) rotate([-90, 0, 0]) translate([-pwr_sw_x, body_h/2 - side_wall, 0]) cap_power_slider();
+        color([0.9, 0.55, 0.15]) translate([-65, 0, 0]) rotate([180, 0, 0]) translate([lr_x, -lr_piv_y, -lr_arm_top]) lr_lever(-1);
+        color([0.9, 0.55, 0.15]) translate([-95, 0, 0]) rotate([180, 0, 0]) translate([-lr_x, -lr_piv_y, -lr_arm_top]) lr_lever(1);
+        color([0.55, 0.55, 0.6]) translate([60, -10, wall + bat_post_h + bat_strap_t]) rotate([180, 0, 0]) translate([-bat_strap_x1, -bat_offset_y, 0]) bat_strap(bat_strap_x1);
+    }
 }
 module battery_fit() { bottom_shell(); battery_sim(); bat_straps(); }
 
@@ -1031,8 +1366,12 @@ module collision_check() {
             speaker_sim();
             button_caps();
             bat_straps();
+            lr_levers();
         }
     }
+    intersection() { lr_levers(); translate([0, 0, pcb_z]) pcb_model(); }
+    intersection() { lr_levers(); edge_caps(); }
+    intersection() { edge_caps(); translate([0, 0, pcb_z]) pcb_model(); }
     intersection() { bat_straps(); translate([0, 0, pcb_z]) pcb_model(); }
     intersection() { bat_straps(); battery_sim(); }
     intersection() { face_caps(); display_sim(); }
@@ -1062,11 +1401,16 @@ module thin_slice(z) {
 }
 module thin_check_top()    { for (z = [1, 3, 4.5, 6, 7.5, 8.9, 9.8]) thin_slice(z) top_shell(); }
 module thin_check_bottom() { for (z = [1, 3, 5, 7, 9, 11, 13, 15, 17]) thin_slice(z) bottom_shell(); }
-module thin_check_levers() { for (z = [0.5, 2.5, 3.5, 5, 6]) thin_slice(z) { cap_shoulder_l(); cap_shoulder_r(); } }
+// edge caps + slider + L/R levers, sliced in assembly Z (their flanges
+// and arms are vertical plates)
+module thin_check_edge() {
+    for (z = [7.5, 8.5, 10, 12, 13.3, 14, 15.5, 16.5])
+        thin_slice(z) union() { edge_caps(); lr_levers(); }
+}
 module thin_check() {
     thin_check_top();
     translate([0, 0, 40]) thin_check_bottom();
-    translate([0, 0, 80]) thin_check_levers();
+    translate([0, 0, 80]) thin_check_edge();
 }
 
 // Label audit — exported to STL by verify_enclosure_requirements.py: the
@@ -1075,6 +1419,24 @@ module thin_check() {
 module labels_check() {
     translate([0, 0, body_d]) mirror([0, 0, 1]) top_labels();
     bottom_labels();
+}
+
+// L/R lever explainers (renders only), R side: the bottom shell cut on
+// the YZ plane through the switch (x = lr_sw_x) or through the cap
+// (x = lr_x), with the PCB, the cap and the lever; lr_press poses them.
+module lr_lever_detail(cut_x) {
+    // each piece cut separately with a cutter of ITS OWN colour: in the
+    // preview a cut face takes the cutter's colour
+    module cut(c) {
+        difference() {
+            color(c) children();
+            color(c) translate([cut_x, -200, -1]) cube([400, 400, 60]);
+        }
+    }
+    cut([0.32, 0.32, 0.36]) bottom_shell();
+    cut([0.1, 0.55, 0.3]) translate([0, 0, pcb_z]) pcb_model(alpha=1);
+    cut([0.62, 0.62, 0.66]) cap_lr_r();
+    cut([0.95, 0.55, 0.1]) lr_lever(1, lr_press * lr_theta * 180 / PI);
 }
 
 // ============================================================
@@ -1141,10 +1503,37 @@ if (part == "assembly") {
     cap_menu();
 } else if (part == "part_select") {
     cap_select();
-} else if (part == "part_shoulder_l") {
-    cap_shoulder_l();
-} else if (part == "part_shoulder_r") {
-    cap_shoulder_r();
+} else if (part == "part_lr_cap_l") {
+    cap_lr_l();
+} else if (part == "part_lr_cap_r") {
+    cap_lr_r();
+} else if (part == "part_lr_caps") {
+    cap_lr_l(); cap_lr_r();
+} else if (part == "part_lr_cap_print") {
+    // one cap (R), flange flat on the bed, face up: a pure rotation
+    rotate([90, 0, 0]) translate([-lr_x, -(body_h/2 - side_wall - lr_fl_t), -lr_axis_z]) cap_lr_r();
+} else if (part == "part_power_slider") {
+    cap_power_slider();
+} else if (part == "part_power_slider_print") {
+    // flange flat on the bed, nub up (rotation only)
+    rotate([-90, 0, 0]) translate([-pwr_sw_x, body_h/2 - side_wall, 0]) cap_power_slider();
+} else if (part == "part_lr_levers") {
+    lr_levers();
+} else if (part == "part_lr_lever_l") {
+    lr_lever(-1);
+} else if (part == "part_lr_lever_r") {
+    lr_lever(1);
+} else if (part == "part_lr_lever_l_print") {
+    // top plane (Z lr_arm_top) flat on the bed: a pure rotation
+    rotate([180, 0, 0]) translate([lr_x, -lr_piv_y, -lr_arm_top]) lr_lever(-1);
+} else if (part == "part_lr_lever_r_print") {
+    rotate([180, 0, 0]) translate([-lr_x, -lr_piv_y, -lr_arm_top]) lr_lever(1);
+} else if (part == "parts_layout") {
+    parts_layout();
+} else if (part == "lr_cut_switch") {
+    lr_lever_detail(lr_sw_x);
+} else if (part == "lr_cut_cap") {
+    lr_lever_detail(lr_x);
 } else if (part == "part_pcb") {
     translate([0, 0, pcb_z]) pcb_model();
 } else if (part == "part_straps") {

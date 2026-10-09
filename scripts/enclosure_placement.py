@@ -29,6 +29,8 @@ OUT = CASE / "viewer" / "placement.json"
 
 I3 = ((1, 0, 0), (0, 1, 0), (0, 0, 1))
 RX180 = ((1, 0, 0), (0, -1, 0), (0, 0, -1))     # turned over about X
+RX90 = ((1, 0, 0), (0, 0, -1), (0, 1, 0))       # +90 about X (undoes a -90 print turn)
+RXm90 = ((1, 0, 0), (0, 0, 1), (0, -1, 0))      # -90 about X (undoes a +90 print turn)
 
 # print file -> [(rotation, reference part in assembly coords, group)]
 # group drives the viewer's exploded offsets and colours. The two straps
@@ -44,8 +46,15 @@ PLACEMENT = {
     "start.stl":            [(I3, "part_start.stl", "pill")],
     "select.stl":           [(I3, "part_select.stl", "pill")],
     "menu.stl":             [(I3, "part_menu.stl", "pill")],
-    "lever_l.stl":          [(I3, "part_shoulder_l.stl", "lever")],
-    "lever_r.stl":          [(I3, "part_shoulder_r.stl", "lever")],
+    # one L/R cap file, printed flange-down (turned +90 about X); the L
+    # and R caps are the same part, so two instances of it
+    "lr_cap_x2.stl":        [(RXm90, "part_lr_caps.stl", "lever"),
+                             (RXm90, "part_lr_caps.stl", "lever")],
+    "power_slider.stl":     [(RX90, "part_power_slider.stl", "lever")],
+    # L/R bell cranks: mirror images of each other, so two files, each
+    # printed upside down on its flat top plane (turned 180 about X)
+    "lr_lever_l.stl":       [(RX180, "part_lr_lever_l.stl", "crank")],
+    "lr_lever_r.stl":       [(RX180, "part_lr_lever_r.stl", "crank")],
     "battery_strap_x2.stl": [(RX180, "part_straps.stl", "strap"),
                              (RX180, "part_straps.stl", "strap")],
 }
@@ -89,10 +98,13 @@ def compute():
             targets = [fmin]
         else:
             # N copies side by side along X in the reference: split by the
-            # gaps in X and match each cluster's bbox
+            # gaps in X and match each cluster's bbox. A gap counts only
+            # when it is wider than the part itself: a rounded cap has no
+            # vertices along its flat faces, so its own interior gaps can
+            # reach 60 % of its width (V3 L/R caps)
             span = rmax[0] - rmin[0]
             xs = sorted({round(v[0], 2) for v in ref})
-            starts = [xs[0]] + [b for a, b in zip(xs, xs[1:]) if b - a > span * 0.5]
+            starts = [xs[0]] + [b for a, b in zip(xs, xs[1:]) if b - a > span]
             if len(starts) != len(instances):
                 raise RuntimeError(f"{instances[0][1]}: {len(starts)} copies, "
                                    f"placement declares {len(instances)}")

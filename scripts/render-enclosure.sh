@@ -22,6 +22,8 @@ VIEWS=(
     "top|0,0,12.5|0,0,0|assembly|430"
     # bottom edge: USB-C plug opening, SD slot, power switch slot
     "ports|0,0,12|90,0,0|assembly|300"
+    "edge-lr|0,42,12|75,0,180|assembly|320"
+    "parts|0,25,5|40,0,15|parts_layout|700"
     "exploded|0,0,20|55,0,330|exploded|600"
     # XZ cut at Y=0: battery, ESP32, PCB, panel + cable space, cap stack
     "cross-section|0,-10,13|60,0,0|cross_section|300"
@@ -55,7 +57,9 @@ done
 # cache-bust the doc page: every render link carries the render time, so a
 # browser never shows a stale PNG under an unchanged file name
 STAMP="$(date +%Y%m%d%H%M)"
-sed -i -E "s#(/img/renders/enclosure/enclosure-[a-z-]+\.png)(\?v=[0-9]+)?#\1?v=${STAMP}#g" \
+# (perl, not sed -i: GNU and BSD/macOS sed disagree on -i, and on macOS
+# "-i -E" swallowed -E as the backup suffix and failed the whole target)
+perl -pi -e "s#(/img/renders/enclosure/enclosure-[a-z-]+\.png)(\?v=[0-9]+)?#\1?v=${STAMP}#g" \
     "$PROJECT_ROOT/website/docs/design/enclosure.md"
 echo "==> Doc image links stamped ?v=${STAMP}"
 

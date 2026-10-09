@@ -39,9 +39,21 @@ the board-side source of truth:
                        part (ESP32 module, J3 JST S2B-PH-SM4-TB 5.5 mm) by
                        >= MIN_Z_CLEAR wherever the pocket overlaps it in XY
   boss/pocket fit      no screw boss may stand inside the battery pocket
-  L/R levers           the lever face cutout stays LEVER_CLEAR from the
-                       corner-screw counterbore; the bottom column's
-                       half-column contact face clears the SW11/SW12 pads
+  L/R levers (V3)      edge caps press the ON-BOARD SW11/SW12 through a
+                       printed bell-crank lever per side: the arm's end
+                       edge on the board's switch centre, its top =
+                       actuator tip - pretravel, arms giving a 0.8..1.25
+                       ratio, the swing never above the actuator tip (the
+                       TS-1187A cover from SW_DATASHEET), the beam clear
+                       of the cap flange at full travel, the pin held in
+                       its slot, lever and blocks clear of the pocket
+                       border, the columns and every other bottom part;
+                       the bottom column's half-column contact face
+                       clears the SW11/SW12 pads
+  -Y edge (V3)         SW16 knob (board PWR_SWITCH_ENC + MSK12C02) inside
+                       the slider's fork; SD slit passes the 11 mm card
+                       and the TF-01A housing front (U6) sets the card
+                       reach; USB-C recess pad clears J1
 
 Scalar constants are parsed with a COLUMN-0-anchored regex (a tolerant
 anchor would bind module-local variables of the same name); vector
@@ -81,8 +93,10 @@ PCB_THICKNESS = 1.6
 
 # Tactile switch C318884 = XKB TS-1187A-B-A-B, datasheet
 # website/static/datasheets/SW1-SW13_Tact-Switch_C318884.pdf: height code
-# A = 1.5 mm, body 5.1 x 5.1, travel 0.25 mm
-SW_DATASHEET = {"h": 1.5, "body": 5.1}
+# A = 1.5 mm, body 5.1 x 5.1, travel 0.25 mm; the drawing: cover face
+# 1.2 above the board, actuator o2.0, operating force code B = 160 gf
+SW_DATASHEET = {"h": 1.5, "body": 5.1, "cover": 1.2, "act_d": 2.0,
+                "travel": 0.25, "force_gf": 160}
 
 # J3 = JST S2B-PH-SM4-TB, hardware/datasheets/J3_JST-PH-2P-SMD_C295747.pdf
 # p.4 "Side entry type": height 5.5 mm, B = 7.9 mm (2 circuits); 6.0 mm
@@ -90,7 +104,13 @@ SW_DATASHEET = {"h": 1.5, "body": 5.1}
 J3_DATASHEET = {"w": 7.9, "h": 8.6, "d": 5.5}
 
 MIN_STEM = 1.0     # mm — a face-cap stem shorter than this cannot be printed
-LEVER_CLEAR = 1.2  # mm — floor web between the lever face cutout and the counterbore
+
+# SW16 = MSK12C02 (hardware/datasheets/SW16_Slide-Switch_C431540.pdf):
+# body 1.4 tall, knob 1.6 wide and 1.5 long on the -Y face, travel 1.6
+PWR_DATASHEET = {"body_d": 2.8, "body_h": 1.4, "knob_w": 1.6, "knob_l": 1.5,
+                 "travel": 1.6}
+# U6 = TF-01A: housing 14.5 x 15 (pcb_parts BODY_BY_PACKAGE), front edge
+# at SD_ENC y - 7.5
 
 # board.py:46-47 record the body relation: 170mm body = 160 + 2x5mm
 BODY_MARGIN = 5.0
@@ -344,13 +364,200 @@ def main() -> int:
           "LED1-LED6 light pipes on the top-side LED placements"
           + (": " + "; ".join(led_bad) if led_bad else ""))
 
-    sh_x, sh_y = need(env, "shoulder_inset_x", "shoulder_y")
-    check("shoulders",
-          close(-sh_x, B.SHOULDER_L_ENC[0]) and close(sh_x, B.SHOULDER_R_ENC[0])
-          and close(sh_y, B.SHOULDER_L_ENC[1])
-          and close(sh_y, B.SHOULDER_R_ENC[1]),
-          f"(+/-{sh_x:g},{sh_y:g}) vs board {B.SHOULDER_L_ENC} / "
-          f"{B.SHOULDER_R_ENC}")
+    # 6b — L/R levers (V3): edge caps press the ON-BOARD SW11/SW12 through
+    # a bell crank. Geometry is checked against the board placements and
+    # the TS-1187A drawing, the kinematics from the constants.
+    (lr_x, lr_sx, lr_sy, cover, arm_top, arm_end, arm_w, piv_y, piv_z, pin_d,
+     slot_w, beam_y0, beam_y1, beam_z0, beam_x0, beam_x1, in_w, in_y0, in_y1,
+     in_z0, bump_r, bump_z, blk_t, blk_gap, blk_wall, blk_top, fl_t, fl_gap,
+     fl_back, cap_w, cap_cl, fl_extra, sw_h_, pretravel_, travel_,
+     side_wall_) = need(
+        env, "lr_x", "lr_sw_x", "lr_sw_y", "sw_cover_h", "lr_arm_top",
+        "lr_arm_y_end", "lr_arm_w", "lr_piv_y", "lr_piv_z", "lr_pin_d",
+        "lr_slot_w", "lr_beam_y0", "lr_beam_y1", "lr_beam_z0", "lr_beam_x0",
+        "lr_beam_x1", "lr_in_w", "lr_in_y0", "lr_in_y1", "lr_in_z0",
+        "lr_bump_r", "lr_bump_z", "lr_blk_t", "lr_blk_gap", "lr_blk_wall",
+        "lr_blk_top", "lr_fl_t", "lr_fl_gap", "lr_fl_back_y", "lr_cap_w",
+        "lr_cap_clear", "lr_fl_extra", "sw_h", "sw_pretravel", "sw_travel",
+        "side_wall")
+    pcb_z_, pcb_h_ = need(env, "pcb_z", "pcb_h")
+    D = SW_DATASHEET
+    tip_z = pcb_z_ - sw_h_                    # actuator tip at rest
+    probs = []
+    for ref, sgn in (("SW11", -1), ("SW12", 1)):
+        row = by_ref.get(ref)
+        if row is None or row[4] != "bottom" or not (close(sgn * lr_sx, row[1])
+                                                     and close(lr_sy, row[2])):
+            probs.append(f"{ref} scad ({sgn * lr_sx:g},{lr_sy:g}) vs board "
+                         f"{(row[1], row[2], row[4]) if row else 'absent'}")
+    r_out = piv_y - arm_end                  # pivot -> contact edge on the actuator
+    r_in = piv_z - bump_z                    # pivot -> cap contact
+    theta = (pretravel_ + travel_) / r_out   # full switch travel
+    if not close(cover, D["cover"]) or not close(travel_, D["travel"]):
+        probs.append(f"cover {cover:g} / travel {travel_:g} vs datasheet {D['cover']:g} / {D['travel']:g}")
+    if not close(arm_top, tip_z - pretravel_):
+        probs.append(f"arm top {arm_top:g} != actuator tip {tip_z:g} - pretravel {pretravel_:g}")
+    if not close(arm_end, lr_sy):
+        probs.append(f"arm end edge y {arm_end:g} off the actuator centre line {lr_sy:g} "
+                     f"(beyond it the arm rises above the actuator tip, short of it the push is off-centre)")
+    if arm_w < D["act_d"]:
+        probs.append(f"arm {arm_w:g} narrower than the o{D['act_d']:g} actuator")
+    # the beam's -Y edge (nearest to the switch body) at full travel
+    beam_rise = arm_top + (piv_y - beam_y0) * theta
+    body_edge = lr_sy + D["body"] / 2
+    if beam_y0 < body_edge + 0.3 and beam_rise > pcb_z_ - cover - 0.05:
+        probs.append(f"beam edge y {beam_y0:g} rises to {beam_rise:.2f} under the switch cover")
+    if beam_rise > pcb_z_ - 0.3:
+        probs.append(f"beam rises to {beam_rise:.2f}, within 0.3 of the PCB")
+    check("lr-lever-on-switch",
+          not probs,
+          f"SW11/SW12 at (+/-{lr_sx:g},{lr_sy:g}) on the board's bottom side; arm "
+          f"{arm_w:g} wide, top {arm_top:g} = tip {tip_z:g} - pretravel {pretravel_:g}, end "
+          f"edge on the actuator centre line; at full travel the arm reaches the tip "
+          f"{tip_z + travel_:g}, {pcb_z_ - cover - (tip_z + travel_):.2f} under the cover"
+          + (": " + "; ".join(probs) if probs else ""))
+
+    probs = []
+    ratio = r_out / r_in
+    cap_travel = theta * r_in
+    if not 0.8 <= ratio <= 1.25:
+        probs.append(f"ratio {ratio:.2f} outside 0.8..1.25 (cap travel {cap_travel:.2f}, "
+                     f"force {D['force_gf'] * ratio:.0f} gf)")
+    if not close(fl_back, body_h / 2 - side_wall_ - fl_gap - fl_t):
+        probs.append(f"flange back y {fl_back:g} not derived from the wall")
+    gap = fl_back - (in_y1 + bump_r)
+    if not 0 < gap <= 0.1 + 1e-9:
+        probs.append(f"bump {gap:.2f} from the flange (want 0..0.1)")
+    if not (in_z0 <= bump_z - bump_r and bump_z + bump_r <= beam_z0):
+        probs.append(f"bump Z {bump_z:g} not on the lower arm (Z {in_z0:g}..{beam_z0:g})")
+    for name_, y_ in (("beam", beam_y1), ("lower arm", in_y1)):
+        if y_ > fl_back - cap_travel - 0.2 + 1e-9:
+            probs.append(f"{name_} +Y face {y_:g} within 0.2 of the flange at full travel "
+                         f"({fl_back - cap_travel:.2f})")
+    if not (beam_y0 < piv_y < beam_y1 and beam_z0 < piv_z - pin_d / 2):
+        probs.append(f"pivot ({piv_y:g},{piv_z:g}) outside the beam")
+    # the lever can only rise until its arm meets the actuator (pretravel):
+    # the whole pin must stay >= 0.5 under the slot top
+    pin_hi = piv_z + pretravel_ + pin_d / 2
+    if blk_top - pin_hi < 0.5 - 1e-9:
+        probs.append(f"pin top rises to {pin_hi:g}, {blk_top - pin_hi:.2f} under the slot "
+                     f"top {blk_top:g} (want >= 0.5)")
+    if blk_top > pcb_z_ - 0.3 + 1e-9 or slot_w - pin_d < 0.2 - 1e-9 or blk_wall < 1.2 - 1e-9:
+        probs.append(f"block top {blk_top:g} / slot clearance {slot_w - pin_d:g} / wall {blk_wall:g}")
+    check("lr-lever-kinematics",
+          not probs,
+          f"arms {r_out:g} / {r_in:g} (ratio {ratio:.2f}): cap travel {cap_travel:.2f}, "
+          f"force {D['force_gf'] * ratio:.0f} gf; bump {gap:.2f} from the flange; beam "
+          f"{fl_back - cap_travel - beam_y1:.2f} short of it at full travel; pin o{pin_d:g} "
+          f"in a {slot_w:g} slot, its top {blk_top - pin_hi:.1f} under the slot top "
+          f"at most lift" + (": " + "; ".join(probs) if probs else ""))
+
+    # lever and blocks (both sides) vs the flange X span, the pocket border,
+    # the columns and every other bottom-side part
+    bat_ox_, bat_oy_, bat_w_, bat_h_, bbw_ = need(env, "bat_offset_x", "bat_offset_y",
+                                                 "bat_w", "bat_h", "bat_border_w")
+    pb_x0, pb_x1 = bat_ox_ - (bat_w_ + 5) / 2 - bbw_, bat_ox_ + (bat_w_ + 5) / 2 + bbw_
+    pb_y0, pb_y1 = bat_oy_ - bat_h_ / 2 - bbw_, bat_oy_ + bat_h_ / 2 + bbw_
+    fl_half = (cap_w - cap_cl) / 2 + fl_extra
+    y_in = body_h / 2 - side_wall_
+    probs = []
+    for sgn in (-1, 1):
+        def X(a, b):
+            return (min(sgn * a, sgn * b), max(sgn * a, sgn * b))
+        moving = (("beam",) + X(beam_x0, beam_x1) + (beam_y0, beam_y1, beam_z0),
+                  ("arm",) + X(lr_sx - arm_w / 2, lr_sx + arm_w / 2) + (arm_end, beam_y0, beam_z0),
+                  ("lower arm",) + X(lr_x - in_w / 2, lr_x + in_w / 2) + (in_y0, in_y1 + bump_r, in_z0))
+        blocks = (("block",) + X(beam_x0 - blk_gap - blk_t, beam_x0 - blk_gap)
+                  + (piv_y - slot_w / 2 - blk_wall, y_in, 2.0),
+                  ("block",) + X(beam_x1 + blk_gap, beam_x1 + blk_gap + blk_t)
+                  + (piv_y - slot_w / 2 - blk_wall, y_in, 2.0))
+        for nm, x0, x1, y0, y1, _z in moving + blocks:
+            if x0 < pb_x1 and x1 > pb_x0 and y0 < pb_y1 and y1 > pb_y0:
+                probs.append(f"{nm} x[{x0:g},{x1:g}] over the pocket border")
+            for cx, cy in screws:
+                nx, ny = min(max(cx, x0), x1), min(max(cy, y0), y1)
+                d = ((cx - nx) ** 2 + (cy - ny) ** 2) ** 0.5
+                if nm != "block" and d < BOSS_R + 0.4:
+                    probs.append(f"{nm} {d - BOSS_R:.2f} from the column at ({cx:g},{cy:g})")
+            for ref, px, py, rot, side, L, W, H in parts:
+                if side != "bottom" or ref in ("SW11", "SW12"):
+                    continue
+                cw, ch = (W, L) if rot % 180 == 90 else (L, W)
+                if x0 < px + cw / 2 and x1 > px - cw / 2 and y0 < py + ch / 2 \
+                        and y1 > py - ch / 2:
+                    probs.append(f"{ref} over the L/R {nm}")
+        for nm, x0, x1, *_ in blocks:      # the flange slides past the blocks
+            if x0 < sgn * lr_x + fl_half + 0.3 and x1 > sgn * lr_x - fl_half - 0.3:
+                probs.append(f"block x[{x0:g},{x1:g}] inside the cap flange span")
+    check("lr-lever-clear",
+          not probs,
+          f"levers and pivot blocks at x=+/-[{beam_x0 - blk_gap - blk_t:g},"
+          f"{beam_x1 + blk_gap + blk_t:g}] vs the flange span +/-[{lr_x - fl_half:g},"
+          f"{lr_x + fl_half:g}], pocket border x[{pb_x0:g},{pb_x1:g}] y[{pb_y0:g},{pb_y1:g}], "
+          f"columns, bottom parts" + (": " + "; ".join(probs) if probs else " — all clear"))
+
+    # 6c — power slider vs SW16 (board placement + MSK12C02 datasheet)
+    (k_tip, k_root, k_z, k_w, travel, nub_w, slot_w, fl_w, fork_z0, fork_z1,
+     fl_t, fl_z0, slot_z0, g_z0, g_z1, g_d, ch_d, ch_half, g_lip, g_stop) = need(
+        env, "pwr_knob_tip_y", "pwr_knob_root_y", "pwr_knob_z", "pwr_knob_w",
+        "pwr_travel", "pwr_nub_w", "pwr_slot_w", "pwr_fl_w", "pwr_fork_z0",
+        "pwr_fork_z1", "pwr_fl_t", "pwr_fl_z0", "pwr_slot_z0", "pwr_guide_z0",
+        "pwr_guide_z1", "pwr_guide_d", "pwr_chan_d", "pwr_chan_half",
+        "pwr_guide_lip", "pwr_guide_stop")
+    PD = PWR_DATASHEET
+    want_root = B.PWR_SWITCH_ENC[1] - PD["body_d"] / 2
+    want_tip = want_root - PD["knob_l"]
+    fork_end = k_root - 0.6
+    check("pwr-slider-vs-sw16",
+          close(k_root, want_root) and close(k_tip, want_tip) and close(k_w, PD["knob_w"])
+          and close(travel, PD["travel"])
+          and pcb_z_ - PD["body_h"] <= k_z <= pcb_z_
+          and fork_z0 <= k_z - 0.3 and fork_z1 >= k_z + 0.3 and fork_z1 <= pcb_z_ - 0.1
+          and fork_end - k_tip >= 0.5
+          and slot_w >= nub_w + travel + 0.3 - 1e-9
+          and fl_w >= slot_w + travel + 2 * 1.2 - 1e-9 and fl_z0 <= slot_z0 - 1.2 + 1e-9
+          # the horizontal guide: flange runs in the channel with play, the
+          # channel is longer than flange + travel, its lip and end stops are
+          # printable, the block ends under the SW16 body and the fork arms
+          and ch_d >= fl_t + 0.05 and ch_half >= fl_w / 2 + travel / 2 + 0.2 - 1e-9
+          and g_lip >= 1.2 - 1e-9 and g_stop >= 1.2 - 1e-9
+          and g_z0 < fl_z0 and g_z1 <= min(fork_z0, pcb_z_ - PD["body_h"]) - 0.1
+          and body_h / 2 - side_wall_ - g_d <= pcb_h_ / 2 + 0.3,
+          f"knob root y {k_root:g} (board {want_root:g}), tip {k_tip:g} ({want_tip:g}), "
+          f"Z {k_z:g} in [{pcb_z_ - PD['body_h']:g},{pcb_z_:g}]; fork Z {fork_z0:g}..{fork_z1:g} "
+          f"reaches y {fork_end:g} ({fork_end - k_tip:g} over the knob); slot {slot_w:g} >= nub "
+          f"{nub_w:g} + travel {travel:g}; flange {fl_w:g} wide from Z {fl_z0:g}; guide "
+          f"channel {2 * ch_half:g} x {ch_d:g} in a {g_d:g} deep block Z {g_z0:g}..{g_z1:g}, "
+          f"lip {g_lip:g}, stops {g_stop:g} (ON<->OFF range {travel:g})")
+
+    # 6d — SD card slit + card reach, USB-C recess pad vs J1
+    (sd_front, sd_out, sd_reach, sd_zc, sd_h, sd_wc,
+     u_rd, u_pad, u_rw, u_rh, u_cw, u_ch) = need(
+        env, "sd_housing_front", "sd_card_out", "sd_card_reach",
+        "sd_z", "sd_cut_h", "sd_cut_w",
+        "usbc_recess_d", "usbc_pad_t", "usbc_recess_w", "usbc_recess_h",
+        "usbc_cut_w", "usbc_cut_h")
+    u6 = by_ref.get("U6")
+    j1 = by_ref.get("J1")
+    if u6 is None or j1 is None:
+        raise Structural("U6 (TF-01A) or J1 (USB-C) missing from the PCB model")
+    want_front = -(u6[2] - u6[6] / 2)
+    # microSD is 11 mm wide: the slit must pass it, and stay in the bottom
+    # shell (top edge below the PCB bottom face = the shell split)
+    check("sd-slit",
+          close(sd_front, want_front) and close(sd_reach, body_h / 2 - sd_front - sd_out)
+          and sd_wc >= 11 + 2 and sd_zc + sd_h / 2 <= pcb_z_ + 1e-9,
+          f"TF-01A front |y| {sd_front:g} (U6 {want_front:g}); card end {sd_reach:g} "
+          f"inside the face; {sd_wc:g}x{sd_h:g} slit at Z {sd_zc:g} "
+          f"(top {sd_zc + sd_h / 2:g} <= PCB bottom {pcb_z_:g})")
+    j1_front = -(j1[2] - j1[6] / 2)
+    pad_face = body_h / 2 - side_wall_ - u_pad
+    check("usbc-recess",
+          u_rd >= 2.0 - 1e-9 and side_wall_ + u_pad - u_rd >= 1.2 - 1e-9
+          and pad_face > j1_front + 0.5 and u_rw > u_cw + 2 and u_rh > u_ch + 2,
+          f"recess {u_rd:g} deep ({u_rw:g}x{u_rh:g} round the {u_cw:g}x{u_ch:g} opening), "
+          f"floor {side_wall_ + u_pad - u_rd:g} thick; pad inner face |y| {pad_face:g} vs "
+          f"J1 front {j1_front:g}")
 
     # 7 — ESP32 module: scad constants vs board constant vs U1 placement
     esp_x, esp_y, esp_w, esp_h, esp_d = need(
@@ -490,20 +697,14 @@ def main() -> int:
           f"{len(inside)} boss(es) inside pocket footprint"
           + (f" {inside}" if inside else ""))
 
-    # 11 — L/R hinged levers vs the corner screws next to SW11/SW12
-    tip_x, cut_clear, head_d, half_h, s_out = need(
-        env, "lever_tip_x", "lever_cut_clear", "m25_head_d", "boss_half_h",
-        "screw_d_outer")
+    # 11 — the column's contact face under the PCB is its OUTER half: its
+    # inner edge is the axis (corner_x), which must clear the SW11/SW12
+    # pad field (the wires to the off-board L/R switches are soldered
+    # there: body edge + 0.7 mm of terminal) and stand >= boss_half_h tall
+    half_h, s_out = need(env, "boss_half_h", "screw_d_outer")
     corner_x = max(abs(s[0]) for s in screws)
     corner_y = max(abs(s[1]) for s in screws)
-    gap = (corner_x - head_d / 2) - (tip_x + cut_clear / 2)
-    check("lever-counterbore",
-          gap >= LEVER_CLEAR - 1e-9,
-          f"lever face cutout ends at {tip_x + cut_clear / 2:g}, counterbore "
-          f"starts at {corner_x - head_d / 2:g}: gap {gap:g} (min {LEVER_CLEAR:g})")
-    # the column's contact face under the PCB is its OUTER half: its inner
-    # edge is the axis (corner_x), which must clear the switch body and
-    # pads (body edge + 0.7 mm of terminal) and stand >= boss_half_h tall
+    sh_x, sh_y = B.SHOULDER_R_ENC
     inner_edge = corner_x
     pad_edge = abs(sh_x) + sw_body / 2 + 0.7
     check("half-column-shoulder-switch",

@@ -22,9 +22,10 @@ button.
                       the FPC slot, under the riser
   R4  LEDs            all six top-side LEDs have a light pipe that keeps a
                       >= MIN_WEB web from every button cutout
-  R5  speaker         grille top-left when looking at the back (+X, +Y in
-                      enclosure coords); driver clears the pocket border,
-                      columns, lever hinges, ribs and the wall
+  R5  speaker         on the player's LEFT = the D-pad side (-X, +Y in
+                      enclosure coords; user 2026-10-07); driver clears
+                      the pocket border, columns, the L lever's pivot
+                      blocks and the filleted inner floor outline
   R6  inserts         M2.5 heat-set HANGLIFE D3.5 x L4: socket OD-0.5..OD-0.3,
                       depth >= L+0.3, boss wall >= 1.5; screw tip lands in
                       the relief above the insert; bottom column walls,
@@ -32,20 +33,30 @@ button.
   R7  button sizes    ABXY >= 9, D-pad arms >= 6.5, Start/Select >= 10x5,
                       Menu >= 12x4 (the "un po' piu' grandi" request)
   R8  robustness      minimum feature thicknesses (walls, rim, well rings,
-                      lever flange/nub, neck wall, ribs)
+                      L/R cap flange, L/R lever + pivot blocks, slider plates, recess
+                      floors, fillet walls, ribs)
   R10 battery         pocket holds the cell the user MEASURED (90x50x10,
                       2026-09-16) with lead clearance, cell top under the
                       PCB-side parts (delegated to the sync gate)
   R11 hold-down       two >= 1 mm straps over the cell on posts at the cell
                       top plane, >= 40 mm apart (the PCB captures them)
-  R12 thin walls      OpenSCAD slices every printed shell/lever, erodes by
-                      min_wall/2 and reports what disappears — the check the
-                      print service runs, run before uploading
+  R12 thin walls      OpenSCAD slices every printed shell/edge cap, erodes
+                      by min_wall/2 and reports what disappears — the check
+                      the print service runs, run before uploading
+  R13 edge recesses   (user 2026-10-07) USB-C opening recessed >= 2 mm;
+                      the SD card keeps the V2.1 16 x 3.5 slit (the V3
+                      window was reverted 2026-10-08); SW16's knob driven by the printed
+                      slider (a finger cannot reach it: 5.1 mm inside)
+  R14 proud caps      (user 2026-10-07) face caps >= 2 mm proud with a
+                      rounded head; L/R caps 2-3 mm proud, rounded
+  R15 rounded shell   (user 2026-10-07, Switch Lite) corners >= 10, back
+                      fillet >= 6, front fillet >= 1.5, fillet walls >= min_wall
   R9  labels          engraved glyphs exported by OpenSCAD (part
                       labels_check) — every label beside ITS OWN button,
                       no glyph anywhere else, and not MIRRORED (the "B"
                       read from the front and the "L" read from the back
-                      have their stem on the correct side)
+                      have their stem on the correct side), and VISIBLE: no
+                      glyph under the raised display bezel
 
 Output contract: every failing check prints a line starting with FAIL.
 Exit codes: 0 pass · 1 requirement violated · 2 cannot evaluate.
@@ -77,11 +88,18 @@ Structural = ves.Structural
 
 
 def export_part(part: str, name: str) -> Path:
-    """Export one `part` of the scad under test to OUT_DIR/name via Docker."""
+    """Export one `part` of the scad under test via Docker to a file named
+    after `name` but UNIQUE per call; the caller deletes it.
+
+    A fixed name, unlinked and rewritten on every call, races the OrbStack
+    bind mount: the host intermittently missed the fresh file and the gate
+    reported an empty "export failed" (exit 2) on a random mutation case —
+    the same race verify_enclosure_stl fixed with unique names."""
     import os
+    import time
+    stem, ext = name.rsplit(".", 1)
+    name = f"{stem}-{os.getpid()}-{time.monotonic_ns()}.{ext}"
     out = OUT_DIR / name
-    if out.exists():
-        out.unlink()
     # the scad under test must live in hardware/enclosure (the /project
     # mount) — the mutation suite drops its copies there
     scad_dir = BASE / "hardware" / "enclosure"
@@ -99,7 +117,8 @@ def export_part(part: str, name: str) -> Path:
     except (OSError, subprocess.TimeoutExpired) as e:
         raise Structural(f"cannot run the OpenSCAD container: {e}")
     if r.returncode != 0 or not out.exists():
-        raise Structural(f"OpenSCAD export of {part} failed:\n"
+        raise Structural(f"OpenSCAD export of {part} failed (exit {r.returncode}, "
+                         f"{'file present' if out.exists() else 'no file'}):\n"
                          + (r.stderr or r.stdout)[-2000:])
     return out
 
@@ -152,7 +171,7 @@ def chirality(stl: Path):
 
 def main() -> int:
     print("=" * 72)
-    print("ENCLOSURE REQUIREMENTS (the user's constraints, 2026-09-16)")
+    print("ENCLOSURE REQUIREMENTS (the user's constraints, 2026-09-16 + 2026-10-07)")
     print("=" * 72)
     try:
         from scripts import generate_enclosure_pcb as GEP
@@ -296,14 +315,19 @@ def main() -> int:
     r = seat_od / 2
     bx, by, bw, bh, bbw = need("bat_offset_x", "bat_offset_y", "bat_w", "bat_h",
                                "bat_border_w")
-    hx, hy, bgap, bt = need("lever_hinge_x", "shoulder_y", "lever_block_gap",
-                            "lever_block_t")
+    back_r, bx0_, bx1_, b_gap, b_t, piv_y, slot_w_, b_wall = need(
+        "back_r", "lr_beam_x0", "lr_beam_x1", "lr_blk_gap", "lr_blk_t", "lr_piv_y",
+        "lr_slot_w", "lr_blk_wall")
     s_out = need("screw_d_outer")[0]
     probs = []
-    if not (spx > 0 and spy > 0):
-        probs.append("not in the +X/+Y quadrant")
+    if not (spx < 0 and spy > 0):
+        probs.append("not in the -X/+Y quadrant (player's left = D-pad side)")
     if abs(spx) + r > body_w / 2 - side_wall or abs(spy) + r > body_h / 2 - side_wall:
         probs.append("touches the wall")
+    # the floor's inner outline is inset back_r by the fillet: the driver
+    # (which sits ON the floor) must stay inside it
+    if abs(spx) + sdd / 2 > body_w / 2 - back_r + 1e-9 or abs(spy) + sdd / 2 > body_h / 2 - back_r + 1e-9:
+        probs.append("driver edge inside the back fillet")
     pb = (bx - (bw + 5) / 2 - bbw, bx + (bw + 5) / 2 + bbw,
           by - bh / 2 - bbw, by + bh / 2 + bbw)
     ddx = max(pb[0] - spx, 0, spx - pb[1]); ddy = max(pb[2] - spy, 0, spy - pb[3])
@@ -312,16 +336,19 @@ def main() -> int:
     for sxp, syp in screws:
         if math.hypot(spx - sxp, spy - syp) < r + s_out / 2 + 3:
             probs.append(f"too close to column ({sxp:g},{syp:g})")
+    # the L/R lever's pivot blocks (the outermost, lowest-standing L/R parts)
     for sgn in (-1, 1):
-        hb = (sgn * hx - 1.5, sgn * hx + 1.5, hy - bgap - bt, hy + bgap + bt)
+        hb = (min(sgn * (bx0_ - b_gap - b_t), sgn * (bx1_ + b_gap + b_t)),
+              max(sgn * (bx0_ - b_gap - b_t), sgn * (bx1_ + b_gap + b_t)),
+              piv_y - slot_w_ / 2 - b_wall, body_h / 2 - side_wall)
         ddx = max(hb[0] - spx, 0, spx - hb[1]); ddy = max(hb[2] - spy, 0, spy - hb[3])
         if math.hypot(ddx, ddy) < r:
-            probs.append("overlaps a lever hinge")
+            probs.append("overlaps an L/R lever")
     check("R5", "speaker-position",
           not probs,
           f"driver seat r{r:g} at ({spx:g},{spy:g}) — "
-          + ("; ".join(probs) if probs else "back top-left, clear of "
-             "wall/pocket/columns/hinges"))
+          + ("; ".join(probs) if probs else "player's left (D-pad side), clear of "
+             "wall/fillet/pocket/columns/L-R levers"))
 
     # ── R6 inserts, screws, columns ─────────────────────────────────────
     (i_od, i_l, i_hd, i_dep, rel_h, tb_d, sd_in, sd_out, g_n, g_t, head_dep,
@@ -359,23 +386,32 @@ def main() -> int:
           f"light pipes need a {MIN_WEB:g} web)")
 
     # ── R8 robustness ───────────────────────────────────────────────────
-    rim_t, well_t, lf_t, nub_d, rib_w = need("disp_rim_t", "btn_well_t",
-                                             "lever_flange_t", "lever_nub_d",
-                                             "rib_w")
-    tw, ttop, rod_z, rod_d, lmin = need("lever_tongue_w", "lever_tongue_top",
-                                        "lever_rod_z", "lever_rod_d",
-                                        "min_wall")
-    lip_t, lip_c, seat_od, drv_d, fl_h, st_t, g_t2, t_front, post_t, peg_d = need(
+    rim_t, well_t, rib_w, lmin = need("disp_rim_t", "btn_well_t", "rib_w", "min_wall")
+    lip_t, lip_c, seat_od, drv_d, fl_h, st_t, g_t2, post_t, peg_d = need(
         "lip_t", "lip_clearance", "spk_seat_od", "spk_driver_d",
-        "btn_flange_h", "bat_strap_t", "boss_gusset_t", "lever_tongue_front",
+        "btn_flange_h", "bat_strap_t", "boss_gusset_t",
         "bat_post_t", "bat_peg_d")
+    (lr_fl_t, lr_blk_wall, lr_arm_top, lr_arm_z0, lr_in_y0, lr_in_y1, lr_beam_y0,
+     lr_beam_y1, lr_beam_z0, lr_arm_w, lr_in_w, pwr_fl_t, pwr_fork_t, pwr_tab_h, u_rd,
+     u_pad, front_r) = need(
+        "lr_fl_t", "lr_blk_wall", "lr_arm_top", "lr_arm_z0", "lr_in_y0", "lr_in_y1",
+        "lr_beam_y0", "lr_beam_y1", "lr_beam_z0", "lr_arm_w", "lr_in_w", "pwr_fl_t",
+        "pwr_fork_t", "pwr_tab_h", "usbc_recess_d", "usbc_pad_t", "front_r")
+    # front fillet: outer arc centre (front_r, front_r) from the edge/face,
+    # inner cavity corner at (side_wall, wall) -> wall = R - distance
+    front_fillet_wall = front_r - math.hypot(side_wall - front_r, wall - front_r)
     walls = {
         "wall": wall, "side wall": side_wall,
         "lip skin": side_wall - lip_t - lip_c, "lip tongue": lip_t,
-        "display rim": rim_t, "well ring": well_t, "lever flange": lf_t,
-        "lever hook side": (tw - (rod_d + 0.3)) / 2,
-        "lever hook top": ttop - (rod_z + (rod_d + 0.3) / 2),
-        "lever hook front": t_front - (rod_d + 0.3) / 2,
+        "display rim": rim_t, "well ring": well_t,
+        "L/R cap flange": lr_fl_t, "L/R pivot slot wall": lr_blk_wall,
+        "L/R upper arm (Z)": lr_arm_top - lr_arm_z0, "L/R upper arm (X)": lr_arm_w,
+        "L/R lower arm (Y)": lr_in_y1 - lr_in_y0, "L/R lower arm (X)": lr_in_w,
+        "L/R beam (Y)": lr_beam_y1 - lr_beam_y0, "L/R beam (Z)": lr_arm_top - lr_beam_z0,
+        "slider flange": pwr_fl_t, "slider fork arm": pwr_fork_t, "slider tab": pwr_tab_h,
+        "slider guide lip": need("pwr_guide_lip")[0], "slider guide stop": need("pwr_guide_stop")[0],
+        "USB recess floor": side_wall + u_pad - u_rd,
+        "front fillet wall": front_fillet_wall, "back fillet wall": min(wall, side_wall),
         "strap post wall": (post_t - (peg_d + 0.3)) / 2,
         "speaker seat ring": (seat_od - (drv_d + 0.6)) / 2,
         "cap flange plate": fl_h, "battery strap": st_t, "column gusset": g_t2,
@@ -383,7 +419,7 @@ def main() -> int:
     }
     thin = [f"{k} {v:.2f}" for k, v in walls.items() if v < lmin - 1e-9]
     check("R8", "min-thickness",
-          not thin and nub_d >= 3.0 and rib_w >= 6,
+          not thin and rib_w >= 6,
           f"{len(walls)} printed walls >= {lmin:g} mm (Weerg thin-material "
           f"threshold)" + (": THIN " + ", ".join(thin) if thin else
                            f"; thinnest {min(walls.values()):.2f}"))
@@ -406,18 +442,26 @@ def main() -> int:
           f"the cell top (Z {wall + p_h:g}); the PCB captures them")
 
     # ── R9 labels (Docker) ──────────────────────────────────────────────
-    lcx, lw = need("lever_cx", "lever_w")
+    lr_x, lr_ly = need("lr_x", "lr_label_y")
     expect = {
         "^": (1, dx, dy + al + 3), "v": (1, dx, dy - al - 3),
+        "<": (1, dx - al - 3, dy), ">": (1, dx + al + 3, dy),
         "A": (1, ax + abxy[0][0], ay + abxy[0][1] + ad / 2 + 2),
         "B": (1, ax + abxy[1][0] + ad / 2 + 2, ay + abxy[1][1]),
         "X": (1, ax + abxy[2][0], ay + abxy[2][1] - ad / 2 - 2),
-        "Y": (1, ax + abxy[3][0] - ad / 2 - 2, ay + abxy[3][1]),
+        # Y above its cap: on its left it sat under the raised bezel
+        "Y": (1, ax + abxy[3][0], ay + abxy[3][1] + ad / 2 + 2),
         "START": (5, sx - ssp / 2, sy - sh / 2 - 2.5),
         "SEL": (3, sx + ssp / 2, sy - sh / 2 - 2.5),
         "MENU": (4, mx, my - mh / 2 - 2.5),
-        "L": (1, -lcx, hy + lw / 2 + 3), "R": (1, lcx, hy + lw / 2 + 3),
+        "L": (1, -lr_x, lr_ly), "R": (1, lr_x, lr_ly),
     }
+    # brand banners (user 2026-10-08): glyph count inside a box round the
+    # string's centre; the front one is read from +Z, the back one from -Z
+    b_fy, b_fs, b_by, b_bs, disp_x_ = need("brand_front_y", "brand_front_size",
+                                           "brand_back_y", "brand_back_size", "disp_x")
+    banners = {"GAME BRO!": (9, disp_x_, b_fy, 6 * b_fs, b_fs),    # the "!" is 2 glyphs
+               "CPJ & CP 2026": (10, 0.0, b_by, 7 * b_bs, b_bs)}
     stl = export_labels()
     try:
         comps = components(stl)
@@ -425,13 +469,46 @@ def main() -> int:
     finally:
         stl.unlink(missing_ok=True)
     centres = [((b[0] + b[1]) / 2, (b[2] + b[3]) / 2) for _v, b, _n in comps]
-    bad, claimed = [], set()
+    bad, claimed, back = [], set(), set()   # back: glyphs on the BACK face
+    for txt, (n, bx, by_, hw, hh) in banners.items():
+        inside = [i for i, (cx, cy) in enumerate(centres)
+                  if abs(cx - bx) <= hw and abs(cy - by_) <= hh]
+        claimed.update(inside)
+        if txt.startswith("CPJ"):
+            back.update(inside)
+        if len(inside) != n:
+            bad.append(f"'{txt}' at ({bx:g},{by_:g}): {len(inside)} glyph(s), want {n}")
+            continue
+        # chirality of one asymmetric glyph: the "B" of GAME BRO! (5th from
+        # the left, read from the front: stem on -X -> centroid left) and
+        # the "J" of CPJ (3rd from the +X end: the string is engraved
+        # mirrored for the back, so the J's stem is on -X -> centroid left)
+        order = sorted(inside, key=lambda i: centres[i][0])
+        pick, want_sign = (order[4], -1) if txt.startswith("GAME") else (order[-3], -1)
+        hit = [c for c in chir if math.hypot(c[0] - centres[pick][0], c[1] - centres[pick][1]) <= 1.0]
+        if len(hit) == 1 and hit[0][2] * want_sign <= 0.05:
+            bad.append(f"'{txt}' engraved mirrored (stem offset {hit[0][2]:+.2f})")
     for txt, (n, ex, ey) in expect.items():
         near = [i for i, (cx, cy) in enumerate(centres)
                 if math.hypot(cx - ex, cy - ey) <= 6.0]
         claimed.update(near)
+        if txt in ("L", "R"):
+            back.update(near)
         if len(near) != n:
             bad.append(f"'{txt}' at ({ex:g},{ey:g}): {len(near)} glyph(s), want {n}")
+    # visible: a glyph engraved where the raised display bezel stands is
+    # swallowed by it (the Y of V3 at x 46.5) — no glyph may touch the
+    # bezel's outer rectangle (viewport + clearance + bezel width); the
+    # back-face glyphs (L, R, the CPJ line) are on the other shell
+    vx, vy, vw, vh, vcl, vbz = need("disp_x", "disp_offset_y", "disp_w", "disp_h",
+                                    "disp_clear", "disp_bezel")
+    bz_hw, bz_hh = vw / 2 + vcl + vbz + 0.3, vh / 2 + vcl + vbz + 0.3
+    for i, (_v, b, _n) in enumerate(comps):
+        if i in back:
+            continue
+        if b[1] > vx - bz_hw and b[0] < vx + bz_hw and b[3] > vy - bz_hh and b[2] < vy + bz_hh:
+            bad.append(f"glyph at ({(b[0] + b[1]) / 2:.1f},{(b[2] + b[3]) / 2:.1f}) under the "
+                       f"raised display bezel (x {vx - bz_hw:.1f}..{vx + bz_hw:.1f}) — invisible")
     orphans = len(comps) - len(claimed)
     if orphans:
         bad.append(f"{orphans} glyph(s) beside no button")
@@ -449,11 +526,11 @@ def main() -> int:
     check("R9", "labels-beside-own-button",
           not bad,
           f"{len(comps)} glyphs exported" + ("; " + "; ".join(bad) if bad else
-                                               ", all 11 labels in place"))
+                                               ", all 13 labels and 2 brand lines in place, none under the bezel"))
 
     # ── R12 thin walls, measured (Docker) ───────────────────────────────
     # part thin_check: horizontal slices of top shell (z < 40), bottom
-    # shell (40..80) and levers (80+), each eroded/dilated by min_wall/2;
+    # shell (40..80) and the edge caps + slider (80+), each eroded/dilated by min_wall/2;
     # whatever survives is material thinner than min_wall. R8 knows the
     # walls we named; this finds the ones we did not.
     stl = export_part("thin_check", THIN_STL)
@@ -463,15 +540,58 @@ def main() -> int:
         stl.unlink(missing_ok=True)
     where = []
     for vol, (x0, x1, y0, y1, z0, z1), _n in thin[:8]:
-        part_name = "top" if z0 < 40 else "bottom" if z0 < 80 else "levers"
+        part_name = "top" if z0 < 40 else "bottom" if z0 < 80 else "edge caps"
         zz = z0 - (0 if z0 < 40 else 40 if z0 < 80 else 80)
         where.append(f"{part_name} z={zz:.1f} x[{x0:.1f},{x1:.1f}] "
                      f"y[{y0:.1f},{y1:.1f}] ({vol / 0.1:.1f} mm2)")
     check("R12", "thin-walls-measured",
           not thin,
-          f"21 slices eroded by {lmin / 2:g}: "
+          f"22 slices eroded by {lmin / 2:g}: "
           + (f"{len(thin)} thin region(s): " + "; ".join(where) if thin
              else f"no material under {lmin:g} mm"))
+
+    # ── R13 edge recesses (user 2026-10-07) ─────────────────────────────
+    # SD: the user reverted the V3 finger window to the V2.1 16 x 3.5 slit
+    # (2026-10-08) — any sd_win_* constant means the window came back.
+    sd_window_back = sorted(k for k in env if k.startswith("sd_win"))
+    (sd_w, sd_zc, sd_h, k_tip, k_root, nub_proud,
+     fork_z0, fork_z1, k_z, slot_w, nub_w, travel) = need(
+        "sd_cut_w", "sd_z", "sd_cut_h",
+        "pwr_knob_tip_y", "pwr_knob_root_y", "pwr_nub_proud", "pwr_fork_z0",
+        "pwr_fork_z1", "pwr_knob_z", "pwr_slot_w", "pwr_nub_w", "pwr_travel")
+    knob_depth = k_tip + body_h / 2          # knob tip inside the -Y face
+    fork_end = k_root - 0.6
+    check("R13", "edge-recesses",
+          u_rd >= 2.0 - 1e-9
+          and not sd_window_back and sd_w >= 16 and sd_h >= 3.5 - 1e-9
+          and nub_proud > 0 and fork_z0 < k_z < fork_z1 and fork_end - k_tip >= 0.5
+          and slot_w >= nub_w + travel + 0.3 - 1e-9,
+          f"USB-C recess {u_rd:g} (>= 2); SD V2.1 slit {sd_w:g} x {sd_h:g} at Z {sd_zc:g}"
+          + (f" — WINDOW IS BACK: {', '.join(sd_window_back)}" if sd_window_back else "")
+          + f"; SW16 knob "
+          f"{knob_depth:g} inside the face -> slider: fork {fork_end - k_tip:g} over the "
+          f"knob, {slot_w:g} slot for a {nub_w:g} nub + {travel:g} travel, nub "
+          f"{nub_proud:g} proud")
+
+    # ── R14 proud, rounded caps (user 2026-10-07) ───────────────────────
+    face_h, face_r, lr_proud, lr_r, lr_cap_h, lr_cap_w = need(
+        "btn_face_h", "btn_face_r", "lr_cap_proud", "lr_cap_r", "lr_cap_h", "lr_cap_w")
+    smallest_half = min(aw, sh, mh, ad) / 2
+    check("R14", "caps-proud-and-rounded",
+          face_h >= 2.0 - 1e-9 and 1.0 <= face_r <= face_h and face_r < smallest_half
+          and 2.0 - 1e-9 <= lr_proud <= 3.0 + 1e-9 and 1.0 <= lr_r <= lr_proud
+          and lr_r < min(lr_cap_h, lr_cap_w) / 2,
+          f"face caps {face_h:g} proud (>= 2), head radius {face_r:g} (narrowest cap "
+          f"half-width {smallest_half:g}); L/R caps {lr_proud:g} proud (2..3), radius {lr_r:g}")
+
+    # ── R15 rounded shell (user 2026-10-07, Switch Lite) ────────────────
+    corner_r, back_r_, steps = need("corner_r", "back_r", "fillet_steps")
+    check("R15", "rounded-shell",
+          corner_r >= 10 and back_r_ >= 6 and front_r >= 1.5 and steps >= 8
+          and front_fillet_wall >= lmin - 1e-9 and back_r_ > side_wall + 0.2,
+          f"corners r{corner_r:g} (>= 10), back fillet r{back_r_:g} (>= 6), front fillet "
+          f"r{front_r:g} (>= 1.5, wall at the inner corner {front_fillet_wall:.2f}), "
+          f"{steps:g} slices per quarter")
 
     print("-" * 72)
     fails = results.count(False)
