@@ -111,7 +111,9 @@ build, sound chips at 16 kHz.
 | Start | 42 fps; MARIA (graphics chip) 17.1 ms + 6502 6.5 ms a frame |
 | 64 KB address space in internal RAM | nothing |
 | MARIA's line colours read once a line, its code in IRAM | 50 fps, MARIA 13.0 ms |
-| MARIA's common case written directly, the core's small state in internal RAM (branch `a78-speed2`, not merged) | 56 fps, MARIA 10.9 ms |
+| MARIA's common case written directly, the core's small state in internal RAM | 56 fps, MARIA 10.9 ms |
+| A frame that is not shown skips MARIA's colour write (frameskip 1) | 59 fps, MARIA 9.7 ms |
+| MARIA's direct objects stored with its state in locals (fork `e21a7296`, in master 2026-10-09) | 58–59 fps, MARIA 9.2 ms, 28–29 frames drawn a second (was 19–20) |
 
 ## What did not pay, across emulators
 
@@ -130,7 +132,7 @@ nothing is promised before it is measured:
 
 | System | Measured | Next lever |
 |:---|:---|:---|
-| Atari 7800 | 50 fps (56 on the unmerged branch) | merge `a78-speed2`; the 6502 is 6.5 ms |
+| Atari 7800 | 58–59 fps (emulation 15.9 ms a frame) | MARIA 9.2 ms; the 6502 is 6.6 ms |
 | CPS1 | Final Fight 55, SF2 38–47 | the scroll-2 copy (18 % of core 0), the opaque drawer |
 | Neo Geo raster games | Metal Slug 2, KOF95 52–55 | 16-bit video path (about 16 ms) |
 | GBA | 46–59 | faster renderer on core 1; the C hardware model |

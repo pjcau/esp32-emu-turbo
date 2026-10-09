@@ -37,7 +37,7 @@ this screen. *Busy* is how much of the main core the emulator takes.
 | Atari 2600 | retro-extra (Stella) | Halo 2600, Donkey Kong, Asteroids | ✅ 60 fps (50 PAL), busy 30–68 % | 2026-10-03 |
 | Neo Geo Pocket | retro-extra (RACE) | Metal Slug 1st Mission and 7 more | ✅ 60 fps, busy 70–89 % | 2026-10-03 |
 | Atari 5200 | retro-home (Atari800 via MCUME) | Galaxian, Pole Position, Space Invaders | ✅ 60 fps, busy 33 % | 2026-10-08 |
-| Atari 7800 | retro-home (ProSystem) | Donkey Kong | 🟡 50 of 60 fps (was 42) | 2026-10-08 |
+| Atari 7800 | retro-home (ProSystem) | Donkey Kong | 🟡 58–59 of 60 fps (was 42) | 2026-10-09 |
 | Commodore 64 | retro-home (Teensy64 + reSID) | Ghostbusters (.d64) | ✅ 50 fps (PAL), busy 70 % | 2026-10-08 |
 | MSX 1 / MSX 2 | fmsx (fMSX) | Nemesis, Metal Gear 2 | ✅ 60 fps, busy 21–26 % | 2026-10-07 |
 

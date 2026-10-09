@@ -30,7 +30,7 @@ What the other Retro-Go forks add, and what was taken from them, is in
 
 Nearly every system runs at its full speed; the ones that do not yet are the
 68000 arcade boards (Neo Geo, CPS1, System 16: 38–58 fps), the GBA (46–59) and
-the Atari 7800 (50). The table is on [Emulators](/docs/software/emulators).
+the Atari 7800 (58–59). The table is on [Emulators](/docs/software/emulators).
 
 | App | Systems |
 |:---|:---|
