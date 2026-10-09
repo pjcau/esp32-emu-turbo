@@ -135,6 +135,11 @@ nothing is promised before it is measured:
 - Writing pixels four at a time from a buffer instead of one byte at a time
   (CPS1, 2026-10-08): **slower** (25.6 → 26.6 ms a frame). Byte stores to
   PSRAM are already merged by the data cache; the buffer added work.
+- Fewer instructions is not faster (GBA renderer, 2026-10-09): three changes that
+  removed the per-pixel transparency test (7 → 4 Xtensa instructions a pixel,
+  output identical) made `render` **slower** on all three games tested (Mario
+  Kart 12.50 → 12.87 ms, Sonic 5.90 → 6.36, Metal Slug Advance 5.35 → 5.66);
+  branch `gba-speed` kept as the record, not merged.
 - Code in IRAM helps only for code that misses the instruction cache (GBA
   helpers, MARIA); for code already hot it gives 1–6 %.
 
@@ -145,7 +150,7 @@ nothing is promised before it is measured:
 | Atari 7800 | 58–59 fps (emulation 15.9 ms a frame) | MARIA 9.2 ms; the 6502 is 6.6 ms |
 | CPS1 | Final Fight 55, SF2 38–47 | the scroll-2 copy (18 % of core 0), the opaque drawer |
 | Neo Geo raster games | Metal Slug 2, KOF95 52–55 | 16-bit video path (about 16 ms) |
-| GBA | 46–59 | faster renderer on core 1; the C hardware model |
+| GBA | Sonic, Metal Slug Advance 60 (all drawn); Mario Kart 51 | Mario Kart is ARM-bound (cpu 19.3 ms a frame, core 1 20 % idle): the emulated CPU, not the renderer |
 | System 16 | 54–58 | not profiled yet |
 
 The plans behind these are in [Arcade 60 fps plan](/docs/next-steps/arcade-60fps-plan)
