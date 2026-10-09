@@ -115,6 +115,16 @@ build, sound chips at 16 kHz.
 | A frame that is not shown skips MARIA's colour write (frameskip 1) | 59 fps, MARIA 9.7 ms |
 | MARIA's direct objects stored with its state in locals (fork `e21a7296`, in master 2026-10-09) | 58–59 fps, MARIA 9.2 ms, 28–29 frames drawn a second (was 19–20) |
 
+## Neo Geo Pocket
+
+| Change | Effect (Metal Slug 1st Mission, board 2026-10-09) |
+|:---|:---|
+| Start | 60 fps, ~29 frames drawn; TLCS-900H 9.0 ms, Z80 2.9, graphics 3.2, of 16.6 |
+| Frameskip decided per frame (was fixed at 1) | drawn 20–31 → 45–61 in the fight, 30 → 60 on a quiet screen |
+| Work RAM tested first in the CPU's byte read | TLCS-900H −0.5 to −0.6 ms |
+| Sound DC blocker in fixed point (no soft doubles) | mix 0.72 → 0.32 ms |
+| VDP registers read once a line | nothing |
+
 ## What did not pay, across emulators
 
 Three predictions in a row about memory were wrong on the board, which is why

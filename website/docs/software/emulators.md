@@ -35,7 +35,7 @@ this screen. *Busy* is how much of the main core the emulator takes.
 | Mega Drive | gwenesis | Sonic, Miniplanets | ✅ 60 fps, 30 drawn, busy 85 % | 2026-10-03 |
 | Game Boy Advance | gbsp (gpSP + Xtensa dynarec) | Sonic Advance, Metal Slug Advance, TMNT | 🟡 56–60 in play (Sonic 56, Metal Slug 46–56, TMNT 49–59); Mario Kart 44–51 | 2026-10-03 |
 | Atari 2600 | retro-extra (Stella) | Halo 2600, Donkey Kong, Asteroids | ✅ 60 fps (50 PAL), busy 30–68 % | 2026-10-03 |
-| Neo Geo Pocket | retro-extra (RACE) | Metal Slug 1st Mission and 7 more | ✅ 60 fps, busy 70–89 % | 2026-10-03 |
+| Neo Geo Pocket | retro-extra (RACE) | Metal Slug 1st Mission and 7 more | ✅ 60 fps, all 60 drawn on quiet screens, 45–61 in Metal Slug's fights (was ~29) | 2026-10-09 |
 | Atari 5200 | retro-home (Atari800 via MCUME) | Galaxian, Pole Position, Space Invaders | ✅ 60 fps, busy 33 % | 2026-10-08 |
 | Atari 7800 | retro-home (ProSystem) | Donkey Kong | 🟡 58–59 of 60 fps (was 42) | 2026-10-09 |
 | Commodore 64 | retro-home (Teensy64 + reSID) | Ghostbusters (.d64) | ✅ 50 fps (PAL), busy 70 % | 2026-10-08 |

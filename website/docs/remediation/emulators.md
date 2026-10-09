@@ -26,7 +26,7 @@ for the full list.
 |:---|:---|:---|
 | ~~DOOM memory leak~~ | not a leak (board, 2026-10-09, `DOOMMEM`, 7 min of E1M1): the purgeable lump cache fills to a 2.8 MB plateau by design, then free PSRAM holds at 2.28 MB; the 1.5 MB reserve (fork `6f8cc892`, 2026-09-27) purges it | open: `static` steps up 82–106 KB per level load; a multi-level run is next |
 | ~~Super Mario Kart at 57 fps~~ | fixed 2026-09-28: 57–62, mostly 60 | the S-DSP mix moved to core 1 (the DSP-1 was only ~2% of the frame) |
-| **Neo Geo Pocket near the limit** | 60 fps with ~29 drawn, CPU 93–99% (Metal Slug) | profile RACE; the sound chip already runs at 16 kHz |
+| ~~Neo Geo Pocket near the limit~~ | fixed 2026-10-09 (fork `3b3cb6b0`): ~29 drawn was the app's frameskip 1, not the CPU; now 45–61 drawn in Metal Slug's fights, 60 on quiet screens. Board profile: TLCS-900H 9.0 ms, Z80 2.9, graphics 3.2 of 16.6 | the interpreter's register-file double indirection, if more is needed |
 
 ## Audio rates (2026-09-27)
 
