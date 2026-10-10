@@ -244,3 +244,21 @@ the next presses). A game that reacts visibly to the joystick is needed to close
      4.5 >>> key l 200
      7.0 >>> hold select
      7.6 >>> release
+
+==== Recheck, c64-ntsc 17a08574 (rebased on 831b674f), retro-home 693 824 B ====
+2. Ghostbusters, Options > Emulator options > Video, RIGHT x3 then LEFT x3 (a webcam photo after each press):
+   values Auto (PAL) -> PAL -> NTSC -> Auto (PAL) -> NTSC -> PAL -> Auto (PAL).
+   Box: single border ONLY while the value is "Auto (PAL)". With "PAL" or "NTSC" the box is again redrawn
+   with a second border at the left and right edges (both directions). The padding seems to cover the
+   "Auto (...)" values but not the bare "PAL" / "NTSC" ones. -> NOT passed.
+   Full lines:
+   c64_main: C64 now NTSC: 263 raster lines, 17095 cycles/frame, 60 fps, audio 32000 Hz
+   c64_main: C64 now PAL: 312 raster lines, 19656 cycles/frame, 50 fps, audio 32000 Hz   -> fixed.
+3. Buttons, with a test program written here (no download): JOYTEST.prg, 12 lines of BASIC V2 tokenized by
+   a script. It moves a '*' with joystick 2 ($DC00), prints the fire bit and the PETSCII code of the last key
+   from GET (starts at "." = 46), and RUN/STOP stops it with BREAK. Put in /sd/roms/c64, removed afterwards.
+   17a08574: D-pad RIGHT/DOWN/LEFT move the '*'; A -> "JOY 16 FIRE 1"; START -> KEY 46 -> 32 (SPACE);
+             SELECT -> "BREAK IN 70 / READY." (RUN/STOP).   -> passed.
+4. Because 2 did not pass, 17a08574 was NOT left installed: the retro-home play build from fork master 831b674f
+   (692 528 B) is back, and the same JOYTEST run on it passes the same way (KEY 46 -> 32, FIRE 1, '*' moves,
+   BREAK IN 80). Play build installed (master), buttons verified.
