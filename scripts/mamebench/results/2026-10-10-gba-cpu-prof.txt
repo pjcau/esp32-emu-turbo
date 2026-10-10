@@ -1,0 +1,1265 @@
+GBA CPU profile on the board, 2026-10-10. Fork gba-cpu 68ee0272, xtensa-68000-dynarec gba-cpu c69ec41, gbsp only,
+GBAPROF=1, 785 568 B. Nothing merged. Volume 0.
+Run: launch Mario Kart - Super Circuit (Europe), "load 1" sent 0.6 s after "Retro-Go ready" (log 4.0 s, the slot-1
+race on Peach Circuit made on 2026-10-09), A held from 4.3 s; the logger ran 75 s. Webcam at ~25 s: lap 1 on the
+grass, Toad, as in the 2026-10-09 runs.
+Captured: 272 GBAJIT lines, 452 GBASAMPLE lines (the block was printed at log 30.1-30.7 s), GBAPROF/GBAWAIT/CORE1 every second.
+    30.7 GBASAMPLE total 19453 of 20171 ticks (last depth-4 caller 8037f898)
+    30.7 GBASAMPLE translated code 59.3% (RAM cache code 2.4%)
+Late GBAPROF: cpu 19.38-19.48 ms/frame, render 12.5-12.7 per drawn frame, 51 frames (51 drawn).
+The Mario Kart ROM and the slot-1 state were NOT copied to the Mac: this PC has no ssh route to it
+(~/.ssh/config knows only github.com). Not sent via git.
+
+End: gbsp play build from fork master 831b674f (776 224 B, no GBAPROF) reinstalled; buttons verified in Sonic
+Advance on the webcam: RIGHT runs, A jumps, START pauses.
+
+---- the whole serial log, unfiltered (colour codes stripped) ----
+     0.1 [debug] STACK:4348, HEAP:229+8117 (152+8064), BUSY:0%, FPS:50 (S:50 R:0+0), BATT:0
+     1.1 [debug] STACK:4348, HEAP:229+8117 (152+8064), BUSY:0%, FPS:50 (S:50 R:0+0), BATT:0
+     2.0 >>> launch gbsp gba /sd/roms/gba/Mario Kart - Super Circuit (Europe).gba
+     2.1 CTL launch gbsp gba /sd/roms/gba/Mario Kart - Super Circuit (Europe).gba
+     2.1 [debug] STACK:4348, HEAP:229+8117 (152+8064), BUSY:0%, FPS:50 (S:50 R:0+0), BATT:0
+     2.1 [info] rg_system_switch_app: Switching to app gbsp (gba)
+     2.3 [warn] rg_system_restart: Restarting system!
+     2.3 [info] rg_audio_deinit: Audio terminated. sink='PDM'
+     2.3 [info] rg_storage_deinit: Storage unmounted.
+     2.3 [info] rg_input_deinit: Input terminated.
+     2.3 [info] rg_display_deinit: Display terminated.
+     2.3 ESP-ROM:esp32s3-20210327
+     2.3 Build:Mar 27 2021
+     2.3 rst:0xc (RTC_SW_CPU_RST),boot:0x2b (SPI_FAST_FLASH_BOOT)
+     2.3 Saved PC:0x40379769
+     2.3 SPIWP:0xee
+     2.3 mode:DIO, clock div:1
+     2.3 load:0x3fce2820,len:0x135c
+     2.3 load:0x403c8700,len:0x4
+     2.3 load:0x403c8704,len:0xe08
+     2.3 load:0x403cb700,len:0x30c0
+     2.3 entry 0x403c892c
+     2.3 I (26) boot: ESP-IDF v5.4 2nd stage bootloader
+     2.3 I (26) boot: compile time Sep 13 2026 16:41:14
+     2.3 I (26) boot: Multicore bootloader
+     2.3 I (27) boot: chip revision: v0.2
+     2.3 I (27) boot: efuse block revision: v1.4
+     2.3 I (27) qio_mode: Enabling default flash chip QIO
+     2.3 I (27) boot.esp32s3: Boot SPI Speed : 80MHz
+     2.3 I (27) boot.esp32s3: SPI Mode       : QIO
+     2.3 I (27) boot.esp32s3: SPI Flash Size : 16MB
+     2.3 I (28) boot: Enabling RNG early entropy source...
+     2.3 I (28) boot: Partition Table:
+     2.3 I (28) boot: ## Label            Usage          Type ST Offset   Length
+     2.3 I (28) boot:  0 nvs              WiFi data        01 02 00009000 00004000
+     2.3 I (29) boot:  1 otadata          OTA data         01 00 0000d000 00002000
+     2.3 I (29) boot:  2 phy_init         RF data          01 01 0000f000 00001000
+     2.3 I (30) boot:  3 launcher         OTA app          00 10 00010000 00120000
+     2.3 I (30) boot:  4 retro-core       OTA app          00 11 00130000 00130000
+     2.3 I (30) boot:  5 prboom-go        OTA app          00 12 00260000 000d0000
+     2.3 I (31) boot:  6 gwenesis         OTA app          00 13 00330000 00100000
+     2.3 I (31) boot:  7 retro-extra      OTA app          00 14 00430000 00140000
+     2.3 I (32) boot:  8 mame-go          OTA app          00 15 00570000 00200000
+     2.3 I (32) boot:  9 wolf3d-go        OTA app          00 16 00770000 000a0000
+     2.3 I (32) boot: 10 opentyrian-go    OTA app          00 17 00810000 000b0000
+     2.3 I (33) boot: 11 gbsp             OTA app          00 18 008c0000 000d0000
+     2.3 I (33) boot: 12 sdapp            OTA app          00 19 00990000 000a0000
+     2.3 I (33) boot: 13 fmsx             OTA app          00 1a 00a30000 000b0000
+     2.3 I (34) boot: 14 retro-home       OTA app          00 1b 00ae0000 00110000
+     2.3 I (34) boot: 15 mamerom          Unknown data     01 40 00bf0000 00400000
+     2.3 I (35) boot: End of partition table
+     2.3 I (35) esp_image: segment 0: paddr=008c0020 vaddr=3c090020 size=201e4h (131556) map
+     2.4 I (55) esp_image: segment 1: paddr=008e020c vaddr=3fc9cf00 size=025b4h (  9652) load
+     2.4 I (57) esp_image: segment 2: paddr=008e27c8 vaddr=40378000 size=0d850h ( 55376) load
+     2.4 I (68) esp_image: segment 3: paddr=008f0020 vaddr=42000020 size=885bch (558524) map
+     2.4 I (151) esp_image: segment 4: paddr=009785e4 vaddr=40385850 size=07674h ( 30324) load
+     2.5 I (157) esp_image: segment 5: paddr=0097fc60 vaddr=600fe100 size=0001ch (    28) load
+     2.5 I (165) boot: Loaded app from partition at offset 0x8c0000
+     2.5 I (165) boot: Disabling RNG early entropy source...
+     2.8 
+     2.8 ========================================================
+     2.8 gbsp unknown (Oct 10 2026 11:00:50)
+     2.8  built for: ESP32-EMU-TURBO. type: dev
+     2.8 ========================================================
+     2.8 
+     2.8 [info] rg_storage_init: Looking for SD Card using SDSPI...
+     2.8 [info] rg_storage_init: Storage mounted at /sd.
+     2.8 [info] rg_input_init: Initializing GPIO gamepad driver...
+     2.8 [info] rg_input_init: Console gamepad control enabled (stdin)
+     2.8 [info] rg_input_init: Input ready. state=00000000 00000000
+     2.8 [info] json_root: Config file loaded: '/sd/retro-go/config/global.json'
+     2.8 [info] json_root: Config file loaded: '/sd/retro-go/config/boot.json'
+     2.8 [info] rg_display_init: Initialization...
+     2.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcd5758
+     2.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcd665c
+     2.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcd7560
+     2.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcd8464
+     2.9 [info] rg_alloc: SIZE=3840, CAPS=DMA|8BIT, PTR=0x3fcd9368
+     3.4 [info] rg_display_init: Display ready.
+     3.4 [info] rg_alloc: SIZE=17280, CAPS=SPIRAM|8BIT, PTR=0x3c123efc
+     3.4 [info] rg_gui_set_language_id: Language set to: English (0)
+     3.4 [info] rg_gui_set_font: Font set to: VeraBold 11 (height=13, scaling=1.00)
+     3.4 [info] rg_gui_set_theme: Using built-in theme!
+     3.4 [info] rg_audio_init: Audio ready. sink='PDM', samplerate=32768, volume=0
+     3.4 [info] rg_system_load_time: Time loaded from storage
+     3.4 [info] rg_system_load_time: Time is now: Tue Sep 29 03:39:20 2026
+     3.4 
+     3.4 [info] rg_system_init: Available memory: 105/212 + 7774/7833
+     3.4 [info] rg_system_init: Retro-Go ready.
+     3.4 
+     3.4 [info] rg_alloc: SIZE=77316, CAPS=SPIRAM|8BIT, PTR=0x3c128520
+     3.4 [info] rg_alloc: SIZE=77316, CAPS=SPIRAM|8BIT, PTR=0x3c13b524
+     3.5 [info] rg_alloc: SIZE=77316, CAPS=SPIRAM|8BIT, PTR=0x3c14e528
+     3.5 [info] rg_alloc: SIZE=753664, CAPS=8BIT, PTR=0x3c16152c
+     3.5 [info] gbsp_main: gbsp_memory=0x3c16152c
+     3.5 [info] gbsp_main: dynarec: translation caches 2432 KB at 0x3c220000 (exec 428c0000)
+     3.5 [info] samp_alloc: sampling profiler: 144 KB of PSRAM claimed before the ROM cache
+     3.5 [info] gbsp_main: ROM cache: 4 blocks of 1 MB
+     4.0 >>> load 1
+     4.0 CTL load queued
+     4.3 >>> hold a
+     4.3 CTL hold 0x0100
+     5.4 [debug] STACK:15024, HEAP:88+42 (31+31), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+     6.3 [info] gbsp_main: line renderer on core 1: yes
+     6.3 [info] gbsp_main: reset_gba
+     6.4 [debug] STACK:15024, HEAP:97+17 (31+13), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+     6.6 [info] sram_load: battery save loaded: /sd/retro-go/saves/gba/Mario Kart - Super Circuit (Europe).gba.sram (131072 bytes)
+     6.6 [info] json_root: Config file loaded: '/sd/retro-go/config/Mario Kart - Super Circuit (Europe).gba.json'
+     6.6 [info] gbsp_main: CPU core: dynarec
+     6.6 [info] gbsp_main: emulation loop
+     6.7 GBAWAIT ms/frame: wait for core 1 1.20 (1.0 syncs), display sync 0.00 | core 1 lines behind at line 80: 72.0, 159: 123.0, wakes 2.0
+     6.7 [info] update_viewport_scaling: 240x160@1.500 => 480x320@1.500 left:0 top:0 step_x:0.50 step_y:0.50
+     6.7 GBAWAIT by cause ms/frame: other 1.21 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.00 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+     6.7 CORE1
+     6.7 CORE0
+     6.7 GBAJIT per second: 5 cache syncs (0.11 ms/frame), 0 RAM flushes, 20 notifies (0.02 ms/frame)
+     6.7 GBAJIT translate: 16 blocks, 2.42 ms/frame
+     6.7 GBAJIT translate by region: bios 2 ewram 0 iwram 0 rom 14 | ROM flushes 0 | last pcs 08062658 08062660 0802d53c 08062640
+     6.7 GBAJIT code: ROM cache 4 KB, RAM cache 0 KB
+     6.7 GBAPROF 1 frames (1 drawn): ms/frame cpu 15.85 sound 0.04 display 0.04 | render 1.91 per drawn frame | 0 instr/frame, 0 cycles/instr | 0 ROM pages loaded
+     6.7 [info] rg_emu_load_state: Loading state from '/sd/retro-go/saves/gba/Mario Kart - Super Circuit (Europe).gba-1.sav'.
+     7.5 [debug] STACK:15024, HEAP:80+17 (31+13), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+     7.8 CTL load done slot 1
+     8.0 GBAWAIT ms/frame: wait for core 1 0.00 (0.0 syncs), display sync 0.00 | core 1 lines behind at line 80: 8.0, 159: 82.0, wakes 11.0
+     8.0 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.00 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+     8.0 CORE1
+     8.0 CORE0
+     8.0 GBAJIT per second: 287 cache syncs (11.76 ms/frame), 0 RAM flushes, 20 notifies (0.03 ms/frame)
+     8.0 GBAJIT translate: 1698 blocks, 492.52 ms/frame
+     8.0 GBAJIT translate by region: bios 19 ewram 0 iwram 24 rom 1655 | ROM flushes 1 | last pcs 0803d080 0803c768 08032c74 08032cd0
+     8.0 GBAJIT code: ROM cache 800 KB, RAM cache 16 KB
+     8.0 GBAPROF 1 frames (1 drawn): ms/frame cpu 138.66 sound 0.06 display 0.05 | render 9.29 per drawn frame | 0 instr/frame, 0 cycles/instr | 0 ROM pages loaded
+     8.5 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:0%, FPS:0 (S:0 R:0+0), BATT:0
+     9.0 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 8.8, 159: 82.2, wakes 9.4
+     9.0 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+     9.0 CORE1
+     9.0 CORE0
+     9.0 GBAJIT per second: 114 cache syncs (0.05 ms/frame), 0 RAM flushes, 1060 notifies (0.03 ms/frame)
+     9.0 GBAJIT translate: 186 blocks, 0.80 ms/frame
+     9.0 GBAJIT translate by region: bios 2 ewram 0 iwram 43 rom 141 | ROM flushes 0 | last pcs 08041456 0803c506 08041730 08032c70
+     9.0 GBAJIT code: ROM cache 861 KB, RAM cache 43 KB
+     9.0 GBAPROF 53 frames (53 drawn): ms/frame cpu 18.84 sound 0.07 display 0.05 | render 11.23 per drawn frame | 3825 instr/frame, 1182 cycles/instr | 0 ROM pages loaded
+     9.5 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:53 (S:0 R:54+0), BATT:0
+    10.0 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 8.6, 159: 82.2, wakes 9.3
+    10.0 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.05 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    10.0 CORE1 IDLE1:100%
+    10.0 CORE0 gbsp:100%
+    10.0 GBAJIT per second: 17 cache syncs (0.01 ms/frame), 0 RAM flushes, 1060 notifies (0.03 ms/frame)
+    10.0 GBAJIT translate: 30 blocks, 0.17 ms/frame
+    10.0 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 30 | ROM flushes 0 | last pcs 08043970 0802fca4 0803b9aa 08030d78
+    10.0 GBAJIT code: ROM cache 876 KB, RAM cache 43 KB
+    10.0 GBAPROF 53 frames (53 drawn): ms/frame cpu 18.64 sound 0.07 display 0.05 | render 11.69 per drawn frame | 6878 instr/frame, 650 cycles/instr | 0 ROM pages loaded
+    10.5 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:52 (S:0 R:52+0), BATT:0
+    10.5 [info] system_monitor_task: Raised frameskip to 2
+    11.0 GBAWAIT ms/frame: wait for core 1 0.09 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.9, 159: 81.7, wakes 9.1
+    11.0 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.09 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    11.0 CORE1 rg_display:26% IDLE1:19% gba_render:54% rg_input:0%
+    11.0 CORE0 gbsp:100% rg_sysmon:0%
+    11.0 GBAJIT per second: 27 cache syncs (0.01 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    11.0 GBAJIT translate: 38 blocks, 0.17 ms/frame
+    11.0 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 38 | ROM flushes 0 | last pcs 0803d932 08049f20 0805f7c4 0805f7ca
+    11.0 GBAJIT code: ROM cache 888 KB, RAM cache 43 KB
+    11.0 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.13 sound 0.07 display 0.05 | render 12.48 per drawn frame | 7037 instr/frame, 652 cycles/instr | 0 ROM pages loaded
+    11.5 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:47+3), BATT:0
+    11.5 [info] system_monitor_task: Raised frameskip to 3
+    12.0 GBAWAIT ms/frame: wait for core 1 0.05 (0.4 syncs), display sync 0.00 | core 1 lines behind at line 80: 8.8, 159: 81.8, wakes 9.3
+    12.0 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.06 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    12.0 CORE1 rg_display:26% IDLE1:20% gba_render:54% rg_input:0%
+    12.0 CORE0 gbsp:100% rg_sysmon:0%
+    12.0 GBAJIT per second: 20 cache syncs (0.01 ms/frame), 0 RAM flushes, 1080 notifies (0.03 ms/frame)
+    12.0 GBAJIT translate: 21 blocks, 0.10 ms/frame
+    12.0 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 21 | ROM flushes 0 | last pcs 0804a38c 0805f800 0805f806 08041170
+    12.0 GBAJIT code: ROM cache 896 KB, RAM cache 43 KB
+    12.0 GBAPROF 54 frames (54 drawn): ms/frame cpu 18.45 sound 0.07 display 0.05 | render 11.59 per drawn frame | 7539 instr/frame, 587 cycles/instr | 0 ROM pages loaded
+    12.4 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:54 (S:0 R:54+0), BATT:0
+    12.4 [info] system_monitor_task: Raised frameskip to 4
+    13.0 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.9, 159: 79.8, wakes 9.8
+    13.0 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.05 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    13.0 CORE1 rg_display:24% IDLE1:21% gba_render:55% rg_input:0%
+    13.0 CORE0 gbsp:100% rg_sysmon:0%
+    13.0 GBAJIT per second: 23 cache syncs (0.01 ms/frame), 0 RAM flushes, 1060 notifies (0.03 ms/frame)
+    13.0 GBAJIT translate: 34 blocks, 0.19 ms/frame
+    13.0 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 34 | ROM flushes 0 | last pcs 0803e21a 0803de7c 0803e00e 080411a8
+    13.0 GBAJIT code: ROM cache 913 KB, RAM cache 43 KB
+    13.0 GBAPROF 53 frames (53 drawn): ms/frame cpu 18.61 sound 0.07 display 0.05 | render 11.63 per drawn frame | 11124 instr/frame, 402 cycles/instr | 0 ROM pages loaded
+    13.4 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:52 (S:0 R:29+23), BATT:0
+    13.4 [info] system_monitor_task: Raised frameskip to 5
+    14.0 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.5, 159: 77.3, wakes 9.4
+    14.0 GBAWAIT by cause ms/frame: other 0.01 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.05 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    14.0 CORE1 rg_display:27% IDLE1:22% gba_render:50% rg_input:0%
+    14.0 CORE0 gbsp:100% rg_sysmon:0%
+    14.0 GBAJIT per second: 43 cache syncs (0.02 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    14.0 GBAJIT translate: 79 blocks, 0.31 ms/frame
+    14.0 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 79 | ROM flushes 0 | last pcs 0804a418 0803de44 08049fee 0802fb9e
+    14.0 GBAJIT code: ROM cache 950 KB, RAM cache 43 KB
+    14.0 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.39 sound 0.07 display 0.05 | render 12.44 per drawn frame | 10640 instr/frame, 437 cycles/instr | 0 ROM pages loaded
+    14.4 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    15.1 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.1, wakes 9.3
+    15.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.02
+    15.1 CORE1 IDLE1:19% rg_display:27% gba_render:54% rg_input:0%
+    15.1 CORE0 gbsp:100% rg_sysmon:0%
+    15.1 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    15.1 GBAJIT translate: 3 blocks, 0.01 ms/frame
+    15.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 3 | ROM flushes 0 | last pcs 08032c98 0803df6c 08049fee 0802fb9e
+    15.1 GBAJIT code: ROM cache 950 KB, RAM cache 43 KB
+    15.1 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.24 sound 0.07 display 0.05 | render 12.59 per drawn frame | 11229 instr/frame, 411 cycles/instr | 0 ROM pages loaded
+    15.5 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    16.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.9, 159: 76.7, wakes 9.3
+    16.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    16.1 CORE1 IDLE1:21% rg_display:25% gba_render:54% rg_input:0%
+    16.1 CORE0 gbsp:100% rg_sysmon:0%
+    16.1 GBAJIT per second: 11 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    16.1 GBAJIT translate: 11 blocks, 0.09 ms/frame
+    16.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 11 | ROM flushes 0 | last pcs 0804a3ec 0803e0b6 0802fc9c 0803ca94
+    16.1 GBAJIT code: ROM cache 956 KB, RAM cache 43 KB
+    16.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.30 sound 0.07 display 0.05 | render 12.54 per drawn frame | 10102 instr/frame, 458 cycles/instr | 0 ROM pages loaded
+    16.5 [debug] STACK:10384, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    17.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 75.4, wakes 9.2
+    17.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    17.1 CORE1 rg_display:27% IDLE1:22% gba_render:51% rg_input:1%
+    17.1 CORE0 gbsp:100% rg_sysmon:0%
+    17.1 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    17.1 GBAJIT translate: 2 blocks, 0.01 ms/frame
+    17.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0803ceb0 0802fc10 0802fc9c 0803ca94
+    17.1 GBAJIT code: ROM cache 957 KB, RAM cache 43 KB
+    17.1 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.25 sound 0.07 display 0.05 | render 12.44 per drawn frame | 11803 instr/frame, 391 cycles/instr | 0 ROM pages loaded
+    17.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    18.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 74.0, wakes 9.2
+    18.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    18.1 CORE1 rg_input:0% IDLE1:21% gba_render:54% rg_display:25%
+    18.1 CORE0 gbsp:100% rg_sysmon:0%
+    18.1 GBAJIT per second: 11 cache syncs (0.01 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    18.1 GBAJIT translate: 87 blocks, 1.02 ms/frame
+    18.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 87 | ROM flushes 0 | last pcs 0803bcc0 0803bcdc 0803b72e 0803bca2
+    18.1 GBAJIT code: ROM cache 1006 KB, RAM cache 43 KB
+    18.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.37 sound 0.07 display 0.05 | render 12.40 per drawn frame | 13193 instr/frame, 352 cycles/instr | 0 ROM pages loaded
+    18.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    19.1 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 74.4, wakes 9.3
+    19.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    19.1 CORE1 rg_display:27% IDLE1:21% gba_render:52% rg_input:0%
+    19.1 CORE0 gbsp:100% rg_sysmon:0%
+    19.1 GBAJIT per second: 10 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    19.1 GBAJIT translate: 17 blocks, 0.05 ms/frame
+    19.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 17 | ROM flushes 0 | last pcs 0803ce34 08043b84 080443dc 08038050
+    19.1 GBAJIT code: ROM cache 1011 KB, RAM cache 43 KB
+    19.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.41 sound 0.07 display 0.05 | render 12.45 per drawn frame | 13630 instr/frame, 342 cycles/instr | 0 ROM pages loaded
+    19.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    20.1 GBAWAIT ms/frame: wait for core 1 0.02 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 76.4, wakes 9.2
+    20.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.02 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    20.1 CORE1 IDLE1:21% rg_display:26% gba_render:53% rg_input:1%
+    20.1 CORE0 gbsp:100% rg_sysmon:0%
+    20.1 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    20.1 GBAJIT translate: 2 blocks, 0.02 ms/frame
+    20.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0804c3ee 0804ca3a 080443dc 08038050
+    20.1 GBAJIT code: ROM cache 1014 KB, RAM cache 43 KB
+    20.1 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.23 sound 0.07 display 0.05 | render 12.52 per drawn frame | 11595 instr/frame, 398 cycles/instr | 0 ROM pages loaded
+    20.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    21.1 GBAWAIT ms/frame: wait for core 1 0.02 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.4, 159: 74.7, wakes 9.3
+    21.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.02 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    21.1 CORE1 rg_display:26% IDLE1:21% gba_render:53% rg_input:0%
+    21.1 CORE0 gbsp:100% rg_sysmon:0%
+    21.1 GBAJIT per second: 9 cache syncs (0.01 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    21.1 GBAJIT translate: 18 blocks, 0.13 ms/frame
+    21.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 18 | ROM flushes 0 | last pcs 080498c0 0803c510 08042cd8 0803dff6
+    21.1 GBAJIT code: ROM cache 1026 KB, RAM cache 43 KB
+    21.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.36 sound 0.07 display 0.05 | render 12.43 per drawn frame | 13715 instr/frame, 339 cycles/instr | 0 ROM pages loaded
+    21.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    22.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.8, 159: 75.7, wakes 9.2
+    22.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    22.1 CORE1 rg_display:28% IDLE1:21% gba_render:51% rg_input:0%
+    22.1 CORE0 gbsp:100% rg_sysmon:0%
+    22.1 GBAJIT per second: 4 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    22.1 GBAJIT translate: 4 blocks, 0.04 ms/frame
+    22.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 4 | ROM flushes 0 | last pcs 080410aa 08039b5a 08040ffa 0803e0fc
+    22.1 GBAJIT code: ROM cache 1029 KB, RAM cache 43 KB
+    22.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.26 sound 0.07 display 0.05 | render 12.53 per drawn frame | 11971 instr/frame, 386 cycles/instr | 0 ROM pages loaded
+    22.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    23.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.9, wakes 9.4
+    23.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    23.1 CORE1 rg_display:26% IDLE1:18% gba_render:55% rg_input:0%
+    23.1 CORE0 gbsp:100% rg_sysmon:0%
+    23.1 GBAJIT per second: 3 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    23.1 GBAJIT translate: 3 blocks, 0.03 ms/frame
+    23.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 3 | ROM flushes 0 | last pcs 0803a57e 0804118c 0803c800 0803e0fc
+    23.1 GBAJIT code: ROM cache 1030 KB, RAM cache 43 KB
+    23.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.31 sound 0.07 display 0.05 | render 12.54 per drawn frame | 10543 instr/frame, 440 cycles/instr | 0 ROM pages loaded
+    23.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    24.1 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 75.4, wakes 9.3
+    24.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    24.1 CORE1 IDLE1:21% rg_display:27% gba_render:52% rg_input:0%
+    24.1 CORE0 gbsp:100% rg_sysmon:0%
+    24.1 GBAJIT per second: 3 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    24.1 GBAJIT translate: 3 blocks, 0.03 ms/frame
+    24.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 3 | ROM flushes 0 | last pcs 08038be0 0804987a 0803e08a 0803e0fc
+    24.1 GBAJIT code: ROM cache 1033 KB, RAM cache 43 KB
+    24.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.36 sound 0.07 display 0.05 | render 12.56 per drawn frame | 11994 instr/frame, 387 cycles/instr | 0 ROM pages loaded
+    24.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    25.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 75.5, wakes 9.3
+    25.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    25.1 CORE1 rg_display:28% IDLE1:20% gba_render:53% rg_input:0%
+    25.1 CORE0 gbsp:100% rg_sysmon:0%
+    25.1 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    25.1 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    25.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0803c5e2 0804987a 0803e08a 0803e0fc
+    25.1 GBAJIT code: ROM cache 1034 KB, RAM cache 43 KB
+    25.1 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.23 sound 0.07 display 0.05 | render 12.54 per drawn frame | 11476 instr/frame, 402 cycles/instr | 0 ROM pages loaded
+    25.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    26.1 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 74.9, wakes 9.5
+    26.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    26.1 CORE1 rg_display:27% IDLE1:21% gba_render:52% rg_input:0%
+    26.1 CORE0 gbsp:100% rg_sysmon:0%
+    26.1 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    26.1 GBAJIT translate: 2 blocks, 0.02 ms/frame
+    26.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0804c3e0 080328b0 0803e08a 0803e0fc
+    26.1 GBAJIT code: ROM cache 1035 KB, RAM cache 43 KB
+    26.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.31 sound 0.07 display 0.05 | render 12.51 per drawn frame | 11414 instr/frame, 406 cycles/instr | 0 ROM pages loaded
+    26.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    27.1 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 75.7, wakes 9.3
+    27.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    27.1 CORE1 rg_display:26% IDLE1:22% gba_render:52% rg_input:0%
+    27.1 CORE0 gbsp:100% rg_sysmon:0%
+    27.1 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    27.1 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    27.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0804c3e0 080328b0 0803e08a 0803e0fc
+    27.1 GBAJIT code: ROM cache 1035 KB, RAM cache 43 KB
+    27.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.34 sound 0.07 display 0.05 | render 12.63 per drawn frame | 11082 instr/frame, 419 cycles/instr | 0 ROM pages loaded
+    27.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    28.1 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.5, 159: 77.0, wakes 9.3
+    28.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.05 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    28.1 CORE1 rg_display:25% rg_input:0% IDLE1:21% gba_render:54%
+    28.1 CORE0 gbsp:100% rg_sysmon:0%
+    28.1 GBAJIT per second: 4 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    28.1 GBAJIT translate: 4 blocks, 0.05 ms/frame
+    28.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 4 | ROM flushes 0 | last pcs 08030d96 08030d1c 0802eb5e 08030cfc
+    28.1 GBAJIT code: ROM cache 1042 KB, RAM cache 43 KB
+    28.1 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.26 sound 0.07 display 0.05 | render 12.60 per drawn frame | 11084 instr/frame, 417 cycles/instr | 0 ROM pages loaded
+    28.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    29.1 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 77.4, wakes 9.2
+    29.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.02 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    29.1 CORE1 IDLE1:20% rg_display:27% gba_render:53% rg_input:0%
+    29.1 CORE0 gbsp:100% rg_sysmon:0%
+    29.1 GBAJIT per second: 3 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    29.1 GBAJIT translate: 4 blocks, 0.03 ms/frame
+    29.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 4 | ROM flushes 0 | last pcs 0804117a 08030d06 0803cc54 08030cfc
+    29.1 GBAJIT code: ROM cache 1046 KB, RAM cache 43 KB
+    29.1 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.23 sound 0.07 display 0.05 | render 12.72 per drawn frame | 10392 instr/frame, 444 cycles/instr | 0 ROM pages loaded
+    29.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    30.1 GBASAMPLE 4037c2ba 162 0.83 a0 8037c2e6 ps 00060d30
+    30.1 GBASAMPLE 40056f64 134 0.69 a0 8037f188 ps 00060330
+    30.1 GBASAMPLE 40056f5e 126 0.65 a0 8037f188 ps 00060930
+    30.1 GBASAMPLE 4037c27b 102 0.52 a0 8037c2e6 ps 00060d30
+    30.1 GBASAMPLE 4037f336 96 0.49 a0 829a1478 ps 00060d30
+    30.1 GBASAMPLE 4037f2bc 89 0.46 a0 82067cba ps 00060d30
+    30.1 GBASAMPLE 4037f2d6 80 0.41 a0 828c4491 ps 00060d30
+    30.1 GBASAMPLE 4037f2db 76 0.39 a0 828c43de ps 00060d30
+    30.1 GBASAMPLE 40056f6d 75 0.39 a0 8037ef25 ps 00060330
+    30.1 GBASAMPLE 40056f68 69 0.35 a0 8037ef25 ps 00060d30
+    30.2 GBASAMPLE 4037f2c6 53 0.27 a0 82903e31 ps 00060d30
+    30.2 GBASAMPLE 40056f60 52 0.27 a0 8037ef25 ps 00060d30
+    30.2 GBASAMPLE 4037f357 52 0.27 a0 828e8a98 ps 00060d30
+    30.2 GBASAMPLE 4037f771 47 0.24 a0 82917b99 ps 00060d30
+    30.2 GBASAMPLE 4037f71c 45 0.23 a0 8290a15e ps 00060d30
+    30.2 GBASAMPLE 4037f2bf 43 0.22 a0 828e7231 ps 00060d30
+    30.2 GBASAMPLE 4037f2ce 40 0.21 a0 82913fae ps 00060d30
+    30.2 GBASAMPLE 4037f339 40 0.21 a0 8292a40a ps 00060d30
+    30.2 GBASAMPLE 420287ee 38 0.20 a0 8037c2f2 ps 00060d30
+    30.2 GBASAMPLE 4037f341 36 0.19 a0 829797db ps 00060930
+    30.2 GBASAMPLE 4037f742 34 0.17 a0 828c3f9c ps 00060d30
+    30.2 GBASAMPLE 4037f371 33 0.17 a0 828d5833 ps 00060d30
+    30.2 GBASAMPLE 4037f710 33 0.17 a0 82067cba ps 00060d30
+    30.2 GBASAMPLE 4037f2d9 32 0.16 a0 828d4d65 ps 00060d30
+    30.2 GBASAMPLE 4037f33f 32 0.16 a0 829088d1 ps 00060d30
+    30.2 GBASAMPLE 4037f4d1 32 0.16 a0 82964df7 ps 00060d30
+    30.2 GBASAMPLE 4037f8dc 32 0.16 a0 82067cba ps 00060d30
+    30.2 GBASAMPLE 4204405e 29 0.15 a0 8037fc79 ps 00060d30
+    30.2 GBASAMPLE 4037f613 29 0.15 a0 828d5372 ps 00060d30
+    30.2 GBASAMPLE 4037f2c2 28 0.14 a0 829552b8 ps 00060d30
+    30.2 GBASAMPLE 4037f33c 26 0.13 a0 828fa0a8 ps 00060d30
+    30.2 GBASAMPLE 42044056 25 0.13 a0 8204671f ps 00060330
+    30.2 GBASAMPLE 4037c516 25 0.13 a0 8037f898 ps 00060d30
+    30.2 GBASAMPLE 4037c2ef 24 0.12 a0 8037c334 ps 00060d30
+    30.2 GBASAMPLE 4037f434 24 0.12 a0 82067cba ps 00060d30
+    30.2 GBASAMPLE 803874c5 24 0.12 a0 8037c7c7 ps 00060d30
+    30.2 GBASAMPLE 4201aab3 23 0.12 a0 8037c4f6 ps 00060d30
+    30.2 GBASAMPLE 4037f2c4 23 0.12 a0 828fa098 ps 00060d30
+    30.2 GBASAMPLE 4037f774 23 0.12 a0 82966356 ps 00060d30
+    30.2 GBASAMPLE 4037c318 22 0.11 a0 8294fcd3 ps 00060d30
+    30.2 GBASAMPLE 4037f2d0 22 0.11 a0 82953b44 ps 00060d30
+    30.2 GBASAMPLE 420287f6 21 0.11 a0 8037c2f2 ps 00060d30
+    30.2 GBASAMPLE 4037f44c 21 0.11 a0 829155c2 ps 00060d30
+    30.2 GBASAMPLE 4037f5fc 21 0.11 a0 828d89a5 ps 00060d30
+    30.2 GBASAMPLE 4037f71f 21 0.11 a0 82915373 ps 00060d30
+    30.2 GBASAMPLE 42028801 20 0.10 a0 8037c2f2 ps 00060d30
+    30.2 GBASAMPLE 4202880d 20 0.10 a0 8037c2f2 ps 00060d30
+    30.2 GBASAMPLE 4037f2cc 20 0.10 a0 8290506b ps 00060d30
+    30.2 GBASAMPLE 4037f343 20 0.10 a0 82903beb ps 00060d30
+    30.2 GBASAMPLE 4037f991 20 0.10 a0 829088ed ps 00060d30
+    30.2 GBASAMPLE 42047ce3 20 0.10 a0 82043e9e ps 00060d30
+    30.2 GBASAMPLE 4204a2b1 19 0.10 a0 8037c4d0 ps 00060d30
+    30.2 GBASAMPLE 4204aef7 19 0.10 a0 8037c78c ps 00060d30
+    30.2 GBASAMPLE 42044044 19 0.10 a0 8037fa3d ps 00060d30
+    30.2 GBASAMPLE 4204545b 19 0.10 a0 82043d42 ps 00060d30
+    30.2 GBASAMPLE 4037f5cc 19 0.10 a0 82929732 ps 00060d30
+    30.2 GBASAMPLE 4037f77c 19 0.10 a0 828c66c9 ps 00060d30
+    30.2 GBASAMPLE 4037f938 19 0.10 a0 828ed7fa ps 00060d30
+    30.2 GBASAMPLE 4037f9a1 19 0.10 a0 82906562 ps 00060d30
+    30.2 GBASAMPLE 4037fc4d 19 0.10 a0 8291e870 ps 00060d30
+    30.2 GBASAMPLE 420287e8 18 0.09 a0 82066c1d ps 00060d30
+    30.2 GBASAMPLE 42043b17 18 0.09 a0 82043fcc ps 00060d30
+    30.2 GBASAMPLE 42043c89 18 0.09 a0 8037ca2d ps 00060d30
+    30.2 GBASAMPLE 4037c547 18 0.09 a0 8037f6c3 ps 00060330
+    30.2 GBASAMPLE 4037f618 18 0.09 a0 828ecb12 ps 00060d30
+    30.2 GBASAMPLE 42047812 18 0.09 a0 82043e9e ps 00060d30
+    30.2 GBASAMPLE 4037f9a5 18 0.09 a0 828fa314 ps 00060d30
+    30.2 GBASAMPLE 4037b4a6 17 0.09 a0 8201ab50 ps 00060d30
+    30.2 GBASAMPLE 42043e9b 17 0.09 a0 8037ca2d ps 00060d30
+    30.2 GBASAMPLE 4037f678 17 0.09 a0 828d4aab ps 00060d30
+    30.3 GBASAMPLE 4037f8f4 17 0.09 a0 828c98cc ps 00060d30
+    30.3 GBASAMPLE 4037f8f7 17 0.09 a0 829321f1 ps 00060d30
+    30.3 GBASAMPLE 4037f99e 17 0.09 a0 82903558 ps 00060d30
+    30.3 GBASAMPLE 4204a2a7 16 0.08 a0 8037c4d0 ps 00060d30
+    30.3 GBASAMPLE 420536a7 16 0.08 a0 8037f140 ps 00060930
+    30.3 GBASAMPLE 42043d16 16 0.08 a0 8037ca2d ps 00060d30
+    30.3 GBASAMPLE 4037c2e6 16 0.08 a0 8037c334 ps 00060d30
+    30.3 GBASAMPLE 4204546a 16 0.08 a0 82043d42 ps 00060d30
+    30.3 GBASAMPLE 42045477 16 0.08 a0 82043d42 ps 00060d30
+    30.3 GBASAMPLE 420464a7 16 0.08 a0 82043e9e ps 00060d30
+    30.3 GBASAMPLE 4037f2d3 16 0.08 a0 82916f81 ps 00060d30
+    30.3 GBASAMPLE 4037f4ed 16 0.08 a0 828d625f ps 00060d30
+    30.3 GBASAMPLE 4037f5d2 16 0.08 a0 82970036 ps 00060d30
+    30.3 GBASAMPLE 4037f670 16 0.08 a0 82067cba ps 00060d30
+    30.3 GBASAMPLE 4037f8ee 16 0.08 a0 828fa314 ps 00060d30
+    30.3 GBASAMPLE 4204a2f6 15 0.08 a0 82047d29 ps 00060d30
+    30.3 GBASAMPLE 4037b47b 15 0.08 a0 8201ab50 ps 00060d30
+    30.3 GBASAMPLE 4037c18c 15 0.08 a0 8037c2e6 ps 00060d30
+    30.3 GBASAMPLE 4037c334 15 0.08 a0 8037f678 ps 00060d30
+    30.3 GBASAMPLE 4037ef45 15 0.08 a0 8037c7c7 ps 00060930
+    30.3 GBASAMPLE 4037f446 15 0.08 a0 829064bc ps 00060d30
+    30.3 GBASAMPLE 4204a2ae 14 0.07 a0 8037c4d0 ps 00060d30
+    30.3 GBASAMPLE 4037b5bc 14 0.07 a0 8201ab50 ps 00060d30
+    30.3 GBASAMPLE 42043b2f 14 0.07 a0 8037ca2d ps 00060d30
+    30.3 GBASAMPLE 4204405c 14 0.07 a0 82044889 ps 00060d30
+    30.3 GBASAMPLE 4037c182 14 0.07 a0 8037c2e6 ps 00060d30
+    30.3 GBASAMPLE 42046703 14 0.07 a0 82043e9e ps 00060d30
+    30.3 GBASAMPLE 4204673e 14 0.07 a0 82043e9e ps 00060d30
+    30.3 GBASAMPLE 4037ef42 14 0.07 a0 8037c7c7 ps 00060d30
+    30.3 GBASAMPLE 4037f069 14 0.07 a0 8037c7c7 ps 00060330
+    30.3 GBASAMPLE 4037f5bf 14 0.07 a0 82922e07 ps 00060d30
+    30.3 GBASAMPLE 4037f61e 14 0.07 a0 8290202c ps 00060d30
+    30.3 GBASAMPLE 4037f713 14 0.07 a0 828ed7ba ps 00060d30
+    30.3 GBASAMPLE 4037f96b 14 0.07 a0 828e8aaf ps 00060d30
+    30.3 GBASAMPLE 4037b45c 13 0.07 a0 8201ab50 ps 00060d30
+    30.3 GBASAMPLE 4037c2d8 13 0.07 a0 8037f678 ps 00060d30
+    30.3 GBASAMPLE 4037c4c4 13 0.07 a0 8037f898 ps 00060d30
+    30.3 GBASAMPLE 4037c4cd 13 0.07 a0 8037f6c3 ps 00060930
+    30.3 GBASAMPLE 4037c4f3 13 0.07 a0 8037f898 ps 00060d30
+    30.3 GBASAMPLE 4037c53e 13 0.07 a0 8037f898 ps 00060d30
+    30.3 GBASAMPLE 420464af 13 0.07 a0 82043e9e ps 00060d30
+    30.3 GBASAMPLE 4037ef39 13 0.07 a0 8037c7c7 ps 00060d30
+    30.3 GBASAMPLE 4037f4b0 13 0.07 a0 8290828a ps 00060d30
+    30.3 GBASAMPLE 4037f5bc 13 0.07 a0 82067cba ps 00060d30
+    30.3 GBASAMPLE 42028818 12 0.06 a0 8037c2f2 ps 00060d30
+    30.3 GBASAMPLE 4204a2a4 12 0.06 a0 8037f6c3 ps 00060d30
+    30.3 GBASAMPLE 4204a2f3 12 0.06 a0 82047d29 ps 00060d30
+    30.3 GBASAMPLE 4037b517 12 0.06 a0 8201ab50 ps 00060d30
+    30.3 GBASAMPLE 42043c7e 12 0.06 a0 82043fcc ps 00060d30
+    30.3 GBASAMPLE 42043ea0 12 0.06 a0 8037ca2d ps 00060d30
+    30.3 GBASAMPLE 4037c164 12 0.06 a0 8037c2e6 ps 00060d30
+    30.3 GBASAMPLE 4037c4fe 12 0.06 a0 8037f898 ps 00060d30
+    30.3 GBASAMPLE 42046739 12 0.06 a0 82043e9e ps 00060d30
+    30.3 GBASAMPLE 420468c4 12 0.06 a0 82043e9e ps 00060d30
+    30.3 GBASAMPLE 4037f5d4 12 0.06 a0 82962fff ps 00060d30
+    30.3 GBASAMPLE 4037fb0d 12 0.06 a0 828e719d ps 00060d30
+    30.3 GBASAMPLE 4037fb9c 12 0.06 a0 82067cba ps 00060d30
+    30.3 GBASAMPLE 4204a294 11 0.06 a0 8037f898 ps 00060d30
+    30.3 GBASAMPLE 4201aab0 11 0.06 a0 8037f6c3 ps 00060330
+    30.3 GBASAMPLE 4201aad5 11 0.06 a0 8037c4f6 ps 00060d30
+    30.3 GBASAMPLE 4204b030 11 0.06 a0 8037c78c ps 00060d30
+    30.4 GBASAMPLE 4204b10c 11 0.06 a0 8037c78c ps 00060d30
+    30.4 GBASAMPLE 4037b48a 11 0.06 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 4037b4b4 11 0.06 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 4037b51f 11 0.06 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 4037b53d 11 0.06 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 4037b5a6 11 0.06 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 4037b5ea 11 0.06 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 42043b14 11 0.06 a0 8037c6ca ps 00060d30
+    30.4 GBASAMPLE 42043bb8 11 0.06 a0 8037ca2d ps 00060d30
+    30.4 GBASAMPLE 42043cc0 11 0.06 a0 8037ca2d ps 00060d30
+    30.4 GBASAMPLE 42043e95 11 0.06 a0 8037ca2d ps 00060d30
+    30.4 GBASAMPLE 4037c482 11 0.06 a0 8037f898 ps 00060d30
+    30.4 GBASAMPLE 4037ef36 11 0.06 a0 8037c7c7 ps 00060d30
+    30.4 GBASAMPLE 4037f44f 11 0.06 a0 8290d6b7 ps 00060d30
+    30.4 GBASAMPLE 4037f8df 11 0.06 a0 82906f83 ps 00060d30
+    30.4 GBASAMPLE 40389cd6 10 0.05 a0 8037a9a9 ps 00060d30
+    30.4 GBASAMPLE 4201aab6 10 0.05 a0 8037c4f6 ps 00060d30
+    30.4 GBASAMPLE 4037b4e0 10 0.05 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 42043915 10 0.05 a0 8037f2f8 ps 00060d30
+    30.4 GBASAMPLE 42043cf8 10 0.05 a0 8037ca2d ps 00060d30
+    30.4 GBASAMPLE 4037c194 10 0.05 a0 8037c2e6 ps 00060d30
+    30.4 GBASAMPLE 4037c439 10 0.05 a0 8037f898 ps 00060d30
+    30.4 GBASAMPLE 4037c519 10 0.05 a0 8037f6c3 ps 00060d30
+    30.4 GBASAMPLE 4037c530 10 0.05 a0 8037f6c3 ps 00060330
+    30.4 GBASAMPLE 4037c582 10 0.05 a0 8037f898 ps 00060d30
+    30.4 GBASAMPLE 4204dc96 10 0.05 a0 820060dc ps 00060930
+    30.4 GBASAMPLE 42046474 10 0.05 a0 82043e9e ps 00060d30
+    30.4 GBASAMPLE 420464ad 10 0.05 a0 82043e9e ps 00060d30
+    30.4 GBASAMPLE 42066cb6 10 0.05 a0 828c016d ps 00060d30
+    30.4 GBASAMPLE 40056f62 10 0.05 a0 8037f188 ps 00060930
+    30.4 GBASAMPLE 40056f5c 10 0.05 a0 8037f188 ps 00060930
+    30.4 GBASAMPLE 4037efcb 10 0.05 a0 8037c7c7 ps 00060d30
+    30.4 GBASAMPLE 4037f2f5 10 0.05 a0 828c00ff ps 00060d30
+    30.4 GBASAMPLE 4037f43e 10 0.05 a0 828fa387 ps 00060d30
+    30.4 GBASAMPLE 4037f4b6 10 0.05 a0 828fa409 ps 00060d30
+    30.4 GBASAMPLE 4037f4bd 10 0.05 a0 8294ac63 ps 00060d30
+    30.4 GBASAMPLE 4037f8f9 10 0.05 a0 828c8109 ps 00060930
+    30.4 GBASAMPLE 4037fbbb 10 0.05 a0 8291e7a7 ps 00060d30
+    30.4 GBASAMPLE 4037fbfa 10 0.05 a0 829074e8 ps 00060d30
+    30.4 GBASAMPLE 4204a2b6 9 0.05 a0 8037c4d0 ps 00060d30
+    30.4 GBASAMPLE 4204aef1 9 0.05 a0 820443d1 ps 00060d30
+    30.4 GBASAMPLE 4037b4d1 9 0.05 a0 8201ab50 ps 00060d30
+    30.4 GBASAMPLE 420536af 9 0.05 a0 8037f140 ps 00060930
+    30.4 GBASAMPLE 4204391d 9 0.05 a0 8037f2f8 ps 00060d30
+    30.4 GBASAMPLE 420439f6 9 0.05 a0 8037f2f8 ps 00060d30
+    30.4 GBASAMPLE 42043b57 9 0.05 a0 8037c825 ps 00060d30
+    30.4 GBASAMPLE 4037be83 9 0.05 a0 8037c4fe ps 00060330
+    30.4 GBASAMPLE 4037c00b 9 0.05 a0 8037c116 ps 00060d30
+    30.4 GBASAMPLE 420440e6 9 0.05 a0 8204671f ps 00060330
+    30.4 GBASAMPLE 420440e8 9 0.05 a0 82046712 ps 00060d30
+    30.4 GBASAMPLE 4037c14c 9 0.05 a0 8037c334 ps 00060d30
+    30.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:52 (S:0 R:27+27), BATT:0
+    30.4 GBASAMPLE 4037c3e2 9 0.05 a0 8037f898 ps 00060d30
+    30.4 GBASAMPLE 4037c973 9 0.05 a0 8037c6e6 ps 00060130
+    30.4 GBASAMPLE 4037ca2a 9 0.05 a0 8037c6ca ps 00060d30
+    30.4 GBASAMPLE 42046753 9 0.05 a0 82043e9e ps 00060d30
+    30.4 GBASAMPLE 4037ef04 9 0.05 a0 8037c7c7 ps 00060330
+    30.4 GBASAMPLE 4037f1aa 9 0.05 a0 8037c7c7 ps 00060330
+    30.4 GBASAMPLE 4037f437 9 0.05 a0 828fa387 ps 00060d30
+    30.4 GBASAMPLE 4037f716 9 0.05 a0 829033cc ps 00060d30
+    30.5 GBASAMPLE 4037f77a 9 0.05 a0 82905284 ps 00060d30
+    30.5 GBASAMPLE 4037f8e5 9 0.05 a0 82933db4 ps 00060d30
+    30.5 GBASAMPLE 4037fae7 9 0.05 a0 8293cc07 ps 00060d30
+    30.5 GBASAMPLE 4037fbb9 9 0.05 a0 82904b01 ps 00060d30
+    30.5 GBASAMPLE 4037b46c 8 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4037b4c3 8 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4037b52d 8 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4037b602 8 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4204391b 8 0.04 a0 8037f2f8 ps 00060d30
+    30.5 GBASAMPLE 42043bd3 8 0.04 a0 8037ca2d ps 00060d30
+    30.5 GBASAMPLE 42043cd1 8 0.04 a0 8037ca2d ps 00060530
+    30.5 GBASAMPLE 4037be80 8 0.04 a0 8037f898 ps 00060d30
+    30.5 GBASAMPLE 4037bea1 8 0.04 a0 8037c4fe ps 00060d30
+    30.5 GBASAMPLE 4204416e 8 0.04 a0 8204671f ps 00060d30
+    30.5 GBASAMPLE 4037c3a3 8 0.04 a0 8037f6c3 ps 00060330
+    30.5 GBASAMPLE 4037c52e 8 0.04 a0 8037f6c3 ps 00060330
+    30.5 GBASAMPLE 4037c5b3 8 0.04 a0 8037f898 ps 00060d30
+    30.5 GBASAMPLE 4037c632 8 0.04 a0 8037f898 ps 00060d30
+    30.5 GBASAMPLE 4037c9e5 8 0.04 a0 8037c6e6 ps 00060d30
+    30.5 GBASAMPLE 4037ca5d 8 0.04 a0 8037c6ca ps 00060d30
+    30.5 GBASAMPLE 42045450 8 0.04 a0 82043d42 ps 00060d30
+    30.5 GBASAMPLE 42045479 8 0.04 a0 82043d42 ps 00060d30
+    30.5 GBASAMPLE 42046499 8 0.04 a0 82043e9e ps 00060d30
+    30.5 GBASAMPLE 4037f393 8 0.04 a0 8295fd24 ps 00060d30
+    30.5 GBASAMPLE 4037f451 8 0.04 a0 82979bf4 ps 00060d30
+    30.5 GBASAMPLE 4037f5cf 8 0.04 a0 829684cb ps 00060d30
+    30.5 GBASAMPLE 4037f625 8 0.04 a0 82915483 ps 00060d30
+    30.5 GBASAMPLE 4037f673 8 0.04 a0 828e8bad ps 00060d30
+    30.5 GBASAMPLE 4037f8f1 8 0.04 a0 828e510c ps 00060d30
+    30.5 GBASAMPLE 4037f8eb 8 0.04 a0 829321f1 ps 00060d30
+    30.5 GBASAMPLE 4037fa50 8 0.04 a0 82067cba ps 00060d30
+    30.5 GBASAMPLE 4037fbae 8 0.04 a0 828e539d ps 00060d30
+    30.5 GBASAMPLE 4037fbb6 8 0.04 a0 8294c59c ps 00060d30
+    30.5 GBASAMPLE 4037fc27 8 0.04 a0 829047b1 ps 00060d30
+    30.5 GBASAMPLE 4037fc62 8 0.04 a0 828fa41f ps 00060d30
+    30.5 GBASAMPLE 42047cdd 8 0.04 a0 82043e9e ps 00060d30
+    30.5 GBASAMPLE 42047d26 8 0.04 a0 82043e9e ps 00060d30
+    30.5 GBASAMPLE 42028804 7 0.04 a0 8037c2f2 ps 00060930
+    30.5 GBASAMPLE 4204af65 7 0.04 a0 820443d1 ps 00060d30
+    30.5 GBASAMPLE 4204b0eb 7 0.04 a0 8037c78c ps 00060d30
+    30.5 GBASAMPLE 4037b524 7 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4037b555 7 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4037b562 7 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 4037b5f9 7 0.04 a0 8201ab50 ps 00060d30
+    30.5 GBASAMPLE 42043a43 7 0.04 a0 8037f2f8 ps 00060d30
+    30.5 GBASAMPLE 42043ada 7 0.04 a0 8037f2f8 ps 00060d30
+    30.5 GBASAMPLE 4204bc28 7 0.04 a0 8037c78c ps 00060d30
+    30.5 GBASAMPLE 42043d0a 7 0.04 a0 8037ca2d ps 00060d30
+    30.5 GBASAMPLE 42043d32 7 0.04 a0 8037ca2d ps 00060d30
+    30.5 GBASAMPLE 4037be8c 7 0.04 a0 8037c4fe ps 00060330
+    30.5 GBASAMPLE 42043e8c 7 0.04 a0 8037c825 ps 00060330
+    30.5 GBASAMPLE 4204404d 7 0.04 a0 82046712 ps 00060330
+    30.5 GBASAMPLE 4037c16f 7 0.04 a0 8037c2e6 ps 00060d30
+    30.5 GBASAMPLE 42044195 7 0.04 a0 8204671f ps 00060d30
+    30.5 GBASAMPLE 4037c185 7 0.04 a0 8037c2e6 ps 00060d30
+    30.5 GBASAMPLE 4037c2f2 7 0.04 a0 8037c334 ps 00060d30
+    30.5 GBASAMPLE 4037c376 7 0.04 a0 8037f898 ps 00060d30
+    30.5 GBASAMPLE 4037c51e 7 0.04 a0 8037f6c3 ps 00060d30
+    30.5 GBASAMPLE 4037c541 7 0.04 a0 8037f898 ps 00060d30
+    30.5 GBASAMPLE 4037c54d 7 0.04 a0 8037f6c3 ps 00060330
+    30.6 GBASAMPLE 4037c5db 7 0.04 a0 8037f6c3 ps 00060330
+    30.6 GBASAMPLE 803850f5 7 0.04 a0 820088a7 ps 00060930
+    30.6 GBASAMPLE 420455cc 7 0.04 a0 82043d42 ps 00060d30
+    30.6 GBASAMPLE 42005c6d 7 0.04 a0 8037f10e ps 00060330
+    30.6 GBASAMPLE 4204dc99 7 0.04 a0 820060dc ps 00060930
+    30.6 GBASAMPLE 42046488 7 0.04 a0 82043e9e ps 00060330
+    30.6 GBASAMPLE 420466f9 7 0.04 a0 82043e9e ps 00060d30
+    30.6 GBASAMPLE 4204671f 7 0.04 a0 82043e9e ps 00060330
+    30.6 GBASAMPLE 42046736 7 0.04 a0 82043e9e ps 00060330
+    30.6 GBASAMPLE 42046732 7 0.04 a0 82043e9e ps 00060330
+    30.6 GBASAMPLE 42046750 7 0.04 a0 82043e9e ps 00060d30
+    30.6 GBASAMPLE 420468b6 7 0.04 a0 82043e9e ps 00060d30
+    30.6 GBASAMPLE 42066b18 7 0.04 a0 82067cba ps 00060d30
+    30.6 GBASAMPLE 40056f66 7 0.04 a0 8037f188 ps 00060330
+    30.6 GBASAMPLE 4200f2fb 7 0.04 a0 82005fc6 ps 00060930
+    30.6 GBASAMPLE 4037f441 7 0.04 a0 8290ab44 ps 00060d30
+    30.6 GBASAMPLE 4037f4b8 7 0.04 a0 829064bc ps 00060d30
+    30.6 GBASAMPLE 4037f4b3 7 0.04 a0 8294bf96 ps 00060d30
+    30.6 GBASAMPLE 4037f504 7 0.04 a0 82ac5bce ps 00060d30
+    30.6 GBASAMPLE 4037f5c2 7 0.04 a0 829a943b ps 00060d30
+    30.6 GBASAMPLE 4037f61b 7 0.04 a0 829685fb ps 00060d30
+    30.6 GBASAMPLE 4037f777 7 0.04 a0 82927d80 ps 00060d30
+    30.6 GBASAMPLE 4037f77e 7 0.04 a0 829052b2 ps 00060d30
+    30.6 GBASAMPLE 42047810 7 0.04 a0 82043e9e ps 00060d30
+    30.6 GBASAMPLE 4037f860 7 0.04 a0 82067cba ps 00060d30
+    30.6 GBASAMPLE 4037f99a 7 0.04 a0 829a1699 ps 00060d30
+    30.6 GBASAMPLE 4037f99c 7 0.04 a0 8292eb83 ps 00060d30
+    30.6 GBASAMPLE 4037f9a3 7 0.04 a0 82906532 ps 00060d30
+    30.6 GBASAMPLE 4037fa53 7 0.04 a0 82ac5c3b ps 00060d30
+    30.6 GBASAMPLE 4037fc5a 7 0.04 a0 829069a0 ps 00060d30
+    30.6 GBASAMPLE 4037fc65 7 0.04 a0 828fa39b ps 00060d30
+    30.6 GBASAMPLE 42008819 6 0.03 a0 820068f0 ps 00060930
+    30.6 GBASAMPLE 420088b7 6 0.03 a0 820068f0 ps 00060930
+    30.6 GBASAMPLE 400011f4 6 0.03 a0 8037c7c7 ps 00060d30
+    30.6 GBASAMPLE 4204a29a 6 0.03 a0 8037c519 ps 00060d30
+    30.6 GBASAMPLE 4204a2c0 6 0.03 a0 8037c4d0 ps 00060d30
+    30.6 GBASAMPLE 4201a858 6 0.03 a0 8201ab10 ps 00060930
+    30.6 GBASAMPLE 4204aeaa 6 0.03 a0 8037c78c ps 00060d30
+    30.6 GBASAMPLE 4204aec2 6 0.03 a0 8037c78c ps 00060d30
+    30.6 GBASAMPLE 4204aed3 6 0.03 a0 820447a1 ps 00060d30
+    30.6 GBASAMPLE 4204af91 6 0.03 a0 8037c78c ps 00060d30
+    30.6 GBASAMPLE 4204b0cb 6 0.03 a0 8037c78c ps 00060d30
+    30.6 GBASAMPLE 4037b47e 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b496 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b4f1 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b564 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b56f 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b575 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b57e 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE 4037b59b 6 0.03 a0 8201ab50 ps 00060d30
+    30.6 GBASAMPLE1 40382bce 4079
+    30.6 GBASAMPLE1 420094d8 1475
+    30.6 GBASAMPLE1 400559e0 862
+    30.6 GBASAMPLE1 4204e444 433
+    30.6 GBASAMPLE1 42052215 328
+    30.6 GBASAMPLE1 42053476 258
+    30.6 GBASAMPLE1 420094df 235
+    30.6 GBASAMPLE1 42052230 185
+    30.6 GBASAMPLE1 4037e768 167
+    30.6 GBASAMPLE1 4205222d 162
+    30.6 GBASAMPLE1 4037d012 128
+    30.6 GBASAMPLE1 42052220 127
+    30.6 GBASAMPLE1 42052226 124
+    30.6 GBASAMPLE1 40389cd6 120
+    30.6 GBASAMPLE1 42052223 116
+    30.6 GBASAMPLE1 4205221e 115
+    30.6 GBASAMPLE1 4205223d 115
+    30.6 GBASAMPLE1 4037e6f0 115
+    30.6 GBASAMPLE1 42052233 114
+    30.6 GBASAMPLE1 4204e438 111
+    30.6 GBASAMPLE1 4204e436 106
+    30.6 GBASAMPLE1 42052237 102
+    30.6 GBASAMPLE1 4204e43e 101
+    30.6 GBASAMPLE1 4205222b 99
+    30.6 GBASAMPLE1 4204e496 98
+    30.6 GBASAMPLE1 42052239 97
+    30.6 GBASAMPLE1 42052235 96
+    30.6 GBASAMPLE1 42052218 94
+    30.6 GBASAMPLE1 42052229 93
+    30.6 GBASAMPLE1 4205223b 93
+    30.6 GBASAMPLE1 4204e44b 93
+    30.6 GBASAMPLE1 4204e441 91
+    30.6 GBASAMPLE1 4204e43b 88
+    30.6 GBASAMPLE1 42009914 84
+    30.6 GBASAMPLE1 4204e447 83
+    30.6 GBASAMPLE1 4200991d 72
+    30.6 GBASAMPLE1 4200991a 70
+    30.6 GBASAMPLE1 4200992e 67
+    30.6 GBASAMPLE1 4037d0a4 66
+    30.6 GBASAMPLE1 4037d4e0 66
+    30.6 GBASAMPLE1 42009934 66
+    30.6 GBASAMPLE1 4205cdea 64
+    30.6 GBASAMPLE1 4205d248 64
+    30.6 GBASAMPLE1 42009923 64
+    30.6 GBASAMPLE1 42009908 63
+    30.6 GBASAMPLE1 4200990b 62
+    30.6 GBASAMPLE1 42009911 59
+    30.6 GBASAMPLE1 4200992c 59
+    30.6 GBASAMPLE1 42009926 57
+    30.6 GBASAMPLE1 42009932 57
+    30.6 GBASAMPLE1 4200990e 56
+    30.6 GBASAMPLE1 42009920 56
+    30.6 GBASAMPLE1 42009917 54
+    30.6 GBASAMPLE1 42009929 54
+    30.6 GBASAMPLE1 40389cf5 53
+    30.6 GBASAMPLE1 42009930 48
+    30.6 GBASAMPLE1 4037e1f9 46
+    30.6 GBASAMPLE1 4037e2a0 45
+    30.6 GBASAMPLE1 42009936 44
+    30.6 GBASAMPLE1 4037cffc 43
+    30.6 GBASAMPLE1 40389ce2 41
+    30.6 GBASAMPLE1 4205ce5c 39
+    30.6 GBASAMPLE1 4206054c 36
+    30.6 GBASAMPLE1 4037d007 36
+    30.6 GBASAMPLE1 42057e2e 36
+    30.6 GBASAMPLE1 420094dc 35
+    30.6 GBASAMPLE1 4204e457 34
+    30.6 GBASAMPLE1 40056f64 33
+    30.6 GBASAMPLE1 40389ced 33
+    30.6 GBASAMPLE1 4204e46d 32
+    30.6 GBASAMPLE1 42060a00 32
+    30.6 GBASAMPLE1 40389cd0 32
+    30.6 GBASAMPLE1 40056f6d 31
+    30.6 GBASAMPLE1 40056f68 31
+    30.6 GBASAMPLE1 4037d5c8 31
+    30.6 GBASAMPLE1 40389cc4 31
+    30.6 GBASAMPLE1 40056f6a 30
+    30.6 GBASAMPLE1 4037cfff 30
+    30.6 GBASAMPLE1 420581c8 29
+    30.6 GBASAMPLE1 4206641c 29
+    30.6 GBASAMPLE1 4204e4a2 28
+    30.6 GBASAMPLE1 4037d0fe 28
+    30.6 GBASAMPLE1 4204e461 27
+    30.6 GBASAMPLE1 40056f66 27
+    30.6 GBASAMPLE1 4204e49c 26
+    30.6 GBASAMPLE1 4204e499 26
+    30.6 GBASAMPLE1 40056f5e 26
+    30.6 GBASAMPLE1 40056f5c 26
+    30.6 GBASAMPLE1 40056f62 25
+    30.6 GBASAMPLE1 4037d017 25
+    30.6 GBASAMPLE1 4204e44e 24
+    30.6 GBASAMPLE1 420094da 24
+    30.6 GBASAMPLE1 4206491b 23
+    30.6 GBASAMPLE1 4205cdd4 23
+    30.6 GBASAMPLE1 4037d0eb 23
+    30.6 GBASAMPLE1 4037d190 23
+    30.6 GBASAMPLE1 42065c40 23
+    30.6 GBASAMPLE1 42065c5a 23
+    30.6 GBASAMPLE1 42060374 22
+    30.6 GBASAMPLE1 4204e475 22
+    30.6 GBASAMPLE1 42064916 22
+    30.6 GBASAMPLE1 42064a7f 22
+    30.6 GBASAMPLE1 40056f6f 22
+    30.6 GBASAMPLE1 4205b321 22
+    30.6 GBASAMPLE1 4037e6d8 21
+    30.6 GBASAMPLE1 4206e964 21
+    30.6 GBASAMPLE1 4037d005 21
+    30.6 GBASAMPLE1 4204e45e 20
+    30.6 GBASAMPLE1 40056f60 20
+    30.6 GBASAMPLE1 42065c34 20
+    30.6 GBASAMPLE1 4204dcd8 20
+    30.6 GBASAMPLE1 4037e71e 19
+    30.6 GBASAMPLE1 4205cdd7 19
+    30.6 GBASAMPLE1 4205cdef 19
+    30.6 GBASAMPLE1 4037d00f 19
+    30.6 GBASAMPLE1 4037d014 19
+    30.6 GBASAMPLE1 42009794 19
+    30.6 GBASAMPLE1 42065fb9 19
+    30.6 GBASAMPLE1 4204e472 18
+    30.6 GBASAMPLE1 42066875 18
+    30.6 GBASAMPLE1 4037d0a7 18
+    30.6 GBASAMPLE1 4204f195 18
+    30.6 GBASAMPLE1 4037e1e0 17
+    30.6 GBASAMPLE1 4037e1ee 17
+    30.6 GBASAMPLE1 42066419 17
+    30.6 GBASAMPLE1 4204e45c 17
+    30.6 GBASAMPLE1 4037d00d 17
+    30.6 GBASAMPLE1 4200971d 17
+    30.6 GBASAMPLE1 4200979a 17
+    30.7 GBASAMPLE1 42065e5a 17
+    30.7 GBASAMPLE1 4037e2a5 16
+    30.7 GBASAMPLE1 4206048a 16
+    30.7 GBASAMPLE1 4037e71b 16
+    30.7 GBASAMPLE1 4037e740 16
+    30.7 GBASAMPLE1 4037e757 16
+    30.7 GBASAMPLE1 420096d8 16
+    30.7 GBASAMPLE1 42085c91 16
+    30.7 GBASAMPLE1 4204dcb7 16
+    30.7 GBASAMPLE1 42058236 15
+    30.7 GBASAMPLE1 420608ed 15
+    30.7 GBASAMPLE1 4205cdec 15
+    30.7 GBASAMPLE1 4037d00a 15
+    30.7 GBASAMPLE1 42009394 15
+    30.7 GBASAMPLE1 4037d529 15
+    30.7 GBASAMPLE1 42009a15 15
+    30.7 GBASAMPLE1 4204dd01 15
+    30.7 GBASAMPLE1 4206034c 14
+    30.7 GBASAMPLE1 42060497 14
+    30.7 GBASAMPLE1 4204e49f 14
+    30.7 GBASAMPLE1 420584e2 14
+    30.7 GBASAMPLE total 19453 of 20171 ticks (last depth-4 caller 8037f898)
+    30.7 GBASAMPLE translated code 59.3% (RAM cache code 2.4%)
+    30.7 GBAWAIT ms/frame: wait for core 1 0.05 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.4, 159: 76.5, wakes 9.3
+    30.7 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    30.7 CORE1 rg_display:18% IDLE1:47% gba_render:35% rg_input:0%
+    30.7 CORE0 gbsp:100% rg_sysmon:0%
+    30.7 GBAJIT per second: 6 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    30.7 GBAJIT translate: 9 blocks, 0.07 ms/frame
+    30.7 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 9 | ROM flushes 0 | last pcs 08030ce6 0803b972 08030d4c 0803b31c
+    30.7 GBAJIT code: ROM cache 1053 KB, RAM cache 43 KB
+    30.7 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.41 sound 0.07 display 0.05 | render 12.60 per drawn frame | 11572 instr/frame, 403 cycles/instr | 0 ROM pages loaded
+    31.1 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.4, 159: 77.3, wakes 9.7
+    31.1 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    31.1 CORE1 IDLE1:22% gba_render:54% rg_display:24% rg_input:0%
+    31.1 CORE0 gbsp:100%
+    31.1 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 500 notifies (0.03 ms/frame)
+    31.1 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    31.1 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 08030ce6 0803b972 08030d4c 0803b31c
+    31.1 GBAJIT code: ROM cache 1053 KB, RAM cache 43 KB
+    31.1 GBAPROF 25 frames (25 drawn): ms/frame cpu 19.19 sound 0.07 display 0.05 | render 12.46 per drawn frame | 10559 instr/frame, 436 cycles/instr | 0 ROM pages loaded
+    31.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:30 (S:1 R:14+14), BATT:0
+    32.2 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.6, wakes 9.2
+    32.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    32.2 CORE1 IDLE1:20% rg_display:27% gba_render:53%
+    32.2 CORE0 gbsp:100% rg_sysmon:0%
+    32.2 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    32.2 GBAJIT translate: 2 blocks, 0.01 ms/frame
+    32.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 08038ac2 08041460 08030d4c 0803b31c
+    32.2 GBAJIT code: ROM cache 1054 KB, RAM cache 43 KB
+    32.2 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.32 sound 0.07 display 0.05 | render 12.66 per drawn frame | 11260 instr/frame, 412 cycles/instr | 0 ROM pages loaded
+    32.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    33.2 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 75.9, wakes 9.2
+    33.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.05 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    33.2 CORE1 rg_display:28% IDLE1:20% gba_render:51% rg_input:0%
+    33.2 CORE0 gbsp:100% rg_sysmon:0%
+    33.2 GBAJIT per second: 5 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    33.2 GBAJIT translate: 7 blocks, 0.03 ms/frame
+    33.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 7 | ROM flushes 0 | last pcs 08030d2c 08030da0 080606de 0803d09c
+    33.2 GBAJIT code: ROM cache 1058 KB, RAM cache 43 KB
+    33.2 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.29 sound 0.07 display 0.05 | render 12.67 per drawn frame | 11687 instr/frame, 396 cycles/instr | 0 ROM pages loaded
+    33.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    34.2 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 74.9, wakes 9.2
+    34.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    34.2 CORE1 rg_display:26% IDLE1:22% gba_render:52% rg_input:0%
+    34.2 CORE0 gbsp:100% rg_sysmon:0%
+    34.2 GBAJIT per second: 5 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    34.2 GBAJIT translate: 5 blocks, 0.05 ms/frame
+    34.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 5 | ROM flushes 0 | last pcs 0804a394 0803b5a4 080498ec 08049f0a
+    34.2 GBAJIT code: ROM cache 1063 KB, RAM cache 43 KB
+    34.2 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.40 sound 0.07 display 0.05 | render 12.59 per drawn frame | 12362 instr/frame, 377 cycles/instr | 0 ROM pages loaded
+    34.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:50 (S:0 R:25+26), BATT:0
+    35.2 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.8, 159: 73.3, wakes 9.2
+    35.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    35.2 CORE1 IDLE1:22% rg_display:27% gba_render:51% rg_input:0%
+    35.2 CORE0 gbsp:100% rg_sysmon:0%
+    35.2 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    35.2 GBAJIT translate: 2 blocks, 0.02 ms/frame
+    35.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0803ba10 08030cd4 080498ec 08049f0a
+    35.2 GBAJIT code: ROM cache 1067 KB, RAM cache 43 KB
+    35.2 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.59 sound 0.07 display 0.05 | render 12.52 per drawn frame | 12824 instr/frame, 367 cycles/instr | 0 ROM pages loaded
+    35.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:50 (S:0 R:26+25), BATT:0
+    36.2 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 76.9, wakes 9.1
+    36.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.02 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    36.2 CORE1 IDLE1:21% rg_display:26% gba_render:53% rg_input:0%
+    36.2 CORE0 gbsp:100% rg_sysmon:0%
+    36.2 GBAJIT per second: 4 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    36.2 GBAJIT translate: 4 blocks, 0.05 ms/frame
+    36.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 4 | ROM flushes 0 | last pcs 0803ba22 0802f252 08030d36 08032c8a
+    36.2 GBAJIT code: ROM cache 1073 KB, RAM cache 43 KB
+    36.2 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.37 sound 0.07 display 0.05 | render 12.76 per drawn frame | 10292 instr/frame, 452 cycles/instr | 0 ROM pages loaded
+    36.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:50 (S:0 R:25+25), BATT:0
+    37.2 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 75.1, wakes 9.2
+    37.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    37.2 CORE1 IDLE1:20% rg_display:28% gba_render:52% rg_input:0%
+    37.2 CORE0 gbsp:100% rg_sysmon:0%
+    37.2 GBAJIT per second: 3 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    37.2 GBAJIT translate: 3 blocks, 0.03 ms/frame
+    37.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 3 | ROM flushes 0 | last pcs 08060f20 0803b7fa 08030d6a 08032c8a
+    37.2 GBAJIT code: ROM cache 1076 KB, RAM cache 43 KB
+    37.2 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.48 sound 0.07 display 0.05 | render 12.63 per drawn frame | 11275 instr/frame, 415 cycles/instr | 0 ROM pages loaded
+    37.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    38.2 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 75.6, wakes 9.0
+    38.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    38.2 CORE1 rg_display:26% gba_render:53% IDLE1:21% rg_input:1%
+    38.2 CORE0 gbsp:100% rg_sysmon:0%
+    38.2 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    38.2 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    38.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 08060f20 0803b7fa 08030d6a 08032c8a
+    38.2 GBAJIT code: ROM cache 1076 KB, RAM cache 43 KB
+    38.2 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.26 sound 0.07 display 0.05 | render 12.65 per drawn frame | 11381 instr/frame, 406 cycles/instr | 0 ROM pages loaded
+    38.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    39.2 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 75.4, wakes 9.3
+    39.2 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    39.2 CORE1 IDLE1:20% rg_display:26% gba_render:53% rg_input:0%
+    39.2 CORE0 gbsp:100% rg_sysmon:0%
+    39.2 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    39.2 GBAJIT translate: 2 blocks, 0.02 ms/frame
+    39.2 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0803869c 08038888 08030d6a 08032c8a
+    39.2 GBAJIT code: ROM cache 1076 KB, RAM cache 43 KB
+    39.2 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.36 sound 0.07 display 0.05 | render 12.64 per drawn frame | 11196 instr/frame, 415 cycles/instr | 0 ROM pages loaded
+    39.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    40.3 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.2, wakes 9.2
+    40.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    40.3 CORE1 IDLE1:21% gba_render:52% rg_display:27% rg_input:0%
+    40.3 CORE0 gbsp:100% rg_sysmon:0%
+    40.3 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    40.3 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    40.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0803869c 08038888 08030d6a 08032c8a
+    40.3 GBAJIT code: ROM cache 1076 KB, RAM cache 43 KB
+    40.3 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.31 sound 0.07 display 0.05 | render 12.66 per drawn frame | 10617 instr/frame, 436 cycles/instr | 0 ROM pages loaded
+    40.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    41.3 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 76.0, wakes 9.2
+    41.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    41.3 CORE1 rg_display:27% IDLE1:21% gba_render:51% rg_input:0%
+    41.3 CORE0 gbsp:100% rg_sysmon:0%
+    41.3 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    41.3 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    41.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0804c3f4 08038888 08030d6a 08032c8a
+    41.3 GBAJIT code: ROM cache 1077 KB, RAM cache 43 KB
+    41.3 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.24 sound 0.07 display 0.05 | render 12.65 per drawn frame | 11367 instr/frame, 406 cycles/instr | 0 ROM pages loaded
+    41.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    42.3 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 74.5, wakes 9.5
+    42.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    42.3 CORE1 rg_display:27% IDLE1:21% gba_render:52% rg_input:0%
+    42.3 CORE0 gbsp:100% rg_sysmon:0%
+    42.3 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    42.3 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    42.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0804c3f4 08038888 08030d6a 08032c8a
+    42.3 GBAJIT code: ROM cache 1077 KB, RAM cache 43 KB
+    42.3 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.32 sound 0.07 display 0.05 | render 12.49 per drawn frame | 12570 instr/frame, 369 cycles/instr | 0 ROM pages loaded
+    42.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    43.3 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 75.6, wakes 9.3
+    43.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    43.3 CORE1 IDLE1:21% rg_display:26% gba_render:52% rg_input:1%
+    43.3 CORE0 gbsp:100% rg_sysmon:0%
+    43.3 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    43.3 GBAJIT translate: 2 blocks, 0.02 ms/frame
+    43.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0803b312 08038a3e 08030d6a 08032c8a
+    43.3 GBAJIT code: ROM cache 1077 KB, RAM cache 43 KB
+    43.3 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.45 sound 0.07 display 0.05 | render 12.61 per drawn frame | 11137 instr/frame, 419 cycles/instr | 0 ROM pages loaded
+    43.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    44.3 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 75.7, wakes 9.2
+    44.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.05 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    44.3 CORE1 rg_display:27% IDLE1:22% gba_render:51% rg_input:0%
+    44.3 CORE0 gbsp:100% rg_sysmon:0%
+    44.3 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    44.3 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    44.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0803c522 08038a3e 08030d6a 08032c8a
+    44.3 GBAJIT code: ROM cache 1078 KB, RAM cache 43 KB
+    44.3 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.38 sound 0.07 display 0.05 | render 12.68 per drawn frame | 10519 instr/frame, 442 cycles/instr | 0 ROM pages loaded
+    44.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    45.3 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 74.6, wakes 9.1
+    45.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    45.3 CORE1 IDLE1:21% rg_display:28% gba_render:51% rg_input:0%
+    45.3 CORE0 gbsp:100% rg_sysmon:0%
+    45.3 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    45.3 GBAJIT translate: 2 blocks, 0.03 ms/frame
+    45.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0802f39e 08038a3e 08030d6a 08032c8a
+    45.3 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    45.3 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.37 sound 0.07 display 0.05 | render 12.64 per drawn frame | 11537 instr/frame, 403 cycles/instr | 0 ROM pages loaded
+    45.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    46.3 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.5, 159: 77.8, wakes 9.2
+    46.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    46.3 CORE1 rg_display:28% IDLE1:19% gba_render:53% rg_input:0%
+    46.3 CORE0 gbsp:100% rg_sysmon:0%
+    46.3 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    46.3 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    46.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0802f39e 08038a3e 08030d6a 08032c8a
+    46.3 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    46.3 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.12 sound 0.07 display 0.05 | render 12.78 per drawn frame | 9681 instr/frame, 474 cycles/instr | 0 ROM pages loaded
+    46.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    47.3 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 75.4, wakes 9.3
+    47.3 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    47.3 CORE1 rg_display:26% IDLE1:21% gba_render:52% rg_input:0%
+    47.3 CORE0 gbsp:100% rg_sysmon:0%
+    47.3 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    47.3 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    47.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0802f39e 08038a3e 08030d6a 08032c8a
+    47.3 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    47.3 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.19 sound 0.07 display 0.05 | render 12.63 per drawn frame | 12519 instr/frame, 368 cycles/instr | 0 ROM pages loaded
+    47.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    48.3 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.9, 159: 73.9, wakes 9.2
+    48.3 GBAWAIT by cause ms/frame: other 0.01 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    48.3 CORE1 rg_display:25% IDLE1:23% gba_render:52% rg_input:0%
+    48.3 CORE0 gbsp:100% rg_sysmon:0%
+    48.3 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    48.3 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    48.3 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 080413ec 08038a3e 08030d6a 08032c8a
+    48.3 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    48.3 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.39 sound 0.07 display 0.05 | render 12.52 per drawn frame | 11777 instr/frame, 395 cycles/instr | 0 ROM pages loaded
+    48.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    49.4 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 74.9, wakes 9.4
+    49.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    49.4 CORE1 IDLE1:20% rg_display:26% gba_render:53% rg_input:0%
+    49.4 CORE0 gbsp:100% rg_sysmon:0%
+    49.4 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    49.4 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    49.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 080413ec 08038a3e 08030d6a 08032c8a
+    49.4 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    49.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.31 sound 0.07 display 0.05 | render 12.55 per drawn frame | 12768 instr/frame, 363 cycles/instr | 0 ROM pages loaded
+    49.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    50.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.0, 159: 75.8, wakes 9.2
+    50.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    50.4 CORE1 rg_display:26% IDLE1:21% gba_render:52% rg_input:0%
+    50.4 CORE0 gbsp:100% rg_sysmon:0%
+    50.4 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    50.4 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    50.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 080413ec 08038a3e 08030d6a 08032c8a
+    50.4 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    50.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.11 sound 0.07 display 0.05 | render 12.60 per drawn frame | 12312 instr/frame, 372 cycles/instr | 0 ROM pages loaded
+    50.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    51.4 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 75.8, wakes 9.2
+    51.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    51.4 CORE1 rg_display:26% IDLE1:20% gba_render:54% rg_input:0%
+    51.4 CORE0 gbsp:100% rg_sysmon:0%
+    51.4 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    51.4 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    51.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 080413ec 08038a3e 08030d6a 08032c8a
+    51.4 GBAJIT code: ROM cache 1081 KB, RAM cache 43 KB
+    51.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.17 sound 0.07 display 0.05 | render 12.61 per drawn frame | 11351 instr/frame, 405 cycles/instr | 0 ROM pages loaded
+    51.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    52.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 76.4, wakes 9.2
+    52.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    52.4 CORE1 IDLE1:22% gba_render:53% rg_display:25% rg_input:0%
+    52.4 CORE0 gbsp:100% rg_sysmon:0%
+    52.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    52.4 GBAJIT translate: 2 blocks, 0.01 ms/frame
+    52.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0802eb6c 08038a3e 08030d6a 08032c8a
+    52.4 GBAJIT code: ROM cache 1082 KB, RAM cache 43 KB
+    52.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.13 sound 0.07 display 0.05 | render 12.59 per drawn frame | 10841 instr/frame, 424 cycles/instr | 0 ROM pages loaded
+    52.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    53.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.8, 159: 73.5, wakes 9.2
+    53.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    53.4 CORE1 IDLE1:22% gba_render:52% rg_display:26% rg_input:0%
+    53.4 CORE0 gbsp:100% rg_sysmon:0%
+    53.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    53.4 GBAJIT translate: 3 blocks, 0.01 ms/frame
+    53.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 3 | ROM flushes 0 | last pcs 0804dc68 0804dc60 08030d6a 08032c8a
+    53.4 GBAJIT code: ROM cache 1083 KB, RAM cache 43 KB
+    53.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.36 sound 0.07 display 0.05 | render 12.53 per drawn frame | 11939 instr/frame, 389 cycles/instr | 0 ROM pages loaded
+    53.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    54.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.0, wakes 9.2
+    54.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    54.4 CORE1 rg_display:27% IDLE1:21% gba_render:52% rg_input:0%
+    54.4 CORE0 gbsp:100% rg_sysmon:0%
+    54.4 GBAJIT per second: 11 cache syncs (0.01 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    54.4 GBAJIT translate: 17 blocks, 0.10 ms/frame
+    54.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 17 | ROM flushes 0 | last pcs 08039be6 0803f32c 0802f020 0803ae4c
+    54.4 GBAJIT code: ROM cache 1099 KB, RAM cache 43 KB
+    54.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.27 sound 0.07 display 0.05 | render 12.53 per drawn frame | 12342 instr/frame, 375 cycles/instr | 0 ROM pages loaded
+    54.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    55.4 GBAWAIT ms/frame: wait for core 1 0.03 (0.1 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 74.7, wakes 9.0
+    55.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    55.4 CORE1 rg_display:26% IDLE1:22% gba_render:52% rg_input:0%
+    55.4 CORE0 gbsp:100% rg_sysmon:0%
+    55.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    55.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    55.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0802f29c 0803f32c 0802f020 0803ae4c
+    55.4 GBAJIT code: ROM cache 1101 KB, RAM cache 43 KB
+    55.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.37 sound 0.07 display 0.05 | render 12.41 per drawn frame | 11519 instr/frame, 404 cycles/instr | 0 ROM pages loaded
+    55.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    56.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 75.5, wakes 9.4
+    56.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    56.4 CORE1 IDLE1:20% rg_display:27% gba_render:52% rg_input:0%
+    56.4 CORE0 gbsp:100% rg_sysmon:0%
+    56.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    56.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    56.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 08042148 0803f32c 0802f020 0803ae4c
+    56.4 GBAJIT code: ROM cache 1101 KB, RAM cache 43 KB
+    56.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.35 sound 0.07 display 0.05 | render 12.56 per drawn frame | 11451 instr/frame, 406 cycles/instr | 0 ROM pages loaded
+    56.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    57.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 78.3, wakes 9.3
+    57.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    57.4 CORE1 rg_display:25% IDLE1:20% rg_input:0% gba_render:55%
+    57.4 CORE0 gbsp:100% rg_sysmon:0%
+    57.4 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    57.4 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    57.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 08042148 0803f32c 0802f020 0803ae4c
+    57.4 GBAJIT code: ROM cache 1101 KB, RAM cache 43 KB
+    57.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 18.98 sound 0.07 display 0.05 | render 12.54 per drawn frame | 9586 instr/frame, 475 cycles/instr | 0 ROM pages loaded
+    57.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:52 (S:0 R:26+26), BATT:0
+    58.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 77.6, wakes 9.2
+    58.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    58.4 CORE1 rg_display:27% IDLE1:20% gba_render:52% rg_input:0%
+    58.4 CORE0 gbsp:100% rg_sysmon:0%
+    58.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    58.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    58.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0804ca76 0803f32c 0802f020 0803ae4c
+    58.4 GBAJIT code: ROM cache 1102 KB, RAM cache 43 KB
+    58.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.17 sound 0.07 display 0.05 | render 12.71 per drawn frame | 9051 instr/frame, 508 cycles/instr | 0 ROM pages loaded
+    58.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    59.4 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.4, 159: 76.8, wakes 9.4
+    59.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.02
+    59.4 CORE1 rg_display:27% IDLE1:19% gba_render:54% rg_input:0%
+    59.4 CORE0 gbsp:100% rg_sysmon:0%
+    59.4 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    59.4 GBAJIT translate: 2 blocks, 0.02 ms/frame
+    59.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 080414ec 08039726 0802f020 0803ae4c
+    59.4 GBAJIT code: ROM cache 1104 KB, RAM cache 43 KB
+    59.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.12 sound 0.07 display 0.05 | render 12.59 per drawn frame | 10506 instr/frame, 437 cycles/instr | 0 ROM pages loaded
+    59.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    60.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 73.1, wakes 9.4
+    60.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    60.4 CORE1 IDLE1:23% rg_display:26% gba_render:51% rg_input:0%
+    60.4 CORE0 gbsp:100% rg_sysmon:0%
+    60.4 GBAJIT per second: 3 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    60.4 GBAJIT translate: 4 blocks, 0.04 ms/frame
+    60.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 4 | ROM flushes 0 | last pcs 0802f434 08039726 08042b00 0802f2b4
+    60.4 GBAJIT code: ROM cache 1111 KB, RAM cache 43 KB
+    60.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.51 sound 0.07 display 0.05 | render 12.51 per drawn frame | 13875 instr/frame, 337 cycles/instr | 0 ROM pages loaded
+    60.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:50 (S:0 R:25+26), BATT:0
+    61.4 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.9, 159: 73.7, wakes 9.1
+    61.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    61.4 CORE1 IDLE1:21% rg_display:26% gba_render:53% rg_input:0%
+    61.4 CORE0 gbsp:100% rg_sysmon:0%
+    61.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    61.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    61.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 080307d6 08039726 08042b00 0802f2b4
+    61.4 GBAJIT code: ROM cache 1111 KB, RAM cache 43 KB
+    61.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.27 sound 0.07 display 0.05 | render 12.57 per drawn frame | 12900 instr/frame, 358 cycles/instr | 0 ROM pages loaded
+    61.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    62.4 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 74.7, wakes 9.4
+    62.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    62.4 CORE1 rg_display:26% IDLE1:22% gba_render:51% rg_input:0%
+    62.4 CORE0 gbsp:100% rg_sysmon:0%
+    62.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    62.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    62.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0804ca34 08039726 08042b00 0802f2b4
+    62.4 GBAJIT code: ROM cache 1113 KB, RAM cache 43 KB
+    62.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.27 sound 0.07 display 0.05 | render 12.51 per drawn frame | 13276 instr/frame, 348 cycles/instr | 0 ROM pages loaded
+    62.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    63.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.2, wakes 9.2
+    63.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    63.4 CORE1 IDLE1:20% rg_display:27% gba_render:53% rg_input:0%
+    63.4 CORE0 gbsp:100% rg_sysmon:0%
+    63.4 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    63.4 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    63.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0804ca34 08039726 08042b00 0802f2b4
+    63.4 GBAJIT code: ROM cache 1113 KB, RAM cache 43 KB
+    63.4 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.19 sound 0.07 display 0.05 | render 12.63 per drawn frame | 11020 instr/frame, 418 cycles/instr | 0 ROM pages loaded
+    63.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    64.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    64.4 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.8, 159: 72.5, wakes 9.3
+    64.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    64.4 CORE1 rg_display:26% IDLE1:21% gba_render:53% rg_input:0%
+    64.4 CORE0 gbsp:100% rg_sysmon:0%
+    64.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    64.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    64.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 08038650 08039726 08042b00 0802f2b4
+    64.4 GBAJIT code: ROM cache 1113 KB, RAM cache 43 KB
+    64.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.43 sound 0.07 display 0.05 | render 12.48 per drawn frame | 14453 instr/frame, 323 cycles/instr | 0 ROM pages loaded
+    65.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    65.4 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.8, 159: 74.1, wakes 9.4
+    65.4 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.02 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    65.4 CORE1 rg_display:27% IDLE1:22% gba_render:51% rg_input:0%
+    65.4 CORE0 gbsp:100% rg_sysmon:0%
+    65.4 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    65.4 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    65.4 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 08037c86 08039726 08042b00 0802f2b4
+    65.4 GBAJIT code: ROM cache 1114 KB, RAM cache 43 KB
+    65.4 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.29 sound 0.07 display 0.05 | render 12.42 per drawn frame | 12429 instr/frame, 372 cycles/instr | 0 ROM pages loaded
+    66.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    66.5 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.3, wakes 9.2
+    66.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    66.5 CORE1 rg_display:28% IDLE1:21% gba_render:52% rg_input:0%
+    66.5 CORE0 gbsp:100% rg_sysmon:0%
+    66.5 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    66.5 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    66.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 08037c86 08039726 08042b00 0802f2b4
+    66.5 GBAJIT code: ROM cache 1114 KB, RAM cache 43 KB
+    66.5 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.22 sound 0.07 display 0.05 | render 12.63 per drawn frame | 10027 instr/frame, 460 cycles/instr | 0 ROM pages loaded
+    67.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    67.5 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 75.3, wakes 9.4
+    67.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    67.5 CORE1 rg_display:27% IDLE1:21% gba_render:52% rg_input:0%
+    67.5 CORE0 gbsp:100% rg_sysmon:0%
+    67.5 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    67.5 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    67.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 08030d60 08039726 08042b00 0802f2b4
+    67.5 GBAJIT code: ROM cache 1115 KB, RAM cache 43 KB
+    67.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.37 sound 0.07 display 0.05 | render 12.58 per drawn frame | 12751 instr/frame, 365 cycles/instr | 0 ROM pages loaded
+    68.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    68.5 GBAWAIT ms/frame: wait for core 1 0.05 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.4, wakes 9.2
+    68.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.02
+    68.5 CORE1 rg_display:28% IDLE1:21% gba_render:51% rg_input:0%
+    68.5 CORE0 gbsp:100% rg_sysmon:0%
+    68.5 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1040 notifies (0.03 ms/frame)
+    68.5 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    68.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 080498d2 08039726 08042b00 0802f2b4
+    68.5 GBAJIT code: ROM cache 1116 KB, RAM cache 43 KB
+    68.5 GBAPROF 52 frames (52 drawn): ms/frame cpu 19.15 sound 0.07 display 0.05 | render 12.67 per drawn frame | 11196 instr/frame, 411 cycles/instr | 0 ROM pages loaded
+    69.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+25), BATT:0
+    69.5 GBAWAIT ms/frame: wait for core 1 0.03 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 75.8, wakes 9.2
+    69.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    69.5 CORE1 rg_display:26% IDLE1:21% gba_render:53% rg_input:0%
+    69.5 CORE0 gbsp:100% rg_sysmon:0%
+    69.5 GBAJIT per second: 4 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    69.5 GBAJIT translate: 8 blocks, 0.02 ms/frame
+    69.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 8 | ROM flushes 0 | last pcs 0803dd3a 08039726 0803dd4c 0803b922
+    69.5 GBAJIT code: ROM cache 1118 KB, RAM cache 43 KB
+    69.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.31 sound 0.07 display 0.05 | render 12.61 per drawn frame | 11297 instr/frame, 410 cycles/instr | 0 ROM pages loaded
+    70.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    70.5 GBAWAIT ms/frame: wait for core 1 0.03 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.3, 159: 76.6, wakes 9.1
+    70.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.02 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    70.5 CORE1 rg_display:27% IDLE1:19% gba_render:54% rg_input:0%
+    70.5 CORE0 gbsp:100% rg_sysmon:0%
+    70.5 GBAJIT per second: 0 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    70.5 GBAJIT translate: 0 blocks, 0.00 ms/frame
+    70.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 0 | ROM flushes 0 | last pcs 0803dd3a 08039726 0803dd4c 0803b922
+    70.5 GBAJIT code: ROM cache 1118 KB, RAM cache 43 KB
+    70.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.31 sound 0.07 display 0.05 | render 12.68 per drawn frame | 11643 instr/frame, 398 cycles/instr | 0 ROM pages loaded
+    71.5 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:26+26), BATT:0
+    71.5 GBAWAIT ms/frame: wait for core 1 0.04 (0.3 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.2, 159: 76.6, wakes 9.1
+    71.5 GBAWAIT by cause ms/frame: other 0.01 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.03 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    71.5 CORE1 IDLE1:19% gba_render:51% rg_display:29% rg_input:0%
+    71.5 CORE0 gbsp:100% rg_sysmon:0%
+    71.5 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    71.5 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    71.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0803c64c 08039726 0803dd4c 0803b922
+    71.5 GBAJIT code: ROM cache 1118 KB, RAM cache 43 KB
+    71.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.33 sound 0.07 display 0.05 | render 12.64 per drawn frame | 10703 instr/frame, 433 cycles/instr | 0 ROM pages loaded
+    72.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+25), BATT:0
+    72.5 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 74.7, wakes 9.2
+    72.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    72.5 CORE1 IDLE1:21% rg_display:26% gba_render:52% rg_input:0%
+    72.5 CORE0 gbsp:100% rg_sysmon:0%
+    72.5 GBAJIT per second: 3 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    72.5 GBAJIT translate: 3 blocks, 0.03 ms/frame
+    72.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 3 | ROM flushes 0 | last pcs 08038a16 0803b7ee 0804ca20 0803b922
+    72.5 GBAJIT code: ROM cache 1121 KB, RAM cache 43 KB
+    72.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.44 sound 0.07 display 0.05 | render 12.65 per drawn frame | 12115 instr/frame, 385 cycles/instr | 0 ROM pages loaded
+    73.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:50 (S:0 R:25+25), BATT:0
+    73.5 GBAWAIT ms/frame: wait for core 1 0.04 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 6.6, 159: 71.6, wakes 9.2
+    73.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.00
+    73.5 CORE1 rg_display:27% IDLE1:22% gba_render:51% rg_input:0%
+    73.5 CORE0 gbsp:100% rg_sysmon:0%
+    73.5 GBAJIT per second: 2 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    73.5 GBAJIT translate: 2 blocks, 0.01 ms/frame
+    73.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 2 | ROM flushes 0 | last pcs 0803b2d6 0804135e 0804ca20 0803b922
+    73.5 GBAJIT code: ROM cache 1122 KB, RAM cache 43 KB
+    73.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.48 sound 0.07 display 0.05 | render 12.54 per drawn frame | 13812 instr/frame, 339 cycles/instr | 0 ROM pages loaded
+    74.4 [debug] STACK:8784, HEAP:97+17 (31+13), BUSY:100%, FPS:51 (S:0 R:25+26), BATT:0
+    74.5 GBAWAIT ms/frame: wait for core 1 0.05 (0.2 syncs), display sync 0.00 | core 1 lines behind at line 80: 7.1, 159: 76.0, wakes 9.2
+    74.5 GBAWAIT by cause ms/frame: other 0.00 cpuBG 0.00 cpuOBJ 0.00 dmaBG 0.04 dmaOBJ 0.00 oam 0.00 pal 0.00 end 0.01
+    74.5 CORE1 rg_display:27% IDLE1:22% gba_render:51% rg_input:0%
+    74.5 CORE0 gbsp:100% rg_sysmon:0%
+    74.5 GBAJIT per second: 1 cache syncs (0.00 ms/frame), 0 RAM flushes, 1020 notifies (0.03 ms/frame)
+    74.5 GBAJIT translate: 1 blocks, 0.01 ms/frame
+    74.5 GBAJIT translate by region: bios 0 ewram 0 iwram 0 rom 1 | ROM flushes 0 | last pcs 0803c612 0804135e 0804ca20 0803b922
+    74.5 GBAJIT code: ROM cache 1123 KB, RAM cache 43 KB
+    74.5 GBAPROF 51 frames (51 drawn): ms/frame cpu 19.38 sound 0.07 display 0.05 | render 12.66 per drawn frame | 10668 instr/frame, 436 cycles/instr | 0 ROM pages loaded
