@@ -104,6 +104,33 @@
     opacity: 0.75;
   }
   #print-status.error { color: #ff6b6b; opacity: 1; font-weight: bold; }
+  #legend { max-height: calc(100vh - 100px); overflow-y: auto; width: 250px; }
+  #legend h2 {
+    font-size: 12px; font-weight: 600; color: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  #parts-toggle { background: none; border: 0; color: #aaa; cursor: pointer; font-size: 12px; }
+  #legend.collapsed #parts-list, #legend.collapsed .parts-actions,
+  #legend.collapsed .legend-note { display: none; }
+  .part-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 1px 4px; margin: 0 -4px; border-radius: 4px;
+  }
+  .part-row.selected { background: rgba(74,108,247,0.3); }
+  .part-row label { flex: 1; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .part-row input[type=color] {
+    width: 22px; height: 18px; padding: 0; border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 3px; background: none; cursor: pointer; flex-shrink: 0;
+  }
+  .part-row input[type=checkbox] { flex-shrink: 0; cursor: pointer; }
+  .parts-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .parts-actions .btn { padding: 4px 9px; font-size: 11px; }
+  @media (max-width: 640px) {
+    #toolbar { flex-wrap: wrap; gap: 8px; padding: 10px 16px; }
+    #info { display: none; }
+    #legend { left: 16px; right: 16px; bottom: 16px; width: auto; max-height: 45vh; }
+  }
 </style>
 </head>
 <body>
@@ -121,18 +148,15 @@
 <div id="loading">Loading 3D model...</div>
 
 <div id="legend">
-  <div class="legend-item"><div class="legend-swatch" style="background:#2a2a35"></div> Top shell</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#35353f"></div> Bottom shell</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#0a0a22"></div> Display</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> D-pad</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#cc3333"></div> A (red)</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#cccc33"></div> B (yellow)</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#3366cc"></div> X (blue)</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#33b050"></div> Y (green)</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#666"></div> Start / Menu / Select</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#555"></div> L / R Shoulder</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#008033"></div> PCB</div>
-  <div class="legend-item"><div class="legend-swatch" style="background:#8a8a95"></div> Battery straps</div>
+  <h2>Parts &amp; colours <button id="parts-toggle" aria-expanded="true" title="Collapse">&#9662;</button></h2>
+  <div id="parts-list" role="list"></div>
+  <div class="parts-actions">
+    <button class="btn" id="btn-reset-colors" title="Back to the default colours">Reset colours</button>
+    <button class="btn" id="btn-copy-colors" title="Copy the colour set as JSON">Copy</button>
+    <button class="btn" id="btn-paste-colors" title="Apply a colour set copied earlier">Paste</button>
+  </div>
+  <div class="legend-note">Pick a colour to repaint a part live; click a part in the
+    3D view to find it in this list. Colours are remembered in this browser.</div>
   <div class="legend-note">Every printed part shown here IS its print file
     (3d_case/*.stl), only rotated and moved into place.</div>
   <div class="legend-note" id="print-status"></div>
@@ -176,6 +200,31 @@ const NON_PRINTED = [
   { file: 'viewer/parts/part_display.stl', color: 0x0a0a22, metalness: 0.1, roughness: 0.3, clearcoat: 0.8, explode: 17.5 },
   { file: 'viewer/parts/part_pcb.stl',     color: 0x008033, metalness: 0.3, roughness: 0.5, clearcoat: 0.4, explode: 7 },
 ];
+
+// Per-part colours. Each placed instance has a stable key (file, plus #n for
+// the second copy of a file placed twice); the user's choices override the
+// group default and are kept in localStorage, so they survive the
+// Assembly/Exploded reload and a page refresh.
+const PART_LABEL = {
+  'case_top.stl': 'Top shell', 'case_bottom.stl': 'Bottom shell',
+  'dpad.stl': 'D-pad', 'btn_a.stl': 'Button A', 'btn_b.stl': 'Button B',
+  'btn_x.stl': 'Button X', 'btn_y.stl': 'Button Y',
+  'start.stl': 'Start', 'select.stl': 'Select', 'menu.stl': 'Menu',
+  'lr_cap_x2.stl': 'Shoulder cap', 'power_slider.stl': 'Power slider',
+  'lr_lever_l.stl': 'Lever L', 'lr_lever_r.stl': 'Lever R',
+  'battery_strap_x2.stl': 'Battery strap',
+  'viewer/parts/part_display.stl': 'Display', 'viewer/parts/part_pcb.stl': 'PCB',
+};
+const COLOR_STORE = 'esp32-emu-turbo.viewer.colors.v1';
+let partColors = {};
+try { partColors = JSON.parse(localStorage.getItem(COLOR_STORE) || '{}') || {}; } catch (e) { partColors = {}; }
+const partHidden = new Set();
+let partDefaults = {};      // key -> default hex, filled while loading
+let selectedKey = null;
+const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+function saveColors() {
+  try { localStorage.setItem(COLOR_STORE, JSON.stringify(partColors)); } catch (e) { /* private mode: colours just are not remembered */ }
+}
 
 let scene, camera, renderer, controls;
 let currentMeshes = [];
@@ -259,9 +308,10 @@ function placementMatrix(p) {
   return m;
 }
 
-function addMesh(geometry, style, matrix, exploded) {
+function addMesh(geometry, style, matrix, exploded, key) {
+  partDefaults[key] = hex(style.color);
   const material = new THREE.MeshPhysicalMaterial({
-    color: style.color,
+    color: partColors[key] || style.color,
     metalness: style.metalness || 0.2,
     roughness: style.roughness || 0.6,
     clearcoat: style.clearcoat || 0,
@@ -270,6 +320,9 @@ function addMesh(geometry, style, matrix, exploded) {
     side: THREE.DoubleSide,
   });
   const mesh = new THREE.Mesh(geometry, material);
+  mesh.userData.key = key;
+  mesh.visible = !partHidden.has(key);
+  if (key === selectedKey) material.emissive.setHex(0x223366);
   mesh.matrixAutoUpdate = false;
   mesh.matrix.copy(matrix);
   if (exploded)
@@ -286,16 +339,22 @@ async function loadParts(exploded) {
     const placement = await (await fetch('viewer/placement.json?v=' + Date.now())).json();
     const geoms = {};
     for (const p of placement) geoms[p.file] = geoms[p.file] || loadSTL(p.file);
-    await Promise.all(placement.map(async (p) => {
+    const seen = {};
+    const keyed = placement.map(p => {
+      seen[p.file] = (seen[p.file] || 0) + 1;
+      return { p, key: seen[p.file] > 1 ? p.file + '#' + seen[p.file] : p.file };
+    });
+    await Promise.all(keyed.map(async ({ p, key }) => {
       const g = (await geoms[p.file]).clone();
       g.computeVertexNormals();
-      addMesh(g, GROUP_STYLE[p.group], placementMatrix(p), exploded);
+      addMesh(g, GROUP_STYLE[p.group], placementMatrix(p), exploded, key);
     }));
     await Promise.all(NON_PRINTED.map(async (part) => {
       const g = await loadSTL(part.file);
       g.computeVertexNormals();
-      addMesh(g, part, new THREE.Matrix4(), exploded);
+      addMesh(g, part, new THREE.Matrix4(), exploded, part.file);
     }));
+    buildPartList([...keyed.map(k => k.key), ...NON_PRINTED.map(n => n.file)]);
     const files = new Set(placement.map(p => p.file));
     status.textContent = files.size + ' print files shown as printed: '
       + [...files].join(', ');
@@ -306,6 +365,114 @@ async function loadParts(exploded) {
   }
   document.getElementById('loading').classList.add('hidden');
 }
+
+function partLabel(key) {
+  const [file, n] = key.split('#');
+  const base = PART_LABEL[file] || file;
+  if (file.endsWith('_x2.stl')) return base + ' ' + (n ? (file.startsWith('lr_') ? 'R' : '2') : (file.startsWith('lr_') ? 'L' : '1'));
+  return base;
+}
+
+function meshesFor(key) { return currentMeshes.filter(m => m.userData.key === key); }
+
+function setColor(key, value) {
+  partColors[key] = value;
+  meshesFor(key).forEach(m => m.material.color.set(value));
+  saveColors();
+}
+
+function selectPart(key) {
+  selectedKey = key;
+  currentMeshes.forEach(m => m.material.emissive.setHex(m.userData.key === key ? 0x223366 : 0x000000));
+  document.querySelectorAll('.part-row').forEach(r => {
+    const on = r.dataset.key === key;
+    r.classList.toggle('selected', on);
+    if (on) r.scrollIntoView({ block: 'nearest' });
+  });
+}
+
+function buildPartList(keys) {
+  const list = document.getElementById('parts-list');
+  list.textContent = '';
+  keys.forEach((key, i) => {
+    const row = document.createElement('div');
+    row.className = 'part-row' + (key === selectedKey ? ' selected' : '');
+    row.dataset.key = key;
+    row.setAttribute('role', 'listitem');
+    const color = document.createElement('input');
+    color.type = 'color';
+    color.id = 'pc-' + i;
+    color.value = partColors[key] || partDefaults[key];
+    color.title = 'Colour of ' + partLabel(key);
+    color.addEventListener('input', () => setColor(key, color.value));
+    color.addEventListener('focus', () => selectPart(key));
+    const label = document.createElement('label');
+    label.htmlFor = color.id;
+    label.textContent = partLabel(key);
+    const vis = document.createElement('input');
+    vis.type = 'checkbox';
+    vis.checked = !partHidden.has(key);
+    vis.title = 'Show / hide ' + partLabel(key);
+    vis.addEventListener('change', () => {
+      if (vis.checked) partHidden.delete(key); else partHidden.add(key);
+      meshesFor(key).forEach(m => { m.visible = vis.checked; });
+    });
+    row.append(color, label, vis);
+    list.appendChild(row);
+  });
+}
+
+document.getElementById('btn-reset-colors').addEventListener('click', () => {
+  partColors = {};
+  saveColors();
+  currentMeshes.forEach(m => m.material.color.set(partDefaults[m.userData.key]));
+  document.querySelectorAll('.part-row').forEach(r => {
+    r.querySelector('input[type=color]').value = partDefaults[r.dataset.key];
+  });
+});
+
+document.getElementById('btn-copy-colors').addEventListener('click', async (e) => {
+  const all = {};
+  Object.keys(partDefaults).forEach(k => { all[k] = partColors[k] || partDefaults[k]; });
+  const text = JSON.stringify(all, null, 1);
+  try { await navigator.clipboard.writeText(text); e.target.textContent = 'Copied'; }
+  catch (err) { console.log(text); e.target.textContent = 'See console'; }
+  setTimeout(() => { e.target.textContent = 'Copy'; }, 1500);
+});
+
+document.getElementById('btn-paste-colors').addEventListener('click', async (e) => {
+  try {
+    const set = JSON.parse(await navigator.clipboard.readText());
+    Object.entries(set).forEach(([k, v]) => {
+      if (k in partDefaults && /^#[0-9a-f]{6}$/i.test(v)) setColor(k, v);
+    });
+    document.querySelectorAll('.part-row').forEach(r => {
+      r.querySelector('input[type=color]').value = partColors[r.dataset.key] || partDefaults[r.dataset.key];
+    });
+    e.target.textContent = 'Applied';
+  } catch (err) { e.target.textContent = 'Not a colour set'; }
+  setTimeout(() => { e.target.textContent = 'Paste'; }, 1500);
+});
+
+document.getElementById('parts-toggle').addEventListener('click', (e) => {
+  const legend = document.getElementById('legend');
+  const collapsed = legend.classList.toggle('collapsed');
+  e.currentTarget.setAttribute('aria-expanded', String(!collapsed));
+  e.currentTarget.innerHTML = collapsed ? '&#9652;' : '&#9662;';
+});
+
+// Click (not drag) on a part selects it in the list
+const raycaster = new THREE.Raycaster();
+let downAt = null;
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 4) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hit = raycaster.intersectObjects(currentMeshes.filter(m => m.visible), false)[0];
+  selectPart(hit ? hit.object.userData.key : null);
+});
 
 async function switchView(view) {
   currentView = view;

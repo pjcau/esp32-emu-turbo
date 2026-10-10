@@ -167,6 +167,8 @@ From the PCB-side face of the boss inward: socket **Ø3.1 × 4.5 deep** for the 
 
 :::tip
 **[Open the interactive 3D viewer](pathname:///viewer.html)** — it loads **the print files themselves** (`3d_case/*.stl`, served through `staticDirectories`) and only rotates and moves them into place (`3d_case/viewer/placement.json`), so what you see is exactly what you print. Only the display and the PCB, which are not printed, come from `3d_case/viewer/parts/`. `make export-enclosure-stl` regenerates everything; gate S0 of `verify_enclosure_stl.py` proves each placed print file lands exactly on the design's assembly position with a pure rotation (never a mirror). No STL lives under `website/`.
+
+The **Parts & colours** panel lists every placed part. A colour picker repaints it live, a checkbox hides it, and clicking a part in the 3D view selects its row. Colours are kept in the browser (`localStorage`) and survive the Assembly/Exploded switch. **Copy** puts the whole colour set on the clipboard as JSON and **Paste** applies one. The print files are never touched.
 :::
 
 ## Features
