@@ -1,0 +1,78 @@
+GBA core 1 renderer in IRAM — board A/B, 2026-10-10
+=====================================================
+Build: fork gba-cpu fe0b63a9, dynarec submodule 3634c3f, GBAPROF=1, gbsp only,
+785 664 B (same size as the Mac build). Installed with the SD updater.
+Protocol: Mario Kart Super Circuit (E), `load 1` right after "Retro-Go ready",
+A held, 62 s logs. Each figure is the median of the last 6 GBAPROF / GBAPERF / GBAL1
+lines. Volume 0. Card file /sd/retro-go/config/gbaopt.txt (the app echoes it back).
+
+Reference (2026-10-10-gba-cpu-opt.txt, b3ae1d3b): cpu 19.30 ms, 54 fps; core1_idle 13.72 ms.
+
+run  card                                   cpu ms (range)       fps   kcycles  I-stall  L1 miss
+1    perf=1                                 18.44 (18.21-18.49)  54    4427     2285     15.3%
+2    perf=1 nohash=1                        19.16 (19.02-19.45)  52    4584     2337     15.3%
+3    perf=1 nohash=1 l1=2048 isync=1        18.99 (18.82-19.09)  52    4506     2352      4.6%
+4    perf=1 nohash=1 rint=1 l1=2048 isync=1 18.93 (18.80-19.03)  52.5  4550     2346      4.6%
+5    perf=1 core1_idle=1                    13.64 (13.53-13.72)  61    3261     1506     15.4%
+6    (no file)                              18.43 (18.17-18.49)  54    -        -        15.3%
+
+Every frame was drawn in every run ("N frames (N drawn)"). Cache-miss counter still reads 0.
+HEAP run 1: "HEAP:60+17 (31+13)", the same in runs 1-6; run 4 (rint=1) "HEAP:54+23".
+Nothing was refused: no "PSRAM REFUSED", no abort, no panic.
+
+Verdict: FAIL against the pass mark (cpu <= 16.5 ms, 60 fps).
+- Run 1 is BETTER than 19.30 by 0.86 ms (18.44), below the expected 1.95-4.45 ms.
+  Run 6 (no card, no counters) gives the same 18.43, so the counters cost nothing.
+- nohash=1 is WORSE by 0.7 ms (19.16 vs 18.44) and costs 2 fps. The skipped lines save
+  display traffic: run 1's debug line shows "R:27+27" (half the frames sent partially),
+  nohash shows "R:0+51" (every frame sent in full). Keep the hash.
+- l1=2048 isync=1 cuts L1 miss from 15% to 4.6% but saves only ~0.17 ms on top of nohash.
+  rint=1 changes nothing (-0.06 ms, within noise).
+- With core 1 idle, the floor is unchanged at 13.64 ms / 61 fps.
+
+GBASAMPLE1 "core 1 code" line: IRAM 37.0%, flash 62.4% of 3696 ticks (run 1).
+THIS LINE IS WRONG. In main.c the top-150 print loop sets samp1[best].n = 0 before the
+summary loop runs, so the summary only counts the tail outside the top 150. Recomputed
+from the 150 printed entries plus that tail:
+  run 1: IRAM 74.0%, flash 19.0%, ROM 6.9% of 17890 ticks
+  run 6: IRAM 75.0%, flash 18.4%, ROM 6.6% of 18224 ticks
+So the move took effect (flash share 54% -> ~19%), but core 0 got back only 0.86 of the
+5.6 ms. Most of the contention is NOT core 1's instruction fetch.
+
+Core 1 per function (run 1, addr2line on the fe0b63a9 ELF, ticks out of 17890):
+  4758 IRAM esp_cpu_wait_for_intr      <- core 1 is idle 27% of the time
+  1758 IRAM rg_line_hash
+  1227 ROM  0x400559e0 (+ neighbours; libc memcpy/memset class)
+  1122 IRAM render_affine_background<u32,1,...>
+   892 IRAM merge_blend<1,false>
+   468 IRAM render_w_effects
+   405 IRAM lookup_pix_8bpp
+   389 IRAM write_lines
+   345 IRAM render_scanline_text<u16,0,false>
+   308 IRAM render_tile_Nbpp<u16,0,...>
+   267 IRAM order_obj
+   225 IRAM render_scanline_text<u16,0,true>
+   206 FLASH render_line
+   193 IRAM rend_pix_8bpp<u32,1,true>
+   175 FLASH render_scanline_text<u32,1,false>
+   122 FLASH render_scanline_text<u32,2,false>
+    90 FLASH render_scanline_text_fast<u32,2,...>
+    73 FLASH render_tile_Nbpp<u32,1,...>
+    63 FLASH render_scanline_text_fast<u32,1,...>
+    55 FLASH render_object<u32,1,...>
+    51 FLASH render_scanline_window ; 41 order_layers ; 39 render_task
+The u32 (rendtype 1/2) instantiations and render_line are still in flash.
+Reading: with flash fetch mostly gone and core 1 idle 27% of the time, the remaining
+~4.7 ms penalty looks like core 1's DATA traffic: it reads VRAM/OAM/palette and writes
+lines into PSRAM through the same cache, and the display DMA too (nohash adds full-frame
+sends and costs 0.7 ms). A next lever would be core 1 working from internal-RAM line
+buffers and PSRAM writes in larger bursts, or rendering fewer lines per frame
+(rendering stays on core 1).
+
+Play check (run 6 and a separate key run on this build, no card file): the race draws
+correctly (webcam); RIGHT steers onto the road; A accelerates; START opens the pause
+menu (CONTINUE / TRY AGAIN / QUIT) and closes it again.
+
+End state: master gbsp play build put back (fork 6ecc9d9b, 776 224 B, GBAPROF strings 0),
+gbsp.done 776224, no gbaopt.txt on the card. Key check on it: RIGHT steers onto the road,
+START pauses and resumes. Board in the launcher, volume 0.
