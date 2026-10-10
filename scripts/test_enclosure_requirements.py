@@ -6,7 +6,7 @@ Each case mutates a copy of enclosure.scad (written next to it, so the
 OpenSCAD container can still `include` pcb_parts.scad and export the
 labels) and demands the requirements gate objects:
 
-    Q1  speaker to the -X side                 R5 speaker      -> exit 1
+    Q1  speaker back to the +X side            R5 speaker      -> exit 1
     Q2  cable riser 3.1 -> 2.5                 R1 stack        -> exit 1
     Q3  ABXY back to o8                        R7 sizes        -> exit 1
     Q4  "A" label engraved beside the D-pad    R9 labels       -> exit 1
@@ -18,9 +18,17 @@ labels) and demands the requirements gate objects:
     Q10 battery pocket back to the 80 mm cell  R10 battery     -> exit 1
     Q11 top labels engraved mirrored           R9 chirality    -> exit 1
     Q12 strap thinned to 0.6 mm                R11 hold-down   -> exit 1
-    Q13 lever hook tongue back to 3 mm         R8 thin walls   -> exit 1
+    Q13 L/R pivot slot wall thinned to 0.8     R8 thin walls   -> exit 1
     Q14 lip groove skin back to 0.7 mm         R8 thin walls   -> exit 1
-    Q15 SD slot cut 2 mm into the shelf        R12 measured    -> exit 1
+    Q15 power trough cut 2 mm into the wall    R12 measured    -> exit 1
+    Q17 face caps back to 0.6 proud            R14 proud caps  -> exit 1
+    Q18 corners back to r8, no back fillet     R15 rounded     -> exit 1
+    Q19 USB-C recess shrunk to 1 mm            R13 recesses    -> exit 1
+    Q20 SD finger window back (sd_win_w)       R13 recesses    -> exit 1
+    Q21 SD slit cut 2 mm into the shelf        R12 measured    -> exit 1
+    Q22 Y label back on its left (the bezel)   R9 visible      -> exit 1
+    Q23 D-pad right arrow dropped              R9 labels       -> exit 1
+    Q24 top-boss gussets removed               R16 gussets     -> exit 1
     Q16 unmutated file                         all green       -> exit 0
 """
 
@@ -28,6 +36,7 @@ from __future__ import annotations
 
 import contextlib
 import io
+import os
 import sys
 from pathlib import Path
 
@@ -37,23 +46,29 @@ import verify_enclosure_sync as ves                 # noqa: E402
 import verify_enclosure_requirements as ver         # noqa: E402
 
 ORIGINAL = ves.SCAD.read_text()
-MUT = ves.SCAD.with_name("_mutation_under_test.scad")
+_CASE = iter(range(1, 10_000))
 
 
 def run_with(text: str) -> int:
-    MUT.write_text(text)
+    # A NEW file name per case: rewriting one fixed name with different
+    # content let the OrbStack bind mount serve the container the previous
+    # case's size — a truncated file ("Parser error ... line 1545", exit 2
+    # on a random case) or, worse, the previous mutation's text.
+    mut = ves.SCAD.with_name(f"_mutation_under_test_{os.getpid()}_{next(_CASE)}.scad")
+    mut.write_text(text)
     real = ves.SCAD
     try:
-        ves.SCAD = MUT
+        ves.SCAD = mut
         buf = io.StringIO()
         try:
             with contextlib.redirect_stdout(buf):
                 return ver.main()
-        except ves.Structural:
+        except ves.Structural as e:
+            print(f"  (structural: {str(e).splitlines()[0]})")
             return 2
     finally:
         ves.SCAD = real
-        MUT.unlink(missing_ok=True)
+        mut.unlink(missing_ok=True)
 
 
 def mutate(old: str, new: str) -> str:
@@ -76,7 +91,7 @@ def main() -> int:
             failures.append(name)
 
     cases = [
-        ("Q1 speaker on the wrong side", "spk_x = 63.5;", "spk_x = -63.5;", 1),
+        ("Q1 speaker on the wrong side", "spk_x = -62.5;", "spk_x = 62.5;", 1),
         ("Q2 cable riser gone", "disp_riser = 3.1;", "disp_riser = 2.5;", 1),
         ("Q3 ABXY shrunk back", "abxy_diam = 9; ", "abxy_diam = 8; ", 1),
         ("Q4 label A beside the D-pad",
@@ -87,7 +102,7 @@ def main() -> int:
         ("Q6 screw through the roof", "screw_len = 20;", "screw_len = 25;", 1),
         ("Q6b insert socket too shallow for L4", "insert_hole_depth = insert_l + 0.5;",
          "insert_hole_depth = insert_l - 1.0;", 1),
-        ("Q7 gusset too thin", "boss_gusset_t = 1.5;", "boss_gusset_t = 0.8;", 1),
+        ("Q7 gusset too thin", "\nboss_gusset_t = 1.5;\n", "\nboss_gusset_t = 0.8;\n", 1),
         ("Q8 extension board past the glass edge", "ext_l = 28;", "ext_l = 100;", 1),
         ("Q9 Menu pill into the LED web", "menu_h = 3.8;", "menu_h = 5.5;", 1),
         ("Q10 pocket back to the 80 mm cell", "bat_w = 90; ", "bat_w = 80; ", 1),
@@ -95,12 +110,24 @@ def main() -> int:
          "module face_label(x, y, txt, size, mirrored=false) {",
          "module face_label(x, y, txt, size, mirrored=true) {", 1),
         ("Q12 strap too thin", "bat_strap_t = 1.2;", "bat_strap_t = 0.6;", 1),
-        ("Q13 lever hook walls thin again", "lever_tongue_w = 5.0;",
-         "lever_tongue_w = 3.0;", 1),
+        ("Q13 L/R pivot slot wall thinned", "lr_blk_wall = 1.4;", "lr_blk_wall = 0.8;", 1),
         ("Q14 lip skin back to 0.7 mm", "lip_clearance = 0.2;", "lip_clearance = 0.7;", 1),
-        ("Q15 SD slot cuts a sliver off the shelf",
+        ("Q15 power trough leaves a 0.6 mm wall", "pwr_trough_d = 0.6;",
+         "pwr_trough_d = 2.0;", 1),
+        ("Q17 face caps back to 0.6 proud", "btn_face_h = 2.0;", "btn_face_h = 0.6;", 1),
+        ("Q18 back fillet gone", "back_r = 8; ", "back_r = 0; ", 1),
+        ("Q19 USB-C recess shrunk", "usbc_recess_d = 2.0;", "usbc_recess_d = 1.0;", 1),
+        ("Q20 SD finger window back", "sd_cut_h = 3.5;",
+         "sd_cut_h = 3.5;\nsd_win_w = 20;", 1),
+        ("Q22 Y label back under the bezel",
+         'face_label(abxy_x + abxy_offsets[3][0], abxy_y + abxy_offsets[3][1] + abxy_diam/2 + 2, "Y", 2.5);',
+         'face_label(abxy_x + abxy_offsets[3][0] - abxy_diam/2 - 2, abxy_y + abxy_offsets[3][1], "Y", 2.5);', 1),
+        ("Q23 D-pad right arrow dropped",
+         'face_label(dpad_x + dpad_arm_len + 3, dpad_y, ">", 2.5);', "", 1),
+        ("Q21 SD slit cuts a sliver off the shelf",
          "sd_slot_cutout(sd_cut_w, sd_cut_h, side_wall + 0.2);",
          "sd_slot_cutout(sd_cut_w, sd_cut_h, side_wall + 2);", 1),
+        ("Q24 top-boss gussets removed", "top_boss_gusset_n = 8;", "top_boss_gusset_n = 0;", 1),
     ]
     for name, old, new, want in cases:
         rc = run_with(mutate(old, new))

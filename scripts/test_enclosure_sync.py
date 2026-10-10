@@ -21,9 +21,12 @@ the gate objects. An assertion that never fires is not evidence.
     M13 disp_w 83.52 -> 86.4                 V1 viewport back    -> exit 1
     M14 disp_riser 3.1 -> 1.0                cable space gone    -> exit 1
     M15 bat_offset_y 5 -> 0                  pocket under J3     -> exit 1
-    M16 lever_tip_over 0.8 -> 3              lever into the screw-> exit 1
+    M16 lr_x 57.5 -> 48                      flange over a block -> exit 1
     M17 sw_h 1.5 -> 3.0                      wrong switch height -> exit 1
     M18 bat_strap_x2 26 -> 5                 strap under the ESP32-> exit 1
+    M19 L/R arm runs past the actuator       rises over the cover-> exit 1
+    M20 L/R beam grown toward the cap        hits the flange     -> exit 1
+    M21 L/R cap contact moved up (ratio 1.7) heavy, short press  -> exit 1
 """
 
 from __future__ import annotations
@@ -100,10 +103,15 @@ def main() -> int:
         ("M13 V1 viewport back", "disp_w = 83.52;", "disp_w = 86.4;", 1),
         ("M14 cable riser gone", "disp_riser = 3.1;", "disp_riser = 1.0;", 1),
         ("M15 pocket under J3", "bat_offset_y = 5;", "bat_offset_y = 0;", 1),
-        ("M16 lever into the screw", "lever_tip_over = 0.8;",
-         "lever_tip_over = 3;", 1),
+        ("M16 L/R cap flange over a pivot block", "lr_x = 57.5;",
+         "lr_x = 48;", 1),
         ("M17 wrong switch height", "sw_h = 1.5;", "sw_h = 3.0;", 1),
         ("M18 strap under the ESP32", "bat_strap_x2 = 26;", "bat_strap_x2 = 5;", 1),
+        ("M19 L/R arm past the actuator", "lr_arm_y_end = lr_sw_y;",
+         "lr_arm_y_end = 30.5;", 1),
+        ("M20 L/R beam into the cap flange", "lr_beam_y1 = 37.9;", "lr_beam_y1 = 38.4;", 1),
+        ("M21 L/R lever ratio 1.7", "lr_bump_z = lr_piv_z - (lr_piv_y - lr_sw_y);",
+         "lr_bump_z = 10.0;", 1),
     ]
     for name, old, new, want in cases:
         rc = run_with(mutate(old, new))

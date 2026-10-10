@@ -296,6 +296,15 @@ ROUTING_EXCEPTIONS = {
         "software-dev", "/check", "blind-spot",
         "while the enclosure-sync gate's own tests are red, its PASS "
         "verdicts on mechanical fit are untrustworthy"),
+    # Same shape again: this mutation suite proves the S12 solidity check
+    # in verify_enclosure_stl.py (mesh watertight/single-body/volume) can
+    # still fire, not a measured property of the shell itself. A red
+    # suite means that check can no longer be trusted — a tooling blind
+    # spot, not a mechanical-fit regression.
+    "test_enclosure_stl_solidity": (
+        "software-dev", "/check", "blind-spot",
+        "while the STL-solidity check's own tests are red, its PASS "
+        "verdicts on mesh closure are untrustworthy"),
     # The "test_point" keyword would hand this suite the degraded severity
     # of the gate it tests; a red mutation suite is a tooling blind spot.
     "test_test_points": (
