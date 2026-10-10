@@ -44,7 +44,7 @@ What the app does besides running the games:
   state loads only in the firmware that wrote it. On the Neo Geo a save has
   no preview picture (no screenshot in its band mode).
 - **Hiscores** on the card (`hiscore.dat` in `/sd/retro-go/mame/mame2000/`).
-- **Loading percentage** under the hourglass; after another arcade game was
+- **Loading percentage** under the loading logo (the hourglass until 2026-10-10); after another arcade game was
   played, "game cache NN%" while the flash cache is rewritten.
 - **Launch times**: 9 to 13 s for the same game again, 20 to 28 s after a
   different arcade game (the 4 MB flash cache holds one game). The first
