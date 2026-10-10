@@ -1,0 +1,56 @@
+System monitor page (fork branch sysmon 4c16a65a, on master 6ecc9d9b) — board, 2026-10-10
+=========================================================================================
+Build: launcher 0x116cb0 (1 141 936 B) and retro-core 0x1049c0 (1 067 456 B), as expected.
+launcher/sdkconfig and retro-core/sdkconfig removed first; the regenerated ones carry
+CONFIG_FREERTOS_GENERATE_RUN_TIME_STATS=y. Installed with scripts/sd_update.py --console
+(launcher.done, retro-core.done). gbsp left as the CPU6 play build. Volume 0.
+Note: the generated sdkconfig files on this PC now keep RUN_TIME_STATS=y for later master
+builds of launcher/retro-core too (they are only regenerated when missing).
+
+Launcher -> menu -> About -> "System monitor": the page opens and refreshes every second.
+Down moves the cursor down the rows (the page fits, so nothing scrolls); B goes back to About.
+Launcher sysmon lines:
+  35.2 sysmon: temp=33.8 max=33.8 int=122327 low=106307 dma=114823 ext=7213924 low=6815784 stack=4348 game=50fps load=0/0
+  36.3 sysmon: temp=33.8 max=33.8 int=123355 low=106307 dma=115851 ext=7213924 low=6815784 stack=4348 game=50fps load=0/0
+  37.3 sysmon: temp=33.8 max=33.8 int=123355 low=106307 dma=115851 ext=7213924 low=6815784 stack=4348 game=50fps load=0/0
+Page (webcam): In game (before menu): Speed 50 fps (83%), skip 1; Emu busy 0%;
+Core 0/1 0%/0%. Live: Die temp 33.8 C (max 33.8), CPU clock 240 MHz, RAM free 120K
+(low 103K), RAM block 59K (DMA 113K), PSRAM free 7044K/8175K (low 6656K), PSRAM block 6656K,
+Main stack 4348 bytes left, Battery N/A, Uptime 0h01m07s, Last reset Software.
+
+NES (retro-core, Super Mario Bros.): played ~60 s (RIGHT held, A every 2 s). The game ran at
+FPS 60 (S:0 R:60+0), BUSY 44-46%. Game menu -> "System monitor" (a new entry between
+Options and About) opens.
+In-game sysmon lines:
+  215.7 sysmon: temp=33.8 max=35.8 int=44835 low=28079 dma=37331 ext=8233548 low=8233548 stack=5004 game=50fps load=0/0
+  216.7 sysmon: temp=33.8 max=35.8 int=44835 low=28079 dma=37331 ext=8233548 low=8233548 stack=4716 game=50fps load=0/0
+  217.7 sysmon: temp=33.8 max=35.8 int=44835 low=28079 dma=37331 ext=8233548 low=8233548 stack=4716 game=50fps load=0/0
+Page (webcam): In game (before menu): Speed 50 fps (83%), skip 0; Emu busy 0%; Core 0/1 0% / 0%.
+Live: Die temp 33.8 C (max 35.8), RAM free 43K (low 27K), RAM block 31K (DMA 36K),
+PSRAM free 8040K/8189K (low 8040K), block 7936K, Main stack 4716 bytes left,
+Uptime 0h02m10s, Last reset Software.
+
+Verdict:
+- Temperature: PASS (never nan, 0 nan in 200+ lines). 33.8-35.8 C, slightly below the
+  expected 35-60 (the board was idle-cool, about 21:00).
+- RAM/PSRAM/stack/uptime/reset: plausible, updated every second.
+- Crash/watchdog: NONE (0 panic/Guru/wdt/abort/backtrace in the whole log).
+- "In game" section: FAIL. It shows 50 fps (83%), busy 0% and core loads 0%/0%, while the game
+  had just been running at 60 fps with BUSY 44-46%. Those are the MENU's numbers: retro-go's
+  stats keep updating once a second while the game menu is open (the [debug] line reads FPS:50
+  S:50 BUSY:0% throughout the menu), so a snapshot taken when the page opens (here ~5 s after
+  the menu opened) sees only menu time. The snapshot needs to be taken when the game menu
+  OPENS, before its first stats tick. Or keep the last stats from a game frame.
+  The core loads are also 0/0 in the launcher, so the run-time-stats loads may be N/A or zero
+  for another reason. Worth checking on the host what load=0/0 means.
+
+Buttons: in the NES, START starts the game, A confirms in the game menu, RIGHT/A play
+(Mario ran and jumped through 1-1 during the 60 s). Sonic Advance (GBA) launched from the new
+launcher: loads state 0, RIGHT runs, plays (webcam).
+Side finding for GBA (CPU6 build, Auto): loading Sonic's state 0 produced one 35 fps second.
+Auto raised frameskip to 1 at 281.4 s and NEVER returned to 0 (FPS 60 S:30 R:30, BUSY 57-61%
+for the rest of the session). retro-go only reduces when frameskip > 1, so Auto at 1 is
+permanent. Sonic then draws 30 frames instead of 60. Reported for CPU7.
+
+End state: sysmon launcher + retro-core installed, gbsp CPU6 play build, board in the launcher,
+volume 0.
