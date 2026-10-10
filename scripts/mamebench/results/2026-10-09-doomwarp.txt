@@ -1,0 +1,951 @@
+DOOM per-level-load leak, A/B with automatic level warp on the board, 2026-10-09. freedoom1.wad, volume 0, hands off.
+B (fix)    = fork doom-leak 4ec6b165 (harness 6ca83c03 + fix abfe73cf + DOOMWARP), DOOMMEM=1 DOOMWARP=40
+A (no fix) = the same with abfe73cf reverted (not committed)
+Each DOOMMEM "load=N map=X" header is printed just BEFORE map X loads, so it shows the map before it; the table
+reads the state ON each map from the next header (the last one from the periodic header after it).
+The harness ran 17 warps, not 18: the 18th header (E1M9, pass 2) is printed but no level load follows it
+(18 P_GetNodesVersion lines = the attract demo + 17 warps). E1M9 has no second visit in either run.
+A was stopped by hand after 15 loads (the user closed the session); B ran to the end (801 s).
+
+static (bytes) on each map, pass 1 / pass 2:
+map   | B (fix)                        | A (no fix)
+E1M1  | 2460244 / 2460244 (+0)         | 2540252 / 2757976 (+217724)
+E1M2  | 2476088 / 2476088 (+0)         | 2582340 / 2773820 (+191480)
+E1M3  | 2478828 / 2478828 (+0)         | 2623516 / 2776560 (+153044)
+E1M4  | 2485124 / 2485124 (+0)         | 2645816 / 2782856 (+137040)
+E1M5  | 2484584 / 2484584 (+0)         | 2645276 / 2782316 (+137040)
+E1M6  | 2583800 / 2583800 (+0)         | 2810512 / 2881532 (+71020)
+E1M7  | 2361012 / 2361012 (+0)         | 2607760 / n/a (stopped)
+E1M8  | 2453536 / 2453536 (+0)         | 2729472 / n/a (stopped)
+E1M9  | 2568612 / n/a (no 2nd load)    | 2866344 / n/a (stopped)
+At the same map B is 80-300 KB below A already on pass 1 and the gap grows with every map A visits.
+
+ext free on each map:
+B: 2098280 2982620 3006776 3543236 2521920 1829824 4100684 2772428 | 2795972 2114036 2982656 3006772 3543200 2521924 1829800 4100752 2772440
+   the same map gives the same free memory on both passes (within 70 B): no trend. Last ext= 2772440.
+A: 2052688 2901268 2899152 3396884 2405100 1752608 3871388 2522628 | 2516892 1848384 2707684 2744124 3258068 2266236 1700424
+   each map has less on pass 2 (E1M1 2052688 -> 1848384 ... E1M6 2405100 -> 1700424). Last ext= 1700424.
+int= 75171 flat in both (74655 once, right after the first load, in both). purges 0+0 in every header of both runs.
+No crash, panic or allocation failure in either log.
+
+Verdict: the fix works. B: static identical on every second visit, ext flat. A: static grows +71..+218 KB a map
+between visits. The fix (abfe73cf only) was put on fork master as c7c79ae6 on 2026-10-10 with the user's ok.
+
+---- DOOMMEM headers, B then A ----
+== B
+    11.7 [=] P_GetNodesVersion: using normal BSP nodes
+    13.4 [=] DOOMMEM up=10s int=58783(31744) ext=3968324(3932160) zone 4189900 B (+4189900 since last)
+    13.4 [=]  static 2218860/1201
+    13.4 [=]  level 878768/399
+    13.4 [=]  cache 1091060/151
+    13.4 [=]  allocs 2164 purges 0+0
+    23.4 [=] DOOMMEM up=20s int=75171(31744) ext=2067156(2064384) zone 6043832 B (+1853932 since last)
+    23.4 [=]  static 2488680/1269
+    23.4 [=]  level 880088/402
+    23.4 [=]  cache 2673852/818
+    23.4 [=]  allocs 766 purges 0+0
+    33.4 [=] DOOMMEM up=30s int=75171(31744) ext=1666952(1638400) zone 6435808 B (+391976 since last)
+    33.4 [=]  static 2484584/1268
+    33.4 [=]  level 879464/399
+    33.4 [=]  cache 3070548/889
+    33.4 [=]  allocs 121 purges 0+0
+    43.4 [=] DOOMMEM up=40s int=75171(31744) ext=1721648(1572864) zone 6381068 B (-54740 since last)
+    43.4 [=]  static 2484584/1268
+    43.4 [=]  level 878008/392
+    43.4 [=]  cache 3017264/926
+    43.4 [=]  allocs 122 purges 0+0
+    46.9 [=] DOOMMEM load=1 map=E1M1 up=44s int=75171(31744) ext=1711960(1572864) zone 6390668 B (+9600 since last)
+    46.9 [=]  static 2484584/1268
+    46.9 [=]  level 875856/385
+    46.9 [=]  cache 3029016/931
+    46.9 [=]  allocs 18 purges 0+0
+    47.0 [=] P_GetNodesVersion: using normal BSP nodes
+    53.4 [=] DOOMMEM up=50s int=74655(31744) ext=2099660(1736704) zone 6013352 B (-377316 since last)
+    53.4 [=]  static 2461064/1260
+    53.4 [=]  level 717264/296
+    53.4 [=]  cache 2834152/674
+    53.4 [=]  allocs 1023 purges 0+0
+    63.4 [=] DOOMMEM up=60s int=75171(31744) ext=2098280(1736704) zone 6014676 B (+1324 since last)
+    63.4 [=]  static 2479704/1260
+    63.4 [=]  level 717264/296
+    63.4 [=]  cache 2816836/675
+    63.4 [=]  allocs 1 purges 0+0
+    73.4 [=] DOOMMEM up=70s int=75171(31744) ext=2098280(1736704) zone 6014676 B (+0 since last)
+    73.4 [=]  static 2460244/1259
+    73.4 [=]  level 717264/296
+    73.4 [=]  cache 2836296/676
+    73.4 [=]  allocs 0 purges 0+0
+    83.4 [=] DOOMMEM up=80s int=75171(31744) ext=2098280(1736704) zone 6014676 B (+0 since last)
+    83.4 [=]  static 2464340/1260
+    83.4 [=]  level 717264/296
+    83.4 [=]  cache 2832200/675
+    83.4 [=]  allocs 0 purges 0+0
+    87.0 [=] DOOMMEM load=2 map=E1M2 up=84s int=75171(31744) ext=2098280(1736704) zone 6014676 B (+0 since last)
+    87.0 [=]  static 2460244/1259
+    87.0 [=]  level 717264/296
+    87.0 [=]  cache 2836296/676
+    87.0 [=]  allocs 0 purges 0+0
+    87.1 [=] P_GetNodesVersion: using normal BSP nodes
+    93.4 [=] DOOMMEM up=90s int=75171(31744) ext=2982620(1769472) zone 5148096 B (-866580 since last)
+    93.4 [=]  static 2476088/1282
+    93.4 [=]  level 643628/333
+    93.4 [=]  cache 2027220/558
+    93.4 [=]  allocs 1010 purges 0+0
+   103.4 [=] DOOMMEM up=100s int=75171(31744) ext=2982620(1769472) zone 5148096 B (+0 since last)
+   103.4 [=]  static 2476088/1282
+   103.4 [=]  level 643628/333
+   103.4 [=]  cache 2027220/558
+   103.4 [=]  allocs 0 purges 0+0
+   113.5 [=] DOOMMEM up=110s int=75171(31744) ext=2982620(1769472) zone 5148096 B (+0 since last)
+   113.5 [=]  static 2480184/1283
+   113.5 [=]  level 643628/333
+   113.5 [=]  cache 2023124/557
+   113.5 [=]  allocs 0 purges 0+0
+   123.4 [=] DOOMMEM up=120s int=75171(31744) ext=2982620(1769472) zone 5148096 B (+0 since last)
+   123.4 [=]  static 2476088/1282
+   123.4 [=]  level 643628/333
+   123.4 [=]  cache 2027220/558
+   123.4 [=]  allocs 0 purges 0+0
+   127.0 [=] DOOMMEM load=3 map=E1M3 up=124s int=75171(31744) ext=2982620(1769472) zone 5148096 B (+0 since last)
+   127.0 [=]  static 2476088/1282
+   127.0 [=]  level 643628/333
+   127.0 [=]  cache 2027220/558
+   127.0 [=]  allocs 0 purges 0+0
+   127.0 [=] P_GetNodesVersion: using normal BSP nodes
+   133.5 [=] DOOMMEM up=130s int=75171(31744) ext=3006776(2097152) zone 5126872 B (-21224 since last)
+   133.5 [=]  static 2478828/1280
+   133.5 [=]  level 710672/322
+   133.5 [=]  cache 1937276/549
+   133.5 [=]  allocs 949 purges 0+0
+   143.4 [=] DOOMMEM up=140s int=75171(31744) ext=3006776(2097152) zone 5126872 B (+0 since last)
+   143.4 [=]  static 2478828/1280
+   143.4 [=]  level 710672/322
+   143.4 [=]  cache 1937276/549
+   143.4 [=]  allocs 0 purges 0+0
+   153.5 [=] DOOMMEM up=150s int=75171(31744) ext=3006776(2097152) zone 5126872 B (+0 since last)
+   153.5 [=]  static 2482924/1281
+   153.5 [=]  level 710672/322
+   153.5 [=]  cache 1933180/548
+   153.5 [=]  allocs 0 purges 0+0
+   163.5 [=] DOOMMEM up=160s int=75171(31744) ext=3006776(2097152) zone 5126872 B (+0 since last)
+   163.5 [=]  static 2478828/1280
+   163.5 [=]  level 710672/322
+   163.5 [=]  cache 1937276/549
+   163.5 [=]  allocs 0 purges 0+0
+   167.0 [=] DOOMMEM load=4 map=E1M4 up=164s int=75171(31744) ext=3006776(2097152) zone 5126872 B (+0 since last)
+   167.0 [=]  static 2478828/1280
+   167.0 [=]  level 710672/322
+   167.0 [=]  cache 1937276/549
+   167.0 [=]  allocs 0 purges 0+0
+   167.0 [=] P_GetNodesVersion: using normal BSP nodes
+   173.5 [=] DOOMMEM up=170s int=75171(31744) ext=3545468(2490368) zone 4597112 B (-529760 since last)
+   173.5 [=]  static 2485124/1296
+   173.5 [=]  level 413888/273
+   173.5 [=]  cache 1697980/540
+   173.5 [=]  allocs 885 purges 0+0
+   183.5 [=] DOOMMEM up=180s int=75171(31744) ext=3543236(2490368) zone 4599256 B (+2144 since last)
+   183.5 [=]  static 2485124/1296
+   183.5 [=]  level 413888/273
+   183.5 [=]  cache 1700124/542
+   183.5 [=]  allocs 2 purges 0+0
+   193.5 [=] DOOMMEM up=190s int=75171(31744) ext=3543236(2490368) zone 4599256 B (+0 since last)
+   193.5 [=]  static 2506216/1297
+   193.5 [=]  level 413888/273
+   193.5 [=]  cache 1679032/541
+   193.5 [=]  allocs 0 purges 0+0
+   203.5 [=] DOOMMEM up=200s int=75171(31744) ext=3543236(2490368) zone 4599256 B (+0 since last)
+   203.5 [=]  static 2491800/1297
+   203.5 [=]  level 413888/273
+   203.5 [=]  cache 1693448/541
+   203.5 [=]  allocs 0 purges 0+0
+   207.0 [=] DOOMMEM load=5 map=E1M5 up=204s int=75171(31744) ext=3543236(2490368) zone 4599256 B (+0 since last)
+   207.0 [=]  static 2485124/1296
+   207.0 [=]  level 413888/273
+   207.0 [=]  cache 1700124/542
+   207.0 [=]  allocs 0 purges 0+0
+   207.1 [=] P_GetNodesVersion: using normal BSP nodes
+   213.5 [=] DOOMMEM up=210s int=75171(31744) ext=2521920(2490368) zone 5599400 B (+1000144 since last)
+   213.5 [=]  static 2488680/1269
+   213.5 [=]  level 878768/399
+   213.5 [=]  cache 2230740/641
+   213.5 [=]  allocs 1106 purges 0+0
+   223.5 [=] DOOMMEM up=220s int=75171(31744) ext=2521920(2490368) zone 5599400 B (+0 since last)
+   223.5 [=]  static 2484584/1268
+   223.5 [=]  level 878768/399
+   223.5 [=]  cache 2234836/642
+   223.5 [=]  allocs 0 purges 0+0
+   233.5 [=] DOOMMEM up=230s int=75171(31744) ext=2521920(2490368) zone 5599400 B (+0 since last)
+   233.5 [=]  static 2484584/1268
+   233.5 [=]  level 878768/399
+   233.5 [=]  cache 2234836/642
+   233.5 [=]  allocs 0 purges 0+0
+   243.5 [=] DOOMMEM up=240s int=75171(31744) ext=2521920(2490368) zone 5599400 B (+0 since last)
+   243.5 [=]  static 2494316/1269
+   243.5 [=]  level 878768/399
+   243.5 [=]  cache 2225104/641
+   243.5 [=]  allocs 0 purges 0+0
+   247.0 [=] DOOMMEM load=6 map=E1M6 up=244s int=75171(31744) ext=2521920(2490368) zone 5599400 B (+0 since last)
+   247.0 [=]  static 2484584/1268
+   247.0 [=]  level 878768/399
+   247.0 [=]  cache 2234836/642
+   247.0 [=]  allocs 0 purges 0+0
+   247.1 [=] P_GetNodesVersion: using normal BSP nodes
+   253.5 [=] DOOMMEM up=250s int=75171(31744) ext=1832056(1540096) zone 6275620 B (+676220 since last)
+   253.5 [=]  static 2583800/1286
+   253.5 [=]  level 1363752/593
+   253.5 [=]  cache 2327868/680
+   253.5 [=]  allocs 1343 purges 0+0
+   263.6 [=] DOOMMEM up=260s int=75171(31744) ext=1829824(1540096) zone 6277764 B (+2144 since last)
+   263.6 [=]  static 2583800/1286
+   263.6 [=]  level 1363752/593
+   263.6 [=]  cache 2330012/682
+   263.6 [=]  allocs 2 purges 0+0
+   273.5 [=] DOOMMEM up=270s int=75171(31744) ext=1829824(1540096) zone 6277764 B (+0 since last)
+   273.5 [=]  static 2583800/1286
+   273.5 [=]  level 1363752/593
+   273.5 [=]  cache 2330012/682
+   273.5 [=]  allocs 0 purges 0+0
+   283.6 [=] DOOMMEM up=280s int=75171(31744) ext=1829824(1540096) zone 6277764 B (+0 since last)
+   283.6 [=]  static 2593532/1287
+   283.6 [=]  level 1363752/593
+   283.6 [=]  cache 2320280/681
+   283.6 [=]  allocs 0 purges 0+0
+   287.0 [=] DOOMMEM load=7 map=E1M7 up=284s int=75171(31744) ext=1829824(1540096) zone 6277764 B (+0 since last)
+   287.0 [=]  static 2583800/1286
+   287.0 [=]  level 1363752/593
+   287.0 [=]  cache 2330012/682
+   287.0 [=]  allocs 0 purges 0+0
+   287.1 [=] P_GetNodesVersion: using normal BSP nodes
+   293.6 [=] DOOMMEM up=290s int=75171(31744) ext=4100684(1933312) zone 4060464 B (-2217300 since last)
+   293.6 [=]  static 2361012/1268
+   293.6 [=]  level 297848/54
+   293.6 [=]  cache 1401604/316
+   293.6 [=]  allocs 429 purges 0+0
+   303.6 [=] DOOMMEM up=300s int=75171(31744) ext=4100684(1933312) zone 4060464 B (+0 since last)
+   303.6 [=]  static 2361012/1268
+   303.6 [=]  level 297848/54
+   303.6 [=]  cache 1401604/316
+   303.6 [=]  allocs 0 purges 0+0
+   313.6 [=] DOOMMEM up=310s int=75171(31744) ext=4100684(1933312) zone 4060464 B (+0 since last)
+   313.6 [=]  static 2361012/1268
+   313.6 [=]  level 297848/54
+   313.6 [=]  cache 1401604/316
+   313.6 [=]  allocs 0 purges 0+0
+   323.6 [=] DOOMMEM up=320s int=75171(31744) ext=4100684(1933312) zone 4060464 B (+0 since last)
+   323.6 [=]  static 2361012/1268
+   323.6 [=]  level 297848/54
+   323.6 [=]  cache 1401604/316
+   323.6 [=]  allocs 0 purges 0+0
+   327.0 [=] DOOMMEM load=8 map=E1M8 up=324s int=75171(31744) ext=4100684(1933312) zone 4060464 B (+0 since last)
+   327.0 [=]  static 2361012/1268
+   327.0 [=]  level 297848/54
+   327.0 [=]  cache 1401604/316
+   327.0 [=]  allocs 0 purges 0+0
+   327.1 [=] P_GetNodesVersion: using normal BSP nodes
+   333.6 [=] DOOMMEM up=330s int=75171(31744) ext=2774660(2228224) zone 5353144 B (+1292680 since last)
+   333.6 [=]  static 2453536/1265
+   333.6 [=]  level 628280/327
+   333.6 [=]  cache 2271288/631
+   333.6 [=]  allocs 997 purges 0+0
+   343.6 [=] DOOMMEM up=340s int=75171(31744) ext=2772428(2228224) zone 5355288 B (+2144 since last)
+   343.6 [=]  static 2453536/1265
+   343.6 [=]  level 628280/327
+   343.6 [=]  cache 2273432/633
+   343.6 [=]  allocs 2 purges 0+0
+   353.6 [=] DOOMMEM up=350s int=75171(31744) ext=2772428(2228224) zone 5355288 B (+0 since last)
+   353.6 [=]  static 2475108/1266
+   353.6 [=]  level 628280/327
+   353.6 [=]  cache 2251860/632
+   353.6 [=]  allocs 0 purges 0+0
+   363.6 [=] DOOMMEM up=360s int=75171(31744) ext=2772428(2228224) zone 5355288 B (+0 since last)
+   363.6 [=]  static 2453536/1265
+   363.6 [=]  level 628280/327
+   363.6 [=]  cache 2273432/633
+   363.6 [=]  allocs 0 purges 0+0
+   367.0 [=] DOOMMEM load=9 map=E1M9 up=364s int=75171(31744) ext=2772428(2228224) zone 5355288 B (+0 since last)
+   367.0 [=]  static 2453536/1265
+   367.0 [=]  level 628280/327
+   367.0 [=]  cache 2273432/633
+   367.0 [=]  allocs 0 purges 0+0
+   367.1 [=] P_GetNodesVersion: using normal BSP nodes
+   373.6 [=] DOOMMEM up=370s int=75171(31744) ext=2795972(2555904) zone 5330972 B (-24316 since last)
+   373.6 [=]  static 2568612/1294
+   373.6 [=]  level 404756/228
+   373.6 [=]  cache 2357172/597
+   373.6 [=]  allocs 901 purges 0+0
+   383.6 [=] DOOMMEM up=380s int=75171(31744) ext=2795972(2555904) zone 5330972 B (+0 since last)
+   383.6 [=]  static 2568612/1294
+   383.6 [=]  level 404756/228
+   383.6 [=]  cache 2357172/597
+   383.6 [=]  allocs 0 purges 0+0
+   393.7 [=] DOOMMEM up=390s int=75171(31744) ext=2795972(2555904) zone 5330972 B (+0 since last)
+   393.7 [=]  static 2568612/1294
+   393.7 [=]  level 404756/228
+   393.7 [=]  cache 2357172/597
+   393.7 [=]  allocs 0 purges 0+0
+   403.6 [=] DOOMMEM up=400s int=75171(31744) ext=2795972(2555904) zone 5330972 B (+0 since last)
+   403.6 [=]  static 2568612/1294
+   403.6 [=]  level 404756/228
+   403.6 [=]  cache 2357172/597
+   403.6 [=]  allocs 0 purges 0+0
+   407.0 [=] DOOMMEM load=10 map=E1M1 up=404s int=75171(31744) ext=2795972(2555904) zone 5330972 B (+0 since last)
+   407.0 [=]  static 2568612/1294
+   407.0 [=]  level 404756/228
+   407.0 [=]  cache 2357172/597
+   407.0 [=]  allocs 0 purges 0+0
+   407.1 [=] P_GetNodesVersion: using normal BSP nodes
+   413.6 [=] DOOMMEM up=410s int=75171(31744) ext=2116268(2064384) zone 5997172 B (+666200 since last)
+   413.6 [=]  static 2464340/1260
+   413.6 [=]  level 717264/296
+   413.7 [=]  cache 2814696/673
+   413.7 [=]  allocs 1022 purges 0+0
+   423.7 [=] DOOMMEM up=420s int=75171(31744) ext=2114036(2064384) zone 5999316 B (+2144 since last)
+   423.7 [=]  static 2460244/1259
+   423.7 [=]  level 717264/296
+   423.7 [=]  cache 2820936/676
+   423.7 [=]  allocs 2 purges 0+0
+   433.7 [=] DOOMMEM up=431s int=75171(31744) ext=2114036(2064384) zone 5999316 B (+0 since last)
+   433.7 [=]  static 2460244/1259
+   433.7 [=]  level 717264/296
+   433.7 [=]  cache 2820936/676
+   433.7 [=]  allocs 0 purges 0+0
+   443.7 [=] DOOMMEM up=441s int=75171(31744) ext=2114036(2064384) zone 5999316 B (+0 since last)
+   443.7 [=]  static 2502232/1260
+   443.7 [=]  level 717264/296
+   443.7 [=]  cache 2778948/675
+   443.7 [=]  allocs 0 purges 0+0
+   447.1 [=] DOOMMEM load=11 map=E1M2 up=444s int=75171(31744) ext=2114036(2064384) zone 5999316 B (+0 since last)
+   447.1 [=]  static 2460244/1259
+   447.1 [=]  level 717264/296
+   447.1 [=]  cache 2820936/676
+   447.1 [=]  allocs 0 purges 0+0
+   447.1 [=] P_GetNodesVersion: using normal BSP nodes
+   453.7 [=] DOOMMEM up=451s int=75171(31744) ext=2984888(2031616) zone 5145952 B (-853364 since last)
+   453.7 [=]  static 2476088/1282
+   453.7 [=]  level 643628/333
+   453.7 [=]  cache 2025076/556
+   453.7 [=]  allocs 1008 purges 0+0
+   463.7 [=] DOOMMEM up=461s int=75171(31744) ext=2982656(2031616) zone 5148096 B (+2144 since last)
+   463.7 [=]  static 2476088/1282
+   463.7 [=]  level 643628/333
+   463.7 [=]  cache 2027220/558
+   463.7 [=]  allocs 2 purges 0+0
+   473.7 [=] DOOMMEM up=471s int=75171(31744) ext=2982656(2031616) zone 5148096 B (+0 since last)
+   473.7 [=]  static 2476088/1282
+   473.7 [=]  level 643628/333
+   473.7 [=]  cache 2027220/558
+   473.7 [=]  allocs 0 purges 0+0
+   483.7 [=] DOOMMEM up=481s int=75171(31744) ext=2982656(2031616) zone 5148096 B (+0 since last)
+   483.7 [=]  static 2480184/1283
+   483.7 [=]  level 643628/333
+   483.7 [=]  cache 2023124/557
+   483.7 [=]  allocs 0 purges 0+0
+   487.1 [=] DOOMMEM load=12 map=E1M3 up=484s int=75171(31744) ext=2982656(2031616) zone 5148096 B (+0 since last)
+   487.1 [=]  static 2476088/1282
+   487.1 [=]  level 643628/333
+   487.1 [=]  cache 2027220/558
+   487.1 [=]  allocs 0 purges 0+0
+   487.1 [=] P_GetNodesVersion: using normal BSP nodes
+   493.7 [=] DOOMMEM up=491s int=75171(31744) ext=3009004(2064384) zone 5124728 B (-23368 since last)
+   493.7 [=]  static 2478828/1280
+   493.7 [=]  level 710672/322
+   493.7 [=]  cache 1935132/547
+   493.7 [=]  allocs 947 purges 0+0
+   503.7 [=] DOOMMEM up=501s int=75171(31744) ext=3006772(2064384) zone 5126872 B (+2144 since last)
+   503.7 [=]  static 2478828/1280
+   503.7 [=]  level 710672/322
+   503.7 [=]  cache 1937276/549
+   503.7 [=]  allocs 2 purges 0+0
+   513.7 [=] DOOMMEM up=511s int=75171(31744) ext=3006772(2064384) zone 5126872 B (+0 since last)
+   513.7 [=]  static 2478828/1280
+   513.7 [=]  level 710672/322
+   513.7 [=]  cache 1937276/549
+   513.7 [=]  allocs 0 purges 0+0
+   523.7 [=] DOOMMEM up=521s int=75171(31744) ext=3006772(2064384) zone 5126872 B (+0 since last)
+   523.7 [=]  static 2478828/1280
+   523.7 [=]  level 710672/322
+   523.7 [=]  cache 1937276/549
+   523.7 [=]  allocs 0 purges 0+0
+   527.1 [=] DOOMMEM load=13 map=E1M4 up=524s int=75171(31744) ext=3006772(2064384) zone 5126872 B (+0 since last)
+   527.1 [=]  static 2478828/1280
+   527.1 [=]  level 710672/322
+   527.1 [=]  cache 1937276/549
+   527.1 [=]  allocs 0 purges 0+0
+   527.2 [=] P_GetNodesVersion: using normal BSP nodes
+   533.7 [=] DOOMMEM up=531s int=75171(31744) ext=3543200(2490368) zone 4599256 B (-527616 since last)
+   533.7 [=]  static 2485124/1296
+   533.7 [=]  level 413888/273
+   533.7 [=]  cache 1700124/542
+   533.7 [=]  allocs 887 purges 0+0
+   543.8 [=] DOOMMEM up=541s int=75171(31744) ext=3543200(2490368) zone 4599256 B (+0 since last)
+   543.8 [=]  static 2485124/1296
+   543.8 [=]  level 413888/273
+   543.8 [=]  cache 1700124/542
+   543.8 [=]  allocs 0 purges 0+0
+   553.7 [=] DOOMMEM up=551s int=75171(31744) ext=3543200(2490368) zone 4599256 B (+0 since last)
+   553.7 [=]  static 2485124/1296
+   553.7 [=]  level 413888/273
+   553.7 [=]  cache 1700124/542
+   553.7 [=]  allocs 0 purges 0+0
+   563.8 [=] DOOMMEM up=561s int=75171(31744) ext=3543200(2490368) zone 4599256 B (+0 since last)
+   563.8 [=]  static 2506216/1297
+   563.8 [=]  level 413888/273
+   563.8 [=]  cache 1679032/541
+   563.8 [=]  allocs 0 purges 0+0
+   567.1 [=] DOOMMEM load=14 map=E1M5 up=564s int=75171(31744) ext=3543200(2490368) zone 4599256 B (+0 since last)
+   567.1 [=]  static 2485124/1296
+   567.1 [=]  level 413888/273
+   567.1 [=]  cache 1700124/542
+   567.1 [=]  allocs 0 purges 0+0
+   567.1 [=] P_GetNodesVersion: using normal BSP nodes
+   573.8 [=] DOOMMEM up=571s int=75171(31744) ext=2524156(2490368) zone 5597256 B (+998000 since last)
+   573.8 [=]  static 2484584/1268
+   573.8 [=]  level 878768/399
+   573.8 [=]  cache 2232692/640
+   573.8 [=]  allocs 1104 purges 0+0
+   583.8 [=] DOOMMEM up=581s int=75171(31744) ext=2521924(2490368) zone 5599400 B (+2144 since last)
+   583.8 [=]  static 2488680/1269
+   583.8 [=]  level 878768/399
+   583.8 [=]  cache 2230740/641
+   583.8 [=]  allocs 2 purges 0+0
+   593.8 [=] DOOMMEM up=591s int=75171(31744) ext=2521924(2490368) zone 5599400 B (+0 since last)
+   593.8 [=]  static 2484584/1268
+   593.8 [=]  level 878768/399
+   593.8 [=]  cache 2234836/642
+   593.8 [=]  allocs 0 purges 0+0
+   603.8 [=] DOOMMEM up=601s int=75171(31744) ext=2521924(2490368) zone 5599400 B (+0 since last)
+   603.8 [=]  static 2484584/1268
+   603.8 [=]  level 878768/399
+   603.8 [=]  cache 2234836/642
+   603.8 [=]  allocs 0 purges 0+0
+   607.1 [=] DOOMMEM load=15 map=E1M6 up=604s int=75171(31744) ext=2521924(2490368) zone 5599400 B (+0 since last)
+   607.1 [=]  static 2484584/1268
+   607.1 [=]  level 878768/399
+   607.1 [=]  cache 2234836/642
+   607.1 [=]  allocs 0 purges 0+0
+   607.2 [=] P_GetNodesVersion: using normal BSP nodes
+   613.8 [=] DOOMMEM up=611s int=75171(31744) ext=1832032(1540096) zone 6275620 B (+676220 since last)
+   613.8 [=]  static 2593532/1287
+   613.8 [=]  level 1363752/593
+   613.8 [=]  cache 2318136/679
+   613.8 [=]  allocs 1343 purges 0+0
+   623.8 [=] DOOMMEM up=621s int=75171(31744) ext=1829800(1540096) zone 6277764 B (+2144 since last)
+   623.8 [=]  static 2583800/1286
+   623.8 [=]  level 1363752/593
+   623.8 [=]  cache 2330012/682
+   623.8 [=]  allocs 2 purges 0+0
+   633.8 [=] DOOMMEM up=631s int=75171(31744) ext=1829800(1540096) zone 6277764 B (+0 since last)
+   633.8 [=]  static 2583800/1286
+   633.8 [=]  level 1363752/593
+   633.8 [=]  cache 2330012/682
+   633.8 [=]  allocs 0 purges 0+0
+   643.8 [=] DOOMMEM up=641s int=75171(31744) ext=1829800(1540096) zone 6277764 B (+0 since last)
+   643.8 [=]  static 2583800/1286
+   643.8 [=]  level 1363752/593
+   643.8 [=]  cache 2330012/682
+   643.8 [=]  allocs 0 purges 0+0
+   647.2 [=] DOOMMEM load=16 map=E1M7 up=644s int=75171(31744) ext=1829800(1540096) zone 6277764 B (+0 since last)
+   647.2 [=]  static 2583800/1286
+   647.2 [=]  level 1363752/593
+   647.2 [=]  cache 2330012/682
+   647.2 [=]  allocs 0 purges 0+0
+   647.2 [=] P_GetNodesVersion: using normal BSP nodes
+   653.8 [=] DOOMMEM up=651s int=75171(31744) ext=4100752(1900544) zone 4060464 B (-2217300 since last)
+   653.8 [=]  static 2361012/1268
+   653.8 [=]  level 297848/54
+   653.8 [=]  cache 1401604/316
+   653.8 [=]  allocs 429 purges 0+0
+   663.8 [=] DOOMMEM up=661s int=75171(31744) ext=4100752(1900544) zone 4060464 B (+0 since last)
+   663.8 [=]  static 2361012/1268
+   663.8 [=]  level 297848/54
+   663.8 [=]  cache 1401604/316
+   663.8 [=]  allocs 0 purges 0+0
+   673.8 [=] DOOMMEM up=671s int=75171(31744) ext=4100752(1900544) zone 4060464 B (+0 since last)
+   673.8 [=]  static 2361012/1268
+   673.8 [=]  level 297848/54
+   673.8 [=]  cache 1401604/316
+   673.8 [=]  allocs 0 purges 0+0
+   683.8 [=] DOOMMEM up=681s int=75171(31744) ext=4100752(1900544) zone 4060464 B (+0 since last)
+   683.8 [=]  static 2361012/1268
+   683.8 [=]  level 297848/54
+   683.8 [=]  cache 1401604/316
+   683.8 [=]  allocs 0 purges 0+0
+   687.2 [=] DOOMMEM load=17 map=E1M8 up=684s int=75171(31744) ext=4100752(1900544) zone 4060464 B (+0 since last)
+   687.2 [=]  static 2361012/1268
+   687.2 [=]  level 297848/54
+   687.2 [=]  cache 1401604/316
+   687.2 [=]  allocs 0 purges 0+0
+   687.2 [=] P_GetNodesVersion: using normal BSP nodes
+   693.8 [=] DOOMMEM up=691s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+1294824 since last)
+   693.8 [=]  static 2453536/1265
+   693.8 [=]  level 628280/327
+   693.8 [=]  cache 2273432/633
+   693.8 [=]  allocs 999 purges 0+0
+   703.9 [=] DOOMMEM up=701s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   703.9 [=]  static 2453536/1265
+   703.9 [=]  level 628280/327
+   703.9 [=]  cache 2273432/633
+   703.9 [=]  allocs 0 purges 0+0
+   713.8 [=] DOOMMEM up=711s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   713.8 [=]  static 2475108/1266
+   713.8 [=]  level 628280/327
+   713.8 [=]  cache 2251860/632
+   713.8 [=]  allocs 0 purges 0+0
+   723.9 [=] DOOMMEM up=721s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   723.9 [=]  static 2453536/1265
+   723.9 [=]  level 628280/327
+   723.9 [=]  cache 2273432/633
+   723.9 [=]  allocs 0 purges 0+0
+   727.2 [=] DOOMMEM load=18 map=E1M9 up=724s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   727.2 [=]  static 2453536/1265
+   727.2 [=]  level 628280/327
+   727.2 [=]  cache 2273432/633
+   727.2 [=]  allocs 0 purges 0+0
+   727.2 [info] warp_bench: DOOMWARP: 18 level loads done
+   733.9 [=] DOOMMEM up=731s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   733.9 [=]  static 2453536/1265
+   733.9 [=]  level 628280/327
+   733.9 [=]  cache 2273432/633
+   733.9 [=]  allocs 0 purges 0+0
+   743.9 [=] DOOMMEM up=741s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   743.9 [=]  static 2453536/1265
+   743.9 [=]  level 628280/327
+   743.9 [=]  cache 2273432/633
+   743.9 [=]  allocs 0 purges 0+0
+   753.9 [=] DOOMMEM up=751s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   753.9 [=]  static 2475108/1266
+   753.9 [=]  level 628280/327
+   753.9 [=]  cache 2251860/632
+   753.9 [=]  allocs 0 purges 0+0
+   763.9 [=] DOOMMEM up=761s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   763.9 [=]  static 2453536/1265
+   763.9 [=]  level 628280/327
+   763.9 [=]  cache 2273432/633
+   763.9 [=]  allocs 0 purges 0+0
+   773.9 [=] DOOMMEM up=771s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   773.9 [=]  static 2453536/1265
+   773.9 [=]  level 628280/327
+   773.9 [=]  cache 2273432/633
+   773.9 [=]  allocs 0 purges 0+0
+   783.9 [=] DOOMMEM up=781s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   783.9 [=]  static 2453536/1265
+   783.9 [=]  level 628280/327
+   783.9 [=]  cache 2273432/633
+   783.9 [=]  allocs 0 purges 0+0
+   793.9 [=] DOOMMEM up=791s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   793.9 [=]  static 2453536/1265
+   793.9 [=]  level 628280/327
+   793.9 [=]  cache 2273432/633
+   793.9 [=]  allocs 0 purges 0+0
+   803.9 [=] DOOMMEM up=801s int=75171(31744) ext=2772440(2555904) zone 5355288 B (+0 since last)
+   803.9 [=]  static 2453536/1265
+   803.9 [=]  level 628280/327
+   803.9 [=]  cache 2273432/633
+   803.9 [=]  allocs 0 purges 0+0
+== A
+    11.6 [=] P_GetNodesVersion: using normal BSP nodes
+    13.4 [=] DOOMMEM up=10s int=58267(31744) ext=3914868(3866624) zone 4242420 B (+4242420 since last)
+    13.4 [=]  static 2265284/1203
+    13.4 [=]  level 878768/399
+    13.4 [=]  cache 1097156/167
+    13.4 [=]  allocs 2182 purges 0+0
+    23.4 [=] DOOMMEM up=20s int=75171(31744) ext=2059820(2031616) zone 6051008 B (+1808588 since last)
+    23.4 [=]  static 2529292/1270
+    23.4 [=]  level 879880/401
+    23.4 [=]  cache 2640624/820
+    23.4 [=]  allocs 751 purges 0+0
+    33.4 [=] DOOMMEM up=30s int=75171(31744) ext=1663744(1638400) zone 6438932 B (+387924 since last)
+    33.4 [=]  static 2529292/1270
+    33.4 [=]  level 879464/399
+    33.4 [=]  cache 3028964/888
+    33.4 [=]  allocs 120 purges 0+0
+    43.4 [=] DOOMMEM up=40s int=75171(31744) ext=1716684(1572864) zone 6385920 B (-53012 since last)
+    43.4 [=]  static 2529292/1270
+    43.4 [=]  level 877592/390
+    43.4 [=]  cache 2977824/927
+    43.4 [=]  allocs 127 purges 0+0
+    46.8 [=] DOOMMEM load=1 map=E1M1 up=44s int=75171(31744) ext=1708756(1572864) zone 6393792 B (+7872 since last)
+    46.8 [=]  static 2529292/1270
+    46.8 [=]  level 875856/385
+    46.8 [=]  cache 2987432/930
+    46.8 [=]  allocs 16 purges 0+0
+    46.9 [=] P_GetNodesVersion: using normal BSP nodes
+    53.4 [=] DOOMMEM up=50s int=75171(31744) ext=2052688(1736704) zone 6059384 B (-334408 since last)
+    53.4 [=]  static 2549852/1264
+    53.4 [=]  level 717264/296
+    53.4 [=]  cache 2791396/673
+    53.4 [=]  allocs 1024 purges 0+0
+    63.4 [=] DOOMMEM up=60s int=75171(31744) ext=2052688(1736704) zone 6059384 B (+0 since last)
+    63.4 [=]  static 2540252/1263
+    63.4 [=]  level 717264/296
+    63.4 [=]  cache 2800996/674
+    63.4 [=]  allocs 0 purges 0+0
+    73.4 [=] DOOMMEM up=70s int=75171(31744) ext=2052688(1736704) zone 6059384 B (+0 since last)
+    73.4 [=]  static 2540252/1263
+    73.4 [=]  level 717264/296
+    73.4 [=]  cache 2800996/674
+    73.4 [=]  allocs 0 purges 0+0
+    83.4 [=] DOOMMEM up=80s int=75171(31744) ext=2052688(1736704) zone 6059384 B (+0 since last)
+    83.4 [=]  static 2540252/1263
+    83.4 [=]  level 717264/296
+    83.4 [=]  cache 2800996/674
+    83.4 [=]  allocs 0 purges 0+0
+    86.8 [=] DOOMMEM load=2 map=E1M2 up=84s int=75171(31744) ext=2052688(1736704) zone 6059384 B (+0 since last)
+    86.8 [=]  static 2540252/1263
+    86.8 [=]  level 717264/296
+    86.8 [=]  cache 2800996/674
+    86.8 [=]  allocs 0 purges 0+0
+    86.9 [=] P_GetNodesVersion: using normal BSP nodes
+    93.4 [=] DOOMMEM up=90s int=75171(31744) ext=2903500(2064384) zone 5225960 B (-833424 since last)
+    93.4 [=]  static 2582340/1288
+    93.4 [=]  level 643628/333
+    93.4 [=]  cache 1998832/554
+    93.4 [=]  allocs 1008 purges 0+0
+   103.4 [=] DOOMMEM up=100s int=75171(31744) ext=2901268(2064384) zone 5228104 B (+2144 since last)
+   103.4 [=]  static 2582340/1288
+   103.4 [=]  level 643628/333
+   103.4 [=]  cache 2000976/556
+   103.4 [=]  allocs 2 purges 0+0
+   113.4 [=] DOOMMEM up=110s int=75171(31744) ext=2901268(2064384) zone 5228104 B (+0 since last)
+   113.4 [=]  static 2601800/1289
+   113.4 [=]  level 643628/333
+   113.4 [=]  cache 1981516/555
+   113.4 [=]  allocs 0 purges 0+0
+   123.4 [=] DOOMMEM up=120s int=75171(31744) ext=2901268(2064384) zone 5228104 B (+0 since last)
+   123.4 [=]  static 2591940/1289
+   123.4 [=]  level 643628/333
+   123.4 [=]  cache 1991376/555
+   123.4 [=]  allocs 0 purges 0+0
+   126.9 [=] DOOMMEM load=3 map=E1M3 up=124s int=75171(31744) ext=2901268(2064384) zone 5228104 B (+0 since last)
+   126.9 [=]  static 2582340/1288
+   126.9 [=]  level 643628/333
+   126.9 [=]  cache 2000976/556
+   126.9 [=]  allocs 0 purges 0+0
+   126.9 [=] P_GetNodesVersion: using normal BSP nodes
+   133.5 [=] DOOMMEM up=130s int=75171(31744) ext=2899152(2490368) zone 5233124 B (+5020 since last)
+   133.5 [=]  static 2623516/1288
+   133.5 [=]  level 710672/322
+   133.5 [=]  cache 1898840/547
+   133.5 [=]  allocs 949 purges 0+0
+   143.5 [=] DOOMMEM up=140s int=75171(31744) ext=2899152(2490368) zone 5233124 B (+0 since last)
+   143.5 [=]  static 2623516/1288
+   143.5 [=]  level 710672/322
+   143.5 [=]  cache 1898840/547
+   143.5 [=]  allocs 0 purges 0+0
+   153.5 [=] DOOMMEM up=150s int=75171(31744) ext=2899152(2490368) zone 5233124 B (+0 since last)
+   153.5 [=]  static 2623516/1288
+   153.5 [=]  level 710672/322
+   153.5 [=]  cache 1898840/547
+   153.5 [=]  allocs 0 purges 0+0
+   163.5 [=] DOOMMEM up=160s int=75171(31744) ext=2899152(2490368) zone 5233124 B (+0 since last)
+   163.5 [=]  static 2627612/1289
+   163.5 [=]  level 710672/322
+   163.5 [=]  cache 1894744/546
+   163.5 [=]  allocs 0 purges 0+0
+   166.9 [=] DOOMMEM load=4 map=E1M4 up=164s int=75171(31744) ext=2899152(2490368) zone 5233124 B (+0 since last)
+   166.9 [=]  static 2623516/1288
+   166.9 [=]  level 710672/322
+   166.9 [=]  cache 1898840/547
+   166.9 [=]  allocs 0 purges 0+0
+   166.9 [=] P_GetNodesVersion: using normal BSP nodes
+   173.5 [=] DOOMMEM up=170s int=75171(31744) ext=3396884(2490368) zone 4743944 B (-489180 since last)
+   173.5 [=]  static 2645816/1306
+   173.5 [=]  level 413888/273
+   173.5 [=]  cache 1684120/540
+   173.5 [=]  allocs 887 purges 0+0
+   183.5 [=] DOOMMEM up=180s int=75171(31744) ext=3396884(2490368) zone 4743944 B (+0 since last)
+   183.5 [=]  static 2645816/1306
+   183.5 [=]  level 413888/273
+   183.5 [=]  cache 1684120/540
+   183.5 [=]  allocs 0 purges 0+0
+   193.5 [=] DOOMMEM up=190s int=75171(31744) ext=3396884(2490368) zone 4743944 B (+0 since last)
+   193.5 [=]  static 2645816/1306
+   193.5 [=]  level 413888/273
+   193.5 [=]  cache 1684120/540
+   193.5 [=]  allocs 0 purges 0+0
+   203.5 [=] DOOMMEM up=200s int=75171(31744) ext=3396884(2490368) zone 4743944 B (+0 since last)
+   203.5 [=]  static 2666908/1307
+   203.5 [=]  level 413888/273
+   203.5 [=]  cache 1663028/539
+   203.5 [=]  allocs 0 purges 0+0
+   206.9 [=] DOOMMEM load=5 map=E1M5 up=204s int=75171(31744) ext=3396884(2490368) zone 4743944 B (+0 since last)
+   206.9 [=]  static 2645816/1306
+   206.9 [=]  level 413888/273
+   206.9 [=]  cache 1684120/540
+   206.9 [=]  allocs 0 purges 0+0
+   206.9 [=] P_GetNodesVersion: using normal BSP nodes
+   213.5 [=] DOOMMEM up=210s int=75171(31744) ext=2405100(2359296) zone 5715384 B (+971440 since last)
+   213.5 [=]  static 2645276/1278
+   213.5 [=]  level 878768/399
+   213.5 [=]  cache 2190128/640
+   213.5 [=]  allocs 1104 purges 0+0
+   223.5 [=] DOOMMEM up=220s int=75171(31744) ext=2405100(2359296) zone 5715384 B (+0 since last)
+   223.5 [=]  static 2645276/1278
+   223.5 [=]  level 878768/399
+   223.5 [=]  cache 2190128/640
+   223.5 [=]  allocs 0 purges 0+0
+   233.5 [=] DOOMMEM up=230s int=75171(31744) ext=2405100(2359296) zone 5715384 B (+0 since last)
+   233.5 [=]  static 2645276/1278
+   233.5 [=]  level 878768/399
+   233.5 [=]  cache 2190128/640
+   233.5 [=]  allocs 0 purges 0+0
+   243.5 [=] DOOMMEM up=240s int=75171(31744) ext=2405100(2359296) zone 5715384 B (+0 since last)
+   243.5 [=]  static 2664736/1279
+   243.5 [=]  level 878768/399
+   243.5 [=]  cache 2170668/639
+   243.5 [=]  allocs 0 purges 0+0
+   246.9 [=] DOOMMEM load=6 map=E1M6 up=244s int=75171(31744) ext=2405100(2359296) zone 5715384 B (+0 since last)
+   246.9 [=]  static 2645276/1278
+   246.9 [=]  level 878768/399
+   246.9 [=]  cache 2190128/640
+   246.9 [=]  allocs 0 purges 0+0
+   247.0 [=] P_GetNodesVersion: using normal BSP nodes
+   253.5 [=] DOOMMEM up=250s int=75171(31744) ext=1754840(1540096) zone 6351740 B (+636356 since last)
+   253.5 [=]  static 2811072/1299
+   253.5 [=]  level 1363752/593
+   253.5 [=]  cache 2176716/675
+   253.5 [=]  allocs 1343 purges 0+0
+   263.5 [=] DOOMMEM up=260s int=75171(31744) ext=1752608(1540096) zone 6353884 B (+2144 since last)
+   263.5 [=]  static 2810512/1298
+   263.5 [=]  level 1363752/593
+   263.5 [=]  cache 2179420/678
+   263.5 [=]  allocs 2 purges 0+0
+   273.5 [=] DOOMMEM up=270s int=75171(31744) ext=1752608(1540096) zone 6353884 B (+0 since last)
+   273.5 [=]  static 2810512/1298
+   273.5 [=]  level 1363752/593
+   273.5 [=]  cache 2179420/678
+   273.5 [=]  allocs 0 purges 0+0
+   283.6 [=] DOOMMEM up=280s int=75171(31744) ext=1752608(1540096) zone 6353884 B (+0 since last)
+   283.6 [=]  static 2810512/1298
+   283.6 [=]  level 1363752/593
+   283.6 [=]  cache 2179420/678
+   283.6 [=]  allocs 0 purges 0+0
+   286.9 [=] DOOMMEM load=7 map=E1M7 up=284s int=75171(31744) ext=1752608(1540096) zone 6353884 B (+0 since last)
+   286.9 [=]  static 2810512/1298
+   286.9 [=]  level 1363752/593
+   286.9 [=]  cache 2179420/678
+   286.9 [=]  allocs 0 purges 0+0
+   286.9 [=] P_GetNodesVersion: using normal BSP nodes
+   293.5 [=] DOOMMEM up=290s int=75171(31744) ext=3871388(2555904) zone 4287176 B (-2066708 since last)
+   293.5 [=]  static 2607760/1282
+   293.5 [=]  level 297848/54
+   293.5 [=]  cache 1381568/314
+   293.5 [=]  allocs 429 purges 0+0
+   303.6 [=] DOOMMEM up=300s int=75171(31744) ext=3871388(2555904) zone 4287176 B (+0 since last)
+   303.6 [=]  static 2607760/1282
+   303.6 [=]  level 297848/54
+   303.6 [=]  cache 1381568/314
+   303.6 [=]  allocs 0 purges 0+0
+   313.6 [=] DOOMMEM up=310s int=75171(31744) ext=3871388(2555904) zone 4287176 B (+0 since last)
+   313.6 [=]  static 2607760/1282
+   313.6 [=]  level 297848/54
+   313.6 [=]  cache 1381568/314
+   313.6 [=]  allocs 0 purges 0+0
+   323.6 [=] DOOMMEM up=320s int=75171(31744) ext=3871388(2555904) zone 4287176 B (+0 since last)
+   323.6 [=]  static 2611856/1283
+   323.6 [=]  level 297848/54
+   323.6 [=]  cache 1377472/313
+   323.6 [=]  allocs 0 purges 0+0
+   327.0 [=] DOOMMEM load=8 map=E1M8 up=324s int=75171(31744) ext=3871388(2555904) zone 4287176 B (+0 since last)
+   327.0 [=]  static 2607760/1282
+   327.0 [=]  level 297848/54
+   327.0 [=]  cache 1381568/314
+   327.0 [=]  allocs 0 purges 0+0
+   327.0 [=] P_GetNodesVersion: using normal BSP nodes
+   333.6 [=] DOOMMEM up=330s int=75171(31744) ext=2524860(2424832) zone 5599892 B (+1312716 since last)
+   333.6 [=]  static 2729472/1281
+   333.6 [=]  level 628280/327
+   333.6 [=]  cache 2242100/629
+   333.6 [=]  allocs 997 purges 0+0
+   343.6 [=] DOOMMEM up=340s int=75171(31744) ext=2522628(2424832) zone 5602036 B (+2144 since last)
+   343.6 [=]  static 2729472/1281
+   343.6 [=]  level 628280/327
+   343.6 [=]  cache 2244244/631
+   343.6 [=]  allocs 2 purges 0+0
+   353.6 [=] DOOMMEM up=350s int=75171(31744) ext=2522628(2424832) zone 5602036 B (+0 since last)
+   353.6 [=]  static 2729472/1281
+   353.6 [=]  level 628280/327
+   353.6 [=]  cache 2244244/631
+   353.6 [=]  allocs 0 purges 0+0
+   363.6 [=] DOOMMEM up=360s int=75171(31744) ext=2522628(2424832) zone 5602036 B (+0 since last)
+   363.6 [=]  static 2751044/1282
+   363.6 [=]  level 628280/327
+   363.6 [=]  cache 2222672/630
+   363.6 [=]  allocs 0 purges 0+0
+   367.0 [=] DOOMMEM load=9 map=E1M9 up=364s int=75171(31744) ext=2522628(2424832) zone 5602036 B (+0 since last)
+   367.0 [=]  static 2729472/1281
+   367.0 [=]  level 628280/327
+   367.0 [=]  cache 2244244/631
+   367.0 [=]  allocs 0 purges 0+0
+   367.0 [=] P_GetNodesVersion: using normal BSP nodes
+   373.6 [=] DOOMMEM up=370s int=75171(31744) ext=2519124(2293760) zone 5604764 B (+2728 since last)
+   373.6 [=]  static 2870440/1313
+   373.6 [=]  level 404756/228
+   373.6 [=]  cache 2329136/592
+   373.6 [=]  allocs 899 purges 0+0
+   383.6 [=] DOOMMEM up=380s int=75171(31744) ext=2516892(2293760) zone 5606908 B (+2144 since last)
+   383.6 [=]  static 2866344/1312
+   383.6 [=]  level 404756/228
+   383.6 [=]  cache 2335376/595
+   383.6 [=]  allocs 2 purges 0+0
+   393.6 [=] DOOMMEM up=390s int=75171(31744) ext=2516892(2293760) zone 5606908 B (+0 since last)
+   393.6 [=]  static 2866344/1312
+   393.6 [=]  level 404756/228
+   393.6 [=]  cache 2335376/595
+   393.6 [=]  allocs 0 purges 0+0
+   403.7 [=] DOOMMEM up=400s int=75171(31744) ext=2516892(2293760) zone 5606908 B (+0 since last)
+   403.7 [=]  static 2866344/1312
+   403.7 [=]  level 404756/228
+   403.7 [=]  cache 2335376/595
+   403.7 [=]  allocs 0 purges 0+0
+   406.9 [=] DOOMMEM load=10 map=E1M1 up=404s int=75171(31744) ext=2516892(2293760) zone 5606908 B (+0 since last)
+   406.9 [=]  static 2866344/1312
+   406.9 [=]  level 404756/228
+   406.9 [=]  cache 2335376/595
+   406.9 [=]  allocs 0 purges 0+0
+   407.0 [=] P_GetNodesVersion: using normal BSP nodes
+   413.6 [=] DOOMMEM up=410s int=75171(31744) ext=1850616(1802240) zone 6259604 B (+652696 since last)
+   413.6 [=]  static 2757976/1277
+   413.6 [=]  level 717264/296
+   413.6 [=]  cache 2783492/672
+   413.6 [=]  allocs 1020 purges 0+0
+   423.6 [=] DOOMMEM up=420s int=75171(31744) ext=1848384(1802240) zone 6261748 B (+2144 since last)
+   423.6 [=]  static 2762072/1278
+   423.6 [=]  level 717264/296
+   423.7 [=]  cache 2781540/673
+   423.7 [=]  allocs 2 purges 0+0
+   433.7 [=] DOOMMEM up=430s int=75171(31744) ext=1848384(1802240) zone 6261748 B (+0 since last)
+   433.7 [=]  static 2757976/1277
+   433.7 [=]  level 717264/296
+   433.7 [=]  cache 2785636/674
+   433.7 [=]  allocs 0 purges 0+0
+   443.7 [=] DOOMMEM up=441s int=75171(31744) ext=1848384(1802240) zone 6261748 B (+0 since last)
+   443.7 [=]  static 2757976/1277
+   443.7 [=]  level 717264/296
+   443.7 [=]  cache 2785636/674
+   443.7 [=]  allocs 0 purges 0+0
+   447.0 [=] DOOMMEM load=11 map=E1M2 up=444s int=75171(31744) ext=1848384(1802240) zone 6261748 B (+0 since last)
+   447.0 [=]  static 2757976/1277
+   447.0 [=]  level 717264/296
+   447.0 [=]  cache 2785636/674
+   447.0 [=]  allocs 0 purges 0+0
+   447.0 [=] P_GetNodesVersion: using normal BSP nodes
+   453.7 [=] DOOMMEM up=451s int=75171(31744) ext=2709916(1736704) zone 5417440 B (-844308 since last)
+   453.7 [=]  static 2773820/1300
+   453.7 [=]  level 643628/333
+   453.7 [=]  cache 1998832/554
+   453.7 [=]  allocs 1006 purges 0+0
+   463.7 [=] DOOMMEM up=461s int=75171(31744) ext=2707684(1736704) zone 5419584 B (+2144 since last)
+   463.7 [=]  static 2773820/1300
+   463.7 [=]  level 643628/333
+   463.7 [=]  cache 2000976/556
+   463.7 [=]  allocs 2 purges 0+0
+   473.7 [=] DOOMMEM up=471s int=75171(31744) ext=2707684(1736704) zone 5419584 B (+0 since last)
+   473.7 [=]  static 2773820/1300
+   473.7 [=]  level 643628/333
+   473.7 [=]  cache 2000976/556
+   473.7 [=]  allocs 0 purges 0+0
+   483.7 [=] DOOMMEM up=481s int=75171(31744) ext=2707684(1736704) zone 5419584 B (+0 since last)
+   483.7 [=]  static 2793280/1301
+   483.7 [=]  level 643628/333
+   483.7 [=]  cache 1981516/555
+   483.7 [=]  allocs 0 purges 0+0
+   487.0 [=] DOOMMEM load=12 map=E1M3 up=484s int=75171(31744) ext=2707684(1736704) zone 5419584 B (+0 since last)
+   487.0 [=]  static 2773820/1300
+   487.0 [=]  level 643628/333
+   487.0 [=]  cache 2000976/556
+   487.0 [=]  allocs 0 purges 0+0
+   487.1 [=] P_GetNodesVersion: using normal BSP nodes
+   493.7 [=] DOOMMEM up=491s int=75171(31744) ext=2744124(2555904) zone 5386168 B (-33416 since last)
+   493.7 [=]  static 2776560/1298
+   493.7 [=]  level 710672/322
+   493.7 [=]  cache 1898840/547
+   493.7 [=]  allocs 947 purges 0+0
+   503.7 [=] DOOMMEM up=501s int=75171(31744) ext=2744124(2555904) zone 5386168 B (+0 since last)
+   503.7 [=]  static 2776560/1298
+   503.7 [=]  level 710672/322
+   503.7 [=]  cache 1898840/547
+   503.7 [=]  allocs 0 purges 0+0
+   513.7 [=] DOOMMEM up=511s int=75171(31744) ext=2744124(2555904) zone 5386168 B (+0 since last)
+   513.7 [=]  static 2776560/1298
+   513.7 [=]  level 710672/322
+   513.7 [=]  cache 1898840/547
+   513.7 [=]  allocs 0 purges 0+0
+   523.7 [=] DOOMMEM up=521s int=75171(31744) ext=2744124(2555904) zone 5386168 B (+0 since last)
+   523.7 [=]  static 2776560/1298
+   523.7 [=]  level 710672/322
+   523.7 [=]  cache 1898840/547
+   523.7 [=]  allocs 0 purges 0+0
+   527.0 [=] DOOMMEM load=13 map=E1M4 up=524s int=75171(31744) ext=2744124(2555904) zone 5386168 B (+0 since last)
+   527.0 [=]  static 2776560/1298
+   527.0 [=]  level 710672/322
+   527.0 [=]  cache 1898840/547
+   527.0 [=]  allocs 0 purges 0+0
+   527.1 [=] P_GetNodesVersion: using normal BSP nodes
+   533.7 [=] DOOMMEM up=531s int=75171(31744) ext=3258068(2555904) zone 4880984 B (-505184 since last)
+   533.7 [=]  static 2786952/1315
+   533.7 [=]  level 413888/273
+   533.7 [=]  cache 1680024/539
+   533.7 [=]  allocs 885 purges 0+0
+   543.7 [=] DOOMMEM up=541s int=75171(31744) ext=3258068(2555904) zone 4880984 B (+0 since last)
+   543.7 [=]  static 2782856/1314
+   543.7 [=]  level 413888/273
+   543.7 [=]  cache 1684120/540
+   543.7 [=]  allocs 0 purges 0+0
+   553.8 [=] DOOMMEM up=551s int=75171(31744) ext=3258068(2555904) zone 4880984 B (+0 since last)
+   553.8 [=]  static 2782856/1314
+   553.8 [=]  level 413888/273
+   553.8 [=]  cache 1684120/540
+   553.8 [=]  allocs 0 purges 0+0
+   563.7 [=] DOOMMEM up=561s int=75171(31744) ext=3258068(2555904) zone 4880984 B (+0 since last)
+   563.7 [=]  static 2782856/1314
+   563.7 [=]  level 413888/273
+   563.7 [=]  cache 1684120/540
+   563.7 [=]  allocs 0 purges 0+0
+   567.0 [=] DOOMMEM load=14 map=E1M5 up=564s int=75171(31744) ext=3258068(2555904) zone 4880984 B (+0 since last)
+   567.0 [=]  static 2782856/1314
+   567.0 [=]  level 413888/273
+   567.0 [=]  cache 1684120/540
+   567.0 [=]  allocs 0 purges 0+0
+   567.1 [=] P_GetNodesVersion: using normal BSP nodes
+   573.8 [=] DOOMMEM up=571s int=75171(31744) ext=2266236(2228224) zone 5852424 B (+971440 since last)
+   573.8 [=]  static 2782316/1286
+   573.8 [=]  level 878768/399
+   573.8 [=]  cache 2190128/640
+   573.8 [=]  allocs 1104 purges 0+0
+   583.8 [=] DOOMMEM up=581s int=75171(31744) ext=2266236(2228224) zone 5852424 B (+0 since last)
+   583.8 [=]  static 2786412/1287
+   583.8 [=]  level 878768/399
+   583.8 [=]  cache 2186032/639
+   583.8 [=]  allocs 0 purges 0+0
+   593.8 [=] DOOMMEM up=591s int=75171(31744) ext=2266236(2228224) zone 5852424 B (+0 since last)
+   593.8 [=]  static 2782316/1286
+   593.8 [=]  level 878768/399
+   593.8 [=]  cache 2190128/640
+   593.8 [=]  allocs 0 purges 0+0
+   603.8 [=] DOOMMEM up=601s int=75171(31744) ext=2266236(2228224) zone 5852424 B (+0 since last)
+   603.8 [=]  static 2801776/1287
+   603.8 [=]  level 878768/399
+   603.8 [=]  cache 2170668/639
+   603.8 [=]  allocs 0 purges 0+0
+   607.1 [=] DOOMMEM load=15 map=E1M6 up=604s int=75171(31744) ext=2266236(2228224) zone 5852424 B (+0 since last)
+   607.1 [=]  static 2782316/1286
+   607.1 [=]  level 878768/399
+   607.1 [=]  cache 2190128/640
+   607.1 [=]  allocs 0 purges 0+0
+   607.1 [=] P_GetNodesVersion: using normal BSP nodes
+   613.8 [=] DOOMMEM up=611s int=75171(31744) ext=1702656(1540096) zone 6403332 B (+550908 since last)
+   613.8 [=]  static 2891264/1305
+   613.8 [=]  level 1363752/593
+   613.8 [=]  cache 2148116/671
+   613.8 [=]  allocs 1341 purges 0+0
+   623.8 [=] DOOMMEM up=621s int=75171(31744) ext=1700424(1540096) zone 6405476 B (+2144 since last)
+   623.8 [=]  static 2881532/1304
+   623.8 [=]  level 1363752/593
+   623.8 [=]  cache 2159992/674
+   623.8 [=]  allocs 2 purges 0+0
+   633.8 [=] DOOMMEM up=631s int=75171(31744) ext=1700424(1540096) zone 6405476 B (+0 since last)
+   633.8 [=]  static 2881532/1304
+   633.8 [=]  level 1363752/593
+   633.8 [=]  cache 2159992/674
+   633.8 [=]  allocs 0 purges 0+0
