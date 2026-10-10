@@ -289,14 +289,29 @@ top_boss_d = insert_hole_d + 2 * insert_wall + 0.1;   // 7.2
 // boss's own FAR END (the free "tip", at local z = top_int, flush with
 // the PCB-side insert flange and the soldering-iron clearance): the rib
 // stops top_boss_gusset_tip_clear short of it. Within that bound, h is
-// set to the LARGEST value that keeps >= 0.5 mm clear of every PCB
+// set to the LARGEST value that keeps >= 0.5 mm clear of every FIXED PCB
 // top-side component near each boss -- checked, not assumed: the
 // nearest top-side part to ANY of the 4 bosses is >= 10 mm away centre
 // to centre (SW13/Menu and LED5/6 near the back-right boss; nothing
 // closer at the other 3), well outside this rib's own XY reach
 // (top_boss_gusset_r = 6.6 from the axis), so every boss gets the same,
-// maximum height -- verify_enclosure_collision is the actual proof
-// (0 interferences), not this comment.
+// maximum height against FIXED parts -- verify_enclosure_collision (0
+// interferences) plus a per-rib mesh clearance sweep are the actual
+// proof, not this comment.
+//
+// Fixed parts are not the whole story: the team-lead's 2026-10-10 full-
+// parts clearance audit (hardware/enclosure/preview-v3/mesh-diff/
+// clearances.md) mesh-measured every one of the 32 ribs against every
+// MOVING part too (caps at full travel + lateral guide slop) and found
+// a second rib the "nearest fixed component" argument above does not
+// cover: back-right boss (70,-30.5), angle 90 (truly north, NOT the 135
+// NW rib below) reaches to within 2.9 mm of the Menu cap's flange
+// corner at full h/r -- closer than the already-overridden 135 rib --
+// because the Menu cap's flange is a far bigger target than any PCB
+// component near that boss. Overridden below (r kept at the default
+// 6.6, h alone lowered to 5.2; a reach cut was not needed here because,
+// unlike the 135 rib, this rib's closest approach is at its TAPERED
+// outer tip, not at its full-height root, so h alone moves it).
 top_boss_gusset_t = 1.5;        // == boss_gusset_t (bottom columns): same
                                 // style and thickness, both >= min_wall
 top_boss_gusset_r = top_boss_d/2 + 3.0;   // 6.6: reach from the AXIS (same
@@ -343,6 +358,28 @@ top_boss_gusset_overrides = [
     //     rib, so it only helps; lateral rattle is the real risk and
     //     0.543 mm clears the 0.5 mm bar with margin. Kept.
     [70, -30.5, 135, 4.0, 5.0],
+    //
+    // Same boss, angle 90 (true north -- the full-parts sweep, not the
+    // comment above, is what found this one; it is CLOSER to the Menu
+    // cap than the 135 rib just above, despite pointing further away
+    // from it on paper, because its full r=6.6 outer tip lands almost
+    // under the flange's top-right corner):
+    //   at full h=6.5, r=6.6:  rest 0.563 mm; worst (press 0.45 +
+    //     lateral 0.3 toward the rib, both at once -- a pressed cap can
+    //     sit at either edge of its own guide slop) 0.344 mm -- UNDER
+    //     the 0.5 mm bar.
+    //   r alone to 6.0 (h=6.5): worst only 0.517 mm -- margin too thin.
+    //   h alone to 5.5 (r=6.6):  worst 0.492 mm -- still short.
+    //   h alone to 5.2 (r=6.6):  rest 0.667 mm; worst 0.562 mm -- clears
+    //     with a margin similar to the 135 rib above. r is left at the
+    //     default: unlike the 135 rib (whose clash is at the full-height
+    //     ROOT, which h cannot move), this rib's closest point to the
+    //     cap sits on the sloped outer face near the tapered tip, where
+    //     the gusset() triangle's hypotenuse runs from (r1, ceiling) to
+    //     (r0, h deep) -- lowering h alone raises that whole sloped face
+    //     toward the ceiling (away from the cap, which sits well below
+    //     it), so h alone is enough; no reach cut needed. Kept.
+    [70, -30.5, 90, 5.2],
 ];
 
 // === Screw positions = PCB corner holes (board MOUNT_HOLES_ENC) ===
