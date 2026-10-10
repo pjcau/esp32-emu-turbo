@@ -1,0 +1,75 @@
+GBA CPU7 — dynamic Auto frameskip — board, 2026-10-10 (PARTIAL: stopped at the user's request)
+=================================================================================================
+Build: fork gba-cpu 722f0cbb (request doc 1c56ece5, same binaries; code ffb457bb), dynarec submodule
+2b87220, on master 6ecc9d9b. GBAPROF 787 408 B, play 777 120 B (as expected). gbsp only;
+launcher/retro-core stay the sysmon 4c16a65a ones.
+Mario Kart runs: driven on the road by the webcam driver (scratchpad drive6.py: launch, `load 1`,
+A held, steering from the road position, 62 s, timestamped log). The route is the same start
+each time but NOT identical: the driver is imperfect (it oversteers in the first right-hand
+curve and sometimes ends on the grass or facing backwards), so treat runs 1-4 as similar
+scenes, not identical ones. SPEED = FPS/60 from the [debug] lines, counted from the state load
++ 3 s. The ~31-32 s GBASAMPLE dump second is a GBAPROF artefact and is shown separately.
+
+run game  card                 SPEED avg (no dump) min 1s (no dump)  drawn  BUSY  cpu ms  transitions
+1   MK    perf (dynamic Auto)  98.3%               85%*              20.2   98    16.36   2
+2   MK    perf skip=0          79.3%               73.3%             47.1   100   20.58   0
+3   MK    perf skip=1          94.1%               88.3%             27.9   100   17.37   0
+4   MK    perf autodyn=0       (stopped at 22.7 s: only 12 s of play)  21.9 100   16.46   2
+5-8 Sonic / Metal Slug         NOT RUN (stopped at the user's request)
+* run 1: the dump second (32.4 s) reads FPS 24 = 40%; without it the worst second is 85% (the
+  state-load second, 10.4 s, FPS 50-51).
+
+Run 1 transitions (dynamic Auto), with FPS in the +-2 s window:
+  11.1 frameskip 0 -> 1: speed 82%, drawn 19.97 ms, skipped 0.00 ms, hold now 3s
+       FPS 9.4:0 (state load) 10.4:50 11.4:51 12.4:59 13.4:61
+  12.1 frameskip 1 -> 2: speed 85%, drawn 17.25 ms, skipped 17.23 ms, hold now 3s
+       FPS 12.4:59 13.4:61 14.4:61
+  Residency at 68.6 s: skip0 3s, skip1 1s, skip2 56s of 60s, 20.6 drawn fps. No drop ever happened.
+  Both raises come right after the state-load stall (138 ms frame at 9.2 s); no freeze after a
+  switch. No SD/settings write near them (only the sram/json/state READ at 7.7-7.8 s).
+Run 4 (autodyn=0) logs the same two raises in the new format (11.0 "0 -> 1", 12.1 "1 -> 2",
+"drawn 0.00 ms") and sits at 2.
+
+Against the pass criteria, on what was run:
+1. Auto SPEED >= best fixed - 1%: PASS on MK (98.3% vs skip=1 94.1%, skip=0 79.3%).
+2. Drawn >= 20 on the road at full speed: PASS (20.2). Fixed skip=1 does NOT hold full speed on
+   this road (94.1%), so the ">= fixed 1" clause does not apply.
+3. Drawn >= today's Auto: run 4 has only 12 s (21.9 drawn) — not comparable, NOT CONCLUDED.
+4. <= 1 transition per 10 s: PASS (2 in 60 s). Sonic/MSA: NOT RUN.
+5. Webcam stutter at a switch: the drive frames around 11-12 s show no torn frame; the
+   freeze the user saw was the GBAPROF dump at ~31 s (reported to the Mac at the time).
+
+PLAY BUILD (777 120 B, no card), Mario Kart, A held on the grass, 140 s (after the dynarec fix below):
+  CPU core: dynarec. FPS 60 except right after each drop; average 30.0 drawn fps
+  (residency at 149 s: skip0 10 s, skip1 106 s, skip2 24 s).
+  Every 1 -> 0 drop is followed 1-2 s later by "0 -> 1: speed 91-94%":
+    13.1 1->0 (15.25 predicted) / 15.1 0->1 speed 92%
+    40.5 1->0 (15.35) / 41.5 0->1 speed 92%
+    65.8 1->0 (15.46) / 66.8 0->1 speed 94%
+    97.2 1->0 (15.20) / 99.2 0->1 speed 91%, 100.2 1->2
+    124.6 1->0 (15.19) / 125.6 0->1 speed 94%
+  The backoff spaces them 3 -> 6 -> 12 -> 24 -> 30 s. The predictor for skip 0 is the drawn time
+  at skip 1 (15.2-15.5 ms), but a real skip-0 frame costs 17.5-18.3 ms ("drawn" in the raise
+  lines). So on this scene the drawn time at skip 1 UNDERestimates skip 0, the opposite of the
+  model's assumption (19.10 vs 18.29). Each failed drop costs one second at 91-94% speed.
+  No "battery save written" line in the play log (only the sram load at start).
+
+DYNAREC FOUND OFF (master code too):
+- After the interrupted runs, Mario Kart came up on the interpreter (SPEED 74-79%, ~45 fps,
+  "CPU core: interpreter (DynarecState)"), with DynarecState = 2 in its json. Cause: the crash
+  guard. A launch sets TRYING; my runs ended with the console `launcher` reboot before 2 minutes,
+  which sends no RG_EVENT_SHUTDOWN, so the next launch found TRYING and set OFF permanently. The
+  alert was dismissed by the held A. A user who powers off or resets within 2 minutes of play
+  gets the same result.
+- The menu toggle cannot undo it in the same session: Off -> "On (next start)" saves OK, but
+  xt_give_up stays 1 and the frame loop's `if (xt_give_up) ... if (jit_state != JIT_OFF)
+  jit_state_set(JIT_OFF)` re-saves OFF on the next frame. I saw this on the board: after the
+  toggle, the next launch was still the interpreter.
+- Fixed on the card for Mario Kart only, by writing {"DynarecState": 0} to its json. After 135 s
+  of play the json still reads 0.
+- Also OFF on the card, NOT touched (cause unknown, possibly genuine): Teenage Mutant Ninja
+  Turtles, Need for Speed - Underground, Super Mario 64 GBA (demo).
+
+End state: CPU7 play build installed (gbsp.done 777 120 B), Frameskip Auto, no gbaopt.txt,
+board in the launcher, volume 0. Buttons on the play build: A accelerates, RIGHT steers, START
+pauses and resumes.
