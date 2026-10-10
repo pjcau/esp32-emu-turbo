@@ -1,0 +1,64 @@
+GBA CPU6 — frameskip ownership fix (pin turns auto off, auto capped at 2) — board, 2026-10-10
+=============================================================================================
+Build: fork gba-cpu 44671f36 (fix 137c9e8d), dynarec submodule 2b87220, on master 6ecc9d9b.
+GBAPROF 785 984 B, play 775 840 B, launcher 1 134 944 B (all as expected).
+The launcher was built only to check its size and was NOT installed: every app links its own
+rg_system, and the installed launcher stays the master one.
+Protocol: `load N` right after "Retro-Go ready", key held, 60 s logs, medians of the last 6
+GBAPROF lines, [debug] medians of the last 20. Mario Kart (E) slot 1 with A held,
+Sonic Advance (USA) slot 0 with RIGHT held. Volume 0.
+
+run game  card          cpu ms (range)       frames/drawn  FPS   S   R       BUSY  Raised/Reduced lines
+1   MK    perf skip=0   18.53 (18.46-18.68)  53/53, 54/54  51.5  0   27.5+23 100%  0
+2   MK    perf skip=1   15.94 (15.77-15.99)  61/31, 60/30  60    30  2+28     96%  0
+3   MK    perf skip=2   14.71 (14.59-14.73)  60/20, 61/21  60    40  10+10    89%  0
+4   MK    perf (Auto)   14.92 (14.63-15.82)  60/20, 61/20  60    40  10+10    89%  2: 10.4 s "to 1", 31.4 s "to 2"
+5   Sonic perf skip=0   10.04 ( 9.66-10.47)  61/61, 60/60  60    0   60+0     62%  0
+6   MK    perf skip=3   14.69 (14.55-14.78)  60/20, 61/21  60    40  10+10    89%  2: 10.5 s "to 1", 31.5 s "to 2"
+Run 6 log at 6.5 s: "[error] opt_read: gbaopt skip=3 is not 0, 1 or 2: leaving the menu's choice"
+(the startup line reports "skip -1"); it then behaves exactly like run 4 (Auto).
+HEAP "HEAP:60+17 (31+13)" in every run. No abort, panic or "PSRAM REFUSED".
+GBASAMPLE1 core 1 code, run 1: IRAM 74.7%, flash 18.3%, other 7.0% of 17854 ticks.
+
+PASS on both findings:
+- (a) A pin logs nothing: 0 lines at skip=0, 1 and 2 (CPU5 had 52 at skip=0).
+- (b) No raise past 2 anywhere: no "to 2" after the dump stall when pinned at 1, no "to 3".
+Run 2 matches CPU5: 15.94 vs 15.87 ms, 60 fps, 30 drawn.
+Run 1 is 18.53 vs CPU5 18.29 (+0.24 ms; CPU5 range 18.04-18.42, now 18.46-18.68). Small, but
+outside CPU5's range; the debug median reads FPS 51.5 vs 54.
+
+NEW FINDING — on Auto, Mario Kart ends at frameskip 2 (20 drawn) in real play:
+- Run 4: Auto raised to 1 at 10.4 s, then to 2 at 31.4 s, right after the GBASAMPLE dump
+  stall. It never comes back, because BUSY at skip 2 is 89% and retro-go only reduces under 85%.
+- PLAY BUILD (no dump), webcam driving on the road (the real race, not the A-held straight on
+  the grass): skip 1 is not enough there. FPS 55-58 (S:28-29 R:0+28-29), BUSY 98-100%. Auto
+  raised to 2 in every drive (drive logs: one "Raised frameskip to 2" each), then sat at
+  FPS 60 (S:40 R:0+20), BUSY 92-98%. Over 90 s it never came back to 1.
+- The only "Reduced frameskip to 1" lines appeared while the game was paused or the screen
+  was nearly static (BUSY 34-82%).
+So for a player, Auto on Mario Kart means 20 drawn frames per second most of the race, not 30.
+The reduce threshold (BUSY < 85%) is unreachable at skip 2 on this game. Options: a reduce test
+based on frame time with the skip discounted, or a cap of 1 for Auto on gbsp. Your call.
+
+Play build (775 840 B), no gbaopt.txt
+-------------------------------------
+- Mario Kart on Auto (menu session log, 150 s): "Raised frameskip to 1" at 17.4 s,
+  "to 2" at 25.4 s (on the road, steering RIGHT), "Reduced to 1" at 29.3 s (in the pause menu).
+- Frameskip set to 2 from the menu at 70.8 s: NO Raised/Reduced line for the remaining 78 s
+  (finding (a) via the menu). FPS 60 (S:40 R:20), BUSY 84-93%.
+- Sonic Advance on Auto: 60 fps (S:0 R:60+0), BUSY 61%, 0 Raised lines.
+- Buttons (webcam): A accelerates, RIGHT steers, START opens the pause menu
+  (CONTINUE / TRY AGAIN / QUIT), START closes it. SELECT + A inside the pause menu: no visible
+  change (same as master and CPU5).
+- Menu -> Emulator options -> Frameskip: reads Auto, RIGHT goes Auto -> 0 -> 1 -> 2, and a 4th
+  RIGHT stays at 2. Set 2, quit, relaunch: still 2. Set back to Auto with LEFT x3, quit,
+  relaunch: still Auto.
+
+Webcam driving (asked by the user): the camera framing had changed. I recalibrated
+drive.py (new bands y 470-530, road hue 95-115 with saturation above 90, kart x 820). The kart
+follows the straight and enters the first right-hand curve, but oversteers and spins round
+("REVERSE" shows). It needs a better controller (minimap position or heading) before it can
+finish a lap.
+
+End state: CPU6 play build installed (gbsp.done 775 840 B), Frameskip = Auto, no gbaopt.txt,
+board in the launcher, volume 0. The launcher is unchanged (master).
