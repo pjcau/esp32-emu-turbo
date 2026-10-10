@@ -24,7 +24,7 @@ for the full list.
 
 | Bug | Measured | Next step |
 |:---|:---|:---|
-| ~~DOOM memory leak~~ | not a leak (board, 2026-10-09, `DOOMMEM`, 7 min of E1M1): the purgeable lump cache fills to a 2.8 MB plateau by design, then free PSRAM holds at 2.28 MB; the 1.5 MB reserve (fork `6f8cc892`, 2026-09-27) purges it | open: `static` steps up 82–106 KB per level load; a multi-level run is next |
+| ~~DOOM memory leak~~ | two causes, both closed (board, 2026-10-09). During play the purgeable lump cache fills to a 2.8 MB plateau by design (the 1.5 MB reserve, fork `6f8cc892`, purges it). A real leak was per level load: `P_CheckForZDoomNodes` / `P_GetNodesVersion` locked the NODES and SSECTORS lumps to read a 4-byte magic, pinning them for the rest of the run (+71..+218 KB a map; about 3 MB over Freedoom's 36 maps, more than the 2.28 MB free). Fixed in fork `c7c79ae6`: `static` identical on every second visit of E1M1–E1M8 | none |
 | ~~Super Mario Kart at 57 fps~~ | fixed 2026-09-28: 57–62, mostly 60 | the S-DSP mix moved to core 1 (the DSP-1 was only ~2% of the frame) |
 | ~~Neo Geo Pocket near the limit~~ | fixed 2026-10-09 (fork `3b3cb6b0`): ~29 drawn was the app's frameskip 1, not the CPU; now 45–61 drawn in Metal Slug's fights, 60 on quiet screens. Board profile: TLCS-900H 9.0 ms, Z80 2.9, graphics 3.2 of 16.6 | the interpreter's register-file double indirection, if more is needed |
 
