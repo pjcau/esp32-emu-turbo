@@ -38,7 +38,7 @@ this screen. *Busy* is how much of the main core the emulator takes.
 | Neo Geo Pocket | retro-extra (RACE) | Metal Slug 1st Mission and 7 more | ✅ 60 fps, all 60 drawn on quiet screens, 45–61 in Metal Slug's fights (was ~29) | 2026-10-09 |
 | Atari 5200 | retro-home (Atari800 via MCUME) | Galaxian, Pole Position, Space Invaders | ✅ 60 fps, busy 33 % | 2026-10-08 |
 | Atari 7800 | retro-home (ProSystem) | Donkey Kong | 🟡 58–59 of 60 fps (was 42) | 2026-10-09 |
-| Commodore 64 | retro-home (Teensy64 + reSID) | Ghostbusters (.d64) | ✅ 50 fps (PAL), busy 70 % | 2026-10-08 |
+| Commodore 64 | retro-home (Teensy64 + reSID) | Ghostbusters (.d64) | ✅ 50 fps PAL (busy 70 %), 60 fps NTSC (busy 73–79 %) | 2026-10-10 |
 | MSX 1 / MSX 2 | fmsx (fMSX) | Nemesis, Metal Gear 2 | ✅ 60 fps, busy 21–26 % | 2026-10-07 |
 
 ## Arcade
@@ -106,6 +106,12 @@ says which one and where.
 
 ## Limits worth knowing
 
+- **Commodore 64, PAL or NTSC:** the machine is a PAL C64 (50 Hz) unless the
+  file name carries (USA), (NTSC), [NTSC], (U), (Japan) or (Canada), which start
+  an NTSC C64 (6567R8 VIC-II, 263 lines, 60 Hz); *Options → Emulator options →
+  Video* forces either. A PAL game on NTSC runs about 20 % fast, as on the real
+  machines. Save states record the standard and load only on the same one;
+  states from before 2026-10-10 do not load.
 - **Commodore 64:** no 1541 drive. A game is loaded from its `.prg`, or the
   first program of a `.d64`, and started by itself; games that load more parts
   from the disk stop after the first, and saving to disk does not work.

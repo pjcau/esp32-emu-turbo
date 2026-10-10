@@ -14,12 +14,12 @@ it, update it from the SD card, and what the card must hold.
 
 ## Current build {#current-build}
 
-On the board since 2026-10-07, every app updated 2026-10-10 through the card. Fork master `831b674f`.
+On the board since 2026-10-07, every app updated 2026-10-10 through the card. Fork master `c7b90b26`.
 
 | | |
 |---|---|
 | Image | `~/flash-backups/flash-2026-10-07-home-computers.img` on the bench PC, 16 711 936 bytes, SHA-1 `35305311f8b3aa3214949efb7b0a1508cb98439d` |
-| Updated since through the card | every app and OutRun's card binary on 2026-10-10 (`831b674f`): the GAME BRO! loading logo in place of the hourglass, DOOM's per-level-load leak fixed, Neo Geo Pocket draws every frame |
+| Updated since through the card | every app and OutRun's card binary on 2026-10-10 (`831b674f`): the GAME BRO! loading logo in place of the hourglass, DOOM's per-level-load leak fixed, Neo Geo Pocket draws every frame; retro-home at `c7b90b26` (C64 PAL/NTSC) the same day |
 | Flash before it | `~/flash-backups/flash-2026-10-07-before-home-computers.bin` |
 | Type | play build: `mame-go` has no benchmark code (`grep -a -c "MAMEBENCH frames" mame-go.bin` = 0) |
 
