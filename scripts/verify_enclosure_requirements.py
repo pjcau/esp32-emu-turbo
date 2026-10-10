@@ -51,6 +51,11 @@ button.
                       rounded head; L/R caps 2-3 mm proud, rounded
   R15 rounded shell   (user 2026-10-07, Switch Lite) corners >= 10, back
                       fillet >= 6, front fillet >= 1.5, fillet walls >= min_wall
+  R16 top-boss gussets (user 2026-10-10) each top-boss insert cylinder is
+                      tied to the ceiling by >= 3 ribs, >= min_wall thick,
+                      stopping >= 0.5 mm short of the boss's own free end
+                      (the insert sits inside the bore, not reached by an
+                      outside-the-wall rib)
   R9  labels          engraved glyphs exported by OpenSCAD (part
                       labels_check) — every label beside ITS OWN button,
                       no glyph anywhere else, and not MIRRORED (the "B"
@@ -592,6 +597,21 @@ def main() -> int:
           f"corners r{corner_r:g} (>= 10), back fillet r{back_r_:g} (>= 6), front fillet "
           f"r{front_r:g} (>= 1.5, wall at the inner corner {front_fillet_wall:.2f}), "
           f"{steps:g} slices per quarter")
+
+    # ── R16 top-boss gussets (user 2026-10-10, height corrected same day:
+    # the insert sits INSIDE the bore, an outside-the-wall rib cannot
+    # narrow its mouth -- the real limit is the boss's own free end) ────
+    (tg_n, tg_t, tg_h, tg_clear, tb_d2, top_int2, mw) = need(
+        "top_boss_gusset_n", "top_boss_gusset_t", "top_boss_gusset_h",
+        "top_boss_gusset_tip_clear",
+        "top_boss_d", "top_int", "min_wall")
+    tip_margin = top_int2 - tg_h       # clearance to the boss's own free end
+    check("R16", "top-boss-gussets",
+          tg_n >= 3 and tg_t >= mw - 1e-9 and tg_h > 0 and tg_h < top_int2 - 1e-9
+          and tip_margin >= 0.5 - 1e-9,
+          f"{tg_n:g} gussets/boss, {tg_t:g} mm thick (>= {mw:g}), {tg_h:g} mm up "
+          f"the {tb_d2:g} mm boss from the ceiling, {tip_margin:.2f} mm clear of "
+          f"the boss's own free end at {top_int2:g} (>= 0.5)")
 
     print("-" * 72)
     fails = results.count(False)

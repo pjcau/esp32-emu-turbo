@@ -141,13 +141,24 @@ led1_y = -30;
 led2_x = -48;           // LED2 full
 led2_y = -30;
 led3_x = 54;            // LED3..LED6 bring-up diagnostics (right of Menu)
-led3_y = -20.5;
+// y -20.5 + 0.03: the Menu guide well's stepped countersink (guide_well())
+// widens the bore by delta 1.2 at local z 4.4 (step i=3 of 5: sink_extra
+// 1.5 * 4/5), landing its horizontal step face at y = menu_y + menu_h/2 +
+// 1.2 = -21.1 -- EXACTLY the bottom of a led_diag_d/2 = 0.6 radius light-
+// pipe hole centred on -20.5 (-20.5 - 0.6 = -21.1). A cylinder exactly
+// tangent to another cut's flat boundary, rather than crossing it, is
+// what left zero-volume two-triangle sheets in case_top.stl at that y,
+// each side of LED4/LED5's x (caught by the solidity check,
+// verify_enclosure_stl S12/meshcheck). +0.03 keeps the LED well inside
+// its sync tolerance (0.1 mm, verify_enclosure_sync) and the S2 placement
+// tolerance (0.15 mm) while clearing the tangency.
+led3_y = -20.47;
 led4_x = 60;
-led4_y = -20.5;
+led4_y = -20.47;
 led5_x = 66;
-led5_y = -20.5;
+led5_y = -20.47;
 led6_x = 72;
-led6_y = -20.5;
+led6_y = -20.47;
 led_d = 2.0;            // LED1/2 light pipe hole
 led_diag_d = 1.2;       // LED3-6 (between the Menu pill and the column)
 
@@ -261,6 +272,78 @@ insert_relief_h = 2.0;  // socket + relief = 6.5 of the 7 mm boss; 0.5 boss
                         // = 0.2 past the insert end (21.6): full 4 mm engagement
 insert_wall = 2.0;      // plastic around the socket (user's request)
 top_boss_d = insert_hole_d + 2 * insert_wall + 0.1;   // 7.2
+
+// === Top-boss gussets (user 2026-10-10): "the 4 cylinders of the top
+// cover must be reinforced with flanges that attach them to the layer" —
+// "layer" clarified as the INNER SURFACE of the top shell, the ceiling
+// top_internals' own root (z=0 in its frame) where the boss cylinders
+// are rooted. Triangular fillet, same gusset() module and thickness
+// class as the existing bottom-column gussets, own reach/height
+// parameters (own name too) because the top boss is a different size
+// (Ø7.2) inside a shorter shell (top_int = 7.0 total, vs the bottom
+// column's much taller screw_boss_h).
+// Height: NOT bounded by the insert socket -- the heat-set insert sits
+// INSIDE the bore (radius insert_hole_d/2 = 1.55); a gusset on the
+// OUTSIDE of the boss wall (from top_boss_d/2 = 3.6 outward) can never
+// narrow that socket's mouth, however tall it is. The real limit is the
+// boss's own FAR END (the free "tip", at local z = top_int, flush with
+// the PCB-side insert flange and the soldering-iron clearance): the rib
+// stops top_boss_gusset_tip_clear short of it. Within that bound, h is
+// set to the LARGEST value that keeps >= 0.5 mm clear of every PCB
+// top-side component near each boss -- checked, not assumed: the
+// nearest top-side part to ANY of the 4 bosses is >= 10 mm away centre
+// to centre (SW13/Menu and LED5/6 near the back-right boss; nothing
+// closer at the other 3), well outside this rib's own XY reach
+// (top_boss_gusset_r = 6.6 from the axis), so every boss gets the same,
+// maximum height -- verify_enclosure_collision is the actual proof
+// (0 interferences), not this comment.
+top_boss_gusset_t = 1.5;        // == boss_gusset_t (bottom columns): same
+                                // style and thickness, both >= min_wall
+top_boss_gusset_r = top_boss_d/2 + 3.0;   // 6.6: reach from the AXIS (same
+                                // convention as boss_gusset_r), i.e. 3.0 mm
+                                // beyond the boss surface — the nearest
+                                // obstacle (ABXY-A well, front-right boss)
+                                // is >= 17 mm away centre to centre;
+                                // verified by verify_enclosure_collision,
+                                // not assumed
+top_boss_gusset_tip_clear = 0.5; // the user's minimum, to the boss's own
+                                // free end (tip), not the insert socket
+top_boss_gusset_h = top_int - top_boss_gusset_tip_clear; // 6.5
+top_boss_gusset_n = 8;          // ribs per boss (R16, >= 3): ALL AROUND
+                                // the cylinder ("le vorrei tutte attorno
+                                // dei cilindri", user 2026-10-10), evenly
+                                // spaced every 360/n deg from +X -- no
+                                // longer limited to the outward quadrant.
+                                // Any rib found to reach a PCB component,
+                                // the frame or a guide well is shortened
+                                // or lowered INDIVIDUALLY (see the
+                                // per-boss override below), never
+                                // dropped silently.
+top_boss_gusset_overrides = [
+    // [boss_x, boss_y, angle_deg, h, r] -- one entry per rib that cannot
+    // take the full top_boss_gusset_h/_r; angle_deg must match 360*i/n
+    // exactly; r defaults to top_boss_gusset_r when omitted.
+    //
+    // The back-right boss (70,-30.5), angle 135 (NW, toward the Menu
+    // cap): at the full height/reach it reaches into part_menu.stl's
+    // flange. "No volume overlap" alone is NOT the user's bar -- the
+    // Menu cap is a MOVING part (switch travel 0.45, lateral guide slop
+    // btn_clear/2 = 0.3) and the requirement is >= 0.5 mm clear in every
+    // position, mesh-measured (trimesh closest_point, both directions,
+    // not just the boolean intersection volume):
+    //   at full h=6.5, r=6.6:            rest clearance   0.230 mm
+    //   lowering h alone to 4.0 (r=6.6):  rest clearance   0.230 mm too
+    //     -- the rib's WIDEST cross-section sits at its ROOT (z=0, the
+    //     ceiling), which does not move with h; height alone cannot fix
+    //     a root-level clash, only a reach (r) change can.
+    //   shortening r alone to 5.0 (h=6.5): rest clearance  0.392 mm -- still short
+    //   r=5.0 AND h=4.0: rest 0.779 mm; worst case (lateral rattle
+    //     toward the rib, no press) 0.543 mm; pressed + lateral 0.561 mm
+    //     -- pressing moves the flange DOWN away from the ceiling-rooted
+    //     rib, so it only helps; lateral rattle is the real risk and
+    //     0.543 mm clears the 0.5 mm bar with margin. Kept.
+    [70, -30.5, 135, 4.0, 5.0],
+];
 
 // === Screw positions = PCB corner holes (board MOUNT_HOLES_ENC) ===
 screw_positions = [
@@ -699,10 +782,22 @@ module top_shell() {
             translate([p[0], p[1], -0.1])
             cylinder(h=wall + btn_guide_h + 0.2, d=p[2], $fn=16);
 
-        // Display keep-out: glass pocket down to the PCB + tail fold zone
+        // Display keep-out: glass pocket down to the PCB + tail fold zone.
+        // offset(delta=-0.03): this cutter's own footprint is a STRICT
+        // SUBSET of the frame wall's hole (top_internals' inner square is
+        // the same panel_pocket_shape() rectangle, extended +1mm on the
+        // tail side only) everywhere, so shrinking it 0.03 mm inward keeps
+        // it clear of the frame's inner wall FACE without changing what
+        // actually bounds the pocket (the frame hole, untouched) — unlike
+        // growing it, which fixed the same defect but grew the MEASURED
+        // pocket past S3/S4's tolerance. Two CSG operands sharing an exact
+        // coincident face — this cutter's nominal edge sitting exactly on
+        // the frame's inner wall face — is what left zero-volume
+        // two-triangle sheets in case_top.stl at x = panel_x1(), caught by
+        // the solidity check (verify_enclosure_stl S12/meshcheck).
         translate([0, 0, wall - 0.01])
         linear_extrude(height=top_int + 0.02)
-        panel_pocket_shape();
+        offset(delta=-0.03) panel_pocket_shape();
         translate([disp_tail_side > 0 ? panel_x1() - 0.01 : panel_x0() - disp_tail_ext,
                    disp_offset_y - disp_tail_w/2, wall + disp_t])
         cube([disp_tail_ext + 0.01, disp_tail_w, top_int - disp_t + 0.01]);
@@ -782,10 +877,31 @@ module top_internals() {
         }
 
         // Insert bosses: plain o7 cylinders from the ceiling to the PCB
-        // (the heat-set insert socket is cut in top_shell at the PCB end)
+        // (the heat-set insert socket is cut in top_shell at the PCB
+        // end), each tied to the ceiling by top_boss_gusset_n triangular
+        // gussets (same gusset() module as the bottom screw columns),
+        // spaced EVENLY ALL AROUND the cylinder (every 360/n deg from
+        // +X) -- not limited to an outward quadrant. Any rib found too
+        // close to a moving part in ANY of its real positions (cap
+        // travel + lateral guide slop, not just "no volume overlap") is
+        // shortened and/or pulled in to its own (h, r) in
+        // top_boss_gusset_overrides for THAT one (bx, by, angle) entry,
+        // never silently dropped; verify_enclosure_collision (0
+        // interferences) plus the mesh-measured clearances recorded in
+        // that list's own comments are the actual proof, not this one.
         color([0.45, 0.45, 0.5])
-        for (pos = screw_positions) translate([pos[0], pos[1], 0])
+        for (pos = screw_positions) translate([pos[0], pos[1], 0]) {
             cylinder(h=top_int, d=top_boss_d, $fn=32);
+            for (i = [0 : top_boss_gusset_n - 1]) {
+                ang = 360 * i / top_boss_gusset_n;
+                ov = [for (o = top_boss_gusset_overrides)
+                        if (o[0] == pos[0] && o[1] == pos[1] && o[2] == ang) o];
+                h = len(ov) > 0 ? ov[0][3] : top_boss_gusset_h;
+                r = (len(ov) > 0 && len(ov[0]) > 4) ? ov[0][4] : top_boss_gusset_r;
+                rotate([0, 0, ang])
+                gusset(top_boss_d/2, r, h, top_boss_gusset_t);
+            }
+        }
 
         // Guide wells around every face button. A well next to the glass
         // is trimmed by the pocket grown by min_wall: what would remain

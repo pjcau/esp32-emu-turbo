@@ -22,9 +22,9 @@ make render-enclosure                # 15 PNG views -> website/static/img/render
 make export-enclosure-stl            # print set -> 3d_case/, viewer set -> 3d_case/viewer/
 make generate-enclosure-pcb          # pcb_parts.scad from board.py (also run by generate-pcb)
 make verify-enclosure-sync           # scad constants vs board.py / datasheets (34 checks)
-make verify-enclosure-requirements   # the user's constraints (19 checks: labels, thin walls, ...)
+make verify-enclosure-requirements   # the user's constraints (20 checks: labels, thin walls, ...)
 make verify-enclosure-collision      # CGAL interference: shells vs PCB/panel/battery/caps
-make verify-enclosure-stl            # measure the exported STLs themselves (S1-S11)
+make verify-enclosure-stl            # measure the exported STLs themselves (S0-S13)
 ```
 :::
 
@@ -64,7 +64,7 @@ that `scripts/verify_enclosure_sync.py` checks against `board.py` or a datasheet
 | USB-C plug could not seat | Receptacle mouth is at the PCB edge, 5 mm inside the wall; the 9 × 3.2 hole only passed the plug shell | Opening sized for the **plug overmold** (13 × 6.5), crossing the shell split |
 | Battery free to lift against the PCB | Nothing held the cell down; the ESP32 underside is only 0.9 mm above the cell top | Two printed **hold-down straps** 5 × 1 mm over the cell at x = −30 and +26 (outside the module footprint), pegged into four posts on the pocket border at the cell plane (Z 12); the PCB captures them. Gate: straps and posts ≥ 0.5 mm under every bottom-side part |
 | Print service rejected the STLs: "thin walls" | Groove skin 0.7, column necks 0.8, speaker ring 0.7, tongue 1.0, cap flanges 0.8, straps 1.0, lever hook 0.35 | One constant **`min_wall = 1.2`**: side walls 2.6 (1.2 skin + 1.2 tongue + 0.2), column contact = outer half-column (no neck), speaker ring 1.7, cap flange 1.2, straps 1.2, lever hook 5 mm wide with 1.35 walls, well rings trimmed through their bore beside the glass, LED pipes open the Menu ring outward, port cutouts only through the wall. Gate R8 tabulates 17 named walls; **R12 slices every shell and lever in OpenSCAD, erodes by 0.6 and fails on anything that disappears** |
-| Bosses and frame 0.4 mm short of the PCB (found 2026-09-17 by measuring the STL) | The lip groove was subtracted as a full slab, chopping the last 0.4 mm off every internal feature — invisible to constant-based gates | Groove is a ring; new gate **`verify_enclosure_stl`** slices the exported `3d_case/*.stl` with OpenSCAD `import()` and measures every cutout, boss, pocket and part against `board.py`, the datasheets and the requirements — a second, independent road (S1–S11) |
+| Bosses and frame 0.4 mm short of the PCB (found 2026-09-17 by measuring the STL) | The lip groove was subtracted as a full slab, chopping the last 0.4 mm off every internal feature — invisible to constant-based gates | Groove is a ring; new gate **`verify_enclosure_stl`** slices the exported `3d_case/*.stl` with OpenSCAD `import()` and measures every cutout, boss, pocket and part against `board.py`, the datasheets and the requirements — a second, independent road (S0–S13) |
 | Hand-drawn PCB model | A dozen boxes from memory; J3 was 3 mm too short, LEDs missing | `hardware/enclosure/pcb_parts.scad` is **generated from `board.py`** (all 98 fitted parts with body sizes/heights, slot, holes); a stale file is a red gate |
 | Engraved labels wrong | V2.0 mirrored the whole label group about x = 0 (A/B/X/Y landed on the D-pad); V2.1 mirrored every top glyph (backwards B, STA/SEL) | Top-shell glyphs are engraved as-is (read from the front), only the back-face L/R are mirrored about their own centre; gate R9 exports the glyphs and checks position **and chirality** (stem side of the B and the L) |
 

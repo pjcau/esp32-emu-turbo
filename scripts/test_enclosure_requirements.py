@@ -28,6 +28,7 @@ labels) and demands the requirements gate objects:
     Q21 SD slit cut 2 mm into the shelf        R12 measured    -> exit 1
     Q22 Y label back on its left (the bezel)   R9 visible      -> exit 1
     Q23 D-pad right arrow dropped              R9 labels       -> exit 1
+    Q24 top-boss gussets removed               R16 gussets     -> exit 1
     Q16 unmutated file                         all green       -> exit 0
 """
 
@@ -101,7 +102,7 @@ def main() -> int:
         ("Q6 screw through the roof", "screw_len = 20;", "screw_len = 25;", 1),
         ("Q6b insert socket too shallow for L4", "insert_hole_depth = insert_l + 0.5;",
          "insert_hole_depth = insert_l - 1.0;", 1),
-        ("Q7 gusset too thin", "boss_gusset_t = 1.5;", "boss_gusset_t = 0.8;", 1),
+        ("Q7 gusset too thin", "\nboss_gusset_t = 1.5;\n", "\nboss_gusset_t = 0.8;\n", 1),
         ("Q8 extension board past the glass edge", "ext_l = 28;", "ext_l = 100;", 1),
         ("Q9 Menu pill into the LED web", "menu_h = 3.8;", "menu_h = 5.5;", 1),
         ("Q10 pocket back to the 80 mm cell", "bat_w = 90; ", "bat_w = 80; ", 1),
@@ -126,6 +127,7 @@ def main() -> int:
         ("Q21 SD slit cuts a sliver off the shelf",
          "sd_slot_cutout(sd_cut_w, sd_cut_h, side_wall + 0.2);",
          "sd_slot_cutout(sd_cut_w, sd_cut_h, side_wall + 2);", 1),
+        ("Q24 top-boss gussets removed", "top_boss_gusset_n = 8;", "top_boss_gusset_n = 0;", 1),
     ]
     for name, old, new, want in cases:
         rc = run_with(mutate(old, new))

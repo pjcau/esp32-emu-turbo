@@ -42,6 +42,19 @@ Checks (S = STL)
       outside the ESP32 footprint; display part 94.57 x 60.88 x 3.9 with
       its top at the ceiling (Z 24.6)
   S11 thin walls on the STL slices themselves: erode/dilate by 0.6
+  S12 solidity: every print STL is watertight (vertices merged within a
+      tolerance, every edge then used by exactly two triangles in
+      opposite directions), exactly one connected body, volume > 0 — a
+      mesh property, not a dimension; a CSG operand exactly coincident or
+      tangent with another leaves zero-volume degenerate sheets that the
+      other S-checks (which measure cut profiles, not mesh closure) don't
+      see. numpy only (no trimesh — this runs under the system python3).
+  S13 top-boss gussets: at each boss's 8 rib angles (all around, every
+      45 deg), a point at radius boss_r + reach/2 (5.1, or 4.3 for the
+      one rib shortened for Menu-cap clearance) is material at z=2.3
+      (near the root) and empty at z=8.7 (past where even the tallest
+      rib ends at 8.5, the boss tip minus 0.5) — the ribs are on the mesh, not only
+      claimed by the scad's own constants
 
 Exit codes: 0 pass · 1 mismatch · 2 cannot evaluate (Docker, files).
 """
@@ -55,6 +68,8 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+
+import numpy as np
 
 BASE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE))
@@ -88,6 +103,64 @@ def stl_vertices(path: Path):
 def bbox(path: Path):
     xs, ys, zs = zip(*stl_vertices(path))
     return (min(xs), max(xs), min(ys), max(ys), min(zs), max(zs))
+
+
+MERGE_TOL = 1e-4   # mm — vertex-merge grid for the S12 solidity check
+
+
+def mesh_solidity(path: Path, merge_tol: float = MERGE_TOL) -> dict:
+    """Watertight / single-body / positive-volume, numpy only.
+
+    Raw STL carries no shared vertex indices: every triangle writes its
+    own copy of each corner, so two triangles meeting at the "same" point
+    only test as equal once rounded onto a tolerance grid first — skip
+    that and every triangle looks like its own disconnected body. Once
+    merged: every undirected edge must be used by exactly two triangles,
+    once in each direction (consistent winding, and no exact duplicate
+    face); the mesh must be a single connected component (union-find over
+    shared vertices); its signed volume (divergence theorem, raw
+    unmerged coordinates) must be positive and non-trivial.
+    """
+    verts = list(stl_vertices(path))
+    if not verts or len(verts) % 3 != 0:
+        return dict(watertight=False, bodies=0, bad_edges=-1, volume=0.0, n_faces=0)
+    tris = np.array(verts, dtype=float).reshape(-1, 3, 3)
+    flat = tris.reshape(-1, 3)
+    keys = np.round(flat / merge_tol).astype(np.int64)
+    _, inv = np.unique(keys, axis=0, return_inverse=True)
+    idx = inv.reshape(-1, 3)
+
+    edges: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    for a, b, c in idx:
+        for u, v in ((a, b), (b, c), (c, a)):
+            key = (int(u), int(v)) if u < v else (int(v), int(u))
+            edges.setdefault(key, []).append((int(u), int(v)))
+    bad_edges = sum(1 for d in edges.values() if len(d) != 2 or d[0] == d[1])
+
+    n_verts = int(idx.max()) + 1
+    parent = list(range(n_verts))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    for a, b, c in idx:
+        a, b, c = int(a), int(b), int(c)
+        ra, rb, rc = find(a), find(b), find(c)
+        if ra != rb:
+            parent[ra] = rb
+        rb = find(b)
+        if rb != rc:
+            parent[rb] = rc
+    roots = {find(v) for tri in idx for v in tri}
+
+    v0, v1, v2 = tris[:, 0], tris[:, 1], tris[:, 2]
+    volume = abs(float(np.sum(np.einsum("ij,ij->i", v0, np.cross(v1, v2))))) / 6.0
+
+    return dict(watertight=bad_edges == 0, bodies=len(roots),
+                bad_edges=bad_edges, volume=volume, n_faces=len(idx))
 
 
 _CALLS = [0]
@@ -613,6 +686,65 @@ def main() -> int:
                                 f"({centre(c)[0]:.1f},{centre(c)[1]:.1f})")
     check("S11", "thin-walls-on-stl", not thin,
           f"27 STL slices eroded by 0.6: " + ("; ".join(thin[:6]) if thin else "nothing under 1.2 mm"))
+
+    # S12 solidity: every print STL is a single watertight, positive-volume
+    # body (numpy only — see mesh_solidity; 2026-10-10 meshcheck found
+    # case_top.stl not a closed manifold: euler -21, 12 edges used by more
+    # than two faces, 7 zero-volume two-triangle sheets where a cutter's
+    # XY boundary sat exactly on another CSG operand's face)
+    stl_files = sorted(CASE.glob("*.stl"))
+    bad = []
+    for f in stl_files:
+        s = mesh_solidity(f)
+        if not (s["watertight"] and s["bodies"] == 1 and s["volume"] > 1e-6):
+            bad.append(f"{f.name}: watertight={s['watertight']} bodies={s['bodies']} "
+                       f"bad_edges={s['bad_edges']} volume={s['volume']:.4g}")
+    check("S12", "stl-solidity", not bad,
+          f"{len(stl_files)} print STLs: watertight (vertices merged within "
+          f"{MERGE_TOL} mm, every edge then used by exactly two triangles), "
+          "exactly 1 body, volume > 0"
+          + (": " + "; ".join(bad) if bad else ""))
+
+    # S13 top-boss gussets (user 2026-10-10; height corrected, grown to
+    # all-around n=8, then one rib shortened in BOTH h and reach for
+    # clearance to the Menu cap under travel+rattle, same day): sample
+    # one point per rib direction -- 8 angles every 45 deg all the way
+    # around each boss -- at radius boss_r + reach/2 from each boss
+    # centre (reach defaults to 3.0, i.e. sample radius 5.1, but is 1.4
+    # for the one shortened rib, back-right boss 135 deg, reach 5.0 ->
+    # sample radius 4.3): at z=2.3 (near the root, inside every rib's
+    # own height) that point must be material; at z=8.7 (past where even
+    # the tallest default rib ends at 8.5, still before the insert-boss
+    # "end" slice at 8.8) the bare boss alone (radius 3.6) cannot reach
+    # any of these sample radii, so it must be empty. An area-based
+    # check (sum of blob area near the boss) was tried first and is NOT
+    # used: at the back-right boss the slice merges with the
+    # neighbouring Menu well into one contour, which swamps the area
+    # signal; sampling the known rib directions directly is immune to
+    # that pre-existing merge.
+    RIB_REACH_OVERRIDE = {(70, -30.5, 135): 5.0}   # must track scad's
+                                                    # top_boss_gusset_overrides
+    gusset_z = top_slice(2.3)
+    past_z = top_slice(8.7)
+    bad = []
+    for x, y in corners:
+        for i in range(8):
+            ang = 45 * i
+            reach = RIB_REACH_OVERRIDE.get((x, y, ang), 3.0)
+            r = 3.6 + reach / 2    # boss radius (Ø7.2, S5) + half the rib reach
+            px = x + r * math.cos(math.radians(ang))
+            py = y + r * math.sin(math.radians(ang))
+            g_ok = point_in_material(gusset_z, px, py)
+            p_ok = point_in_material(past_z, px, py)
+            if not (g_ok and not p_ok):
+                bad.append(f"({x},{y}) ang {ang:.1f}: material at z=2.3 "
+                           f"{g_ok}, at z=8.7 {p_ok}")
+    check("S13", "top-boss-gussets",
+          not bad,
+          "4 bosses x 8 ribs, all around: material at z=2.3 (near the root) "
+          "at each rib's own angle and reach, gone by z=8.7 (past where even "
+          "the tallest default rib ends at 8.5)"
+          + (": " + "; ".join(bad) if bad else ""))
 
     shutil.rmtree(WORK, ignore_errors=True)
     print("-" * 72)

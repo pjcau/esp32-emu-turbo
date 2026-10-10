@@ -80,6 +80,7 @@ VERIFY_ALL_SCRIPTS = \
 	test_cpl_rotation_law \
 	test_enclosure_sync \
 	test_enclosure_requirements \
+	test_enclosure_stl_solidity \
 	test_esd_protection \
 	test_erc_severity \
 	test_gate_coverage \
@@ -395,6 +396,9 @@ test-enclosure-requirements: ## Mutation tests for the enclosure-requirements ga
 
 verify-enclosure-stl: ## Enclosure STL audit — measures the exported 3d_case/*.stl against board.py, datasheets and requirements (the "other road")
 	@$(T) verify-enclosure-stl python3 scripts/verify_enclosure_stl.py
+
+test-enclosure-stl-solidity: ## Mutation tests for the S12 solidity check (watertight/single-body/volume) in verify_enclosure_stl.py
+	@$(T) test-enclosure-stl-solidity python3 scripts/test_enclosure_stl_solidity.py
 
 generate-enclosure-pcb: ## Regenerate hardware/enclosure/pcb_parts.scad from board.py placements
 	@$(T) generate-enclosure-pcb python3 scripts/generate_enclosure_pcb.py
