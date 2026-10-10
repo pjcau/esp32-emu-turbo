@@ -1,0 +1,65 @@
+GBA CPU5 — frameskip on the core-1 renderer, IRAM placement shipped — board, 2026-10-10
+==========================================================================================
+Build: fork gba-cpu 5d433adb (request doc 8cb9f2bd), dynarec submodule 2b87220, on master 6ecc9d9b.
+GBAPROF 785 872 B, play 775 824 B (both as expected). Installed with the SD updater.
+Protocol: `load N` right after "Retro-Go ready", key held, 60 s logs, medians of the last 6
+GBAPROF / GBAPERF / GBAL1 lines; [debug] FPS/S/R/BUSY = medians of the last 20 lines.
+Mario Kart Super Circuit (E) slot 1, A held. Sonic Advance (USA) slot 0, RIGHT held. Volume 0.
+
+run game  card            cpu ms (range)       GBAPROF frames/drawn  kcyc  I-stall FPS  S   R      BUSY
+1   MK    perf skip=0     18.29 (18.04-18.42)  54/54, 55/55          4399  2281    54   0   27+27  100%
+2   MK    perf skip=1     15.87 (15.70-15.94)  61/31, 60/30          3779  1869    60   30  2+28    96%
+3   MK    perf skip=2     14.72 (14.57-14.81)  60/20, 61/21          3706  1778    60   40  10+10   89%
+4   Sonic perf skip=0     10.04 ( 9.71-10.46)  61/61, 60/60          2437  1003    60   0   60+0    62%
+5   Sonic perf (Auto)     10.06 ( 9.74-10.47)  61/61, 60/60          2442  1014    60   0   60+0    62%
+L1 miss 4.6% on MK (l1 2048 now the default), 5.6% on Sonic.
+HEAP run 1: "HEAP:60+17 (31+13)", the same in every run. No abort, panic or "PSRAM REFUSED".
+
+PASS: run 2 is 15.87 ms <= 16.5, 60 emulated fps with 30 drawn. Sonic is unaffected:
+60/60 at skip=0 pinned and on Auto.
+The core-1 renderer still costs core 0 ~4.65 ms per drawn frame:
+18.29 -> 15.87 -> 14.72 for 54 -> 30 -> 20 drawn, with 13.64 as the core1_idle floor.
+
+GBASAMPLE1 "core 1 code" now prints the real split by itself (fix works, no hand
+recomputation needed): run 1 IRAM 74.3%, flash 18.7%, other 7.1% of 18024 ticks.
+Run 2: 85.0 / 10.0 / 5.0 of 19331. Run 3: 90.7 / 6.6 / 2.7. Run 4: 86.5 / 9.8 / 3.7.
+
+Frameskip log lines:
+- Run 1 (skip=0 pinned on MK, which runs at 54 fps): "Raised frameskip to 1" EVERY SECOND,
+  from 10.4 s to 61.3 s (52 lines). The pin holds (54/54 drawn), but rg_system's auto logic
+  raises app->frameskip, the pin puts it back, and it raises again: log spam on a pinned 0.
+  The pin should also stop the auto path, or the pin should be applied where the auto logic
+  reads it.
+- Run 2 (skip=1): one "Raised frameskip to 2" at 31.4 s. Run 3 (skip=2): one "Raised
+  frameskip to 3" at 31.4 s. Both come right after the GBASAMPLE dump at ~30.9 s, which
+  stalls a second. The pin held (30 and 20 drawn throughout).
+  Note: an auto raise to 3 means Auto can go past the menu's maximum of 2.
+- Runs 4 and 5 (Sonic): no Raised/Reduced line.
+
+Webcam runs 1-3: the race draws correctly (Toad on the course, HUD, minimap) at 54, 30 and
+20 drawn. Runs 4-5: Sonic level correct.
+
+Play build (775 824 B), no gbaopt.txt, Frameskip on Auto (the default)
+----------------------------------------------------------------------
+Mario Kart, A held, 60 s: one "Raised frameskip to 1" at 10.4 s, then steady
+FPS 60 (S:30 R:2+28), BUSY 93-94%. The menu header reads "SPEED: 100% (60.1)".
+HEAP:62+161 (31+156). The first [debug] line (9.4 s) was FPS 56, BUSY 99%, then Auto engaged.
+Sonic Advance, RIGHT held, 60 s: FPS 60 (S:0 R:60+0), BUSY 61-64%, no Raised/Reduced line.
+The first [debug] line (10.4 s) showed S:8 R:0+52, BUSY 73%, during the state load; Sonic
+was 60/60 from 18 s on with no log line.
+Smoothness: a 3 s webcam burst (31 frames at ~10 Hz) shows steady motion, no frozen or torn
+frames, no corruption (frame-to-frame diff 4.0-7.0, even). The webcam's ~10 Hz cannot
+resolve 30 vs 54 drawn, so this is "no visible defect", not a smoothness verdict. Audio not
+judged (volume 0).
+
+Menu (Options -> Emulator options): Audio enable / Frameskip / Fast CPU (dynarec).
+- The Frameskip row reads "Auto" by default.
+- RIGHT cycles Auto -> 0 -> 1 -> 2 and stops at 2 (a 4th RIGHT stays at 2, no wrap-around).
+- Persistence: I set 1, quit to the launcher, relaunched Mario Kart; the row read 1.
+  I then set Auto back (LEFT x2) and the row read Auto.
+Buttons on the play build (webcam): A accelerates, RIGHT steers, START opens the pause menu
+(CONTINUE / TRY AGAIN / QUIT), START closes it; SELECT + A inside the pause menu changed
+nothing visible (same as master).
+
+End state: the CPU5 play build is installed (gbsp.done 775 824 B, 5d433adb), Frameskip = Auto,
+no gbaopt.txt, board in the launcher, volume 0. The fork submodule in main is still on master 6ecc9d9b.
