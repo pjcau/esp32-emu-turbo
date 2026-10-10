@@ -262,3 +262,12 @@ the next presses). A game that reacts visibly to the joystick is needed to close
 4. Because 2 did not pass, 17a08574 was NOT left installed: the retro-home play build from fork master 831b674f
    (692 528 B) is back, and the same JOYTEST run on it passes the same way (KEY 46 -> 32, FIRE 1, '*' moves,
    BREAK IN 80). Play build installed (master), buttons verified.
+
+==== Recheck 2, c64-ntsc c7b90b26 (fix v2: RG_DIALOG_REDRAW on a Video change), retro-home 693 856 B ====
+2. Ghostbusters, Video stepped RIGHT x3 then LEFT x3, webcam photo after each press:
+   Auto (PAL) -> PAL -> NTSC -> Auto (PAL) -> NTSC -> PAL -> Auto (PAL).
+   One border on every value: with PAL/NTSC the box is narrower and nothing of the wider box stays on screen.
+   -> passed. Closing the menu: "C64 now PAL: 312 raster lines, 19656 cycles/frame, 50 fps, audio 32000 Hz".
+3. JOYTEST on this build: D-pad moves the '*', A -> "JOY 16 FIRE 1", START -> KEY 46 -> 32 (SPACE),
+   SELECT -> "BREAK IN 80 / READY.". Test file removed from the card. -> passed.
+4. c7b90b26 left installed as the play build: play build installed, buttons verified.
